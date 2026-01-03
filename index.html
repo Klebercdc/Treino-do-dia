@@ -1,141 +1,27 @@
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b1220" />
-    <title>Treino do Dia</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <div class="titlewrap">
-        <h1>Treino do Dia</h1>
-        <div class="sub" id="todayLabel">Carregando…</div>
-      </div>
-      <div class="actions">
-        <button class="btn secondary" id="btnHistory">Histórico</button>
-        <button class="iconbtn" id="btnSettings" aria-label="Configurações">⚙️</button>
-      </div>
-    </header>
-
-    <main class="container">
-      <section class="card">
-        <div class="grid">
-          <label class="field">
-            <span>Modo</span>
-            <select id="modeSelect">
-              <option value="auto">Automático (pela data)</option>
-              <option value="manual">Manual (escolho)</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Data (GMT-3)</span>
-            <input id="dateInput" type="date" />
-          </label>
-
-          <label class="field">
-            <span>Treino</span>
-            <select id="workoutSelect">
-              <option value="A">A (Segunda)</option>
-              <option value="B">B (Quarta)</option>
-              <option value="C">C (Sexta)</option>
-              <option value="OFF">OFF (Descanso)</option>
-            </select>
-          </label>
-
-          <div class="field actionsrow">
-            <span>&nbsp;</span>
-            <button class="btn" id="btnLoad">Carregar</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="card" id="workoutCard">
-        <div class="cardhead">
-          <div>
-            <div class="pill" id="pillDay">—</div>
-            <h2 id="workoutTitle">—</h2>
-            <div class="muted" id="workoutObjective">—</div>
-          </div>
-          <div class="stack">
-            <button class="btn" id="btnSave">Salvar hoje</button>
-            <button class="btn secondary" id="btnCopy">Copiar</button>
-          </div>
-        </div>
-
-        <div class="list" id="exerciseList"></div>
+<div class="list" id="exerciseList"></div>
 
         <div class="footerrow">
-  <button id="btnExport" class="btn secondary mini">JSON</button>
-  
-  <div class="row" style="flex: 3; display: flex; gap: 10px;">
-    <button id="btnCopy" class="btn secondary" style="flex: 1;">Copiar</button>
-    <button id="btnSave" class="btn" style="flex: 2;">Salvar hoje</button>
-  </div>
+          <button id="btnExport" class="btn secondary mini">JSON</button>
+          
+          <div class="footer-actions">
+            <button id="btnCopy" class="btn secondary">Copiar</button>
+            <button id="btnSave" class="btn">Salvar hoje</button>
+          </div>
+        </div>
       </section>
     </main>
 
     <dialog class="modal" id="modalHistory">
       <div class="modalhead">
         <h3>Histórico</h3>
-        <button class="iconbtn" id="closeHistory" aria-label="Fechar">×</button>
+        <button class="iconbtn" id="closeHistory">×</button>
       </div>
-
-      <div class="grid">
-        <label class="field">
-          <span>Filtrar por exercício</span>
-          <select id="histExercise"></select>
-        </label>
-        <label class="field">
-          <span>Ações</span>
-          <div class="row">
-            <button class="btn secondary" id="btnExport">Exportar</button>
-            <button class="btn secondary" id="btnImport">Importar</button>
-            <button class="btn danger" id="btnClear">Limpar tudo</button>
-          </div>
-        </label>
-      </div>
-
-      <div class="divider"></div>
-      <div class="hist" id="histList"></div>
-    </dialog>
+      </dialog>
 
     <dialog class="modal" id="modalSettings">
-      <div class="modalhead">
-        <h3>Configurações</h3>
-        <button class="iconbtn" id="closeSettings" aria-label="Fechar">×</button>
-      </div>
-
-      <div class="grid">
-        <label class="field">
-          <span>Fuso</span>
-          <input value="America/Sao_Paulo (GMT-3)" disabled />
-        </label>
-        <label class="field">
-          <span>Guardar RPE?</span>
-          <select id="keepRpe">
-            <option value="1">Sim</option>
-            <option value="0">Não</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="row end">
-        <button class="btn" id="btnSaveSettings">Salvar</button>
-      </div>
-    </dialog>
+      </dialog>
 
     <input type="file" id="fileImport" accept="application/json" hidden />
     <script src="./app.js"></script>
   </body>
 </html>
-<div class="footerrow">
-  <button id="btnExport" class="btn secondary">Backup (JSON)</button>
-  
-  <div class="row">
-    <button id="btnCopy" class="btn secondary">Copiar</button>
-    <button id="btnSave" class="btn">Salvar hoje</button>
-  </div>
-</div>
