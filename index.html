@@ -3,162 +3,227 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <meta name="theme-color" content="#3b5bdb" />
-    <title>TITAN LOG - FINAL HYBRID</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="theme-color" content="#0b1220" />
+    <title>TITAN LOG - PRO MASTER</title>
     <style>
-      :root { --primary: #3b5bdb; --bg: #f8f9fa; --card: #ffffff; --text: #1a1a1a; --gray: #868e96; --green: #40c057; --orange: #fd7e14; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 90px; }
+      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
+      body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; margin: 0; padding-bottom: 100px; -webkit-font-smoothing: antialiased; }
       
-      /* Navigation */
-      .tab-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid #eee; padding: 12px 0; justify-content: space-around; z-index: 1000; }
-      .tab-item { text-align: center; color: var(--gray); font-size: 11px; cursor: pointer; flex: 1; }
-      .tab-item.active { color: var(--primary); font-weight: 700; }
-
-      /* Sections */
-      .section { display: none; padding: 20px; }
-      .section.active { display: block; }
-
-      /* Cards & UI */
-      .header { padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
-      .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-      .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-      .summary-box { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid #eee; }
-      .summary-box span { font-size: 10px; color: var(--gray); display: block; }
-      .summary-box strong { font-size: 16px; color: var(--primary); }
-
-      /* Exercise Row */
-      .series-row { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
-      .input-group { background: #f1f3f5; border-radius: 8px; padding: 6px; text-align: center; }
-      .input-group span { font-size: 8px; color: var(--gray); display: block; }
-      input { background: transparent; border: none; width: 100%; text-align: center; font-size: 15px; font-weight: 700; outline: none; }
+      .top-header { padding: 18px 15px; background: rgba(22, 30, 46, 0.98); backdrop-filter: blur(10px); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+      .brand { font-weight: 900; font-size: 1.1rem; color: var(--blue); letter-spacing: -1px; }
       
-      .predict-badge { background: rgba(64, 192, 87, 0.1); color: var(--green); padding: 10px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-bottom: 15px; display: none; text-align: center; }
-      .btn-main { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; }
+      /* Timer UI */
+      .timer-container { display: flex; align-items: center; gap: 5px; }
+      .timer-select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; font-size: 0.75rem; padding: 2px; font-weight: bold; outline: none; }
+      .timer-box { font-family: monospace; color: var(--orange); font-weight: bold; font-size: 0.9rem; background: #0b1220; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--orange); cursor: pointer; min-width: 65px; text-align: center; }
 
-      .ex-title { font-weight: 800; font-size: 17px; margin-bottom: 15px; display: block; }
+      .setup-panel { background: var(--card); padding: 25px; border-bottom: 3px solid var(--blue); border-radius: 0 0 20px 20px; }
+      .field { margin-bottom: 15px; }
+      .field label { font-size: 0.65rem; color: #a0aec0; display: block; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+      .field select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; font-weight: bold; font-size: 0.9rem; }
+
+      .nav-pills { display: flex; gap: 8px; padding: 12px; background: var(--bg); overflow-x: auto; scrollbar-width: none; }
+      .pill { flex: none; text-align: center; padding: 12px 20px; border-radius: 10px; background: #1a202c; font-weight: 800; font-size: 0.7rem; border: 1px solid #2d3748; cursor: pointer; color: #718096; white-space: nowrap; transition: 0.2s; }
+      .pill.active { background: var(--blue); border-color: var(--blue); color: white; box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3); }
+
+      .exercise-card { background: var(--card); border-radius: 18px; padding: 18px; margin: 12px; border: 1px solid #2d3748; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+      .ex-title { font-weight: 800; font-size: 1.1rem; color: #fff; text-decoration: underline dotted var(--blue); cursor: pointer; }
+      .ex-target { font-size: 0.75rem; color: var(--orange); font-weight: bold; margin: 5px 0 15px 0; display: block; }
+      
+      .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: 900; text-transform: uppercase; }
+      
+      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 8px; padding: 8px 0; }
+      .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
+
+      .footer { position: fixed; bottom: 0; width: 100%; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px); padding: 12px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 100; }
+      .btn { padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.8rem; text-transform: uppercase; }
+      .btn-save { background: var(--green); color: white; box-shadow: 0 4px 15px rgba(56, 178, 172, 0.2); }
+      .btn-config { background: #1a202c; color: var(--blue); border: 1px solid var(--blue); }
+      .btn-hist { flex: 0.3; background: #2d3748; color: white; }
+
+      dialog { background: #161e2e; color: #fff; border: none; border-radius: 20px; width: 90%; max-width: 400px; padding: 20px; }
+      .lib-item { padding: 12px; border-bottom: 1px solid #2d3748; font-size: 0.9rem; cursor: pointer; }
+      .section { display: none; }
+      .section.active { display: block; animation: fadeIn 0.3s ease; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
   </head>
   <body>
 
-    <div id="relatorio" class="section active">
-      <div class="header"><h2>📊 Estatísticas</h2></div>
-      <div class="summary-grid">
-        <div class="summary-box"><span>Treinos</span><strong>12</strong></div>
-        <div class="summary-box"><span>Volume</span><strong>5.4k</strong></div>
-        <div class="summary-box"><span>Peso</span><strong>67kg</strong></div>
+    <header class="top-header">
+      <div class="brand">TITAN<span style="color:#fff">PRO</span></div>
+      <div class="timer-container">
+        <select id="timerSet" class="timer-select">
+          <option value="60">1m</option>
+          <option value="120">2m</option>
+          <option value="180">3m</option>
+          <option value="240">4m</option>
+          <option value="300">5m</option>
+        </select>
+        <div id="timer" class="timer-box" onclick="toggleTimer()">OFF</div>
       </div>
-      <div class="card"><canvas id="mainChart" height="150"></canvas></div>
-    </div>
+      <div id="displayDate" style="font-size: 0.7rem; font-weight: bold; color: var(--blue)">--/--/--</div>
+    </header>
 
-    <div id="treino" class="section">
-      <div class="header"><h2>🏋️ Treino de Hoje</h2><span id="faseAtiva" style="color:var(--orange); font-weight:bold; font-size:12px;">HIPERTROFIA</span></div>
-      
-      <div id="predict-box" class="predict-badge"></div>
-
-      <div id="workout-container">
-          </div>
-      <button class="btn-main" onclick="salvarSessao()">FINALIZAR TREINO</button>
-    </div>
-
-    <div id="personalizar" class="section">
-      <div class="header"><h2>⚙️ Ajustes</h2></div>
-      <div class="card">
-        <label style="font-size:12px; font-weight:bold; color:var(--gray)">FASE DA PERIODIZAÇÃO</label>
-        <select id="selectFase" onchange="mudarFase()" style="width:100%; padding:15px; margin-top:10px; border-radius:10px; border:1px solid #ddd; font-weight:bold;">
-            <option value="adapt">Fase 1: Adaptação</option>
-            <option value="hiper" selected>Fase 2: Hipertrofia</option>
-            <option value="forca">Fase 3: Força Pura</option>
-            <option value="cut">Fase 4: Polimento</option>
+    <div class="setup-panel" id="setupPanel">
+      <div class="field"><label>Dias por Semana</label>
+        <select id="freq" onchange="gerarProtocolo()">
+          <option value="2">2 Dias (Full Body)</option>
+          <option value="3" selected>3 Dias (ABC - Clássico)</option>
+          <option value="4">4 Dias (Upper / Lower)</option>
+          <option value="5">5 Dias (Híbrido ABC+UL)</option>
+          <option value="6">6 Dias (PPL 2x)</option>
         </select>
       </div>
+      <div class="field"><label>Foco do Treino</label>
+        <select id="obj" onchange="gerarProtocolo()">
+          <option value="hipertrofia">Hipertrofia (Densidade)</option>
+          <option value="forca">Força Bruta (Cargas)</option>
+          <option value="definicao">Metabólico (Definição)</option>
+        </select>
+      </div>
+      <button class="btn btn-save" style="width: 100%;" onclick="document.getElementById('setupPanel').style.display='none'">GERAR PLANILHA</button>
     </div>
 
-    <nav class="tab-nav">
-      <div class="tab-item" onclick="nav('relatorio')">📊 Relatório</div>
-      <div class="tab-item active" onclick="nav('treino')">🏋️ Treino</div>
-      <div class="tab-item" onclick="nav('personalizar')">⚙️ Ajustes</div>
-    </nav>
+    <div class="nav-pills" id="nav"></div>
+    <main id="container"></main>
+
+    <footer class="footer">
+      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️</button>
+      <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
+      <button class="btn btn-hist" onclick="verHistorico()">📜</button>
+    </footer>
+
+    <dialog id="modalLib">
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Escolher Exercício</h3>
+      <div id="libContent" style="max-height: 350px; overflow-y: auto;"></div>
+      <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:10px; background:#2d3748; color:white;">Fechar</button>
+    </dialog>
 
     <script>
-      const treinosABC = {
-        "A": ["Agachamento Smith", "Supino Inclinado", "Desenv. Militar", "Fundos/Tríceps", "Extensora"],
-        "B": ["Terra/Stiff", "Remada Curvada", "Puxada Alta", "Face Pull", "Rosca Direta"],
-        "C": ["Leg Press 45", "Supino Máquina", "Búlgaro Smith", "Elev. Lateral", "Remada Máq"]
+      const biblioteca = {
+        "Peito": ["Supino Inclinado", "Supino Reto Barra", "Aberturas Halter", "Voador", "Crossover"],
+        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Levantamento Terra", "Pull Down"],
+        "Pernas": ["Leg Press 45", "Agachamento", "Cadeira Extensora", "Mesa Flexora", "Panturrilha"],
+        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Face Pull"],
+        "Braços": ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa", "Paralelas"]
       };
 
-      let faseAtual = "hiper";
+      const divisoes = {
+        "2": ["Full Body A", "Full Body B"],
+        "3": ["A: Push (Empurrar)", "B: Pull (Puxar)", "C: Legs (Pernas)"],
+        "4": ["A: Superior", "B: Inferior", "C: Superior 2", "D: Inferior 2"],
+        "5": ["A: Peito/Ombro", "B: Costas/Bíceps", "C: Pernas", "D: Superior", "E: Inferior"],
+        "6": ["A: Push", "B: Pull", "C: Legs", "D: Push 2", "E: Pull 2", "F: Legs 2"]
+      };
 
-      function nav(id) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.currentTarget.classList.add('active');
-        if(id === 'relatorio') initChart();
+      let currentExId = null;
+      let timerInterval = null;
+      let isTimerRunning = false;
+
+      function toggleTimer() {
+        const display = document.getElementById('timer');
+        if (isTimerRunning) {
+          clearInterval(timerInterval);
+          isTimerRunning = false;
+          display.innerText = "OFF";
+          display.style.borderColor = "var(--orange)";
+        } else {
+          let time = parseInt(document.getElementById('timerSet').value);
+          isTimerRunning = true;
+          display.style.borderColor = "var(--green)";
+          timerInterval = setInterval(() => {
+            let mins = Math.floor(time / 60);
+            let secs = time % 60;
+            display.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            if (time <= 0) {
+              clearInterval(timerInterval);
+              isTimerRunning = false;
+              display.innerText = "FIM!";
+              display.style.borderColor = "var(--red)";
+              if(window.navigator.vibrate) window.navigator.vibrate([300, 100, 300]);
+            }
+            time--;
+          }, 1000);
+        }
       }
 
-      function renderTreino() {
-        const container = document.getElementById('workout-container');
-        container.innerHTML = "";
-        // Exemplo carregando Treino A
-        treinosABC["A"].forEach((ex, idx) => {
-          container.innerHTML += `
-            <div class="card">
-              <span class="ex-title">${ex}</span>
-              <div class="series-row" style="font-size:9px; color:var(--gray); font-weight:bold; text-align:center;">
-                <div>SET</div><div>KG</div><div>REPS</div><div>RPE</div>
-              </div>
-              ${[1,2,3,4].map(s => `
-                <div class="series-row">
-                  <div style="font-weight:bold; text-align:center;">${s}</div>
-                  <div class="input-group"><span>KG</span><input type="number" class="kg-${idx}" oninput="calc('${idx}')"></div>
-                  <div class="input-group"><span>REP</span><input type="number"></div>
-                  <div class="input-group"><span>RPE</span><input type="number" class="rpe-${idx}" oninput="calc('${idx}')"></div>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        });
-      }
-
-      function calc(idx) {
-        const kgs = document.getElementsByClassName(`kg-${idx}`);
-        const rpes = document.getElementsByClassName(`rpe-${idx}`);
-        const badge = document.getElementById('predict-box');
+      function gerarProtocolo() {
+        const f = document.getElementById('freq').value;
+        const o = document.getElementById('obj').value;
+        const nav = document.getElementById('nav');
+        const cont = document.getElementById('container');
+        nav.innerHTML = ""; cont.innerHTML = "";
         
-        let vKg = 0; let vRpe = 0;
-        for(let i=0; i<kgs.length; i++) {
-          if(kgs[i].value > 0) { vKg = parseFloat(kgs[i].value); vRpe = parseInt(rpes[i].value); }
-        }
+        let meta = o==="forca"?"5-8 Reps": (o==="hipertrofia"?"8-12 Reps":"15-20 Reps");
+        let sets = o==="forca"?5: (o==="definicao"?3:4);
 
-        if(vKg > 0 && vRpe > 0) {
-          badge.style.display = "block";
-          let sugestao = vRpe <= 7 ? (vKg * 1.05).toFixed(1) : (vRpe <= 9 ? (vKg * 1.02).toFixed(1) : vKg);
-          badge.innerHTML = `🎯 <strong>ALVO:</strong> Próxima carga sugerida para este exercício: <strong>${sugestao} KG</strong>`;
-        }
-      }
-
-      function mudarFase() {
-        faseAtual = document.getElementById('selectFase').value;
-        document.getElementById('faseAtiva').innerText = faseAtual.toUpperCase();
-        alert("Periodização alterada para " + faseAtual);
-      }
-
-      function initChart() {
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'],
-            datasets: [{ label: 'Volume', data: [4200, 0, 4800, 0, 5100], borderColor: '#3b5bdb', tension: 0.4 }]
-          },
-          options: { plugins: { legend: { display: false } } }
+        divisoes[f].forEach((nome, i) => {
+          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
+          let sec = document.createElement('div');
+          sec.id = `sec${i}`;
+          sec.className = `section ${i===0?'active':''}`;
+          
+          const sugestao = ["Supino Inclinado", "Puxada Alta", "Leg Press 45", "Desenvolvimento", "Rosca Direta", "Tríceps Corda"];
+          sugestao.forEach((ex, idx) => {
+            const id = `ex-${i}-${idx}`;
+            sec.innerHTML += `
+              <div class="exercise-card">
+                <span class="ex-title" id="${id}" onclick="abrirLib('${id}')">${ex}</span>
+                <span class="ex-target">${sets} SÉRIES | ${meta} | RPE 9</span>
+                <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+                ${Array.from({length: sets}, (_, s) => `
+                  <div class="series-grid">
+                    <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s+1}</span>
+                    <div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div>
+                    <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
+                    <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
+                  </div>`).join('')}
+              </div>`;
+          });
+          cont.appendChild(sec);
         });
       }
 
-      function salvarSessao() { alert("Treino salvo com sucesso!"); }
+      function abrirLib(id) {
+        currentExId = id;
+        const lib = document.getElementById('libContent');
+        lib.innerHTML = "";
+        for (let cat in biblioteca) {
+          lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin-top:10px; border-bottom:1px solid #2d3748; font-size:0.7rem; text-transform:uppercase;">${cat}</div>`;
+          biblioteca[cat].forEach(ex => { lib.innerHTML += `<div class="lib-item" onclick="trocar('${ex}')">${ex}</div>`; });
+        }
+        document.getElementById('modalLib').showModal();
+      }
 
-      renderTreino();
+      function trocar(n) { document.getElementById(currentExId).innerText = n; document.getElementById('modalLib').close(); }
+      function tab(idx) { document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active')); document.getElementById(`sec${idx}`).classList.add('active'); document.getElementById(`p${idx}`).classList.add('active'); window.scrollTo(0,0); }
+
+      function salvarTreino() {
+        const ativo = document.querySelector('.section.active');
+        const logs = [];
+        ativo.querySelectorAll('.exercise-card').forEach(card => {
+          const nome = card.querySelector('.ex-title').innerText;
+          card.querySelectorAll('.series-grid:not(.header-grid)').forEach((linha, i) => {
+            const inps = linha.querySelectorAll('input');
+            if(inps[1].value) logs.push({ex: nome, s: i+1, kg: inps[0].value||0, r: inps[1].value, rpe: inps[2].value||'-'});
+          });
+        });
+        if(!logs.length) return alert("Preencha o treino!");
+        let h = JSON.parse(localStorage.getItem('titan_master_v1') || '[]');
+        h.unshift({data: new Date().toLocaleString('pt-PT'), dados: logs});
+        localStorage.setItem('titan_master_v1', JSON.stringify(h.slice(0,30)));
+        alert("✅ Sessão Gravada!");
+      }
+
+      function verHistorico() {
+        let h = JSON.parse(localStorage.getItem('titan_master_v1') || '[]');
+        if(!h.length) return alert("Sem dados.");
+        alert(h.map(i => `🗓️ ${i.data}\n${i.dados.map(d => `• ${d.ex}: ${d.kg}kg x ${d.r}`).join('\n')}`).join('\n\n'));
+      }
+
+      window.onload = () => { gerarProtocolo(); document.getElementById('displayDate').innerText = new Date().toLocaleDateString('pt-PT'); };
     </script>
   </body>
 </html>
