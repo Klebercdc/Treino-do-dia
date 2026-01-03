@@ -36,6 +36,9 @@
       .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
       .btn.primary { background: #38b2ac; color: #fff; }
       .btn.secondary { background: #2d3748; color: #fff; }
+
+      .rpe-table { font-size: 0.75rem; border-collapse: collapse; width: 100%; margin-top: 10px; }
+      .rpe-table td { padding: 4px; border-bottom: 1px solid #2d3748; }
     </style>
   </head>
   <body>
@@ -68,6 +71,19 @@
       </div>
     </main>
 
+    <dialog class="modal" id="modalSettings">
+      <div class="modalhead"><h3>Guia RPE</h3><button class="iconbtn" id="closeSettings">×</button></div>
+      <table class="rpe-table">
+        <tr><td><b>10</b></td><td>Falha total. Nenhuma repetição a mais.</td></tr>
+        <tr><td><b>9</b></td><td>Muito difícil. Restaria 1 repetição na reserva.</td></tr>
+        <tr><td><b>8</b></td><td>Difícil. Restariam 2 repetições na reserva.</td></tr>
+        <tr><td><b>7</b></td><td>Moderado. Restariam 3 repetições na reserva.</td></tr>
+      </table>
+      <div class="divider"></div>
+      <label class="field"><span>Guardar RPE?</span><select id="keepRpe"><option value="1">Sim</option><option value="0">Não</option></select></label>
+      <button class="btn primary" id="btnSaveSettings" style="margin-top:20px; width:100%">Fechar</button>
+    </dialog>
+
     <dialog class="modal" id="modalHistory">
       <div class="modalhead"><h3>Histórico</h3><button class="iconbtn" id="closeHistory">×</button></div>
       <div class="grid">
@@ -81,35 +97,27 @@
       <div class="hist" id="histList"></div>
     </dialog>
 
-    <dialog class="modal" id="modalSettings">
-      <div class="modalhead"><h3>Configurações</h3><button class="iconbtn" id="closeSettings">×</button></div>
-      <div class="grid">
-        <label class="field"><span>Guardar RPE?</span><select id="keepRpe"><option value="1">Sim</option><option value="0">Não</option></select></label>
-      </div>
-      <button class="btn primary" id="btnSaveSettings" style="margin-top:20px; width:100%">Salvar</button>
-    </dialog>
-
     <input type="file" id="fileImport" accept="application/json" hidden />
 
     <script>
       const data = {
         A: [
-          { n: "1. Agachamento / Leg 45", m: "4 Séries | 90s", o: "Meta: RPE 8-9 (Ficar a 1-2 da falha)", s: 4 },
-          { n: "2. Supino Inclinado", m: "4 Séries | 90s", o: "Meta: RPE 9 (Foco na progressão)", s: 4 },
-          { n: "3. Desenv. Militar", m: "3 Séries | 60s", o: "Meta: RPE 8 (Preservar ombro)", s: 3 },
-          { n: "4. Fundos (Dips) / Testa", m: "3 Séries | 60s", o: "Meta: RPE 9-10 (Falha técnica)", s: 3 },
-          { n: "5. Cadeira Extensora", m: "3 Séries | 45s", o: "Meta: RPE 10 (Queima total)", s: 3 }
+          { n: "1. Agachamento / Leg 45", m: "4 Séries | 90s", o: "Meta: RPE 8-9 (1-2 reserva)", s: 4 },
+          { n: "2. Supino Inclinado", m: "4 Séries | 90s", o: "Meta: RPE 9", s: 4 },
+          { n: "3. Desenv. Militar", m: "3 Séries | 60s", o: "Meta: RPE 8", s: 3 },
+          { n: "4. Fundos / Testa", m: "3 Séries | 60s", o: "Meta: RPE 9-10", s: 3 },
+          { n: "5. Cadeira Extensora", m: "3 Séries | 45s", o: "Meta: RPE 10 (Falha | Baixar peso se necessário)", s: 3 }
         ],
         B: [
-          { n: "1. Terra ou Stiff", m: "4 Séries | 90s", o: "Meta: RPE 7-8 (Cuidado com lombar)", s: 4 },
-          { n: "2. Remada Curvada", m: "4 Séries | 90s", o: "Meta: RPE 9 (Esmagar dorsal)", s: 4 },
+          { n: "1. Terra ou Stiff", m: "4 Séries | 90s", o: "Meta: RPE 7-8", s: 4 },
+          { n: "2. Remada Curvada", m: "4 Séries | 90s", o: "Meta: RPE 9", s: 4 },
           { n: "3. Puxada Alta (Frente)", m: "3 Séries | 60s", o: "Meta: RPE 9", s: 3 },
-          { n: "4. Face Pull", m: "3 Séries | 45s", o: "Meta: RPE 10 (Volume alto)", s: 3 },
+          { n: "4. Face Pull", m: "3 Séries | 45s", o: "Meta: RPE 10", s: 3 },
           { n: "5. Rosca Direta", m: "3 Séries | 60s", o: "Meta: RPE 9", s: 3 }
         ],
         C: [
           { n: "1A. Leg Press Horiz.", m: "3 Séries | Superset", o: "Meta: RPE 9", s: 3 },
-          { n: "1B. Flexão de Braços", m: "3 Séries | Máximo", o: "Meta: RPE 10 (Falha)", s: 3 },
+          { n: "1B. Flexão de Braços", m: "3 Séries | Máximo", o: "Meta: RPE 10", s: 3 },
           { n: "2A. Afundo / Passada", m: "3 Séries | Constante", o: "Meta: RPE 8", s: 3 },
           { n: "2B. Elevação Lateral", m: "3 Séries | 15 Reps", o: "Meta: RPE 10", s: 3 },
           { n: "3A. Remada Máquina", m: "3 Séries | Foco Dorsal", o: "Meta: RPE 9", s: 3 },
@@ -156,6 +164,13 @@
       }
 
       build();
+
+      // Funções de Diálogo
+      document.getElementById('btnSettings').onclick = () => document.getElementById('modalSettings').showModal();
+      document.getElementById('closeSettings').onclick = () => document.getElementById('modalSettings').close();
+      document.getElementById('btnSaveSettings').onclick = () => document.getElementById('modalSettings').close();
+      document.getElementById('btnHistory').onclick = () => document.getElementById('modalHistory').showModal();
+      document.getElementById('closeHistory').onclick = () => document.getElementById('modalHistory').close();
     </script>
     <script src="./app.js"></script>
   </body>
