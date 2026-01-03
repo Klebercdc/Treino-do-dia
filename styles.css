@@ -130,3 +130,40 @@ body {
   margin-bottom: 10px;
   border: 1px solid var(--border);
 }
+/* Garante que nada ultrapassa a largura do telemóvel */
+.container {
+  overflow-x: hidden;
+  padding: 10px;
+}
+
+.card {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 12px 8px; /* Reduz padding lateral nos cards */
+}
+
+/* Remove margens negativas que podem causar scroll lateral */
+.grid, .set-row {
+  width: 100%;
+  margin: 0 !important;
+}
+
+/* Ajuste nos inputs para não terem bordas largas */
+input {
+  border: 1px solid var(--border);
+  background: var(--btn2);
+  color: var(--text);
+  border-radius: 6px;
+}
+
+/* Otimiza a barra fixa no fundo para ecrãs muito pequenos */
+@media (max-width: 360px) {
+  .footerrow {
+    padding: 8px;
+    gap: 5px;
+  }
+  .btn {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
