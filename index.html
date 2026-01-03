@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - Teu Protocolo ABC</title>
+    <title>TITAN LOG - Master AI</title>
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
       body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 95px; }
@@ -17,46 +17,57 @@
       .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); overflow-x: auto; border-bottom: 1px solid #2d3748; }
       .pill { flex: 1; text-align: center; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; white-space: nowrap; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
-      .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
+      .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; animation: fadeIn 0.3s ease; }
       .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); text-decoration: underline dotted; cursor: pointer; }
       .ex-target { font-size: 0.75rem; color: var(--orange); font-weight: bold; margin: 4px 0 10px 0; display: block; }
       .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
       .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: bold; }
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
+      .section { display: none; }
+      .section.active { display: block; }
       .footer { position: fixed; bottom: 0; width: 100%; background: var(--bg); padding: 12px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 100; }
       .btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
       .btn-save { background: var(--green); color: white; }
       .btn-config { background: #1a202c; color: var(--blue); border: 1px solid var(--blue); }
       dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 400px; padding: 20px; }
       .lib-item { padding: 12px; border-bottom: 1px solid #2d3748; cursor: pointer; }
-      .section { display: none; }
-      .section.active { display: block; }
+      .lib-item:active { background: var(--blue); }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
   </head>
   <body>
 
     <div class="top-header">
-      <h1 style="margin:0; font-size: 1.1rem; color: var(--blue);">TITAN LOG - TEU ABC</h1>
+      <h1 style="margin:0; font-size: 1.1rem; color: var(--blue);">TITAN LOG MASTER</h1>
       <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
 
     <div class="setup-panel" id="setupPanel">
-      <div class="field"><label>Periodização Atual</label>
-        <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia" selected>Hipertrofia (8-12 Reps)</option>
-          <option value="forca">Força (5-8 Reps)</option>
-          <option value="definicao">Definição (15-20 Reps)</option>
+      <div class="field"><label>Frequência (Dias/Semana)</label>
+        <select id="freq" onchange="gerarProtocolo()">
+          <option value="2">2 Dias (Full Body)</option>
+          <option value="3">3 Dias (ABC - Push/Pull/Legs)</option>
+          <option value="4" selected>4 Dias (Upper/Lower)</option>
+          <option value="5">5 Dias (ABC + Upper/Lower)</option>
+          <option value="6">6 Dias (PPL x2 - Hipertrofia Extrema)</option>
         </select>
       </div>
-      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">ABRIR MEU TREINO</button>
+      <div class="field"><label>Objetivo & Periodização</label>
+        <select id="obj" onchange="gerarProtocolo()">
+          <option value="hipertrofia">Hipertrofia (8-12 Reps - Volume)</option>
+          <option value="forca">Força (3-5 Reps - Carga Máxima)</option>
+          <option value="definicao">Definição (15-20 Reps - Metabólico)</option>
+        </select>
+      </div>
+      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">GERAR TREINO PERSONALIZADO</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
 
     <footer class="footer">
-      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ Meta</button>
+      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️</button>
       <button class="btn btn-save" onclick="salvarTreino()">SALVAR HOJE</button>
       <button class="btn btn-config" onclick="verHistorico()" style="flex:0.4">📜</button>
     </footer>
@@ -69,44 +80,51 @@
 
     <script>
       const biblioteca = {
-        "Peito": ["Supino Inclinado", "Supino Reto Halter", "Crossover", "Voador", "Flexão"],
-        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Terra", "Stiff", "Pull Down"],
-        "Pernas": ["Leg Press 45", "Cadeira Extensora", "Cadeira Flexora", "Agachamento", "Panturrilha"],
-        "Ombros": ["Desenvolvimento Militar", "Elevação Lateral", "Face Pull", "Crucifixo Inverso"],
+        "Peito": ["Supino Inclinado", "Supino Reto Barra", "Supino Halter", "Crossover", "Voador"],
+        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Serrote", "Barra Fixa", "Terra"],
+        "Pernas": ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff", "Panturrilha"],
+        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Crucifixo Inverso"],
         "Braços": ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa", "Paralelas"]
       };
 
-      const treinosFixos = {
-        "A": ["Supino Inclinado", "Supino Reto Halter", "Desenvolvimento Militar", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"],
-        "B": ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Crucifixo Inverso", "Rosca Direta", "Rosca Martelo"],
-        "C": ["Leg Press 45", "Cadeira Extensora", "Cadeira Flexora", "Stiff", "Panturrilha em Pé"]
+      const divisoes = {
+        "2": ["A (Full Body 1)", "B (Full Body 2)"],
+        "3": ["A (Push - Empurrar)", "B (Pull - Puxar)", "C (Legs - Pernas)"],
+        "4": ["A (Upper - Superior)", "B (Lower - Inferior)", "C (Upper 2)", "D (Lower 2)"],
+        "5": ["A (Peito/Ombro)", "B (Costas/Traps)", "C (Pernas)", "D (Superior)", "E (Inferior)"],
+        "6": ["A (Push)", "B (Pull)", "C (Legs)", "D (Push 2)", "E (Pull 2)", "F (Legs 2)"]
       };
 
       let currentExId = null;
 
       function gerarProtocolo() {
+        const f = document.getElementById('freq').value;
         const o = document.getElementById('obj').value;
         const nav = document.getElementById('nav');
         const cont = document.getElementById('container');
         
         nav.innerHTML = ""; cont.innerHTML = "";
-        let meta = o==="forca"?"5-8 Reps (Força)": (o==="hipertrofia"?"8-12 Reps (Densidade)":"15-20 Reps (Pump)");
+        let meta = o==="forca"?"3-5 Reps (Força)": (o==="hipertrofia"?"8-12 Reps (Volume)":"15-20 Reps (Pump)");
         let sets = o==="forca"?5: (o==="definicao"?3:4);
 
-        ["A", "B", "C"].forEach((letra, i) => {
-          const nomePill = letra === "A" ? "PUSH (Empurrar)" : (letra === "B" ? "PULL (Puxar)" : "LEGS (Pernas)");
-          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nomePill}</div>`;
-          
+        divisoes[f].forEach((nome, i) => {
+          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
           let sec = document.createElement('div');
           sec.id = `sec${i}`;
           sec.className = `section ${i===0?'active':''}`;
           
-          treinosFixos[letra].forEach((ex, idx) => {
+          let sugestao = [];
+          if(nome.includes("Push") || nome.includes("Peito") || nome.includes("Upper")) sugestao = ["Supino Inclinado", "Desenvolvimento", "Tríceps Corda", "Elevação Lateral"];
+          if(nome.includes("Pull") || nome.includes("Costas")) sugestao = ["Puxada Alta", "Remada Curvada", "Rosca Direta", "Crucifixo Inverso"];
+          if(nome.includes("Legs") || nome.includes("Lower") || nome.includes("Pernas")) sugestao = ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Panturrilha"];
+          if(nome.includes("Full")) sugestao = ["Agachamento", "Supino Reto", "Remada Curvada", "Desenvolvimento", "Rosca/Tríceps"];
+
+          sugestao.forEach((ex, idx) => {
             const id = `ex-${i}-${idx}`;
             sec.innerHTML += `
               <div class="exercise-card">
                 <span class="ex-title" id="${id}" onclick="abrirLib('${id}')">${ex}</span>
-                <span class="ex-target">META: ${sets} Séries | ${meta}</span>
+                <span class="ex-target">META: ${sets} Séries de ${meta}</span>
                 <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
                 ${Array.from({length: sets}, (_, s) => `
                   <div class="series-grid">
@@ -135,6 +153,7 @@
       }
 
       function trocar(n) { document.getElementById(currentExId).innerText = n; document.getElementById('modalLib').close(); }
+
       function tab(idx) {
         document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active'));
         document.getElementById(`sec${idx}`).classList.add('active');
@@ -151,16 +170,16 @@
             if(inps[1].value) logs.push({ex: nome, s: i+1, kg: inps[0].value||0, r: inps[1].value, rpe: inps[2].value||'-'});
           });
         });
-        if(!logs.length) return alert("Preenche as repetições!");
-        let h = JSON.parse(localStorage.getItem('titan_abc') || '[]');
+        if(!logs.length) return alert("Preencha as repetições!");
+        let h = JSON.parse(localStorage.getItem('titan_master') || '[]');
         h.unshift({data: new Date().toLocaleString('pt-PT'), dados: logs});
-        localStorage.setItem('titan_abc', JSON.stringify(h.slice(0,30)));
-        alert("✅ Treino de Hoje Salvo!");
+        localStorage.setItem('titan_master', JSON.stringify(h.slice(0,30)));
+        alert("✅ Treino Salvo!");
       }
 
       function verHistorico() {
-        let h = JSON.parse(localStorage.getItem('titan_abc') || '[]');
-        if(!h.length) return alert("Sem treinos gravados.");
+        let h = JSON.parse(localStorage.getItem('titan_master') || '[]');
+        if(!h.length) return alert("Sem histórico.");
         alert(h.map(i => `🗓️ ${i.data}\n${i.dados.map(d => `• ${d.ex}: ${d.kg}kg x ${d.r} (RPE:${d.rpe})`).join('\n')}`).join('\n\n'));
       }
 
