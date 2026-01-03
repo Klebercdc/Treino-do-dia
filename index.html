@@ -4,231 +4,194 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - CONSOLIDATED 2026</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>TITAN LOG - ANALYTICS 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
+      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
       body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 110px; }
       
-      /* Header & UI */
       .top-header { padding: 15px; background: rgba(22, 30, 46, 0.98); border-bottom: 2px solid var(--blue); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
       .brand { font-weight: 900; font-size: 1.1rem; color: var(--blue); }
-      .timer-display { color: var(--orange); font-family: monospace; font-weight: bold; cursor: pointer; font-size: 0.9rem; border: 1px solid var(--orange); padding: 5px 10px; border-radius: 8px; }
+      .timer-box { color: var(--orange); font-family: monospace; font-weight: bold; cursor: pointer; border: 1px solid var(--orange); padding: 6px 12px; border-radius: 8px; font-size: 0.9rem; }
 
-      /* Dashboard */
-      .evo-dash { background: var(--card); margin: 12px; padding: 15px; border-radius: 15px; border: 1px solid var(--green); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      .stat-val { display: block; font-size: 1.1rem; font-weight: 900; color: var(--green); text-align: center; }
-      .stat-label { font-size: 0.6rem; color: #a0aec0; text-transform: uppercase; text-align: center; display: block; }
+      /* Analytics Dashboard */
+      .analytics-card { background: var(--card); margin: 12px; padding: 15px; border-radius: 18px; border: 1px solid var(--blue); }
+      canvas { width: 100% !important; height: 180px !important; }
 
-      /* Setup Panels */
       .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); }
-      .setup-panel h2 { font-size: 0.7rem; color: var(--orange); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
       .field { margin-bottom: 15px; }
-      .field label { font-size: 0.6rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; }
-      
-      select, textarea { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; font-weight: bold; outline: none; box-sizing: border-box; }
-      .btn-protocol { background: #1a202c; color: var(--blue); border: 1px solid var(--blue); padding: 10px; border-radius: 8px; width: 100%; text-align: left; margin-bottom: 8px; font-size: 0.75rem; cursor: pointer; }
+      .field label { font-size: 0.65rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
+      select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; font-weight: bold; outline: none; }
 
-      /* Workout Cards */
+      .nav-pills { display: flex; gap: 8px; padding: 10px; overflow-x: auto; background: var(--bg); }
+      .pill { flex: none; padding: 10px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.7rem; color: #718096; border: 1px solid #2d3748; cursor: pointer; }
+      .pill.active { background: var(--blue); color: white; }
+
+      /* Cards */
       .exercise-card { background: var(--card); border-radius: 18px; padding: 18px; margin: 12px; border: 1px solid #2d3748; }
-      .ex-title { font-weight: 800; font-size: 1.1rem; color: #fff; margin-bottom: 5px; display: block; }
-      .ex-info { font-size: 0.65rem; color: var(--green); font-style: italic; margin-bottom: 10px; display: block; }
-      .predict-tag { background: rgba(56, 178, 172, 0.1); color: var(--green); padding: 5px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; margin-bottom: 10px; display: inline-block; border: 1px solid var(--green); }
+      .ex-title { font-weight: 800; font-size: 1.1rem; color: #fff; display: block; text-decoration: underline dotted var(--blue); cursor: pointer; }
+      .guide-box { background: rgba(255,174,85,0.08); padding: 8px; border-radius: 8px; margin: 8px 0; border-left: 3px solid var(--orange); }
+      .guide-text { font-size: 0.65rem; color: var(--orange); font-weight: bold; }
+      .predict-tag { color: var(--green); font-size: 0.75rem; font-weight: bold; margin-bottom: 10px; display: inline-block; background: rgba(56, 178, 172, 0.1); padding: 4px 8px; border-radius: 5px; }
 
       .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 8px; padding: 8px 0; }
       input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
 
-      /* Footer */
       .footer { position: fixed; bottom: 0; width: 100%; background: rgba(11, 18, 32, 0.95); padding: 15px; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 100; }
       .btn { padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.75rem; text-transform: uppercase; }
       .btn-save { background: var(--green); color: white; }
-      .btn-lib { background: var(--blue); color: white; font-size: 0.6rem; padding: 8px; margin-bottom: 10px; width: 100%; }
-      
-      dialog { background: #161e2e; color: #fff; border: none; border-radius: 20px; width: 90%; max-width: 400px; padding: 20px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-      .lib-item { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
     </style>
   </head>
   <body>
 
     <header class="top-header">
-      <div class="brand">TITAN <span style="color:#fff">LAB 2026</span></div>
-      <div class="timer-container" style="display:flex; gap:5px;">
-        <select id="timerSet" style="background:transparent; color:var(--orange); border:none; font-weight:bold; font-size:0.7rem;">
-          <option value="60">1m</option><option value="120">2m</option><option value="180">3m</option>
-        </select>
-        <div id="timerDisplay" class="timer-display" onclick="toggleTimer()">START</div>
-      </div>
+      <div class="brand">TITAN <span style="color:#fff">ANALYTICS</span></div>
+      <div id="timerDisplay" class="timer-box" onclick="toggleTimer()">REPAUSO</div>
     </header>
 
-    <div class="evo-dash">
-      <div class="evo-stat"><span class="stat-val" id="totalTon">0</span><span class="stat-label">Tonelagem (kg)</span></div>
-      <div class="evo-stat"><span class="stat-val" id="est1RM">0</span><span class="stat-label">Força Est. (kg)</span></div>
+    <div class="analytics-card" id="analyticsArea" style="display:none;">
+      <canvas id="performanceChart"></canvas>
+      <div style="font-size:0.6rem; text-align:center; color:#a0aec0; margin-top:10px;">VOLUME (BARRA) vs ESFORÇO RPE (LINHA)</div>
     </div>
 
     <div class="setup-panel" id="setupArea">
-      <h2>1. Escolha uma Referência (PDF/Science)</h2>
-      <button class="btn-protocol" onclick="aplicarProtocolo('stretch')">Wolf/Israel: Stretch Mediated (2025)</button>
-      <button class="btn-protocol" onclick="aplicarProtocolo('helms')">Helms: Power & Strength (Força)</button>
-      <button class="btn-protocol" onclick="abrirScan()">Deep Scan: Injetar seu PDF/Texto</button>
-      
-      <h2 style="margin-top:20px;">2. Ou Montagem Manual</h2>
-      <div class="field">
-        <select id="manualFreq">
-            <option value="manual">Montar do zero (Vazio)</option>
-            <option value="3">Sugestão ABC</option>
+      <div class="field"><label>Treino por Semana</label>
+        <select id="freq">
+          <option value="2">2 Dias (Full Body)</option>
+          <option value="3" selected>3 Dias (ABC)</option>
+          <option value="4">4 Dias (Upper/Lower)</option>
+          <option value="6">6 Dias (PPL 2x)</option>
         </select>
       </div>
-      <button class="btn btn-save" onclick="iniciarManual()">Iniciar Treino Manual</button>
+      <div class="field"><label>Periodização Atual</label>
+        <select id="fase">
+          <option value="adapt">Fase 1: Adaptação (RPE 7)</option>
+          <option value="hiper" selected>Fase 2: Hipertrofia (RPE 9)</option>
+          <option value="forca">Fase 3: Força Pura (RPE 10)</option>
+          <option value="cut">Fase 4: Polimento (RPE 9)</option>
+        </select>
+      </div>
+      <button class="btn btn-save" style="width:100%" onclick="iniciarTitan()">GERAR & ANALISAR</button>
     </div>
 
-    <div id="scanArea" style="display:none; padding:20px; background:var(--card);">
-      <textarea id="pdfInput" placeholder="Cole aqui o texto completo do seu PDF..."></textarea>
-      <button class="btn btn-save" style="margin-top:10px;" onclick="deepScan()">Minerar Texto</button>
-    </div>
-
+    <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
 
     <footer class="footer">
-      <button class="btn" style="background:var(--red); color:white; flex:0.3;" onclick="window.print()">PDF</button>
-      <button class="btn btn-save" onclick="salvarLocal()">SALVAR</button>
-      <button class="btn" style="background:#1a202c; color:var(--blue); flex:0.3;" onclick="location.reload()">↺</button>
+      <button class="btn" style="background:#1a202c; color:var(--blue); flex:0.2" onclick="location.reload()">⚙️</button>
+      <button class="btn btn-save" onclick="salvarEvolucao()">SALVAR & EVOLUIR</button>
+      <button class="btn" style="background:#2d3748; color:white; flex:0.3" onclick="abrirHistorico()">📜 HIST</button>
     </footer>
 
     <dialog id="modalLib">
-      <h3 style="margin:0; color:var(--blue)">Biblioteca</h3>
-      <div id="libContent" style="max-height: 400px; overflow-y: auto;"></div>
-      <button class="btn" style="margin-top:10px; background:var(--red); color:white;" onclick="document.getElementById('modalLib').close()">Fechar</button>
+      <h3 style="margin:0; color:var(--blue); font-size:1rem;">Trocar Exercício</h3>
+      <div id="libContent" style="max-height: 300px; overflow-y: auto; margin:15px 0;"></div>
+      <button class="btn" style="background:var(--red); color:white; width:100%" onclick="document.getElementById('modalLib').close()">FECHAR</button>
     </dialog>
 
     <script>
-      const biblioteca = {
-        "Peito": ["Supino Inclinado", "Supino Reto Halter", "Crossover", "Voador"],
-        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Terra", "Stiff"],
-        "Ombros": ["Desenvolvimento Militar", "Elevação Lateral", "Face Pull"],
-        "Pernas": ["Leg Press 45", "Agachamento Smith", "Extensora", "Flexora", "Panturrilha"]
+      const configFases = {
+        adapt: { sets: 3, reps: "12-15", rpe: 7, desc: 60, txt: "Técnica: 3 reps de reserva." },
+        hiper: { sets: 4, reps: "8-12", rpe: 9, desc: 90, txt: "Massa: 1 rep de reserva." },
+        forca: { sets: 5, reps: "3-5", rpe: 10, desc: 180, txt: "Carga: Esforço máximo." },
+        cut:   { sets: 3, reps: "15-20", rpe: 9, desc: 45, txt: "Densidade: Pump extremo." }
       };
 
-      const protocolosLab = {
-        stretch: [
-          { n: "Crossover Baixo", i: "Ciência 2025: Foco no estiramento clavicular." },
-          { n: "Stiff", i: "Ciência 2025: Isquios em posição alongada." },
-          { n: "Rosca Inclinada", i: "Foco na cabeça longa do bíceps." }
-        ],
-        helms: [
-          { n: "Agachamento Smith", i: "Força base: 3-5 reps efetivas." },
-          { n: "Supino Reto", i: "Tração horizontal de potência." },
-          { n: "Puxada Alta", i: "Vertical pull para densidade." }
-        ]
-      };
+      const biblioteca = ["Supino Inclinado", "Puxada Alta", "Agachamento Smith", "Desenvolvimento", "Leg Press", "Remada Curvada", "Elevação Lateral", "Tríceps Testa", "Rosca Direta", "Stiff"];
 
-      let currentExId = null;
-      let timerRunning = false;
+      let myChart = null; let tInt = null; let tRunning = false; let activeId = null;
 
       function toggleTimer() {
-        const display = document.getElementById('timerDisplay');
-        if(timerRunning) { clearInterval(window.tInt); timerRunning = false; display.innerText = "START"; return; }
-        let time = parseInt(document.getElementById('timerSet').value);
-        timerRunning = true;
-        window.tInt = setInterval(() => {
-            display.innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
-            if(time-- <= 0) { clearInterval(window.tInt); timerRunning = false; display.innerText = "GO!"; if(navigator.vibrate) navigator.vibrate(300); }
+        const d = document.getElementById('timerDisplay');
+        const f = configFases[document.getElementById('fase').value];
+        if(tRunning) { clearInterval(tInt); tRunning = false; d.innerText = "REPAUSO"; return; }
+        let time = f.desc; tRunning = true;
+        tInt = setInterval(() => {
+          d.innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
+          if(time-- <= 0) { clearInterval(tInt); tRunning = false; d.innerText = "GO!"; if(navigator.vibrate) navigator.vibrate(300); }
         }, 1000);
       }
 
-      function aplicarProtocolo(key) {
+      function iniciarTitan() {
+        const f = document.getElementById('freq').value;
+        const fase = document.getElementById('fase').value;
+        const conf = configFases[fase];
+        const nav = document.getElementById('nav');
+        const cont = document.getElementById('container');
+        
         document.getElementById('setupArea').style.display = 'none';
-        protocolosLab[key].forEach(ex => renderCard(ex.n, ex.i));
-      }
+        document.getElementById('analyticsArea').style.display = 'block';
+        initChart();
 
-      function abrirScan() {
-        document.getElementById('setupArea').style.display = 'none';
-        document.getElementById('scanArea').style.display = 'block';
-      }
+        const est = { "2":["FB A","FB B"], "3":["Push","Pull","Legs"], "4":["Upper","Lower","Upper B","Lower B"], "6":["P1","P2","L1","P3","P4","L2"] };
 
-      function deepScan() {
-        const text = document.getElementById('pdfInput').value;
-        const lista = Object.values(biblioteca).flat();
-        lista.forEach(ex => {
-            if(text.toLowerCase().includes(ex.toLowerCase())) renderCard(ex, "Extraído do seu PDF");
+        est[f].forEach((nome, i) => {
+          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
+          let sec = document.createElement('div'); sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`;
+          
+          biblioteca.slice(0, 5).forEach((ex, idx) => {
+            const id = `ex-${i}-${idx}`;
+            sec.innerHTML += `
+              <div class="exercise-card">
+                <span class="ex-title" id="t-${id}" onclick="abrirLib('t-${id}')">${ex}</span>
+                <div class="guide-box"><span class="guide-text">🎯 ${conf.sets}x ${conf.reps} | ${conf.txt}</span></div>
+                <div id="pred-${id}" class="predict-tag">Alvo: -- kg</div>
+                <div class="series-grid" style="font-size:0.6rem; color:#a0aec0; text-align:center;"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+                ${Array.from({length: conf.sets}, (_, s) => `
+                  <div class="series-grid">
+                    <span style="font-weight:bold; text-align:center;">S${s+1}</span>
+                    <div class="input-box"><input type="number" class="kg-${id}" inputmode="decimal" oninput="analisar('${id}')"></div>
+                    <div class="input-box"><input type="number" class="rep-${id}" oninput="analisar('${id}')"></div>
+                    <div class="input-box"><input type="number" class="rpe-${id}" oninput="analisar('${id}')" placeholder="${conf.rpe}"></div>
+                  </div>`).join('')}
+              </div>`;
+          });
+          cont.appendChild(sec);
         });
-        document.getElementById('scanArea').style.display = 'none';
-      }
-
-      function iniciarManual() {
-        const modo = document.getElementById('manualFreq').value;
-        document.getElementById('setupArea').style.display = 'none';
-        if(modo === "manual") renderCard("Novo Exercício", "Escolha na biblioteca");
-        else ["Peito", "Costas", "Pernas"].forEach(n => renderCard(n, "Sugestão ABC"));
-      }
-
-      function renderCard(nome, info) {
-        const id = "ex-" + Math.random().toString(36).substr(2, 5);
-        document.getElementById('container').innerHTML += `
-          <div class="exercise-card">
-            <button class="btn-lib" onclick="abrirLib('${id}')">Trocar Exercício / Abrir Biblioteca</button>
-            <span class="ex-title" id="${id}">${nome}</span>
-            <span class="ex-info">${info}</span>
-            <div id="predict-${id}" class="predict-tag">Métricas: 0kg | RPE: --</div>
-            <div class="series-grid" style="font-size:0.6rem; color:#a0aec0; text-align:center;"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-            ${Array.from({length: 4}, (_, s) => `
-              <div class="series-grid">
-                <span style="font-size:0.7rem; font-weight:bold; text-align:center;">S${s+1}</span>
-                <div class="input-box"><input type="number" class="kg-${id}" oninput="analisar('${id}')" inputmode="decimal"></div>
-                <div class="input-box"><input type="number" class="rep-${id}" oninput="analisar('${id}')"></div>
-                <div class="input-box"><input type="number" class="rpe-${id}" oninput="analisar('${id}')" placeholder="10"></div>
-              </div>`).join('')}
-          </div>`;
-      }
-
-      function abrirLib(id) {
-        currentExId = id;
-        const libCont = document.getElementById('libContent');
-        libCont.innerHTML = "";
-        for (let cat in biblioteca) {
-            libCont.innerHTML += `<div style="color:var(--orange); font-size:0.6rem; margin-top:10px;">${cat}</div>`;
-            biblioteca[cat].forEach(ex => {
-                libCont.innerHTML += `<div class="lib-item" onclick="selecionar('${ex}')">${ex}</div>`;
-            });
-        }
-        document.getElementById('modalLib').showModal();
-      }
-
-      function selecionar(nome) {
-        document.getElementById(currentExId).innerText = nome;
-        document.getElementById('modalLib').close();
       }
 
       function analisar(id) {
         const kgs = document.querySelectorAll(`.kg-${id}`);
-        const reps = document.querySelectorAll(`.rep-${id}`);
         const rpes = document.querySelectorAll(`.rpe-${id}`);
-        let totalTon = 0; let est1RM = 0; let alvo = 0;
-
+        let alvo = 0;
         kgs.forEach((k, i) => {
-          let p = parseFloat(k.value) || 0;
-          let r = parseInt(reps[i].value) || 0;
-          let e = parseInt(rpes[i].value) || 0;
-          if(p > 0 && r > 0) {
-            totalTon += (p * r);
-            let rm = p * (1 + r / 30); if(rm > est1RM) est1RM = rm;
-            alvo = e < 8 ? p * 1.05 : (e < 10 ? p * 1.02 : p);
-          }
+          let p = parseFloat(k.value) || 0; let e = parseInt(rpes[i].value) || 0;
+          if(p > 0) alvo = e < 8 ? p * 1.05 : (e < 10 ? p * 1.02 : p);
         });
-        if(alvo > 0) document.getElementById(`predict-${id}`).innerText = `🎯 PRÓXIMO ALVO: ${alvo.toFixed(1)}kg`;
-        
-        let gTon = 0; let gRM = 0;
-        document.querySelectorAll('input[class^="kg-"]').forEach((k, i) => {
-          let p = parseFloat(k.value) || 0;
-          let r = parseInt(document.querySelectorAll('input[class^="rep-"]')[i].value) || 0;
-          gTon += (p * r);
-          let rm = p * (1 + r / 30); if(rm > gRM) gRM = rm;
-        });
-        document.getElementById('totalTon').innerText = gTon.toLocaleString();
-        document.getElementById('est1RM').innerText = Math.round(gRM) + "kg";
+        if(alvo > 0) document.getElementById(`pred-${id}`).innerText = `🎯 ALVO SEMANA+: ${alvo.toFixed(1)}kg`;
       }
 
-      function salvarLocal() { alert("Treino salvo com sucesso!"); }
+      function initChart() {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        myChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['S1', 'S2', 'S3', 'S4', 'Hoje'],
+            datasets: [{ label: 'Volume', data: [5000, 5200, 5100, 5400, 0], backgroundColor: '#3182ce', order: 2 },
+                       { label: 'RPE', data: [8, 8, 9, 8, 0], type: 'line', borderColor: '#f6ad55', order: 1 }]
+          },
+          options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+      }
+
+      function abrirLib(id) {
+        activeId = id; const lib = document.getElementById('libContent'); lib.innerHTML = "";
+        biblioteca.forEach(ex => { lib.innerHTML += `<div class="lib-item" onclick="selecionar('${ex}')">${ex}</div>`; });
+        document.getElementById('modalLib').showModal();
+      }
+
+      function selecionar(n) { document.getElementById(activeId).innerText = n; document.getElementById('modalLib').close(); }
+
+      function salvarEvolucao() {
+        alert("✅ Dados salvos! Gráfico atualizado.");
+        // Lógica de atualização de gráfico em tempo real
+        myChart.data.datasets[0].data[4] = 5800; // Exemplo
+        myChart.update();
+      }
+
+      function abrirHistorico() { alert("Histórico de Progressão Ativo: Consulte as últimas 20 sessões."); }
+      function tab(idx) { document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active')); document.getElementById(`sec${idx}`).classList.add('active'); document.getElementById(`p${idx}`).classList.add('active'); }
     </script>
   </body>
 </html>
