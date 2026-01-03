@@ -4,13 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - Meta por Série</title>
+    <title>TITAN LOG - Periodização Ativa</title>
     <link rel="stylesheet" href="./styles.css" />
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; }
+      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
       body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; }
       
       .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
+      .period-selector { background: var(--card); padding: 10px; border-bottom: 1px solid #2d3748; display: flex; align-items: center; justify-content: space-around; }
+      .period-selector select { background: #0b1220; color: var(--green); border: 1px solid var(--green); border-radius: 5px; padding: 5px; font-weight: bold; }
+      
       .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2d3748; }
       .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
@@ -27,14 +30,14 @@
       
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
-      .input-box input::placeholder { color: #4a5568; opacity: 1; }
+      .input-box input::placeholder { color: #4a5568; }
 
       .section { display: none; }
       .section.active { display: block; }
       
       .footer-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 10px; gap: 10px; }
       .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
-      .btn.primary { background: #38b2ac; color: #fff; }
+      .btn.primary { background: var(--green); color: #fff; }
       .btn.secondary { background: #2d3748; color: #fff; }
     </style>
   </head>
@@ -49,6 +52,16 @@
         <button class="iconbtn" id="btnSettings">⚙️</button>
       </div>
     </header>
+
+    <div class="period-selector">
+      <span>Fase Atual:</span>
+      <select id="periodoFase">
+        <option value="forca">FORÇA (Cargas Altas)</option>
+        <option value="hipertrofia" selected>HIPERTROFIA (Densidade)</option>
+        <option value="metabolico">METABÓLICO (Pump)</option>
+        <option value="deload">DELOAD (Recuperação)</option>
+      </select>
+    </div>
 
     <div class="nav-pills">
       <div class="pill active" onclick="tab('A', this)">TREINO A</div>
@@ -71,17 +84,17 @@
     <script>
       const data = {
         A: [
-          { n: "1. Agachamento / Leg 45", target: "META: 8-10 REPS | RPE 8-9", m: "Foco: Força e Base", s: 4 },
+          { n: "1. Agachamento / Leg 45", target: "META: 8-10 REPS | RPE 8-9", m: "Foco: Base e Estabilidade", s: 4 },
           { n: "2. Supino Inclinado", target: "META: 8-10 REPS | RPE 9", m: "Foco: Peitoral Superior", s: 4 },
-          { n: "3. Desenv. Militar", target: "META: 10-12 REPS | RPE 8", m: "Foco: Deltoides", s: 3 },
-          { n: "4. Fundos ou Testa", target: "META: FALHA TÉCNICA | RPE 9", m: "Foco: Tríceps", s: 3 },
+          { n: "3. Desenv. Militar", target: "META: 10-12 REPS | RPE 8", m: "Foco: Deltoide Frontal", s: 3 },
+          { n: "4. Fundos ou Testa", target: "META: FALHA | RPE 9-10", m: "Foco: Tríceps", s: 3 },
           { n: "5. Cadeira Extensora", target: "META: 15 REPS | RPE 10", m: "Foco: Isolamento", s: 3 }
         ],
         B: [
-          { n: "1. Terra ou Stiff", target: "META: 6-8 REPS | RPE 7-8", m: "Foco: Cadeia Posterior", s: 4 },
-          { n: "2. Remada Curvada", target: "META: 8-10 REPS | RPE 9", m: "Foco: Espessura Costas", s: 4 },
-          { n: "3. Puxada Alta (Frente)", target: "META: 10-12 REPS | RPE 9", m: "Foco: Largura Costas", s: 3 },
-          { n: "4. Face Pull", target: "META: 15 REPS | RPE 10", m: "Foco: Deltoide Posterior", s: 3 },
+          { n: "1. Terra ou Stiff", target: "META: 6-8 REPS | RPE 7-8", m: "Foco: Isquios/Lombar", s: 4 },
+          { n: "2. Remada Curvada", target: "META: 8-10 REPS | RPE 9", m: "Foco: Dorsal", s: 4 },
+          { n: "3. Puxada Alta (Frente)", target: "META: 10-12 REPS | RPE 9", m: "Foco: Grande Dorsal", s: 3 },
+          { n: "4. Face Pull", target: "META: 15 REPS | RPE 10", m: "Foco: Saúde Ombro", s: 3 },
           { n: "5. Rosca Direta", target: "META: 10-12 REPS | RPE 9", m: "Foco: Bíceps", s: 3 }
         ],
         C: [
@@ -91,7 +104,7 @@
           { n: "2B. Elevação Lateral", target: "META: 15 REPS | RPE 10", m: "SUPERSET", s: 3 },
           { n: "3A. Remada Máquina", target: "META: 12 REPS | RPE 9", m: "SUPERSET", s: 3 },
           { n: "3B. Tríceps Corda", target: "META: 15 REPS | RPE 10", m: "SUPERSET", s: 3 },
-          { n: "4. Cadeira Flexora", target: "META: 15 REPS | RPE 9", m: "Foco: Isquiotibiais", s: 4 }
+          { n: "4. Cadeira Flexora", target: "META: 15 REPS | RPE 9", m: "Foco: Isquios", s: 4 }
         ]
       };
 
@@ -133,7 +146,7 @@
 
       build();
 
-      // Modal e Histórico - Conectados ao app.js
+      // Funções de Modal conectadas ao seu app.js
       document.getElementById('btnHistory').onclick = () => document.getElementById('modalHistory')?.showModal();
       document.getElementById('btnSettings').onclick = () => document.getElementById('modalSettings')?.showModal();
     </script>
