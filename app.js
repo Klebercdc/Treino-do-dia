@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = { keepRpe: true };
 
 const WORKOUTS = {
   A: {
-    title: "TREINO A (Segunda)",
+    title: "TREINO A",
     objective: "Força/hipertrofia — foco em execução + progressão",
     items: [
       { ex: "Agachamento Livre", sets: 4, reps: "8-10", rest: "90s" },
@@ -22,7 +22,7 @@ const WORKOUTS = {
     ],
   },
   B: {
-    title: "TREINO B (Quarta)",
+    title: "TREINO B",
     objective: "Posterior + costas + bíceps + core",
     items: [
       { ex: "Terra/Stiff", sets: 4, reps: "6-8", rest: "90s" },
@@ -34,7 +34,7 @@ const WORKOUTS = {
     ],
   },
   C: {
-    title: "TREINO C (Sexta)",
+    title: "TREINO C",
     objective: "Circuito/bi-set — volume + condicionamento",
     items: [
       { ex: "1A. Leg Press", sets: 3, reps: "12", rest: "0s" },
