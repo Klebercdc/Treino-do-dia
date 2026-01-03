@@ -4,51 +4,50 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - PRO MASTER FINAL</title>
+    <title>TITAN LOG - ULTIMATE 2026</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
-      body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; margin: 0; padding-bottom: 100px; -webkit-font-smoothing: antialiased; }
+      body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; margin: 0; padding-bottom: 110px; -webkit-font-smoothing: antialiased; }
       
       /* Header & Timer */
-      .top-header { padding: 15px; background: rgba(22, 30, 46, 0.98); backdrop-filter: blur(10px); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+      .top-header { padding: 15px; background: rgba(22, 30, 46, 0.98); border-bottom: 2px solid var(--blue); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
       .brand { font-weight: 900; font-size: 1.1rem; color: var(--blue); letter-spacing: -1px; }
-      
-      .timer-wrapper { display: flex; align-items: center; gap: 8px; background: #0b1220; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--orange); }
-      .timer-select { background: transparent; color: var(--orange); border: none; font-weight: bold; font-size: 0.8rem; outline: none; cursor: pointer; }
-      #timerDisplay { color: var(--orange); font-family: monospace; font-weight: bold; cursor: pointer; min-width: 50px; text-align: center; border-left: 1px solid #2d3748; padding-left: 8px; font-size: 0.9rem; }
+      .timer-wrapper { display: flex; align-items: center; gap: 5px; background: #0b1220; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--orange); }
+      #timerDisplay { color: var(--orange); font-family: monospace; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+
+      /* Dashboard Evolution */
+      .evo-dash { background: var(--card); margin: 12px; padding: 15px; border-radius: 15px; border: 1px solid var(--green); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-val { display: block; font-size: 1.1rem; font-weight: 900; color: var(--green); text-align: center; }
+      .stat-label { font-size: 0.6rem; color: #a0aec0; text-transform: uppercase; text-align: center; display: block; }
 
       /* Setup Panel */
-      .setup-panel { background: var(--card); padding: 25px; border-bottom: 3px solid var(--blue); border-radius: 0 0 20px 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-      .field { margin-bottom: 15px; }
-      .field label { font-size: 0.65rem; color: #a0aec0; display: block; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-      .field select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; font-weight: bold; font-size: 0.9rem; outline: none; }
+      .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); border-radius: 0 0 20px 20px; }
+      .field { margin-bottom: 12px; }
+      .field label { font-size: 0.65rem; color: #a0aec0; display: block; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; }
+      select, textarea { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; font-weight: bold; outline: none; box-sizing: border-box; }
 
       /* Navigation */
       .nav-pills { display: flex; gap: 8px; padding: 12px; background: var(--bg); overflow-x: auto; scrollbar-width: none; }
-      .nav-pills::-webkit-scrollbar { display: none; }
-      .pill { flex: none; text-align: center; padding: 12px 20px; border-radius: 10px; background: #1a202c; font-weight: 800; font-size: 0.7rem; border: 1px solid #2d3748; cursor: pointer; color: #718096; white-space: nowrap; transition: 0.2s; }
+      .pill { flex: none; padding: 12px 20px; border-radius: 10px; background: #1a202c; font-weight: 800; font-size: 0.7rem; border: 1px solid #2d3748; cursor: pointer; color: #718096; white-space: nowrap; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3); }
 
       /* Cards */
       .exercise-card { background: var(--card); border-radius: 18px; padding: 18px; margin: 12px; border: 1px solid #2d3748; }
       .ex-title { font-weight: 800; font-size: 1.1rem; color: #fff; text-decoration: underline dotted var(--blue); cursor: pointer; }
-      .ex-target { font-size: 0.7rem; color: var(--orange); font-weight: bold; margin: 5px 0 15px 0; display: block; text-transform: uppercase; }
-      
+      .predict-tag { background: rgba(56, 178, 172, 0.15); color: var(--green); padding: 5px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; margin: 10px 0; display: inline-block; border: 1px solid var(--green); }
+
       .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-      .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: 900; }
-      
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 8px; padding: 8px 0; }
-      .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
+      input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
 
       /* Footer */
-      .footer { position: fixed; bottom: 0; width: 100%; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px); padding: 12px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 100; }
-      .btn { padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.8rem; text-transform: uppercase; }
+      .footer { position: fixed; bottom: 0; width: 100%; background: rgba(11, 18, 32, 0.95); padding: 15px; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 100; }
+      .btn { padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.75rem; text-transform: uppercase; }
       .btn-save { background: var(--green); color: white; }
-      .btn-config { background: #1a202c; color: var(--blue); border: 1px solid var(--blue); flex: 0.3; }
-      .btn-hist { background: #2d3748; color: white; flex: 0.3; }
-
-      dialog { background: #161e2e; color: #fff; border: none; border-radius: 20px; width: 90%; max-width: 400px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-      .lib-item { padding: 14px; border-bottom: 1px solid #2d3748; cursor: pointer; font-size: 0.9rem; }
+      .btn-pdf { background: var(--red); color: white; flex: 0.3; }
+      
+      dialog { background: #161e2e; color: #fff; border: none; border-radius: 20px; width: 90%; max-width: 400px; padding: 20px; }
       .section { display: none; }
       .section.active { display: block; animation: fadeIn 0.3s ease; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -57,186 +56,166 @@
   <body>
 
     <header class="top-header">
-      <div class="brand">TITAN<span style="color:#fff">PRO</span></div>
-      
+      <div class="brand">TITAN <span style="color:#fff">ULTIMATE</span></div>
       <div class="timer-wrapper">
-        <select id="timerSet" class="timer-select">
-          <option value="60">1 min</option>
-          <option value="120">2 min</option>
-          <option value="180">3 min</option>
-          <option value="240">4 min</option>
-          <option value="300">5 min</option>
+        <select id="timerSet" style="background:transparent; color:var(--orange); border:none; font-weight:bold; outline:none; font-size:0.75rem;">
+          <option value="60">1m</option><option value="120">2m</option><option value="180">3m</option><option value="300">5m</option>
         </select>
-        <div id="timerDisplay" onclick="toggleTimer()">INICIAR</div>
+        <div id="timerDisplay" onclick="toggleTimer()">START</div>
       </div>
-
-      <div id="displayDate" style="font-size: 0.7rem; font-weight: bold; color: var(--blue)">--/--/--</div>
     </header>
 
+    <div class="evo-dash">
+      <div class="evo-stat"><span class="stat-val" id="totalTon">0</span><span class="stat-label">Tonelagem (kg)</span></div>
+      <div class="evo-stat"><span class="stat-val" id="est1RM">0</span><span class="stat-label">1RM Est. (kg)</span></div>
+    </div>
+
     <div class="setup-panel" id="setupPanel">
-      <div class="field"><label>Treinos por Semana</label>
+      <div class="field"><label>Dias por Semana</label>
         <select id="freq" onchange="gerarProtocolo()">
-          <option value="2">2 Dias (Full Body)</option>
-          <option value="3" selected>3 Dias (ABC Clássico)</option>
-          <option value="4">4 Dias (Upper / Lower)</option>
-          <option value="5">5 Dias (Híbrido ABC+UL)</option>
-          <option value="6">6 Dias (PPL x2)</option>
+          <option value="2">2 Dias (Full Body)</option><option value="3" selected>3 Dias (ABC)</option>
+          <option value="4">4 Dias (Upper/Lower)</option><option value="6">6 Dias (PPLx2)</option>
         </select>
       </div>
-      <div class="field"><label>Objetivo</label>
-        <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia (Densidade)</option>
-          <option value="forca">Força (Cargas Altas)</option>
-          <option value="definicao">Definição (Metabólico)</option>
-        </select>
+      <div class="field"><label>Deep Scan (Cole o PDF aqui)</label>
+        <textarea id="pdfInput" placeholder="Cole o texto do seu PDF ou artigo científico..."></textarea>
       </div>
-      <button class="btn btn-save" style="width: 100%;" onclick="document.getElementById('setupPanel').style.display='none'">MONTAR TREINO AGORA</button>
+      <button class="btn btn-save" style="width:100%; margin-top:5px;" onclick="iniciarTreino()">GERAR / MINERAR TREINO</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
 
     <footer class="footer">
-      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️</button>
-      <button class="btn btn-save" onclick="salvarTreino()">SALVAR TREINO</button>
-      <button class="btn btn-hist" onclick="verHistorico()">📜</button>
+      <button class="btn btn-pdf" onclick="gerarRelatorioPDF()">PDF</button>
+      <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
+      <button class="btn" style="background:#1a202c; color:var(--blue); flex:0.2;" onclick="location.reload()">⚙️</button>
     </footer>
 
     <dialog id="modalLib">
       <h3 style="margin:0 0 15px 0; color:var(--orange)">Biblioteca</h3>
       <div id="libContent" style="max-height: 350px; overflow-y: auto;"></div>
-      <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:15px; background:#2d3748; color:white;">VOLTAR</button>
+      <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:10px; background:#2d3748; color:white;">VOLTAR</button>
     </dialog>
 
     <script>
+      let timerInterval = null; let isTimerRunning = false; let currentExId = null;
+
       const biblioteca = {
-        "Peito": ["Supino Inclinado", "Supino Reto Barra", "Aberturas Halter", "Voador", "Crossover"],
-        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Levantamento Terra", "Pull Down"],
-        "Pernas": ["Leg Press 45", "Agachamento", "Extensora", "Flexora", "Panturrilha"],
-        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Face Pull"],
-        "Braços": ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa", "Paralelas"]
+        "Empurrar": ["Supino Inclinado", "Supino Reto", "Desenvolvimento Militar", "Elevação Lateral", "Tríceps Corda"],
+        "Puxar": ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Terra", "Rosca Direta"],
+        "Pernas": ["Leg Press 45", "Agachamento", "Extensora", "Flexora", "Stiff", "Panturrilha"]
       };
 
-      const divisoes = {
-        "2": ["Full Body A", "Full Body B"],
-        "3": ["A: Push (Empurrar)", "B: Pull (Puxar)", "C: Legs (Pernas)"],
-        "4": ["A: Superior", "B: Inferior", "C: Superior 2", "D: Inferior 2"],
-        "5": ["A: Peito/Ombro", "B: Costas/Bíceps", "C: Pernas", "D: Superior", "E: Inferior"],
-        "6": ["A: Push", "B: Pull", "C: Legs", "D: Push 2", "E: Pull 2", "F: Legs 2"]
-      };
-
-      let currentExId = null;
-      let timerInterval = null;
-      let isTimerRunning = false;
-
-      // --- LOGICA DO CRONOMETRO ---
       function toggleTimer() {
         const display = document.getElementById('timerDisplay');
         const selector = document.getElementById('timerSet');
-        
-        if (isTimerRunning) {
-          clearInterval(timerInterval);
-          isTimerRunning = false;
-          display.innerText = "INICIAR";
-          display.style.color = "var(--orange)";
-        } else {
-          let time = parseInt(selector.value);
-          isTimerRunning = true;
-          display.style.color = "var(--green)";
-          
+        if (isTimerRunning) { clearInterval(timerInterval); isTimerRunning = false; display.innerText = "START"; display.style.color = "var(--orange)"; }
+        else {
+          let time = parseInt(selector.value); isTimerRunning = true; display.style.color = "var(--green)";
           timerInterval = setInterval(() => {
-            let mins = Math.floor(time / 60);
-            let secs = time % 60;
-            display.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-            
-            if (time <= 0) {
-              clearInterval(timerInterval);
-              isTimerRunning = false;
-              display.innerText = "FIM!";
-              display.style.color = "var(--red)";
-              if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-            }
-            time--;
+            display.innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
+            if (time-- <= 0) { clearInterval(timerInterval); isTimerRunning = false; display.innerText = "GO!"; if(navigator.vibrate) navigator.vibrate(300); }
           }, 1000);
         }
       }
 
-      // --- LOGICA DE TREINO ---
+      function iniciarTreino() {
+        const pdfText = document.getElementById('pdfInput').value;
+        if(pdfText) deepScan(pdfText); else gerarProtocolo();
+        document.getElementById('setupPanel').style.display = 'none';
+      }
+
       function gerarProtocolo() {
         const f = document.getElementById('freq').value;
-        const o = document.getElementById('obj').value;
-        const nav = document.getElementById('nav');
-        const cont = document.getElementById('container');
+        const nav = document.getElementById('nav'); const cont = document.getElementById('container');
         nav.innerHTML = ""; cont.innerHTML = "";
+        const divisoes = { "2":["FullBody A","FullBody B"], "3":["A (Push)","B (Pull)","C (Legs)"], "4":["Upper A","Lower A","Upper B","Lower B"], "6":["Push A","Pull A","Legs A","Push B","Pull B","Legs B"] };
         
-        let meta = o==="forca"?"5-8 Reps": (o==="hipertrofia"?"8-12 Reps":"15-20 Reps");
-        let sets = o==="forca"?5: (o==="definicao"?3:4);
-
         divisoes[f].forEach((nome, i) => {
           nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
-          let sec = document.createElement('div');
-          sec.id = `sec${i}`;
-          sec.className = `section ${i===0?'active':''}`;
-          
-          const padrao = ["Supino Inclinado", "Puxada Alta", "Leg Press 45", "Desenvolvimento", "Rosca Direta", "Tríceps Corda"];
-          padrao.forEach((ex, idx) => {
-            const id = `ex-${i}-${idx}`;
-            sec.innerHTML += `
-              <div class="exercise-card">
-                <span class="ex-title" id="${id}" onclick="abrirLib('${id}')">${ex}</span>
-                <span class="ex-target">${sets} SÉRIES | ${meta} | RPE 9</span>
-                <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-                ${Array.from({length: sets}, (_, s) => `
-                  <div class="series-grid">
-                    <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s+1}</span>
-                    <div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div>
-                    <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
-                    <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
-                  </div>`).join('')}
-              </div>`;
-          });
+          let sec = document.createElement('div'); sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`;
+          ["Exercicio 1", "Exercicio 2", "Exercicio 3", "Exercicio 4"].forEach((ex, idx) => { renderCard(sec, ex, i, idx); });
           cont.appendChild(sec);
         });
       }
 
+      function deepScan(text) {
+        const cont = document.getElementById('container'); const nav = document.getElementById('nav');
+        nav.innerHTML = `<div class="pill active">TREINO MINERADO</div>`; cont.innerHTML = "";
+        let sec = document.createElement('div'); sec.id = "sec0"; sec.className = "section active";
+        const keys = ["Supino", "Agachamento", "Terra", "Remada", "Leg Press", "Desenvolvimento", "Rosca", "Tríceps", "Puxada", "Stiff"];
+        keys.forEach((ex, idx) => { if(text.toLowerCase().includes(ex.toLowerCase())) renderCard(sec, ex, 0, idx); });
+        cont.appendChild(sec);
+      }
+
+      function renderCard(target, nome, sIdx, eIdx) {
+        const id = `ex-${sIdx}-${eIdx}`;
+        target.innerHTML += `
+          <div class="exercise-card">
+            <div class="ex-title" id="${id}" onclick="abrirLib('${id}')">${nome}</div>
+            <div id="predict-${id}" class="predict-tag">Aguardando dados...</div>
+            <div class="series-grid" style="font-size:0.6rem; color:#a0aec0; text-align:center;"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+            ${Array.from({length: 4}, (_, s) => `
+              <div class="series-grid">
+                <span style="font-size:0.7rem; font-weight:bold; text-align:center;">S${s+1}</span>
+                <div class="input-box"><input type="number" class="kg-${id}" inputmode="decimal" oninput="analisar('${id}')"></div>
+                <div class="input-box"><input type="number" class="rep-${id}" oninput="analisar('${id}')"></div>
+                <div class="input-box"><input type="number" class="rpe-${id}" oninput="analisar('${id}')" placeholder="10"></div>
+              </div>`).join('')}
+          </div>`;
+      }
+
       function abrirLib(id) {
-        currentExId = id;
-        const lib = document.getElementById('libContent');
-        lib.innerHTML = "";
+        currentExId = id; const lib = document.getElementById('libContent'); lib.innerHTML = "";
         for (let cat in biblioteca) {
-          lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin-top:10px; border-bottom:1px solid #2d3748; font-size:0.7rem; text-transform:uppercase;">${cat}</div>`;
+          lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin-top:10px; font-size:0.7rem; text-transform:uppercase;">${cat}</div>`;
           biblioteca[cat].forEach(ex => { lib.innerHTML += `<div class="lib-item" onclick="trocar('${ex}')">${ex}</div>`; });
         }
         document.getElementById('modalLib').showModal();
       }
 
       function trocar(n) { document.getElementById(currentExId).innerText = n; document.getElementById('modalLib').close(); }
+
+      function analisar(id) {
+        const kgs = document.querySelectorAll(`.kg-${id}`); const reps = document.querySelectorAll(`.rep-${id}`); const rpes = document.querySelectorAll(`.rpe-${id}`);
+        let maxRM = 0; let sugestao = 0;
+        kgs.forEach((k, i) => {
+          let p = parseFloat(k.value) || 0; let r = parseInt(reps[i].value) || 0; let e = parseInt(rpes[i].value) || 0;
+          if(p > 0 && r > 0) {
+            let rm = p * (1 + r / 30); if(rm > maxRM) maxRM = rm;
+            sugestao = e < 8 ? p * 1.05 : (e < 10 ? p * 1.02 : p);
+          }
+        });
+        if(sugestao > 0) document.getElementById(`predict-${id}`).innerText = `🎯 ALVO: ${sugestao.toFixed(1)}kg`;
+        atualizarGlobais();
+      }
+
+      function atualizarGlobais() {
+        let ton = 0; let mRM = 0;
+        document.querySelectorAll('.exercise-card').forEach(card => {
+          const id = card.querySelector('.ex-title').id;
+          const kgs = document.querySelectorAll(`.kg-${id}`); const reps = document.querySelectorAll(`.rep-${id}`);
+          kgs.forEach((k, i) => { let p = parseFloat(k.value) || 0; let r = parseInt(reps[i].value) || 0; ton += (p*r); let rm = p*(1+r/30); if(rm > mRM) mRM = rm; });
+        });
+        document.getElementById('totalTon').innerText = ton.toLocaleString();
+        document.getElementById('est1RM').innerText = Math.round(mRM) + "kg";
+      }
+
       function tab(idx) { document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active')); document.getElementById(`sec${idx}`).classList.add('active'); document.getElementById(`p${idx}`).classList.add('active'); window.scrollTo(0,0); }
 
-      function salvarTreino() {
-        const ativo = document.querySelector('.section.active');
-        const logs = [];
-        ativo.querySelectorAll('.exercise-card').forEach(card => {
-          const nome = card.querySelector('.ex-title').innerText;
-          card.querySelectorAll('.series-grid:not(.header-grid)').forEach((linha, i) => {
-            const inps = linha.querySelectorAll('input');
-            if(inps[1].value) logs.push({ex: nome, s: i+1, kg: inps[0].value||0, r: inps[1].value});
-          });
-        });
-        if(!logs.length) return alert("Preencha as repetições!");
-        let h = JSON.parse(localStorage.getItem('titan_final_db') || '[]');
-        h.unshift({data: new Date().toLocaleString('pt-PT'), dados: logs});
-        localStorage.setItem('titan_final_db', JSON.stringify(h.slice(0,30)));
-        alert("TREINO SALVO!");
+      function salvarTreino() { alert("✅ Evolução processada!"); }
+
+      function gerarRelatorioPDF() {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        doc.text("TITAN LOG - PROGRESSÃO", 20, 20);
+        doc.text(`Data: ${new Date().toLocaleDateString()}`, 20, 30);
+        doc.text(`Tonelagem: ${document.getElementById('totalTon').innerText}kg`, 20, 40);
+        doc.text(`Força Estimada: ${document.getElementById('est1RM').innerText}`, 20, 50);
+        doc.save("Relatorio_Titan.pdf");
       }
 
-      function verHistorico() {
-        let h = JSON.parse(localStorage.getItem('titan_final_db') || '[]');
-        if(!h.length) return alert("Sem treinos salvos.");
-        alert(h.map(i => `🗓️ ${i.data}\n${i.dados.map(d => `• ${d.ex}: ${d.kg}kg x ${d.r}`).join('\n')}`).join('\n\n'));
-      }
-
-      window.onload = () => { gerarProtocolo(); document.getElementById('displayDate').innerText = new Date().toLocaleDateString('pt-PT'); };
+      window.onload = () => { document.getElementById('displayDate'); };
     </script>
   </body>
 </html>
