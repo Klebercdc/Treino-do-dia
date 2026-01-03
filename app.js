@@ -2,46 +2,22 @@
 
 const TZ = "America/Sao_Paulo";
 const K = {
-  SESSIONS: "tdd_sessions_v1",
+  SESSIONS: "tdd_sessions_v2", // Mudei para v2 pois a estrutura de dados mudou (array de séries)
   SETTINGS: "tdd_settings_v1",
-  PHASE: "tdd_current_phase", // Nova chave para salvar a fase da periodização
+  PHASE: "tdd_current_phase",
 };
 
 const DEFAULT_SETTINGS = { keepRpe: true };
 
-// --- 1. CONFIGURAÇÃO DA PERIODIZAÇÃO (O "Cérebro" do Treinador) ---
+// --- 1. PERIODIZAÇÃO ---
 const PERIODIZATION = {
-  1: {
-    name: "Fase 1: Base (Adaptação)",
-    desc: "Foco em execução perfeita. RPE 7-8.",
-    setsMod: 0,       // Mantém séries padrão
-    repsOverride: "12-15",
-    rpeTarget: "7-8"
-  },
-  2: {
-    name: "Fase 2: Volume (Hipertrofia)",
-    desc: "Acumular fadiga. Falha na última série. RPE 8-9.",
-    setsMod: 1,       // Adiciona 1 série (Hardcore)
-    repsOverride: "10-12",
-    rpeTarget: "9"
-  },
-  3: {
-    name: "Fase 3: Força (Intensidade)",
-    desc: "Carga alta, descanso longo. RPE 9-10.",
-    setsMod: 0,       // Volta ao padrão
-    repsOverride: "6-8",
-    rpeTarget: "10"
-  },
-  4: {
-    name: "Fase 4: Deload (Recuperação)",
-    desc: "Recuperação ativa. -40% carga. NÃO chegar à falha.",
-    setsMod: -1,      // Remove 1 série (Mínimo 2)
-    repsOverride: "10-12",
-    rpeTarget: "5-6"
-  }
+  1: { name: "Fase 1: Base", desc: "Foco em execução perfeita. RPE 7-8.", setsMod: 0, repsOverride: "12-15", rpeTarget: "7-8" },
+  2: { name: "Fase 2: Volume", desc: "Acumular fadiga. Falha na última. RPE 8-9.", setsMod: 1, repsOverride: "10-12", rpeTarget: "9" },
+  3: { name: "Fase 3: Força", desc: "Carga alta, descanso longo. RPE 9-10.", setsMod: 0, repsOverride: "6-8", rpeTarget: "10" },
+  4: { name: "Fase 4: Deload", desc: "Recuperação. -40% carga. Sem falha.", setsMod: -1, repsOverride: "10-12", rpeTarget: "5-6" }
 };
 
-// --- 2. CONFIGURAÇÃO DOS TREINOS (Módulos Puros) ---
+// --- 2. TREINOS ---
 const WORKOUTS = {
   A: {
     title: "TREINO A",
@@ -69,7 +45,7 @@ const WORKOUTS = {
   },
   C: {
     title: "TREINO C",
-    objective: "Full Body / Metabólico / Perna Foco",
+    objective: "Full Body / Metabólico",
     items: [
       { ex: "Leg Press", sets: 3, reps: "12", rest: "60s" },
       { ex: "Flexão de Braço", sets: 3, reps: "Máx", rest: "60s" },
@@ -83,41 +59,25 @@ const WORKOUTS = {
   },
   OFF: {
     title: "OFF / DESCANSO",
-    objective: "Recuperação / Cardio Leve",
+    objective: "Recuperação",
     items: [{ ex: "CARDIO 45MIN", sets: 1, reps: "FC 120bpm", rest: "-" }],
   },
 };
 
-// --- FUNÇÕES UTILITÁRIAS ---
-
-function $(id) {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`Elemento não encontrado: ${id}`);
-  return el;
-}
+// --- HELPER FUNCTIONS ---
+function $(id) { return document.getElementById(id); }
 
 function jsonParse(s, fallback) {
-  try {
-    const v = JSON.parse(s);
-    return v ?? fallback;
-  } catch {
-    return fallback;
-  }
+  try { return JSON.parse(s) ?? fallback; } catch { return fallback; }
 }
 
 function loadSettings() {
-  const raw = localStorage.getItem(K.SETTINGS);
-  const s = raw ? jsonParse(raw, DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
+  const s = jsonParse(localStorage.getItem(K.SETTINGS), DEFAULT_SETTINGS);
   return { keepRpe: Boolean(s.keepRpe) };
 }
 
-function saveSettings(s) {
-  localStorage.setItem(K.SETTINGS, JSON.stringify({ keepRpe: s.keepRpe ? 1 : 0 }));
-}
-
 function loadSessions() {
-  const raw = localStorage.getItem(K.SESSIONS);
-  const arr = raw ? jsonParse(raw, []) : [];
+  const arr = jsonParse(localStorage.getItem(K.SESSIONS), []);
   return Array.isArray(arr) ? arr : [];
 }
 
@@ -140,170 +100,145 @@ function formatBR(ymd) {
 
 function weekdayFromYMD(ymd) {
   const [y, m, d] = ymd.split("-").map(Number);
-  // Meio-dia para evitar bug de fuso
-  const dt = new Date(y, m - 1, d, 12, 0, 0); 
-  return dt.getDay(); // 0=Dom, 6=Sab
+  return new Date(y, m - 1, d, 12, 0, 0).getDay();
 }
 
 function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function sessionKey(ymd) {
-  return ymd;
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function getSessionByDate(sessions, ymd) {
-  const key = sessionKey(ymd);
-  return sessions.find((x) => x && x.dateKey === key) || null;
+  return sessions.find((x) => x && x.dateKey === ymd) || null;
 }
 
 function upsertSession(sessions, session) {
-  const key = sessionKey(session.dateKey);
-  const idx = sessions.findIndex((x) => x && x.dateKey === key);
+  const idx = sessions.findIndex((x) => x && x.dateKey === session.dateKey);
   if (idx >= 0) sessions[idx] = session;
   else sessions.push(session);
   sessions.sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
   return sessions;
 }
 
+// --- FUNÇÃO CORE: Renderiza as Linhas de Inputs (Série a Série) ---
 function buildExerciseRow(item, existing) {
-  const w = existing?.weight ?? "";
-  const r = existing?.doneReps ?? "";
-  const p = existing?.rpe ?? "";
-  const n = existing?.notes ?? "";
+  const notes = existing?.notes ?? "";
+  
+  // existing.setsData é um array com os dados de cada série salva: [{w:100, r:10, p:8}, ...]
+  const setsData = existing?.setsData || [];
+
+  let setsHtml = "";
+  
+  // Cabeçalho da tabelinha de séries
+  setsHtml += `
+    <div style="display:grid; grid-template-columns: 30px 1fr 1fr 1fr; gap:5px; margin-bottom:5px; font-size:11px; color:#aaa; text-align:center;">
+      <span>#</span>
+      <span>Carga (kg)</span>
+      <span>Reps</span>
+      <span>RPE</span>
+    </div>
+  `;
+
+  // Loop para criar uma linha para CADA série programada
+  for (let i = 0; i < item.sets; i++) {
+    const sData = setsData[i] || {}; // Dados salvos desta série específica
+    const w = sData.w || "";
+    const r = sData.r || "";
+    const p = sData.p || "";
+
+    setsHtml += `
+      <div class="set-row" style="display:grid; grid-template-columns: 30px 1fr 1fr 1fr; gap:5px; margin-bottom:8px; align-items:center;">
+        <div style="text-align:center; font-weight:bold; color:#555;">${i + 1}</div>
+        <input class="inpWeight" type="number" inputmode="decimal" placeholder="kg" value="${escapeHtml(w)}" style="text-align:center;">
+        <input class="inpReps" type="number" inputmode="numeric" placeholder="reps" value="${escapeHtml(r)}" style="text-align:center;">
+        <input class="inpRpe" type="number" inputmode="decimal" placeholder="-" value="${escapeHtml(p)}" style="text-align:center;">
+      </div>
+    `;
+  }
 
   return `
     <div class="item" data-ex="${escapeHtml(item.ex)}">
       <div class="itemtop">
         <div>
-          <h4>${escapeHtml(item.ex)}</h4>
+          <h4 style="margin-bottom:4px;">${escapeHtml(item.ex)}</h4>
           <div class="meta">
-            <span>Séries: ${escapeHtml(String(item.sets))}</span>
-            <span>Reps: ${escapeHtml(String(item.reps))}</span>
-            <span>Desc: ${escapeHtml(String(item.rest))}</span>
+            <span style="color:#2dd4bf;">${item.sets} Séries</span> • 
+            <span>${item.reps} reps</span> • 
+            <span>${item.rest}</span>
           </div>
         </div>
       </div>
 
-      <div class="grid" style="margin-top:10px;">
+      <div style="margin-top:15px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;">
+        ${setsHtml}
+      </div>
+
+      <div style="margin-top:10px;">
         <label class="field">
-          <span>Carga (kg)</span>
-          <input class="inpWeight" inputmode="decimal" placeholder="ex.: 80" value="${escapeHtml(w)}" />
-        </label>
-        <label class="field">
-          <span>Reps feitas</span>
-          <input class="inpReps" inputmode="numeric" placeholder="ex.: 8" value="${escapeHtml(r)}" />
-        </label>
-        <label class="field">
-          <span>RPE</span>
-          <input class="inpRpe" inputmode="decimal" placeholder="6–10" value="${escapeHtml(p)}" />
-        </label>
-        <label class="field">
-          <span>Notas</span>
-          <input class="inpNotes" placeholder="técnica, dor, etc." value="${escapeHtml(n)}" />
+          <span style="font-size:11px; margin-left:2px;">Observações do exercício</span>
+          <input class="inpNotes" placeholder="Dores, ajustes, técnica..." value="${escapeHtml(notes)}" style="font-size:13px;">
         </label>
       </div>
     </div>
   `;
 }
 
-// --- CORE: RENDERIZAÇÃO INTELIGENTE ---
-
+// --- CORE: Renderização Principal ---
 function renderWorkout(ymd, workoutKey, settings, sessions) {
-  // 1. Carregar Fase da Periodização
   let currentPhase = localStorage.getItem(K.PHASE) || "1";
-  
   const w = WORKOUTS[workoutKey] || WORKOUTS.OFF;
   const p = PERIODIZATION[currentPhase];
-  
   const dow = weekdayFromYMD(ymd);
   const labels = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
 
-  // 2. Textos do Topo
   $("todayLabel").textContent = `${labels[dow]} • ${formatBR(ymd)}`;
   $("workoutTitle").textContent = w.title;
-  $("workoutObjective").textContent = `${w.objective}`;
-  
-  // 3. Gerar Dropdowns (Seletores)
-  const pillDay = $("pillDay");
-  
-  // Opções de Treino
-  const workoutOpts = Object.keys(WORKOUTS).map(k => 
-    `<option value="${k}" ${k === workoutKey ? 'selected' : ''}>${k}</option>`
-  ).join('');
+  $("workoutObjective").textContent = w.objective;
 
-  // Opções de Fase (Periodização)
-  const phaseOpts = Object.keys(PERIODIZATION).map(k => 
-    `<option value="${k}" ${k === currentPhase ? 'selected' : ''}>${PERIODIZATION[k].name}</option>`
-  ).join('');
+  // Dropdowns UI
+  const pillDay = $("pillDay");
+  const workoutOpts = Object.keys(WORKOUTS).map(k => `<option value="${k}" ${k === workoutKey ? 'selected' : ''}>${k}</option>`).join('');
+  const phaseOpts = Object.keys(PERIODIZATION).map(k => `<option value="${k}" ${k === currentPhase ? 'selected' : ''}>${PERIODIZATION[k].name}</option>`).join('');
 
   pillDay.innerHTML = `
     <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-top:5px;">
-      <label style="display:flex; justify-content:space-between; align-items:center; background:#222; padding:5px; border-radius:4px;">
-        <span style="font-size:0.9rem; color:#aaa;">Treino:</span>
-        <select id="workoutSelector" style="padding:5px; border-radius:4px; background:#444; color:#fff; border:none; width:70%;">
-          ${workoutOpts}
-        </select>
-      </label>
-      <label style="display:flex; justify-content:space-between; align-items:center; background:#222; padding:5px; border-radius:4px;">
-        <span style="font-size:0.9rem; color:#aaa;">Ciclo:</span>
-        <select id="phaseSelector" style="padding:5px; border-radius:4px; background:#224; color:#adf; border:none; width:70%;">
-          ${phaseOpts}
-        </select>
-      </label>
-      <div style="font-size:0.8rem; color:#888; text-align:right; font-style:italic;">
-        ${p.desc}
+      <div style="display:flex; gap:10px;">
+        <label style="flex:1; background:#222; padding:5px; border-radius:4px;">
+          <select id="workoutSelector" style="width:100%; background:transparent; color:#fff; border:none;">${workoutOpts}</select>
+        </label>
+        <label style="flex:1; background:#224; padding:5px; border-radius:4px;">
+          <select id="phaseSelector" style="width:100%; background:transparent; color:#adf; border:none;">${phaseOpts}</select>
+        </label>
       </div>
+      <div style="font-size:0.8rem; color:#888; text-align:center; font-style:italic;">${p.desc}</div>
     </div>
   `;
 
-  // Event Listeners dos Selects
-  document.getElementById("workoutSelector").addEventListener("change", (e) => {
-    // Recarrega a tela com o novo treino escolhido
-    renderWorkout(ymd, e.target.value, settings, sessions);
-  });
-
-  document.getElementById("phaseSelector").addEventListener("change", (e) => {
-    // Salva a nova fase e recarrega
+  // Listeners
+  $("workoutSelector").addEventListener("change", (e) => renderWorkout(ymd, e.target.value, settings, sessions));
+  $("phaseSelector").addEventListener("change", (e) => {
     localStorage.setItem(K.PHASE, e.target.value);
     renderWorkout(ymd, workoutKey, settings, sessions);
   });
 
-
-  // 4. Preparar Exercícios
+  // Carregar dados existentes
   const existingSession = getSessionByDate(sessions, ymd);
   const existingEntries = new Map();
   if (existingSession && Array.isArray(existingSession.entries)) {
     existingSession.entries.forEach((e) => existingEntries.set(e.ex, e));
   }
 
+  // Gerar Lista de Exercícios
   const list = $("exerciseList");
   list.innerHTML = "";
   
   w.items.forEach((it) => {
-    // CLONAR item para modificar sem estragar o original
     let item = { ...it };
-
-    // LÓGICA DE PERIODIZAÇÃO (Matemática do Treino)
-    // Só aplica modificadores se NÃO for Cardio e NÃO for OFF
+    // Aplica Periodização
     if (workoutKey !== "OFF" && !item.ex.toUpperCase().includes("CARDIO")) {
-        
-        // Ajuste de Séries (Garante mínimo de 2 séries, exceto se original for 1)
         let baseSets = parseInt(item.sets);
-        // Se a fase manda tirar séries, garantimos que nunca fica abaixo de 2
-        item.sets = Math.max(2, baseSets + p.setsMod); 
-
-        // Ajuste de Repetições
+        item.sets = Math.max(1, baseSets + p.setsMod); 
         item.reps = p.repsOverride; 
-
-        // Adiciona alvo de RPE na descrição do descanso
-        item.rest += ` | Meta RPE ${p.rpeTarget}`;
+        item.rest += ` | RPE ${p.rpeTarget}`;
     }
 
     const exEntry = existingEntries.get(item.ex) || null;
@@ -313,41 +248,57 @@ function renderWorkout(ymd, workoutKey, settings, sessions) {
   hydrateHistExercises(sessions);
 }
 
+// --- NOVA COLETA DE DADOS (Lê todas as linhas) ---
 function collectEntriesFromUI(settings) {
   const nodes = Array.from(document.querySelectorAll("#exerciseList .item"));
   return nodes.map((node) => {
     const ex = node.getAttribute("data-ex") || "";
-    const weight = node.querySelector(".inpWeight")?.value?.trim() || "";
-    const doneReps = node.querySelector(".inpReps")?.value?.trim() || "";
-    const rpe = settings.keepRpe ? (node.querySelector(".inpRpe")?.value?.trim() || "") : "";
     const notes = node.querySelector(".inpNotes")?.value?.trim() || "";
-    return { ex, weight, doneReps, rpe, notes };
+    
+    // Coleta todas as linhas de séries dentro deste exercício
+    const setRows = Array.from(node.querySelectorAll(".set-row"));
+    const setsData = setRows.map(row => ({
+      w: row.querySelector(".inpWeight").value.trim(),
+      r: row.querySelector(".inpReps").value.trim(),
+      p: row.querySelector(".inpRpe").value.trim()
+    })).filter(s => s.w || s.r); // Salva apenas se tiver algo preenchido
+
+    // Para compatibilidade com histórico antigo (calcula média ou pega o melhor set)
+    // Mas agora o foco é setsData.
+    const bestSet = setsData.reduce((prev, curr) => (parseFloat(curr.w) > parseFloat(prev.w) ? curr : prev), {w:"", r:""});
+    
+    return { 
+      ex, 
+      notes, 
+      setsData, // Novo formato rico
+      weight: bestSet.w, // Mantém compatibilidade simples
+      doneReps: bestSet.r,
+      rpe: bestSet.p
+    };
   });
 }
 
 function copyText(ymd, workoutKey, sessions) {
-  // Nota: Copia os dados brutos. Se quiser incluir detalhes da periodização,
-  // precisaria ler o DOM ou a fase. Aqui mantemos simples.
   const w = WORKOUTS[workoutKey] || WORKOUTS.OFF;
   const existing = getSessionByDate(sessions, ymd);
   const map = new Map();
   (existing?.entries || []).forEach((e) => map.set(e.ex, e));
 
-  const lines = [];
-  lines.push(`Treino — ${formatBR(ymd)} — ${w.title}`);
-  if (w.objective) lines.push(`Foco: ${w.objective}`);
-  lines.push("");
-
+  const lines = [`Treino — ${formatBR(ymd)} — ${w.title}`];
+  
   w.items.forEach((it, i) => {
     const e = map.get(it.ex);
-    const wgt = e?.weight ? `${e.weight}kg` : "";
-    const reps = e?.doneReps ? `${e.doneReps} reps` : "";
-    const rpe = e?.rpe ? `RPE ${e.rpe}` : "";
-    const extra = [wgt, reps, rpe].filter(Boolean).join(" • ");
-    // Nota: Aqui usamos os dados originais do objeto WORKOUTS para o nome,
-    // mas os dados inseridos pelo user para o log.
-    lines.push(`${i + 1}. ${it.ex} ${extra ? "— " + extra : ""}`);
-    if (e?.notes) lines.push(`   Notas: ${e.notes}`);
+    lines.push(`${i + 1}. ${it.ex} (${it.sets}x${it.reps})`);
+    
+    if (e?.setsData && e.setsData.length > 0) {
+      // Formata linha a linha: 100kg x 8 (RPE 8)
+      e.setsData.forEach((s, idx) => {
+        const txt = `   S${idx+1}: ${s.w}kg x ${s.r} ${s.p ? `(RPE ${s.p})` : ''}`;
+        lines.push(txt);
+      });
+    }
+    if (e?.notes) lines.push(`   Obs: ${e.notes}`);
+    lines.push(""); // Linha vazia
   });
 
   return lines.join("\n");
@@ -357,124 +308,92 @@ function hydrateHistExercises(sessions) {
   const sel = $("histExercise");
   const set = new Set();
   sessions.forEach((s) => (s.entries || []).forEach((e) => set.add(e.ex)));
-  const all = Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  // Preserva valor selecionado se houver
-  const currentVal = sel.value;
+  const all = Array.from(set).sort();
+  const val = sel.value;
   sel.innerHTML = `<option value="__ALL__">Todos</option>` + all.map((x) => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
-  if (currentVal) sel.value = currentVal;
+  sel.value = val;
 }
 
 function renderHistory(sessions, filterEx) {
   const box = $("histList");
   box.innerHTML = "";
-
-  if (!sessions.length) {
-    box.innerHTML = `<div class="small">Sem registros ainda.</div>`;
-    return;
-  }
+  if (!sessions.length) { box.innerHTML = `<div class="small">Sem registros.</div>`; return; }
 
   const f = filterEx && filterEx !== "__ALL__" ? filterEx : null;
-  // Mostra apenas os últimos 50 treinos para não pesar
   const displaySessions = sessions.slice(0, 50);
 
   displaySessions.forEach((s) => {
     const entries = (s.entries || []).filter((e) => (f ? e.ex === f : true));
     if (!entries.length) return;
 
-    const header = `<div class="small">${formatBR(s.dateKey)} • ${escapeHtml(s.workoutKey)}</div>`;
-    const rows = entries
-      .map((e) => {
-        const b = e.weight ? `<b>${escapeHtml(e.weight)}kg</b>` : "";
-        const c = e.doneReps ? `<b>${escapeHtml(e.doneReps)} reps</b>` : "";
-        const d = e.rpe ? `RPE ${escapeHtml(e.rpe)}` : "";
-        const info = [b, c, d].filter(Boolean).join(" • ");
-        const n = e.notes ? `<div class="small" style="color:#aaa;">${escapeHtml(e.notes)}</div>` : "";
-        
-        return `<div class="histcard">
-          <div><b>${escapeHtml(e.ex)}</b></div>
-          <div class="kv"><div class="small">${info}</div></div>
-          ${n}
-        </div>`;
-      })
-      .join("");
+    const rows = entries.map((e) => {
+      let details = "";
+      if (e.setsData && e.setsData.length) {
+        details = e.setsData.map((sd, i) => 
+          `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:2px 0;">
+             <span>S${i+1}</span> <span><b>${sd.w}kg</b></span> <span>${sd.r} reps</span> 
+           </div>`
+        ).join("");
+      } else {
+        details = `<div>${e.weight}kg x ${e.doneReps}</div>`; // Fallback antigo
+      }
 
-    box.insertAdjacentHTML(
-      "beforeend",
-      `<div class="histcard" style="border-left: 2px solid #555;">
-        ${header}
-        <div class="hist">${rows}</div>
-      </div>`
-    );
+      return `
+        <div class="histcard" style="margin-bottom:8px;">
+          <div style="font-weight:bold; color:#2dd4bf; margin-bottom:5px;">${escapeHtml(e.ex)}</div>
+          <div style="font-size:12px; color:#ccc; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px;">
+            ${details}
+          </div>
+          ${e.notes ? `<div class="small" style="margin-top:4px; color:#888;">Obs: ${escapeHtml(e.notes)}</div>` : ""}
+        </div>`;
+    }).join("");
+
+    box.insertAdjacentHTML("beforeend", `
+      <div style="margin-bottom:15px; border-left:2px solid #444; padding-left:10px;">
+        <div class="small" style="margin-bottom:5px;">${formatBR(s.dateKey)} • ${s.workoutKey}</div>
+        ${rows}
+      </div>
+    `);
   });
 }
 
 function exportJSON() {
   const sessions = loadSessions();
-  const payload = { version: 1, exportedAt: new Date().toISOString(), tz: TZ, sessions };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+  const blob = new Blob([JSON.stringify({ sessions }, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = `treino_backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
 }
 
-// --- INICIALIZAÇÃO ---
-
+// --- INIT ---
 window.addEventListener("DOMContentLoaded", () => {
-  const now = new Date();
-  const ymd = formatYMDinTZ(now);
+  const ymd = formatYMDinTZ(new Date());
   const settings = loadSettings();
   const sessions = loadSessions();
-
-  // Definição Inicial do Treino
-  // Tenta encontrar se já existe um treino salvo para hoje
-  const existingSession = getSessionByDate(sessions, ymd);
   
-  // Se já treinou hoje, carrega aquele treino. 
-  // Se não, carrega "A" como padrão (podes mudar para B ou C se preferires começar noutro)
-  const initialWorkoutKey = existingSession ? existingSession.workoutKey : "A";
-
-  // Renderiza a aplicação
-  renderWorkout(ymd, initialWorkoutKey, settings, sessions);
+  const existing = getSessionByDate(sessions, ymd);
+  renderWorkout(ymd, existing ? existing.workoutKey : "A", settings, sessions);
   renderHistory(sessions, "__ALL__");
 
-  // Eventos dos Botões Principais
   $("btnSave").addEventListener("click", () => {
-    const selector = document.getElementById("workoutSelector");
-    const currentKey = selector ? selector.value : "OFF";
-    
+    const selector = $("workoutSelector");
     const entries = collectEntriesFromUI(settings);
-    const session = { dateKey: ymd, workoutKey: currentKey, entries };
-    upsertSession(sessions, session);
+    upsertSession(sessions, { dateKey: ymd, workoutKey: selector ? selector.value : "OFF", entries });
     saveSessions(sessions);
     
-    // Feedback visual
     const btn = $("btnSave");
-    const originalText = btn.textContent;
     btn.textContent = "Salvo!";
     btn.style.background = "#2ea44f";
-    setTimeout(() => {
-      btn.textContent = originalText;
-      btn.style.background = "";
-    }, 1500);
-    
+    setTimeout(() => { btn.textContent = "Salvar hoje"; btn.style.background = ""; }, 1500);
     renderHistory(sessions, $("histExercise").value);
   });
 
   $("btnCopy").addEventListener("click", () => {
-    const selector = document.getElementById("workoutSelector");
-    const currentKey = selector ? selector.value : "OFF";
-    const txt = copyText(ymd, currentKey, sessions);
-    
-    navigator.clipboard.writeText(txt).then(() => {
-      alert("Copiado para a área de transferência!");
-    });
+    navigator.clipboard.writeText(copyText(ymd, $("workoutSelector").value, sessions))
+      .then(() => alert("Copiado!"));
   });
 
-  $("btnExport").addEventListener("click", exportJSON);
-
-  $("histExercise").addEventListener("change", (e) => {
-    renderHistory(sessions, e.target.value);
-  });
+  if($("btnExport")) $("btnExport").addEventListener("click", exportJSON);
+  $("histExercise").addEventListener("change", (e) => renderHistory(sessions, e.target.value));
 });
