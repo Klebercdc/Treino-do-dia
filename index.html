@@ -4,44 +4,48 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - Periodização Dinâmica</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <title>TITAN LOG PRO</title>
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; }
+      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 50px; }
       .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
       .period-selector { background: var(--card); padding: 12px; border-bottom: 2px solid var(--blue); display: flex; align-items: center; justify-content: center; gap: 10px; }
-      .period-selector select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; padding: 8px; font-weight: bold; width: 60%; }
+      .period-selector select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; padding: 8px; font-weight: bold; width: 65%; font-size: 0.9rem; }
       .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2d3748; }
-      .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; }
+      .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
       .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); margin-bottom: 2px; }
       .ex-target { font-size: 0.9rem; color: var(--orange); font-weight: bold; margin-bottom: 4px; display: block; }
       .ex-meta { font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; }
-      .series-header { display: grid; grid-template-columns: 35px 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; text-align: center; }
+      .series-header { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; text-align: center; }
       .series-header span { font-size: 0.65rem; color: #718096; font-weight: bold; }
-      .series-row { display: grid; grid-template-columns: 35px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .series-row { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
       .s-label { font-weight: bold; color: #718096; font-size: 0.85rem; text-align: center; }
-      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 0; }
+      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
       .section { display: none; }
       .section.active { display: block; }
       .footer-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 10px; gap: 10px; }
-      .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
+      .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; font-size: 0.9rem; transition: 0.2s; }
       .btn.primary { background: var(--green); color: #fff; }
       .btn.secondary { background: #2d3748; color: #fff; }
+      
+      /* Estilo do Modal de Histórico */
+      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; padding: 20px; width: 90%; max-width: 500px; }
+      dialog::backdrop { background: rgba(0,0,0,0.8); }
+      .hist-item { border-bottom: 1px solid #2d3748; padding: 12px 0; }
     </style>
   </head>
   <body>
     <header class="topbar">
-      <div class="titlewrap"><h1>TITAN LOG</h1><div class="sub" id="todayLabel">...</div></div>
-      <div class="actions"><button class="btn secondary mini" id="btnHistory">Histórico</button></div>
+      <div><h1 style="margin:0; font-size: 1.4rem;">TITAN LOG</h1><div id="todayLabel" style="font-size: 0.8rem; color: #718096;">...</div></div>
+      <button class="btn secondary" style="flex:none; padding: 8px 12px;" id="btnHistory">Histórico</button>
     </header>
 
     <div class="period-selector">
       <span>Fase:</span>
-      <select id="periodoFase" onchange="build()">
+      <select id="periodoFase" onchange="buildTreino()">
         <option value="hipertrofia">HIPERTROFIA (8-12 Reps)</option>
         <option value="forca">FORÇA (5-8 Reps)</option>
         <option value="metabolico">METABÓLICO (15-20 Reps)</option>
@@ -50,198 +54,125 @@
     </div>
 
     <div class="nav-pills">
-      <div class="pill active" onclick="tab('A', this)">TREINO A</div>
-      <div class="pill" onclick="tab('B', this)">TREINO B</div>
-      <div class="pill" onclick="tab('C', this)">TREINO C</div>
+      <div class="pill active" id="pillA" onclick="tab('A')">TREINO A</div>
+      <div class="pill" id="pillB" onclick="tab('B')">TREINO B</div>
+      <div class="pill" id="pillC" onclick="tab('C')">TREINO C</div>
     </div>
 
-    <main class="container">
+    <main id="mainContainer">
       <div id="A" class="section active"></div>
       <div id="B" class="section"></div>
       <div id="C" class="section"></div>
-      <div class="footer-row">
-        <button id="btnCopy" class="btn secondary">Copiar</button>
-        <button id="btnSave" class="btn primary">Salvar hoje</button>
-      </div>
     </main>
+
+    <div class="footer-row">
+      <button class="btn secondary" id="btnCopy">Copiar</button>
+      <button class="btn primary" id="btnSave">Salvar Hoje</button>
+    </div>
+
+    <dialog id="modalHistory">
+        <h3 style="margin-top:0; color: var(--blue);">Histórico Recente</h3>
+        <div id="historyContent" style="max-height: 350px; overflow-y: auto;"></div>
+        <button class="btn secondary" onclick="document.getElementById('modalHistory').close()" style="width:100%; margin-top:15px;">Fechar</button>
+        <button onclick="limparHistorico()" style="width:100%; margin-top:10px; background:none; border:none; color:var(--red); font-size:0.7rem; cursor:pointer;">APAGAR TUDO</button>
+    </dialog>
 
     <script>
       const baseData = {
-        A: [
-          { n: "1. Agachamento / Leg 45", s: 4, m: "Quadricípete" },
-          { n: "2. Supino Inclinado", s: 4, m: "Peitoral Sup." },
-          { n: "3. Desenv. Militar", s: 3, m: "Ombros" },
-          { n: "4. Fundos / Testa", s: 3, m: "Tríceps" },
-          { n: "5. Cadeira Extensora", s: 3, m: "Isolamento Quad." }
-        ],
-        B: [
-          { n: "1. Terra ou Stiff", s: 4, m: "Post. / Lombar" },
-          { n: "2. Remada Curvada", s: 4, m: "Espessura" },
-          { n: "3. Puxada Alta", s: 3, m: "Largura" },
-          { n: "4. Face Pull", s: 3, m: "Post. Ombro" },
-          { n: "5. Rosca Direta", s: 3, m: "Bíceps" }
-        ],
-        C: [
-          { n: "1A. Leg Press Horiz.", s: 3, m: "Metabólico" },
-          { n: "1B. Flexão de Braços", s: 3, m: "Metabólico" },
-          { n: "2A. Afundo / Passada", s: 3, m: "Metabólico" },
-          { n: "2B. Elevação Lateral", s: 3, m: "Metabólico" },
-          { n: "3A. Remada Máquina", s: 3, m: "Metabólico" },
-          { n: "3B. Tríceps Corda", s: 3, m: "Metabólico" },
-          { n: "4. Cadeira Flexora", s: 4, m: "Isolamento Post." }
-        ]
+        A: [ { n: "1. Agachamento / Leg 45", s: 4, m: "Quadricípete" }, { n: "2. Supino Inclinado", s: 4, m: "Peitoral Sup." }, { n: "3. Desenv. Militar", s: 3, m: "Ombros" }, { n: "4. Fundos / Testa", s: 3, m: "Tríceps" }, { n: "5. Cadeira Extensora", s: 3, m: "Isolamento" } ],
+        B: [ { n: "1. Terra ou Stiff", s: 4, m: "Posterior" }, { n: "2. Remada Curvada", s: 4, m: "Dorsal" }, { n: "3. Puxada Alta", s: 3, m: "Costas" }, { n: "4. Face Pull", s: 3, m: "Ombro Post." }, { n: "5. Rosca Direta", s: 3, m: "Bíceps" } ],
+        C: [ { n: "1A. Leg Press Horiz.", s: 3, m: "Superset" }, { n: "1B. Flexão de Braços", s: 3, m: "Superset" }, { n: "2A. Afundo / Passada", s: 3, m: "Superset" }, { n: "2B. Elevação Lateral", s: 3, m: "Superset" }, { n: "3A. Remada Máquina", s: 3, m: "Superset" }, { n: "3B. Tríceps Corda", s: 3, m: "Superset" }, { n: "4. Cadeira Flexora", s: 4, m: "Isolamento" } ]
       };
 
       const fases = {
         hipertrofia: { reps: "8-12", rpe: "8-9", mod_s: 0 },
         forca: { reps: "5-8", rpe: "9-10", mod_s: 0 },
         metabolico: { reps: "15-20", rpe: "10", mod_s: 1 },
-        deload: { reps: "10-12", rpe: "6-7", mod_s: -1 }
+        deload: { reps: "10-12", rpe: "6", mod_s: -1 }
       };
 
-      function tab(t, el) {
+      function tab(treinoId) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-        document.getElementById(t).classList.add('active');
-        el.classList.add('active');
+        document.getElementById(treinoId).classList.add('active');
+        document.getElementById('pill' + treinoId).classList.add('active');
       }
 
-      function build() {
+      function buildTreino() {
         const fase = document.getElementById('periodoFase').value;
-        const config = fases[fase];
-        
+        const conf = fases[fase];
         ['A', 'B', 'C'].forEach(id => {
           const container = document.getElementById(id);
-          container.innerHTML = ""; 
+          container.innerHTML = "";
           baseData[id].forEach(ex => {
-            const numSeries = Math.max(2, ex.s + config.mod_s);
-            let html = `
-              <div class="exercise-card">
-                <div class="ex-title">${ex.n}</div>
-                <div class="ex-target">META: ${config.reps} REPS | RPE ${config.rpe}</div>
-                <div class="ex-meta">${ex.m} | ${numSeries} Séries</div>
-                <div class="series-header"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
+            const numSeries = Math.max(2, ex.s + conf.mod_s);
+            let cardHtml = `<div class="exercise-card"><div class="ex-title">${ex.n}</div><div class="ex-target">META: ${conf.reps} REPS | RPE ${conf.rpe}</div><div class="ex-meta">${ex.m} | ${numSeries} Séries</div><div class="series-header"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
             for (let i = 1; i <= numSeries; i++) {
-              html += `
-                <div class="series-row">
-                  <div class="s-label">S${i}</div>
-                  <div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div>
-                  <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
-                  <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
-                </div>`;
+              cardHtml += `<div class="series-row"><div class="s-label">S${i}</div><div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div><div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div><div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div></div>`;
             }
-            html += `</div>`;
-            container.innerHTML += html;
+            container.innerHTML += cardHtml + `</div>`;
           });
         });
-        document.getElementById('todayLabel').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
       }
 
-      build();
-    </script>
-    <script src="./app.js"></script>
-  </body>
-</html>
-    <dialog id="modalHistory" style="background: #161e2e; color: #fff; border: 1px solid #3182ce; border-radius: 12px; padding: 20px; width: 90%; max-width: 500px;">
-        <h3 style="margin-top:0; color: #3182ce;">Histórico de Treinos</h3>
-        <div id="historyContent" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem;">
-            </div>
-        <button class="btn secondary" onclick="document.getElementById('modalHistory').close()" style="width:100%; margin-top:15px;">Fechar</button>
-        <button class="btn" onclick="limparHistorico()" style="width:100%; margin-top:10px; background: #e53e3e; color: white;">Apagar Tudo</button>
-    </dialog>
-
-    <script>
-      // 1. Lógica de Salvamento
+      // LÓGICA DE SALVAMENTO
       document.getElementById('btnSave').addEventListener('click', function() {
-          const fase = document.getElementById('periodoFase').value;
           const treinoAtivo = document.querySelector('.section.active').id;
           const cards = document.querySelectorAll(`#${treinoAtivo} .exercise-card`);
-          
-          let registroDia = {
-              data: new Date().toLocaleString('pt-BR'),
-              fase: fase.toUpperCase(),
-              treino: treinoAtivo,
-              exercicios: []
-          };
+          let logs = [];
 
           cards.forEach(card => {
               const nome = card.querySelector('.ex-title').innerText;
-              const series = [];
-              const linhas = card.querySelectorAll('.series-row');
-
-              linhas.forEach((linha, index) => {
+              card.querySelectorAll('.series-row').forEach((linha, i) => {
                   const inputs = linha.querySelectorAll('input');
-                  const kg = inputs[0].value;
-                  const reps = inputs[1].value;
-                  const rpe = inputs[2].value;
-
-                  if (kg || reps || rpe) {
-                      series.push({ s: index + 1, kg: kg || "0", reps: reps || "0", rpe: rpe || "-" });
+                  if (inputs[1].value) { // Se preencheu reps
+                      logs.push({ ex: nome, s: i+1, kg: inputs[0].value || "0", reps: inputs[1].value, rpe: inputs[2].value || "-" });
                   }
               });
-
-              if (series.length > 0) {
-                  registroDia.exercicios.push({ nome, series });
-              }
           });
 
-          if (registroDia.exercicios.length === 0) {
-              alert("Preencha algo antes de salvar!");
-              return;
-          }
+          if (logs.length === 0) return alert("Preenche as repetições primeiro!");
 
-          let historico = JSON.parse(localStorage.getItem('titan_log_history') || '[]');
-          historico.unshift(registroDia);
-          localStorage.setItem('titan_log_history', JSON.stringify(historico));
-
-          alert("✅ Treino salvo com sucesso!");
+          let historico = JSON.parse(localStorage.getItem('titan_log') || '[]');
+          historico.unshift({ data: new Date().toLocaleString('pt-PT'), treino: treinoAtivo, dados: logs });
+          localStorage.setItem('titan_log', JSON.stringify(historico.slice(0, 20))); // Guarda os últimos 20
+          alert("✅ Treino guardado no Histórico!");
       });
 
-      // 2. Lógica para Ver Histórico
+      // LÓGICA DE HISTÓRICO
       document.getElementById('btnHistory').addEventListener('click', function() {
-          const historico = JSON.parse(localStorage.getItem('titan_log_history') || '[]');
-          const container = document.getElementById('historyContent');
-          
-          if (historico.length === 0) {
-              container.innerHTML = "<p>Nenhum treino salvo ainda.</p>";
-          } else {
-              container.innerHTML = historico.map(reg => `
-                  <div style="border-bottom: 1px solid #2d3748; padding: 10px 0;">
-                      <strong style="color: #f6ad55;">${reg.data} - Treino ${reg.treino}</strong><br>
-                      <small>Fase: ${reg.fase}</small>
-                      ${reg.exercicios.map(ex => `<div style="font-size: 0.75rem;">• ${ex.nome}</div>`).join('')}
+          const hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
+          const content = document.getElementById('historyContent');
+          if (hist.length === 0) content.innerHTML = "<p>Sem treinos guardados.</p>";
+          else {
+              content.innerHTML = hist.map(h => `
+                  <div class="hist-item">
+                      <div style="color:var(--orange); font-weight:bold;">${h.data} (Treino ${h.treino})</div>
+                      ${h.dados.map(d => `<div style="font-size:0.75rem;">${d.ex} S${d.s}: ${d.kg}kg x ${d.reps} (RPE ${d.rpe})</div>`).join('')}
                   </div>
               `).join('');
           }
           document.getElementById('modalHistory').showModal();
       });
 
-      function limparHistorico() {
-          if(confirm("Deseja apagar todo o histórico?")) {
-              localStorage.removeItem('titan_log_history');
-              location.reload();
-          }
-      }
+      function limparHistorico() { if(confirm("Apagar tudo?")) { localStorage.removeItem('titan_log'); location.reload(); } }
 
-      // 3. Função de Copiar (WhatsApp)
+      // COPIAR WHATSAPP
       document.getElementById('btnCopy').addEventListener('click', function() {
           const treinoAtivo = document.querySelector('.section.active').id;
-          const cards = document.querySelectorAll(`#${treinoAtivo} .exercise-card`);
-          let texto = `*TITAN LOG - TREINO ${treinoAtivo}*\nData: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
-
-          cards.forEach(card => {
-              const nome = card.querySelector('.ex-title').innerText;
-              let sTexto = "";
-              card.querySelectorAll('.series-row').forEach((linha, i) => {
-                  const inputs = linha.querySelectorAll('input');
-                  if (inputs[1].value) {
-                      sTexto += `  S${i+1}: ${inputs[0].value}kg x ${inputs[1].value} reps (RPE ${inputs[2].value})\n`;
-                  }
+          let txt = `*TITAN LOG - ${treinoAtivo}*\n`;
+          document.querySelectorAll(`#${treinoAtivo} .exercise-card`).forEach(card => {
+              let sTxt = "";
+              card.querySelectorAll('.series-row').forEach((l, i) => {
+                  const inp = l.querySelectorAll('input');
+                  if (inp[1].value) sTxt += ` S${i+1}: ${inp[0].value}kg x ${inp[1].value} (RPE ${inp[2].value})\n`;
               });
-              if (sTexto) texto += `*${nome}*\n${sTexto}\n`;
+              if (sTxt) txt += `\n*${card.querySelector('.ex-title').innerText}*\n${sTxt}`;
           });
-
-          navigator.clipboard.writeText(texto).then(() => alert("Copiado para o WhatsApp!"));
+          navigator.clipboard.writeText(txt).then(() => alert("Copiado!"));
       });
-    </script>
 
+      window.onload = () => { buildTreino(); document.getElementById('todayLabel').innerText = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric' }); };
+    </script>
+  </body>
+</html>
