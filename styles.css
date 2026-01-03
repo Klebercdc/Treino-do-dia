@@ -1,37 +1,16 @@
-/* Garante que nada ultrapassa a largura do telemóvel */
-.container {
-  overflow-x: hidden;
+.btn.mini {
+  flex: 0 1 auto; /* Não cresce, apenas ocupa o espaço do texto */
   padding: 10px;
+  font-size: 11px;
+  min-width: 60px;
+  text-transform: uppercase;
+  opacity: 0.8;
 }
 
-.card {
-  margin-left: 0;
-  margin-right: 0;
-  padding: 12px 8px; /* Reduz padding lateral nos cards */
-}
-
-/* Remove margens negativas que podem causar scroll lateral */
-.grid, .set-row {
-  width: 100%;
-  margin: 0 !important;
-}
-
-/* Ajuste nos inputs para não terem bordas largas */
-input {
-  border: 1px solid var(--border);
-  background: var(--btn2);
-  color: var(--text);
-  border-radius: 6px;
-}
-
-/* Otimiza a barra fixa no fundo para ecrãs muito pequenos */
-@media (max-width: 360px) {
-  .footerrow {
-    padding: 8px;
-    gap: 5px;
-  }
-  .btn {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
+/* Ajuste na footerrow para garantir que os outros botões ocupem o resto */
+.footerrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 20px; /* Mais espaço embaixo para evitar a barra do iPhone */
 }
