@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>Treino do Dia</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="titlewrap">
+        <h1>Treino do Dia</h1>
+        <div class="sub" id="todayLabel">Carregando...</div>
+      </div>
+      <div class="actions">
+        <button class="iconbtn" id="btnSettings">⚙️</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card" id="dayCard">
+        <div class="cardhead">
+          <div>
+            <div class="pill" id="pillDay">—</div>
+            <h2 id="workoutTitle">—</h2>
+            <div class="muted" id="workoutObjective">—</div>
+          </div>
+          <div class="stack">
+            <button class="btn" id="btnCopy">Copiar</button>
+            <button class="btn secondary" id="btnManagePRs">PRs</button>
+          </div>
+        </div>
+
+        <div class="list" id="exerciseList"></div>
+
+        <div class="footerrow">
+          <button class="btn tertiary" id="btnPrevDay">◀</button>
+          <button class="btn tertiary" id="btnToday">Hoje</button>
+          <button class="btn tertiary" id="btnNextDay">▶</button>
+        </div>
+      </section>
+
+      <section class="card" id="restCard" hidden>
+        <h2>Dia de Descanso</h2>
+        <p class="muted">Aproveite para recuperar.</p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
