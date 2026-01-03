@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - Custom</title>
+    <title>TITAN LOG - Biblioteca Completa</title>
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
       body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 60px; }
@@ -25,17 +25,18 @@
       .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; text-align: center; }
       .btn.primary { background: var(--green); color: #fff; width: 100%; }
       .btn.secondary { background: #2d3748; color: #fff; }
-      
-      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 500px; padding: 20px; }
-      .config-group { margin-bottom: 15px; border-bottom: 1px solid #2d3748; padding-bottom: 10px; }
-      .config-item { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 0.9rem; }
+      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 92%; max-width: 500px; padding: 20px; box-sizing: border-box; }
+      .config-group { margin-bottom: 20px; border-bottom: 1px solid #2d3748; padding-bottom: 10px; }
+      .config-group strong { color: var(--blue); display: block; margin-bottom: 10px; font-size: 1.1rem; }
+      .config-item { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.95rem; }
+      .config-item input[type="checkbox"] { width: 18px; height: 18px; }
     </style>
   </head>
   <body>
     <header class="topbar">
       <div><h1 style="margin:0; font-size: 1.2rem;">TITAN LOG</h1></div>
       <div style="display:flex; gap:5px;">
-        <button class="btn secondary" style="padding: 8px;" id="btnConfig">⚙️ Config</button>
+        <button class="btn secondary" style="padding: 8px;" onclick="document.getElementById('modalConfig').showModal(); renderChecklist();">⚙️ Montar</button>
         <button class="btn secondary" style="padding: 8px;" id="btnHistory">📜 Hist</button>
       </div>
     </header>
@@ -61,44 +62,39 @@
       <div id="C" class="section"></div>
     </main>
 
-    <div style="padding: 10px; display: flex; gap: 10px;">
-        <button class="btn secondary" id="btnCopy" style="flex:1">Copiar Whats</button>
-        <button class="btn primary" id="btnSave" style="flex:2">SALVAR TREINO</button>
+    <div style="padding: 10px; display: flex; gap: 10px; position: sticky; bottom: 0; background: var(--bg);">
+        <button class="btn primary" id="btnSave">SALVAR TREINO</button>
     </div>
 
     <dialog id="modalConfig">
-        <h3 style="color:var(--blue)">Configurar Exercícios</h3>
-        <p style="font-size:0.8rem">Selecione o Treino (A, B ou C) e marque os exercícios:</p>
-        <select id="selectTreinoConfig" onchange="renderChecklist()" style="width:100%; padding:10px; margin-bottom:15px; background:#0b1220; color:white;">
-            <option value="A">Editar Treino A</option>
-            <option value="B">Editar Treino B</option>
-            <option value="C">Editar Treino C</option>
+        <h3 style="color:var(--blue); margin-top:0;">Montar Treino</h3>
+        <select id="selectTreinoConfig" onchange="renderChecklist()" style="width:100%; padding:12px; margin-bottom:15px; background:#0b1220; color:white; border: 1px solid var(--blue);">
+            <option value="A">Configurar Treino A</option>
+            <option value="B">Configurar Treino B</option>
+            <option value="C">Configurar Treino C</option>
         </select>
-        <div id="checklistExercicios" style="max-height:300px; overflow-y:auto;"></div>
-        <button class="btn primary" onclick="document.getElementById('modalConfig').close(); buildTreino();" style="margin-top:15px;">Salvar e Fechar</button>
+        <div id="checklistExercicios" style="max-height:60vh; overflow-y:auto; padding-right:10px;"></div>
+        <button class="btn primary" onclick="document.getElementById('modalConfig').close(); buildTreino();" style="margin-top:15px;">Confirmar Montagem</button>
     </dialog>
 
     <dialog id="modalHistory">
-        <h3 style="color:var(--orange)">Histórico</h3>
+        <h3 style="color:var(--orange)">Histórico de Cargas</h3>
         <div id="historyContent" style="max-height:350px; overflow-y:auto;"></div>
         <button class="btn secondary" onclick="document.getElementById('modalHistory').close()" style="width:100%; margin-top:10px;">Fechar</button>
     </dialog>
 
     <script>
       const biblioteca = {
-        "PERNAS": ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Cadeira Flexora", "Stiff", "Afundo", "Elevação de Panturrilha"],
-        "PEITO": ["Supino Reto", "Supino Inclinado", "Crucifixo", "Cross Over", "Flexão de Braço"],
-        "COSTAS": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Pull Down", "Levantamento Terra"],
-        "OMBROS": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Face Pull"],
-        "BRAÇOS": ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa", "Paralelas"]
+        "PERNAS": ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Cadeira Flexora", "Mesa Flexora", "Stiff", "Afundo", "Passada", "Agachamento Sumô", "Hack Machine"],
+        "PEITO": ["Supino Reto Barra", "Supino Inclinado Halter", "Supino Declinado", "Crucifixo Reto", "Peck Deck (Voador)", "Cross Over", "Flexão de Braço"],
+        "COSTAS": ["Puxada Alta", "Remada Curvada Barra", "Remada Serrote", "Remada Baixa", "Pull Down Corda", "Levantamento Terra", "Barra Fixa"],
+        "OMBROS": ["Desenvolvimento Militar", "Elevação Lateral", "Elevação Frontal", "Desenvolvimento Arnold", "Crucifixo Inverso", "Face Pull", "Encolhimento Trapeziro"],
+        "BÍCEPS": ["Rosca Direta Barra", "Rosca Alternada", "Rosca Martelo", "Rosca Scott", "Rosca Concentrada", "Rosca Inversa"],
+        "TRÍCEPS": ["Tríceps Corda", "Tríceps Testa", "Tríceps Pulley Barra", "Paralelas", "Tríceps Francês", "Tríceps Coice"],
+        "PANTURRILHA": ["Panturrilha em Pé", "Panturrilha Sentado (Sustentação)", "Panturrilha no Leg"]
       };
 
-      // Carrega ou define padrão
-      let meuTreino = JSON.parse(localStorage.getItem('titan_setup')) || {
-        A: ["Agachamento Livre", "Supino Inclinado", "Desenvolvimento"],
-        B: ["Levantamento Terra", "Remada Curvada", "Puxada Alta"],
-        C: ["Leg Press 45", "Elevação Lateral", "Tríceps Corda"]
-      };
+      let meuTreino = JSON.parse(localStorage.getItem('titan_setup')) || { A: [], B: [], C: [] };
 
       const fases = {
         hipertrofia: { reps: "8-12", rpe: "8-9", s: 4 },
@@ -118,7 +114,7 @@
         const conf = fases[fase];
         ['A', 'B', 'C'].forEach(id => {
           const container = document.getElementById(id);
-          container.innerHTML = "";
+          container.innerHTML = meuTreino[id].length ? "" : `<p style="text-align:center; color:#718096; margin-top:20px;">Use o botão ⚙️ Montar para adicionar exercícios.</p>`;
           meuTreino[id].forEach(ex => {
             let html = `<div class="exercise-card"><div class="ex-title">${ex}</div><div class="ex-target">META: ${conf.reps} REPS | RPE ${conf.rpe}</div><div style="display:grid; grid-template-columns: 40px 1fr 1fr 1fr; gap:8px; text-align:center; font-size:0.6rem; color:#718096; margin-bottom:5px;"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
             for (let i = 1; i <= conf.s; i++) {
@@ -144,12 +140,11 @@
       }
 
       function updateSetup(treino, el) {
-        if (el.checked) { meuTreino[treino].push(el.value); }
+        if (el.checked) { if(!meuTreino[treino].includes(el.value)) meuTreino[treino].push(el.value); }
         else { meuTreino[treino] = meuTreino[treino].filter(i => i !== el.value); }
         localStorage.setItem('titan_setup', JSON.stringify(meuTreino));
       }
 
-      // SALVAR E HISTÓRICO
       document.getElementById('btnSave').onclick = () => {
           const tAtivo = document.querySelector('.section.active').id;
           const logs = [];
@@ -160,21 +155,19 @@
                   if (inp[1].value) logs.push({ ex: nome, s: i+1, kg: inp[0].value||0, reps: inp[1].value, rpe: inp[2].value||'-' });
               });
           });
-          if (!logs.length) return alert("Preencha algo!");
+          if (!logs.length) return alert("Preencha as repetições!");
           let hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
           hist.unshift({ data: new Date().toLocaleString('pt-BR'), treino: tAtivo, dados: logs });
-          localStorage.setItem('titan_log', JSON.stringify(hist.slice(0, 20)));
-          alert("✅ Salvo!");
+          localStorage.setItem('titan_log', JSON.stringify(hist.slice(0, 30)));
+          alert("✅ Treino Salvo!");
       };
 
       document.getElementById('btnHistory').onclick = () => {
           const hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
-          document.getElementById('historyContent').innerHTML = hist.map(h => `<div style="border-bottom:1px solid #2d3748; padding:10px 0;"><strong style="color:var(--orange)">${h.data} (${h.treino})</strong>${h.dados.map(d => `<div style="font-size:0.75rem;">${d.ex} S${d.s}: ${d.kg}kg x ${d.reps}</div>`).join('')}</div>`).join('') || "Vazio";
+          document.getElementById('historyContent').innerHTML = hist.map(h => `<div style="border-bottom:1px solid #2d3748; padding:10px 0;"><strong style="color:var(--orange)">${h.data}</strong>${h.dados.map(d => `<div style="font-size:0.75rem;">${d.ex} S${d.s}: ${d.kg}kg x ${d.reps}</div>`).join('')}</div>`).join('') || "Histórico Vazio";
           document.getElementById('modalHistory').showModal();
       };
 
-      document.getElementById('btnConfig').onclick = () => { renderChecklist(); document.getElementById('modalConfig').showModal(); };
-      
       window.onload = buildTreino;
     </script>
   </body>
