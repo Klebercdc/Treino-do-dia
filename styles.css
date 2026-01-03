@@ -1,48 +1,44 @@
-/* Barra de rodapé otimizada */
+/* Container do Rodapé */
 .footerrow {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(11, 18, 32, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 10px 12px 25px 12px; /* Espaço extra embaixo para gestos do telemóvel */
+  background: rgba(11, 18, 32, 0.98);
+  padding: 10px 12px 25px; /* Padding extra para mobile */
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border-top: 1px solid var(--border);
   z-index: 100;
 }
 
-/* Botão JSON (Ultra Pequeno) */
-#btnExport {
-  flex: 0 0 auto; /* Não cresce nem encolhe */
-  width: 55px;    /* Largura fixa pequena */
+/* O Botão JSON Pequeno */
+.btn.mini {
+  flex: 0 0 auto;  /* Não cresce nem encolhe */
+  width: 55px;     /* Largura fixa pequena */
   height: 40px;
   padding: 0;
   font-size: 10px;
-  background: var(--btn2);
-  color: var(--muted);
-  border-color: var(--border);
+  text-transform: uppercase;
 }
 
-/* Container dos botões principais */
+/* Container dos botões de ação */
 .footer-actions {
   display: flex;
-  flex: 1; /* Ocupa todo o resto do espaço */
-  gap: 8px;
+  flex: 1;         /* Ocupa todo o resto do espaço */
+  gap: 10px;
 }
 
 .footer-actions .btn {
-  flex: 1; /* Divide o espaço restante igualmente */
+  flex: 1;         /* Divide o espaço entre Copiar e Salvar */
   height: 40px;
   font-size: 14px;
-  padding: 0 5px;
 }
 
 /* Destaque para o botão Salvar */
 #btnSave {
-  flex: 1.5; /* Salvar ligeiramente maior que o Copiar */
+  flex: 1.4;       /* Dá um pouco mais de peso ao botão de Salvar */
   background: var(--accent);
-  color: #000;
+  color: #0b1220;
 }
