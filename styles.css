@@ -42,3 +42,21 @@
   background: var(--accent);
   color: #0b1220;
 }
+.footerrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* ... outros estilos ... */
+}
+
+.btn.mini {
+  flex: 0 0 auto;
+  width: 55px; /* Tamanho pequeno fixo */
+  font-size: 10px;
+}
+
+.footer-actions {
+  display: flex;
+  flex: 1; /* Ocupa o resto da largura */
+  gap: 8px;
+}
