@@ -4,13 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>Treino do Dia</title>
+    <title>Treino do Dia - Coach Titan</title>
     <link rel="stylesheet" href="./styles.css" />
+    <style>
+      /* Pequeno ajuste para garantir visibilidade no mobile */
+      body { background-color: #0b1220; color: #fff; font-family: sans-serif; }
+      .muted { color: #888; font-size: 0.9em; }
+    </style>
   </head>
   <body>
     <header class="topbar">
       <div class="titlewrap">
-        <h1>Treino do Dia</h1>
+        <h1>TITAN LOG v1.0</h1>
         <div class="sub" id="todayLabel">Carregando…</div>
       </div>
       <div class="actions">
@@ -23,7 +28,7 @@
       <section class="card" id="workoutCard">
         <div id="pillDay" class="pill-container"></div>
         <h2 id="workoutTitle" style="margin: 10px 0 5px 0;">—</h2>
-        <div class="muted" id="workoutObjective">—</div>
+        <div class="muted" id="workoutObjective">Foco: Recomposição Corporal</div>
         
         <div class="list" id="exerciseList"></div>
 
@@ -59,6 +64,46 @@
     </dialog>
 
     <input type="file" id="fileImport" accept="application/json" hidden />
+
+    <script>
+      const TREINOS_TITAN = {
+        "A": {
+          titulo: "TREINO A: Empurrar + Quad",
+          objetivo: "Tensão Mecânica e Força",
+          exercicios: [
+            { nome: "Agachamento Livre", series: 4, reps: "8-10", obs: "Amplitude máxima" },
+            { nome: "Supino Inclinado", series: 4, reps: "8-10", obs: "Foco peitoral superior" },
+            { nome: "Desenv. Militar", series: 3, reps: "10-12", obs: "Não arquear lombar" },
+            { nome: "Fundos (Dips)", series: 3, reps: "Falha", obs: "Tronco inclinado" },
+            { nome: "Cadeira Extensora", series: 3, reps: "15", obs: "Pico de contração 1s" }
+          ]
+        },
+        "B": {
+          titulo: "TREINO B: Puxar + Posterior",
+          objetivo: "Densidade e Postura",
+          exercicios: [
+            { nome: "Levantamento Terra", series: 4, reps: "6-8", obs: "Coluna neutra" },
+            { nome: "Remada Curvada", series: 4, reps: "8-10", obs: "Tronco paralelo ao chão" },
+            { nome: "Puxada Alta", series: 3, reps: "10-12", obs: "Foco na largura" },
+            { nome: "Face Pull", series: 3, reps: "15", obs: "Saúde do ombro" },
+            { nome: "Rosca Direta", series: 3, reps: "10-12", obs: "Sem roubar" }
+          ]
+        },
+        "C": {
+          titulo: "TREINO C: Full Body Metabólico",
+          objetivo: "Gasto Calórico e Volume",
+          exercicios: [
+            { nome: "Leg Press + Flexão", series: 3, reps: "12/Máx", obs: "Super-série sem descanso" },
+            { nome: "Afundo + Elev. Lateral", series: 3, reps: "12/15", obs: "Super-série" },
+            { nome: "Remada + Tríceps Corda", series: 3, reps: "12/15", obs: "Super-série" },
+            { nome: "Cadeira Flexora", series: 4, reps: "15", obs: "Movimento lento" },
+            { nome: "Abdominal Supra", series: 4, reps: "20", obs: "Soltar ar no topo" }
+          ]
+        }
+      };
+      console.log("Treinos carregados no sistema.", TREINOS_TITAN);
+    </script>
+    
     <script src="./app.js"></script>
   </body>
 </html>
