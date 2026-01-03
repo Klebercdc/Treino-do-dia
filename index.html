@@ -41,16 +41,9 @@
 
       .btn-add-ex { background: #1a202c; color: var(--blue); border: 2px dashed var(--blue); width: calc(100% - 20px); margin: 15px 10px; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; }
 
-      /* RODAPÉ AO FINAL (NÃO FIXO) */
-      .footer-actions { 
-        padding: 20px 10px 40px 10px;
-        display: flex; 
-        gap: 12px; 
-        background: transparent;
-      }
+      .footer-actions { padding: 20px 10px 40px 10px; display: flex; gap: 12px; background: transparent; }
       .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.75rem; text-transform: uppercase; }
       .btn-save { background: var(--green); color: white; box-shadow: 0 4px 0 #2d8a84; }
-      .btn-save:active { transform: translateY(2px); box-shadow: none; }
       .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
 
       dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 400px; padding: 20px; }
@@ -62,7 +55,7 @@
 
     <div class="top-header">
       <h1 style="margin:0; font-size: 1.1rem; color: var(--blue);">TITAN <span style="color:#fff">LOG MASTER</span></h1>
-      <div class="date-badge" id="displayDate">03/01/26</div>
+      <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
 
     <div class="timer-area">
@@ -99,9 +92,7 @@
     </div>
 
     <div class="nav-pills" id="nav"></div>
-    
     <main id="container"></main>
-    
     <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
 
     <div class="footer-actions">
@@ -221,7 +212,7 @@
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s+1}</span>
               <div class="input-box"><input type="number" inputmode="decimal"></div>
               <div class="input-box"><input type="number"></div>
-              <div class="input-box"><input type="number" placeholder="8"></div>
+              <div class="input-box"><input type="number"></div>
             </div>`).join('')}
         `;
         document.getElementById(sectionId).appendChild(card);
