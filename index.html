@@ -3,195 +3,136 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - ANALYTICS 2026</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="theme-color" content="#ffffff" />
+    <title>TITAN LOG - PRO</title>
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
-      body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 110px; }
+      :root { --primary: #3b5bdb; --bg: #f8f9fa; --card: #ffffff; --text: #1a1a1a; --gray: #868e96; --orange: #fd7e14; --green: #40c057; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding-bottom: 80px; }
       
-      .top-header { padding: 15px; background: rgba(22, 30, 46, 0.98); border-bottom: 2px solid var(--blue); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-      .brand { font-weight: 900; font-size: 1.1rem; color: var(--blue); }
-      .timer-box { color: var(--orange); font-family: monospace; font-weight: bold; cursor: pointer; border: 1px solid var(--orange); padding: 6px 12px; border-radius: 8px; font-size: 0.9rem; }
+      /* Header & Tabs */
+      .header { padding: 40px 20px 20px; background: var(--card); border-bottom: 1px solid #eee; }
+      .header h1 { margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px; }
+      
+      .tab-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid #eee; padding: 10px 0; z-index: 1000; justify-content: space-around; }
+      .tab-item { text-align: center; color: var(--gray); font-size: 10px; font-weight: 600; flex: 1; text-decoration: none; cursor: pointer; }
+      .tab-item.active { color: var(--primary); }
+      .tab-icon { display: block; font-size: 20px; margin-bottom: 4px; }
 
-      /* Analytics Dashboard */
-      .analytics-card { background: var(--card); margin: 12px; padding: 15px; border-radius: 18px; border: 1px solid var(--blue); }
-      canvas { width: 100% !important; height: 180px !important; }
+      /* Summary Cards */
+      .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 20px; }
+      .summary-box { background: var(--card); padding: 15px; border-radius: 12px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+      .summary-box span { display: block; font-size: 11px; color: var(--gray); margin-bottom: 5px; }
+      .summary-box strong { font-size: 18px; color: var(--primary); }
 
-      .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); }
-      .field { margin-bottom: 15px; }
-      .field label { font-size: 0.65rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-      select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; font-weight: bold; outline: none; }
+      /* Workout Cards */
+      .card { background: var(--card); margin: 0 20px 15px; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f1f3f5; }
+      .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+      .card-title { font-size: 18px; font-weight: 700; color: #000; }
+      .card-meta { font-size: 13px; color: var(--gray); }
+      
+      .exercise-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid #f1f3f5; cursor: pointer; }
+      .ex-info { display: flex; align-items: center; gap: 12px; }
+      .ex-img { width: 45px; height: 45px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 
-      .nav-pills { display: flex; gap: 8px; padding: 10px; overflow-x: auto; background: var(--bg); }
-      .pill { flex: none; padding: 10px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.7rem; color: #718096; border: 1px solid #2d3748; cursor: pointer; }
-      .pill.active { background: var(--blue); color: white; }
+      /* Series UI (In-Workout) */
+      .series-line { display: grid; grid-template-columns: 30px 1fr 50px 1fr 50px; gap: 10px; align-items: center; background: #f1f3f5; padding: 10px; border-radius: 10px; margin-bottom: 8px; }
+      .series-input { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 8px; text-align: center; font-weight: 700; font-size: 16px; width: 100%; box-sizing: border-box; outline: none; }
+      
+      .btn-main { background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; margin-top: 20px; cursor: pointer; }
 
-      /* Cards */
-      .exercise-card { background: var(--card); border-radius: 18px; padding: 18px; margin: 12px; border: 1px solid #2d3748; }
-      .ex-title { font-weight: 800; font-size: 1.1rem; color: #fff; display: block; text-decoration: underline dotted var(--blue); cursor: pointer; }
-      .guide-box { background: rgba(255,174,85,0.08); padding: 8px; border-radius: 8px; margin: 8px 0; border-left: 3px solid var(--orange); }
-      .guide-text { font-size: 0.65rem; color: var(--orange); font-weight: bold; }
-      .predict-tag { color: var(--green); font-size: 0.75rem; font-weight: bold; margin-bottom: 10px; display: inline-block; background: rgba(56, 178, 172, 0.1); padding: 4px 8px; border-radius: 5px; }
-
-      .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 8px; padding: 8px 0; }
-      input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
-
-      .footer { position: fixed; bottom: 0; width: 100%; background: rgba(11, 18, 32, 0.95); padding: 15px; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 100; }
-      .btn { padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.75rem; text-transform: uppercase; }
-      .btn-save { background: var(--green); color: white; }
+      .section { display: none; }
+      .section.active { display: block; }
     </style>
   </head>
   <body>
 
-    <header class="top-header">
-      <div class="brand">TITAN <span style="color:#fff">ANALYTICS</span></div>
-      <div id="timerDisplay" class="timer-box" onclick="toggleTimer()">REPAUSO</div>
-    </header>
-
-    <div class="analytics-card" id="analyticsArea" style="display:none;">
-      <canvas id="performanceChart"></canvas>
-      <div style="font-size:0.6rem; text-align:center; color:#a0aec0; margin-top:10px;">VOLUME (BARRA) vs ESFORÇO RPE (LINHA)</div>
+    <div id="relatorio" class="section active">
+      <div class="header"><h1>Relatório</h1></div>
+      <div class="summary-grid">
+        <div class="summary-box"><span>Treinos</span><strong id="totalTreinos">0</strong></div>
+        <div class="summary-box"><span>Tempo (min)</span><strong>0</strong></div>
+        <div class="summary-box"><span>Volume (kg)</span><strong id="totalVolume">0</strong></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Esta Semana</div>
+        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+          ${[21,22,23,24,25,26,27].map(d => `<div style="text-align:center"><div style="font-size:10px; color:var(--gray); margin-bottom:5px">S</div><div style="font-weight:700; padding:8px; background:${d==25?'#000':'#f1f3f5'}; color:${d==25?'#fff':'#000'}; border-radius:50%">${d}</div></div>`).join('')}
+        </div>
+      </div>
     </div>
 
-    <div class="setup-panel" id="setupArea">
-      <div class="field"><label>Treino por Semana</label>
-        <select id="freq">
-          <option value="2">2 Dias (Full Body)</option>
-          <option value="3" selected>3 Dias (ABC)</option>
-          <option value="4">4 Dias (Upper/Lower)</option>
-          <option value="6">6 Dias (PPL 2x)</option>
-        </select>
-      </div>
-      <div class="field"><label>Periodização Atual</label>
-        <select id="fase">
-          <option value="adapt">Fase 1: Adaptação (RPE 7)</option>
-          <option value="hiper" selected>Fase 2: Hipertrofia (RPE 9)</option>
-          <option value="forca">Fase 3: Força Pura (RPE 10)</option>
-          <option value="cut">Fase 4: Polimento (RPE 9)</option>
-        </select>
-      </div>
-      <button class="btn btn-save" style="width:100%" onclick="iniciarTitan()">GERAR & ANALISAR</button>
+    <div id="treino" class="section">
+      <div class="header"><h1>Treino</h1></div>
+      <div id="workoutList"></div>
     </div>
 
-    <div class="nav-pills" id="nav"></div>
-    <main id="container"></main>
+    <div id="personalizar" class="section">
+      <div class="header"><h1>Personalizar</h1></div>
+      <div class="card" style="text-align:center; padding: 40px 20px;">
+        <div style="font-size: 60px; margin-bottom: 20px;">🏋️‍♂️</div>
+        <h2 style="margin: 0 0 10px;">Defina a sua periodização</h2>
+        <p style="color:var(--gray); font-size: 14px; margin-bottom: 25px;">Escolha a fase atual para ajustar metas.</p>
+        <select id="faseSelect" onchange="updateFase()" style="width:100%; padding:15px; border-radius:10px; border:1px solid #ddd; font-weight:700;">
+          <option value="adapt">Fase 1: Adaptação</option>
+          <option value="hiper" selected>Fase 2: Hipertrofia</option>
+          <option value="forca">Fase 3: Força Pura</option>
+          <option value="cut">Fase 4: Polimento</option>
+        </select>
+        <button class="btn-main" onclick="switchTab('treino')">+ INÍCIO</button>
+      </div>
+    </div>
 
-    <footer class="footer">
-      <button class="btn" style="background:#1a202c; color:var(--blue); flex:0.2" onclick="location.reload()">⚙️</button>
-      <button class="btn btn-save" onclick="salvarEvolucao()">SALVAR & EVOLUIR</button>
-      <button class="btn" style="background:#2d3748; color:white; flex:0.3" onclick="abrirHistorico()">📜 HIST</button>
-    </footer>
-
-    <dialog id="modalLib">
-      <h3 style="margin:0; color:var(--blue); font-size:1rem;">Trocar Exercício</h3>
-      <div id="libContent" style="max-height: 300px; overflow-y: auto; margin:15px 0;"></div>
-      <button class="btn" style="background:var(--red); color:white; width:100%" onclick="document.getElementById('modalLib').close()">FECHAR</button>
-    </dialog>
+    <nav class="tab-nav">
+      <a class="tab-item" onclick="switchTab('treino')"><span class="tab-icon">🏋️</span>Treino</a>
+      <a class="tab-item" onclick="switchTab('personalizar')"><span class="tab-icon">✏️</span>Personalizar</a>
+      <a class="tab-item" onclick="switchTab('exercicios')"><span class="tab-icon">📖</span>Exercícios</a>
+      <a class="tab-item active" onclick="switchTab('relatorio')"><span class="tab-icon">📊</span>Relatório</a>
+      <a class="tab-item"><span class="tab-icon">👤</span>Meu</a>
+    </nav>
 
     <script>
-      const configFases = {
-        adapt: { sets: 3, reps: "12-15", rpe: 7, desc: 60, txt: "Técnica: 3 reps de reserva." },
-        hiper: { sets: 4, reps: "8-12", rpe: 9, desc: 90, txt: "Massa: 1 rep de reserva." },
-        forca: { sets: 5, reps: "3-5", rpe: 10, desc: 180, txt: "Carga: Esforço máximo." },
-        cut:   { sets: 3, reps: "15-20", rpe: 9, desc: 45, txt: "Densidade: Pump extremo." }
+      const data = {
+        fase: 'hiper',
+        stats: { treinos: 0, volume: 0 },
+        protocolo: {
+          "Treino A": ["Agachamento Livre", "Supino Inclinado", "Desenv. Militar", "Fundos", "Extensora"],
+          "Treino B": ["Terra/Stiff", "Remada Curvada", "Puxada Alta", "Face Pull", "Rosca Direta"],
+          "Treino C": ["Leg Press 45", "Supino Máquina", "Búlgaro Smith", "Elev. Lateral", "Remada Máq"]
+        }
       };
 
-      const biblioteca = ["Supino Inclinado", "Puxada Alta", "Agachamento Smith", "Desenvolvimento", "Leg Press", "Remada Curvada", "Elevação Lateral", "Tríceps Testa", "Rosca Direta", "Stiff"];
-
-      let myChart = null; let tInt = null; let tRunning = false; let activeId = null;
-
-      function toggleTimer() {
-        const d = document.getElementById('timerDisplay');
-        const f = configFases[document.getElementById('fase').value];
-        if(tRunning) { clearInterval(tInt); tRunning = false; d.innerText = "REPAUSO"; return; }
-        let time = f.desc; tRunning = true;
-        tInt = setInterval(() => {
-          d.innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
-          if(time-- <= 0) { clearInterval(tInt); tRunning = false; d.innerText = "GO!"; if(navigator.vibrate) navigator.vibrate(300); }
-        }, 1000);
-      }
-
-      function iniciarTitan() {
-        const f = document.getElementById('freq').value;
-        const fase = document.getElementById('fase').value;
-        const conf = configFases[fase];
-        const nav = document.getElementById('nav');
-        const cont = document.getElementById('container');
-        
-        document.getElementById('setupArea').style.display = 'none';
-        document.getElementById('analyticsArea').style.display = 'block';
-        initChart();
-
-        const est = { "2":["FB A","FB B"], "3":["Push","Pull","Legs"], "4":["Upper","Lower","Upper B","Lower B"], "6":["P1","P2","L1","P3","P4","L2"] };
-
-        est[f].forEach((nome, i) => {
-          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
-          let sec = document.createElement('div'); sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`;
-          
-          biblioteca.slice(0, 5).forEach((ex, idx) => {
-            const id = `ex-${i}-${idx}`;
-            sec.innerHTML += `
-              <div class="exercise-card">
-                <span class="ex-title" id="t-${id}" onclick="abrirLib('t-${id}')">${ex}</span>
-                <div class="guide-box"><span class="guide-text">🎯 ${conf.sets}x ${conf.reps} | ${conf.txt}</span></div>
-                <div id="pred-${id}" class="predict-tag">Alvo: -- kg</div>
-                <div class="series-grid" style="font-size:0.6rem; color:#a0aec0; text-align:center;"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-                ${Array.from({length: conf.sets}, (_, s) => `
-                  <div class="series-grid">
-                    <span style="font-weight:bold; text-align:center;">S${s+1}</span>
-                    <div class="input-box"><input type="number" class="kg-${id}" inputmode="decimal" oninput="analisar('${id}')"></div>
-                    <div class="input-box"><input type="number" class="rep-${id}" oninput="analisar('${id}')"></div>
-                    <div class="input-box"><input type="number" class="rpe-${id}" oninput="analisar('${id}')" placeholder="${conf.rpe}"></div>
-                  </div>`).join('')}
-              </div>`;
-          });
-          cont.appendChild(sec);
+      function renderWorkouts() {
+        const list = document.getElementById('workoutList');
+        list.innerHTML = "";
+        Object.entries(data.protocolo).forEach(([nome, exs]) => {
+          list.innerHTML += `
+            <div class="card">
+              <div class="card-header"><span class="card-title">${nome}</span><span class="card-meta">${exs.length} exercícios</span></div>
+              ${exs.slice(0,3).map(ex => `
+                <div class="exercise-row">
+                  <div class="ex-info"><div class="ex-img">💪</div><div><strong>${ex}</strong></div></div>
+                  <div style="font-weight:700; font-size:14px;">4 x 8</div>
+                </div>`).join('')}
+              <div style="text-align:right; color:var(--primary); font-size:12px; font-weight:700; margin-top:10px; cursor:pointer;">Ver todos</div>
+              <button class="btn-main" onclick="alert('Iniciando ${nome}...')">INICIAR TREINO</button>
+            </div>`;
         });
       }
 
-      function analisar(id) {
-        const kgs = document.querySelectorAll(`.kg-${id}`);
-        const rpes = document.querySelectorAll(`.rpe-${id}`);
-        let alvo = 0;
-        kgs.forEach((k, i) => {
-          let p = parseFloat(k.value) || 0; let e = parseInt(rpes[i].value) || 0;
-          if(p > 0) alvo = e < 8 ? p * 1.05 : (e < 10 ? p * 1.02 : p);
-        });
-        if(alvo > 0) document.getElementById(`pred-${id}`).innerText = `🎯 ALVO SEMANA+: ${alvo.toFixed(1)}kg`;
+      function switchTab(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(id === 'treino') renderWorkouts();
       }
 
-      function initChart() {
-        const ctx = document.getElementById('performanceChart').getContext('2d');
-        myChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['S1', 'S2', 'S3', 'S4', 'Hoje'],
-            datasets: [{ label: 'Volume', data: [5000, 5200, 5100, 5400, 0], backgroundColor: '#3182ce', order: 2 },
-                       { label: 'RPE', data: [8, 8, 9, 8, 0], type: 'line', borderColor: '#f6ad55', order: 1 }]
-          },
-          options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
-        });
+      function updateFase() {
+        data.fase = document.getElementById('faseSelect').value;
+        alert(`Periodização atualizada para: ${data.fase}`);
       }
 
-      function abrirLib(id) {
-        activeId = id; const lib = document.getElementById('libContent'); lib.innerHTML = "";
-        biblioteca.forEach(ex => { lib.innerHTML += `<div class="lib-item" onclick="selecionar('${ex}')">${ex}</div>`; });
-        document.getElementById('modalLib').showModal();
-      }
-
-      function selecionar(n) { document.getElementById(activeId).innerText = n; document.getElementById('modalLib').close(); }
-
-      function salvarEvolucao() {
-        alert("✅ Dados salvos! Gráfico atualizado.");
-        // Lógica de atualização de gráfico em tempo real
-        myChart.data.datasets[0].data[4] = 5800; // Exemplo
-        myChart.update();
-      }
-
-      function abrirHistorico() { alert("Histórico de Progressão Ativo: Consulte as últimas 20 sessões."); }
-      function tab(idx) { document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active')); document.getElementById(`sec${idx}`).classList.add('active'); document.getElementById(`p${idx}`).classList.add('active'); }
+      renderWorkouts();
     </script>
   </body>
 </html>
