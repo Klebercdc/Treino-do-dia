@@ -4,30 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN AI - Consultoria Individualizada</title>
+    <title>TITAN AI - Custom Master</title>
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 85px; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 90px; }
       
-      /* Header & Date */
-      .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
-      .date-badge { font-size: 0.85rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--orange); }
+      .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 30; }
+      .date-badge { font-size: 0.8rem; color: var(--orange); font-weight: bold; }
 
-      /* Setup Panel */
-      .setup-panel { background: var(--card); padding: 20px; border-bottom: 2px solid var(--blue); position: relative; z-index: 20; }
+      .setup-panel { background: var(--card); padding: 20px; border-bottom: 2px solid var(--blue); }
       .field { margin-bottom: 12px; }
       .field label { font-size: 0.7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; }
       .field select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid #2d3748; border-radius: 8px; }
       
-      /* Nav Pills */
-      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; overflow-x: auto; }
+      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); overflow-x: auto; border-bottom: 1px solid #2d3748; }
       .pill { flex: 1; text-align: center; padding: 12px 18px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; white-space: nowrap; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
 
-      /* Exercise Cards */
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
-      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); }
-      .ex-target { font-size: 0.8rem; color: var(--orange); font-weight: bold; margin: 4px 0 10px 0; display: block; }
+      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); text-decoration: underline; text-decoration-style: dotted; cursor: pointer; }
+      .ex-target { font-size: 0.75rem; color: var(--orange); font-weight: bold; margin: 4px 0 10px 0; display: block; }
       
       .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
       .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: bold; }
@@ -37,40 +33,28 @@
       .section { display: none; }
       .section.active { display: block; }
 
-      /* Buttons */
-      .footer { position: fixed; bottom: 0; width: 100%; background: var(--bg); padding: 12px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; }
+      .footer { position: fixed; bottom: 0; width: 100%; background: var(--bg); padding: 12px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; z-index: 40; }
       .btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
       .btn-save { background: var(--green); color: white; }
       .btn-config { background: #1a202c; color: var(--blue); border: 1px solid var(--blue); }
+
+      /* Modal Biblioteca */
+      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 400px; padding: 20px; }
+      .lib-item { padding: 12px; border-bottom: 1px solid #2d3748; cursor: pointer; font-size: 0.9rem; }
+      .lib-item:active { background: var(--blue); }
     </style>
   </head>
   <body>
 
     <div class="top-header">
-      <h1 style="margin:0; font-size: 1.1rem; color: var(--blue);">TITAN PRO</h1>
-      <div class="date-badge" id="displayDate">01/01/2026</div>
+      <h1 style="margin:0; font-size: 1.1rem; color: var(--blue);">TITAN CUSTOM</h1>
+      <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
 
     <div class="setup-panel" id="setupPanel">
-      <div class="field">
-        <label>DIAS DISPONÍVEIS</label>
-        <select id="freq" onchange="gerarProtocolo()">
-          <option value="2">2 Dias (Full Body)</option>
-          <option value="3">3 Dias (ABC)</option>
-          <option value="4" selected>4 Dias (Upper/Lower)</option>
-          <option value="5">5 Dias (ABC + UL)</option>
-          <option value="6">6 Dias (PPL 2x)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>OBJETIVO</label>
-        <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia</option>
-          <option value="forca">Força</option>
-          <option value="cutting">Definição</option>
-        </select>
-      </div>
-      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">GERAR TREINO</button>
+      <div class="field"><label>DIAS</label><select id="freq" onchange="gerarProtocolo()"><option value="3">3 Dias (ABC)</option><option value="4" selected>4 Dias (Upper/Lower)</option><option value="5">5 Dias (ABC+UL)</option></select></div>
+      <div class="field"><label>OBJETIVO</label><select id="obj" onchange="gerarProtocolo()"><option value="hipertrofia">Hipertrofia</option><option value="forca">Força</option></select></div>
+      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">MONTAR BASE</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
@@ -78,18 +62,26 @@
 
     <footer class="footer">
       <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️</button>
-      <button class="btn btn-save" onclick="salvarTreino()">SALVAR TREINO</button>
-      <button class="btn btn-config" onclick="verHistorico()">📜 HIST</button>
+      <button class="btn btn-save" onclick="salvarTreino()">SALVAR</button>
+      <button class="btn btn-config" onclick="verHistorico()">📜</button>
     </footer>
 
+    <dialog id="modalLib">
+      <h3 style="margin-top:0; color:var(--orange)">Trocar Exercício</h3>
+      <div id="libContent" style="max-height: 350px; overflow-y: auto;"></div>
+      <button class="btn secondary" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:10px; background:#2d3748; color:white; border:none; padding:10px; border-radius:8px;">Cancelar</button>
+    </dialog>
+
     <script>
-      const exercicios = {
-        peito: ["Supino Inclinado", "Supino Reto", "Cross Over"],
-        costas: ["Puxada Alta", "Remada Curvada", "Remada Serrote"],
-        ombro: ["Desenvolvimento", "Elevação Lateral"],
-        perna: ["Agachamento", "Leg Press", "Extensora", "Flexora"],
-        braco: ["Rosca Direta", "Tríceps Corda"]
+      const biblioteca = {
+        "Peito": ["Supino Inclinado", "Supino Reto Barra", "Supino Halter", "Crucifixo", "Crossover", "Voador", "Flexão"],
+        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Serrote", "Pull Down", "Barra Fixa", "Stiff"],
+        "Pernas": ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Avanço", "Hack Machine", "Panturrilha"],
+        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Crucifixo Inverso", "Face Pull"],
+        "Braços": ["Rosca Direta", "Rosca Martelo", "Rosca Scott", "Tríceps Corda", "Tríceps Testa", "Paralelas", "Tríceps Pulley"]
       };
+
+      let currentTargetId = null;
 
       function gerarProtocolo() {
         const f = document.getElementById('freq').value;
@@ -98,13 +90,8 @@
         const cont = document.getElementById('container');
         
         nav.innerHTML = ""; cont.innerHTML = "";
-        let divisao = [];
-        if(f=="2") divisao = ["Treino Único"];
-        else if(f=="3") divisao = ["A: Empurrar", "B: Puxar", "C: Pernas"];
-        else if(f=="4") divisao = ["A: Superior", "B: Inferior", "C: Superior", "D: Inferior"];
-        else divisao = ["A: Peito/Ombro", "B: Costas", "C: Pernas", "D: Braços"];
-
-        let metaReps = o==="forca"?"5-8":(o==="hipertrofia"?"8-12":"12-15");
+        let divisao = f=="3"?["A: Peito/Ombro/Tri","B: Costas/Biceps","C: Pernas"]:["A: Superior","B: Inferior","C: Superior","D: Inferior"];
+        let metaReps = o==="forca"?"5-8":"8-12";
 
         divisao.forEach((nome, i) => {
           nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
@@ -112,12 +99,14 @@
           sec.id = `sec${i}`;
           sec.className = `section ${i===0?'active':''}`;
           
-          const listaEx = [...exercicios.peito, ...exercicios.costas, ...exercicios.perna].slice(i, i+6);
+          // Sugestão inicial aleatória da biblioteca
+          const sugestao = ["Supino Reto", "Puxada Alta", "Agachamento", "Desenvolvimento", "Rosca Direta", "Tríceps Corda"];
 
-          listaEx.forEach(ex => {
+          sugestao.forEach((ex, idx) => {
+            const exId = `ex-${i}-${idx}`;
             sec.innerHTML += `
               <div class="exercise-card">
-                <span class="ex-title">${ex}</span>
+                <span class="ex-title" id="${exId}" onclick="abrirLib('${exId}')">${ex}</span>
                 <span class="ex-target">META: ${metaReps} REPS | RPE 9</span>
                 <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
                 ${Array.from({length: 4}, (_, s) => `
@@ -131,6 +120,24 @@
           });
           cont.appendChild(sec);
         });
+      }
+
+      function abrirLib(id) {
+        currentTargetId = id;
+        const content = document.getElementById('libContent');
+        content.innerHTML = "";
+        for (let cat in biblioteca) {
+          content.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin: 10px 0 5px 0; border-bottom:1px solid #2d3748">${cat}</div>`;
+          biblioteca[cat].forEach(ex => {
+            content.innerHTML += `<div class="lib-item" onclick="trocarEx('${ex}')">${ex}</div>`;
+          });
+        }
+        document.getElementById('modalLib').showModal();
+      }
+
+      function trocarEx(novoNome) {
+        document.getElementById(currentTargetId).innerText = novoNome;
+        document.getElementById('modalLib').close();
       }
 
       function tab(idx) {
@@ -150,15 +157,15 @@
           });
         });
         if(!logs.length) return alert("Preencha as repetições!");
-        let h = JSON.parse(localStorage.getItem('titan_universal') || '[]');
+        let h = JSON.parse(localStorage.getItem('titan_v3') || '[]');
         h.unshift({data: new Date().toLocaleString('pt-BR'), dados: logs});
-        localStorage.setItem('titan_universal', JSON.stringify(h.slice(0,20)));
-        alert("✅ Treino salvo com sucesso!");
+        localStorage.setItem('titan_v3', JSON.stringify(h.slice(0,30)));
+        alert("✅ Salvo!");
       }
 
       function verHistorico() {
-        let h = JSON.parse(localStorage.getItem('titan_universal') || '[]');
-        if(!h.length) return alert("Nenhum histórico.");
+        let h = JSON.parse(localStorage.getItem('titan_v3') || '[]');
+        if(!h.length) return alert("Vazio.");
         let txt = h.map(i => `🗓️ ${i.data}\n${i.dados.map(d => `• ${d.ex}: ${d.kg}kg x ${d.r}`).join('\n')}`).join('\n\n');
         alert(txt);
       }
