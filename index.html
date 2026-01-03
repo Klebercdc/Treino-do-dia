@@ -4,88 +4,91 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN AI - Consultoria Inteligente</title>
+    <title>TITAN AI - Consultoria Individualizada</title>
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 80px; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 85px; }
       
+      /* Header & Date */
+      .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
+      .date-badge { font-size: 0.85rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--orange); }
+
       /* Setup Panel */
-      .setup-panel { background: var(--card); padding: 20px; border-bottom: 2px solid var(--blue); }
-      .setup-panel h2 { margin: 0 0 15px 0; font-size: 1.2rem; color: var(--blue); text-align: center; }
-      .field { margin-bottom: 15px; }
-      .field label { font-size: 0.75rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; }
-      .field select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid #2d3748; border-radius: 8px; font-size: 0.9rem; outline: none; }
+      .setup-panel { background: var(--card); padding: 20px; border-bottom: 2px solid var(--blue); position: relative; z-index: 20; }
+      .field { margin-bottom: 12px; }
+      .field label { font-size: 0.7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; }
+      .field select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid #2d3748; border-radius: 8px; }
       
-      /* Navigation */
-      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; overflow-x: auto; white-space: nowrap; }
-      .pill { flex: 1; text-align: center; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
+      /* Nav Pills */
+      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; overflow-x: auto; }
+      .pill { flex: 1; text-align: center; padding: 12px 18px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; white-space: nowrap; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
 
       /* Exercise Cards */
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
-      .ex-header { margin-bottom: 12px; }
-      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); display: block; }
-      .ex-target { font-size: 0.8rem; color: var(--orange); font-weight: bold; margin-top: 4px; display: block; }
+      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); }
+      .ex-target { font-size: 0.8rem; color: var(--orange); font-weight: bold; margin: 4px 0 10px 0; display: block; }
       
       .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-      .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: bold; margin-bottom: 5px; }
+      .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: bold; }
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
       
       .section { display: none; }
       .section.active { display: block; }
 
-      /* Footer */
-      .footer { position: fixed; bottom: 0; width: 100%; background: var(--bg); padding: 10px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; }
+      /* Buttons */
+      .footer { position: fixed; bottom: 0; width: 100%; background: var(--bg); padding: 12px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; }
       .btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
       .btn-save { background: var(--green); color: white; }
-      .btn-hist { background: var(--card); color: white; border: 1px solid var(--blue); }
+      .btn-config { background: #1a202c; color: var(--blue); border: 1px solid var(--blue); }
     </style>
   </head>
   <body>
 
+    <div class="top-header">
+      <h1 style="margin:0; font-size: 1.1rem; color: var(--blue);">TITAN PRO</h1>
+      <div class="date-badge" id="displayDate">01/01/2026</div>
+    </div>
+
     <div class="setup-panel" id="setupPanel">
-      <h2>CONFIGURAR PROTOCOLO</h2>
-      
       <div class="field">
-        <label>DISPONIBILIDADE (DIAS POR SEMANA)</label>
+        <label>DIAS DISPONÍVEIS</label>
         <select id="freq" onchange="gerarProtocolo()">
           <option value="2">2 Dias (Full Body)</option>
-          <option value="3">3 Dias (FB ou ABC)</option>
-          <option value="4" selected>4 Dias (Upper / Lower)</option>
-          <option value="5">5 Dias (Push / Pull / Legs + UL)</option>
+          <option value="3">3 Dias (ABC)</option>
+          <option value="4" selected>4 Dias (Upper/Lower)</option>
+          <option value="5">5 Dias (ABC + UL)</option>
           <option value="6">6 Dias (PPL 2x)</option>
         </select>
       </div>
-
       <div class="field">
-        <label>OBJETIVO PRINCIPAL</label>
+        <label>OBJETIVO</label>
         <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia (Ganho de Massa)</option>
-          <option value="forca">Força Bruta (Cargas Altas)</option>
-          <option value="cutting">Definição (Gasto Calórico)</option>
+          <option value="hipertrofia">Hipertrofia</option>
+          <option value="forca">Força</option>
+          <option value="cutting">Definição</option>
         </select>
       </div>
-
-      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">MONTAR TREINO AGORA</button>
+      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">GERAR TREINO</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
 
     <footer class="footer">
-      <button class="btn btn-hist" onclick="verHistorico()">📜 HISTÓRICO</button>
-      <button class="btn btn-save" onclick="salvarTreino()">💾 SALVAR HOJE</button>
-      <button class="btn btn-hist" onclick="document.getElementById('setupPanel').style.display='block'" style="flex:0.5">⚙️</button>
+      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️</button>
+      <button class="btn btn-save" onclick="salvarTreino()">SALVAR TREINO</button>
+      <button class="btn btn-config" onclick="verHistorico()">📜 HIST</button>
     </footer>
 
     <script>
-      const db = {
-        peito: ["Supino Inclinado", "Supino Reto", "Crucifixo"],
-        costas: ["Puxada Alta", "Remada Curvada", "Remada Baixa"],
-        ombro: ["Desenvolvimento", "Elevação Lateral", "Face Pull"],
-        perna: ["Agachamento", "Leg Press", "Cadeira Extensora", "Mesa Flexora"],
-        braço: ["Rosca Direta", "Tríceps Corda", "Tríceps Testa"]
+      const exercicios = {
+        peito: ["Supino Inclinado", "Supino Reto", "Cross Over"],
+        costas: ["Puxada Alta", "Remada Curvada", "Remada Serrote"],
+        ombro: ["Desenvolvimento", "Elevação Lateral"],
+        perna: ["Agachamento", "Leg Press", "Extensora", "Flexora"],
+        braco: ["Rosca Direta", "Tríceps Corda"]
       };
 
       function gerarProtocolo() {
@@ -95,15 +98,13 @@
         const cont = document.getElementById('container');
         
         nav.innerHTML = ""; cont.innerHTML = "";
-
         let divisao = [];
-        if(f == "2") divisao = ["TREINO ÚNICO (Full Body)"];
-        else if(f == "3") divisao = ["A (Empurrar)", "B (Puxar)", "C (Pernas)"];
-        else if(f == "4") divisao = ["A (Superior)", "B (Inferior)", "C (Superior)", "D (Inferior)"];
-        else divisao = ["A (Peito/Ombro)", "B (Costas/Trapezio)", "C (Pernas)", "D (Braços)"];
+        if(f=="2") divisao = ["Treino Único"];
+        else if(f=="3") divisao = ["A: Empurrar", "B: Puxar", "C: Pernas"];
+        else if(f=="4") divisao = ["A: Superior", "B: Inferior", "C: Superior", "D: Inferior"];
+        else divisao = ["A: Peito/Ombro", "B: Costas", "C: Pernas", "D: Braços"];
 
-        let reps = o === "forca" ? "5-8" : (o === "hipertrofia" ? "8-12" : "12-15");
-        let series = o === "forca" ? 5 : 4;
+        let metaReps = o==="forca"?"5-8":(o==="hipertrofia"?"8-12":"12-15");
 
         divisao.forEach((nome, i) => {
           nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
@@ -111,25 +112,21 @@
           sec.id = `sec${i}`;
           sec.className = `section ${i===0?'active':''}`;
           
-          // Seleção lógica de exercícios simplificada para o exemplo
-          const lista = [...db.peito, ...db.costas, ...db.perna].slice(i*2, (i*2)+5);
-          
-          lista.forEach(ex => {
+          const listaEx = [...exercicios.peito, ...exercicios.costas, ...exercicios.perna].slice(i, i+6);
+
+          listaEx.forEach(ex => {
             sec.innerHTML += `
               <div class="exercise-card">
-                <div class="ex-header">
-                  <span class="ex-title">${ex}</span>
-                  <span class="ex-target">META: ${series}x ${reps} | RPE 9</span>
-                </div>
+                <span class="ex-title">${ex}</span>
+                <span class="ex-target">META: ${metaReps} REPS | RPE 9</span>
                 <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-                ${Array.from({length: series}, (_, s) => `
+                ${Array.from({length: 4}, (_, s) => `
                   <div class="series-grid">
-                    <span style="text-align:center; font-weight:bold; color:#718096">S${s+1}</span>
+                    <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s+1}</span>
                     <div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div>
                     <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
                     <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
-                  </div>
-                `).join('')}
+                  </div>`).join('')}
               </div>`;
           });
           cont.appendChild(sec);
@@ -154,19 +151,22 @@
         });
         if(!logs.length) return alert("Preencha as repetições!");
         let h = JSON.parse(localStorage.getItem('titan_universal') || '[]');
-        h.unshift({data: new Date().toLocaleString(), dados: logs});
+        h.unshift({data: new Date().toLocaleString('pt-BR'), dados: logs});
         localStorage.setItem('titan_universal', JSON.stringify(h.slice(0,20)));
-        alert("✅ Salvo no dispositivo!");
+        alert("✅ Treino salvo com sucesso!");
       }
 
       function verHistorico() {
         let h = JSON.parse(localStorage.getItem('titan_universal') || '[]');
-        if(!h.length) return alert("Nenhum histórico encontrado.");
-        let txt = h.map(i => `${i.data}\n${i.dados.map(d => `${d.ex} (S${d.s}): ${d.kg}kg x ${d.r}`).join('\n')}`).join('\n\n---\n\n');
+        if(!h.length) return alert("Nenhum histórico.");
+        let txt = h.map(i => `🗓️ ${i.data}\n${i.dados.map(d => `• ${d.ex}: ${d.kg}kg x ${d.r}`).join('\n')}`).join('\n\n');
         alert(txt);
       }
 
-      window.onload = gerarProtocolo;
+      window.onload = () => {
+        gerarProtocolo();
+        document.getElementById('displayDate').innerText = new Date().toLocaleDateString('pt-BR');
+      };
     </script>
   </body>
 </html>
