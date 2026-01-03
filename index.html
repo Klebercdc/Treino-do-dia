@@ -4,47 +4,43 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG PRO</title>
+    <title>TITAN LOG - Custom</title>
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 50px; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 60px; }
       .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
       .period-selector { background: var(--card); padding: 12px; border-bottom: 2px solid var(--blue); display: flex; align-items: center; justify-content: center; gap: 10px; }
-      .period-selector select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; padding: 8px; font-weight: bold; width: 65%; font-size: 0.9rem; }
-      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2d3748; }
+      .period-selector select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; padding: 8px; font-weight: bold; width: 65%; }
+      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; }
       .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
-      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); margin-bottom: 2px; }
-      .ex-target { font-size: 0.9rem; color: var(--orange); font-weight: bold; margin-bottom: 4px; display: block; }
-      .ex-meta { font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; }
-      .series-header { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; text-align: center; }
-      .series-header span { font-size: 0.65rem; color: #718096; font-weight: bold; }
+      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); }
+      .ex-target { font-size: 0.9rem; color: var(--orange); font-weight: bold; margin: 4px 0; display: block; }
       .series-row { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-      .s-label { font-weight: bold; color: #718096; font-size: 0.85rem; text-align: center; }
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
       .section { display: none; }
       .section.active { display: block; }
-      .footer-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 10px; gap: 10px; }
-      .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; font-size: 0.9rem; transition: 0.2s; }
-      .btn.primary { background: var(--green); color: #fff; }
+      .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; text-align: center; }
+      .btn.primary { background: var(--green); color: #fff; width: 100%; }
       .btn.secondary { background: #2d3748; color: #fff; }
       
-      /* Estilo do Modal de Histórico */
-      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; padding: 20px; width: 90%; max-width: 500px; }
-      dialog::backdrop { background: rgba(0,0,0,0.8); }
-      .hist-item { border-bottom: 1px solid #2d3748; padding: 12px 0; }
+      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 500px; padding: 20px; }
+      .config-group { margin-bottom: 15px; border-bottom: 1px solid #2d3748; padding-bottom: 10px; }
+      .config-item { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 0.9rem; }
     </style>
   </head>
   <body>
     <header class="topbar">
-      <div><h1 style="margin:0; font-size: 1.4rem;">TITAN LOG</h1><div id="todayLabel" style="font-size: 0.8rem; color: #718096;">...</div></div>
-      <button class="btn secondary" style="flex:none; padding: 8px 12px;" id="btnHistory">Histórico</button>
+      <div><h1 style="margin:0; font-size: 1.2rem;">TITAN LOG</h1></div>
+      <div style="display:flex; gap:5px;">
+        <button class="btn secondary" style="padding: 8px;" id="btnConfig">⚙️ Config</button>
+        <button class="btn secondary" style="padding: 8px;" id="btnHistory">📜 Hist</button>
+      </div>
     </header>
 
     <div class="period-selector">
-      <span>Fase:</span>
       <select id="periodoFase" onchange="buildTreino()">
         <option value="hipertrofia">HIPERTROFIA (8-12 Reps)</option>
         <option value="forca">FORÇA (5-8 Reps)</option>
@@ -65,37 +61,56 @@
       <div id="C" class="section"></div>
     </main>
 
-    <div class="footer-row">
-      <button class="btn secondary" id="btnCopy">Copiar</button>
-      <button class="btn primary" id="btnSave">Salvar Hoje</button>
+    <div style="padding: 10px; display: flex; gap: 10px;">
+        <button class="btn secondary" id="btnCopy" style="flex:1">Copiar Whats</button>
+        <button class="btn primary" id="btnSave" style="flex:2">SALVAR TREINO</button>
     </div>
 
+    <dialog id="modalConfig">
+        <h3 style="color:var(--blue)">Configurar Exercícios</h3>
+        <p style="font-size:0.8rem">Selecione o Treino (A, B ou C) e marque os exercícios:</p>
+        <select id="selectTreinoConfig" onchange="renderChecklist()" style="width:100%; padding:10px; margin-bottom:15px; background:#0b1220; color:white;">
+            <option value="A">Editar Treino A</option>
+            <option value="B">Editar Treino B</option>
+            <option value="C">Editar Treino C</option>
+        </select>
+        <div id="checklistExercicios" style="max-height:300px; overflow-y:auto;"></div>
+        <button class="btn primary" onclick="document.getElementById('modalConfig').close(); buildTreino();" style="margin-top:15px;">Salvar e Fechar</button>
+    </dialog>
+
     <dialog id="modalHistory">
-        <h3 style="margin-top:0; color: var(--blue);">Histórico Recente</h3>
-        <div id="historyContent" style="max-height: 350px; overflow-y: auto;"></div>
-        <button class="btn secondary" onclick="document.getElementById('modalHistory').close()" style="width:100%; margin-top:15px;">Fechar</button>
-        <button onclick="limparHistorico()" style="width:100%; margin-top:10px; background:none; border:none; color:var(--red); font-size:0.7rem; cursor:pointer;">APAGAR TUDO</button>
+        <h3 style="color:var(--orange)">Histórico</h3>
+        <div id="historyContent" style="max-height:350px; overflow-y:auto;"></div>
+        <button class="btn secondary" onclick="document.getElementById('modalHistory').close()" style="width:100%; margin-top:10px;">Fechar</button>
     </dialog>
 
     <script>
-      const baseData = {
-        A: [ { n: "1. Agachamento / Leg 45", s: 4, m: "Quadricípete" }, { n: "2. Supino Inclinado", s: 4, m: "Peitoral Sup." }, { n: "3. Desenv. Militar", s: 3, m: "Ombros" }, { n: "4. Fundos / Testa", s: 3, m: "Tríceps" }, { n: "5. Cadeira Extensora", s: 3, m: "Isolamento" } ],
-        B: [ { n: "1. Terra ou Stiff", s: 4, m: "Posterior" }, { n: "2. Remada Curvada", s: 4, m: "Dorsal" }, { n: "3. Puxada Alta", s: 3, m: "Costas" }, { n: "4. Face Pull", s: 3, m: "Ombro Post." }, { n: "5. Rosca Direta", s: 3, m: "Bíceps" } ],
-        C: [ { n: "1A. Leg Press Horiz.", s: 3, m: "Superset" }, { n: "1B. Flexão de Braços", s: 3, m: "Superset" }, { n: "2A. Afundo / Passada", s: 3, m: "Superset" }, { n: "2B. Elevação Lateral", s: 3, m: "Superset" }, { n: "3A. Remada Máquina", s: 3, m: "Superset" }, { n: "3B. Tríceps Corda", s: 3, m: "Superset" }, { n: "4. Cadeira Flexora", s: 4, m: "Isolamento" } ]
+      const biblioteca = {
+        "PERNAS": ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Cadeira Flexora", "Stiff", "Afundo", "Elevação de Panturrilha"],
+        "PEITO": ["Supino Reto", "Supino Inclinado", "Crucifixo", "Cross Over", "Flexão de Braço"],
+        "COSTAS": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Pull Down", "Levantamento Terra"],
+        "OMBROS": ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Face Pull"],
+        "BRAÇOS": ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa", "Paralelas"]
+      };
+
+      // Carrega ou define padrão
+      let meuTreino = JSON.parse(localStorage.getItem('titan_setup')) || {
+        A: ["Agachamento Livre", "Supino Inclinado", "Desenvolvimento"],
+        B: ["Levantamento Terra", "Remada Curvada", "Puxada Alta"],
+        C: ["Leg Press 45", "Elevação Lateral", "Tríceps Corda"]
       };
 
       const fases = {
-        hipertrofia: { reps: "8-12", rpe: "8-9", mod_s: 0 },
-        forca: { reps: "5-8", rpe: "9-10", mod_s: 0 },
-        metabolico: { reps: "15-20", rpe: "10", mod_s: 1 },
-        deload: { reps: "10-12", rpe: "6", mod_s: -1 }
+        hipertrofia: { reps: "8-12", rpe: "8-9", s: 4 },
+        forca: { reps: "5-8", rpe: "9-10", s: 4 },
+        metabolico: { reps: "15-20", rpe: "10", s: 3 },
+        deload: { reps: "10-12", rpe: "6", s: 2 }
       };
 
-      function tab(treinoId) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-        document.getElementById(treinoId).classList.add('active');
-        document.getElementById('pill' + treinoId).classList.add('active');
+      function tab(id) {
+        document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('pill'+id).classList.add('active');
       }
 
       function buildTreino() {
@@ -104,75 +119,63 @@
         ['A', 'B', 'C'].forEach(id => {
           const container = document.getElementById(id);
           container.innerHTML = "";
-          baseData[id].forEach(ex => {
-            const numSeries = Math.max(2, ex.s + conf.mod_s);
-            let cardHtml = `<div class="exercise-card"><div class="ex-title">${ex.n}</div><div class="ex-target">META: ${conf.reps} REPS | RPE ${conf.rpe}</div><div class="ex-meta">${ex.m} | ${numSeries} Séries</div><div class="series-header"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
-            for (let i = 1; i <= numSeries; i++) {
-              cardHtml += `<div class="series-row"><div class="s-label">S${i}</div><div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div><div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div><div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div></div>`;
+          meuTreino[id].forEach(ex => {
+            let html = `<div class="exercise-card"><div class="ex-title">${ex}</div><div class="ex-target">META: ${conf.reps} REPS | RPE ${conf.rpe}</div><div style="display:grid; grid-template-columns: 40px 1fr 1fr 1fr; gap:8px; text-align:center; font-size:0.6rem; color:#718096; margin-bottom:5px;"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
+            for (let i = 1; i <= conf.s; i++) {
+              html += `<div class="series-row"><div style="text-align:center; font-weight:bold; color:#718096;">S${i}</div><div class="input-box"><input type="number" inputmode="decimal"></div><div class="input-box"><input type="number" inputmode="numeric"></div><div class="input-box"><input type="number" inputmode="numeric"></div></div>`;
             }
-            container.innerHTML += cardHtml + `</div>`;
+            container.innerHTML += html + `</div>`;
           });
         });
       }
 
-      // LÓGICA DE SALVAMENTO
-      document.getElementById('btnSave').addEventListener('click', function() {
-          const treinoAtivo = document.querySelector('.section.active').id;
-          const cards = document.querySelectorAll(`#${treinoAtivo} .exercise-card`);
-          let logs = [];
-
-          cards.forEach(card => {
-              const nome = card.querySelector('.ex-title').innerText;
-              card.querySelectorAll('.series-row').forEach((linha, i) => {
-                  const inputs = linha.querySelectorAll('input');
-                  if (inputs[1].value) { // Se preencheu reps
-                      logs.push({ ex: nome, s: i+1, kg: inputs[0].value || "0", reps: inputs[1].value, rpe: inputs[2].value || "-" });
-                  }
-              });
+      function renderChecklist() {
+        const treino = document.getElementById('selectTreinoConfig').value;
+        const container = document.getElementById('checklistExercicios');
+        container.innerHTML = "";
+        for (let cat in biblioteca) {
+          let html = `<div class="config-group"><strong>${cat}</strong>`;
+          biblioteca[cat].forEach(ex => {
+            const checked = meuTreino[treino].includes(ex) ? 'checked' : '';
+            html += `<div class="config-item"><input type="checkbox" value="${ex}" ${checked} onchange="updateSetup('${treino}', this)"> ${ex}</div>`;
           });
+          container.innerHTML += html + `</div>`;
+        }
+      }
 
-          if (logs.length === 0) return alert("Preenche as repetições primeiro!");
+      function updateSetup(treino, el) {
+        if (el.checked) { meuTreino[treino].push(el.value); }
+        else { meuTreino[treino] = meuTreino[treino].filter(i => i !== el.value); }
+        localStorage.setItem('titan_setup', JSON.stringify(meuTreino));
+      }
 
-          let historico = JSON.parse(localStorage.getItem('titan_log') || '[]');
-          historico.unshift({ data: new Date().toLocaleString('pt-PT'), treino: treinoAtivo, dados: logs });
-          localStorage.setItem('titan_log', JSON.stringify(historico.slice(0, 20))); // Guarda os últimos 20
-          alert("✅ Treino guardado no Histórico!");
-      });
-
-      // LÓGICA DE HISTÓRICO
-      document.getElementById('btnHistory').addEventListener('click', function() {
-          const hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
-          const content = document.getElementById('historyContent');
-          if (hist.length === 0) content.innerHTML = "<p>Sem treinos guardados.</p>";
-          else {
-              content.innerHTML = hist.map(h => `
-                  <div class="hist-item">
-                      <div style="color:var(--orange); font-weight:bold;">${h.data} (Treino ${h.treino})</div>
-                      ${h.dados.map(d => `<div style="font-size:0.75rem;">${d.ex} S${d.s}: ${d.kg}kg x ${d.reps} (RPE ${d.rpe})</div>`).join('')}
-                  </div>
-              `).join('');
-          }
-          document.getElementById('modalHistory').showModal();
-      });
-
-      function limparHistorico() { if(confirm("Apagar tudo?")) { localStorage.removeItem('titan_log'); location.reload(); } }
-
-      // COPIAR WHATSAPP
-      document.getElementById('btnCopy').addEventListener('click', function() {
-          const treinoAtivo = document.querySelector('.section.active').id;
-          let txt = `*TITAN LOG - ${treinoAtivo}*\n`;
-          document.querySelectorAll(`#${treinoAtivo} .exercise-card`).forEach(card => {
-              let sTxt = "";
+      // SALVAR E HISTÓRICO
+      document.getElementById('btnSave').onclick = () => {
+          const tAtivo = document.querySelector('.section.active').id;
+          const logs = [];
+          document.querySelectorAll(`#${tAtivo} .exercise-card`).forEach(card => {
+              const nome = card.querySelector('.ex-title').innerText;
               card.querySelectorAll('.series-row').forEach((l, i) => {
                   const inp = l.querySelectorAll('input');
-                  if (inp[1].value) sTxt += ` S${i+1}: ${inp[0].value}kg x ${inp[1].value} (RPE ${inp[2].value})\n`;
+                  if (inp[1].value) logs.push({ ex: nome, s: i+1, kg: inp[0].value||0, reps: inp[1].value, rpe: inp[2].value||'-' });
               });
-              if (sTxt) txt += `\n*${card.querySelector('.ex-title').innerText}*\n${sTxt}`;
           });
-          navigator.clipboard.writeText(txt).then(() => alert("Copiado!"));
-      });
+          if (!logs.length) return alert("Preencha algo!");
+          let hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
+          hist.unshift({ data: new Date().toLocaleString('pt-BR'), treino: tAtivo, dados: logs });
+          localStorage.setItem('titan_log', JSON.stringify(hist.slice(0, 20)));
+          alert("✅ Salvo!");
+      };
 
-      window.onload = () => { buildTreino(); document.getElementById('todayLabel').innerText = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric' }); };
+      document.getElementById('btnHistory').onclick = () => {
+          const hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
+          document.getElementById('historyContent').innerHTML = hist.map(h => `<div style="border-bottom:1px solid #2d3748; padding:10px 0;"><strong style="color:var(--orange)">${h.data} (${h.treino})</strong>${h.dados.map(d => `<div style="font-size:0.75rem;">${d.ex} S${d.s}: ${d.kg}kg x ${d.reps}</div>`).join('')}</div>`).join('') || "Vazio";
+          document.getElementById('modalHistory').showModal();
+      };
+
+      document.getElementById('btnConfig').onclick = () => { renderChecklist(); document.getElementById('modalConfig').showModal(); };
+      
+      window.onload = buildTreino;
     </script>
   </body>
 </html>
