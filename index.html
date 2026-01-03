@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG PRO</title>
+    <title>TITAN LOG - Meta por Série</title>
     <link rel="stylesheet" href="./styles.css" />
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; }
+      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; }
       body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; }
       
       .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
@@ -17,8 +17,8 @@
 
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
       .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); margin-bottom: 2px; }
-      .ex-meta { font-size: 0.75rem; color: #a0aec0; margin-bottom: 5px; text-transform: uppercase; }
-      .ex-obs { font-size: 0.75rem; color: #f6ad55; font-style: italic; margin-bottom: 12px; display: block; }
+      .ex-target { font-size: 0.9rem; color: var(--orange); font-weight: bold; margin-bottom: 4px; display: block; }
+      .ex-meta { font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; }
       
       .series-header { display: grid; grid-template-columns: 35px 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; text-align: center; }
       .series-header span { font-size: 0.65rem; color: #718096; font-weight: bold; }
@@ -36,15 +36,12 @@
       .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
       .btn.primary { background: #38b2ac; color: #fff; }
       .btn.secondary { background: #2d3748; color: #fff; }
-
-      .rpe-table { font-size: 0.75rem; border-collapse: collapse; width: 100%; margin-top: 10px; }
-      .rpe-table td { padding: 4px; border-bottom: 1px solid #2d3748; }
     </style>
   </head>
   <body>
     <header class="topbar">
       <div class="titlewrap">
-        <h1>Treino do Dia</h1>
+        <h1>TITAN LOG</h1>
         <div class="sub" id="todayLabel">Carregando...</div>
       </div>
       <div class="actions">
@@ -71,58 +68,30 @@
       </div>
     </main>
 
-    <dialog class="modal" id="modalSettings">
-      <div class="modalhead"><h3>Guia RPE</h3><button class="iconbtn" id="closeSettings">×</button></div>
-      <table class="rpe-table">
-        <tr><td><b>10</b></td><td>Falha total. Nenhuma repetição a mais.</td></tr>
-        <tr><td><b>9</b></td><td>Muito difícil. Restaria 1 repetição na reserva.</td></tr>
-        <tr><td><b>8</b></td><td>Difícil. Restariam 2 repetições na reserva.</td></tr>
-        <tr><td><b>7</b></td><td>Moderado. Restariam 3 repetições na reserva.</td></tr>
-      </table>
-      <div class="divider"></div>
-      <label class="field"><span>Guardar RPE?</span><select id="keepRpe"><option value="1">Sim</option><option value="0">Não</option></select></label>
-      <button class="btn primary" id="btnSaveSettings" style="margin-top:20px; width:100%">Fechar</button>
-    </dialog>
-
-    <dialog class="modal" id="modalHistory">
-      <div class="modalhead"><h3>Histórico</h3><button class="iconbtn" id="closeHistory">×</button></div>
-      <div class="grid">
-        <select id="histExercise" style="width:100%"></select>
-        <div class="row" style="margin-top:10px; display:flex; gap:5px;">
-          <button class="btn secondary" id="btnImport">Importar</button>
-          <button class="btn danger" id="btnClear">Limpar</button>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="hist" id="histList"></div>
-    </dialog>
-
-    <input type="file" id="fileImport" accept="application/json" hidden />
-
     <script>
       const data = {
         A: [
-          { n: "1. Agachamento / Leg 45", m: "4 Séries | 90s", o: "Meta: RPE 8-9 (1-2 reserva)", s: 4 },
-          { n: "2. Supino Inclinado", m: "4 Séries | 90s", o: "Meta: RPE 9", s: 4 },
-          { n: "3. Desenv. Militar", m: "3 Séries | 60s", o: "Meta: RPE 8", s: 3 },
-          { n: "4. Fundos / Testa", m: "3 Séries | 60s", o: "Meta: RPE 9-10", s: 3 },
-          { n: "5. Cadeira Extensora", m: "3 Séries | 45s", o: "Meta: RPE 10 (Falha | Baixar peso se necessário)", s: 3 }
+          { n: "1. Agachamento / Leg 45", target: "META: 8-10 REPS | RPE 8-9", m: "Foco: Força e Base", s: 4 },
+          { n: "2. Supino Inclinado", target: "META: 8-10 REPS | RPE 9", m: "Foco: Peitoral Superior", s: 4 },
+          { n: "3. Desenv. Militar", target: "META: 10-12 REPS | RPE 8", m: "Foco: Deltoides", s: 3 },
+          { n: "4. Fundos ou Testa", target: "META: FALHA TÉCNICA | RPE 9", m: "Foco: Tríceps", s: 3 },
+          { n: "5. Cadeira Extensora", target: "META: 15 REPS | RPE 10", m: "Foco: Isolamento", s: 3 }
         ],
         B: [
-          { n: "1. Terra ou Stiff", m: "4 Séries | 90s", o: "Meta: RPE 7-8", s: 4 },
-          { n: "2. Remada Curvada", m: "4 Séries | 90s", o: "Meta: RPE 9", s: 4 },
-          { n: "3. Puxada Alta (Frente)", m: "3 Séries | 60s", o: "Meta: RPE 9", s: 3 },
-          { n: "4. Face Pull", m: "3 Séries | 45s", o: "Meta: RPE 10", s: 3 },
-          { n: "5. Rosca Direta", m: "3 Séries | 60s", o: "Meta: RPE 9", s: 3 }
+          { n: "1. Terra ou Stiff", target: "META: 6-8 REPS | RPE 7-8", m: "Foco: Cadeia Posterior", s: 4 },
+          { n: "2. Remada Curvada", target: "META: 8-10 REPS | RPE 9", m: "Foco: Espessura Costas", s: 4 },
+          { n: "3. Puxada Alta (Frente)", target: "META: 10-12 REPS | RPE 9", m: "Foco: Largura Costas", s: 3 },
+          { n: "4. Face Pull", target: "META: 15 REPS | RPE 10", m: "Foco: Deltoide Posterior", s: 3 },
+          { n: "5. Rosca Direta", target: "META: 10-12 REPS | RPE 9", m: "Foco: Bíceps", s: 3 }
         ],
         C: [
-          { n: "1A. Leg Press Horiz.", m: "3 Séries | Superset", o: "Meta: RPE 9", s: 3 },
-          { n: "1B. Flexão de Braços", m: "3 Séries | Máximo", o: "Meta: RPE 10", s: 3 },
-          { n: "2A. Afundo / Passada", m: "3 Séries | Constante", o: "Meta: RPE 8", s: 3 },
-          { n: "2B. Elevação Lateral", m: "3 Séries | 15 Reps", o: "Meta: RPE 10", s: 3 },
-          { n: "3A. Remada Máquina", m: "3 Séries | Foco Dorsal", o: "Meta: RPE 9", s: 3 },
-          { n: "3B. Tríceps Corda", m: "3 Séries | 15 Reps", o: "Meta: RPE 10", s: 3 },
-          { n: "4. Cadeira Flexora", m: "4 Séries | 45s", o: "Meta: RPE 9", s: 4 }
+          { n: "1A. Leg Press Horiz.", target: "META: 12 REPS | RPE 9", m: "SUPERSET", s: 3 },
+          { n: "1B. Flexão de Braços", target: "META: MÁXIMO | RPE 10", m: "SUPERSET", s: 3 },
+          { n: "2A. Afundo / Passada", target: "META: 12 REPS CADA | RPE 8", m: "SUPERSET", s: 3 },
+          { n: "2B. Elevação Lateral", target: "META: 15 REPS | RPE 10", m: "SUPERSET", s: 3 },
+          { n: "3A. Remada Máquina", target: "META: 12 REPS | RPE 9", m: "SUPERSET", s: 3 },
+          { n: "3B. Tríceps Corda", target: "META: 15 REPS | RPE 10", m: "SUPERSET", s: 3 },
+          { n: "4. Cadeira Flexora", target: "META: 15 REPS | RPE 9", m: "Foco: Isquiotibiais", s: 4 }
         ]
       };
 
@@ -140,8 +109,8 @@
             let html = `
               <div class="exercise-card">
                 <div class="ex-title">${ex.n}</div>
+                <div class="ex-target">${ex.target}</div>
                 <div class="ex-meta">${ex.m}</div>
-                <div class="ex-obs">${ex.o}</div>
                 <div class="series-header">
                   <span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span>
                 </div>`;
@@ -158,19 +127,15 @@
             container.innerHTML += html;
           });
         });
-        
         const agora = new Date();
         document.getElementById('todayLabel').innerText = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
       }
 
       build();
 
-      // Funções de Diálogo
-      document.getElementById('btnSettings').onclick = () => document.getElementById('modalSettings').showModal();
-      document.getElementById('closeSettings').onclick = () => document.getElementById('modalSettings').close();
-      document.getElementById('btnSaveSettings').onclick = () => document.getElementById('modalSettings').close();
-      document.getElementById('btnHistory').onclick = () => document.getElementById('modalHistory').showModal();
-      document.getElementById('closeHistory').onclick = () => document.getElementById('modalHistory').close();
+      // Modal e Histórico - Conectados ao app.js
+      document.getElementById('btnHistory').onclick = () => document.getElementById('modalHistory')?.showModal();
+      document.getElementById('btnSettings').onclick = () => document.getElementById('modalSettings')?.showModal();
     </script>
     <script src="./app.js"></script>
   </body>
