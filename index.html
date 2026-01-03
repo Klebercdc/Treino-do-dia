@@ -4,19 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG PRO - Full System</title>
+    <title>TITAN LOG PRO</title>
     <link rel="stylesheet" href="./styles.css" />
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; }
       body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; }
       
-      /* Header & Pills */
       .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
       .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2d3748; }
       .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
 
-      /* Cards & Grid */
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
       .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); margin-bottom: 2px; }
       .ex-meta { font-size: 0.75rem; color: #a0aec0; margin-bottom: 5px; text-transform: uppercase; }
@@ -27,8 +25,9 @@
       .series-row { display: grid; grid-template-columns: 35px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
       .s-label { font-weight: bold; color: #718096; font-size: 0.85rem; text-align: center; }
       
-      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 6px 0; }
-      .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1rem; outline: none; font-weight: bold; }
+      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 0; }
+      .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
+      .input-box input::placeholder { color: #4a5568; opacity: 1; }
 
       .section { display: none; }
       .section.active { display: block; }
@@ -93,13 +92,12 @@
     <input type="file" id="fileImport" accept="application/json" hidden />
 
     <script>
-      // 1. Definição dos Dados com Metas de RPE
       const data = {
         A: [
           { n: "1. Agachamento / Leg 45", m: "4 Séries | 90s", o: "Meta: RPE 8-9 (Ficar a 1-2 da falha)", s: 4 },
           { n: "2. Supino Inclinado", m: "4 Séries | 90s", o: "Meta: RPE 9 (Foco na progressão)", s: 4 },
           { n: "3. Desenv. Militar", m: "3 Séries | 60s", o: "Meta: RPE 8 (Preservar ombro)", s: 3 },
-          { n: "4. Fundos / Testa", m: "3 Séries | 60s", o: "Meta: RPE 9-10 (Falha técnica)", s: 3 },
+          { n: "4. Fundos (Dips) / Testa", m: "3 Séries | 60s", o: "Meta: RPE 9-10 (Falha técnica)", s: 3 },
           { n: "5. Cadeira Extensora", m: "3 Séries | 45s", o: "Meta: RPE 10 (Queima total)", s: 3 }
         ],
         B: [
@@ -120,7 +118,6 @@
         ]
       };
 
-      // 2. Lógica de Interface
       function tab(t, el) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -146,7 +143,7 @@
                   <div class="s-label">S${i}</div>
                   <div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div>
                   <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
-                  <div class="input-box"><input type="number" inputmode="numeric" placeholder="10"></div>
+                  <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
                 </div>`;
             }
             html += `</div>`;
@@ -154,7 +151,6 @@
           });
         });
         
-        // Data de hoje
         const agora = new Date();
         document.getElementById('todayLabel').innerText = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
       }
