@@ -4,14 +4,48 @@ const TZ = "America/Sao_Paulo";
 const K = {
   SESSIONS: "tdd_sessions_v1",
   SETTINGS: "tdd_settings_v1",
+  PHASE: "tdd_current_phase", // Nova chave para salvar a fase da periodização
 };
 
 const DEFAULT_SETTINGS = { keepRpe: true };
 
+// --- 1. CONFIGURAÇÃO DA PERIODIZAÇÃO (O "Cérebro" do Treinador) ---
+const PERIODIZATION = {
+  1: {
+    name: "Fase 1: Base (Adaptação)",
+    desc: "Foco em execução perfeita. RPE 7-8.",
+    setsMod: 0,       // Mantém séries padrão
+    repsOverride: "12-15",
+    rpeTarget: "7-8"
+  },
+  2: {
+    name: "Fase 2: Volume (Hipertrofia)",
+    desc: "Acumular fadiga. Falha na última série. RPE 8-9.",
+    setsMod: 1,       // Adiciona 1 série (Hardcore)
+    repsOverride: "10-12",
+    rpeTarget: "9"
+  },
+  3: {
+    name: "Fase 3: Força (Intensidade)",
+    desc: "Carga alta, descanso longo. RPE 9-10.",
+    setsMod: 0,       // Volta ao padrão
+    repsOverride: "6-8",
+    rpeTarget: "10"
+  },
+  4: {
+    name: "Fase 4: Deload (Recuperação)",
+    desc: "Recuperação ativa. -40% carga. NÃO chegar à falha.",
+    setsMod: -1,      // Remove 1 série (Mínimo 2)
+    repsOverride: "10-12",
+    rpeTarget: "5-6"
+  }
+};
+
+// --- 2. CONFIGURAÇÃO DOS TREINOS (Módulos Puros) ---
 const WORKOUTS = {
   A: {
     title: "TREINO A",
-    objective: "Força/hipertrofia — foco em execução + progressão",
+    objective: "Peito, Ombros, Tríceps e Quad.",
     items: [
       { ex: "Agachamento Livre", sets: 4, reps: "8-10", rest: "90s" },
       { ex: "Supino Inclinado", sets: 4, reps: "8-10", rest: "90s" },
@@ -23,7 +57,7 @@ const WORKOUTS = {
   },
   B: {
     title: "TREINO B",
-    objective: "Posterior + costas + bíceps + core",
+    objective: "Costas, Posterior, Bíceps e Core.",
     items: [
       { ex: "Terra/Stiff", sets: 4, reps: "6-8", rest: "90s" },
       { ex: "Remada Curvada", sets: 4, reps: "8-10", rest: "90s" },
@@ -35,24 +69,26 @@ const WORKOUTS = {
   },
   C: {
     title: "TREINO C",
-    objective: "Circuito/bi-set — volume + condicionamento",
+    objective: "Full Body / Metabólico / Perna Foco",
     items: [
-      { ex: "1A. Leg Press", sets: 3, reps: "12", rest: "0s" },
-      { ex: "1B. Flexão Braço", sets: 3, reps: "Máx", rest: "60s" },
-      { ex: "2A. Passada", sets: 3, reps: "12", rest: "0s" },
-      { ex: "2B. Elev. Lateral", sets: 3, reps: "15", rest: "60s" },
-      { ex: "3A. Remada Máq.", sets: 3, reps: "12", rest: "0s" },
-      { ex: "3B. Tríceps Corda", sets: 3, reps: "15", rest: "60s" },
-      { ex: "4. Mesa Flexora", sets: 4, reps: "15", rest: "45s" },
-      { ex: "5. Abd. Supra", sets: 4, reps: "20", rest: "30s" },
+      { ex: "Leg Press", sets: 3, reps: "12", rest: "60s" },
+      { ex: "Flexão de Braço", sets: 3, reps: "Máx", rest: "60s" },
+      { ex: "Passada (Lunge)", sets: 3, reps: "12", rest: "60s" },
+      { ex: "Elevação Lateral", sets: 3, reps: "15", rest: "60s" },
+      { ex: "Remada Máquina", sets: 3, reps: "12", rest: "60s" },
+      { ex: "Tríceps Corda", sets: 3, reps: "15", rest: "60s" },
+      { ex: "Mesa Flexora", sets: 4, reps: "15", rest: "45s" },
+      { ex: "Abd. Supra", sets: 4, reps: "20", rest: "30s" },
     ],
   },
   OFF: {
-    title: "OFF (Descanso)",
-    objective: "Recuperação / cardio leve se quiser",
-    items: [{ ex: "CARDIO 45MIN", sets: 1, reps: "FC 120 ou H2O UP", rest: "-" }],
+    title: "OFF / DESCANSO",
+    objective: "Recuperação / Cardio Leve",
+    items: [{ ex: "CARDIO 45MIN", sets: 1, reps: "FC 120bpm", rest: "-" }],
   },
 };
+
+// --- FUNÇÕES UTILITÁRIAS ---
 
 function $(id) {
   const el = document.getElementById(id);
@@ -103,26 +139,10 @@ function formatBR(ymd) {
 }
 
 function weekdayFromYMD(ymd) {
-  const [y, m, d] = ymd.split("-").map((x) => Number(x));
-  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  const dow = Number(new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short" }).format(dt));
-  // fallback: use JS day in TZ via formatting trick
-  const w = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, weekday: "long" }).format(dt).toUpperCase();
-  if (w.includes("SEG")) return 1;
-  if (w.includes("TER")) return 2;
-  if (w.includes("QUA")) return 3;
-  if (w.includes("QUI")) return 4;
-  if (w.includes("SEX")) return 5;
-  if (w.includes("SÁB") || w.includes("SAB")) return 6;
-  return 0; // DOM
-}
-
-function autoWorkoutForDow(dow) {
-  // SEG=A | TER=OFF | QUA=B | QUI=OFF | SEX=C | SAB=OFF | DOM=OFF
-  if (dow === 1) return "A";
-  if (dow === 3) return "B";
-  if (dow === 5) return "C";
-  return "OFF";
+  const [y, m, d] = ymd.split("-").map(Number);
+  // Meio-dia para evitar bug de fuso
+  const dt = new Date(y, m - 1, d, 12, 0, 0); 
+  return dt.getDay(); // 0=Dom, 6=Sab
 }
 
 function escapeHtml(s) {
@@ -165,7 +185,7 @@ function buildExerciseRow(item, existing) {
           <h4>${escapeHtml(item.ex)}</h4>
           <div class="meta">
             <span>Séries: ${escapeHtml(String(item.sets))}</span>
-            <span>Reps alvo: ${escapeHtml(String(item.reps))}</span>
+            <span>Reps: ${escapeHtml(String(item.reps))}</span>
             <span>Desc: ${escapeHtml(String(item.rest))}</span>
           </div>
         </div>
@@ -193,16 +213,70 @@ function buildExerciseRow(item, existing) {
   `;
 }
 
+// --- CORE: RENDERIZAÇÃO INTELIGENTE ---
+
 function renderWorkout(ymd, workoutKey, settings, sessions) {
+  // 1. Carregar Fase da Periodização
+  let currentPhase = localStorage.getItem(K.PHASE) || "1";
+  
   const w = WORKOUTS[workoutKey] || WORKOUTS.OFF;
+  const p = PERIODIZATION[currentPhase];
+  
   const dow = weekdayFromYMD(ymd);
   const labels = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
 
-  $("todayLabel").textContent = `${labels[dow]} • ${formatBR(ymd)} (GMT-3)`;
-  $("pillDay").textContent = `Data: ${formatBR(ymd)} • ${workoutKey}`;
+  // 2. Textos do Topo
+  $("todayLabel").textContent = `${labels[dow]} • ${formatBR(ymd)}`;
   $("workoutTitle").textContent = w.title;
-  $("workoutObjective").textContent = w.objective || "";
+  $("workoutObjective").textContent = `${w.objective}`;
+  
+  // 3. Gerar Dropdowns (Seletores)
+  const pillDay = $("pillDay");
+  
+  // Opções de Treino
+  const workoutOpts = Object.keys(WORKOUTS).map(k => 
+    `<option value="${k}" ${k === workoutKey ? 'selected' : ''}>${k}</option>`
+  ).join('');
 
+  // Opções de Fase (Periodização)
+  const phaseOpts = Object.keys(PERIODIZATION).map(k => 
+    `<option value="${k}" ${k === currentPhase ? 'selected' : ''}>${PERIODIZATION[k].name}</option>`
+  ).join('');
+
+  pillDay.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-top:5px;">
+      <label style="display:flex; justify-content:space-between; align-items:center; background:#222; padding:5px; border-radius:4px;">
+        <span style="font-size:0.9rem; color:#aaa;">Treino:</span>
+        <select id="workoutSelector" style="padding:5px; border-radius:4px; background:#444; color:#fff; border:none; width:70%;">
+          ${workoutOpts}
+        </select>
+      </label>
+      <label style="display:flex; justify-content:space-between; align-items:center; background:#222; padding:5px; border-radius:4px;">
+        <span style="font-size:0.9rem; color:#aaa;">Ciclo:</span>
+        <select id="phaseSelector" style="padding:5px; border-radius:4px; background:#224; color:#adf; border:none; width:70%;">
+          ${phaseOpts}
+        </select>
+      </label>
+      <div style="font-size:0.8rem; color:#888; text-align:right; font-style:italic;">
+        ${p.desc}
+      </div>
+    </div>
+  `;
+
+  // Event Listeners dos Selects
+  document.getElementById("workoutSelector").addEventListener("change", (e) => {
+    // Recarrega a tela com o novo treino escolhido
+    renderWorkout(ymd, e.target.value, settings, sessions);
+  });
+
+  document.getElementById("phaseSelector").addEventListener("change", (e) => {
+    // Salva a nova fase e recarrega
+    localStorage.setItem(K.PHASE, e.target.value);
+    renderWorkout(ymd, workoutKey, settings, sessions);
+  });
+
+
+  // 4. Preparar Exercícios
   const existingSession = getSessionByDate(sessions, ymd);
   const existingEntries = new Map();
   if (existingSession && Array.isArray(existingSession.entries)) {
@@ -211,12 +285,31 @@ function renderWorkout(ymd, workoutKey, settings, sessions) {
 
   const list = $("exerciseList");
   list.innerHTML = "";
+  
   w.items.forEach((it) => {
-    const exEntry = existingEntries.get(it.ex) || null;
-    list.insertAdjacentHTML("beforeend", buildExerciseRow(it, exEntry));
+    // CLONAR item para modificar sem estragar o original
+    let item = { ...it };
+
+    // LÓGICA DE PERIODIZAÇÃO (Matemática do Treino)
+    // Só aplica modificadores se NÃO for Cardio e NÃO for OFF
+    if (workoutKey !== "OFF" && !item.ex.toUpperCase().includes("CARDIO")) {
+        
+        // Ajuste de Séries (Garante mínimo de 2 séries, exceto se original for 1)
+        let baseSets = parseInt(item.sets);
+        // Se a fase manda tirar séries, garantimos que nunca fica abaixo de 2
+        item.sets = Math.max(2, baseSets + p.setsMod); 
+
+        // Ajuste de Repetições
+        item.reps = p.repsOverride; 
+
+        // Adiciona alvo de RPE na descrição do descanso
+        item.rest += ` | Meta RPE ${p.rpeTarget}`;
+    }
+
+    const exEntry = existingEntries.get(item.ex) || null;
+    list.insertAdjacentHTML("beforeend", buildExerciseRow(item, exEntry));
   });
 
-  // preencher selects do histórico
   hydrateHistExercises(sessions);
 }
 
@@ -233,14 +326,16 @@ function collectEntriesFromUI(settings) {
 }
 
 function copyText(ymd, workoutKey, sessions) {
+  // Nota: Copia os dados brutos. Se quiser incluir detalhes da periodização,
+  // precisaria ler o DOM ou a fase. Aqui mantemos simples.
   const w = WORKOUTS[workoutKey] || WORKOUTS.OFF;
   const existing = getSessionByDate(sessions, ymd);
   const map = new Map();
   (existing?.entries || []).forEach((e) => map.set(e.ex, e));
 
   const lines = [];
-  lines.push(`Treino — ${formatBR(ymd)} (GMT-3) — ${w.title}`);
-  if (w.objective) lines.push(`Objetivo: ${w.objective}`);
+  lines.push(`Treino — ${formatBR(ymd)} — ${w.title}`);
+  if (w.objective) lines.push(`Foco: ${w.objective}`);
   lines.push("");
 
   w.items.forEach((it, i) => {
@@ -249,7 +344,9 @@ function copyText(ymd, workoutKey, sessions) {
     const reps = e?.doneReps ? `${e.doneReps} reps` : "";
     const rpe = e?.rpe ? `RPE ${e.rpe}` : "";
     const extra = [wgt, reps, rpe].filter(Boolean).join(" • ");
-    lines.push(`${i + 1}. ${it.ex} — ${it.sets}x${it.reps} — desc ${it.rest}${extra ? " | " + extra : ""}`);
+    // Nota: Aqui usamos os dados originais do objeto WORKOUTS para o nome,
+    // mas os dados inseridos pelo user para o log.
+    lines.push(`${i + 1}. ${it.ex} ${extra ? "— " + extra : ""}`);
     if (e?.notes) lines.push(`   Notas: ${e.notes}`);
   });
 
@@ -261,7 +358,10 @@ function hydrateHistExercises(sessions) {
   const set = new Set();
   sessions.forEach((s) => (s.entries || []).forEach((e) => set.add(e.ex)));
   const all = Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  // Preserva valor selecionado se houver
+  const currentVal = sel.value;
   sel.innerHTML = `<option value="__ALL__">Todos</option>` + all.map((x) => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+  if (currentVal) sel.value = currentVal;
 }
 
 function renderHistory(sessions, filterEx) {
@@ -269,32 +369,30 @@ function renderHistory(sessions, filterEx) {
   box.innerHTML = "";
 
   if (!sessions.length) {
-    box.innerHTML = `<div class="small">Sem registros ainda. Use “Salvar hoje” após preencher carga/reps.</div>`;
+    box.innerHTML = `<div class="small">Sem registros ainda.</div>`;
     return;
   }
 
   const f = filterEx && filterEx !== "__ALL__" ? filterEx : null;
+  // Mostra apenas os últimos 50 treinos para não pesar
+  const displaySessions = sessions.slice(0, 50);
 
-  sessions.forEach((s) => {
+  displaySessions.forEach((s) => {
     const entries = (s.entries || []).filter((e) => (f ? e.ex === f : true));
     if (!entries.length) return;
 
-    const header = `<div class="small">${formatBR(s.dateKey)} • Treino ${escapeHtml(s.workoutKey)}</div>`;
+    const header = `<div class="small">${formatBR(s.dateKey)} • ${escapeHtml(s.workoutKey)}</div>`;
     const rows = entries
       .map((e) => {
-        const a = `${escapeHtml(e.ex)}`;
-        const b = `Carga: <b>${escapeHtml(e.weight || "-")}</b> kg`;
-        const c = `Reps: <b>${escapeHtml(e.doneReps || "-")}</b>`;
-        const d = `RPE: <b>${escapeHtml(e.rpe || "-")}</b>`;
-        const n = e.notes ? `<div class="small">Notas: ${escapeHtml(e.notes)}</div>` : "";
+        const b = e.weight ? `<b>${escapeHtml(e.weight)}kg</b>` : "";
+        const c = e.doneReps ? `<b>${escapeHtml(e.doneReps)} reps</b>` : "";
+        const d = e.rpe ? `RPE ${escapeHtml(e.rpe)}` : "";
+        const info = [b, c, d].filter(Boolean).join(" • ");
+        const n = e.notes ? `<div class="small" style="color:#aaa;">${escapeHtml(e.notes)}</div>` : "";
+        
         return `<div class="histcard">
-          <div><b>${a}</b></div>
-          <div class="kv">
-            <div class="small">${b}</div>
-            <div class="small">${c}</div>
-            <div class="small">${d}</div>
-            <div class="small">Alvo: ${escapeHtml(String((WORKOUTS[s.workoutKey]?.items || []).find((x) => x.ex === e.ex)?.reps || ""))}</div>
-          </div>
+          <div><b>${escapeHtml(e.ex)}</b></div>
+          <div class="kv"><div class="small">${info}</div></div>
           ${n}
         </div>`;
       })
@@ -302,9 +400,8 @@ function renderHistory(sessions, filterEx) {
 
     box.insertAdjacentHTML(
       "beforeend",
-      `<div class="histcard">
+      `<div class="histcard" style="border-left: 2px solid #555;">
         ${header}
-        <div class="divider"></div>
         <div class="hist">${rows}</div>
       </div>`
     );
@@ -314,4 +411,70 @@ function renderHistory(sessions, filterEx) {
 function exportJSON() {
   const sessions = loadSessions();
   const payload = { version: 1, exportedAt: new Date().toISOString(), tz: TZ, sessions };
-  const blob = new Blob([JSON.stringify(payload]()
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `treino_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+// --- INICIALIZAÇÃO ---
+
+window.addEventListener("DOMContentLoaded", () => {
+  const now = new Date();
+  const ymd = formatYMDinTZ(now);
+  const settings = loadSettings();
+  const sessions = loadSessions();
+
+  // Definição Inicial do Treino
+  // Tenta encontrar se já existe um treino salvo para hoje
+  const existingSession = getSessionByDate(sessions, ymd);
+  
+  // Se já treinou hoje, carrega aquele treino. 
+  // Se não, carrega "A" como padrão (podes mudar para B ou C se preferires começar noutro)
+  const initialWorkoutKey = existingSession ? existingSession.workoutKey : "A";
+
+  // Renderiza a aplicação
+  renderWorkout(ymd, initialWorkoutKey, settings, sessions);
+  renderHistory(sessions, "__ALL__");
+
+  // Eventos dos Botões Principais
+  $("btnSave").addEventListener("click", () => {
+    const selector = document.getElementById("workoutSelector");
+    const currentKey = selector ? selector.value : "OFF";
+    
+    const entries = collectEntriesFromUI(settings);
+    const session = { dateKey: ymd, workoutKey: currentKey, entries };
+    upsertSession(sessions, session);
+    saveSessions(sessions);
+    
+    // Feedback visual
+    const btn = $("btnSave");
+    const originalText = btn.textContent;
+    btn.textContent = "Salvo!";
+    btn.style.background = "#2ea44f";
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = "";
+    }, 1500);
+    
+    renderHistory(sessions, $("histExercise").value);
+  });
+
+  $("btnCopy").addEventListener("click", () => {
+    const selector = document.getElementById("workoutSelector");
+    const currentKey = selector ? selector.value : "OFF";
+    const txt = copyText(ymd, currentKey, sessions);
+    
+    navigator.clipboard.writeText(txt).then(() => {
+      alert("Copiado para a área de transferência!");
+    });
+  });
+
+  $("btnExport").addEventListener("click", exportJSON);
+
+  $("histExercise").addEventListener("change", (e) => {
+    renderHistory(sessions, e.target.value);
+  });
+});
