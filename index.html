@@ -4,19 +4,27 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>Treino do Dia - Coach Titan</title>
+    <title>Protocolo TITAN - 3X</title>
     <link rel="stylesheet" href="./styles.css" />
     <style>
-      /* Pequeno ajuste para garantir visibilidade no mobile */
-      body { background-color: #0b1220; color: #fff; font-family: sans-serif; }
-      .muted { color: #888; font-size: 0.9em; }
+      .exercise-item { padding: 12px; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
+      .ex-info { display: flex; flex-direction: column; }
+      .ex-name { font-weight: bold; color: #fff; }
+      .ex-meta { font-size: 0.85em; color: #a0aec0; }
+      .ex-obs { font-size: 0.8em; color: #4a5568; font-style: italic; }
+      .ex-input { background: #1a202c; border: 1px solid #4a5568; color: #fff; width: 60px; text-align: center; border-radius: 4px; padding: 6px; }
+      .pill-container { display: flex; gap: 10px; margin-bottom: 15px; }
+      .pill { padding: 8px 15px; border-radius: 20px; background: #1a202c; color: #a0aec0; cursor: pointer; border: 1px solid #2d3748; }
+      .pill.active { background: #3182ce; color: #fff; border-color: #3182ce; }
+      .workout-section { display: none; }
+      .workout-section.active { display: block; }
     </style>
   </head>
   <body>
     <header class="topbar">
       <div class="titlewrap">
         <h1>TITAN LOG v1.0</h1>
-        <div class="sub" id="todayLabel">Carregando…</div>
+        <div class="sub">Início: 15 de Janeiro | 200mg/sem</div>
       </div>
       <div class="actions">
         <button class="btn secondary" id="btnHistory">Histórico</button>
@@ -25,15 +33,52 @@
     </header>
 
     <main class="container">
-      <section class="card" id="workoutCard">
-        <div id="pillDay" class="pill-container"></div>
-        <h2 id="workoutTitle" style="margin: 10px 0 5px 0;">—</h2>
-        <div class="muted" id="workoutObjective">Foco: Recomposição Corporal</div>
-        
-        <div class="list" id="exerciseList"></div>
+      <section class="card">
+        <div class="pill-container">
+          <div class="pill active" onclick="showWorkout('A')">Treino A</div>
+          <div class="pill" onclick="showWorkout('B')">Treino B</div>
+          <div class="pill" onclick="showWorkout('C')">Treino C</div>
+        </div>
+
+        <div id="workoutA" class="workout-section active">
+          <h2 style="margin: 0;">Empurrar + Quadricípete</h2>
+          <div class="muted">Tensão Mecânica e Força</div>
+          <div class="list">
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">1. Agachamento / Leg 45</span><span class="ex-meta">4x 8-10 (90s)</span><span class="ex-obs">Amplitude máxima</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">2. Supino Inclinado</span><span class="ex-meta">4x 8-10 (90s)</span><span class="ex-obs">Peitoral superior</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">3. Desenv. Militar</span><span class="ex-meta">3x 10-12 (60s)</span><span class="ex-obs">Não arquear lombar</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">4. Fundos (Dips) / Testa</span><span class="ex-meta">3x Falha (60s)</span><span class="ex-obs">Foco tríceps</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">5. Cadeira Extensora</span><span class="ex-meta">3x 15 (45s)</span><span class="ex-obs">Segura 1s no topo</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+          </div>
+        </div>
+
+        <div id="workoutB" class="workout-section">
+          <h2 style="margin: 0;">Puxar + Posterior</h2>
+          <div class="muted">Densidade e Postura</div>
+          <div class="list">
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">1. Terra ou Stiff</span><span class="ex-meta">4x 6-8 (90s)</span><span class="ex-obs">Coluna neutra</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">2. Remada Curvada</span><span class="ex-meta">4x 8-10 (90s)</span><span class="ex-obs">Puxada no umbigo</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">3. Puxada Alta (Frente)</span><span class="ex-meta">3x 10-12 (60s)</span><span class="ex-obs">Foco na largura</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">4. Face Pull</span><span class="ex-meta">3x 15 (45s)</span><span class="ex-obs">Saúde do ombro</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">5. Rosca Direta</span><span class="ex-meta">3x 10-12 (60s)</span><span class="ex-obs">Sem roubar</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+          </div>
+        </div>
+
+        <div id="workoutC" class="workout-section">
+          <h2 style="margin: 0;">Full Body Metabólico</h2>
+          <div class="muted">Gasto Calórico e Volume</div>
+          <div class="list">
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">1A. Leg Press Horiz.</span><span class="ex-meta">3x 12 (Superset)</span><span class="ex-obs">Sem descanso p/ o próximo</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">1B. Flexão de Braços</span><span class="ex-meta">3x Máximo</span><span class="ex-obs">Peito no chão</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">2A. Afundo / Passada</span><span class="ex-meta">3x 12 cada (Superset)</span><span class="ex-obs">Constante</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">2B. Elevação Lateral</span><span class="ex-meta">3x 15</span><span class="ex-obs">Controla descida</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">3A. Remada Máquina</span><span class="ex-meta">3x 12 (Superset)</span><span class="ex-obs">Esmaga costas</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">3B. Tríceps Corda</span><span class="ex-meta">3x 15</span><span class="ex-obs">Estende tudo</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+            <div class="exercise-item"><div class="ex-info"><span class="ex-name">4. Cadeira Flexora</span><span class="ex-meta">4x 15 (45s)</span><span class="ex-obs">Movimento lento</span></div><input type="number" class="ex-input" placeholder="kg"></div>
+          </div>
+        </div>
 
         <div class="footerrow">
-          <button id="btnExport" class="btn secondary mini">JSON</button>
           <div class="footer-actions">
             <button id="btnCopy" class="btn secondary">Copiar</button>
             <button id="btnSave" class="btn">Salvar hoje</button>
@@ -42,68 +87,14 @@
       </section>
     </main>
 
-    <dialog class="modal" id="modalHistory">
-      <div class="modalhead"><h3>Histórico</h3><button class="iconbtn" id="closeHistory">×</button></div>
-      <div class="grid">
-        <select id="histExercise" style="width:100%"></select>
-        <div class="row">
-          <button class="btn secondary" id="btnImport">Importar</button>
-          <button class="btn danger" id="btnClear">Limpar</button>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="hist" id="histList"></div>
-    </dialog>
-
-    <dialog class="modal" id="modalSettings">
-      <div class="modalhead"><h3>Configurações</h3><button class="iconbtn" id="closeSettings">×</button></div>
-      <div class="grid">
-        <label class="field"><span>Guardar RPE?</span><select id="keepRpe"><option value="1">Sim</option><option value="0">Não</option></select></label>
-      </div>
-      <button class="btn" id="btnSaveSettings" style="margin-top:20px; width:100%">Salvar</button>
-    </dialog>
-
-    <input type="file" id="fileImport" accept="application/json" hidden />
-
     <script>
-      const TREINOS_TITAN = {
-        "A": {
-          titulo: "TREINO A: Empurrar + Quad",
-          objetivo: "Tensão Mecânica e Força",
-          exercicios: [
-            { nome: "Agachamento Livre", series: 4, reps: "8-10", obs: "Amplitude máxima" },
-            { nome: "Supino Inclinado", series: 4, reps: "8-10", obs: "Foco peitoral superior" },
-            { nome: "Desenv. Militar", series: 3, reps: "10-12", obs: "Não arquear lombar" },
-            { nome: "Fundos (Dips)", series: 3, reps: "Falha", obs: "Tronco inclinado" },
-            { nome: "Cadeira Extensora", series: 3, reps: "15", obs: "Pico de contração 1s" }
-          ]
-        },
-        "B": {
-          titulo: "TREINO B: Puxar + Posterior",
-          objetivo: "Densidade e Postura",
-          exercicios: [
-            { nome: "Levantamento Terra", series: 4, reps: "6-8", obs: "Coluna neutra" },
-            { nome: "Remada Curvada", series: 4, reps: "8-10", obs: "Tronco paralelo ao chão" },
-            { nome: "Puxada Alta", series: 3, reps: "10-12", obs: "Foco na largura" },
-            { nome: "Face Pull", series: 3, reps: "15", obs: "Saúde do ombro" },
-            { nome: "Rosca Direta", series: 3, reps: "10-12", obs: "Sem roubar" }
-          ]
-        },
-        "C": {
-          titulo: "TREINO C: Full Body Metabólico",
-          objetivo: "Gasto Calórico e Volume",
-          exercicios: [
-            { nome: "Leg Press + Flexão", series: 3, reps: "12/Máx", obs: "Super-série sem descanso" },
-            { nome: "Afundo + Elev. Lateral", series: 3, reps: "12/15", obs: "Super-série" },
-            { nome: "Remada + Tríceps Corda", series: 3, reps: "12/15", obs: "Super-série" },
-            { nome: "Cadeira Flexora", series: 4, reps: "15", obs: "Movimento lento" },
-            { nome: "Abdominal Supra", series: 4, reps: "20", obs: "Soltar ar no topo" }
-          ]
-        }
-      };
-      console.log("Treinos carregados no sistema.", TREINOS_TITAN);
+      function showWorkout(day) {
+        document.querySelectorAll('.workout-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        document.getElementById('workout' + day).classList.add('active');
+        event.currentTarget.classList.add('active');
+      }
     </script>
-    
     <script src="./app.js"></script>
   </body>
 </html>
