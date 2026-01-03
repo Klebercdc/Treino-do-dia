@@ -3,136 +3,162 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <meta name="theme-color" content="#ffffff" />
-    <title>TITAN LOG - PRO</title>
+    <meta name="theme-color" content="#3b5bdb" />
+    <title>TITAN LOG - FINAL HYBRID</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-      :root { --primary: #3b5bdb; --bg: #f8f9fa; --card: #ffffff; --text: #1a1a1a; --gray: #868e96; --orange: #fd7e14; --green: #40c057; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding-bottom: 80px; }
+      :root { --primary: #3b5bdb; --bg: #f8f9fa; --card: #ffffff; --text: #1a1a1a; --gray: #868e96; --green: #40c057; --orange: #fd7e14; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 90px; }
       
-      /* Header & Tabs */
-      .header { padding: 40px 20px 20px; background: var(--card); border-bottom: 1px solid #eee; }
-      .header h1 { margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.5px; }
-      
-      .tab-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid #eee; padding: 10px 0; z-index: 1000; justify-content: space-around; }
-      .tab-item { text-align: center; color: var(--gray); font-size: 10px; font-weight: 600; flex: 1; text-decoration: none; cursor: pointer; }
-      .tab-item.active { color: var(--primary); }
-      .tab-icon { display: block; font-size: 20px; margin-bottom: 4px; }
+      /* Navigation */
+      .tab-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: var(--card); border-top: 1px solid #eee; padding: 12px 0; justify-content: space-around; z-index: 1000; }
+      .tab-item { text-align: center; color: var(--gray); font-size: 11px; cursor: pointer; flex: 1; }
+      .tab-item.active { color: var(--primary); font-weight: 700; }
 
-      /* Summary Cards */
-      .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 20px; }
-      .summary-box { background: var(--card); padding: 15px; border-radius: 12px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-      .summary-box span { display: block; font-size: 11px; color: var(--gray); margin-bottom: 5px; }
-      .summary-box strong { font-size: 18px; color: var(--primary); }
-
-      /* Workout Cards */
-      .card { background: var(--card); margin: 0 20px 15px; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f1f3f5; }
-      .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-      .card-title { font-size: 18px; font-weight: 700; color: #000; }
-      .card-meta { font-size: 13px; color: var(--gray); }
-      
-      .exercise-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid #f1f3f5; cursor: pointer; }
-      .ex-info { display: flex; align-items: center; gap: 12px; }
-      .ex-img { width: 45px; height: 45px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-
-      /* Series UI (In-Workout) */
-      .series-line { display: grid; grid-template-columns: 30px 1fr 50px 1fr 50px; gap: 10px; align-items: center; background: #f1f3f5; padding: 10px; border-radius: 10px; margin-bottom: 8px; }
-      .series-input { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 8px; text-align: center; font-weight: 700; font-size: 16px; width: 100%; box-sizing: border-box; outline: none; }
-      
-      .btn-main { background: var(--primary); color: #fff; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; margin-top: 20px; cursor: pointer; }
-
-      .section { display: none; }
+      /* Sections */
+      .section { display: none; padding: 20px; }
       .section.active { display: block; }
+
+      /* Cards & UI */
+      .header { padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
+      .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+      .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+      .summary-box { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid #eee; }
+      .summary-box span { font-size: 10px; color: var(--gray); display: block; }
+      .summary-box strong { font-size: 16px; color: var(--primary); }
+
+      /* Exercise Row */
+      .series-row { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
+      .input-group { background: #f1f3f5; border-radius: 8px; padding: 6px; text-align: center; }
+      .input-group span { font-size: 8px; color: var(--gray); display: block; }
+      input { background: transparent; border: none; width: 100%; text-align: center; font-size: 15px; font-weight: 700; outline: none; }
+      
+      .predict-badge { background: rgba(64, 192, 87, 0.1); color: var(--green); padding: 10px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-bottom: 15px; display: none; text-align: center; }
+      .btn-main { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; }
+
+      .ex-title { font-weight: 800; font-size: 17px; margin-bottom: 15px; display: block; }
     </style>
   </head>
   <body>
 
     <div id="relatorio" class="section active">
-      <div class="header"><h1>Relatório</h1></div>
+      <div class="header"><h2>📊 Estatísticas</h2></div>
       <div class="summary-grid">
-        <div class="summary-box"><span>Treinos</span><strong id="totalTreinos">0</strong></div>
-        <div class="summary-box"><span>Tempo (min)</span><strong>0</strong></div>
-        <div class="summary-box"><span>Volume (kg)</span><strong id="totalVolume">0</strong></div>
+        <div class="summary-box"><span>Treinos</span><strong>12</strong></div>
+        <div class="summary-box"><span>Volume</span><strong>5.4k</strong></div>
+        <div class="summary-box"><span>Peso</span><strong>67kg</strong></div>
       </div>
-      <div class="card">
-        <div class="card-title">Esta Semana</div>
-        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-          ${[21,22,23,24,25,26,27].map(d => `<div style="text-align:center"><div style="font-size:10px; color:var(--gray); margin-bottom:5px">S</div><div style="font-weight:700; padding:8px; background:${d==25?'#000':'#f1f3f5'}; color:${d==25?'#fff':'#000'}; border-radius:50%">${d}</div></div>`).join('')}
-        </div>
-      </div>
+      <div class="card"><canvas id="mainChart" height="150"></canvas></div>
     </div>
 
     <div id="treino" class="section">
-      <div class="header"><h1>Treino</h1></div>
-      <div id="workoutList"></div>
+      <div class="header"><h2>🏋️ Treino de Hoje</h2><span id="faseAtiva" style="color:var(--orange); font-weight:bold; font-size:12px;">HIPERTROFIA</span></div>
+      
+      <div id="predict-box" class="predict-badge"></div>
+
+      <div id="workout-container">
+          </div>
+      <button class="btn-main" onclick="salvarSessao()">FINALIZAR TREINO</button>
     </div>
 
     <div id="personalizar" class="section">
-      <div class="header"><h1>Personalizar</h1></div>
-      <div class="card" style="text-align:center; padding: 40px 20px;">
-        <div style="font-size: 60px; margin-bottom: 20px;">🏋️‍♂️</div>
-        <h2 style="margin: 0 0 10px;">Defina a sua periodização</h2>
-        <p style="color:var(--gray); font-size: 14px; margin-bottom: 25px;">Escolha a fase atual para ajustar metas.</p>
-        <select id="faseSelect" onchange="updateFase()" style="width:100%; padding:15px; border-radius:10px; border:1px solid #ddd; font-weight:700;">
-          <option value="adapt">Fase 1: Adaptação</option>
-          <option value="hiper" selected>Fase 2: Hipertrofia</option>
-          <option value="forca">Fase 3: Força Pura</option>
-          <option value="cut">Fase 4: Polimento</option>
+      <div class="header"><h2>⚙️ Ajustes</h2></div>
+      <div class="card">
+        <label style="font-size:12px; font-weight:bold; color:var(--gray)">FASE DA PERIODIZAÇÃO</label>
+        <select id="selectFase" onchange="mudarFase()" style="width:100%; padding:15px; margin-top:10px; border-radius:10px; border:1px solid #ddd; font-weight:bold;">
+            <option value="adapt">Fase 1: Adaptação</option>
+            <option value="hiper" selected>Fase 2: Hipertrofia</option>
+            <option value="forca">Fase 3: Força Pura</option>
+            <option value="cut">Fase 4: Polimento</option>
         </select>
-        <button class="btn-main" onclick="switchTab('treino')">+ INÍCIO</button>
       </div>
     </div>
 
     <nav class="tab-nav">
-      <a class="tab-item" onclick="switchTab('treino')"><span class="tab-icon">🏋️</span>Treino</a>
-      <a class="tab-item" onclick="switchTab('personalizar')"><span class="tab-icon">✏️</span>Personalizar</a>
-      <a class="tab-item" onclick="switchTab('exercicios')"><span class="tab-icon">📖</span>Exercícios</a>
-      <a class="tab-item active" onclick="switchTab('relatorio')"><span class="tab-icon">📊</span>Relatório</a>
-      <a class="tab-item"><span class="tab-icon">👤</span>Meu</a>
+      <div class="tab-item" onclick="nav('relatorio')">📊 Relatório</div>
+      <div class="tab-item active" onclick="nav('treino')">🏋️ Treino</div>
+      <div class="tab-item" onclick="nav('personalizar')">⚙️ Ajustes</div>
     </nav>
 
     <script>
-      const data = {
-        fase: 'hiper',
-        stats: { treinos: 0, volume: 0 },
-        protocolo: {
-          "Treino A": ["Agachamento Livre", "Supino Inclinado", "Desenv. Militar", "Fundos", "Extensora"],
-          "Treino B": ["Terra/Stiff", "Remada Curvada", "Puxada Alta", "Face Pull", "Rosca Direta"],
-          "Treino C": ["Leg Press 45", "Supino Máquina", "Búlgaro Smith", "Elev. Lateral", "Remada Máq"]
-        }
+      const treinosABC = {
+        "A": ["Agachamento Smith", "Supino Inclinado", "Desenv. Militar", "Fundos/Tríceps", "Extensora"],
+        "B": ["Terra/Stiff", "Remada Curvada", "Puxada Alta", "Face Pull", "Rosca Direta"],
+        "C": ["Leg Press 45", "Supino Máquina", "Búlgaro Smith", "Elev. Lateral", "Remada Máq"]
       };
 
-      function renderWorkouts() {
-        const list = document.getElementById('workoutList');
-        list.innerHTML = "";
-        Object.entries(data.protocolo).forEach(([nome, exs]) => {
-          list.innerHTML += `
-            <div class="card">
-              <div class="card-header"><span class="card-title">${nome}</span><span class="card-meta">${exs.length} exercícios</span></div>
-              ${exs.slice(0,3).map(ex => `
-                <div class="exercise-row">
-                  <div class="ex-info"><div class="ex-img">💪</div><div><strong>${ex}</strong></div></div>
-                  <div style="font-weight:700; font-size:14px;">4 x 8</div>
-                </div>`).join('')}
-              <div style="text-align:right; color:var(--primary); font-size:12px; font-weight:700; margin-top:10px; cursor:pointer;">Ver todos</div>
-              <button class="btn-main" onclick="alert('Iniciando ${nome}...')">INICIAR TREINO</button>
-            </div>`;
-        });
-      }
+      let faseAtual = "hiper";
 
-      function switchTab(id) {
+      function nav(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         event.currentTarget.classList.add('active');
-        if(id === 'treino') renderWorkouts();
+        if(id === 'relatorio') initChart();
       }
 
-      function updateFase() {
-        data.fase = document.getElementById('faseSelect').value;
-        alert(`Periodização atualizada para: ${data.fase}`);
+      function renderTreino() {
+        const container = document.getElementById('workout-container');
+        container.innerHTML = "";
+        // Exemplo carregando Treino A
+        treinosABC["A"].forEach((ex, idx) => {
+          container.innerHTML += `
+            <div class="card">
+              <span class="ex-title">${ex}</span>
+              <div class="series-row" style="font-size:9px; color:var(--gray); font-weight:bold; text-align:center;">
+                <div>SET</div><div>KG</div><div>REPS</div><div>RPE</div>
+              </div>
+              ${[1,2,3,4].map(s => `
+                <div class="series-row">
+                  <div style="font-weight:bold; text-align:center;">${s}</div>
+                  <div class="input-group"><span>KG</span><input type="number" class="kg-${idx}" oninput="calc('${idx}')"></div>
+                  <div class="input-group"><span>REP</span><input type="number"></div>
+                  <div class="input-group"><span>RPE</span><input type="number" class="rpe-${idx}" oninput="calc('${idx}')"></div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        });
       }
 
-      renderWorkouts();
+      function calc(idx) {
+        const kgs = document.getElementsByClassName(`kg-${idx}`);
+        const rpes = document.getElementsByClassName(`rpe-${idx}`);
+        const badge = document.getElementById('predict-box');
+        
+        let vKg = 0; let vRpe = 0;
+        for(let i=0; i<kgs.length; i++) {
+          if(kgs[i].value > 0) { vKg = parseFloat(kgs[i].value); vRpe = parseInt(rpes[i].value); }
+        }
+
+        if(vKg > 0 && vRpe > 0) {
+          badge.style.display = "block";
+          let sugestao = vRpe <= 7 ? (vKg * 1.05).toFixed(1) : (vRpe <= 9 ? (vKg * 1.02).toFixed(1) : vKg);
+          badge.innerHTML = `🎯 <strong>ALVO:</strong> Próxima carga sugerida para este exercício: <strong>${sugestao} KG</strong>`;
+        }
+      }
+
+      function mudarFase() {
+        faseAtual = document.getElementById('selectFase').value;
+        document.getElementById('faseAtiva').innerText = faseAtual.toUpperCase();
+        alert("Periodização alterada para " + faseAtual);
+      }
+
+      function initChart() {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'],
+            datasets: [{ label: 'Volume', data: [4200, 0, 4800, 0, 5100], borderColor: '#3b5bdb', tension: 0.4 }]
+          },
+          options: { plugins: { legend: { display: false } } }
+        });
+      }
+
+      function salvarSessao() { alert("Treino salvo com sucesso!"); }
+
+      renderTreino();
     </script>
   </body>
 </html>
