@@ -4,37 +4,29 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - Periodização Ativa</title>
+    <title>TITAN LOG - Periodização Dinâmica</title>
     <link rel="stylesheet" href="./styles.css" />
     <style>
       :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
       body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; }
-      
       .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
-      .period-selector { background: var(--card); padding: 10px; border-bottom: 1px solid #2d3748; display: flex; align-items: center; justify-content: space-around; }
-      .period-selector select { background: #0b1220; color: var(--green); border: 1px solid var(--green); border-radius: 5px; padding: 5px; font-weight: bold; }
-      
+      .period-selector { background: var(--card); padding: 12px; border-bottom: 2px solid var(--blue); display: flex; align-items: center; justify-content: center; gap: 10px; }
+      .period-selector select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; padding: 8px; font-weight: bold; width: 60%; }
       .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2d3748; }
       .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
-
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
       .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); margin-bottom: 2px; }
       .ex-target { font-size: 0.9rem; color: var(--orange); font-weight: bold; margin-bottom: 4px; display: block; }
       .ex-meta { font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; text-transform: uppercase; }
-      
       .series-header { display: grid; grid-template-columns: 35px 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; text-align: center; }
       .series-header span { font-size: 0.65rem; color: #718096; font-weight: bold; }
       .series-row { display: grid; grid-template-columns: 35px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
       .s-label { font-weight: bold; color: #718096; font-size: 0.85rem; text-align: center; }
-      
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 10px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
-      .input-box input::placeholder { color: #4a5568; }
-
       .section { display: none; }
       .section.active { display: block; }
-      
       .footer-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 10px; gap: 10px; }
       .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
       .btn.primary { background: var(--green); color: #fff; }
@@ -43,22 +35,16 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="titlewrap">
-        <h1>TITAN LOG</h1>
-        <div class="sub" id="todayLabel">Carregando...</div>
-      </div>
-      <div class="actions">
-        <button class="btn secondary mini" id="btnHistory">Histórico</button>
-        <button class="iconbtn" id="btnSettings">⚙️</button>
-      </div>
+      <div class="titlewrap"><h1>TITAN LOG</h1><div class="sub" id="todayLabel">...</div></div>
+      <div class="actions"><button class="btn secondary mini" id="btnHistory">Histórico</button></div>
     </header>
 
     <div class="period-selector">
-      <span>Fase Atual:</span>
-      <select id="periodoFase">
-        <option value="forca">FORÇA (Cargas Altas)</option>
-        <option value="hipertrofia" selected>HIPERTROFIA (Densidade)</option>
-        <option value="metabolico">METABÓLICO (Pump)</option>
+      <span>Fase:</span>
+      <select id="periodoFase" onchange="build()">
+        <option value="hipertrofia">HIPERTROFIA (8-12 Reps)</option>
+        <option value="forca">FORÇA (5-8 Reps)</option>
+        <option value="metabolico">METABÓLICO (15-20 Reps)</option>
         <option value="deload">DELOAD (Recuperação)</option>
       </select>
     </div>
@@ -73,39 +59,44 @@
       <div id="A" class="section active"></div>
       <div id="B" class="section"></div>
       <div id="C" class="section"></div>
-
       <div class="footer-row">
-        <button id="btnExport" class="btn secondary">JSON</button>
         <button id="btnCopy" class="btn secondary">Copiar</button>
         <button id="btnSave" class="btn primary">Salvar hoje</button>
       </div>
     </main>
 
     <script>
-      const data = {
+      const baseData = {
         A: [
-          { n: "1. Agachamento / Leg 45", target: "META: 8-10 REPS | RPE 8-9", m: "Foco: Base e Estabilidade", s: 4 },
-          { n: "2. Supino Inclinado", target: "META: 8-10 REPS | RPE 9", m: "Foco: Peitoral Superior", s: 4 },
-          { n: "3. Desenv. Militar", target: "META: 10-12 REPS | RPE 8", m: "Foco: Deltoide Frontal", s: 3 },
-          { n: "4. Fundos ou Testa", target: "META: FALHA | RPE 9-10", m: "Foco: Tríceps", s: 3 },
-          { n: "5. Cadeira Extensora", target: "META: 15 REPS | RPE 10", m: "Foco: Isolamento", s: 3 }
+          { n: "1. Agachamento / Leg 45", s: 4, m: "Quadricípete" },
+          { n: "2. Supino Inclinado", s: 4, m: "Peitoral Sup." },
+          { n: "3. Desenv. Militar", s: 3, m: "Ombros" },
+          { n: "4. Fundos / Testa", s: 3, m: "Tríceps" },
+          { n: "5. Cadeira Extensora", s: 3, m: "Isolamento Quad." }
         ],
         B: [
-          { n: "1. Terra ou Stiff", target: "META: 6-8 REPS | RPE 7-8", m: "Foco: Isquios/Lombar", s: 4 },
-          { n: "2. Remada Curvada", target: "META: 8-10 REPS | RPE 9", m: "Foco: Dorsal", s: 4 },
-          { n: "3. Puxada Alta (Frente)", target: "META: 10-12 REPS | RPE 9", m: "Foco: Grande Dorsal", s: 3 },
-          { n: "4. Face Pull", target: "META: 15 REPS | RPE 10", m: "Foco: Saúde Ombro", s: 3 },
-          { n: "5. Rosca Direta", target: "META: 10-12 REPS | RPE 9", m: "Foco: Bíceps", s: 3 }
+          { n: "1. Terra ou Stiff", s: 4, m: "Post. / Lombar" },
+          { n: "2. Remada Curvada", s: 4, m: "Espessura" },
+          { n: "3. Puxada Alta", s: 3, m: "Largura" },
+          { n: "4. Face Pull", s: 3, m: "Post. Ombro" },
+          { n: "5. Rosca Direta", s: 3, m: "Bíceps" }
         ],
         C: [
-          { n: "1A. Leg Press Horiz.", target: "META: 12 REPS | RPE 9", m: "SUPERSET", s: 3 },
-          { n: "1B. Flexão de Braços", target: "META: MÁXIMO | RPE 10", m: "SUPERSET", s: 3 },
-          { n: "2A. Afundo / Passada", target: "META: 12 REPS CADA | RPE 8", m: "SUPERSET", s: 3 },
-          { n: "2B. Elevação Lateral", target: "META: 15 REPS | RPE 10", m: "SUPERSET", s: 3 },
-          { n: "3A. Remada Máquina", target: "META: 12 REPS | RPE 9", m: "SUPERSET", s: 3 },
-          { n: "3B. Tríceps Corda", target: "META: 15 REPS | RPE 10", m: "SUPERSET", s: 3 },
-          { n: "4. Cadeira Flexora", target: "META: 15 REPS | RPE 9", m: "Foco: Isquios", s: 4 }
+          { n: "1A. Leg Press Horiz.", s: 3, m: "Metabólico" },
+          { n: "1B. Flexão de Braços", s: 3, m: "Metabólico" },
+          { n: "2A. Afundo / Passada", s: 3, m: "Metabólico" },
+          { n: "2B. Elevação Lateral", s: 3, m: "Metabólico" },
+          { n: "3A. Remada Máquina", s: 3, m: "Metabólico" },
+          { n: "3B. Tríceps Corda", s: 3, m: "Metabólico" },
+          { n: "4. Cadeira Flexora", s: 4, m: "Isolamento Post." }
         ]
+      };
+
+      const fases = {
+        hipertrofia: { reps: "8-12", rpe: "8-9", mod_s: 0 },
+        forca: { reps: "5-8", rpe: "9-10", mod_s: 0 },
+        metabolico: { reps: "15-20", rpe: "10", mod_s: 1 },
+        deload: { reps: "10-12", rpe: "6-7", mod_s: -1 }
       };
 
       function tab(t, el) {
@@ -116,18 +107,21 @@
       }
 
       function build() {
+        const fase = document.getElementById('periodoFase').value;
+        const config = fases[fase];
+        
         ['A', 'B', 'C'].forEach(id => {
           const container = document.getElementById(id);
-          data[id].forEach(ex => {
+          container.innerHTML = ""; 
+          baseData[id].forEach(ex => {
+            const numSeries = Math.max(2, ex.s + config.mod_s);
             let html = `
               <div class="exercise-card">
                 <div class="ex-title">${ex.n}</div>
-                <div class="ex-target">${ex.target}</div>
-                <div class="ex-meta">${ex.m}</div>
-                <div class="series-header">
-                  <span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span>
-                </div>`;
-            for (let i = 1; i <= ex.s; i++) {
+                <div class="ex-target">META: ${config.reps} REPS | RPE ${config.rpe}</div>
+                <div class="ex-meta">${ex.m} | ${numSeries} Séries</div>
+                <div class="series-header"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
+            for (let i = 1; i <= numSeries; i++) {
               html += `
                 <div class="series-row">
                   <div class="s-label">S${i}</div>
@@ -140,15 +134,10 @@
             container.innerHTML += html;
           });
         });
-        const agora = new Date();
-        document.getElementById('todayLabel').innerText = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+        document.getElementById('todayLabel').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
       }
 
       build();
-
-      // Funções de Modal conectadas ao seu app.js
-      document.getElementById('btnHistory').onclick = () => document.getElementById('modalHistory')?.showModal();
-      document.getElementById('btnSettings').onclick = () => document.getElementById('modalSettings')?.showModal();
     </script>
     <script src="./app.js"></script>
   </body>
