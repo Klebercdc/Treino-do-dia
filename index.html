@@ -4,171 +4,169 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN LOG - Biblioteca Completa</title>
+    <title>TITAN AI - Consultoria Inteligente</title>
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 60px; }
-      .topbar { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3748; }
-      .period-selector { background: var(--card); padding: 12px; border-bottom: 2px solid var(--blue); display: flex; align-items: center; justify-content: center; gap: 10px; }
-      .period-selector select { background: #0b1220; color: var(--orange); border: 1px solid var(--orange); border-radius: 5px; padding: 8px; font-weight: bold; width: 65%; }
-      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; }
-      .pill { flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.8rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
+      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; }
+      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 80px; }
+      
+      /* Setup Panel */
+      .setup-panel { background: var(--card); padding: 20px; border-bottom: 2px solid var(--blue); }
+      .setup-panel h2 { margin: 0 0 15px 0; font-size: 1.2rem; color: var(--blue); text-align: center; }
+      .field { margin-bottom: 15px; }
+      .field label { font-size: 0.75rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; }
+      .field select { width: 100%; padding: 12px; background: #0b1220; color: white; border: 1px solid #2d3748; border-radius: 8px; font-size: 0.9rem; outline: none; }
+      
+      /* Navigation */
+      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); position: sticky; top: 0; z-index: 10; overflow-x: auto; white-space: nowrap; }
+      .pill { flex: 1; text-align: center; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
       .pill.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+      /* Exercise Cards */
       .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
-      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); }
-      .ex-target { font-size: 0.9rem; color: var(--orange); font-weight: bold; margin: 4px 0; display: block; }
-      .series-row { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .ex-header { margin-bottom: 12px; }
+      .ex-title { font-weight: 800; font-size: 1.1rem; color: var(--blue); display: block; }
+      .ex-target { font-size: 0.8rem; color: var(--orange); font-weight: bold; margin-top: 4px; display: block; }
+      
+      .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .header-grid { text-align: center; font-size: 0.6rem; color: #718096; font-weight: bold; margin-bottom: 5px; }
       .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; padding: 8px 0; }
       .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; outline: none; font-weight: bold; }
+      
       .section { display: none; }
       .section.active { display: block; }
-      .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; text-align: center; }
-      .btn.primary { background: var(--green); color: #fff; width: 100%; }
-      .btn.secondary { background: #2d3748; color: #fff; }
-      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 92%; max-width: 500px; padding: 20px; box-sizing: border-box; }
-      .config-group { margin-bottom: 20px; border-bottom: 1px solid #2d3748; padding-bottom: 10px; }
-      .config-group strong { color: var(--blue); display: block; margin-bottom: 10px; font-size: 1.1rem; }
-      .config-item { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 0.95rem; }
-      .config-item input[type="checkbox"] { width: 18px; height: 18px; }
+
+      /* Footer */
+      .footer { position: fixed; bottom: 0; width: 100%; background: var(--bg); padding: 10px; box-sizing: border-box; display: flex; gap: 10px; border-top: 1px solid #2d3748; }
+      .btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; flex: 1; text-align: center; }
+      .btn-save { background: var(--green); color: white; }
+      .btn-hist { background: var(--card); color: white; border: 1px solid var(--blue); }
     </style>
   </head>
   <body>
-    <header class="topbar">
-      <div><h1 style="margin:0; font-size: 1.2rem;">TITAN LOG</h1></div>
-      <div style="display:flex; gap:5px;">
-        <button class="btn secondary" style="padding: 8px;" onclick="document.getElementById('modalConfig').showModal(); renderChecklist();">⚙️ Montar</button>
-        <button class="btn secondary" style="padding: 8px;" id="btnHistory">📜 Hist</button>
-      </div>
-    </header>
 
-    <div class="period-selector">
-      <select id="periodoFase" onchange="buildTreino()">
-        <option value="hipertrofia">HIPERTROFIA (8-12 Reps)</option>
-        <option value="forca">FORÇA (5-8 Reps)</option>
-        <option value="metabolico">METABÓLICO (15-20 Reps)</option>
-        <option value="deload">DELOAD (Recuperação)</option>
-      </select>
-    </div>
-
-    <div class="nav-pills">
-      <div class="pill active" id="pillA" onclick="tab('A')">TREINO A</div>
-      <div class="pill" id="pillB" onclick="tab('B')">TREINO B</div>
-      <div class="pill" id="pillC" onclick="tab('C')">TREINO C</div>
-    </div>
-
-    <main id="mainContainer">
-      <div id="A" class="section active"></div>
-      <div id="B" class="section"></div>
-      <div id="C" class="section"></div>
-    </main>
-
-    <div style="padding: 10px; display: flex; gap: 10px; position: sticky; bottom: 0; background: var(--bg);">
-        <button class="btn primary" id="btnSave">SALVAR TREINO</button>
-    </div>
-
-    <dialog id="modalConfig">
-        <h3 style="color:var(--blue); margin-top:0;">Montar Treino</h3>
-        <select id="selectTreinoConfig" onchange="renderChecklist()" style="width:100%; padding:12px; margin-bottom:15px; background:#0b1220; color:white; border: 1px solid var(--blue);">
-            <option value="A">Configurar Treino A</option>
-            <option value="B">Configurar Treino B</option>
-            <option value="C">Configurar Treino C</option>
+    <div class="setup-panel" id="setupPanel">
+      <h2>CONFIGURAR PROTOCOLO</h2>
+      
+      <div class="field">
+        <label>DISPONIBILIDADE (DIAS POR SEMANA)</label>
+        <select id="freq" onchange="gerarProtocolo()">
+          <option value="2">2 Dias (Full Body)</option>
+          <option value="3">3 Dias (FB ou ABC)</option>
+          <option value="4" selected>4 Dias (Upper / Lower)</option>
+          <option value="5">5 Dias (Push / Pull / Legs + UL)</option>
+          <option value="6">6 Dias (PPL 2x)</option>
         </select>
-        <div id="checklistExercicios" style="max-height:60vh; overflow-y:auto; padding-right:10px;"></div>
-        <button class="btn primary" onclick="document.getElementById('modalConfig').close(); buildTreino();" style="margin-top:15px;">Confirmar Montagem</button>
-    </dialog>
+      </div>
 
-    <dialog id="modalHistory">
-        <h3 style="color:var(--orange)">Histórico de Cargas</h3>
-        <div id="historyContent" style="max-height:350px; overflow-y:auto;"></div>
-        <button class="btn secondary" onclick="document.getElementById('modalHistory').close()" style="width:100%; margin-top:10px;">Fechar</button>
-    </dialog>
+      <div class="field">
+        <label>OBJETIVO PRINCIPAL</label>
+        <select id="obj" onchange="gerarProtocolo()">
+          <option value="hipertrofia">Hipertrofia (Ganho de Massa)</option>
+          <option value="forca">Força Bruta (Cargas Altas)</option>
+          <option value="cutting">Definição (Gasto Calórico)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">MONTAR TREINO AGORA</button>
+    </div>
+
+    <div class="nav-pills" id="nav"></div>
+    <main id="container"></main>
+
+    <footer class="footer">
+      <button class="btn btn-hist" onclick="verHistorico()">📜 HISTÓRICO</button>
+      <button class="btn btn-save" onclick="salvarTreino()">💾 SALVAR HOJE</button>
+      <button class="btn btn-hist" onclick="document.getElementById('setupPanel').style.display='block'" style="flex:0.5">⚙️</button>
+    </footer>
 
     <script>
-      const biblioteca = {
-        "PERNAS": ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Cadeira Flexora", "Mesa Flexora", "Stiff", "Afundo", "Passada", "Agachamento Sumô", "Hack Machine"],
-        "PEITO": ["Supino Reto Barra", "Supino Inclinado Halter", "Supino Declinado", "Crucifixo Reto", "Peck Deck (Voador)", "Cross Over", "Flexão de Braço"],
-        "COSTAS": ["Puxada Alta", "Remada Curvada Barra", "Remada Serrote", "Remada Baixa", "Pull Down Corda", "Levantamento Terra", "Barra Fixa"],
-        "OMBROS": ["Desenvolvimento Militar", "Elevação Lateral", "Elevação Frontal", "Desenvolvimento Arnold", "Crucifixo Inverso", "Face Pull", "Encolhimento Trapeziro"],
-        "BÍCEPS": ["Rosca Direta Barra", "Rosca Alternada", "Rosca Martelo", "Rosca Scott", "Rosca Concentrada", "Rosca Inversa"],
-        "TRÍCEPS": ["Tríceps Corda", "Tríceps Testa", "Tríceps Pulley Barra", "Paralelas", "Tríceps Francês", "Tríceps Coice"],
-        "PANTURRILHA": ["Panturrilha em Pé", "Panturrilha Sentado (Sustentação)", "Panturrilha no Leg"]
+      const db = {
+        peito: ["Supino Inclinado", "Supino Reto", "Crucifixo"],
+        costas: ["Puxada Alta", "Remada Curvada", "Remada Baixa"],
+        ombro: ["Desenvolvimento", "Elevação Lateral", "Face Pull"],
+        perna: ["Agachamento", "Leg Press", "Cadeira Extensora", "Mesa Flexora"],
+        braço: ["Rosca Direta", "Tríceps Corda", "Tríceps Testa"]
       };
 
-      let meuTreino = JSON.parse(localStorage.getItem('titan_setup')) || { A: [], B: [], C: [] };
+      function gerarProtocolo() {
+        const f = document.getElementById('freq').value;
+        const o = document.getElementById('obj').value;
+        const nav = document.getElementById('nav');
+        const cont = document.getElementById('container');
+        
+        nav.innerHTML = ""; cont.innerHTML = "";
 
-      const fases = {
-        hipertrofia: { reps: "8-12", rpe: "8-9", s: 4 },
-        forca: { reps: "5-8", rpe: "9-10", s: 4 },
-        metabolico: { reps: "15-20", rpe: "10", s: 3 },
-        deload: { reps: "10-12", rpe: "6", s: 2 }
-      };
+        let divisao = [];
+        if(f == "2") divisao = ["TREINO ÚNICO (Full Body)"];
+        else if(f == "3") divisao = ["A (Empurrar)", "B (Puxar)", "C (Pernas)"];
+        else if(f == "4") divisao = ["A (Superior)", "B (Inferior)", "C (Superior)", "D (Inferior)"];
+        else divisao = ["A (Peito/Ombro)", "B (Costas/Trapezio)", "C (Pernas)", "D (Braços)"];
 
-      function tab(id) {
-        document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('pill'+id).classList.add('active');
-      }
+        let reps = o === "forca" ? "5-8" : (o === "hipertrofia" ? "8-12" : "12-15");
+        let series = o === "forca" ? 5 : 4;
 
-      function buildTreino() {
-        const fase = document.getElementById('periodoFase').value;
-        const conf = fases[fase];
-        ['A', 'B', 'C'].forEach(id => {
-          const container = document.getElementById(id);
-          container.innerHTML = meuTreino[id].length ? "" : `<p style="text-align:center; color:#718096; margin-top:20px;">Use o botão ⚙️ Montar para adicionar exercícios.</p>`;
-          meuTreino[id].forEach(ex => {
-            let html = `<div class="exercise-card"><div class="ex-title">${ex}</div><div class="ex-target">META: ${conf.reps} REPS | RPE ${conf.rpe}</div><div style="display:grid; grid-template-columns: 40px 1fr 1fr 1fr; gap:8px; text-align:center; font-size:0.6rem; color:#718096; margin-bottom:5px;"><span>SÉRIE</span><span>KG</span><span>REPS</span><span>RPE</span></div>`;
-            for (let i = 1; i <= conf.s; i++) {
-              html += `<div class="series-row"><div style="text-align:center; font-weight:bold; color:#718096;">S${i}</div><div class="input-box"><input type="number" inputmode="decimal"></div><div class="input-box"><input type="number" inputmode="numeric"></div><div class="input-box"><input type="number" inputmode="numeric"></div></div>`;
-            }
-            container.innerHTML += html + `</div>`;
+        divisao.forEach((nome, i) => {
+          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
+          let sec = document.createElement('div');
+          sec.id = `sec${i}`;
+          sec.className = `section ${i===0?'active':''}`;
+          
+          // Seleção lógica de exercícios simplificada para o exemplo
+          const lista = [...db.peito, ...db.costas, ...db.perna].slice(i*2, (i*2)+5);
+          
+          lista.forEach(ex => {
+            sec.innerHTML += `
+              <div class="exercise-card">
+                <div class="ex-header">
+                  <span class="ex-title">${ex}</span>
+                  <span class="ex-target">META: ${series}x ${reps} | RPE 9</span>
+                </div>
+                <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+                ${Array.from({length: series}, (_, s) => `
+                  <div class="series-grid">
+                    <span style="text-align:center; font-weight:bold; color:#718096">S${s+1}</span>
+                    <div class="input-box"><input type="number" inputmode="decimal" placeholder="-"></div>
+                    <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
+                    <div class="input-box"><input type="number" inputmode="numeric" placeholder="-"></div>
+                  </div>
+                `).join('')}
+              </div>`;
           });
+          cont.appendChild(sec);
         });
       }
 
-      function renderChecklist() {
-        const treino = document.getElementById('selectTreinoConfig').value;
-        const container = document.getElementById('checklistExercicios');
-        container.innerHTML = "";
-        for (let cat in biblioteca) {
-          let html = `<div class="config-group"><strong>${cat}</strong>`;
-          biblioteca[cat].forEach(ex => {
-            const checked = meuTreino[treino].includes(ex) ? 'checked' : '';
-            html += `<div class="config-item"><input type="checkbox" value="${ex}" ${checked} onchange="updateSetup('${treino}', this)"> ${ex}</div>`;
-          });
-          container.innerHTML += html + `</div>`;
-        }
+      function tab(idx) {
+        document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active'));
+        document.getElementById(`sec${idx}`).classList.add('active');
+        document.getElementById(`p${idx}`).classList.add('active');
       }
 
-      function updateSetup(treino, el) {
-        if (el.checked) { if(!meuTreino[treino].includes(el.value)) meuTreino[treino].push(el.value); }
-        else { meuTreino[treino] = meuTreino[treino].filter(i => i !== el.value); }
-        localStorage.setItem('titan_setup', JSON.stringify(meuTreino));
+      function salvarTreino() {
+        const ativo = document.querySelector('.section.active');
+        const logs = [];
+        ativo.querySelectorAll('.exercise-card').forEach(card => {
+          const nome = card.querySelector('.ex-title').innerText;
+          card.querySelectorAll('.series-grid:not(.header-grid)').forEach((linha, i) => {
+            const inps = linha.querySelectorAll('input');
+            if(inps[1].value) logs.push({ex: nome, s: i+1, kg: inps[0].value||0, r: inps[1].value});
+          });
+        });
+        if(!logs.length) return alert("Preencha as repetições!");
+        let h = JSON.parse(localStorage.getItem('titan_universal') || '[]');
+        h.unshift({data: new Date().toLocaleString(), dados: logs});
+        localStorage.setItem('titan_universal', JSON.stringify(h.slice(0,20)));
+        alert("✅ Salvo no dispositivo!");
       }
 
-      document.getElementById('btnSave').onclick = () => {
-          const tAtivo = document.querySelector('.section.active').id;
-          const logs = [];
-          document.querySelectorAll(`#${tAtivo} .exercise-card`).forEach(card => {
-              const nome = card.querySelector('.ex-title').innerText;
-              card.querySelectorAll('.series-row').forEach((l, i) => {
-                  const inp = l.querySelectorAll('input');
-                  if (inp[1].value) logs.push({ ex: nome, s: i+1, kg: inp[0].value||0, reps: inp[1].value, rpe: inp[2].value||'-' });
-              });
-          });
-          if (!logs.length) return alert("Preencha as repetições!");
-          let hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
-          hist.unshift({ data: new Date().toLocaleString('pt-BR'), treino: tAtivo, dados: logs });
-          localStorage.setItem('titan_log', JSON.stringify(hist.slice(0, 30)));
-          alert("✅ Treino Salvo!");
-      };
+      function verHistorico() {
+        let h = JSON.parse(localStorage.getItem('titan_universal') || '[]');
+        if(!h.length) return alert("Nenhum histórico encontrado.");
+        let txt = h.map(i => `${i.data}\n${i.dados.map(d => `${d.ex} (S${d.s}): ${d.kg}kg x ${d.r}`).join('\n')}`).join('\n\n---\n\n');
+        alert(txt);
+      }
 
-      document.getElementById('btnHistory').onclick = () => {
-          const hist = JSON.parse(localStorage.getItem('titan_log') || '[]');
-          document.getElementById('historyContent').innerHTML = hist.map(h => `<div style="border-bottom:1px solid #2d3748; padding:10px 0;"><strong style="color:var(--orange)">${h.data}</strong>${h.dados.map(d => `<div style="font-size:0.75rem;">${d.ex} S${d.s}: ${d.kg}kg x ${d.reps}</div>`).join('')}</div>`).join('') || "Histórico Vazio";
-          document.getElementById('modalHistory').showModal();
-      };
-
-      window.onload = buildTreino;
+      window.onload = gerarProtocolo;
     </script>
   </body>
 </html>
