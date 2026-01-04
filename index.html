@@ -15,17 +15,14 @@
       .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
       .date-badge { font-size: 0.8rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 4px 10px; border-radius: 15px; }
       
-      /* ESTILO DO LOGO */
       .header-left { display: flex; align-items: center; gap: 12px; }
       .logo-img { 
         height: 45px; 
         width: auto; 
         object-fit: contain; 
-        /* Mantendo o brilho azul */
         filter: drop-shadow(0 0 8px rgba(49, 130, 206, 0.6));
       }
 
-      /* CRONÓMETRO */
       .timer-area { background: #1a202c; padding: 12px; border-bottom: 2px solid var(--blue); text-align: center; }
       #timerDisplay { font-size: 2.2rem; font-weight: 800; color: var(--blue); font-family: monospace; margin-bottom: 8px; }
       .timer-btns { display: flex; gap: 6px; justify-content: center; margin-bottom: 5px; }
@@ -59,8 +56,17 @@
       .btn-save { background: var(--green); color: white; box-shadow: 0 4px 0 #2d8a84; }
       .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
 
-      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 400px; padding: 20px; }
+      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 500px; padding: 20px; }
       .lib-item { padding: 12px; border-bottom: 1px solid #2d3748; cursor: pointer; }
+      
+      /* NOVO: Estilo CSV Modal */
+      #csvTextarea { width: 100%; height: 250px; padding: 12px; background: #0b1220; border: 1px solid var(--blue); border-radius: 8px; color: white; font-family: monospace; font-size: 0.8rem; resize: none; margin-bottom: 12px; outline: none; }
+      .csv-info { font-size: 0.7rem; color: #a0aec0; margin-bottom: 12px; line-height: 1.4; }
+      .csv-buttons { display: flex; gap: 8px; }
+      .csv-buttons button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+      .btn-import { background: var(--green); color: white; }
+      .btn-cancel { background: #2d3748; color: var(--blue); }
+      
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
   </head>
@@ -114,9 +120,11 @@
     <div class="footer-actions">
       <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ CONFIG</button>
       <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
+      <button class="btn btn-config" onclick="abrirCSVModal()" style="flex:0.5; background:var(--orange); color:white;">📊 CSV</button>
       <button class="btn btn-config" onclick="verHistorico()" style="flex:0.4">📜 HIST</button>
     </div>
 
+    <!-- Modal Biblioteca (Original) -->
     <dialog id="modalLib">
       <h3 id="libHeader" style="margin:0 0 15px 0; color:var(--orange)">Trocar Exercício</h3>
       <div style="margin-bottom:15px; display:flex; gap:5px;">
@@ -125,6 +133,23 @@
       </div>
       <div id="libContent" style="max-height: 300px; overflow-y: auto;"></div>
       <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:10px; background:#2d3748; color:white;">Fechar</button>
+    </dialog>
+
+    <!-- NOVO: Modal CSV -->
+    <dialog id="modalCSV">
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Importar Treino via CSV</h3>
+      <div class="csv-info">
+        <strong>Formato esperado:</strong><br>
+        TREINO,EXERCÍCIO,SÉRIES,REPS,META RPE,DESCANSO<br>
+        Treino A,Agachamento Livre,4,8-10,RPE 8-9,90s<br>
+        ...<br>
+        Cole o CSV abaixo (copia direto do Excel/Google Sheets):
+      </div>
+      <textarea id="csvTextarea" placeholder="Cole seu CSV aqui..."></textarea>
+      <div class="csv-buttons">
+        <button class="btn-import" onclick="importarCSV()">✓ IMPORTAR</button>
+        <button class="btn-cancel" onclick="document.getElementById('modalCSV').close()">✕ CANCELAR</button>
+      </div>
     </dialog>
 
     <script>
@@ -211,10 +236,10 @@
         });
       }
 
-      function criarCard(nome, sectionId) {
+      function criarCard(nome, sectionId, series = null, reps = null, rpe = null) {
         const o = document.getElementById('obj').value;
-        const meta = o==="forca"?"3-5 Reps": (o==="hipertrofia"?"8-12 Reps":"15-20 Reps");
-        const sets = o==="forca"?5: (o==="definicao"?3:4);
+        const meta = reps || (o==="forca"?"3-5 Reps": (o==="hipertrofia"?"8-12 Reps":"15-20 Reps"));
+        const sets = series || (o==="forca"?5: (o==="definicao"?3:4));
         const id = 'ex-' + Math.random().toString(36).substr(2, 5);
         const card = document.createElement('div');
         card.className = 'exercise-card';
@@ -228,7 +253,7 @@
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s+1}</span>
               <div class="input-box"><input type="number" inputmode="decimal"></div>
               <div class="input-box"><input type="number"></div>
-              <div class="input-box"><input type="number"></div>
+              <div class="input-box"><input type="number" placeholder="${rpe||''}"></div>
             </div>`).join('')}
         `;
         document.getElementById(sectionId).appendChild(card);
@@ -262,6 +287,60 @@
         document.querySelectorAll('.section, .pill').forEach(el => el.classList.remove('active'));
         document.getElementById(`sec${idx}`).classList.add('active');
         document.getElementById(`p${idx}`).classList.add('active');
+      }
+
+      // NOVO: Funções CSV
+      function abrirCSVModal() {
+        document.getElementById('csvTextarea').value = "";
+        document.getElementById('modalCSV').showModal();
+      }
+
+      function importarCSV() {
+        const csv = document.getElementById('csvTextarea').value.trim();
+        if(!csv) { alert("⚠️ Cole o CSV primeiro!"); return; }
+        
+        const linhas = csv.split('\n').filter(l => l.trim());
+        if(linhas.length < 2) { alert("⚠️ CSV inválido!"); return; }
+
+        // Pula header
+        const dados = linhas.slice(1).map(linha => {
+          const cols = linha.split(',').map(c => c.trim());
+          return {
+            treino: cols[0],
+            exercicio: cols[1],
+            series: parseInt(cols[2]) || 4,
+            reps: cols[3],
+            rpe: cols[4],
+            descanso: cols[5]
+          };
+        });
+
+        // Agrupa por TREINO
+        const agrupar = {};
+        dados.forEach(d => {
+          if(!agrupar[d.treino]) agrupar[d.treino] = [];
+          agrupar[d.treino].push(d);
+        });
+
+        // Limpa e reconstrói interface
+        document.getElementById('nav').innerHTML = "";
+        document.getElementById('container').innerHTML = "";
+        let idx = 0;
+        for(let treino in agrupar) {
+          document.getElementById('nav').innerHTML += `<div class="pill ${idx===0?'active':''}" id="p${idx}" onclick="tab(${idx})">${treino}</div>`;
+          let sec = document.createElement('div');
+          sec.id = `sec${idx}`;
+          sec.className = `section ${idx===0?'active':''}`;
+          document.getElementById('container').appendChild(sec);
+          
+          agrupar[treino].forEach(ex => {
+            criarCard(ex.exercicio, sec.id, ex.series, ex.reps, ex.rpe);
+          });
+          idx++;
+        }
+
+        document.getElementById('modalCSV').close();
+        alert("✅ Treino importado com sucesso!");
       }
 
       function salvarTreino() { alert("✅ Treino Salvo!"); }
