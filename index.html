@@ -137,6 +137,8 @@
         </select>
       </div>
 
+     
+
       <button class="btn btn-save" onclick="closeConfig()" style="margin-top:12px;">ABRIR PLANILHA</button>
     </div>
 
@@ -479,10 +481,10 @@
 
       function importarCSVFromText(csvText, alsoSaveAsTemplate = false) {
         const csv = String(csvText || "").trim();
-        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return false; }
+        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return; }
 
         const linhas = csv.split(/\r?\n/).filter(l => l.trim());
-        if (linhas.length < 2) { alert("⚠️ CSV inválido!"); return false; }
+        if (linhas.length < 2) { alert("⚠️ CSV inválido!"); return; }
 
         const delim = detectDelimiter(linhas[0]);
         const header = splitCSVLine(linhas[0], delim).map(h => h.trim().toUpperCase());
@@ -496,7 +498,7 @@
 
         if (idxTreino < 0 || idxEx < 0) {
           alert("⚠️ Header precisa ter: TREINO e EXERCÍCIO/EXERCICIO.");
-          return false;
+          return;
         }
 
         const grouped = {};
@@ -519,4 +521,439 @@
           const rpe = idxRpe >= 0 ? (cols[idxRpe] || "").trim() : "";
           const descanso = idxDesc >= 0 ? (cols[idxDesc] || "").trim() : "";
 
-          if (!grouped[treinoKey]) { grouped[treinoKey] = []; orderOfAppearance.push(tre
+          if (!grouped[treinoKey]) { grouped[treinoKey] = []; orderOfAppearance.push(treinoKey); }
+          grouped[treinoKey].push({ exercicio, series, reps, rpe, descanso });
+        }
+
+        const treinoCount = Object.keys(grouped).length;
+        if (treinoCount < 1) { alert("⚠️ Não encontrei linhas válidas no CSV."); return; }
+        if (treinoCount > 6) { alert("⚠️ O CSV tem mais de 6 treinos. Vou usar apenas os 6 primeiros."); }
+
+        buildTabsFromGrouped(grouped, orderOfAppearance);
+        scheduleDraftSave();
+
+        if (alsoSaveAsTemplate) {
+          trySaveTemplate(csv);
+        }
+      }
+
+      function importarCSV() {
+        importarCSVFromText(document.getElementById("csvTextarea").value, false);
+        document.getElementById("modalCSV").close();
+        alert("✅ Treino importado com sucesso!");
+      }
+
+      function gerarProtocolo() {
+        const f = document.getElementById("freq").value;
+        const nav = document.getElementById("nav");
+        const cont = document.getElementById("container");
+        nav.innerHTML = ""; cont.innerHTML = "";
+
+        divisoes[f].forEach((nome, i) => {
+          nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
+          const sec = document.createElement("div");
+          sec.id = `sec${i}`;
+          sec.className = `section ${i === 0 ? "active" : ""}`;
+          sec.setAttribute("data-treino-key", nome);
+          cont.appendChild(sec);
+
+          const sug = (nome.includes("Push") || nome.includes("Upper"))
+            ? ["Supino Inclinado", "Desenvolvimento"]
+            : (nome.includes("Pull") ? ["Puxada Alta", "Remada Curvada"] : ["Agachamento", "Leg Press 45"]);
+
+          sug.forEach(ex => criarCard(ex, sec.id));
+        });
+
+        addPillControls();
+        scheduleDraftSave();
+      }
+
+      /* ===== RASCUNHO + HISTÓRICO DE SESSÕES ===== */
+      let draftSaveTimer = null;
+
+      function scheduleDraftSave() {
+        if (draftSaveTimer) clearTimeout(draftSaveTimer);
+        draftSaveTimer = setTimeout(() => {
+          try {
+            const st = serializeCurrentState();
+            localStorage.setItem(STORAGE.draftKey, JSON.stringify(st));
+          } catch (_) {}
+        }, 300);
+      }
+
+      function getActiveIdx() {
+        const pills = Array.from(document.querySelectorAll("#nav .pill")).filter(p => !p.classList.contains("add-pill"));
+        const active = pills.find(p => p.classList.contains("active"));
+        const idx = pills.indexOf(active);
+        return idx >= 0 ? idx : 0;
+      }
+
+      function serializeCurrentState() {
+        const freq = document.getElementById("freq").value;
+        const obj = document.getElementById("obj").value;
+
+        const pillEls = Array.from(document.querySelectorAll("#nav .pill")).filter(p => !p.classList.contains("add-pill"));
+        const pills = pillEls.map((p, i) => ({ idx: i, label: p.textContent.replace("×", "").trim() }));
+
+        const sections = Array.from(document.querySelectorAll("#container .section")).map((sec, secIdx) => {
+          const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx + 1}`;
+          const cards = Array.from(sec.querySelectorAll(".exercise-card")).map(card => {
+            const nameEl = card.querySelector(".ex-title");
+            const exName = nameEl ? nameEl.textContent.trim() : (card.getAttribute("data-ex-name") || "Exercício");
+            const exSets = parseInt(card.getAttribute("data-ex-sets") || "0", 10) || 0;
+            const metaEl = card.querySelector(".ex-target");
+            const meta = metaEl ? metaEl.textContent.trim() : "";
+            const rows = Array.from(card.querySelectorAll(".series-grid")).slice(1);
+            const values = rows.map(r => {
+              const inputs = r.querySelectorAll("input");
+              return { kg: inputs[0]?.value ?? "", reps: inputs[1]?.value ?? "", rpe: inputs[2]?.value ?? "" };
+            });
+            return { name: exName, sets: exSets, meta, values };
+          });
+          return { treinoKey, cards };
+        });
+
+        return {
+          v: 2,
+          savedAt: new Date().toISOString(),
+          freq,
+          obj,
+          activeIdx: getActiveIdx(),
+          pills,
+          sections
+        };
+      }
+
+      function loadState(state) {
+        if (!state || !Array.isArray(state.sections)) return false;
+
+        try {
+          if (state.freq) document.getElementById("freq").value = state.freq;
+          if (state.obj) document.getElementById("obj").value = state.obj;
+        } catch (_) {}
+
+        document.getElementById("nav").innerHTML = "";
+        document.getElementById("container").innerHTML = "";
+
+        const sections = state.sections.slice(0, 6);
+
+        sections.forEach((secData, idx) => {
+          const label = (state.pills && state.pills[idx] && state.pills[idx].label) ? state.pills[idx].label : treinoLabel(secData.treinoKey);
+
+          document.getElementById("nav").innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${label}</div>`;
+
+          const sec = document.createElement("div");
+          sec.id = `sec${idx}`;
+          sec.className = `section ${idx === 0 ? "active" : ""}`;
+          sec.setAttribute("data-treino-key", secData.treinoKey || label);
+          document.getElementById("container").appendChild(sec);
+
+          (secData.cards || []).forEach(c => {
+            let metaReps = null;
+            if (typeof c.meta === "string") {
+              const m = c.meta.split("Sets x");
+              if (m.length === 2) metaReps = m[1].trim();
+            }
+            criarCard(c.name, sec.id, c.sets || null, metaReps, null, c.values || null);
+          });
+        });
+
+        addPillControls();
+
+        const idx = Math.min(Math.max(parseInt(state.activeIdx || 0, 10), 0), Math.max(0, sections.length - 1));
+        tab(idx);
+        return true;
+      }
+
+      function getHistory() {
+        try {
+          const raw = localStorage.getItem(STORAGE.historyKey);
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        } catch (_) { return []; }
+      }
+
+      function setHistory(arr) {
+        try { localStorage.setItem(STORAGE.historyKey, JSON.stringify(arr)); } catch (_) {}
+      }
+
+      function salvarTreino() {
+        try {
+          const st = serializeCurrentState();
+          const item = { id: "sess_" + Math.random().toString(36).slice(2) + "_" + Date.now(), createdAt: new Date().toISOString(), state: st };
+          const hist = getHistory();
+          hist.unshift(item);
+          if (hist.length > STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
+          setHistory(hist);
+          localStorage.setItem(STORAGE.draftKey, JSON.stringify(st));
+          alert("✅ Sessão salva no histórico!");
+        } catch (_) {
+          alert("⚠️ Não consegui salvar (armazenamento do navegador cheio ou bloqueado).");
+        }
+      }
+
+      function formatSaoPaulo(iso) {
+        try {
+          const d = iso ? new Date(iso) : new Date();
+          return new Intl.DateTimeFormat("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+          }).format(d);
+        } catch (_) { return iso || ""; }
+      }
+
+      function renderHistorico() {
+        const list = document.getElementById("histList");
+        const hist = getHistory();
+
+        if (!hist.length) {
+          list.innerHTML = `<div class="hist-item">Nenhuma sessão salva ainda.</div>`;
+          return;
+        }
+
+        list.innerHTML = "";
+        hist.forEach(item => {
+          const dt = formatSaoPaulo(item.createdAt);
+          const treinoCount = (item.state && item.state.sections) ? item.state.sections.length : 0;
+          const exCount = (item.state && item.state.sections) ? item.state.sections.reduce((acc, s) => acc + (s.cards ? s.cards.length : 0), 0) : 0;
+
+          const row = document.createElement("div");
+          row.className = "hist-item";
+          row.innerHTML = `<strong>${dt}</strong><div style="color:#a0aec0; font-size:0.75rem; margin-top:4px;">${treinoCount} treinos • ${exCount} exercícios</div>`;
+          row.onclick = () => {
+            try {
+              if (item.state) {
+                loadState(item.state);
+                scheduleDraftSave();
+                document.getElementById("modalHIST").close();
+                alert("✅ Sessão carregada!");
+              }
+            } catch (_) { alert("⚠️ Não consegui carregar esta sessão."); }
+          };
+          list.appendChild(row);
+        });
+      }
+
+      function verHistorico() {
+        renderHistorico();
+        document.getElementById("modalHIST").showModal();
+      }
+
+      function limparHistorico() {
+        try { localStorage.removeItem(STORAGE.historyKey); renderHistorico(); } catch (_) {}
+      }
+
+      /* ===== COLUNAS: ADICIONAR / EXCLUIR ===== */
+      function adicionarTreino() {
+        const st = serializeCurrentState();
+        if (!st.sections) st.sections = [];
+        if (!st.pills) st.pills = [];
+        if (st.sections.length >= 6) { alert("⚠️ Limite máximo: 6 treinos/abas."); return; }
+
+        const nome = prompt("Nome do novo treino (ex.: Treino D / Dia 4 / Upper 2):");
+        if (!nome) return;
+
+        const key = normalizeTreinoKey(nome);
+        if (!key) return;
+
+        st.sections.push({ treinoKey: key, cards: [] });
+        st.pills.push({ idx: st.pills.length, label: treinoLabel(key) });
+        st.activeIdx = st.sections.length - 1;
+
+        loadState(st);
+        scheduleDraftSave();
+      }
+
+      function excluirTreinoAtual() {
+        excluirTreinoPorIdx(getActiveIdx());
+      }
+
+      function excluirTreinoPorIdx(idx) {
+        const st = serializeCurrentState();
+        if (!st.sections || st.sections.length <= 1) { alert("⚠️ Você precisa manter pelo menos 1 treino."); return; }
+
+        const label = (st.pills && st.pills[idx] && st.pills[idx].label) ? st.pills[idx].label : `Treino ${idx + 1}`;
+        const ok = confirm(`Excluir a coluna/aba (${label})? Isso remove os exercícios dessa aba.`);
+        if (!ok) return;
+
+        st.sections.splice(idx, 1);
+        if (Array.isArray(st.pills)) st.pills.splice(idx, 1);
+
+        st.pills = (st.pills || []).map((p, i) => ({ idx: i, label: p.label }));
+        st.activeIdx = Math.min(Math.max(0, st.activeIdx || 0), st.sections.length - 1);
+        if ((st.activeIdx || 0) >= idx) st.activeIdx = Math.max(0, (st.activeIdx || 0) - 1);
+
+        loadState(st);
+        scheduleDraftSave();
+      }
+
+      function addPillControls() {
+        const nav = document.getElementById("nav");
+
+        const oldAdd = nav.querySelector(".pill.add-pill");
+        if (oldAdd) oldAdd.remove();
+
+        const pills = Array.from(nav.querySelectorAll(".pill")).filter(p => !p.classList.contains("add-pill"));
+
+        pills.forEach((pill, idx) => {
+          const existing = pill.querySelector(".pill-x");
+          if (existing) existing.remove();
+
+          const x = document.createElement("span");
+          x.className = "pill-x";
+          x.textContent = "×";
+          x.onclick = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            excluirTreinoPorIdx(idx);
+          };
+          pill.appendChild(x);
+        });
+
+        const add = document.createElement("div");
+        add.className = "pill add-pill";
+        add.textContent = "+";
+        add.onclick = () => adicionarTreino();
+        nav.appendChild(add);
+      }
+
+      /* ===== MODELOS CSV (histórico de CSV usados) ===== */
+      function getCSVTemplates() {
+        try {
+          const raw = localStorage.getItem(STORAGE.csvTplKey);
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        } catch (_) { return []; }
+      }
+
+      function setCSVTemplates(arr) {
+        try { localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr)); } catch (_) {}
+      }
+
+      function trySaveTemplate(csv) {
+        const name = prompt("Nome do modelo (ex.: ABC Hipertrofia / Upper-Lower / Semana 5):");
+        if (!name) return;
+
+        const tpl = {
+          id: "tpl_" + Math.random().toString(36).slice(2) + "_" + Date.now(),
+          name: String(name).trim(),
+          createdAt: new Date().toISOString(),
+          csv: String(csv)
+        };
+
+        const arr = getCSVTemplates();
+        arr.unshift(tpl);
+        if (arr.length > STORAGE.maxTemplates) arr.length = STORAGE.maxTemplates;
+        setCSVTemplates(arr);
+        alert("✅ Modelo salvo!");
+      }
+
+      function salvarModeloCSV() {
+        const csv = document.getElementById("csvTextarea").value.trim();
+        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return; }
+        trySaveTemplate(csv);
+      }
+
+      function showTplArea() {
+        const area = document.getElementById("tplArea");
+        if (area) area.style.display = "block";
+      }
+      function hideModelosCSV() {
+        const area = document.getElementById("tplArea");
+        if (area) area.style.display = "none";
+      }
+
+      function mostrarModelosCSV() {
+        showTplArea();
+        renderModelosCSV();
+      }
+
+      function renderModelosCSV() {
+        const list = document.getElementById("tplList");
+        const arr = getCSVTemplates();
+
+        if (!arr.length) {
+          list.innerHTML = `<div class="tpl-item">Nenhum modelo salvo ainda.</div>`;
+          return;
+        }
+
+        list.innerHTML = "";
+        arr.forEach(tpl => {
+          const row = document.createElement("div");
+          row.className = "tpl-item";
+          row.innerHTML = `<strong style="color:var(--orange);">${escapeHTML(tpl.name)}</strong><small>${formatSaoPaulo(tpl.createdAt)}</small>`;
+          row.onclick = () => {
+            const ok = confirm(`Carregar modelo: "${tpl.name}"?`);
+            if (!ok) return;
+            importarCSVFromText(tpl.csv, false);
+            document.getElementById("modalCSV").close();
+            alert("✅ Modelo carregado!");
+          };
+
+          row.oncontextmenu = (e) => {
+            e.preventDefault();
+            const ok = confirm(`Excluir modelo "${tpl.name}"?`);
+            if (!ok) return;
+            deleteTemplateById(tpl.id);
+          };
+
+          list.appendChild(row);
+        });
+
+        const hint = document.createElement("div");
+        hint.className = "tpl-item";
+        hint.style.cursor = "default";
+        hint.innerHTML = `<small>Dica: toque no modelo para carregar. No computador, clique direito para excluir.</small>`;
+        list.appendChild(hint);
+      }
+
+      function escapeHTML(s) {
+        return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
+
+      function deleteTemplateById(id) {
+        const arr = getCSVTemplates().filter(t => t.id !== id);
+        setCSVTemplates(arr);
+        renderModelosCSV();
+      }
+
+      function limparModelosCSV() {
+        const ok = confirm("Limpar todos os modelos CSV salvos?");
+        if (!ok) return;
+        try { localStorage.removeItem(STORAGE.csvTplKey); } catch (_) {}
+        renderModelosCSV();
+      }
+
+      function hideModelosCSV() {
+        const area = document.getElementById("tplArea");
+        if (area) area.style.display = "none";
+      }
+
+      /* ===== BOOT ===== */
+      window.onload = () => {
+        try {
+          document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+        } catch (_) {
+          document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-PT");
+        }
+
+        let loaded = false;
+        try {
+          const raw = localStorage.getItem(STORAGE.draftKey);
+          if (raw) loaded = loadState(JSON.parse(raw));
+        } catch (_) {}
+
+        if (!loaded) gerarProtocolo();
+
+        document.getElementById("freq").addEventListener("change", scheduleDraftSave, { passive: true });
+        document.getElementById("obj").addEventListener("change", scheduleDraftSave, { passive: true });
+
+        openConfig();
+      };
+    </script>
+  </body>
+</html>
