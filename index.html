@@ -7,6 +7,11 @@
     <title>TITAN PRO - Smart Log</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
 
     <link rel="icon" href="Logo.png" type="image/png" />
 
@@ -57,7 +62,7 @@
       .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
       .remove-ex { position:absolute; top:10px; right:10px; color:var(--red); font-size:1.2rem; cursor:pointer; font-weight:bold; padding:5px; }
 
-      /* Estilo novo para sugestão RPE */
+      /* Estilo para sugestão RPE/1RM */
       .rpe-suggest { display:block; font-size:0.7rem; color:var(--green); margin-bottom:10px; font-family:monospace; }
 
       .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
@@ -78,7 +83,7 @@
       #csvTextarea { width:100%; height:220px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; font-size:.8rem; resize:none; margin-bottom:12px; outline:none; }
       .csv-info { font-size:.7rem; color:#a0aec0; margin-bottom:12px; line-height:1.4; }
       .csv-buttons { display:flex; gap:8px; flex-wrap:wrap; }
-      .csv-buttons button { flex:1; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; min-width:140px; }
+      .csv-buttons button, .csv-buttons label { flex:1; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; min-width:130px; text-align:center; font-size: 0.8rem; }
       .btn-import { background:var(--green); color:#fff; }
       .btn-cancel { background:#2d3748; color:var(--blue); }
 
@@ -128,16 +133,17 @@
           <option value="2">2 Dias (Full Body)</option>
           <option value="3" selected>3 Dias (ABC)</option>
           <option value="4">4 Dias (Upper/Lower)</option>
+          <option value="5">5 Dias (ABCDE)</option>
           <option value="6">6 Dias (PPL x2)</option>
         </select>
       </div>
 
       <div class="field">
-        <label>Objetivo</label>
+        <label>Objetivo (Define Reps)</label>
         <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia</option>
-          <option value="forca">Força</option>
-          <option value="definicao">Definição</option>
+          <option value="hipertrofia">Hipertrofia (8-12 reps)</option>
+          <option value="forca">Força Bruta (3-5 reps)</option>
+          <option value="definicao">Definição/RML (15-20 reps)</option>
         </select>
       </div>
       <button class="btn btn-save" onclick="closeConfig()" style="margin-top:12px;">ABRIR PLANILHA</button>
@@ -166,20 +172,23 @@
     </dialog>
 
     <dialog id="modalCSV">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Importar Treino via CSV</h3>
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Importar Treino</h3>
       <div class="csv-info">
-        <strong>Formato esperado:</strong><br />
-        TREINO,EXERCÍCIO,SÉRIES,REPS,META RPE,DESCANSO<br />
-        Treino A,Agachamento Livre,4,8-10,RPE 8-9,90s<br />
-        ...<br />
-        Cole o CSV abaixo (copia direto do Excel/Google Sheets):
+        <strong>Opção 1:</strong> Cole o CSV do Excel/Sheets.<br />
+        <strong>Opção 2:</strong> Use o botão "Ler PDF" para extrair texto de fichas.<br /><br />
+        Formato CSV esperado: TREINO,EXERCÍCIO,SÉRIES,REPS...
       </div>
 
-      <textarea id="csvTextarea" placeholder="Cole seu CSV aqui..."></textarea>
+      <textarea id="csvTextarea" placeholder="Cole seu CSV aqui ou carregue um PDF..."></textarea>
 
       <div class="csv-buttons">
+        <label class="btn-cancel" style="background:var(--blue); color:white; display:flex; align-items:center; justify-content:center;">
+          📄 LER PDF
+          <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)">
+        </label>
+        
         <button class="btn-import" onclick="importarCSV()">✓ IMPORTAR</button>
-        <button class="btn-cancel" onclick="salvarModeloCSV()">💾 SALVAR MODELO</button>
+        <button class="btn-cancel" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
         <button class="btn-cancel" onclick="mostrarModelosCSV()">📚 MODELOS</button>
         <button class="btn-cancel" onclick="document.getElementById('modalCSV').close()">✕ FECHAR</button>
       </div>
@@ -204,6 +213,45 @@
     </dialog>
 
     <script>
+      /* === CATALOGO DE TREINOS INTELIGENTES (2-6 DIAS) === */
+      const TREINOS_PRONTOS = {
+        // 2 DIAS: FULL BODY A/B (Ideal para frequência)
+        "2": [
+            { nome: "A (Full Body Foco Agacho)", exs: ["Agachamento Livre", "Supino Reto", "Remada Curvada", "Desenvolvimento Halteres", "Panturrilha em Pé"] },
+            { nome: "B (Full Body Foco Terra)", exs: ["Levantamento Terra", "Leg Press 45", "Puxada Alta", "Supino Inclinado", "Rosca Direta"] }
+        ],
+        // 3 DIAS: PUSH / PULL / LEGS (Clássico Moderno)
+        "3": [
+            { nome: "A (Push: Peito/Ombro/Tri)", exs: ["Supino Reto", "Supino Inclinado Halteres", "Desenvolvimento Militar", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
+            { nome: "B (Pull: Costas/Bíceps)", exs: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Crucifixo Inverso", "Rosca Direta", "Rosca Martelo"] },
+            { nome: "C (Legs: Pernas Completo)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff", "Panturrilha Sentado"] }
+        ],
+        // 4 DIAS: UPPER / LOWER (Padrão Ouro)
+        "4": [
+            { nome: "A (Upper Força)", exs: ["Supino Reto", "Remada Curvada", "Desenvolvimento Barra", "Barra Fixa (ou Graviton)"] },
+            { nome: "B (Lower Força)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Panturrilha em Pé"] },
+            { nome: "C (Upper Hipertrofia)", exs: ["Supino Inclinado Halteres", "Puxada Alta", "Elevação Lateral", "Voador/Peck Deck", "Rosca Direta", "Tríceps Corda"] },
+            { nome: "D (Lower Posterior)", exs: ["Levantamento Terra (ou Stiff)", "Mesa Flexora", "Passada/Afundo", "Panturrilha Sentado"] }
+        ],
+        // 5 DIAS: ABCDE (Body Part Split - Estética)
+        "5": [
+            { nome: "A (Peito)", exs: ["Supino Reto", "Supino Inclinado", "Crucifixo Máquina", "Crossover Polia Alta", "Flexão de Braço"] },
+            { nome: "B (Costas)", exs: ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Pulldown", "Lombar/Hiperextensão"] },
+            { nome: "C (Pernas)", exs: ["Agachamento", "Leg Press", "Extensora", "Flexora", "Stiff", "Panturrilha"] },
+            { nome: "D (Ombros)", exs: ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Crucifixo Inverso", "Encolhimento"] },
+            { nome: "E (Braços)", exs: ["Rosca Direta", "Tríceps Testa", "Rosca Scott", "Tríceps Corda", "Rosca Punho"] }
+        ],
+        // 6 DIAS: PPL x2 (Alta Frequência/Volume)
+        "6": [
+            { nome: "A (Push 1)", exs: ["Supino Reto", "Desenvolvimento", "Tríceps Testa", "Elevação Lateral"] },
+            { nome: "B (Pull 1)", exs: ["Puxada Alta", "Remada Curvada", "Rosca Direta", "Face Pull"] },
+            { nome: "C (Legs 1)", exs: ["Agachamento", "Extensora", "Panturrilha em Pé"] },
+            { nome: "D (Push 2)", exs: ["Supino Inclinado", "Crossover", "Tríceps Corda", "Elevação Lateral"] },
+            { nome: "E (Pull 2)", exs: ["Remada Baixa", "Puxada Triângulo", "Rosca Martelo", "Crucifixo Inverso"] },
+            { nome: "F (Legs 2)", exs: ["Levantamento Terra", "Leg Press", "Mesa Flexora", "Panturrilha Sentado"] }
+        ]
+      };
+
       const STORAGE = Object.freeze({
         draftKey: "titanpro_draft_v2",
         historyKey: "titanpro_history_v2",
@@ -221,6 +269,7 @@
         if (p) p.style.display = "none";
       }
 
+      /* ===== TIMER ===== */
       let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -274,19 +323,13 @@
         document.getElementById("ctrlBtn").style.background = "var(--green)";
       }
 
+      /* ===== DADOS & UI ===== */
       const biblioteca = {
-        "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador"],
-        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra"],
+        "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador", "Flexão"],
+        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra", "Pulldown"],
         "Pernas": ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff", "Panturrilha"],
-        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso"],
-        "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa"]
-      };
-
-      const divisoes = {
-        "2": ["A (Full Body)", "B (Full Body)"],
-        "3": ["A (Push)", "B (Pull)", "C (Legs)"],
-        "4": ["A (Upper)", "B (Lower)", "C (Upper 2)", "D (Lower 2)"],
-        "6": ["A (Push)", "B (Pull)", "C (Legs)", "D (Push 2)", "E (Pull 2)", "F (Legs 2)"]
+        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso", "Encolhimento"],
+        "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott"]
       };
 
       let currentExId = null;
@@ -303,6 +346,7 @@
         });
       }
 
+      // Função principal de criação dos cards de exercício
       function criarCard(nome, sectionId, series = null, reps = null, rpe = null, values = null) {
         const o = document.getElementById("obj").value;
         const meta = reps || (o === "forca" ? "3-5 Reps" : (o === "hipertrofia" ? "8-12 Reps" : "15-20 Reps"));
@@ -323,7 +367,6 @@
           const rpeVal = values && values[s] ? (values[s].rpe ?? "") : "";
           const placeholderRpe = (rpe || "");
           
-          // Adicionado oninput para atualizar 1RM dinamicamente
           return `
             <div class="series-grid">
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
@@ -333,12 +376,12 @@
             </div>`;
         }).join("");
 
-        // Adicionado span rpe-suggest
+        // Estrutura com feedback de 1RM/RPE
         card.innerHTML = `
           <span class="remove-ex" onclick="this.parentElement.remove(); scheduleDraftSave();">×</span>
           <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
           <span class="ex-target">${sets} Sets x ${meta}</span>
-          <span class="rpe-suggest">1RM prev: <span id="1rm-${id}">-</span> | Sugestão: <span id="rpe-${id}">-</span></span>
+          <span class="rpe-suggest">1RM est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
           <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
           ${rows}
         `;
@@ -406,6 +449,7 @@
         document.getElementById("modalCSV").showModal();
       }
 
+      /* ===== IMPORTAÇÃO CSV & PDF ===== */
       function normalizeTreinoKey(raw) {
         const s = String(raw || "").trim().replace(/\s+/g, " ");
         return s ? s : null;
@@ -485,12 +529,13 @@
         addPillControls();
       }
 
+      // IMPORTAÇÃO CSV CORRIGIDA
       function importarCSVFromText(csvText, alsoSaveAsTemplate = false) {
         const csv = String(csvText || "").trim();
-        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return; }
+        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return false; }
 
         const linhas = csv.split(/\r?\n/).filter(l => l.trim());
-        if (linhas.length < 2) { alert("⚠️ CSV inválido!"); return; }
+        if (linhas.length < 2) { alert("⚠️ CSV inválido ou muito curto!"); return false; }
 
         const delim = detectDelimiter(linhas[0]);
         const header = splitCSVLine(linhas[0], delim).map(h => h.trim().toUpperCase());
@@ -504,7 +549,7 @@
 
         if (idxTreino < 0 || idxEx < 0) {
           alert("⚠️ Header precisa ter: TREINO e EXERCÍCIO/EXERCICIO.");
-          return;
+          return false;
         }
 
         const grouped = {};
@@ -512,10 +557,8 @@
 
         for (let i = 1; i < linhas.length; i++) {
           const cols = splitCSVLine(linhas[i], delim);
-
           const treinoKey = normalizeTreinoKey(cols[idxTreino]);
           if (!treinoKey) continue;
-
           const exercicio = (cols[idxEx] || "").trim();
           if (!exercicio) continue;
 
@@ -532,49 +575,104 @@
         }
 
         const treinoCount = Object.keys(grouped).length;
-        if (treinoCount < 1) { alert("⚠️ Não encontrei linhas válidas no CSV."); return; }
-        if (treinoCount > 6) { alert("⚠️ O CSV tem mais de 6 treinos. Vou usar apenas os 6 primeiros."); }
+        if (treinoCount < 1) { alert("⚠️ Não encontrei linhas válidas."); return false; }
+        if (treinoCount > 6) { alert("⚠️ O CSV tem mais de 6 treinos. Usarei apenas os 6 primeiros."); }
 
         buildTabsFromGrouped(grouped, orderOfAppearance);
         scheduleDraftSave();
 
-        if (alsoSaveAsTemplate) {
-          trySaveTemplate(csv);
-        }
+        if (alsoSaveAsTemplate) trySaveTemplate(csv);
+        
+        return true;
       }
 
       function importarCSV() {
-        importarCSVFromText(document.getElementById("csvTextarea").value, false);
-        document.getElementById("modalCSV").close();
-        alert("✅ Treino importado com sucesso!");
+        const sucesso = importarCSVFromText(document.getElementById("csvTextarea").value, false);
+        if (sucesso) {
+          document.getElementById("modalCSV").close();
+          alert("✅ Treino importado com sucesso!");
+        }
       }
 
+      // FUNÇÃO DE LEITURA DE PDF
+      async function extrairTextoPDF(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const btnLabel = input.parentElement;
+        const originalText = btnLabel.innerText;
+        
+        btnLabel.innerText = "Lendo...";
+        
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+          let fullText = "TREINO,EXERCÍCIO,SÉRIES,REPS\n"; 
+
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(" ");
+            const linhas = pageText.split(/ {2,}|\n/).filter(l => l.trim().length > 3);
+            
+            linhas.forEach(linha => {
+               if(/[a-zA-Z]/.test(linha)) {
+                   fullText += `Treino A,${linha.trim()},4,10-12\n`; 
+               }
+            });
+          }
+          document.getElementById("csvTextarea").value = fullText;
+          alert("✅ Texto extraído! Agora ajuste o texto na caixa e clique em IMPORTAR.");
+        } catch (err) {
+          console.error(err);
+          alert("❌ Erro ao ler PDF (Pode ser imagem escaneada).");
+        } finally {
+          btnLabel.innerHTML = `📄 LER PDF <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)">`;
+          input.value = "";
+        }
+      }
+
+      // GERAÇÃO DE PROTOCOLO INTELIGENTE (USA O CATÁLOGO TREINOS_PRONTOS)
       function gerarProtocolo() {
         const f = document.getElementById("freq").value;
         const nav = document.getElementById("nav");
         const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
 
-        divisoes[f].forEach((nome, i) => {
-          nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
-          const sec = document.createElement("div");
-          sec.id = `sec${i}`;
-          sec.className = `section ${i === 0 ? "active" : ""}`;
-          sec.setAttribute("data-treino-key", nome);
-          cont.appendChild(sec);
+        const preset = TREINOS_PRONTOS[f];
 
-          const sug = (nome.includes("Push") || nome.includes("Upper"))
-            ? ["Supino Inclinado", "Desenvolvimento"]
-            : (nome.includes("Pull") ? ["Puxada Alta", "Remada Curvada"] : ["Agachamento", "Leg Press 45"]);
+        if (preset) {
+           preset.forEach((treino, i) => {
+             const labelCurto = treino.nome.split(" ")[0]; 
+             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">${labelCurto}</div>`;
+             
+             const sec = document.createElement("div");
+             sec.id = `sec${i}`;
+             sec.className = `section ${i === 0 ? "active" : ""}`;
+             sec.setAttribute("data-treino-key", treino.nome);
+             cont.appendChild(sec);
 
-          sug.forEach(ex => criarCard(ex, sec.id));
-        });
+             treino.exs.forEach(exNome => {
+               criarCard(exNome, sec.id); // criarCard já ajusta REPS baseado no OBJ
+             });
+           });
+        } else {
+           // Fallback genérico caso não ache o preset
+           divisoes[f].forEach((nome, i) => {
+             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">${nome}</div>`;
+             const sec = document.createElement("div");
+             sec.id = `sec${i}`;
+             sec.className = `section ${i === 0 ? "active" : ""}`;
+             sec.setAttribute("data-treino-key", nome);
+             cont.appendChild(sec);
+             criarCard("Exercício Base", sec.id);
+           });
+        }
 
         addPillControls();
         scheduleDraftSave();
       }
 
-      /* ===== RASCUNHO + HISTÓRICO DE SESSÕES ===== */
+      /* ===== RASCUNHO + HISTÓRICO ===== */
       let draftSaveTimer = null;
 
       function scheduleDraftSave() {
@@ -597,7 +695,6 @@
       function serializeCurrentState() {
         const freq = document.getElementById("freq").value;
         const obj = document.getElementById("obj").value;
-
         const pillEls = Array.from(document.querySelectorAll("#nav .pill")).filter(p => !p.classList.contains("add-pill"));
         const pills = pillEls.map((p, i) => ({ idx: i, label: p.textContent.replace("×", "").trim() }));
 
@@ -619,20 +716,11 @@
           return { treinoKey, cards };
         });
 
-        return {
-          v: 2,
-          savedAt: new Date().toISOString(),
-          freq,
-          obj,
-          activeIdx: getActiveIdx(),
-          pills,
-          sections
-        };
+        return { v: 2, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
       }
 
       function loadState(state) {
         if (!state || !Array.isArray(state.sections)) return false;
-
         try {
           if (state.freq) document.getElementById("freq").value = state.freq;
           if (state.obj) document.getElementById("obj").value = state.obj;
@@ -640,14 +728,11 @@
 
         document.getElementById("nav").innerHTML = "";
         document.getElementById("container").innerHTML = "";
-
         const sections = state.sections.slice(0, 6);
 
         sections.forEach((secData, idx) => {
           const label = (state.pills && state.pills[idx] && state.pills[idx].label) ? state.pills[idx].label : treinoLabel(secData.treinoKey);
-
           document.getElementById("nav").innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${label}</div>`;
-
           const sec = document.createElement("div");
           sec.id = `sec${idx}`;
           sec.className = `section ${idx === 0 ? "active" : ""}`;
@@ -665,7 +750,6 @@
         });
 
         addPillControls();
-
         const idx = Math.min(Math.max(parseInt(state.activeIdx || 0, 10), 0), Math.max(0, sections.length - 1));
         tab(idx);
         return true;
@@ -685,15 +769,13 @@
 
       function salvarTreino() {
         try {
-          // Integração Coach Titan: Pergunta o peso
           const pesoAtual = prompt("Peso atual (kg)? Digite apenas o número.");
-          
           const st = serializeCurrentState();
           const item = { 
             id: "sess_" + Math.random().toString(36).slice(2) + "_" + Date.now(), 
             createdAt: new Date().toISOString(), 
             state: st,
-            bodyWeight: pesoAtual ? parseFloat(pesoAtual) : null // Salva peso
+            bodyWeight: pesoAtual ? parseFloat(pesoAtual) : null 
           };
           
           const hist = getHistory();
@@ -702,29 +784,15 @@
           setHistory(hist);
           localStorage.setItem(STORAGE.draftKey, JSON.stringify(st));
           
-          // Alerta de Deload após salvar
           checkDeload();
-          
           alert("✅ Sessão salva no histórico!");
         } catch (e) {
           console.error(e);
-          alert("⚠️ Não consegui salvar (armazenamento do navegador cheio ou bloqueado).");
+          alert("⚠️ Armazenamento cheio ou bloqueado.");
         }
       }
-      
-      /* === FUNÇÕES NOVAS (PASTED & INTEGRATED) === */
 
-      function calcProgress(exName, newKg, newReps, prevData) {
-        if (!prevData || !prevData.length) return { suggestKg: newKg * 1.025, msg: "1ª vez: +2.5% próxima" };
-        const last = prevData[prevData.length - 1];
-        const volumeAntigo = last.kg * last.reps;
-        const volumeNovo = newKg * newReps;
-        const gain = ((volumeNovo - volumeAntigo) / volumeAntigo * 100).toFixed(1);
-        const suggest = newKg * (1 + gain/100 * 0.8); // 80% conservador
-        return { gain: gain > 0 ? `+${gain}%` : `${gain}%`, suggestKg: Math.round(suggest/2.5)*2.5, msg: gain > 5 ? "Deload próxima?" : "Bom overload!" };
-      }
-
-      // Função para calcular volume total da sessão (necessária para checkDeload)
+      /* ===== COACH LOGIC: VOL, RPE, GRÁFICOS ===== */
       function calcVolumeTotal(state) {
         if (!state || !state.sections) return 0;
         let vol = 0;
@@ -741,17 +809,14 @@
       }
 
       function checkDeload() {
-        const hist = getHistory().slice(0, 7).reverse(); // Pega últimos 7, inverte para cronológico
+        const hist = getHistory().slice(0, 7).reverse();
         if (hist.length < 2) return;
-        
         const volumes = hist.map(h => calcVolumeTotal(h.state)); 
         const ultimo = volumes[volumes.length-1];
         const penultimo = volumes[volumes.length-2];
-        
         if (ultimo > 0 && penultimo > 0) {
            const trend = (ultimo - penultimo) / penultimo * 100;
-           // Lógica ajustada: se caiu drasticamente o volume total em relação ao anterior
-           if (trend < -15) alert("⚠️ ALERTA DELOAD: Volume caiu bruscamente (-15%) — considere reduzir cargas em 10-20% na próxima.");
+           if (trend < -15) alert("⚠️ ALERTA: Volume caiu bruscamente (-15%). Se não for Deload planejado, revise a dieta/sono.");
         }
       }
 
@@ -759,64 +824,55 @@
         const card = document.querySelector(`[data-ex-id="${id}"]`);
         if(!card) return;
         const inputs = card.querySelectorAll("input");
-        // Pega a primeira série válida com dados
         let kg = 0, reps = 0;
         for(let i=0; i < inputs.length; i+=3) {
            if(inputs[i].value && inputs[i+1].value) {
                kg = parseFloat(inputs[i].value);
                reps = parseFloat(inputs[i+1].value);
-               break; // usa a primeira série preenchida como base
+               break; 
            }
         }
-
         if (kg && reps) {
-            const epley1rm = kg * (1 + reps/30); // Fórmula Epley
+            const epley1rm = kg * (1 + reps/30);
             const el1rm = document.getElementById(`1rm-${id}`);
             const elRpe = document.getElementById(`rpe-${id}`);
             if(el1rm) el1rm.textContent = Math.round(epley1rm) + "kg";
-            if(elRpe) elRpe.textContent = reps > 10 ? "RPE 8-9 (Resist)" : "RPE 9-10 (Força)";
+            if(elRpe) elRpe.textContent = reps > 10 ? "RPE 8-9 (Resistência)" : "RPE 9-10 (Força)";
         }
       }
 
       function showEvoChart() {
-        const hist = getHistory().reverse(); // Cronológico
+        const hist = getHistory().reverse();
         if(hist.length === 0) { alert("Sem histórico para gerar gráficos."); return; }
 
         const data = hist.map(h => ({ 
-            date: formatSaoPaulo(h.createdAt).split(' ')[0], // Só data
+            date: formatSaoPaulo(h.createdAt).split(' ')[0], 
             vol: calcVolumeTotal(h.state)
         }));
 
-        const ctx = document.createElement('canvas'); 
-        ctx.width=300; ctx.height=200;
-        
         const modal = document.createElement('dialog');
-        modal.style.background = "#161e2e";
-        modal.style.border = "1px solid var(--blue)";
-        modal.style.borderRadius = "12px";
-        modal.style.width = "95%";
-        modal.style.maxWidth = "600px";
+        modal.style.cssText = "background:#161e2e; border:1px solid var(--blue); border-radius:12px; width:95%; max-width:600px; padding:20px;";
         
-        // Botão fechar
+        const canvas = document.createElement('canvas'); 
+        canvas.width=300; canvas.height=200;
+
         const closeBtn = document.createElement('button');
         closeBtn.innerText = "FECHAR GRÁFICO";
         closeBtn.className = "btn";
-        closeBtn.style.background = "var(--red)";
-        closeBtn.style.color = "white";
-        closeBtn.style.marginTop = "10px";
-        closeBtn.onclick = () => modal.close();
+        closeBtn.style.cssText = "background:var(--red); color:white; margin-top:10px; width:100%";
+        closeBtn.onclick = () => { modal.close(); modal.remove(); };
 
-        modal.appendChild(ctx); 
+        modal.appendChild(canvas); 
         modal.appendChild(closeBtn);
         document.body.appendChild(modal); 
         modal.showModal();
         
-        new Chart(ctx, {
+        new Chart(canvas, {
             type: 'line',
             data: { 
                 labels: data.map(d => d.date), 
                 datasets: [{ 
-                    label: 'Volume Total (kg * reps)', 
+                    label: 'Volume Total (Kg Total)', 
                     data: data.map(d => d.vol),
                     borderColor: '#38b2ac',
                     backgroundColor: 'rgba(56, 178, 172, 0.2)',
@@ -826,9 +882,7 @@
             },
             options: { 
                 responsive: true, 
-                plugins: {
-                    legend: { labels: { color: 'white' } }
-                },
+                plugins: { legend: { labels: { color: 'white' } } },
                 scales: { 
                     y: { beginAtZero: true, ticks: { color: '#a0aec0' }, grid: { color: '#2d3748'} },
                     x: { ticks: { color: '#a0aec0' }, grid: { color: '#2d3748'} }
@@ -842,11 +896,8 @@
           const d = iso ? new Date(iso) : new Date();
           return new Intl.DateTimeFormat("pt-BR", {
             timeZone: "America/Sao_Paulo",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit"
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit"
           }).format(d);
         } catch (_) { return iso || ""; }
       }
@@ -854,11 +905,7 @@
       function renderHistorico() {
         const list = document.getElementById("histList");
         const hist = getHistory();
-
-        if (!hist.length) {
-          list.innerHTML = `<div class="hist-item">Nenhuma sessão salva ainda.</div>`;
-          return;
-        }
+        if (!hist.length) { list.innerHTML = `<div class="hist-item">Nenhuma sessão salva.</div>`; return; }
 
         list.innerHTML = "";
         hist.forEach(item => {
@@ -878,121 +925,69 @@
                 document.getElementById("modalHIST").close();
                 alert("✅ Sessão carregada!");
               }
-            } catch (_) { alert("⚠️ Não consegui carregar esta sessão."); }
+            } catch (_) { alert("⚠️ Erro ao carregar sessão."); }
           };
           list.appendChild(row);
         });
       }
 
-      function verHistorico() {
-        renderHistorico();
-        document.getElementById("modalHIST").showModal();
-      }
+      function verHistorico() { renderHistorico(); document.getElementById("modalHIST").showModal(); }
+      function limparHistorico() { try { localStorage.removeItem(STORAGE.historyKey); renderHistorico(); } catch (_) {} }
 
-      function limparHistorico() {
-        try { localStorage.removeItem(STORAGE.historyKey); renderHistorico(); } catch (_) {}
-      }
-
-      /* ===== COLUNAS: ADICIONAR / EXCLUIR ===== */
       function adicionarTreino() {
         const st = serializeCurrentState();
         if (!st.sections) st.sections = [];
         if (!st.pills) st.pills = [];
-        if (st.sections.length >= 6) { alert("⚠️ Limite máximo: 6 treinos/abas."); return; }
-
-        const nome = prompt("Nome do novo treino (ex.: Treino D / Dia 4 / Upper 2):");
+        if (st.sections.length >= 6) { alert("⚠️ Limite máximo: 6 treinos."); return; }
+        const nome = prompt("Nome do novo treino (ex.: Treino D):");
         if (!nome) return;
-
         const key = normalizeTreinoKey(nome);
         if (!key) return;
-
         st.sections.push({ treinoKey: key, cards: [] });
         st.pills.push({ idx: st.pills.length, label: treinoLabel(key) });
         st.activeIdx = st.sections.length - 1;
-
-        loadState(st);
-        scheduleDraftSave();
-      }
-
-      function excluirTreinoAtual() {
-        excluirTreinoPorIdx(getActiveIdx());
+        loadState(st); scheduleDraftSave();
       }
 
       function excluirTreinoPorIdx(idx) {
         const st = serializeCurrentState();
-        if (!st.sections || st.sections.length <= 1) { alert("⚠️ Você precisa manter pelo menos 1 treino."); return; }
-
-        const label = (st.pills && st.pills[idx] && st.pills[idx].label) ? st.pills[idx].label : `Treino ${idx + 1}`;
-        const ok = confirm(`Excluir a coluna/aba (${label})? Isso remove os exercícios dessa aba.`);
-        if (!ok) return;
-
+        if (!st.sections || st.sections.length <= 1) { alert("⚠️ Mantenha pelo menos 1 treino."); return; }
+        if (!confirm("Excluir esta aba e exercícios?")) return;
         st.sections.splice(idx, 1);
         if (Array.isArray(st.pills)) st.pills.splice(idx, 1);
-
         st.pills = (st.pills || []).map((p, i) => ({ idx: i, label: p.label }));
         st.activeIdx = Math.min(Math.max(0, st.activeIdx || 0), st.sections.length - 1);
-        if ((st.activeIdx || 0) >= idx) st.activeIdx = Math.max(0, (st.activeIdx || 0) - 1);
-
-        loadState(st);
-        scheduleDraftSave();
+        loadState(st); scheduleDraftSave();
       }
 
       function addPillControls() {
         const nav = document.getElementById("nav");
-
         const oldAdd = nav.querySelector(".pill.add-pill");
         if (oldAdd) oldAdd.remove();
-
         const pills = Array.from(nav.querySelectorAll(".pill")).filter(p => !p.classList.contains("add-pill"));
-
         pills.forEach((pill, idx) => {
           const existing = pill.querySelector(".pill-x");
           if (existing) existing.remove();
-
           const x = document.createElement("span");
-          x.className = "pill-x";
-          x.textContent = "×";
-          x.onclick = (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            excluirTreinoPorIdx(idx);
-          };
+          x.className = "pill-x"; x.textContent = "×";
+          x.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); excluirTreinoPorIdx(idx); };
           pill.appendChild(x);
         });
-
         const add = document.createElement("div");
-        add.className = "pill add-pill";
-        add.textContent = "+";
+        add.className = "pill add-pill"; add.textContent = "+";
         add.onclick = () => adicionarTreino();
         nav.appendChild(add);
       }
 
-      /* ===== MODELOS CSV (histórico de CSV usados) ===== */
-      function getCSVTemplates() {
-        try {
-          const raw = localStorage.getItem(STORAGE.csvTplKey);
-          const arr = raw ? JSON.parse(raw) : [];
-          return Array.isArray(arr) ? arr : [];
-        } catch (_) { return []; }
-      }
-
-      function setCSVTemplates(arr) {
-        try { localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr)); } catch (_) {}
-      }
-
+      /* ===== TEMPLATES CSV ===== */
+      function getCSVTemplates() { try { return JSON.parse(localStorage.getItem(STORAGE.csvTplKey)) || []; } catch { return []; } }
+      function setCSVTemplates(arr) { try { localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr)); } catch {} }
+      
       function trySaveTemplate(csv) {
-        const name = prompt("Nome do modelo (ex.: ABC Hipertrofia / Upper-Lower / Semana 5):");
+        const name = prompt("Nome do modelo (ex.: Upper-Lower):");
         if (!name) return;
-
-        const tpl = {
-          id: "tpl_" + Math.random().toString(36).slice(2) + "_" + Date.now(),
-          name: String(name).trim(),
-          createdAt: new Date().toISOString(),
-          csv: String(csv)
-        };
-
         const arr = getCSVTemplates();
-        arr.unshift(tpl);
+        arr.unshift({ id: "tpl_" + Date.now(), name: String(name).trim(), createdAt: new Date().toISOString(), csv: String(csv) });
         if (arr.length > STORAGE.maxTemplates) arr.length = STORAGE.maxTemplates;
         setCSVTemplates(arr);
         alert("✅ Modelo salvo!");
@@ -1004,100 +999,35 @@
         trySaveTemplate(csv);
       }
 
-      function showTplArea() {
-        const area = document.getElementById("tplArea");
-        if (area) area.style.display = "block";
-      }
-      function hideModelosCSV() {
-        const area = document.getElementById("tplArea");
-        if (area) area.style.display = "none";
-      }
-
       function mostrarModelosCSV() {
-        showTplArea();
-        renderModelosCSV();
-      }
-
-      function renderModelosCSV() {
+        document.getElementById("tplArea").style.display = "block";
         const list = document.getElementById("tplList");
         const arr = getCSVTemplates();
-
-        if (!arr.length) {
-          list.innerHTML = `<div class="tpl-item">Nenhum modelo salvo ainda.</div>`;
-          return;
-        }
-
+        if (!arr.length) { list.innerHTML = `<div class="tpl-item">Sem modelos salvos.</div>`; return; }
         list.innerHTML = "";
         arr.forEach(tpl => {
           const row = document.createElement("div");
           row.className = "tpl-item";
           row.innerHTML = `<strong style="color:var(--orange);">${escapeHTML(tpl.name)}</strong><small>${formatSaoPaulo(tpl.createdAt)}</small>`;
-          row.onclick = () => {
-            const ok = confirm(`Carregar modelo: "${tpl.name}"?`);
-            if (!ok) return;
-            importarCSVFromText(tpl.csv, false);
-            document.getElementById("modalCSV").close();
-            alert("✅ Modelo carregado!");
-          };
-
-          row.oncontextmenu = (e) => {
-            e.preventDefault();
-            const ok = confirm(`Excluir modelo "${tpl.name}"?`);
-            if (!ok) return;
-            deleteTemplateById(tpl.id);
-          };
-
+          row.onclick = () => { if(confirm(`Carregar "${tpl.name}"?`)) { importarCSVFromText(tpl.csv, false); document.getElementById("modalCSV").close(); alert("✅ Carregado!"); }};
+          row.oncontextmenu = (e) => { e.preventDefault(); if(confirm(`Excluir "${tpl.name}"?`)) { deleteTemplateById(tpl.id); }};
           list.appendChild(row);
         });
-
-        const hint = document.createElement("div");
-        hint.className = "tpl-item";
-        hint.style.cursor = "default";
-        hint.innerHTML = `<small>Dica: toque no modelo para carregar. No computador, clique direito para excluir.</small>`;
-        list.appendChild(hint);
+        list.innerHTML += `<div class="tpl-item"><small>Toque para carregar. Segure para excluir.</small></div>`;
       }
 
-      function escapeHTML(s) {
-        return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-      }
+      function deleteTemplateById(id) { setCSVTemplates(getCSVTemplates().filter(t => t.id !== id)); mostrarModelosCSV(); }
+      function limparModelosCSV() { if(confirm("Apagar tudo?")) localStorage.removeItem(STORAGE.csvTplKey); mostrarModelosCSV(); }
+      function hideModelosCSV() { document.getElementById("tplArea").style.display = "none"; }
+      function escapeHTML(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 
-      function deleteTemplateById(id) {
-        const arr = getCSVTemplates().filter(t => t.id !== id);
-        setCSVTemplates(arr);
-        renderModelosCSV();
-      }
-
-      function limparModelosCSV() {
-        const ok = confirm("Limpar todos os modelos CSV salvos?");
-        if (!ok) return;
-        try { localStorage.removeItem(STORAGE.csvTplKey); } catch (_) {}
-        renderModelosCSV();
-      }
-
-      function hideModelosCSV() {
-        const area = document.getElementById("tplArea");
-        if (area) area.style.display = "none";
-      }
-
-      /* ===== BOOT ===== */
       window.onload = () => {
-        try {
-          document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-        } catch (_) {
-          document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-PT");
-        }
-
+        try { document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); } catch {}
         let loaded = false;
-        try {
-          const raw = localStorage.getItem(STORAGE.draftKey);
-          if (raw) loaded = loadState(JSON.parse(raw));
-        } catch (_) {}
-
+        try { const raw = localStorage.getItem(STORAGE.draftKey); if (raw) loaded = loadState(JSON.parse(raw)); } catch {}
         if (!loaded) gerarProtocolo();
-
-        document.getElementById("freq").addEventListener("change", scheduleDraftSave, { passive: true });
-        document.getElementById("obj").addEventListener("change", scheduleDraftSave, { passive: true });
-
+        document.getElementById("freq").addEventListener("change", gerarProtocolo, { passive: true });
+        document.getElementById("obj").addEventListener("change", gerarProtocolo, { passive: true });
         openConfig();
       };
     </script>
