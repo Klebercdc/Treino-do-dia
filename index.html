@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
     <title>TITAN PRO - Smart Log</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="icon" href="Logo.png" type="image/png" />
 
@@ -47,14 +49,16 @@
         background:#1a202c;
       }
 
-      /* CORREÇÃO CRÍTICA: abas funcionarem */
       .section { display:none; }
       .section.active { display:block; }
 
       .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; animation:fadeIn .3s ease; position:relative; }
       .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration:underline dotted; cursor:pointer; }
-      .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 10px 0; display:block; }
+      .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
       .remove-ex { position:absolute; top:10px; right:10px; color:var(--red); font-size:1.2rem; cursor:pointer; font-weight:bold; padding:5px; }
+
+      /* Estilo novo para sugestão RPE */
+      .rpe-suggest { display:block; font-size:0.7rem; color:var(--green); margin-bottom:10px; font-family:monospace; }
 
       .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
       .header-grid { text-align:center; font-size:.6rem; color:#718096; font-weight:bold; }
@@ -63,9 +67,9 @@
 
       .btn-add-ex { background:#1a202c; color:var(--blue); border:2px dashed var(--blue); width:calc(100% - 20px); margin:15px 10px; padding:15px; border-radius:12px; font-weight:800; cursor:pointer; }
 
-      .footer-actions { padding:20px 10px 40px 10px; display:flex; gap:12px; background:transparent; }
-      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; text-align:center; font-size:.75rem; text-transform:uppercase; }
-      .btn-save { background:var(--green); color:#fff; box-shadow:0 4px 0 #2d8a84; }
+      .footer-actions { padding:20px 10px 40px 10px; display:flex; gap:12px; background:transparent; flex-wrap:wrap;}
+      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; text-align:center; font-size:.75rem; text-transform:uppercase; min-width: 80px; }
+      .btn-save { background:var(--green); color:#fff; box-shadow:0 4px 0 #2d8a84; flex:2; }
       .btn-config { background:#2d3748; color:var(--blue); border:1px solid var(--blue); }
 
       dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:90%; max-width:500px; padding:20px; }
@@ -136,9 +140,6 @@
           <option value="definicao">Definição</option>
         </select>
       </div>
-
-     
-
       <button class="btn btn-save" onclick="closeConfig()" style="margin-top:12px;">ABRIR PLANILHA</button>
     </div>
 
@@ -148,6 +149,7 @@
 
     <div class="footer-actions">
       <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
+      <button class="btn btn-config" onclick="showEvoChart()">📈 EVOLUÇÃO</button>
       <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
       <button class="btn btn-config" onclick="abrirCSVModal()" style="flex:0.5; background:var(--orange); color:white;">📊 CSV</button>
       <button class="btn btn-config" onclick="verHistorico()" style="flex:0.4">📜 HIST</button>
@@ -320,19 +322,23 @@
           const repsVal = values && values[s] ? (values[s].reps ?? "") : "";
           const rpeVal = values && values[s] ? (values[s].rpe ?? "") : "";
           const placeholderRpe = (rpe || "");
+          
+          // Adicionado oninput para atualizar 1RM dinamicamente
           return `
             <div class="series-grid">
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
-              <div class="input-box"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}"></div>
-              <div class="input-box"><input type="number" value="${escapeAttr(repsVal)}"></div>
+              <div class="input-box"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input type="number" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
               <div class="input-box"><input type="number" placeholder="${escapeAttr(placeholderRpe)}" value="${escapeAttr(rpeVal)}"></div>
             </div>`;
         }).join("");
 
+        // Adicionado span rpe-suggest
         card.innerHTML = `
           <span class="remove-ex" onclick="this.parentElement.remove(); scheduleDraftSave();">×</span>
           <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
           <span class="ex-target">${sets} Sets x ${meta}</span>
+          <span class="rpe-suggest">1RM prev: <span id="1rm-${id}">-</span> | Sugestão: <span id="rpe-${id}">-</span></span>
           <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
           ${rows}
         `;
@@ -679,17 +685,156 @@
 
       function salvarTreino() {
         try {
+          // Integração Coach Titan: Pergunta o peso
+          const pesoAtual = prompt("Peso atual (kg)? Digite apenas o número.");
+          
           const st = serializeCurrentState();
-          const item = { id: "sess_" + Math.random().toString(36).slice(2) + "_" + Date.now(), createdAt: new Date().toISOString(), state: st };
+          const item = { 
+            id: "sess_" + Math.random().toString(36).slice(2) + "_" + Date.now(), 
+            createdAt: new Date().toISOString(), 
+            state: st,
+            bodyWeight: pesoAtual ? parseFloat(pesoAtual) : null // Salva peso
+          };
+          
           const hist = getHistory();
           hist.unshift(item);
           if (hist.length > STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
           setHistory(hist);
           localStorage.setItem(STORAGE.draftKey, JSON.stringify(st));
+          
+          // Alerta de Deload após salvar
+          checkDeload();
+          
           alert("✅ Sessão salva no histórico!");
-        } catch (_) {
+        } catch (e) {
+          console.error(e);
           alert("⚠️ Não consegui salvar (armazenamento do navegador cheio ou bloqueado).");
         }
+      }
+      
+      /* === FUNÇÕES NOVAS (PASTED & INTEGRATED) === */
+
+      function calcProgress(exName, newKg, newReps, prevData) {
+        if (!prevData || !prevData.length) return { suggestKg: newKg * 1.025, msg: "1ª vez: +2.5% próxima" };
+        const last = prevData[prevData.length - 1];
+        const volumeAntigo = last.kg * last.reps;
+        const volumeNovo = newKg * newReps;
+        const gain = ((volumeNovo - volumeAntigo) / volumeAntigo * 100).toFixed(1);
+        const suggest = newKg * (1 + gain/100 * 0.8); // 80% conservador
+        return { gain: gain > 0 ? `+${gain}%` : `${gain}%`, suggestKg: Math.round(suggest/2.5)*2.5, msg: gain > 5 ? "Deload próxima?" : "Bom overload!" };
+      }
+
+      // Função para calcular volume total da sessão (necessária para checkDeload)
+      function calcVolumeTotal(state) {
+        if (!state || !state.sections) return 0;
+        let vol = 0;
+        state.sections.forEach(sec => {
+            sec.cards.forEach(card => {
+                card.values.forEach(v => {
+                    const k = parseFloat(v.kg) || 0;
+                    const r = parseFloat(v.reps) || 0;
+                    vol += (k * r);
+                });
+            });
+        });
+        return vol;
+      }
+
+      function checkDeload() {
+        const hist = getHistory().slice(0, 7).reverse(); // Pega últimos 7, inverte para cronológico
+        if (hist.length < 2) return;
+        
+        const volumes = hist.map(h => calcVolumeTotal(h.state)); 
+        const ultimo = volumes[volumes.length-1];
+        const penultimo = volumes[volumes.length-2];
+        
+        if (ultimo > 0 && penultimo > 0) {
+           const trend = (ultimo - penultimo) / penultimo * 100;
+           // Lógica ajustada: se caiu drasticamente o volume total em relação ao anterior
+           if (trend < -15) alert("⚠️ ALERTA DELOAD: Volume caiu bruscamente (-15%) — considere reduzir cargas em 10-20% na próxima.");
+        }
+      }
+
+      function updateSuggests(id) {
+        const card = document.querySelector(`[data-ex-id="${id}"]`);
+        if(!card) return;
+        const inputs = card.querySelectorAll("input");
+        // Pega a primeira série válida com dados
+        let kg = 0, reps = 0;
+        for(let i=0; i < inputs.length; i+=3) {
+           if(inputs[i].value && inputs[i+1].value) {
+               kg = parseFloat(inputs[i].value);
+               reps = parseFloat(inputs[i+1].value);
+               break; // usa a primeira série preenchida como base
+           }
+        }
+
+        if (kg && reps) {
+            const epley1rm = kg * (1 + reps/30); // Fórmula Epley
+            const el1rm = document.getElementById(`1rm-${id}`);
+            const elRpe = document.getElementById(`rpe-${id}`);
+            if(el1rm) el1rm.textContent = Math.round(epley1rm) + "kg";
+            if(elRpe) elRpe.textContent = reps > 10 ? "RPE 8-9 (Resist)" : "RPE 9-10 (Força)";
+        }
+      }
+
+      function showEvoChart() {
+        const hist = getHistory().reverse(); // Cronológico
+        if(hist.length === 0) { alert("Sem histórico para gerar gráficos."); return; }
+
+        const data = hist.map(h => ({ 
+            date: formatSaoPaulo(h.createdAt).split(' ')[0], // Só data
+            vol: calcVolumeTotal(h.state)
+        }));
+
+        const ctx = document.createElement('canvas'); 
+        ctx.width=300; ctx.height=200;
+        
+        const modal = document.createElement('dialog');
+        modal.style.background = "#161e2e";
+        modal.style.border = "1px solid var(--blue)";
+        modal.style.borderRadius = "12px";
+        modal.style.width = "95%";
+        modal.style.maxWidth = "600px";
+        
+        // Botão fechar
+        const closeBtn = document.createElement('button');
+        closeBtn.innerText = "FECHAR GRÁFICO";
+        closeBtn.className = "btn";
+        closeBtn.style.background = "var(--red)";
+        closeBtn.style.color = "white";
+        closeBtn.style.marginTop = "10px";
+        closeBtn.onclick = () => modal.close();
+
+        modal.appendChild(ctx); 
+        modal.appendChild(closeBtn);
+        document.body.appendChild(modal); 
+        modal.showModal();
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: data.map(d => d.date), 
+                datasets: [{ 
+                    label: 'Volume Total (kg * reps)', 
+                    data: data.map(d => d.vol),
+                    borderColor: '#38b2ac',
+                    backgroundColor: 'rgba(56, 178, 172, 0.2)',
+                    tension: 0.3,
+                    fill: true
+                }] 
+            },
+            options: { 
+                responsive: true, 
+                plugins: {
+                    legend: { labels: { color: 'white' } }
+                },
+                scales: { 
+                    y: { beginAtZero: true, ticks: { color: '#a0aec0' }, grid: { color: '#2d3748'} },
+                    x: { ticks: { color: '#a0aec0' }, grid: { color: '#2d3748'} }
+                } 
+            }
+        });
       }
 
       function formatSaoPaulo(iso) {
@@ -718,12 +863,13 @@
         list.innerHTML = "";
         hist.forEach(item => {
           const dt = formatSaoPaulo(item.createdAt);
+          const peso = item.bodyWeight ? ` | ${item.bodyWeight}kg` : "";
           const treinoCount = (item.state && item.state.sections) ? item.state.sections.length : 0;
           const exCount = (item.state && item.state.sections) ? item.state.sections.reduce((acc, s) => acc + (s.cards ? s.cards.length : 0), 0) : 0;
 
           const row = document.createElement("div");
           row.className = "hist-item";
-          row.innerHTML = `<strong>${dt}</strong><div style="color:#a0aec0; font-size:0.75rem; margin-top:4px;">${treinoCount} treinos • ${exCount} exercícios</div>`;
+          row.innerHTML = `<strong>${dt}${peso}</strong><div style="color:#a0aec0; font-size:0.75rem; margin-top:4px;">${treinoCount} treinos • ${exCount} exercícios</div>`;
           row.onclick = () => {
             try {
               if (item.state) {
