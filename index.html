@@ -10,7 +10,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-      // Configuração obrigatória do Worker do PDF
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
     </script>
@@ -35,7 +34,6 @@
         padding-bottom: 20px;
       }
 
-      /* HEADER */
       .top-header {
         padding: 15px;
         background: var(--card);
@@ -67,7 +65,6 @@
         filter: drop-shadow(0 0 8px rgba(49, 130, 206, 0.6));
       }
 
-      /* TIMER */
       .timer-area {
         background: #1a202c;
         padding: 12px;
@@ -110,7 +107,6 @@
         font-size: 0.8rem;
       }
 
-      /* SETUP PANEL */
       .setup-panel {
         background: var(--card);
         padding: 20px;
@@ -138,7 +134,6 @@
         font-weight: bold;
       }
 
-      /* TABS / PILLS */
       .nav-pills {
         display: flex;
         gap: 8px;
@@ -185,7 +180,6 @@
         background: #1a202c;
       }
 
-      /* EXERCISES */
       .section {
         display: none;
       }
@@ -214,17 +208,9 @@
         font-weight: bold;
         margin: 4px 0 5px 0;
         display: block;
-      }
-      .remove-ex {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        color: var(--red);
-        font-size: 1.2rem;
         cursor: pointer;
-        font-weight: bold;
-        padding: 5px;
       }
+
       .rpe-suggest {
         display: block;
         font-size: 0.7rem;
@@ -263,6 +249,36 @@
         font-weight: bold;
       }
 
+      .setcell {
+        text-align: center;
+        user-select: none;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+      .setcell .slabel {
+        font-size: 0.7rem;
+        color: #718096;
+        font-weight: 800;
+        line-height: 1.05;
+      }
+      .setcell .rmmini {
+        font-size: 0.58rem;
+        color: #a0aec0;
+        font-family: monospace;
+        line-height: 1.05;
+        opacity: 0.95;
+      }
+
+      .ghost::placeholder {
+        color: rgba(255, 255, 255, 0.38);
+      }
+      .ghost {
+        opacity: 0.96;
+      }
+
       .btn-add-ex {
         background: #1a202c;
         color: var(--blue);
@@ -275,7 +291,6 @@
         cursor: pointer;
       }
 
-      /* FOOTER */
       .footer-actions {
         padding: 20px 10px 40px 10px;
         display: flex;
@@ -307,7 +322,6 @@
         border: 1px solid var(--blue);
       }
 
-      /* MODALS */
       dialog {
         background: #161e2e;
         color: #fff;
@@ -579,29 +593,22 @@
     </dialog>
 
     <script>
-      /* =========================================
-         1. CATÁLOGO DE TREINOS INTELIGENTES
-         ========================================= */
       const TREINOS_PRONTOS = {
-        // 2 DIAS: FULL BODY
         "2": [
           { nome: "A (Full Body - Foco Agacho)", exs: ["Agachamento Livre", "Supino Reto", "Remada Curvada", "Desenvolvimento Militar", "Panturrilha em Pé"] },
           { nome: "B (Full Body - Foco Terra)", exs: ["Levantamento Terra", "Leg Press 45", "Puxada Alta", "Supino Inclinado", "Rosca Direta"] },
         ],
-        // 3 DIAS: PUSH / PULL / LEGS
         "3": [
           { nome: "A (Push: Peito/Ombro/Tri)", exs: ["Supino Reto", "Supino Inclinado", "Desenvolvimento Militar", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
           { nome: "B (Pull: Costas/Bíceps)", exs: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Crucifixo Inverso", "Rosca Direta", "Rosca Martelo"] },
           { nome: "C (Legs: Pernas)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff", "Panturrilha Sentado"] },
         ],
-        // 4 DIAS: UPPER / LOWER
         "4": [
           { nome: "A (Upper Força)", exs: ["Supino Reto", "Remada Curvada", "Desenvolvimento", "Barra Fixa (ou Graviton)"] },
           { nome: "B (Lower Força)", exs: ["Agachamento Livre", "Leg Press 45", "Extensora", "Panturrilha em Pé"] },
           { nome: "C (Upper Hipertrofia)", exs: ["Supino Inclinado", "Puxada Alta", "Elevação Lateral", "Voador", "Rosca Direta", "Tríceps Corda"] },
           { nome: "D (Lower Posterior)", exs: ["Levantamento Terra", "Mesa Flexora", "Passada", "Panturrilha Sentado"] },
         ],
-        // 5 DIAS: ABCDE (BODY PART SPLIT)
         "5": [
           { nome: "A (Peito)", exs: ["Supino Reto", "Supino Inclinado", "Crucifixo Máquina", "Crossover", "Flexão de Braço"] },
           { nome: "B (Costas)", exs: ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Pulldown", "Hiperextensão Lombar"] },
@@ -609,7 +616,6 @@
           { nome: "D (Ombros)", exs: ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Crucifixo Inverso", "Encolhimento"] },
           { nome: "E (Braços)", exs: ["Rosca Direta", "Tríceps Testa", "Rosca Scott", "Tríceps Corda", "Rosca Punho"] },
         ],
-        // 6 DIAS: PPL x2
         "6": [
           { nome: "A (Push 1)", exs: ["Supino Reto", "Desenvolvimento", "Tríceps Testa", "Elevação Lateral"] },
           { nome: "B (Pull 1)", exs: ["Puxada Alta", "Remada Curvada", "Rosca Direta", "Face Pull"] },
@@ -624,11 +630,11 @@
         draftKey: "titanpro_draft_v2",
         historyKey: "titanpro_history_v2",
         csvTplKey: "titanpro_csv_templates_v1",
+        prevKey: "titanpro_prev_v1",
         maxHistory: 80,
         maxTemplates: 20,
       });
 
-      // Bibliotecas de fallback
       const divisoesGen = {
         "2": ["A", "B"],
         "3": ["A", "B", "C"],
@@ -645,9 +651,6 @@
         Braços: ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott"],
       };
 
-      /* =========================================
-         2. CORE: TIMER & UI
-         ========================================= */
       function openConfig() {
         document.getElementById("setupPanel").style.display = "block";
       }
@@ -665,7 +668,6 @@
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         return audioCtx;
       }
-
       function playBeep() {
         try {
           const ctx = getAudioCtx();
@@ -735,11 +737,104 @@
         document.getElementById("ctrlBtn").style.background = "var(--green)";
       }
 
-      /* =========================================
-         3. GERAÇÃO DE PROTOCOLO (Smart)
-         ========================================= */
       let currentExId = null;
       let isAddingNew = false;
+
+      let prevMap = Object.create(null);
+
+      function escapeAttr(v) {
+        return String(v ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;");
+      }
+      function escapeHTML(s) {
+        return String(s ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function toNum(x) {
+        const n = parseFloat(String(x ?? "").replace(",", "."));
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function calcRM(kg, reps) {
+        const K = toNum(kg);
+        const R = toNum(reps);
+        if (!K || !R) return 0;
+        return K * (1 + R / 30);
+      }
+
+      function roundRM(x) {
+        const n = toNum(x);
+        if (!n) return 0;
+        return Math.round(n);
+      }
+
+      function prevKeyOf(treinoKey, exName) {
+        return `${String(treinoKey || "").trim()}||${String(exName || "").trim()}`.toLowerCase();
+      }
+
+      function rebuildPrevMapFromLatestHistory() {
+        const hist = safeJSON(STORAGE.historyKey, []);
+        if (!Array.isArray(hist) || !hist.length) return Object.create(null);
+        const latest = hist[0]?.state;
+        if (!latest?.sections) return Object.create(null);
+        const map = Object.create(null);
+        latest.sections.forEach((sec) => {
+          const treinoKey = sec.treinoKey || sec?.treinoKey || sec?.treino || sec?.key;
+          (sec.cards || []).forEach((c) => {
+            const exName = c?.name || "";
+            const k = prevKeyOf(treinoKey, exName);
+            map[k] = (c.values || []).map((v) => ({
+              kg: v?.kg ?? "",
+              reps: v?.reps ?? "",
+              rpe: v?.rpe ?? "",
+              rm: v?.rm ?? (v?.kg && v?.reps ? roundRM(calcRM(v.kg, v.reps)) : ""),
+            }));
+          });
+        });
+        return map;
+      }
+
+      function safeJSON(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return fallback;
+          return JSON.parse(raw);
+        } catch {
+          return fallback;
+        }
+      }
+
+      function savePrevSnapshotFromState(state) {
+        try {
+          localStorage.setItem(STORAGE.prevKey, JSON.stringify({ savedAt: new Date().toISOString(), state }));
+        } catch {}
+      }
+
+      function getPrevMap() {
+        const snap = safeJSON(STORAGE.prevKey, null);
+        if (snap?.state?.sections) {
+          const map = Object.create(null);
+          snap.state.sections.forEach((sec) => {
+            const treinoKey = sec.treinoKey || sec?.treinoKey || sec?.treino || sec?.key;
+            (sec.cards || []).forEach((c) => {
+              const exName = c?.name || "";
+              const k = prevKeyOf(treinoKey, exName);
+              map[k] = (c.values || []).map((v) => ({
+                kg: v?.kg ?? "",
+                reps: v?.reps ?? "",
+                rpe: v?.rpe ?? "",
+                rm: v?.rm ?? (v?.kg && v?.reps ? roundRM(calcRM(v.kg, v.reps)) : ""),
+              }));
+            });
+          });
+          return map;
+        }
+        return rebuildPrevMapFromLatestHistory();
+      }
 
       function gerarProtocolo() {
         const f = document.getElementById("freq").value;
@@ -762,11 +857,10 @@
             cont.appendChild(sec);
 
             treino.exs.forEach((exNome) => {
-              criarCard(exNome, sec.id); // criarCard lê o objetivo para ajustar REPS
+              criarCard(exNome, sec.id, null, null, null, null);
             });
           });
         } else {
-          // Fallback genérico
           (divisoesGen[f] || ["A", "B"]).forEach((nome, i) => {
             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">Treino ${nome}</div>`;
             const sec = document.createElement("div");
@@ -774,11 +868,13 @@
             sec.className = `section ${i === 0 ? "active" : ""}`;
             sec.setAttribute("data-treino-key", `Treino ${nome}`);
             cont.appendChild(sec);
-            criarCard("Exercício Base", sec.id);
+            criarCard("Exercício Base", sec.id, null, null, null, null);
           });
         }
+
         addPillControls();
         scheduleDraftSave();
+        applyPrevGhostsToAll();
       }
 
       function criarCard(nome, sectionId, series = null, reps = null, rpe = null, values = null) {
@@ -786,6 +882,11 @@
         const meta = reps || (o === "forca" ? "3-5 Reps" : o === "hipertrofia" ? "8-12 Reps" : "15-20 Reps");
         const sets = series || (o === "forca" ? 5 : o === "definicao" ? 3 : 4);
         const id = "ex-" + Math.random().toString(36).slice(2, 9);
+
+        const sec = document.getElementById(sectionId);
+        const treinoKey = sec?.getAttribute("data-treino-key") || "";
+        const pKey = prevKeyOf(treinoKey, nome);
+        const prev = prevMap[pKey] || null;
 
         const card = document.createElement("div");
         card.className = "exercise-card";
@@ -795,60 +896,117 @@
         card.setAttribute("data-ex-meta", meta);
 
         const rows = Array.from({ length: sets }, (_, s) => {
-          const kgVal = values && values[s] ? values[s].kg ?? "" : "";
-          const repsVal = values && values[s] ? values[s].reps ?? "" : "";
-          const rpeVal = values && values[s] ? values[s].rpe ?? "" : "";
-          const placeholderRpe = rpe || "";
+          const cur = values && values[s] ? values[s] : null;
+
+          const kgVal = cur ? cur.kg ?? "" : "";
+          const repsVal = cur ? cur.reps ?? "" : "";
+          const rpeVal = cur ? cur.rpe ?? "" : "";
+
+          const prevRow = prev && prev[s] ? prev[s] : null;
+          const phKg = prevRow ? prevRow.kg ?? "" : "";
+          const phReps = prevRow ? prevRow.reps ?? "" : "";
+          const phRpe = prevRow ? prevRow.rpe ?? "" : "";
+          const phRm = prevRow ? prevRow.rm ?? (prevRow.kg && prevRow.reps ? roundRM(calcRM(prevRow.kg, prevRow.reps)) : "") : "";
+
+          const rmNow = cur?.rm ?? (cur?.kg && cur?.reps ? roundRM(calcRM(cur.kg, cur.reps)) : 0);
+          const rmTxt = rmNow ? `${rmNow}kg` : phRm ? `${phRm}kg` : "-";
+
+          const ghostKg = !kgVal && phKg ? "ghost" : "";
+          const ghostReps = !repsVal && phReps ? "ghost" : "";
+          const ghostRpe = !rpeVal && phRpe ? "ghost" : "";
 
           return `
-            <div class="series-grid">
-              <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
-              <div class="input-box"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" placeholder="${escapeAttr(placeholderRpe)}" value="${escapeAttr(rpeVal)}"></div>
+            <div class="series-grid" data-row="1">
+              <span class="setcell" onclick="onPressSetCell(this)">
+                <span class="slabel">S${s + 1}</span>
+                <span class="rmmini" id="rm-${id}-${s}">RM: ${escapeHTML(rmTxt)}</span>
+              </span>
+              <div class="input-box"><input class="${ghostKg}" type="number" inputmode="decimal" placeholder="${escapeAttr(phKg)}" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input class="${ghostReps}" type="number" placeholder="${escapeAttr(phReps)}" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input class="${ghostRpe}" type="number" placeholder="${escapeAttr(phRpe || (rpe || ''))}" value="${escapeAttr(rpeVal)}"></div>
             </div>`;
         }).join("");
 
         card.innerHTML = `
-          <span class="remove-ex" onclick="this.parentElement.remove(); scheduleDraftSave();">×</span>
-          <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
-          <span class="ex-target">${sets} Sets x ${meta}</span>
+          <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${escapeHTML(nome)}</span>
+          <span class="ex-target" onclick="confirmDeleteExercise(this)"> ${sets} Sets x ${escapeHTML(meta)} </span>
           <span class="rpe-suggest">1RM est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
           <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
           ${rows}
         `;
 
-        document.getElementById(sectionId).appendChild(card);
+        sec.appendChild(card);
         attachAutosaveToCard(card);
         scheduleDraftSave();
+        updateSuggests(id);
+      }
+
+      function confirmDeleteExercise(elTarget) {
+        try {
+          const card = elTarget.closest(".exercise-card");
+          if (!card) return;
+          const nome = card.querySelector(".ex-title")?.textContent || "Exercício";
+          if (confirm(`Apagar exercício "${nome}"?`)) {
+            card.remove();
+            scheduleDraftSave();
+          }
+        } catch {}
+      }
+
+      function onPressSetCell(el) {
+        try {
+          const row = el.closest(".series-grid");
+          if (!row) return;
+          const inputs = row.querySelectorAll("input");
+          if (inputs.length !== 3) return;
+
+          const hasAny = Array.from(inputs).some((i) => String(i.value || "").trim().length);
+          if (!hasAny) {
+            inputs[0].focus();
+            return;
+          }
+
+          if (confirm("Apagar esta série (KG/REPS/RPE)?")) {
+            inputs.forEach((i) => (i.value = ""));
+            const card = row.closest(".exercise-card");
+            if (card) updateSuggests(card.getAttribute("data-ex-id"));
+            scheduleDraftSave();
+          }
+        } catch {}
       }
 
       function updateSuggests(id) {
         const card = document.querySelector(`[data-ex-id="${id}"]`);
         if (!card) return;
-        const inputs = card.querySelectorAll("input");
-        let kg = 0,
-          reps = 0;
-        // Pega a primeira série preenchida
-        for (let i = 0; i < inputs.length; i += 3) {
-          if (inputs[i].value && inputs[i + 1].value) {
-            kg = parseFloat(inputs[i].value);
-            reps = parseFloat(inputs[i + 1].value);
-            break;
+
+        const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
+        let firstKg = 0;
+        let firstReps = 0;
+
+        rows.forEach((r, idx) => {
+          const i = r.querySelectorAll("input");
+          const kg = i[0].value;
+          const reps = i[1].value;
+
+          if (!firstKg && !firstReps && kg && reps) {
+            firstKg = toNum(kg);
+            firstReps = toNum(reps);
           }
-        }
-        if (kg && reps) {
-          const epley1rm = kg * (1 + reps / 30);
+
+          const rm = roundRM(calcRM(kg, reps));
+          const rmEl = document.getElementById(`rm-${id}-${idx}`);
+          if (rmEl) rmEl.textContent = `RM: ${rm ? rm + "kg" : "-"}`;
+        });
+
+        if (firstKg && firstReps) {
+          const epley1rm = firstKg * (1 + firstReps / 30);
           const el1rm = document.getElementById(`1rm-${id}`);
           const elRpe = document.getElementById(`rpe-${id}`);
           if (el1rm) el1rm.textContent = Math.round(epley1rm) + "kg";
-          if (elRpe) elRpe.textContent = reps > 10 ? "RPE 8-9 (Resist)" : "RPE 9-10 (Força)";
+          if (elRpe) elRpe.textContent = firstReps > 10 ? "RPE 8-9 (Resist)" : "RPE 9-10 (Força)";
         }
       }
 
-      /* =========================================
-         4. IMPORTAÇÃO (PDF & CSV)
-         ========================================= */
       async function extrairTextoPDF(input) {
         if (!input.files || !input.files[0]) return;
         const file = input.files[0];
@@ -865,10 +1023,8 @@
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map((item) => item.str).join(" ");
-            // Limpeza Heurística
             const linhas = pageText.split(/ {2,}|\n/).filter((l) => l.trim().length > 3);
             linhas.forEach((linha) => {
-              // Se a linha tem letras, assumimos que é um exercício
               if (/[a-zA-Z]/.test(linha)) {
                 fullText += `Treino A,${linha.trim().replace(/,/g, "")},4,10-12\n`;
               }
@@ -944,6 +1100,7 @@
         buildTabsFromGrouped(grouped, orderOfAppearance);
         scheduleDraftSave();
         if (alsoSaveAsTemplate) trySaveTemplate(csv);
+        applyPrevGhostsToAll();
         return true;
       }
 
@@ -952,21 +1109,6 @@
           document.getElementById("modalCSV").close();
           alert("✅ Treino importado!");
         }
-      }
-
-      /* =========================================
-         5. FUNÇÕES AUXILIARES (UI, DATA, HIST)
-         ========================================= */
-      function escapeAttr(v) {
-        return String(v ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/"/g, "&quot;");
-      }
-      function escapeHTML(s) {
-        return String(s ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
       }
 
       function attachAutosaveToCard(card) {
@@ -994,7 +1136,7 @@
         for (let cat in biblioteca) {
           lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin:15px 0 5px; border-bottom:1px solid #2d3748">${cat}</div>`;
           biblioteca[cat].forEach((ex) => {
-            lib.innerHTML += `<div class="lib-item" onclick="selecionar('${ex}')">${ex}</div>`;
+            lib.innerHTML += `<div class="lib-item" onclick="selecionar('${escapeAttr(ex)}')">${escapeHTML(ex)}</div>`;
           });
         }
         document.getElementById("modalLib").showModal();
@@ -1006,8 +1148,18 @@
         } else {
           const el = document.getElementById(currentExId);
           if (el) {
+            const oldName = el.innerText;
             el.innerText = n;
-            el.closest(".exercise-card").setAttribute("data-ex-name", n);
+            const card = el.closest(".exercise-card");
+            if (card) {
+              card.setAttribute("data-ex-name", n);
+              const sec = card.closest(".section");
+              const treinoKey = sec?.getAttribute("data-treino-key") || "";
+              const oldKey = prevKeyOf(treinoKey, oldName);
+              const newKey = prevKeyOf(treinoKey, n);
+              if (!prevMap[newKey] && prevMap[oldKey]) prevMap[newKey] = prevMap[oldKey];
+              applyPrevGhostsToCard(card);
+            }
             scheduleDraftSave();
           }
         }
@@ -1026,6 +1178,7 @@
         document.getElementById(`sec${idx}`).classList.add("active");
         document.getElementById(`p${idx}`).classList.add("active");
         scheduleDraftSave();
+        applyPrevGhostsToAll();
       }
 
       function abrirCSVModal() {
@@ -1077,7 +1230,7 @@
         nav.innerHTML = "";
         cont.innerHTML = "";
         order.slice(0, 6).forEach((key, idx) => {
-          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${treinoLabel(key)}</div>`;
+          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(treinoLabel(key))}</div>`;
           const sec = document.createElement("div");
           sec.id = `sec${idx}`;
           sec.className = `section ${idx === 0 ? "active" : ""}`;
@@ -1088,7 +1241,6 @@
         addPillControls();
       }
 
-      /* ===== STATE & HISTORY ===== */
       let draftSaveTimer = null;
       function scheduleDraftSave() {
         if (draftSaveTimer) clearTimeout(draftSaveTimer);
@@ -1107,20 +1259,34 @@
       function serializeCurrentState() {
         const freq = document.getElementById("freq").value;
         const obj = document.getElementById("obj").value;
-        const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")).map((p, i) => ({ idx: i, label: p.textContent.replace("×", "").trim() }));
+        const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")).map((p, i) => ({
+          idx: i,
+          label: p.textContent.replace("×", "").trim(),
+        }));
+
         const sections = Array.from(document.querySelectorAll("#container .section")).map((sec, secIdx) => {
           const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx + 1}`;
           const cards = Array.from(sec.querySelectorAll(".exercise-card")).map((card) => {
             const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
             const values = rows.map((r) => {
               const i = r.querySelectorAll("input");
-              return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
+              const kg = i[0].value;
+              const reps = i[1].value;
+              const rpe = i[2].value;
+              const rm = roundRM(calcRM(kg, reps));
+              return { kg, reps, rpe, rm: rm ? rm : "" };
             });
-            return { name: card.querySelector(".ex-title").textContent, sets: values.length, meta: card.querySelector(".ex-target").textContent, values };
+            return {
+              name: card.querySelector(".ex-title")?.textContent || "",
+              sets: values.length,
+              meta: card.querySelector(".ex-target")?.textContent || "",
+              values,
+            };
           });
           return { treinoKey, cards };
         });
-        return { v: 2, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
+
+        return { v: 3, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
       }
 
       function loadState(state) {
@@ -1133,19 +1299,40 @@
         const cont = document.getElementById("container");
         nav.innerHTML = "";
         cont.innerHTML = "";
+
         state.sections.slice(0, 6).forEach((secData, idx) => {
           const label = state.pills && state.pills[idx] ? state.pills[idx].label : secData.treinoKey;
-          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${label}</div>`;
+          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(label)}</div>`;
           const sec = document.createElement("div");
           sec.id = `sec${idx}`;
           sec.className = `section ${idx === 0 ? "active" : ""}`;
           sec.setAttribute("data-treino-key", secData.treinoKey);
           cont.appendChild(sec);
-          (secData.cards || []).forEach((c) => criarCard(c.name, sec.id, c.sets, c.meta.split("Sets x")[1]?.trim(), null, c.values));
+
+          (secData.cards || []).forEach((c) => {
+            const metaTxt = String(c.meta || "");
+            const maybeReps = metaTxt.includes("Sets x") ? metaTxt.split("Sets x")[1]?.trim() : null;
+            criarCard(c.name, sec.id, c.sets, maybeReps, null, c.values);
+          });
         });
+
         addPillControls();
         tab(state.activeIdx || 0);
+        applyPrevGhostsToAll();
         return true;
+      }
+
+      function clearAllInputsToGhost() {
+        const cards = Array.from(document.querySelectorAll(".exercise-card"));
+        cards.forEach((card) => {
+          const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
+          rows.forEach((r) => {
+            const i = r.querySelectorAll("input");
+            i.forEach((inp) => (inp.value = ""));
+          });
+          updateSuggests(card.getAttribute("data-ex-id"));
+        });
+        scheduleDraftSave();
       }
 
       function salvarTreino() {
@@ -1153,26 +1340,82 @@
           const peso = prompt("Peso atual (kg)? Só números.");
           const st = serializeCurrentState();
           const item = { id: "sess_" + Date.now(), createdAt: new Date().toISOString(), state: st, bodyWeight: peso ? parseFloat(peso) : null };
-          const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+          const hist = safeJSON(STORAGE.historyKey, []);
           hist.unshift(item);
           if (hist.length > STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
           localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist));
+
+          savePrevSnapshotFromState(st);
+          prevMap = getPrevMap();
+          applyPrevGhostsToAll();
+          clearAllInputsToGhost();
+
           checkDeload();
-          alert("✅ Sessão Salva!");
+          alert("✅ Sessão Salva! (Valores anteriores ficaram como transparente)");
         } catch {
           alert("⚠️ Memória cheia.");
         }
       }
 
-      /* ===== COACH LOGIC: ALERTS & CHARTS ===== */
+      function applyPrevGhostsToAll() {
+        const cards = Array.from(document.querySelectorAll(".exercise-card"));
+        cards.forEach(applyPrevGhostsToCard);
+      }
+
+      function applyPrevGhostsToCard(card) {
+        try {
+          const sec = card.closest(".section");
+          const treinoKey = sec?.getAttribute("data-treino-key") || "";
+          const exName = card.querySelector(".ex-title")?.textContent || card.getAttribute("data-ex-name") || "";
+          const k = prevKeyOf(treinoKey, exName);
+          const prev = prevMap[k] || null;
+          if (!prev) return;
+
+          const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
+          rows.forEach((r, idx) => {
+            const pv = prev[idx] || null;
+            if (!pv) return;
+            const i = r.querySelectorAll("input");
+
+            if (!i[0].value && String(pv.kg ?? "").trim()) {
+              i[0].placeholder = String(pv.kg);
+              i[0].classList.add("ghost");
+            }
+            if (!i[1].value && String(pv.reps ?? "").trim()) {
+              i[1].placeholder = String(pv.reps);
+              i[1].classList.add("ghost");
+            }
+            if (!i[2].value && String(pv.rpe ?? "").trim()) {
+              i[2].placeholder = String(pv.rpe);
+              i[2].classList.add("ghost");
+            }
+
+            const rmEl = card.querySelector(`#rm-${card.getAttribute("data-ex-id")}-${idx}`);
+            if (rmEl && !rmEl.textContent.includes("kg")) {
+              const pr = pv.rm ?? (pv.kg && pv.reps ? roundRM(calcRM(pv.kg, pv.reps)) : "");
+              if (pr) rmEl.textContent = `RM: ${pr}kg`;
+            }
+          });
+
+          updateSuggests(card.getAttribute("data-ex-id"));
+        } catch {}
+      }
+
       function calcVolumeTotal(state) {
         if (!state?.sections) return 0;
-        return state.sections.reduce((acc, sec) => acc + sec.cards.reduce((acc2, c) => acc2 + c.values.reduce((acc3, v) => acc3 + ((parseFloat(v.kg) || 0) * (parseFloat(v.reps) || 0)), 0), 0), 0);
+        return state.sections.reduce(
+          (acc, sec) =>
+            acc +
+            (sec.cards || []).reduce(
+              (acc2, c) =>
+                acc2 + (c.values || []).reduce((acc3, v) => acc3 + (toNum(v.kg) * toNum(v.reps)), 0),
+              0
+            ),
+          0
+        );
       }
       function checkDeload() {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]")
-          .slice(0, 7)
-          .reverse();
+        const hist = safeJSON(STORAGE.historyKey, []).slice(0, 7).reverse();
         if (hist.length < 2) return;
         const vols = hist.map((h) => calcVolumeTotal(h.state));
         const last = vols[vols.length - 1],
@@ -1181,7 +1424,7 @@
       }
 
       function showEvoChart() {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]").reverse();
+        const hist = safeJSON(STORAGE.historyKey, []).reverse();
         if (!hist.length) {
           alert("Sem histórico.");
           return;
@@ -1189,7 +1432,8 @@
         const data = hist.map((h) => ({ d: new Date(h.createdAt).toLocaleDateString("pt-BR").slice(0, 5), v: calcVolumeTotal(h.state) }));
 
         const dialog = document.createElement("dialog");
-        dialog.style.cssText = "background:#161e2e; width:95%; max-width:600px; padding:15px; border:1px solid var(--blue); border-radius:12px;";
+        dialog.style.cssText =
+          "background:#161e2e; width:95%; max-width:600px; padding:15px; border:1px solid var(--blue); border-radius:12px;";
         const cvs = document.createElement("canvas");
         const btn = document.createElement("button");
         btn.innerText = "FECHAR";
@@ -1206,19 +1450,37 @@
 
         new Chart(cvs, {
           type: "line",
-          data: { labels: data.map((x) => x.d), datasets: [{ label: "Volume Total (kg)", data: data.map((x) => x.v), borderColor: "#38b2ac", backgroundColor: "rgba(56,178,172,0.2)", fill: true, tension: 0.3 }] },
-          options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color: "#2d3748" } }, x: { grid: { color: "#2d3748" } } }, plugins: { legend: { labels: { color: "white" } } } },
+          data: {
+            labels: data.map((x) => x.d),
+            datasets: [
+              {
+                label: "Volume Total (kg)",
+                data: data.map((x) => x.v),
+                borderColor: "#38b2ac",
+                backgroundColor: "rgba(56,178,172,0.2)",
+                fill: true,
+                tension: 0.3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, grid: { color: "#2d3748" } }, x: { grid: { color: "#2d3748" } } },
+            plugins: { legend: { labels: { color: "white" } } },
+          },
         });
       }
 
       function verHistorico() {
         const list = document.getElementById("histList");
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+        const hist = safeJSON(STORAGE.historyKey, []);
         list.innerHTML = hist.length ? "" : '<div class="hist-item">Sem sessões.</div>';
         hist.forEach((h) => {
           const el = document.createElement("div");
           el.className = "hist-item";
-          el.innerHTML = `<strong>${new Date(h.createdAt).toLocaleString("pt-BR")}</strong> ${h.bodyWeight ? `| ${h.bodyWeight}kg` : ""}<br><small>${calcVolumeTotal(h.state)}kg vol total</small>`;
+          el.innerHTML = `<strong>${new Date(h.createdAt).toLocaleString("pt-BR")}</strong> ${
+            h.bodyWeight ? `| ${h.bodyWeight}kg` : ""
+          }<br><small>${calcVolumeTotal(h.state)}kg vol total</small>`;
           el.onclick = () => {
             if (confirm("Carregar sessão?")) {
               loadState(h.state);
@@ -1233,11 +1495,12 @@
       function limparHistorico() {
         if (confirm("Apagar tudo?")) {
           localStorage.removeItem(STORAGE.historyKey);
+          localStorage.removeItem(STORAGE.prevKey);
+          prevMap = Object.create(null);
           verHistorico();
         }
       }
 
-      /* ===== PILL CONTROLS & ADD TREINO ===== */
       function adicionarTreino() {
         const st = serializeCurrentState();
         if (st.sections.length >= 7) {
@@ -1285,7 +1548,6 @@
         nav.appendChild(add);
       }
 
-      /* ===== TEMPLATES STORAGE ===== */
       function getCSVTemplates() {
         try {
           return JSON.parse(localStorage.getItem(STORAGE.csvTplKey)) || [];
@@ -1339,19 +1601,23 @@
         else alert("Cole o CSV.");
       }
 
-      /* ===== BOOT ===== */
       window.onload = () => {
         try {
           document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
         } catch {}
+
+        prevMap = getPrevMap();
+
         let loaded = false;
         try {
           const r = localStorage.getItem(STORAGE.draftKey);
           if (r) loaded = loadState(JSON.parse(r));
         } catch {}
+
         if (!loaded) gerarProtocolo();
         openConfig();
+        applyPrevGhostsToAll();
       };
     </script>
   </body>
-</html> 
+</html>
