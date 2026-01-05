@@ -10,8 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
 
-    <link rel="icon" href="Logo.png" type="image/png" />
-
     <style>
       :root { --bg:#0b1220; --card:#161e2e; --blue:#3182ce; --text:#f7fafc; --orange:#f6ad55; --green:#38b2ac; --red:#e53e3e; }
       body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; user-select:none; -webkit-user-select:none; }
@@ -19,7 +17,6 @@
       .top-header { padding:15px; background:var(--card); border-bottom:1px solid #2d3748; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
       .date-badge { font-size:.8rem; color:var(--orange); font-weight:bold; background:#0b1220; padding:4px 10px; border-radius:15px; }
       .header-left { display:flex; align-items:center; gap:12px; }
-      .logo-img { height:45px; filter:drop-shadow(0 0 8px rgba(49,130,206,.6)); }
 
       .timer-area { background:#1a202c; padding:12px; border-bottom:2px solid var(--blue); text-align:center; }
       #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; margin-bottom:8px; }
@@ -65,7 +62,7 @@
 
   <body>
     <div class="top-header">
-      <div class="header-left"><img src="Logo.png" alt="Logo" class="logo-img" /><h1 style="margin:0; font-size:1.1rem; color:var(--blue);">TITAN <span style="color:#fff">PRO</span></h1></div>
+      <div class="header-left"><h1 style="margin:0; font-size:1.1rem; color:var(--blue);">TITAN <span style="color:#fff">PRO</span></h1></div>
       <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
 
@@ -132,7 +129,6 @@
 
       let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
 
-      /* TIMER */
       function setT(s, btn) { timeLeft = baseTime = s; updateT(); document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
       function updateT() { const m = Math.floor(timeLeft / 60); const s = timeLeft % 60; document.getElementById("timerDisplay").innerText = `${m}:${s < 10 ? '0' : ''}${s}`; }
       function toggleT() {
@@ -143,7 +139,6 @@
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); }
       function playBeep() { const a = new AudioContext(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+0.5); }
 
-      /* CORE ENGINE */
       function criarCard(nome, sectionId, values = null) {
         const id = "ex-" + Math.random().toString(36).substr(2, 5);
         const ghost = getLastValues(nome);
@@ -180,7 +175,6 @@
         if(max1RM > 0) res.innerHTML = `1RM Est: ${Math.round(max1RM)}kg`;
       }
 
-      /* ARQUIVOS E MODELOS */
       function abrirCSVModal() { document.getElementById("modalCSV").showModal(); }
       function fazerBackup() {
         const b = { draft: localStorage.getItem(STORAGE.draft), hist: localStorage.getItem(STORAGE.hist) };
@@ -228,7 +222,6 @@
         reader.readAsArrayBuffer(file);
       }
 
-      /* AUXILIARES */
       function saveDraft() {
         const s = { sections: Array.from(document.querySelectorAll(".section")).map(sec => ({
           cards: Array.from(sec.querySelectorAll(".exercise-card")).map(c => ({
@@ -273,7 +266,6 @@
           const sec = document.createElement("div"); sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`; cont.appendChild(sec);
           if(i===0) ["Supino", "Crucifixo"].forEach(ex => criarCard(ex, sec.id));
         });
-        addLongPress(document.querySelector(".pill.active"), () => { if(confirm("Excluir este treino?")) location.reload(); });
         saveDraft();
       }
 
