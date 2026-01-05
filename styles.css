@@ -1,63 +1,153 @@
-/* STYLES.CSS - ESTRUTURA DASHBOARD INDUSTRIAL */
 :root {
-    --bg-black: #05080f;
-    --sidebar-surface: #0c121d;
-    --card-surface: rgba(15, 23, 42, 0.7);
-    --border-dim: #1e293b;
-    --accent-blue: #3b82f6;
-    --accent-green: #10b981;
-    --text-primary: #f3f4f6;
-    --text-muted: #64748b;
-    --orange: #fbbf24;
-    --red: #ef4444;
+  --bg:#0b1220;
+  --card:#161e2e;
+  --blue:#3182ce;
+  --orange:#f6ad55;
+  --green:#38b2ac;
+  --red:#e53e3e;
+  --text:#f7fafc;
 }
 
 body {
-    background-color: var(--bg-black);
-    color: var(--text-primary);
-    margin: 0;
-    height: 100vh;
-    display: grid;
-    grid-template-areas: 
-        "header header"
-        "sidebar main"
-        "footer footer";
-    grid-template-columns: 320px 1fr;
-    grid-template-rows: auto 1fr auto;
-    overflow: hidden;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,sans-serif;
+  margin:0;
 }
 
-.top-header { grid-area: header; display: flex; justify-content: space-between; padding: 12px 25px; border-bottom: 1px solid var(--border-dim); }
-.brand { font-weight: 900; text-transform: uppercase; }
-.brand span { color: var(--accent-blue); }
-
-.left-pane { grid-area: sidebar; background: var(--sidebar-surface); border-right: 1px solid var(--border-dim); padding: 25px; display: flex; flex-direction: column; gap: 20px; }
-.display-time { font-size: 4rem; font-weight: 800; color: var(--accent-blue); text-align: center; font-family: monospace; }
-
-.exercise-carousel { 
-    grid-area: main; 
-    display: flex; 
-    flex-direction: row; 
-    overflow-x: auto; 
-    padding: 30px; 
-    gap: 20px; 
-    scroll-snap-type: x mandatory; 
+.top-header {
+  background:var(--card);
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-.exercise-card { 
-    min-width: 350px; 
-    background: var(--card-surface); 
-    border-radius: 20px; 
-    padding: 25px; 
-    border: 1px solid var(--border-dim); 
-    scroll-snap-align: start; 
-    height: fit-content;
+.logo-img { height:42px }
+h1 { font-size:1.1rem }
+h1 span { color:white }
+
+.date-badge {
+  background:#000;
+  padding:6px 12px;
+  border-radius:14px;
+  color:var(--orange);
+  font-weight:800;
 }
 
-.series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
-.input-box { background: #060b14; border: 1px solid var(--border-dim); border-radius: 8px; padding: 10px 0; }
-.input-box input { background: transparent; border: none; color: white; width: 100%; text-align: center; font-weight: 800; outline: none; }
+.timer-area {
+  background:#1a202c;
+  padding:15px;
+  text-align:center;
+}
 
-.footer-bar { grid-area: footer; display: flex; padding: 15px 25px; gap: 15px; border-top: 1px solid var(--border-dim); background: var(--bg-black); }
-.btn-tab { background: var(--accent-blue); color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: 900; }
-.btn-secondary { background: #1e293b; color: white; border: 1px solid var(--border-dim); padding: 15px; border-radius: 12px; flex: 1; font-weight: 700; cursor: pointer; }
+#timerDisplay {
+  font-size:2.2rem;
+  font-weight:900;
+  color:var(--blue);
+}
+
+.btn-t, .btn-ctrl {
+  background:#2d3748;
+  border:none;
+  padding:10px;
+  border-radius:8px;
+  color:white;
+  font-weight:900;
+}
+
+.btn-ctrl { background:var(--green) }
+.btn-ctrl.red { background:var(--red) }
+
+.setup-panel {
+  background:var(--card);
+  padding:20px;
+}
+
+.field label {
+  font-size:.7rem;
+  font-weight:900;
+  color:#aaa;
+}
+
+.field select {
+  width:100%;
+  padding:12px;
+  background:#000;
+  color:white;
+  border-radius:8px;
+}
+
+.nav-pills {
+  display:flex;
+  gap:8px;
+  padding:10px;
+}
+
+.pill {
+  padding:10px 16px;
+  border-radius:8px;
+  background:#222;
+  color:#aaa;
+}
+
+.pill.active {
+  background:var(--blue);
+  color:white;
+}
+
+.exercise-card {
+  background:var(--card);
+  margin:12px;
+  padding:15px;
+  border-radius:12px;
+}
+
+.series-grid {
+  display:grid;
+  grid-template-columns:40px 1fr 1fr 1fr;
+  gap:6px;
+  margin-bottom:6px;
+}
+
+.input-box {
+  background:#000;
+  border-radius:6px;
+}
+
+.input-box input {
+  width:100%;
+  background:transparent;
+  border:none;
+  color:white;
+  text-align:center;
+  font-weight:900;
+}
+
+.ghost::placeholder {
+  color:rgba(255,255,255,.4);
+}
+
+.rmmini {
+  font-size:.6rem;
+  color:#aaa;
+}
+
+.footer-actions {
+  display:flex;
+  gap:8px;
+  padding:15px;
+}
+
+.btn {
+  flex:1;
+  padding:12px;
+  border-radius:8px;
+  border:none;
+  font-weight:900;
+}
+
+.btn-save {
+  background:var(--green);
+  color:white;
+}
