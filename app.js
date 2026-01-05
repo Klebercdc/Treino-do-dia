@@ -1,201 +1,197 @@
 /* ==========================================================================
-   TITAN PRO - CORE ENGINE V7 (GOD MODE)
+   TITAN PRO - CORE ENGINE V8 (GOD MODE)
    ========================================================================== */
 
-const STORAGE = Object.freeze({
-    draft: "titan_draft_v7",
-    history: "titan_hist_v7",
-    max: 50
+const STORAGE_KEYS = Object.freeze({
+    draft: "titan_pro_draft_v8",
+    history: "titan_pro_history_v8",
+    max_history: 100
 });
 
-const BIBLIOTECA = {
-    "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador"],
-    "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Barra Fixa"],
-    "Pernas": ["Agachamento", "Leg Press", "Extensora", "Flexora", "Stiff", "Panturrilha"],
-    "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso"],
-    "Braços": ["Rosca Direta", "Rosca Martelo", "Tríceps Corda", "Tríceps Testa"]
-};
+let prCache = new Map();
+let activeTimer = null;
+let baseSeconds = 60;
+let secondsLeft = 60;
 
-let prMap = new Map();
-let isAddingNew = false;
-let currentExId = null;
-
-/* --------------------------------------------------------------------------
-   1. MOTOR DE PERFORMANCE (CACHE & GHOST)
-   -------------------------------------------------------------------------- */
-
-// Constrói mapa de recordes para busca instantânea
-function buildPRCache() {
-    prMap.clear();
-    const hist = JSON.parse(localStorage.getItem(STORAGE.history) || "[]");
-    hist.forEach(sessao => {
-        if (!sessao.state?.sections) return;
-        sessao.state.sections.forEach(sec => {
-            sec.cards.forEach(c => {
-                let bestSetRM = 0;
-                c.values.forEach(v => {
-                    const k = parseFloat(v.kg) || 0, r = parseFloat(v.reps) || 0;
-                    if (k > 0 && r > 0) {
-                        const rm = k * (1 + r / 30); // Epley Formula
-                        if (rm > bestSetRM) bestSetRM = rm;
+/* 1. MOTOR DE PERFORMANCE E RECORDES (PR) */
+const buildPRCache = () => {
+    prCache.clear();
+    const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]");
+    history.forEach(session => {
+        if (!session.state?.sections) return;
+        session.state.sections.forEach(section => {
+            section.cards.forEach(card => {
+                let maxRM = 0;
+                card.values.forEach(v => {
+                    const kg = parseFloat(v.kg) || 0;
+                    const reps = parseFloat(v.reps) || 0;
+                    if (kg > 0 && reps > 0) {
+                        const rm = kg * (1 + reps / 30); // Epley Formula
+                        if (rm > maxRM) maxRM = rm;
                     }
                 });
-                const currentMax = prMap.get(c.name) || 0;
-                if (bestSetRM > currentMax) prMap.set(c.name, bestSetRM);
+                const globalMax = prCache.get(card.name) || 0;
+                if (maxRM > globalMax) prCache.set(card.name, maxRM);
             });
         });
     });
-}
+};
 
-// Busca carga do treino anterior para o Ghost Loading
-function buscarSombraAnterior(nomeEx, indexSerie) {
-    const hist = JSON.parse(localStorage.getItem(STORAGE.history) || "[]");
-    for (let sessao of hist) {
-        if (!sessao.state?.sections) continue;
-        for (let sec of sessao.state.sections) {
-            const card = sec.cards.find(x => x.name === nomeEx);
-            if (card && card.values[indexSerie]) {
-                const val = card.values[indexSerie];
-                if (val.kg || val.reps) return val;
+/* 2. GHOST DATA ENGINE (CARGA FANTASMA) */
+const getGhostValue = (exerciseName, setIndex) => {
+    const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]");
+    for (let session of history) {
+        if (!session.state?.sections) continue;
+        for (let section of session.state.sections) {
+            const card = section.cards.find(c => c.name === exerciseName);
+            if (card && card.values[setIndex]) {
+                const data = card.values[setIndex];
+                if (data.kg || data.reps) return data;
             }
         }
     }
     return null;
-}
+};
 
-/* --------------------------------------------------------------------------
-   2. MOTOR DE RENDERIZAÇÃO (HORIZONTAL LAYOUT)
-   -------------------------------------------------------------------------- */
-
-function criarCard(nome, series = 4, values = null) {
+/* 3. RENDERIZADOR DE EXERCÍCIOS (HORIZONTAL CAROUSEL) */
+const renderCard = (name, seriesCount = 4, existingValues = null) => {
     const container = document.getElementById("container");
-    const id = "ex-" + Math.random().toString(36).substr(2, 7);
+    const exerciseId = `ex-${Math.random().toString(36).substr(2, 9)}`;
     
     const card = document.createElement("div");
     card.className = "exercise-card";
-    card.setAttribute("data-ex-id", id);
-    card.setAttribute("data-ex-name", nome);
+    card.setAttribute("data-id", exerciseId);
+    card.setAttribute("data-name", name);
 
     let rowsHtml = "";
-    for (let i = 0; i < series; i++) {
-        const v = values?.[i] || { kg: "", reps: "", rpe: "" };
-        const sombra = buscarSombraAnterior(nome, i);
+    for (let i = 0; i < seriesCount; i++) {
+        const val = existingValues?.[i] || { kg: "", reps: "", rpe: "" };
+        const ghost = getGhostValue(name, i);
 
         rowsHtml += `
             <div class="series-grid">
                 <span class="header-grid">S${i + 1}</span>
-                <div class="input-box ${v.kg ? 'filled' : ''}">
-                    <input type="number" inputmode="decimal" value="${v.kg}" placeholder="${sombra?.kg || 'kg'}" oninput="updateSuggests('${id}')">
+                <div class="input-box ${val.kg ? 'filled' : ''}">
+                    <input type="number" inputmode="decimal" value="${val.kg}" 
+                           placeholder="${ghost?.kg || '0'}" oninput="syncState('${exerciseId}')">
                 </div>
-                <div class="input-box ${v.reps ? 'filled' : ''}">
-                    <input type="number" inputmode="decimal" value="${v.reps}" placeholder="${sombra?.reps || 'reps'}" oninput="updateSuggests('${id}')">
+                <div class="input-box ${val.reps ? 'filled' : ''}">
+                    <input type="number" inputmode="decimal" value="${val.reps}" 
+                           placeholder="${ghost?.reps || '0'}" oninput="syncState('${exerciseId}')">
                 </div>
                 <div class="input-box">
-                    <input type="number" inputmode="decimal" value="${v.rpe}" placeholder="RPE" oninput="updateSuggests('${id}')" style="color:var(--orange)">
+                    <input type="number" inputmode="decimal" value="${val.rpe}" 
+                           placeholder="RPE" oninput="syncState('${exerciseId}')" style="color:var(--orange)">
                 </div>
             </div>`;
     }
 
     card.innerHTML = `
         <div class="card-header">
-            <h3 class="ex-title" onclick="abrirLibParaTrocar('${id}')">${nome}</h3>
-            <span class="ex-target">${series} Sets x Meta</span>
+            <h3 class="ex-title">${name}</h3>
+            <span>${seriesCount} Séries</span>
         </div>
-        <span class="rpe-suggest">EST. 1RM: <span id="1rm-${id}">-</span> | <span id="stat-${id}">-</span></span>
+        <span class="rpe-suggest">1RM: <span id="rm-${exerciseId}">-</span> | <span id="status-${exerciseId}">-</span></span>
         <div class="series-grid header-grid">
             <span>SET</span><span>KG</span><span>REPS</span><span>RPE</span>
         </div>
         ${rowsHtml}`;
 
     container.appendChild(card);
-    updateSuggests(id);
-}
+    syncState(exerciseId);
+};
 
-function updateSuggests(id) {
-    const card = document.querySelector(`[data-ex-id="${id}"]`);
+/* 4. MOTOR DE ESTADO E 1RM */
+const syncState = (id) => {
+    const card = document.querySelector(`[data-id="${id}"]`);
     if (!card) return;
-    const inputs = card.querySelectorAll("input"), nome = card.getAttribute("data-ex-name");
-    let maxRM = 0, lastRpe = 0;
+    const inputs = card.querySelectorAll("input");
+    const name = card.getAttribute("data-name");
+    let topRM = 0;
+    let rpeVal = 0;
 
     for (let i = 0; i < inputs.length; i += 3) {
         const k = parseFloat(inputs[i].value) || 0;
         const r = parseFloat(inputs[i+1].value) || 0;
         const rp = parseFloat(inputs[i+2].value) || 0;
+        
         if (k > 0 && r > 0) {
             inputs[i].parentElement.classList.add("filled");
             inputs[i+1].parentElement.classList.add("filled");
-            const rm = k * (1 + r / 30);
-            if (rm > maxRM) { maxRM = rm; lastRpe = rp; }
+            const currentRM = k * (1 + r / 30);
+            if (currentRM > topRM) { topRM = currentRM; rpeVal = rp; }
         } else {
             inputs[i].parentElement.classList.remove("filled");
             inputs[i+1].parentElement.classList.remove("filled");
         }
     }
 
-    const elRM = document.getElementById(`1rm-${id}`), elST = document.getElementById(`stat-${id}`);
-    if (maxRM > 0) {
-        const bestAllTime = prMap.get(nome) || 0;
-        elRM.innerHTML = `${Math.round(maxRM)}kg ${maxRM > (bestAllTime + 0.5) ? '<b style="color:var(--green)">▲PR</b>' : ''}`;
-        elST.textContent = lastRpe >= 9 ? "HARD" : lastRpe >= 7 ? "OPT" : "LIGHT";
-        elST.style.color = lastRpe >= 7 ? "var(--green)" : "var(--orange)";
+    const rmDisplay = document.getElementById(`rm-${id}`);
+    const statusDisplay = document.getElementById(`status-${id}`);
+    if (topRM > 0) {
+        const historyMax = prCache.get(name) || 0;
+        rmDisplay.innerHTML = `${Math.round(topRM)}kg ${topRM > (historyMax + 0.1) ? '<b style="color:var(--accent-green)">▲PR</b>' : ''}`;
+        statusDisplay.textContent = rpeVal >= 9 ? "HARD" : "OPT";
+        statusDisplay.style.color = rpeVal >= 7 ? "var(--accent-green)" : "var(--orange)";
     }
-    salvarRascunho();
-}
+    saveDraft();
+};
 
-/* --------------------------------------------------------------------------
-   3. TIMER ENGINE
-   -------------------------------------------------------------------------- */
-
-let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function setT(s, btn) {
-    if (isRunning) return;
-    timeLeft = baseTime = s;
-    updateTimerDisplay();
-    document.querySelectorAll(".btn-timer-opt").forEach(x => x.classList.remove("active"));
+/* 5. TIMER CONTROLLER */
+const setT = (s, btn) => {
+    if (activeTimer) return;
+    secondsLeft = baseSeconds = s;
+    updateTimerUI();
+    document.querySelectorAll(".btn-timer-opt").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-}
+};
 
-function updateTimerDisplay() {
-    const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
-    document.getElementById("timerDisplay").innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-}
+const updateTimerUI = () => {
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    document.getElementById("timerDisplay").textContent = `0${m}:${s < 10 ? '0' : ''}${s}`;
+};
 
-function toggleT() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+const toggleT = () => {
     const btn = document.getElementById("ctrlBtn");
-    if (isRunning) {
-        clearInterval(timerInt); isRunning = false;
-        btn.innerText = "START REST"; btn.style.background = "var(--accent-green)";
+    if (activeTimer) {
+        clearInterval(activeTimer);
+        activeTimer = null;
+        btn.textContent = "START REST";
+        btn.style.background = "var(--accent-green)";
     } else {
-        isRunning = true; btn.innerText = "PAUSE"; btn.style.background = "var(--orange)";
-        timerInt = setInterval(() => {
-            if (timeLeft > 0) { timeLeft--; updateTimerDisplay(); }
-            else { 
-                clearInterval(timerInt); isRunning = false;
-                new Audio('data:audio/wav;base64,UklGRl9vT1...').play().catch(()=>{}); // Placeholder som curto
-                btn.innerText = "START REST"; timeLeft = baseTime; updateTimerDisplay();
+        btn.textContent = "PAUSE";
+        btn.style.background = "var(--orange)";
+        activeTimer = setInterval(() => {
+            if (secondsLeft > 0) {
+                secondsLeft--;
+                updateTimerUI();
+            } else {
+                clearInterval(activeTimer);
+                activeTimer = null;
+                btn.textContent = "START REST";
+                secondsLeft = baseSeconds;
+                updateTimerUI();
+                if (window.navigator.vibrate) window.navigator.vibrate([200, 100, 200]);
             }
         }, 1000);
     }
-}
+};
 
-function resetT() {
-    clearInterval(timerInt); isRunning = false;
-    timeLeft = baseTime; updateTimerDisplay();
-    document.getElementById("ctrlBtn").innerText = "START REST";
-}
+const resetT = () => {
+    clearInterval(activeTimer);
+    activeTimer = null;
+    secondsLeft = baseSeconds;
+    updateTimerUI();
+    document.getElementById("ctrlBtn").textContent = "START REST";
+};
 
-/* --------------------------------------------------------------------------
-   4. PERSISTÊNCIA & ESTADO
-   -------------------------------------------------------------------------- */
-
-function salvarRascunho() {
+/* 6. PERSISTÊNCIA */
+const saveDraft = () => {
     const state = {
         sections: [{
             cards: Array.from(document.querySelectorAll(".exercise-card")).map(c => ({
-                name: c.getAttribute("data-ex-name"),
+                name: c.getAttribute("data-name"),
                 values: Array.from(c.querySelectorAll(".series-grid:not(.header-grid)")).map(r => {
                     const i = r.querySelectorAll("input");
                     return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
@@ -203,32 +199,27 @@ function salvarRascunho() {
             }))
         }]
     };
-    localStorage.setItem(STORAGE.draft, JSON.stringify(state));
-}
+    localStorage.setItem(STORAGE_KEYS.draft, JSON.stringify(state));
+};
 
-function salvarTreino() {
-    const rascunho = localStorage.getItem(STORAGE.draft);
-    if (!rascunho) return;
-    const hist = JSON.parse(localStorage.getItem(STORAGE.history) || "[]");
-    hist.unshift({ date: new Date().toISOString(), state: JSON.parse(rascunho) });
-    localStorage.setItem(STORAGE.history, JSON.stringify(hist.slice(0, STORAGE.max)));
+const salvarTreino = () => {
+    const draft = JSON.parse(localStorage.getItem(STORAGE_KEYS.draft));
+    if (!draft) return;
+    const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]");
+    history.unshift({ date: new Date().toISOString(), state: draft });
+    localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(history.slice(0, STORAGE_KEYS.max_history)));
     buildPRCache();
-    alert("✅ SESSÃO ARQUIVADA!");
-}
+    alert("SESSÃO SALVA");
+};
 
-/* --------------------------------------------------------------------------
-   5. INICIALIZAÇÃO ABSOLUTA
-   -------------------------------------------------------------------------- */
-
+/* 7. INITIALIZATION */
 window.onload = () => {
-    document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
     buildPRCache();
-    
-    const salvo = localStorage.getItem(STORAGE.draft);
-    if (salvo) {
-        const st = JSON.parse(salvo);
-        st.sections[0].cards.forEach(c => criarCard(c.name, c.values.length, c.values));
+    const draft = JSON.parse(localStorage.getItem(STORAGE_KEYS.draft));
+    if (draft && draft.sections) {
+        draft.sections[0].cards.forEach(c => renderCard(c.name, c.values.length, c.values));
     } else {
-        ["Supino", "Puxada", "Agachamento"].forEach(n => criarCard(n));
+        ["Supino Inclinado", "Puxada Aberta", "Agachamento Livre"].forEach(ex => renderCard(ex));
     }
+    document.getElementById("displayDate").textContent = new Date().toLocaleDateString("pt-BR");
 };
