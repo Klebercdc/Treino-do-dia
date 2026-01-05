@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN PRO - Gestural UI</title>
+    <title>TITAN PRO - Clean Layout</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -40,7 +40,6 @@
 
       /* TABS / PILLS */
       .nav-pills { display:flex; gap:8px; padding:10px; background:var(--bg); overflow-x:auto; border-bottom:1px solid #2d3748; }
-      /* MUDANÇA: Padding ajustado e sem espaço para o X */
       .pill { flex:none; padding:12px 20px; border-radius:8px; background:#1a202c; font-weight:bold; font-size:.75rem; border:1px solid #2d3748; cursor:pointer; color:#a0aec0; position:relative; transition: transform 0.1s; }
       .pill:active { transform: scale(0.95); }
       .pill.active { background:var(--blue); border-color:var(--blue); color:#fff; }
@@ -49,9 +48,8 @@
       /* EXERCISES */
       .section { display:none; }
       .section.active { display:block; }
-      /* MUDANÇA: User select none para facilitar o Long Press sem selecionar texto */
       .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; animation:fadeIn .3s ease; position:relative; transition: background 0.2s; }
-      .exercise-card:active { background:#232d3f; } /* Feedback visual ao tocar */
+      .exercise-card:active { background:#232d3f; }
       
       .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration:underline dotted; cursor:pointer; }
       .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
@@ -203,44 +201,44 @@
 
     <script>
       /* =========================================
-         1. PERIODIZAÇÃO
+         1. PERIODIZAÇÃO (CLEAN NAMES)
          ========================================= */
       const TREINOS_PRONTOS = {
         "3": {
             "hipertrofia": [
-                { nome: "Push (Empurrar)", exs: ["Supino Inclinado Halter", "Supino Reto Barra", "Desenvolvimento Máquina", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
-                { nome: "Pull (Puxar)", exs: ["Puxada Alta Aberta", "Remada Curvada", "Remada Baixa Triângulo", "Face Pull", "Rosca Direta", "Rosca Scott"] },
-                { nome: "Legs (Pernas)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff Halter", "Panturrilha Sentado"] }
+                { nome: "Treino A", exs: ["Supino Inclinado Halter", "Supino Reto Barra", "Desenvolvimento Máquina", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
+                { nome: "Treino B", exs: ["Puxada Alta Aberta", "Remada Curvada", "Remada Baixa Triângulo", "Face Pull", "Rosca Direta", "Rosca Scott"] },
+                { nome: "Treino C", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff Halter", "Panturrilha Sentado"] }
             ],
             "forca": [
-                { nome: "Push (Força)", exs: ["Supino Reto (Foco Carga)", "Desenvolvimento Militar", "Supino Fechado", "Paralelas"] },
-                { nome: "Pull (Força)", exs: ["Levantamento Terra", "Remada Pendlay", "Barra Fixa (com peso)", "Rosca Martelo"] },
-                { nome: "Legs (Força)", exs: ["Agachamento Livre (Low Bar)", "Agachamento Frontal", "Stiff Barra", "Panturrilha em Pé"] }
+                { nome: "Treino A", exs: ["Supino Reto (Foco Carga)", "Desenvolvimento Militar", "Supino Fechado", "Paralelas"] },
+                { nome: "Treino B", exs: ["Levantamento Terra", "Remada Pendlay", "Barra Fixa (com peso)", "Rosca Martelo"] },
+                { nome: "Treino C", exs: ["Agachamento Livre (Low Bar)", "Agachamento Frontal", "Stiff Barra", "Panturrilha em Pé"] }
             ],
             "resistencia": [
-                { nome: "Full Body 1", exs: ["Agachamento Taça", "Flexão de Braço", "Remada Invertida", "Abdominal Supra", "Polichinelo"] },
-                { nome: "Full Body 2", exs: ["Afundo", "Desenvolvimento Halter", "Puxada Alta", "Prancha", "Burpees"] },
-                { nome: "Full Body 3", exs: ["Leg Press", "Supino Máquina", "Rosca Direta", "Tríceps Banco", "Corrida Estacionária"] }
+                { nome: "Treino A", exs: ["Agachamento Taça", "Flexão de Braço", "Remada Invertida", "Abdominal Supra", "Polichinelo"] },
+                { nome: "Treino B", exs: ["Afundo", "Desenvolvimento Halter", "Puxada Alta", "Prancha", "Burpees"] },
+                { nome: "Treino C", exs: ["Leg Press", "Supino Máquina", "Rosca Direta", "Tríceps Banco", "Corrida Estacionária"] }
             ]
         },
         "4": {
             "hipertrofia": [
-                { nome: "Upper A", exs: ["Supino Inclinado", "Remada Curvada", "Voador", "Puxada Alta", "Elevação Lateral", "Rosca Direta"] },
-                { nome: "Lower A", exs: ["Agachamento Livre", "Leg Press", "Extensora", "Passada", "Panturrilha em Pé"] },
-                { nome: "Upper B", exs: ["Desenvolvimento", "Barra Fixa", "Elevação Lateral Polia", "Tríceps Corda", "Rosca Scott", "Face Pull"] },
-                { nome: "Lower B", exs: ["Levantamento Terra", "Mesa Flexora", "Stiff", "Cadeira Abdutora", "Panturrilha Sentado"] }
+                { nome: "Treino A", exs: ["Supino Inclinado", "Remada Curvada", "Voador", "Puxada Alta", "Elevação Lateral", "Rosca Direta"] },
+                { nome: "Treino B", exs: ["Agachamento Livre", "Leg Press", "Extensora", "Passada", "Panturrilha em Pé"] },
+                { nome: "Treino C", exs: ["Desenvolvimento", "Barra Fixa", "Elevação Lateral Polia", "Tríceps Corda", "Rosca Scott", "Face Pull"] },
+                { nome: "Treino D", exs: ["Levantamento Terra", "Mesa Flexora", "Stiff", "Cadeira Abdutora", "Panturrilha Sentado"] }
             ],
             "forca": [
-                { nome: "Upper Press", exs: ["Supino Reto (Pausa)", "Supino Inclinado", "Desenvolvimento Militar", "Tríceps Testa"] },
-                { nome: "Lower Squat", exs: ["Agachamento Livre", "Agachamento Pausado", "Extensora Unilateral", "Abdominal Roda"] },
-                { nome: "Upper Pull", exs: ["Remada Curvada", "Barra Fixa (Carga)", "Remada Unilateral", "Rosca Martelo Pesada"] },
-                { nome: "Lower Deadlift", exs: ["Levantamento Terra", "Stiff", "Leg Press Pesado", "Prancha com Peso"] }
+                { nome: "Treino A", exs: ["Supino Reto (Pausa)", "Supino Inclinado", "Desenvolvimento Militar", "Tríceps Testa"] },
+                { nome: "Treino B", exs: ["Agachamento Livre", "Agachamento Pausado", "Extensora Unilateral", "Abdominal Roda"] },
+                { nome: "Treino C", exs: ["Remada Curvada", "Barra Fixa (Carga)", "Remada Unilateral", "Rosca Martelo Pesada"] },
+                { nome: "Treino D", exs: ["Levantamento Terra", "Stiff", "Leg Press Pesado", "Prancha com Peso"] }
             ]
         }
       };
 
       const STORAGE = Object.freeze({
-        draftKey: "titanpro_draft_v5", 
+        draftKey: "titanpro_draft_v6", // New version to reset pills
         historyKey: "titanpro_history_v4",
         csvTplKey: "titanpro_csv_templates_v1",
         maxHistory: 80,
@@ -275,32 +273,27 @@
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); document.getElementById("ctrlBtn").innerText = "INICIAR"; document.getElementById("ctrlBtn").style.background = "var(--green)"; }
 
       /* =========================================
-         3. GERAÇÃO DE PROTOCOLO (LONG PRESS & LABELS)
+         3. GERAÇÃO DE PROTOCOLO (LONG PRESS & CLEAN LABELS)
          ========================================= */
       let currentExId = null;
       let isAddingNew = false;
-      let pressTimer = null; // Timer para o long press
+      let pressTimer = null;
 
-      // Helper para Long Press
       function addLongPressListener(el, callback) {
         const start = (e) => {
-          if(e.target.tagName === 'INPUT') return; // Ignora inputs
+          if(e.target.tagName === 'INPUT') return;
           pressTimer = setTimeout(() => {
-             // Bloqueia o click subsequente
              el.setAttribute("data-long-pressed", "true");
              callback();
-          }, 800); // 800ms para ativar
+          }, 800); 
         };
         const end = () => { clearTimeout(pressTimer); };
-        
         el.addEventListener("mousedown", start);
         el.addEventListener("touchstart", start, {passive: true});
         el.addEventListener("mouseup", end);
         el.addEventListener("mouseleave", end);
         el.addEventListener("touchend", end);
         el.addEventListener("touchcancel", end);
-        
-        // Bloqueia o menu de contexto nativo
         el.addEventListener("contextmenu", e => { e.preventDefault(); return false; });
       }
 
@@ -316,13 +309,9 @@
 
         if (preset) {
            preset.forEach((treino, i) => {
-             // LÓGICA DE NOME: Sempre "TREINO X"
-             let cleanName = treino.nome;
-             // Remove "Treino" se já existir para não duplicar, depois adiciona padrão
-             cleanName = cleanName.replace(/^Treino\s+/i, ""); 
-             // Se tiver parenteses, mantem, se for só letra, ok.
-             // Ex: "A (Push)" vira "TREINO A (Push)"
-             const labelFinal = `TREINO ${cleanName}`; 
+             // LÓGICA DE RÓTULO LIMPO: Apenas TREINO + LETRA
+             const letra = String.fromCharCode(65 + i); // 0->A, 1->B...
+             const labelFinal = `TREINO ${letra}`; 
 
              nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">${labelFinal}</div>`;
              
@@ -363,7 +352,6 @@
         card.setAttribute("data-ex-sets", String(sets));
         card.setAttribute("data-ex-meta", meta);
 
-        // Adiciona funcionalidade Long Press para excluir
         addLongPressListener(card, () => {
            if(confirm(`Excluir o exercício "${nome}"?`)) {
                card.remove();
@@ -384,7 +372,6 @@
             </div>`;
         }).join("");
 
-        // Removido o <span class="remove-ex">
         card.innerHTML = `
           <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
           <span class="ex-target">${sets} Sets x ${meta}</span>
@@ -516,11 +503,10 @@
       function selecionar(n) { if (isAddingNew) { const active = document.querySelector(".section.active"); if (active) criarCard(n, active.id); } else { const el = document.getElementById(currentExId); if (el) { el.innerText = n; el.closest(".exercise-card").setAttribute("data-ex-name", n); scheduleDraftSave(); } } document.getElementById("modalLib").close(); }
       function adicionarManual() { const val = document.getElementById("manualName").value; if (val) { selecionar(val); document.getElementById("manualName").value = ""; } }
 
-      // Modificado para lidar com o click vs long press
       function tabClick(idx, element) {
         if (element.getAttribute("data-long-pressed") === "true") {
             element.removeAttribute("data-long-pressed");
-            return; // Foi long press, ignora a troca de aba
+            return;
         }
         document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
         document.getElementById(`sec${idx}`).classList.add("active");
@@ -530,19 +516,27 @@
 
       function abrirCSVModal() { document.getElementById("csvTextarea").value = ""; hideModelosCSV(); document.getElementById("modalCSV").showModal(); }
       function normalizeTreinoKey(raw) { return String(raw || "").trim().replace(/\s+/g, " ") || null; }
-      function treinoLabel(key) { 
-          const k = String(key || "").trim(); 
-          // Força prefixo TREINO se não tiver
+      
+      // FUNÇÃO AJUSTADA PARA FORÇAR "TREINO X"
+      function treinoLabel(key, idx) { 
+          // Se passarmos o índice, podemos garantir A, B, C
+          if (typeof idx !== 'undefined') {
+              return `TREINO ${String.fromCharCode(65 + idx)}`;
+          }
+          const k = String(key || "").trim();
           return k.toUpperCase().startsWith("TREINO") ? k.toUpperCase() : `TREINO ${k.toUpperCase()}`; 
       }
       
       function splitCSVLine(line, delim) { const out = []; let cur = ""; let inQuotes = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (inQuotes && line[i+1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; } } else if (!inQuotes && ch === delim) { out.push(cur.trim()); cur = ""; } else { cur += ch; } } out.push(cur.trim()); return out; }
       function detectDelimiter(headerLine) { const cComma = (headerLine.match(/,/g)||[]).length, cSemi = (headerLine.match(/;/g)||[]).length, cTab = (headerLine.match(/\t/g)||[]).length; return (cTab >= cSemi && cTab >= cComma) ? "\t" : (cSemi >= cComma ? ";" : ","); }
+      
       function buildTabsFromGrouped(grouped, order) {
         const nav = document.getElementById("nav"); const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
         order.slice(0, 6).forEach((key, idx) => {
-          nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${treinoLabel(key)}</div>`;
+          // Usa o índice para forçar A, B, C na importação também
+          const label = treinoLabel(key, idx); 
+          nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${label}</div>`;
           const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`; sec.setAttribute("data-treino-key", key); cont.appendChild(sec);
           (grouped[key]||[]).forEach(ex => criarCard(ex.exercicio, sec.id, ex.series, ex.reps));
         });
@@ -567,7 +561,7 @@
           });
           return { treinoKey, cards };
         });
-        return { v: 5, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
+        return { v: 6, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
       }
 
       function loadState(state) {
@@ -576,7 +570,8 @@
         const nav = document.getElementById("nav"); const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
         state.sections.slice(0,6).forEach((secData, idx) => {
-           const label = (state.pills && state.pills[idx]) ? state.pills[idx].label : treinoLabel(secData.treinoKey);
+           // Força o label limpo ao carregar
+           const label = `TREINO ${String.fromCharCode(65 + idx)}`;
            nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${label}</div>`;
            const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`; sec.setAttribute("data-treino-key", secData.treinoKey); cont.appendChild(sec);
            (secData.cards||[]).forEach(c => criarCard(c.name, sec.id, c.sets, c.meta.split("Sets x")[1]?.trim(), null, c.values));
@@ -596,15 +591,14 @@
       function adicionarTreino() {
         const st = serializeCurrentState();
         if(st.sections.length >= 7) { alert("Máximo atingido."); return; }
-        const nome = prompt("Nome (ex: A, B, C):"); if(!nome) return;
-        const fullName = `TREINO ${nome.toUpperCase()}`;
-        st.sections.push({ treinoKey: nome, cards: [] });
+        const nextLetter = String.fromCharCode(65 + st.sections.length);
+        const fullName = `TREINO ${nextLetter}`;
+        st.sections.push({ treinoKey: `Treino ${nextLetter}`, cards: [] });
         st.pills.push({ idx: st.pills.length, label: fullName });
         st.activeIdx = st.sections.length - 1; loadState(st); scheduleDraftSave();
       }
       
       function excluirTreinoPorIdx(idx) {
-        // Agora chamado via Long Press
         if(!confirm(`Excluir ${document.getElementById("p"+idx).textContent}?`)) return;
         const st = serializeCurrentState();
         if(st.sections.length <= 1) { alert("Mantenha 1 treino."); return; }
@@ -614,9 +608,7 @@
 
       function addPillControls() {
         const nav = document.getElementById("nav");
-        // Remove qualquer botão antigo
         nav.querySelectorAll(".add-pill").forEach(e => e.remove());
-        // Adiciona Long Press nas pills existentes
         nav.querySelectorAll(".pill").forEach((p, i) => {
           addLongPressListener(p, () => {
              excluirTreinoPorIdx(i);
