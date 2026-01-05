@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN PRO - Backup Master</title>
+    <title>TITAN PRO - Master Edition</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -14,54 +14,58 @@
 
     <style>
       :root { --bg:#0b1220; --card:#161e2e; --blue:#3182ce; --text:#f7fafc; --orange:#f6ad55; --green:#38b2ac; --red:#e53e3e; }
-      body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; user-select:none; }
+      body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; user-select:none; -webkit-user-select:none; }
 
-      /* HEADER */
       .top-header { padding:15px; background:var(--card); border-bottom:1px solid #2d3748; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
       .date-badge { font-size:.8rem; color:var(--orange); font-weight:bold; background:#0b1220; padding:4px 10px; border-radius:15px; }
-      .logo-img { height:40px; filter:drop-shadow(0 0 5px var(--blue)); }
+      .header-left { display:flex; align-items:center; gap:12px; }
+      .logo-img { height:45px; filter:drop-shadow(0 0 8px rgba(49,130,206,.6)); }
 
-      /* TIMER */
       .timer-area { background:#1a202c; padding:12px; border-bottom:2px solid var(--blue); text-align:center; }
-      #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; }
-      .timer-btns { display:flex; gap:6px; justify-content:center; margin-top:5px; }
-      .btn-t { background:#2d3748; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; cursor:pointer; }
+      #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; margin-bottom:8px; }
+      .timer-btns { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
+      .btn-t { background:#2d3748; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-size:.75rem; cursor:pointer; font-weight:bold; }
       .btn-t.active { background:var(--blue); }
-      .btn-ctrl { background:var(--green); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; }
+      .btn-ctrl { background:var(--green); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:.8rem; }
 
-      /* PILLS & CARDS */
-      .nav-pills { display:flex; gap:8px; padding:10px; overflow-x:auto; background:var(--bg); }
-      .pill { flex:none; padding:12px 20px; border-radius:8px; background:#1a202c; font-weight:bold; font-size:.75rem; color:#a0aec0; border:1px solid #2d3748; }
-      .pill.active { background:var(--blue); color:#fff; }
+      .setup-panel { background:var(--card); padding:20px; border-bottom:3px solid var(--blue); display:block; }
+      .field { margin-bottom:15px; }
+      .field label { font-size:.7rem; color:#a0aec0; display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase; }
+      .field select { width:100%; padding:12px; background:#0b1220; color:#fff; border:1px solid var(--blue); border-radius:8px; font-weight:bold; }
 
-      .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; }
-      .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration: underline dotted; }
+      .nav-pills { display:flex; gap:8px; padding:10px; background:var(--bg); overflow-x:auto; border-bottom:1px solid #2d3748; }
+      .pill { flex:none; padding:12px 20px; border-radius:8px; background:#1a202c; font-weight:bold; font-size:.75rem; border:1px solid #2d3748; cursor:pointer; color:#a0aec0; transition: transform 0.1s; }
+      .pill.active { background:var(--blue); border-color:var(--blue); color:#fff; }
+      .pill.add-pill { border:2px dashed var(--blue); color:var(--blue); }
 
-      .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:6px; }
-      .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:6px 0; }
+      .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; animation:fadeIn .3s ease; position:relative; }
+      .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration:underline dotted; cursor:pointer; }
+      .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
+      .rpe-suggest { display:block; font-size:0.7rem; color:var(--green); margin-bottom:10px; font-family:monospace; }
+
+      .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
+      .header-grid { text-align:center; font-size:.6rem; color:#718096; font-weight:bold; }
+      .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:8px 0; }
       .input-box.filled { border-color: var(--green); }
       .input-box input { background:transparent; border:none; color:#fff; width:100%; text-align:center; font-size:1.1rem; outline:none; font-weight:bold; }
-      .input-box input::placeholder { color: rgba(255,255,255,0.1); }
+      .input-box input::placeholder { color: rgba(255,255,255,0.1); font-weight: normal; }
 
-      /* FOOTER & MODALS */
-      .footer-actions { padding:15px; display:flex; gap:10px; flex-wrap:wrap; }
-      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; font-size:.75rem; text-transform:uppercase; text-align:center;}
+      .footer-actions { padding:20px 10px 40px 10px; display:flex; gap:12px; background:transparent; flex-wrap:wrap;}
+      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; text-align:center; font-size:.75rem; text-transform:uppercase; }
       .btn-save { background:var(--green); color:#fff; }
       .btn-config { background:#2d3748; color:var(--blue); border:1px solid var(--blue); }
-      
-      /* Alerta de Backup no botão */
-      .backup-alert { border: 2px solid var(--orange) !important; animation: pulse 2s infinite; }
-      @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(246, 173, 85, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(246, 173, 85, 0); } 100% { box-shadow: 0 0 0 0px rgba(246, 173, 85, 0); } }
 
-      dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:92%; max-width:500px; padding:20px; }
-      dialog::backdrop { background: rgba(0,0,0,0.85); }
-      #csvTextarea { width:100%; height:150px; background:#0b1220; color:white; border:1px solid var(--blue); border-radius:8px; padding:10px; font-family:monospace; }
+      dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:90%; max-width:500px; padding:20px; }
+      dialog::backdrop { background: rgba(0,0,0,0.8); }
+      #csvTextarea { width:100%; height:180px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; font-size:.8rem; margin-bottom:12px; }
+      
+      @keyframes fadeIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
     </style>
   </head>
 
   <body>
     <div class="top-header">
-      <div style="display:flex; align-items:center; gap:10px;"><img src="Logo.png" class="logo-img"> <h1 style="margin:0; font-size:1.1rem;">TITAN <span style="color:var(--blue)">PRO</span></h1></div>
+      <div class="header-left"><img src="Logo.png" alt="Logo" class="logo-img" /><h1 style="margin:0; font-size:1.1rem; color:var(--blue);">TITAN <span style="color:#fff">PRO</span></h1></div>
       <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
 
@@ -78,110 +82,155 @@
       </div>
     </div>
 
+    <div class="setup-panel" id="setupPanel">
+      <div class="field"><label>Frequência Semanal</label><select id="freq" onchange="gerarProtocolo()"><option value="3">3 Dias (ABC)</option><option value="4">4 Dias (Upper/Lower)</option><option value="5">5 Dias (ABCDE)</option></select></div>
+      <button class="btn btn-config" onclick="limparApenasValores()" style="width:100%; border:1px solid var(--red); color:var(--red); margin-bottom:10px;">♻️ LIMPAR CARGAS</button>
+      <button class="btn btn-save" onclick="closeConfig()">ABRIR TREINO</button>
+    </div>
+
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
+    <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
 
     <div class="footer-actions">
+      <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
       <button class="btn btn-config" onclick="showAnalytics()">📈 EVOLUÇÃO</button>
       <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
-      <button id="btnArquivos" class="btn btn-config" onclick="abrirCSVModal()" style="background:var(--orange); color:white; border:none;">📊 ARQUIVOS</button>
+      <button class="btn btn-config" onclick="abrirCSVModal()" style="background:var(--orange); color:white; border:none;">📊 ARQUIVOS</button>
+      <button class="btn btn-config" onclick="verHistorico()">📜 HIST</button>
     </div>
 
     <dialog id="modalCSV">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Backup & Importação</h3>
-      <p style="font-size: 0.7rem; color: #a0aec0; margin-bottom: 10px;">Cole o texto de um backup para restaurar ou use o botão para salvar seu progresso.</p>
-      <textarea id="csvTextarea" placeholder="Conteúdo do Backup JSON ou CSV..."></textarea>
-      <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-save" onclick="fazerBackup()">BAIXAR BACKUP</button>
-          <button class="btn btn-config" style="background: var(--blue); color:white" onclick="restaurarBackup()">RESTAURAR</button>
-        </div>
-        <button class="btn" onclick="document.getElementById('modalCSV').close()" style="background:#2d3748; color:white;">FECHAR</button>
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Arquivos & Modelos</h3>
+      <textarea id="csvTextarea" placeholder="Cole CSV ou texto extraído..."></textarea>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <label class="btn btn-config" style="background:var(--blue); color:white; flex:1">📄 PDF<input type="file" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"></label>
+        <button class="btn btn-save" onclick="importarCSV()">IMPORTAR</button>
+        <button class="btn btn-config" onclick="fazerBackup()">☁️ BACKUP</button>
+        <button class="btn btn-config" onclick="salvarModelo()" style="background:var(--green); color:white">💾 SALVAR MOD</button>
+        <button class="btn btn-config" onclick="verModelos()">📚 MODELOS</button>
+        <button class="btn" onclick="document.getElementById('modalCSV').close()">✕</button>
       </div>
+      <div id="modelosLista" style="margin-top:15px; max-height:150px; overflow-y:auto; display:none; border-top:1px solid #2d3748; padding-top:10px;"></div>
+    </dialog>
+
+    <dialog id="modalHIST">
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Histórico</h3>
+      <div id="histList" style="max-height:300px; overflow-y:auto;"></div>
+      <button class="btn" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:10px;">FECHAR</button>
+    </dialog>
+
+    <dialog id="modalLib">
+      <h3 id="libHeader" style="margin:0; color:var(--orange)">Exercícios</h3>
+      <div id="libContent" style="max-height:300px; overflow-y:auto; margin:15px 0;"></div>
+      <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%">FECHAR</button>
     </dialog>
 
     <script>
-      const STORAGE = { draft: "titan_v10_draft", hist: "titan_v10_hist", lastBackup: "titan_v10_lastback" };
+      const STORAGE = { draft: "titan_m_draft", hist: "titan_m_hist", mods: "titan_m_mods" };
+      const MUSCLE_MAP = { "Peito": ["Supino", "Voador", "Crossover"], "Costas": ["Puxada", "Remada", "Terra", "Barra"], "Pernas": ["Agachamento", "Leg", "Extensora", "Flexora", "Stiff"], "Ombros": ["Desenvolvimento", "Elevação"], "Braços": ["Rosca", "Tríceps"] };
 
-      /* --- LÓGICA DE BACKUP --- */
-      function abrirCSVModal() { 
-        document.getElementById("modalCSV").showModal(); 
-      }
-
-      function fazerBackup() {
-        const data = {
-          draft: localStorage.getItem(STORAGE.draft),
-          hist: localStorage.getItem(STORAGE.hist),
-          backupDate: new Date().toISOString()
-        };
-        const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `TITAN_PRO_DATA_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        
-        localStorage.setItem(STORAGE.lastBackup, new Date().toISOString());
-        checkBackupStatus();
-        alert("Backup concluído! Guarde este arquivo em local seguro.");
-      }
-
-      function restaurarBackup() {
-        const text = document.getElementById("csvTextarea").value;
-        if(!text) return alert("Cole o conteúdo do arquivo de backup.");
-        try {
-          const data = JSON.parse(text);
-          if(data.draft) localStorage.setItem(STORAGE.draft, data.draft);
-          if(data.hist) localStorage.setItem(STORAGE.hist, data.hist);
-          alert("Dados restaurados com sucesso! O app irá recarregar.");
-          location.reload();
-        } catch(e) {
-          alert("Erro: Formato de backup inválido.");
-        }
-      }
-
-      function checkBackupStatus() {
-        const last = localStorage.getItem(STORAGE.lastBackup);
-        const btn = document.getElementById("btnArquivos");
-        if(!last) {
-          btn.classList.add("backup-alert");
-          return;
-        }
-        const diffDays = (new Date() - new Date(last)) / (1000 * 60 * 60 * 24);
-        if(diffDays > 7) btn.classList.add("backup-alert");
-        else btn.classList.remove("backup-alert");
-      }
-
-      /* --- CORE ENGINE --- */
       let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
+
+      /* TIMER */
       function setT(s, btn) { timeLeft = baseTime = s; updateT(); document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active")); btn.classList.add("active"); }
       function updateT() { const m = Math.floor(timeLeft / 60); const s = timeLeft % 60; document.getElementById("timerDisplay").innerText = `${m}:${s < 10 ? '0' : ''}${s}`; }
       function toggleT() {
         const btn = document.getElementById("ctrlBtn");
         if (isRunning) { clearInterval(timerInt); isRunning = false; btn.innerText = "INICIAR"; } 
-        else { isRunning = true; btn.innerText = "PAUSAR"; timerInt = setInterval(() => { if (timeLeft > 0) { timeLeft--; updateT(); } else { clearInterval(timerInt); isRunning = false; btn.innerText = "INICIAR"; timeLeft = baseTime; updateT(); } }, 1000); }
+        else { isRunning = true; btn.innerText = "PAUSAR"; timerInt = setInterval(() => { if (timeLeft > 0) { timeLeft--; updateT(); } else { clearInterval(timerInt); isRunning = false; playBeep(); btn.innerText = "INICIAR"; timeLeft = baseTime; updateT(); } }, 1000); }
       }
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); }
+      function playBeep() { const a = new AudioContext(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+0.5); }
 
+      /* CORE ENGINE */
       function criarCard(nome, sectionId, values = null) {
         const id = "ex-" + Math.random().toString(36).substr(2, 5);
+        const ghost = getLastValues(nome);
         const card = document.createElement("div");
         card.className = "exercise-card";
         card.setAttribute("data-name", nome);
         let rows = "";
-        for(let s=0; s<4; s++){
+        for(let s=0; s<4; s++) {
           const v = values?.[s] || {kg:"", reps:"", rpe:""};
           rows += `<div class="series-grid"><span style="font-size:.6rem;color:#718096">S${s+1}</span>
-            <div class="input-box ${v.kg?'filled':''}"><input type="number" value="${v.kg}" oninput="saveDraft()"></div>
-            <div class="input-box ${v.reps?'filled':''}"><input type="number" value="${v.reps}" oninput="saveDraft()"></div>
-            <div class="input-box"><input type="number" value="${v.rpe}" oninput="saveDraft()"></div></div>`;
+            <div class="input-box ${v.kg?'filled':''}"><input type="number" placeholder="${ghost?.[s]?.kg||''}" value="${v.kg}" oninput="updateEx('${id}')"></div>
+            <div class="input-box ${v.reps?'filled':''}"><input type="number" placeholder="${ghost?.[s]?.reps||''}" value="${v.reps}" oninput="updateEx('${id}')"></div>
+            <div class="input-box"><input type="number" placeholder="RPE" value="${v.rpe}" oninput="updateEx('${id}')"></div></div>`;
         }
-        card.innerHTML = `<span class="ex-title">${nome}</span><div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>${rows}`;
+        card.innerHTML = `<span class="ex-title" id="${id}" onclick="abrirLib('${id}')">${nome}</span><span class="rpe-suggest" id="res-${id}">1RM: -</span><div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>${rows}`;
         document.getElementById(sectionId).appendChild(card);
+        card.querySelectorAll("input").forEach(i => i.addEventListener("input", saveDraft));
+        addLongPress(card, () => { if(confirm("Excluir exercício?")) { card.remove(); saveDraft(); } });
+        updateEx(id);
       }
 
+      function updateEx(id) {
+        const card = document.getElementById(id).closest(".exercise-card");
+        const inputs = card.querySelectorAll("input");
+        let max1RM = 0;
+        for(let i=0; i<inputs.length; i+=3) {
+          const kg = parseFloat(inputs[i].value) || 0, rp = parseFloat(inputs[i+1].value) || 0;
+          if(kg && rp) { 
+            inputs[i].parentElement.classList.add("filled");
+            const e = kg * (1 + rp/30); if(e > max1RM) max1RM = e;
+          }
+        }
+        const res = document.getElementById(`res-${id}`);
+        if(max1RM > 0) res.innerHTML = `1RM Est: ${Math.round(max1RM)}kg`;
+      }
+
+      /* ARQUIVOS E MODELOS */
+      function abrirCSVModal() { document.getElementById("modalCSV").showModal(); }
+      function fazerBackup() {
+        const b = { draft: localStorage.getItem(STORAGE.draft), hist: localStorage.getItem(STORAGE.hist) };
+        const blob = new Blob([JSON.stringify(b)], {type:"application/json"});
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "TITAN_MASTER_BACKUP.json"; a.click();
+      }
+      function salvarModelo() {
+        const nome = prompt("Nome do modelo:");
+        if(!nome) return;
+        const mods = JSON.parse(localStorage.getItem(STORAGE.mods) || "[]");
+        mods.push({ nome, data: localStorage.getItem(STORAGE.draft) });
+        localStorage.setItem(STORAGE.mods, JSON.stringify(mods));
+        alert("Modelo salvo!");
+      }
+      function verModelos() {
+        const div = document.getElementById("modelosLista");
+        const mods = JSON.parse(localStorage.getItem(STORAGE.mods) || "[]");
+        div.innerHTML = mods.map((m, i) => `<div onclick="carregarMod(${i})" style="padding:10px; border-bottom:1px solid #2d3748; cursor:pointer">${m.nome}</div>`).join("");
+        div.style.display = "block";
+      }
+      function carregarMod(i) {
+        const mods = JSON.parse(localStorage.getItem(STORAGE.mods));
+        localStorage.setItem(STORAGE.draft, mods[i].data);
+        location.reload();
+      }
+      function importarCSV() {
+        const t = document.getElementById("csvTextarea").value;
+        const active = document.querySelector(".section.active");
+        t.split("\n").forEach(l => { if(l.trim()) criarCard(l.split(",")[0].trim(), active.id); });
+        saveDraft(); document.getElementById("modalCSV").close();
+      }
+      async function extrairTextoPDF(input) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = async function() {
+          const pdf = await pdfjsLib.getDocument({data: new Uint8Array(this.result)}).promise;
+          let full = "";
+          for(let i=1; i<=pdf.numPages; i++){
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            full += content.items.map(s => s.str).join(" ") + "\n";
+          }
+          document.getElementById("csvTextarea").value = full;
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      /* AUXILIARES */
       function saveDraft() {
-        const state = { sections: Array.from(document.querySelectorAll(".section")).map(sec => ({
+        const s = { sections: Array.from(document.querySelectorAll(".section")).map(sec => ({
           cards: Array.from(sec.querySelectorAll(".exercise-card")).map(c => ({
             name: c.getAttribute("data-name"),
             values: Array.from(c.querySelectorAll(".series-grid:not(.header-grid)")).map(r => {
@@ -190,7 +239,42 @@
             })
           }))
         }))};
-        localStorage.setItem(STORAGE.draft, JSON.stringify(state));
+        localStorage.setItem(STORAGE.draft, JSON.stringify(s));
+      }
+
+      function getLastValues(name) {
+        const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
+        if(!h[0]) return null;
+        for(let s of h[0].state.sections){
+          const c = s.cards.find(x => x.name === name);
+          if(c) return c.values;
+        }
+        return null;
+      }
+
+      function addLongPress(el, cb) { 
+        let t; 
+        el.onmousedown = el.ontouchstart = () => t = setTimeout(() => { el.setAttribute("data-long", "true"); cb(); }, 800);
+        el.onmouseup = el.ontouchend = () => clearTimeout(t);
+      }
+
+      function tab(i) {
+        document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
+        document.getElementById(`sec${i}`).classList.add("active");
+        document.getElementById(`p${i}`).classList.add("active");
+        saveDraft();
+      }
+
+      function gerarProtocolo() {
+        const cont = document.getElementById("container"); const nav = document.getElementById("nav");
+        cont.innerHTML = ""; nav.innerHTML = "";
+        ["A", "B", "C"].forEach((l, i) => {
+          nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">TREINO ${l}</div>`;
+          const sec = document.createElement("div"); sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`; cont.appendChild(sec);
+          if(i===0) ["Supino", "Crucifixo"].forEach(ex => criarCard(ex, sec.id));
+        });
+        addLongPress(document.querySelector(".pill.active"), () => { if(confirm("Excluir este treino?")) location.reload(); });
+        saveDraft();
       }
 
       function salvarTreino() {
@@ -198,34 +282,48 @@
         const d = JSON.parse(localStorage.getItem(STORAGE.draft));
         const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
         h.unshift({ date: new Date(), state: d });
-        localStorage.setItem(STORAGE.hist, JSON.stringify(h.slice(0,50)));
-        alert("Sessão Salva no Histórico!");
+        localStorage.setItem(STORAGE.hist, JSON.stringify(h.slice(0, 50)));
+        alert("Sessão salva!");
       }
 
-      function gerarProtocolo() {
-        const cont = document.getElementById("container"); const nav = document.getElementById("nav");
-        cont.innerHTML = ""; nav.innerHTML = "";
-        ["A", "B", "C"].forEach((l, i) => {
-          nav.innerHTML += `<div class="pill ${i===0?'active':''}" onclick="tab(${i})">TREINO ${l}</div>`;
-          const sec = document.createElement("div"); sec.id = `sec${i}`; sec.className = `section`;
-          sec.style.display = i===0?"block":"none"; cont.appendChild(sec);
-          if(i===0) ["Supino", "Crucifixo"].forEach(ex => criarCard(ex, sec.id));
-        });
+      function showAnalytics() {
+        const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
+        if(!h.length) return alert("Sem histórico.");
+        const groups = { "Peito": 0, "Costas": 0, "Pernas": 0, "Ombros": 0, "Braços": 0 };
+        h[0].state.sections.forEach(s => s.cards.forEach(c => {
+          for(let g in MUSCLE_MAP) if(MUSCLE_MAP[g].some(m => c.name.includes(m))) groups[g]++;
+        }));
+        const dialog = document.createElement("dialog");
+        dialog.innerHTML = `<canvas id="radarChart"></canvas><button class="btn" onclick="this.parentElement.close(); this.parentElement.remove()">FECHAR</button>`;
+        document.body.appendChild(dialog); dialog.showModal();
+        new Chart(document.getElementById("radarChart"), { type:'radar', data:{ labels:Object.keys(groups), datasets:[{data:Object.values(groups), borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.2)'}] }, options: { scales: { r: { ticks: { display: false } } } }});
       }
 
-      function tab(i) {
-        document.querySelectorAll(".section").forEach(s => s.style.display = "none");
-        document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
-        document.querySelectorAll(".section")[i].style.display = "block";
-        document.querySelectorAll(".pill")[i].classList.add("active");
+      function verHistorico() {
+        const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
+        const list = document.getElementById("histList"); list.innerHTML = h.map(x => `<div style="padding:10px; border-bottom:1px solid #2d3748">${new Date(x.date).toLocaleString()} - Sessão</div>`).join("");
+        document.getElementById("modalHIST").showModal();
       }
 
-      function showAnalytics() { alert("Análise de progresso carregando..."); }
+      function openConfig() { document.getElementById("setupPanel").style.display = "block"; }
+      function closeConfig() { document.getElementById("setupPanel").style.display = "none"; }
+      function limparApenasValores() { document.querySelectorAll("input").forEach(i => i.value = ""); saveDraft(); }
 
       window.onload = () => {
         document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-        gerarProtocolo();
-        checkBackupStatus();
+        const s = localStorage.getItem(STORAGE.draft);
+        if(s) {
+          const st = JSON.parse(s);
+          const cont = document.getElementById("container"); const nav = document.getElementById("nav");
+          cont.innerHTML = ""; nav.innerHTML = "";
+          st.sections.forEach((secData, i) => {
+            nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">TREINO ${String.fromCharCode(65+i)}</div>`;
+            const sec = document.createElement("div"); sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`; cont.appendChild(sec);
+            secData.cards.forEach(c => criarCard(c.name, sec.id, c.values));
+          });
+        } else {
+          gerarProtocolo();
+        }
       };
     </script>
   </body>
