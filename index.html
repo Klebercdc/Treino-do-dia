@@ -7,6 +7,7 @@
     <title>TITAN PRO | Elite Workout</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -23,7 +24,7 @@
             margin: 0; padding-bottom: 100px; -webkit-font-smoothing: antialiased;
         }
 
-        /* HEADER & STATUS */
+        /* HEADER */
         header {
             padding: env(safe-area-inset-top) 20px 15px;
             background: rgba(11, 18, 32, 0.8); backdrop-filter: blur(10px);
@@ -34,315 +35,319 @@
 
         .logo { font-size: 1.4rem; font-weight: 900; letter-spacing: -1px; }
         .logo span { color: var(--blue); }
-        .stats-top { font-size: 0.7rem; font-weight: 700; color: var(--green); text-transform: uppercase; }
+        .sync-badge { font-size: 0.6rem; background: var(--glass); padding: 4px 8px; border-radius: 10px; color: var(--text-dim); }
 
-        /* TIMER BOX */
+        /* DASHBOARD BOX */
         .timer-container {
             margin: 15px; padding: 20px;
             background: linear-gradient(145deg, #1a2436, #161e2e);
             border-radius: 20px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        #timerDisplay { font-size: 3.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
-        .timer-presets { display: flex; justify-content: center; gap: 10px; margin: 15px 0; }
-        .t-btn { 
-            background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text); padding: 8px 15px; border-radius: 10px; font-weight: 600;
-        }
-        .t-btn.active { background: var(--blue); border-color: var(--blue); }
+        #timerDisplay { font-size: 3.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 10px; }
         
         .main-btn {
             width: 100%; padding: 15px; border-radius: 15px; border: none;
-            font-weight: 800; text-transform: uppercase; cursor: pointer;
-            transition: 0.2s;
+            font-weight: 800; text-transform: uppercase; cursor: pointer; transition: 0.2s;
         }
         .btn-green { background: var(--green); color: #052c16; }
 
-        /* NAV PILLS */
-        .nav-scroller {
-            display: flex; gap: 12px; padding: 0 15px 15px;
-            overflow-x: auto; scrollbar-width: none;
-        }
-        .nav-scroller::-webkit-scrollbar { display: none; }
+        /* NAV & IMPORT */
+        .nav-scroller { display: flex; gap: 12px; padding: 0 15px 15px; overflow-x: auto; scrollbar-width: none; }
         .pill {
             flex: none; padding: 10px 25px; border-radius: 25px;
             background: var(--card); color: var(--text-dim);
-            font-weight: 700; font-size: 0.8rem; border: 1px solid transparent;
+            font-weight: 700; font-size: 0.8rem; cursor: pointer;
         }
-        .pill.active { background: var(--blue); color: #fff; box-shadow: 0 4px 15px rgba(49, 130, 206, 0.3); }
+        .pill.active { background: var(--blue); color: #fff; }
 
-        /* EXERCISE CARD */
+        /* CARDS */
         .exercise-card {
             background: var(--card); margin: 0 15px 15px;
-            border-radius: 20px; padding: 20px;
+            border-radius: 20px; padding: 18px;
             border: 1px solid rgba(255,255,255,0.05);
         }
-        .ex-info { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .ex-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
         .ex-name { font-size: 1.1rem; font-weight: 800; color: var(--blue); }
-        .ex-stats { text-align: right; font-size: 0.7rem; color: var(--text-dim); }
-
+        
         .set-row {
-            display: grid; grid-template-columns: 35px 1fr 1fr 1fr 40px;
-            gap: 10px; align-items: center; margin-bottom: 12px;
+            display: grid; grid-template-columns: 30px 1fr 1fr 1fr 40px;
+            gap: 8px; align-items: center; margin-bottom: 8px;
         }
-        .set-label { font-size: 0.75rem; font-weight: 800; color: var(--text-dim); text-align: center; }
         .input-group {
             background: #0b1220; border: 1px solid #2d3748;
-            border-radius: 10px; padding: 10px 5px; position: relative;
+            border-radius: 8px; padding: 8px 4px;
         }
-        .input-group.done { border-color: var(--green); background: rgba(72, 187, 120, 0.05); }
         .input-group input {
             background: transparent; border: none; color: #fff;
             width: 100%; text-align: center; font-size: 1rem; font-weight: 700;
         }
-        .btn-check { color: var(--text-dim); font-size: 1.2rem; border: none; background: none; }
-        .btn-check.active { color: var(--green); }
 
-        /* FOOTER NAV */
+        /* DOCK */
         .dock {
             position: fixed; bottom: 0; width: 100%;
             background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px);
             border-top: 1px solid rgba(255,255,255,0.05);
             display: grid; grid-template-columns: repeat(4, 1fr);
             padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-            z-index: 1000;
         }
         .dock-item {
             background: none; border: none; color: var(--text-dim);
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-            font-size: 0.6rem; font-weight: 700;
+            display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.6rem;
         }
         .dock-item.active { color: var(--blue); }
-        .dock-item i { font-size: 1.2rem; }
 
-        .btn-finish {
-            grid-column: span 1; background: var(--green);
-            color: #052c16; border-radius: 12px; margin: 0 5px;
-        }
-
-        /* UTILS */
-        .hidden { display: none; }
+        /* MODALS */
+        dialog { background: var(--card); color: white; border: 1px solid #2d3748; border-radius: 20px; width: 90%; max-width: 450px; padding: 20px; }
+        dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
+        textarea { width: 100%; background: #0b1220; border: 1px solid #2d3748; color: white; padding: 10px; border-radius: 10px; font-family: monospace; resize: none; }
     </style>
 </head>
 <body>
 
 <header>
     <div class="logo">TITAN <span>PRO</span></div>
-    <div class="stats-top"><i class="fa-solid fa-bolt"></i> <span id="totalVolume">0</span> KG</div>
+    <div class="sync-badge" id="syncStatus">SESSÃO ATIVA</div>
 </header>
 
-<div class="timer-container">
-    <div id="timerDisplay">02:00</div>
-    <div class="timer-presets">
-        <button class="t-btn" onclick="setTimer(60, this)">1m</button>
-        <button class="t-btn active" onclick="setTimer(120, this)">2m</button>
-        <button class="t-btn" onclick="setTimer(180, this)">3m</button>
+<div id="workoutView">
+    <div class="timer-container">
+        <div id="timerDisplay">02:00</div>
+        <button id="timerBtn" class="main-btn btn-green" onclick="toggleTimer()">Iniciar Descanso</button>
     </div>
-    <button id="timerCtrl" class="main-btn btn-green" onclick="toggleTimer()">Iniciar Descanso</button>
+
+    <div class="nav-scroller" id="navPills"></div>
+    <main id="workoutArea"></main>
+    
+    <div style="padding: 0 15px 30px; display: flex; gap: 10px;">
+        <button class="main-btn" style="background: var(--glass); color: var(--blue); flex: 1;" onclick="addExercise()">+ ADD</button>
+        <button class="main-btn" style="background: var(--glass); color: var(--orange); flex: 1;" onclick="openImport()">IMPORTAR</button>
+    </div>
 </div>
 
-<div class="nav-scroller" id="navPills"></div>
-
-<main id="workoutArea"></main>
-
-<div style="padding: 0 15px 30px;">
-    <button class="main-btn" style="background: var(--glass); color: var(--blue); border: 1px dashed var(--blue);" onclick="addExercise()">
-        <i class="fa-solid fa-plus"></i> Adicionar Exercício
-    </button>
+<div id="historyView" style="display:none; padding: 20px;">
+    <h2>Histórico</h2>
+    <canvas id="evolutionChart"></canvas>
+    <div id="historyList"></div>
 </div>
 
 <div class="dock">
-    <button class="dock-item active"><i class="fa-solid fa-dumbbell"></i>Treino</button>
-    <button class="dock-item" onclick="showHistory()"><i class="fa-solid fa-calendar-days"></i>Histórico</button>
-    <button class="dock-item btn-finish" onclick="finishWorkout()">Finalizar</button>
-    <button class="dock-item" onclick="openSettings()"><i class="fa-solid fa-gear"></i>Ajustes</button>
+    <button class="dock-item active" onclick="switchView('workout')"><i class="fa-solid fa-dumbbell"></i>Treino</button>
+    <button class="dock-item" onclick="switchView('history')"><i class="fa-solid fa-chart-line"></i>Evolução</button>
+    <button class="dock-item" onclick="finishWorkout()" style="background: var(--green); border-radius: 10px; color: #052c16; margin: 0 5px;"><i class="fa-solid fa-check"></i>SALVAR</button>
+    <button class="dock-item" onclick="openConfig()"><i class="fa-solid fa-gear"></i>Config</button>
 </div>
 
+<dialog id="modalImport">
+    <h3>Importar Treino</h3>
+    <p style="font-size: 0.7rem; color: var(--text-dim);">Cole seu CSV ou use o leitor de PDF.</p>
+    <textarea id="csvInput" rows="5" placeholder="TREINO,EXERCICIO,SERIES,REPS&#10;A,Supino,4,10"></textarea>
+    <div style="margin-top: 15px; display: flex; gap: 10px;">
+        <label class="main-btn" style="background: var(--blue); text-align: center; font-size: 0.7rem; flex: 1;">
+            📄 LER PDF <input type="file" id="pdfFile" accept=".pdf" style="display:none" onchange="handlePDF(this)">
+        </label>
+        <button class="main-btn btn-green" style="flex: 1;" onclick="processCSV()">IMPORTAR</button>
+    </div>
+    <button class="main-btn" style="margin-top:10px; background:none; color:var(--red);" onclick="this.closest('dialog').close()">CANCELAR</button>
+</dialog>
+
+<dialog id="modalConfig">
+    <h3>Configurações Profissionais</h3>
+    <div style="margin-bottom: 20px;">
+        <label style="font-size: 0.8rem; color: var(--text-dim);">TREINOS PRÉ-DEFINIDOS</label>
+        <button class="main-btn" style="background: var(--glass); margin-top: 5px;" onclick="loadPreset('ABC')">CARREGAR ABC (Hipertrofia)</button>
+        <button class="main-btn" style="background: var(--glass); margin-top: 5px;" onclick="loadPreset('FORCA')">CARREGAR UPPER/LOWER (Força)</button>
+    </div>
+    <button class="main-btn" style="background: var(--red);" onclick="clearAllData()">APAGAR TODOS OS DADOS</button>
+    <button class="main-btn" style="margin-top:10px; background:none;" onclick="this.closest('dialog').close()">FECHAR</button>
+</dialog>
+
 <script>
-    // --- STATE MANAGEMENT ---
-    let workoutState = {
-        volume: 0,
-        activeTreino: 0,
-        timer: { time: 120, base: 120, running: false, id: null },
-        data: []
+    // --- DATABASE & PRESETS ---
+    const PRESETS = {
+        'ABC': [
+            { n: 'TREINO A', e: [{n:'Supino Inclinado', s:4}, {n:'Supino Reto', s:4}, {n:'Desenvolvimento', s:3}, {n:'Tríceps Corda', s:4}] },
+            { n: 'TREINO B', e: [{n:'Puxada Alta', s:4}, {n:'Remada Curvada', s:4}, {n:'Serrote', s:3}, {n:'Rosca Direta', s:4}] },
+            { n: 'TREINO C', e: [{n:'Agachamento', s:4}, {n:'Leg Press', s:4}, {n:'Extensora', s:3}, {n:'Flexora', s:3}] }
+        ],
+        'FORCA': [
+            { n: 'SUPERIOR', e: [{n:'Supino Reto', s:5}, {n:'Remada Pendlay', s:5}, {n:'Militar', s:3}] },
+            { n: 'INFERIOR', e: [{n:'Agachamento', s:5}, {n:'Terra', s:3}, {n:'Panturrilha', s:5}] }
+        ]
     };
 
-    const PRESETS = [
-        { n: "Treino A", e: ["Supino Inclinado", "Supino Reto", "Desenvolvimento", "Elevação Lateral", "Tríceps Corda"] },
-        { n: "Treino B", e: ["Puxada Alta", "Remada Curvada", "Pulldown", "Rosca Direta", "Rosca Martelo"] },
-        { n: "Treino C", e: ["Agachamento", "Leg Press", "Extensora", "Mesa Flexora", "Panturrilha"] }
-    ];
+    let state = {
+        activeTab: 0,
+        timer: { time: 120, base: 120, running: false, id: null },
+        treinos: []
+    };
 
-    // --- CORE FUNCTIONS ---
-    function init() {
-        renderNav();
-        renderWorkout(0);
-        loadVolume();
-    }
-
-    function renderNav() {
+    // --- RENDER ENGINE ---
+    function renderApp() {
         const nav = document.getElementById("navPills");
-        nav.innerHTML = PRESETS.map((t, i) => `
-            <div class="pill ${i === 0 ? 'active' : ''}" onclick="switchTreino(${i}, this)">
-                ${t.n}
-            </div>
-        `).join("");
-    }
-
-    function switchTreino(idx, el) {
-        document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
-        el.classList.add("active");
-        renderWorkout(idx);
-    }
-
-    function renderWorkout(idx) {
         const area = document.getElementById("workoutArea");
-        const treino = PRESETS[idx];
-        area.innerHTML = treino.e.map(ex => createExerciseHTML(ex)).join("");
+        
+        nav.innerHTML = state.treinos.map((t, i) => `
+            <div class="pill ${state.activeTab === i ? 'active' : ''}" onclick="switchTab(${i})">${t.n}</div>
+        `).join("");
+
+        const current = state.treinos[state.activeTab];
+        area.innerHTML = current ? current.e.map(ex => createCard(ex)).join("") : "";
     }
 
-    function createExerciseHTML(name) {
-        return `
-            <div class="exercise-card">
-                <div class="ex-info">
-                    <div>
-                        <div class="ex-name">${name}</div>
-                        <div class="ex-stats">1RM Est: <span class="rm-val">-</span> kg</div>
-                    </div>
-                    <button style="background:none; border:none; color:var(--text-dim);" onclick="this.closest('.exercise-card').remove()">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
+    function createCard(ex) {
+        let rows = "";
+        for(let i=0; i < (ex.s || 4); i++) {
+            rows += `
+                <div class="set-row">
+                    <span style="font-size:0.7rem; color:var(--text-dim); text-align:center;">${i+1}</span>
+                    <div class="input-group"><input type="number" placeholder="kg" oninput="saveCurrentState()"></div>
+                    <div class="input-group"><input type="number" placeholder="reps" oninput="saveCurrentState()"></div>
+                    <div class="input-group"><input type="number" placeholder="rpe"></div>
+                    <button style="background:none; border:none; color:var(--text-dim);" onclick="toggleDone(this)">
+                        <i class="fa-solid fa-circle-check"></i>
                     </button>
                 </div>
-                <div class="sets-area">
-                    ${[1,2,3].map(s => createSetRow(s)).join("")}
-                </div>
-                <button onclick="addSet(this)" style="background:none; border:none; color:var(--blue); font-size:0.7rem; font-weight:800; margin-top:10px;">
-                    + ADICIONAR SÉRIE
-                </button>
-            </div>
-        `;
-    }
-
-    function createSetRow(num) {
+            `;
+        }
         return `
-            <div class="set-row">
-                <span class="set-label">${num}</span>
-                <div class="input-group">
-                    <input type="number" placeholder="kg" oninput="calcStats(this)">
+            <div class="exercise-card">
+                <div class="ex-header">
+                    <div class="ex-name">${ex.n}</div>
+                    <i class="fa-solid fa-trash" style="color:var(--red); font-size:0.8rem;" onclick="removeEx('${ex.n}')"></i>
                 </div>
-                <div class="input-group">
-                    <input type="number" placeholder="reps" oninput="calcStats(this)">
-                </div>
-                <div class="input-group">
-                    <input type="number" placeholder="RPE">
-                </div>
-                <button class="btn-check" onclick="toggleDone(this)">
-                    <i class="fa-solid fa-circle-check"></i>
-                </button>
+                ${rows}
             </div>
         `;
     }
 
     // --- LOGIC ---
+    function switchTab(i) { state.activeTab = i; renderApp(); }
+
+    function loadPreset(key) {
+        state.treinos = PRESETS[key];
+        state.activeTab = 0;
+        renderApp();
+        saveCurrentState();
+        document.getElementById("modalConfig").close();
+    }
+
     function toggleDone(btn) {
-        const row = btn.closest(".set-row");
-        const groups = row.querySelectorAll(".input-group");
         btn.classList.toggle("active");
-        groups.forEach(g => g.classList.toggle("done"));
+        btn.style.color = btn.classList.contains("active") ? "var(--green)" : "var(--text-dim)";
+        if(btn.classList.contains("active")) startTimer();
+    }
+
+    // --- CSV & PDF IMPORT ---
+    function openImport() { document.getElementById("modalImport").showModal(); }
+
+    function processCSV() {
+        const csv = document.getElementById("csvInput").value;
+        const lines = csv.split('\n').filter(l => l.trim() !== '');
+        const grouped = {};
         
-        if(btn.classList.contains("active")) {
-            startTimerFromReset();
-            calculateTotalVolume();
-        }
-    }
-
-    function calcStats(input) {
-        const card = input.closest(".exercise-card");
-        const rows = card.querySelectorAll(".set-row");
-        let maxRM = 0;
-
-        rows.forEach(r => {
-            const kg = parseFloat(r.querySelector("input[placeholder='kg']").value) || 0;
-            const reps = parseFloat(r.querySelector("input[placeholder='reps']").value) || 0;
-            if(kg > 0 && reps > 0) {
-                const rm = kg * (1 + reps/30); // Epley Formula
-                if(rm > maxRM) maxRM = rm;
-            }
+        lines.forEach((line, i) => {
+            if(i === 0 && line.toUpperCase().includes("TREINO")) return;
+            const [treino, ex, sets] = line.split(',');
+            if(!grouped[treino]) grouped[treino] = [];
+            grouped[treino].push({ n: ex.trim(), s: parseInt(sets) || 4 });
         });
 
-        if(maxRM > 0) card.querySelector(".rm-val").textContent = Math.round(maxRM);
+        state.treinos = Object.keys(grouped).map(key => ({ n: key, e: grouped[key] }));
+        renderApp();
+        document.getElementById("modalImport").close();
+        saveCurrentState();
     }
 
-    function calculateTotalVolume() {
-        let total = 0;
-        document.querySelectorAll(".set-row").forEach(r => {
-            if(r.querySelector(".btn-check").classList.contains("active")) {
-                const kg = parseFloat(r.querySelector("input[placeholder='kg']").value) || 0;
-                const reps = parseFloat(r.querySelector("input[placeholder='reps']").value) || 0;
-                total += (kg * reps);
+    async function handlePDF(input) {
+        const file = input.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            let text = "";
+            for(let i=1; i<=pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(" ");
             }
-        });
-        document.getElementById("totalVolume").textContent = total.toLocaleString();
+            // Simplificação para o usuário: joga o texto no CSV area para ele ajustar
+            document.getElementById("csvInput").value = "Edite o texto extraído para o formato CSV:\n" + text;
+        };
+        reader.readAsArrayBuffer(file);
     }
 
     // --- TIMER ---
-    function setTimer(s, btn) {
-        workoutState.timer.base = workoutState.timer.time = s;
-        document.querySelectorAll(".t-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        updateTimerUI();
+    function startTimer() {
+        clearInterval(state.timer.id);
+        state.timer.time = state.timer.base;
+        state.timer.running = true;
+        state.timer.id = setInterval(() => {
+            if(state.timer.time > 0) {
+                state.timer.time--;
+                updateTimerUI();
+            } else {
+                clearInterval(state.timer.id);
+                state.timer.running = false;
+                navigator.vibrate?.(200);
+                document.getElementById("timerBtn").textContent = "INICIAR DESCANSO";
+            }
+        }, 1000);
+        document.getElementById("timerBtn").textContent = "PAUSAR";
     }
 
     function toggleTimer() {
-        if(workoutState.timer.running) {
-            clearInterval(workoutState.timer.id);
-            workoutState.timer.running = false;
-            document.getElementById("timerCtrl").textContent = "Continuar Descanso";
+        if(state.timer.running) {
+            clearInterval(state.timer.id);
+            state.timer.running = false;
+            document.getElementById("timerBtn").textContent = "CONTINUAR";
         } else {
-            workoutState.timer.running = true;
-            document.getElementById("timerCtrl").textContent = "Pausar";
-            workoutState.timer.id = setInterval(() => {
-                if(workoutState.timer.time > 0) {
-                    workoutState.timer.time--;
-                    updateTimerUI();
-                } else {
-                    finishTimer();
-                }
-            }, 1000);
+            startTimer();
         }
     }
 
-    function startTimerFromReset() {
-        clearInterval(workoutState.timer.id);
-        workoutState.timer.time = workoutState.timer.base;
-        workoutState.timer.running = false;
-        toggleTimer();
-    }
-
-    function finishTimer() {
-        clearInterval(workoutState.timer.id);
-        workoutState.timer.running = false;
-        document.getElementById("timerCtrl").textContent = "Iniciar Descanso";
-        workoutState.timer.time = workoutState.timer.base;
-        updateTimerUI();
-        navigator.vibrate?.([200, 100, 200]);
-    }
-
     function updateTimerUI() {
-        const m = Math.floor(workoutState.timer.time / 60);
-        const s = workoutState.timer.time % 60;
-        document.getElementById("timerDisplay").textContent = 
-            `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        const m = Math.floor(state.timer.time / 60);
+        const s = state.timer.time % 60;
+        document.getElementById("timerDisplay").textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    // --- DATA PERSISTENCE ---
+    function saveCurrentState() {
+        localStorage.setItem("titan_state", JSON.stringify(state));
     }
 
     function finishWorkout() {
-        if(confirm("Deseja finalizar a sessão e salvar no histórico?")) {
-            alert("Sessão salva! Volume Total: " + document.getElementById("totalVolume").textContent + " kg");
+        const history = JSON.parse(localStorage.getItem("titan_history") || "[]");
+        history.push({ date: new Date().toISOString(), treinos: state.treinos });
+        localStorage.setItem("titan_history", JSON.stringify(history));
+        alert("Treino salvo com sucesso!");
+    }
+
+    function switchView(view) {
+        document.getElementById("workoutView").style.display = view === 'workout' ? 'block' : 'none';
+        document.getElementById("historyView").style.display = view === 'history' ? 'block' : 'none';
+        if(view === 'history') renderHistory();
+    }
+
+    function openConfig() { document.getElementById("modalConfig").showModal(); }
+
+    function clearAllData() {
+        if(confirm("Isso apagará TODO o histórico e treinos. Tem certeza?")) {
+            localStorage.clear();
             location.reload();
         }
     }
 
-    init();
+    // Init
+    const saved = localStorage.getItem("titan_state");
+    if(saved) {
+        state = JSON.parse(saved);
+        renderApp();
+    } else {
+        loadPreset('ABC');
+    }
 </script>
 </body>
 </html>
