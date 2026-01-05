@@ -7,58 +7,54 @@
     <title>TITAN PRO - Smart Log</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel="icon" href="Logo.png" type="image/png" />
 
     <style>
-      :root { --bg:#0b1220; --card:#161e2e; --blue:#3182ce; --text:#f7fafc; --orange:#f6ad55; --green:#38b2ac; --red:#e53e3e; }
-      body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; }
+      :root { --bg:#0b1220; --card:#161e2e; --blue:#3182ce; --text:#f7fafc; --orange:#f6ad55; --green:#38b2ac; --red:#e53e3e; --glass: rgba(22, 30, 46, 0.95); }
+      body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; user-select:none; -webkit-tap-highlight-color: transparent; }
 
-      .top-header { padding:15px; background:var(--card); border-bottom:1px solid #2d3748; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
+      /* HEADER & NAV */
+      .top-header { padding:15px; background:var(--card); border-bottom:1px solid #2d3748; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; backdrop-filter: blur(10px); }
       .date-badge { font-size:.8rem; color:var(--orange); font-weight:bold; background:#0b1220; padding:4px 10px; border-radius:15px; }
-      .header-left { display:flex; align-items:center; gap:12px; }
-      .logo-img { height:45px; width:auto; object-fit:contain; filter:drop-shadow(0 0 8px rgba(49,130,206,.6)); }
+      .logo-img { height:45px; width:auto; filter:drop-shadow(0 0 8px rgba(49,130,206,.6)); }
 
+      /* TIMER DASHBOARD */
       .timer-area { background:#1a202c; padding:12px; border-bottom:2px solid var(--blue); text-align:center; }
-      #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; margin-bottom:8px; }
+      #timerDisplay { font-size:2.5rem; font-weight:800; color:var(--blue); font-family: 'JetBrains Mono', monospace; margin-bottom:8px; font-variant-numeric: tabular-nums; }
       .timer-btns { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
-      .btn-t { background:#2d3748; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-size:.75rem; cursor:pointer; font-weight:bold; }
-      .btn-t.active { background:var(--blue); }
-      .btn-ctrl { background:var(--green); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:.8rem; }
+      .btn-t { background:#2d3748; color:#fff; border:none; padding:10px 15px; border-radius:8px; font-size:.75rem; cursor:pointer; font-weight:bold; transition: 0.2s; }
+      .btn-t.active { background:var(--blue); box-shadow: 0 0 10px var(--blue); }
+      .btn-ctrl { background:var(--green); color:#fff; border:none; padding:12px 25px; border-radius:8px; font-weight:bold; cursor:pointer; }
 
-      .setup-panel { background:var(--card); padding:20px; border-bottom:3px solid var(--blue); display:block; }
-      .field { margin-bottom:15px; }
-      .field label { font-size:.7rem; color:#a0aec0; display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase; }
-      .field select { width:100%; padding:12px; background:#0b1220; color:#fff; border:1px solid var(--blue); border-radius:8px; font-weight:bold; }
+      /* BENTO CARDS - EXERCÍCIOS */
+      .exercise-card { background:var(--card); border-radius:16px; padding:18px; margin:15px 10px; border:1px solid #2d3748; position:relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+      .ex-title { font-weight:800; font-size:1.2rem; color:var(--blue); display: block; margin-bottom: 2px; }
+      .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin-bottom: 12px; display:block; opacity: 0.9; }
+      .rpe-suggest { display:block; font-size:0.75rem; color:var(--green); margin-bottom:15px; background: rgba(56, 178, 172, 0.1); padding: 5px 10px; border-radius: 6px; }
 
-      .nav-pills { display:flex; gap:8px; padding:10px; background:var(--bg); overflow-x:auto; border-bottom:1px solid #2d3748; }
-      .pill { flex:none; padding:12px 20px; border-radius:8px; background:#1a202c; font-weight:bold; font-size:.75rem; border:1px solid #2d3748; cursor:pointer; color:#a0aec0; position:relative; padding-right:34px; }
-      .pill.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-      .pill .pill-x { position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--red); font-weight:900; font-size:1rem; padding:2px 6px; border-radius:8px; cursor:pointer; }
-      .pill.add-pill { padding-right:20px; border:2px dashed var(--blue); color:var(--blue); background:#1a202c; }
+      /* INPUT GRID */
+      .series-grid { display:grid; grid-template-columns:35px 1fr 1fr 1fr; gap:10px; align-items:center; margin-bottom:8px; }
+      .header-grid { text-align:center; font-size:.65rem; color:#718096; font-weight:bold; text-transform: uppercase; }
+      .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:8px; padding:10px 0; transition: 0.3s; }
+      .input-box.filled { border-color: var(--green); background: rgba(56, 178, 172, 0.05); }
+      .input-box input { background:transparent; border:none; color:#fff; width:100%; text-align:center; font-size:1.2rem; outline:none; font-weight:bold; }
+      .input-box input::placeholder { color: rgba(255,255,255,0.1); font-weight: 400; }
 
-      .section { display:none; }
-      .section.active { display:block; }
+      /* PILLS & NAVIGATION */
+      .nav-pills { display:flex; gap:10px; padding:12px; background:var(--bg); overflow-x:auto; scrollbar-width: none; }
+      .pill { flex:none; padding:12px 22px; border-radius:12px; background:#1a202c; font-weight:bold; font-size:.8rem; border:1px solid #2d3748; cursor:pointer; color:#a0aec0; position:relative; }
+      .pill.active { background:var(--blue); color:#fff; border-color: var(--blue); }
+      .pill-x { margin-left: 8px; color: var(--red); font-weight: 900; }
 
-      .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; animation:fadeIn .3s ease; position:relative; }
-      .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration:underline dotted; cursor:pointer; }
-      .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
-      .remove-ex { position:absolute; top:10px; right:10px; color:var(--red); font-size:1.2rem; cursor:pointer; font-weight:bold; padding:5px; }
+      /* FOOTER FIXED */
+      .footer-actions { padding:15px; display:flex; gap:10px; background: var(--glass); position: sticky; bottom: 0; backdrop-filter: blur(10px); border-top: 1px solid #2d3748; }
+      .btn { padding:15px; border-radius:12px; border:none; font-weight:800; cursor:pointer; flex:1; font-size:.7rem; transition: 0.2s; }
+      .btn-save { background:var(--green); color:#fff; box-shadow:0 4px 15px rgba(56, 178, 172, 0.3); }
+      
+      dialog { background:var(--card); color:#fff; border:1px solid var(--blue); border-radius:18px; width:92%; max-width:450px; padding:25px; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+      dialog::backdrop { background: rgba(0,0,0,0.8); }
 
-      .rpe-suggest { display:block; font-size:0.7rem; color:var(--green); margin-bottom:10px; font-family:monospace; }
-      .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
-      .header-grid { text-align:center; font-size:.6rem; color:#718096; font-weight:bold; }
-      .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:8px 0; }
-      .input-box input { background:transparent; border:none; color:#fff; width:100%; text-align:center; font-size:1.1rem; outline:none; font-weight:bold; }
-      .input-box input::placeholder { color: rgba(255,255,255,0.1); }
-
-      .btn-add-ex { background:#1a202c; color:var(--blue); border:2px dashed var(--blue); width:calc(100% - 20px); margin:15px 10px; padding:15px; border-radius:12px; font-weight:800; cursor:pointer; }
-      .footer-actions { padding:20px 10px 40px 10px; display:flex; gap:12px; background:transparent; flex-wrap:wrap;}
-      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; text-align:center; font-size:.75rem; text-transform:uppercase; min-width: 80px; }
-      .btn-save { background:var(--green); color:#fff; box-shadow:0 4px 0 #2d8a84; flex:2; }
-      .btn-config { background:#2d3748; color:var(--blue); border:1px solid var(--blue); }
-
-      dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:95%; max-width:500px; padding:20px; }
-      .lib-item { padding:12px; border-bottom:1px solid #2d3748; cursor:pointer; }
       @keyframes fadeIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
     </style>
   </head>
@@ -66,8 +62,8 @@
   <body>
     <div class="top-header">
       <div class="header-left">
-        <img src="Logo.png" alt="Logo" class="logo-img" />
-        <h1 style="margin:0; font-size:1.1rem; color:var(--blue);">TITAN <span style="color:#fff">PRO</span></h1>
+        <img src="Logo.png" alt="TITAN" class="logo-img" onerror="this.style.display='none'"/>
+        <h1 style="margin:0; font-size:1.2rem; font-weight: 900; color:var(--blue);">TITAN <span style="color:#fff">PRO</span></h1>
       </div>
       <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
@@ -75,310 +71,336 @@
     <div class="timer-area">
       <div id="timerDisplay">01:00</div>
       <div class="timer-btns">
-        <button class="btn-t active" onclick="setT(60, this)">1m</button>
-        <button class="btn-t" onclick="setT(120, this)">2m</button>
-        <button class="btn-t" onclick="setT(180, this)">3m</button>
-        <button class="btn-t" onclick="setT(300, this)">5m</button>
+        <button class="btn-t active" onclick="TitanApp.Timer.set(60, this)">1m</button>
+        <button class="btn-t" onclick="TitanApp.Timer.set(120, this)">2m</button>
+        <button class="btn-t" onclick="TitanApp.Timer.set(180, this)">3m</button>
+        <button class="btn-t" onclick="TitanApp.Timer.set(300, this)">5m</button>
       </div>
       <div class="timer-btns">
-        <button id="ctrlBtn" class="btn-ctrl" onclick="toggleT()">INICIAR</button>
-        <button class="btn-ctrl" style="background:var(--red)" onclick="resetT()">ZERAR</button>
+        <button id="ctrlBtn" class="btn-ctrl" onclick="TitanApp.Timer.toggle()">INICIAR</button>
+        <button class="btn-ctrl" style="background:var(--red)" onclick="TitanApp.Timer.reset()">ZERAR</button>
       </div>
     </div>
 
     <div class="setup-panel" id="setupPanel">
       <div class="field">
-        <label>Frequência Base</label>
-        <select id="freq" onchange="gerarProtocolo()">
-          <option value="2">2 Dias (Full Body)</option>
-          <option value="3" selected>3 Dias (ABC)</option>
-          <option value="4">4 Dias (Upper/Lower)</option>
-          <option value="6">6 Dias (PPL x2)</option>
+        <label>Objetivo do Protocolo</label>
+        <select id="obj" onchange="TitanApp.Workout.generate()">
+          <option value="hipertrofia">Hipertrofia (Estética)</option>
+          <option value="forca">Força (Cargas Máximas)</option>
+          <option value="definicao">Definição (Metabólico)</option>
         </select>
       </div>
-      <div class="field">
-        <label>Objetivo</label>
-        <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia</option>
-          <option value="forca">Força</option>
-          <option value="definicao">Definição</option>
-        </select>
-      </div>
-      <button class="btn btn-save" onclick="closeConfig()" style="margin-top:12px;">ABRIR PLANILHA</button>
+      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'" style="width:100%">FECHAR CONFIG</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
-    <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
+    <button class="btn-add-ex" style="width: calc(100% - 20px); margin: 10px;" onclick="TitanApp.Library.open(true)">+ ADICIONAR EXERCÍCIO</button>
 
     <div class="footer-actions">
-      <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
-      <button class="btn btn-config" onclick="showEvoChart()">📈 EVOLUÇÃO</button>
-      <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
-      <button class="btn btn-config" onclick="abrirCSVModal()" style="flex:0.5; background:var(--orange); color:white;">📊 CSV</button>
-      <button class="btn btn-config" onclick="verHistorico()" style="flex:0.4">📜 HIST</button>
+      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️</button>
+      <button class="btn btn-config" onclick="TitanApp.Stats.showChart()">📈</button>
+      <button class="btn btn-save" onclick="TitanApp.Storage.saveSession()">SALVAR TREINO</button>
+      <button class="btn btn-config" onclick="TitanApp.History.open()">📜</button>
     </div>
 
     <dialog id="modalLib">
       <h3 id="libHeader" style="margin:0 0 15px 0; color:var(--orange)">Biblioteca</h3>
-      <input type="text" id="manualName" placeholder="Nome..." style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--blue); background:#0b1220; color:white;">
-      <div id="libContent" style="max-height:300px; overflow-y:auto; margin-top:10px;"></div>
-      <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:10px; background:#2d3748; color:white;">Fechar</button>
-    </dialog>
-
-    <dialog id="modalHIST">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Histórico</h3>
-      <div id="histList"></div>
-      <button class="btn" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:10px;">FECHAR</button>
+      <input type="text" id="manualName" placeholder="Nome personalizado..." style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--blue); background:#0b1220; color:white; margin-bottom: 10px;">
+      <div id="libContent" style="max-height:300px; overflow-y:auto;"></div>
+      <button class="btn" onclick="this.closest('dialog').close()" style="width:100%; margin-top:10px; background:#2d3748; color:white;">VOLTAR</button>
     </dialog>
 
     <script>
-      const STORAGE = {
-        draftKey: "titanpro_draft_v2",
-        historyKey: "titanpro_history_v2",
-        maxHistory: 80
+      /**
+       * TITAN APP - ARQUITETURA SINGLETON (PLAYTON STYLE)
+       * Responsável: Engine de Performance e Persistência
+       */
+      const TitanApp = {
+        Config: {
+            draftKey: "titanpro_v2_draft",
+            historyKey: "titanpro_v2_history",
+            maxHistory: 80
+        },
+
+        Data: {
+            prMap: new Map(),
+            isAdding: false,
+            currentExId: null,
+            biblioteca: {
+                "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador"],
+                "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra"],
+                "Pernas": ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff"],
+                "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso"],
+                "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa"]
+            }
+        },
+
+        // --- MÓDULO DE PERSISTÊNCIA (STORAGE) ---
+        Storage: {
+            saveSession() {
+                const peso = prompt("Peso corporal hoje (kg)?");
+                const state = TitanApp.Workout.serialize();
+                const history = JSON.parse(localStorage.getItem(TitanApp.Config.historyKey) || "[]");
+                
+                history.unshift({
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    weight: peso,
+                    state: state
+                });
+
+                localStorage.setItem(TitanApp.Config.historyKey, JSON.stringify(history.slice(0, TitanApp.Config.maxHistory)));
+                TitanApp.Stats.buildPRs();
+                alert("Sessão Arquivada!");
+            },
+
+            autoSave() {
+                const state = TitanApp.Workout.serialize();
+                localStorage.setItem(TitanApp.Config.draftKey, JSON.stringify(state));
+            }
+        },
+
+        // --- MÓDULO DE TREINO (WORKOUT) ---
+        Workout: {
+            createCard(nome, sectionId, series = 4, values = null) {
+                const id = "ex-" + Math.random().toString(36).substr(2, 7);
+                const container = document.getElementById(sectionId);
+                const card = document.createElement("div");
+                card.className = "exercise-card";
+                card.id = id;
+
+                let rows = "";
+                for (let i = 0; i < series; i++) {
+                    const v = values?.[i] || { kg: "", reps: "", rpe: "" };
+                    const ghost = TitanApp.Workout.getGhostData(nome, i);
+                    rows += `
+                        <div class="series-grid">
+                            <span class="header-grid">S${i+1}</span>
+                            <div class="input-box ${v.kg ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.kg}" placeholder="${ghost?.kg || ''}" oninput="TitanApp.Workout.sync('${id}')"></div>
+                            <div class="input-box ${v.reps ? 'filled' : ''}"><input type="number" value="${v.reps}" placeholder="${ghost?.reps || ''}" oninput="TitanApp.Workout.sync('${id}')"></div>
+                            <div class="input-box"><input type="number" placeholder="RPE" value="${v.rpe}" oninput="TitanApp.Storage.autoSave()"></div>
+                        </div>`;
+                }
+
+                card.innerHTML = `
+                    <span style="position:absolute; top:10px; right:15px; color:var(--red); font-weight:bold; cursor:pointer" onclick="this.parentElement.remove(); TitanApp.Storage.autoSave()">×</span>
+                    <span class="ex-title" onclick="TitanApp.Library.open(false, '${id}')">${nome}</span>
+                    <span class="ex-target">${series} Sets • Progressão Ativa</span>
+                    <div class="rpe-suggest">1RM Est: <span id="rm-${id}">-</span> | Recorde: <span id="pr-${id}">-</span></div>
+                    <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+                    ${rows}`;
+
+                container.appendChild(card);
+                TitanApp.Workout.sync(id);
+            },
+
+            sync(id) {
+                const card = document.getElementById(id);
+                if(!card) return;
+                const name = card.querySelector(".ex-title").innerText;
+                const inputs = card.querySelectorAll("input");
+                let maxRM = 0;
+
+                for (let i = 0; i < inputs.length; i += 3) {
+                    const k = parseFloat(inputs[i].value) || 0;
+                    const r = parseFloat(inputs[i+1].value) || 0;
+                    if(k > 0 && r > 0) {
+                        inputs[i].parentElement.classList.add("filled");
+                        const rm = k * (1 + r/30);
+                        if(rm > maxRM) maxRM = rm;
+                    } else {
+                        inputs[i].parentElement.classList.remove("filled");
+                    }
+                }
+
+                const pr = TitanApp.Data.prMap.get(name) || 0;
+                document.getElementById(`rm-${id}`).innerText = maxRM ? Math.round(maxRM) + "kg" : "-";
+                document.getElementById(`pr-${id}`).innerText = pr ? Math.round(pr) + "kg" : "-";
+                if(maxRM > pr + 0.1 && pr > 0) document.getElementById(`rm-${id}`).style.color = "var(--green)";
+                
+                TitanApp.Storage.autoSave();
+            },
+
+            getGhostData(name, idx) {
+                const hist = JSON.parse(localStorage.getItem(TitanApp.Config.historyKey) || "[]");
+                for (let s of hist) {
+                    for (let sec of s.state.sections) {
+                        const c = sec.cards.find(x => x.name === name);
+                        if (c?.values[idx]?.kg) return c.values[idx];
+                    }
+                }
+                return null;
+            },
+
+            serialize() {
+                return {
+                    obj: document.getElementById("obj").value,
+                    sections: Array.from(document.querySelectorAll(".section")).map(sec => ({
+                        treinoKey: sec.getAttribute("data-treino-key"),
+                        cards: Array.from(sec.querySelectorAll(".exercise-card")).map(c => ({
+                            name: c.querySelector(".ex-title").innerText,
+                            values: Array.from(c.querySelectorAll(".series-grid:not(.header-grid)")).map(r => {
+                                const i = r.querySelectorAll("input");
+                                return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
+                            })
+                        }))
+                    }))
+                };
+            }
+        },
+
+        // --- MÓDULO DE TEMPO (TIMER) ---
+        Timer: {
+            timeLeft: 60, base: 60, interval: null, running: false,
+            audio: new (window.AudioContext || window.webkitAudioContext)(),
+
+            set(s, btn) {
+                if(this.running) return;
+                this.timeLeft = this.base = s;
+                this.updateUI();
+                document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+            },
+
+            updateUI() {
+                const m = Math.floor(this.timeLeft / 60);
+                const s = this.timeLeft % 60;
+                document.getElementById("timerDisplay").innerText = `${m}:${s < 10 ? "0" : ""}${s}`;
+            },
+
+            toggle() {
+                if(this.audio.state === 'suspended') this.audio.resume();
+                const btn = document.getElementById("ctrlBtn");
+                if(this.running) {
+                    clearInterval(this.interval); this.running = false;
+                    btn.innerText = "CONTINUAR";
+                } else {
+                    this.running = true; btn.innerText = "PAUSAR";
+                    this.interval = setInterval(() => {
+                        if(this.timeLeft > 0) { this.timeLeft--; this.updateUI(); }
+                        else { 
+                            clearInterval(this.interval); this.running = false;
+                            this.beep(); btn.innerText = "INICIAR"; 
+                            this.timeLeft = this.base; this.updateUI(); 
+                        }
+                    }, 1000);
+                }
+            },
+
+            reset() { clearInterval(this.interval); this.running = false; this.timeLeft = this.base; this.updateUI(); document.getElementById("ctrlBtn").innerText = "INICIAR"; },
+
+            beep() {
+                const o = this.audio.createOscillator();
+                const g = this.audio.createGain();
+                o.connect(g); g.connect(this.audio.destination);
+                o.frequency.value = 880; g.gain.value = 0.1;
+                o.start(); o.stop(this.audio.currentTime + 0.5);
+            }
+        },
+
+        // --- MÓDULO DE BIBLIOTECA ---
+        Library: {
+            open(isNew, id = null) {
+                TitanApp.Data.isAdding = isNew;
+                TitanApp.Data.currentExId = id;
+                const cont = document.getElementById("libContent");
+                cont.innerHTML = "";
+                for (let cat in TitanApp.Data.biblioteca) {
+                    cont.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin-top:15px; border-bottom:1px solid #333">${cat}</div>`;
+                    TitanApp.Data.biblioteca[cat].forEach(ex => {
+                        const d = document.createElement("div");
+                        d.className = "lib-item";
+                        d.innerText = ex;
+                        d.onclick = () => {
+                            if(TitanApp.Data.isAdding) TitanApp.Workout.createCard(ex, document.querySelector(".section.active").id);
+                            else { 
+                                const el = document.getElementById(TitanApp.Data.currentExId);
+                                el.querySelector(".ex-title").innerText = ex;
+                            }
+                            document.getElementById("modalLib").close();
+                            TitanApp.Storage.autoSave();
+                        };
+                        cont.appendChild(d);
+                    });
+                }
+                document.getElementById("modalLib").showModal();
+            }
+        },
+
+        // --- MÓDULO DE ESTATÍSTICAS ---
+        Stats: {
+            buildPRs() {
+                TitanApp.Data.prMap.clear();
+                const hist = JSON.parse(localStorage.getItem(TitanApp.Config.historyKey) || "[]");
+                hist.forEach(s => {
+                    s.state.sections.forEach(sec => {
+                        sec.cards.forEach(c => {
+                            c.values.forEach(v => {
+                                const rm = parseFloat(v.kg) * (1 + parseFloat(v.reps)/30);
+                                if(rm > (TitanApp.Data.prMap.get(c.name) || 0)) TitanApp.Data.prMap.set(c.name, rm);
+                            });
+                        });
+                    });
+                });
+            },
+
+            showChart() {
+                const hist = JSON.parse(localStorage.getItem(TitanApp.Config.historyKey) || "[]").reverse();
+                if(!hist.length) return alert("Sem dados!");
+                
+                const diag = document.createElement("dialog");
+                diag.style.width = "95%"; diag.style.background = "#0b1220";
+                const canvas = document.createElement("canvas");
+                diag.appendChild(canvas);
+                const btn = document.createElement("button");
+                btn.innerText = "FECHAR"; btn.className = "btn"; btn.onclick = () => diag.close();
+                diag.appendChild(btn);
+                document.body.appendChild(diag);
+                diag.showModal();
+
+                new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: hist.map(h => new Date(h.date).toLocaleDateString()),
+                        datasets: [{
+                            label: 'Volume de Treino (kg)',
+                            data: hist.map(h => h.state.sections.reduce((acc, s) => acc + s.cards.reduce((ac, c) => ac + c.values.reduce((a, v) => a + (v.kg*v.reps), 0), 0), 0)),
+                            borderColor: '#3182ce', tension: 0.3
+                        }]
+                    },
+                    options: { scales: { y: { beginAtZero: false } } }
+                });
+            }
+        }
       };
 
-      let prMap = new Map();
-
-      function openConfig() { document.getElementById("setupPanel").style.display = "block"; }
-      function closeConfig() { document.getElementById("setupPanel").style.display = "none"; }
-
-      let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      function playBeep() {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.frequency.value = 880; gain.gain.value = 0.1;
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-      }
-
-      function setT(s, btn) {
-        if (isRunning) return;
-        timeLeft = baseTime = s; updateT();
-        document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-      }
-
-      function updateT() {
-        const m = Math.floor(timeLeft / 60);
-        const s = timeLeft % 60;
-        document.getElementById("timerDisplay").innerText = `${m}:${s < 10 ? "0" : ""}${s}`;
-      }
-
-      function toggleT() {
-        if (audioCtx.state === "suspended") audioCtx.resume();
-        const btn = document.getElementById("ctrlBtn");
-        if (isRunning) {
-          clearInterval(timerInt); isRunning = false;
-          btn.innerText = "CONTINUAR";
-        } else {
-          isRunning = true; btn.innerText = "PAUSAR";
-          timerInt = setInterval(() => {
-            if (timeLeft > 0) { timeLeft--; updateT(); }
-            else { clearInterval(timerInt); isRunning = false; playBeep(); btn.innerText = "INICIAR"; timeLeft = baseTime; updateT(); }
-          }, 1000);
-        }
-      }
-
-      function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); document.getElementById("ctrlBtn").innerText = "INICIAR"; }
-
-      function buildPRCache() {
-        prMap.clear();
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        hist.forEach(sessao => {
-          sessao.state?.sections?.forEach(sec => {
-            sec.cards?.forEach(c => {
-              c.values?.forEach(v => {
-                const k = parseFloat(v.kg)||0, r = parseFloat(v.reps)||0;
-                if(k>0 && r>0) {
-                  const rm = k * (1 + r/30);
-                  if(rm > (prMap.get(c.name)||0)) prMap.set(c.name, rm);
-                }
-              });
-            });
-          });
-        });
-      }
-
-      function getGhost(nomeEx, idx) {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        for (let sessao of hist) {
-          const sec = sessao.state?.sections?.find(s => s.cards?.some(c => c.name === nomeEx));
-          const card = sec?.cards?.find(c => c.name === nomeEx);
-          if (card?.values?.[idx]?.kg) return card.values[idx];
-        }
-        return null;
-      }
-
-      function criarCard(nome, sectionId, series = 4, reps = "8-12", rpe = "", values = null) {
-        const id = "ex-" + Math.random().toString(36).substr(2, 7);
-        const card = document.createElement("div");
-        card.className = "exercise-card";
-        card.setAttribute("data-ex-id", id);
-        card.setAttribute("data-ex-name", nome);
-
-        let rows = "";
-        for (let s = 0; s < series; s++) {
-          const v = values?.[s] || { kg: "", reps: "", rpe: "" };
-          const ghost = getGhost(nome, s);
-          rows += `
-            <div class="series-grid">
-              <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
-              <div class="input-box"><input type="number" inputmode="decimal" value="${v.kg}" placeholder="${ghost?.kg||''}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" value="${v.reps}" placeholder="${ghost?.reps||''}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" placeholder="${rpe}" value="${v.rpe}"></div>
-            </div>`;
-        }
-
-        card.innerHTML = `
-          <span class="remove-ex" onclick="this.parentElement.remove(); scheduleDraftSave();">×</span>
-          <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
-          <span class="ex-target">${series} Sets x ${reps}</span>
-          <span class="rpe-suggest">1RM: <span id="1rm-${id}">-</span> | PR: <span id="pr-${id}">-</span></span>
-          <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-          ${rows}`;
-
-        document.getElementById(sectionId).appendChild(card);
-        updateSuggests(id);
-      }
-
-      function updateSuggests(id) {
-        const card = document.querySelector(`[data-ex-id="${id}"]`);
-        if(!card) return;
-        const name = card.getAttribute("data-ex-name");
-        const ins = card.querySelectorAll("input");
-        let bestRM = 0;
-        for(let i=0; i<ins.length; i+=3) {
-          const k = parseFloat(ins[i].value)||0, r = parseFloat(ins[i+1].value)||0;
-          if(k>0 && r>0) { const rm = k * (1 + r/30); if(rm > bestRM) bestRM = rm; }
-        }
-        const histPR = prMap.get(name) || 0;
-        document.getElementById(`1rm-${id}`).innerText = bestRM ? Math.round(bestRM)+"kg" : "-";
-        document.getElementById(`pr-${id}`).innerText = histPR ? Math.round(histPR)+"kg" : "-";
-        if (bestRM > histPR + 0.1 && histPR > 0) document.getElementById(`1rm-${id}`).style.color = "var(--green)";
-        scheduleDraftSave();
-      }
-
-      function serializeCurrentState() {
-        return {
-          freq: document.getElementById("freq").value,
-          obj: document.getElementById("obj").value,
-          sections: Array.from(document.querySelectorAll(".section")).map(sec => ({
-            treinoKey: sec.getAttribute("data-treino-key"),
-            cards: Array.from(sec.querySelectorAll(".exercise-card")).map(card => ({
-              name: card.getAttribute("data-ex-name"),
-              values: Array.from(card.querySelectorAll(".series-grid")).slice(1).map(r => {
-                const i = r.querySelectorAll("input");
-                return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
-              })
-            }))
-          }))
-        };
-      }
-
-      function scheduleDraftSave() {
-        clearTimeout(window.saveTimer);
-        window.saveTimer = setTimeout(() => {
-          localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState()));
-        }, 500);
-      }
-
-      function salvarTreino() {
-        const peso = prompt("Peso corporal atual (kg)?");
-        const st = serializeCurrentState();
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        hist.unshift({ createdAt: new Date().toISOString(), bodyWeight: peso, state: st });
-        localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist.slice(0, STORAGE.maxHistory)));
-        buildPRCache();
-        alert("✅ Sessão Salva!");
-      }
-
-      function verHistorico() {
-        const list = document.getElementById("histList");
-        list.innerHTML = "";
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        hist.forEach(h => {
-          const d = new Date(h.createdAt).toLocaleDateString();
-          const div = document.createElement("div");
-          div.className = "hist-item";
-          div.innerHTML = `<strong>${d}</strong> | ${h.bodyWeight||'--'}kg`;
-          div.onclick = () => { if(confirm("Carregar este treino?")) { loadState(h.state); document.getElementById("modalHIST").close(); } };
-          list.appendChild(div);
-        });
-        document.getElementById("modalHIST").showModal();
-      }
-
-      function loadState(st) {
-        if(!st) return;
-        document.getElementById("container").innerHTML = "";
-        document.getElementById("nav").innerHTML = "";
-        st.sections.forEach((sec, i) => {
-          const pill = document.createElement("div");
-          pill.className = `pill ${i===0?'active':''}`;
-          pill.id = `p${i}`;
-          pill.innerText = sec.treinoKey;
-          pill.onclick = () => tab(i);
-          document.getElementById("nav").appendChild(pill);
-
-          const div = document.createElement("div");
-          div.id = `sec${i}`;
-          div.className = `section ${i===0?'active':''}`;
-          div.setAttribute("data-treino-key", sec.treinoKey);
-          document.getElementById("container").appendChild(div);
-          sec.cards.forEach(c => criarCard(c.name, div.id, c.values.length, "Meta", "", c.values));
-        });
-      }
-
-      function tab(idx) {
+      // --- BOOTSTRAP ---
+      window.tab = (i) => {
         document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
-        document.getElementById(`sec${idx}`).classList.add("active");
-        document.getElementById(`p${idx}`).classList.add("active");
-      }
-
-      function showEvoChart() {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]").reverse();
-        const ctx = document.createElement("canvas");
-        const modal = document.createElement("dialog");
-        modal.style.background = "#161e2e"; modal.style.width = "95%";
-        const btn = document.createElement("button"); btn.innerText = "FECHAR"; btn.onclick = () => modal.close();
-        modal.appendChild(ctx); modal.appendChild(btn); document.body.appendChild(modal);
-        modal.showModal();
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: hist.map(h => new Date(h.createdAt).toLocaleDateString()),
-            datasets: [{ label: 'Volume Total', data: hist.map(h => h.state.sections.reduce((a, s) => a + s.cards.reduce((aa, c) => aa + c.values.reduce((aaa, v) => aaa + (v.kg*v.reps), 0), 0), 0)), borderColor: '#3182ce' }]
-          }
-        });
-      }
-
-      function abrirLibParaNovo() { window.isAdding = true; showLib(); }
-      function abrirLibParaTrocar(id) { window.isAdding = false; window.curId = id; showLib(); }
-      function showLib() {
-        const cont = document.getElementById("libContent"); cont.innerHTML = "";
-        for (let cat in biblioteca) {
-          cont.innerHTML += `<div style="color:var(--orange); font-weight:bold; margin-top:10px;">${cat}</div>`;
-          biblioteca[cat].forEach(ex => {
-            const div = document.createElement("div"); div.className = "lib-item"; div.innerText = ex;
-            div.onclick = () => {
-              if(window.isAdding) criarCard(ex, document.querySelector(".section.active").id);
-              else { const el = document.getElementById(window.curId); el.innerText = ex; el.closest(".exercise-card").setAttribute("data-ex-name", ex); }
-              document.getElementById("modalLib").close(); scheduleDraftSave();
-            };
-            cont.appendChild(div);
-          });
-        }
-        document.getElementById("modalLib").showModal();
-      }
+        document.getElementById(`sec${i}`).classList.add("active");
+        document.getElementById(`p${i}`).classList.add("active");
+      };
 
       window.onload = () => {
         document.getElementById("displayDate").innerText = new Date().toLocaleDateString();
-        buildPRCache();
-        const draft = localStorage.getItem(STORAGE.draftKey);
-        if (draft) loadState(JSON.parse(draft)); else openConfig();
+        TitanApp.Stats.buildPRs();
+        
+        const draft = localStorage.getItem(TitanApp.Config.draftKey);
+        if(draft) {
+            const st = JSON.parse(draft);
+            document.getElementById("obj").value = st.obj;
+            st.sections.forEach((s, i) => {
+                const nav = document.getElementById("nav");
+                nav.innerHTML += `<div class="pill ${i===0?'active':''}" id="p${i}" onclick="tab(${i})">${s.treinoKey}</div>`;
+                const sec = document.createElement("div");
+                sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`;
+                sec.setAttribute("data-treino-key", s.treinoKey);
+                document.getElementById("container").appendChild(sec);
+                s.cards.forEach(c => TitanApp.Workout.createCard(c.name, sec.id, c.values.length, c.values));
+            });
+        }
       };
     </script>
   </body>
