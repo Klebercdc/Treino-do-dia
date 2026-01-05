@@ -1,211 +1,200 @@
-/* TITAN PRO - PREMIUM CSS 
-   Design: Glassmorphism / Dark Mode Professional
+/* TITAN PRO - ULTRA DARK & HIGH CONTRAST 
+   Foco: Legibilidade em ambiente de treino e estética Premium
 */
 
 :root { 
-    --bg: #070b14; 
-    --card: #111827; 
-    --blue: #3b82f6; 
-    --blue-glow: rgba(59, 130, 246, 0.4);
-    --text: #f3f4f6; 
-    --orange: #fbbf24; 
-    --green: #10b981; 
-    --red: #ef4444; 
-    --glass: rgba(17, 24, 39, 0.85);
+    --bg: #000000; 
+    --card: #111111; 
+    --accent: #3b82f6; 
+    --accent-glow: rgba(59, 130, 246, 0.3);
+    --text-primary: #ffffff; 
+    --text-secondary: #888888; 
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
 }
 
 body { 
-    background: var(--bg); 
-    color: var(--text); 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background-color: var(--bg); 
+    color: var(--text-primary); 
+    font-family: 'Inter', -apple-system, sans-serif; 
     margin: 0; 
-    padding-bottom: 30px; 
-    user-select: none; 
-    -webkit-user-select: none; 
-    -webkit-tap-highlight-color: transparent; 
+    padding-bottom: 40px; 
+    -webkit-font-smoothing: antialiased;
 }
 
-/* HEADER COM EFEITO BLUR */
+/* HEADER MINIMALISTA */
 .top-header { 
-    padding: 15px 20px; 
-    background: var(--glass); 
-    backdrop-filter: blur(15px); 
-    -webkit-backdrop-filter: blur(15px);
-    border-bottom: 1px solid rgba(255,255,255,0.05); 
+    padding: 20px; 
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
     position: sticky; 
     top: 0; 
-    z-index: 100; 
+    z-index: 1000;
+    border-bottom: 1px solid #222;
 }
 
-.logo-img { 
-    height: 40px; 
-    filter: drop-shadow(0 0 8px var(--blue-glow)); 
-}
+.logo-img { height: 32px; filter: drop-shadow(0 0 5px var(--accent)); }
 
 .date-badge { 
-    font-size: .75rem; 
-    color: var(--orange); 
-    font-weight: 700; 
-    background: rgba(251, 191, 36, 0.1); 
-    padding: 5px 12px; 
-    border-radius: 20px; 
-    border: 1px solid rgba(251, 191, 36, 0.2);
+    font-size: 0.7rem; 
+    font-weight: 900; 
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
 }
 
-/* TIMER DASHBOARD */
+/* TIMER - O "CÉREBRO" DO APP */
 .timer-area { 
-    background: linear-gradient(to bottom, #111827, #070b14); 
-    padding: 20px; 
-    border-bottom: 2px solid var(--blue); 
+    padding: 40px 20px;
+    background: linear-gradient(to bottom, #0a0a0a, #000);
     text-align: center;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    border-bottom: 1px solid #222;
 }
 
 #timerDisplay { 
-    font-size: 3.2rem; 
-    font-weight: 800; 
-    color: #fff; 
-    text-shadow: 0 0 20px var(--blue-glow);
-    font-family: 'Inter', monospace; 
-    margin-bottom: 15px; 
+    font-size: 4.5rem; 
+    font-weight: 900; 
+    letter-spacing: -3px;
+    margin-bottom: 25px;
     font-variant-numeric: tabular-nums;
+    background: linear-gradient(to bottom, #fff, #888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .btn-t { 
-    background: #1f2937; 
-    color: #9ca3af; 
-    border: 1px solid #374151; 
-    padding: 8px 15px; 
-    border-radius: 10px; 
-    font-size: .8rem; 
-    font-weight: 600; 
-    cursor: pointer;
+    background: #111;
+    color: var(--text-secondary);
+    border: 1px solid #333;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
     transition: 0.2s;
 }
 
 .btn-t.active { 
-    background: var(--blue); 
-    color: #fff; 
-    border-color: var(--blue);
-    box-shadow: 0 0 15px var(--blue-glow);
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
 }
 
-/* CARDS DE EXERCÍCIO (PROFUNDIDADE) */
+/* CARDS DE EXERCÍCIO - DESIGN "BENTO BOX" */
 .exercise-card { 
-    background: linear-gradient(145deg, #161e2e, #0f172a); 
-    border-radius: 20px; 
-    padding: 20px; 
-    margin: 15px; 
-    border: 1px solid rgba(255,255,255,0.03); 
-    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.6);
-    animation: fadeIn 0.4s ease-out; 
-    position: relative; 
+    background: var(--card);
+    margin: 16px;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid #222;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
 }
 
 .ex-title { 
-    font-weight: 800; 
-    font-size: 1.25rem; 
-    color: var(--blue); 
-    text-decoration: underline dotted rgba(59, 130, 246, 0.3);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.5px;
 }
 
 .ex-target { 
-    font-size: .75rem; 
-    color: var(--orange); 
-    background: rgba(251, 191, 36, 0.1); 
-    padding: 3px 10px; 
-    border-radius: 8px; 
-    margin: 8px 0; 
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 6px 0 20px 0;
     display: inline-block;
-    font-weight: bold;
 }
 
-/* INPUTS INTEGRADOS */
+.rpe-suggest { 
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 15px;
+}
+
+/* INPUTS DE ALTA VISIBILIDADE */
 .series-grid { 
     display: grid; 
-    grid-template-columns: 35px 1fr 1fr 1fr; 
-    gap: 10px; 
-    align-items: center; 
-    margin-bottom: 10px; 
+    grid-template-columns: 30px 1fr 1fr 1fr; 
+    gap: 12px; 
+    margin-bottom: 10px;
 }
 
 .header-grid { 
-    text-align: center; 
-    font-size: .65rem; 
-    color: #6b7280; 
-    font-weight: 800; 
+    font-size: 0.6rem;
+    font-weight: 900;
+    color: #444;
     text-transform: uppercase;
 }
 
 .input-box { 
-    background: #060b14; 
-    border: 1px solid #1f2937; 
-    border-radius: 12px; 
-    padding: 10px 0; 
-    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #000;
+    border: 1.5px solid #333;
+    border-radius: 12px;
+    padding: 12px 0;
+    transition: all 0.2s;
 }
 
 .input-box.filled { 
-    border-color: var(--green); 
+    border-color: var(--green);
     background: rgba(16, 185, 129, 0.05);
 }
 
 .input-box input { 
-    background: transparent; 
-    border: none; 
-    color: #fff; 
-    width: 100%; 
-    text-align: center; 
-    font-size: 1.15rem; 
-    outline: none; 
-    font-weight: 800; 
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-align: center;
+    background: transparent;
+    border: none;
+    outline: none;
 }
 
-/* PLACEHOLDER CLARINHO (CARGA FANTASMA) */
-.input-box input::placeholder { 
-    color: rgba(255,255,255,0.1); 
-    font-weight: 400; 
+.input-box input::placeholder {
+    color: #222; /* Fica bem clarinho, quase invisível até você olhar de perto */
 }
 
-/* NAVEGAÇÃO E BOTÕES */
+/* NAV PILLS MODERNO */
 .nav-pills { 
-    display: flex; 
-    gap: 10px; 
-    padding: 15px; 
-    overflow-x: auto; 
-    scrollbar-width: none; 
+    display: flex;
+    padding: 15px;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
 .pill { 
-    flex: none; 
-    padding: 12px 22px; 
-    border-radius: 14px; 
-    background: #111827; 
-    font-weight: 700; 
-    font-size: .8rem; 
-    border: 1px solid #1f2937; 
-    color: #9ca3af; 
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: #111;
+    color: var(--text-secondary);
+    font-weight: 700;
+    border: 1px solid #222;
+    white-space: nowrap;
 }
 
 .pill.active { 
-    background: var(--blue); 
-    color: #fff; 
-    border-color: var(--blue);
-    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4); 
+    background: #fff;
+    color: #000;
+    border-color: #fff;
 }
 
+/* FOOTER ACTIONS */
 .btn-save { 
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-    color: #fff; 
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
-    border-radius: 14px;
-    font-weight: 800;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 900;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px var(--accent-glow);
 }
 
-@keyframes fadeIn { 
-    from { opacity: 0; transform: translateY(15px); } 
-    to { opacity: 1; transform: translateY(0); } 
+.btn-config {
+    background: #111;
+    color: #fff;
+    border: 1px solid #333;
 }
