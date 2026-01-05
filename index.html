@@ -238,7 +238,7 @@
       };
 
       const STORAGE = Object.freeze({
-        draftKey: "titanpro_draft_v6", // New version to reset pills
+        draftKey: "titanpro_draft_v6", 
         historyKey: "titanpro_history_v4",
         csvTplKey: "titanpro_csv_templates_v1",
         maxHistory: 80,
@@ -273,7 +273,7 @@
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); document.getElementById("ctrlBtn").innerText = "INICIAR"; document.getElementById("ctrlBtn").style.background = "var(--green)"; }
 
       /* =========================================
-         3. GERAÇÃO DE PROTOCOLO (LONG PRESS & CLEAN LABELS)
+         3. GERAÇÃO DE PROTOCOLO
          ========================================= */
       let currentExId = null;
       let isAddingNew = false;
@@ -309,8 +309,7 @@
 
         if (preset) {
            preset.forEach((treino, i) => {
-             // LÓGICA DE RÓTULO LIMPO: Apenas TREINO + LETRA
-             const letra = String.fromCharCode(65 + i); // 0->A, 1->B...
+             const letra = String.fromCharCode(65 + i); 
              const labelFinal = `TREINO ${letra}`; 
 
              nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">${labelFinal}</div>`;
@@ -386,16 +385,19 @@
         scheduleDraftSave();
       }
 
+      // --- FUNÇÃO ATUALIZADA: INTEGRAÇÃO COM HISTÓRICO ---
       function updateSuggests(id) {
         const card = document.querySelector(`[data-ex-id="${id}"]`);
-        if(!card) return;
+        if (!card) return;
+        
+        const nomeEx = card.getAttribute("data-ex-name"); 
         const inputs = card.querySelectorAll("input");
         let maxKg = 0, maxReps = 0, maxRpe = 0;
-        
-        for(let i=0; i < inputs.length; i+=3) {
+
+        for (let i = 0; i < inputs.length; i += 3) {
            const kgIn = inputs[i];
-           const repIn = inputs[i+1];
-           const rpeIn = inputs[i+2];
+           const repIn = inputs[i + 1];
+           const rpeIn = inputs[i + 2];
 
            const kg = parseFloat(kgIn.value) || 0;
            const reps = parseFloat(repIn.value) || 0;
@@ -404,7 +406,16 @@
            if(kgIn.value && repIn.value) {
               kgIn.parentElement.classList.add("filled");
               repIn.parentElement.classList.add("filled");
-              if(kg >= maxKg) { maxKg = kg; maxReps = reps; maxRpe = rpe; }
+              
+              // Verifica se esta série é a melhor da sessão (Baseado em 1RM Estimado)
+              const currentSet1RM = kg * (1 + reps/30);
+              const maxSet1RM = maxKg * (1 + maxReps/30);
+
+              if(currentSet1RM > maxSet1RM) { 
+                 maxKg = kg; 
+                 maxReps = reps; 
+                 maxRpe = rpe; 
+              }
            } else {
               kgIn.parentElement.classList.remove("filled");
               repIn.parentElement.classList.remove("filled");
@@ -416,7 +427,19 @@
 
         if (maxKg && maxReps) {
             const epley1rm = maxKg * (1 + maxReps/30);
-            if(el1rm) el1rm.textContent = Math.round(epley1rm) + "kg";
+            
+            // LÓGICA DE COMPARAÇÃO HISTÓRICA
+            const lastBest = getLastMax(nomeEx);
+            let diffIcon = "";
+            
+            if (lastBest > 0) {
+                if (epley1rm > lastBest + 1) diffIcon = " <span style='color:var(--green)'>▲Pr</span>"; 
+                else if (epley1rm < lastBest - 1) diffIcon = " <span style='color:var(--red)'>▼</span>";
+                else diffIcon = " <span style='color:#a0aec0'>=</span>";
+            }
+
+            if(el1rm) el1rm.innerHTML = Math.round(epley1rm) + "kg" + diffIcon;
+            
             if(elStatus) {
                 if(maxRpe >= 9) elStatus.textContent = "🔥 Falha";
                 else if(maxRpe >= 7) elStatus.textContent = "✅ Eficiente";
@@ -428,6 +451,37 @@
             if(el1rm) el1rm.textContent = "-";
             if(elStatus) elStatus.textContent = "-";
         }
+      }
+
+      // --- NOVO: BUSCA NO HISTÓRICO O MELHOR 1RM JÁ FEITO ---
+      function getLastMax(exName) {
+        try {
+            const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+            // Itera sobre o histórico
+            for (let h of hist) {
+                if (!h.state || !h.state.sections) continue;
+                for (let sec of h.state.sections) {
+                    if (!sec.cards) continue;
+                    // Encontra o exercício pelo nome
+                    const found = sec.cards.find(c => c.name === exName);
+                    if (found && found.values) {
+                        // Calcula o melhor set daquele dia
+                        let max1rmDay = 0;
+                        found.values.forEach(v => {
+                            const kg = parseFloat(v.kg) || 0;
+                            const reps = parseFloat(v.reps) || 0;
+                            if (kg > 0 && reps > 0) {
+                                const epley = kg * (1 + reps / 30);
+                                if (epley > max1rmDay) max1rmDay = epley;
+                            }
+                        });
+                        // Retorna o primeiro que achar (o mais recente)
+                        if (max1rmDay > 0) return max1rmDay;
+                    }
+                }
+            }
+        } catch (e) { console.error(e); }
+        return 0; // Nenhum histórico encontrado
       }
 
       /* =========================================
@@ -517,9 +571,7 @@
       function abrirCSVModal() { document.getElementById("csvTextarea").value = ""; hideModelosCSV(); document.getElementById("modalCSV").showModal(); }
       function normalizeTreinoKey(raw) { return String(raw || "").trim().replace(/\s+/g, " ") || null; }
       
-      // FUNÇÃO AJUSTADA PARA FORÇAR "TREINO X"
       function treinoLabel(key, idx) { 
-          // Se passarmos o índice, podemos garantir A, B, C
           if (typeof idx !== 'undefined') {
               return `TREINO ${String.fromCharCode(65 + idx)}`;
           }
@@ -534,7 +586,6 @@
         const nav = document.getElementById("nav"); const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
         order.slice(0, 6).forEach((key, idx) => {
-          // Usa o índice para forçar A, B, C na importação também
           const label = treinoLabel(key, idx); 
           nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${label}</div>`;
           const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`; sec.setAttribute("data-treino-key", key); cont.appendChild(sec);
@@ -570,7 +621,6 @@
         const nav = document.getElementById("nav"); const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
         state.sections.slice(0,6).forEach((secData, idx) => {
-           // Força o label limpo ao carregar
            const label = `TREINO ${String.fromCharCode(65 + idx)}`;
            nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${label}</div>`;
            const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`; sec.setAttribute("data-treino-key", secData.treinoKey); cont.appendChild(sec);
