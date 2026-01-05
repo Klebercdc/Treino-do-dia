@@ -1,13 +1,12 @@
 <!doctype html>
-<html lang="pt-PT">
+<html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
-    <title>TITAN PRO - Smart Log</title>
+    <title>TITAN PRO - Periodization Coach</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -58,10 +57,9 @@
       .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
       .header-grid { text-align:center; font-size:.6rem; color:#718096; font-weight:bold; }
       .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:8px 0; transition: border-color 0.3s ease; }
-      /* Melhoria Visual 1: Borda verde quando preenchido */
       .input-box.filled { border-color: var(--green); box-shadow: 0 0 5px rgba(56, 178, 172, 0.3); }
       .input-box input { background:transparent; border:none; color:#fff; width:100%; text-align:center; font-size:1.1rem; outline:none; font-weight:bold; }
-
+      
       .btn-add-ex { background:#1a202c; color:var(--blue); border:2px dashed var(--blue); width:calc(100% - 20px); margin:15px 10px; padding:15px; border-radius:12px; font-weight:800; cursor:pointer; }
 
       /* FOOTER */
@@ -74,7 +72,7 @@
       dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:90%; max-width:500px; padding:20px; }
       dialog::backdrop { background: rgba(0,0,0,0.8); }
       .lib-item { padding:12px; border-bottom:1px solid #2d3748; cursor:pointer; }
-
+      
       #csvTextarea { width:100%; height:220px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; font-size:.8rem; resize:none; margin-bottom:12px; outline:none; }
       .csv-info { font-size:.7rem; color:#a0aec0; margin-bottom:12px; line-height:1.4; }
       .csv-buttons { display:flex; gap:8px; flex-wrap:wrap; }
@@ -92,8 +90,7 @@
       .tpl-item { padding:10px 12px; border-bottom:1px solid #2d3748; cursor:pointer; }
       .tpl-item small { color:#a0aec0; display:block; margin-top:4px; font-size:.7rem; }
       .tpl-actions { display:flex; gap:8px; margin-top:10px; }
-      .tpl-actions button { flex:1; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; }
-
+      
       @keyframes fadeIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
     </style>
   </head>
@@ -134,15 +131,15 @@
       </div>
 
       <div class="field">
-        <label>Objetivo (Define Reps)</label>
+        <label>Objetivo do Mesociclo</label>
         <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia (8-12 reps)</option>
-          <option value="forca">Força Bruta (3-5 reps)</option>
-          <option value="definicao">Definição/RML (15-20 reps)</option>
+          <option value="hipertrofia">Hipertrofia (Foco Geral)</option>
+          <option value="forca">Força (Baixas Reps / Alta Carga)</option>
+          <option value="resistencia">Resistência/RML (15+ Reps)</option>
         </select>
       </div>
       
-      <button class="btn btn-config" onclick="limparApenasValores()" style="width:100%; border:1px solid var(--red); color:var(--red); margin-top:10px;">♻️ LIMPAR VALORES (MANTER TREINO)</button>
+      <button class="btn btn-config" onclick="limparApenasValores()" style="width:100%; border:1px solid var(--red); color:var(--red); margin-top:10px;">♻️ NOVA SEMANA (LIMPAR CARGAS)</button>
       
       <button class="btn btn-save" onclick="closeConfig()" style="margin-top:12px;">ABRIR TREINO</button>
     </div>
@@ -176,7 +173,7 @@
         <strong>Opção 2 (CSV):</strong> Cole o CSV do Excel/Sheets.<br />
       </div>
 
-      <textarea id="csvTextarea" placeholder="O texto da ficha aparecerá aqui..."></textarea>
+      <textarea id="csvTextarea" placeholder="Cole o CSV ou use o botão PDF..."></textarea>
 
       <div class="csv-buttons">
         <label class="btn-cancel" style="background:var(--blue); color:white;">
@@ -213,44 +210,54 @@
 
     <script>
       /* =========================================
-         1. CATÁLOGO DE TREINOS INTELIGENTES
+         1. CATÁLOGO DE TREINOS COM PERIODIZAÇÃO (LÓGICA ANINHADA)
          ========================================= */
       const TREINOS_PRONTOS = {
-        "2": [
-            { nome: "A (Full Body - Foco Agacho)", exs: ["Agachamento Livre", "Supino Reto", "Remada Curvada", "Desenvolvimento Militar", "Panturrilha em Pé"] },
-            { nome: "B (Full Body - Foco Terra)", exs: ["Levantamento Terra", "Leg Press 45", "Puxada Alta", "Supino Inclinado", "Rosca Direta"] }
-        ],
-        "3": [
-            { nome: "A (Push: Peito/Ombro/Tri)", exs: ["Supino Reto", "Supino Inclinado", "Desenvolvimento Militar", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
-            { nome: "B (Pull: Costas/Bíceps)", exs: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Crucifixo Inverso", "Rosca Direta", "Rosca Martelo"] },
-            { nome: "C (Legs: Pernas)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff", "Panturrilha Sentado"] }
-        ],
-        "4": [
-            { nome: "A (Upper Força)", exs: ["Supino Reto", "Remada Curvada", "Desenvolvimento", "Barra Fixa (ou Graviton)"] },
-            { nome: "B (Lower Força)", exs: ["Agachamento Livre", "Leg Press 45", "Extensora", "Panturrilha em Pé"] },
-            { nome: "C (Upper Hipertrofia)", exs: ["Supino Inclinado", "Puxada Alta", "Elevação Lateral", "Voador", "Rosca Direta", "Tríceps Corda"] },
-            { nome: "D (Lower Posterior)", exs: ["Levantamento Terra", "Mesa Flexora", "Passada", "Panturrilha Sentado"] }
-        ],
-        "5": [
-            { nome: "A (Peito)", exs: ["Supino Reto", "Supino Inclinado", "Crucifixo Máquina", "Crossover", "Flexão de Braço"] },
-            { nome: "B (Costas)", exs: ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Pulldown", "Hiperextensão Lombar"] },
-            { nome: "C (Pernas)", exs: ["Agachamento", "Leg Press", "Extensora", "Mesa Flexora", "Stiff", "Panturrilha"] },
-            { nome: "D (Ombros)", exs: ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Crucifixo Inverso", "Encolhimento"] },
-            { nome: "E (Braços)", exs: ["Rosca Direta", "Tríceps Testa", "Rosca Scott", "Tríceps Corda", "Rosca Punho"] }
-        ],
-        "6": [
-            { nome: "A (Push 1)", exs: ["Supino Reto", "Desenvolvimento", "Tríceps Testa", "Elevação Lateral"] },
-            { nome: "B (Pull 1)", exs: ["Puxada Alta", "Remada Curvada", "Rosca Direta", "Face Pull"] },
-            { nome: "C (Legs 1)", exs: ["Agachamento", "Extensora", "Panturrilha em Pé"] },
-            { nome: "D (Push 2)", exs: ["Supino Inclinado", "Crossover", "Tríceps Corda", "Elevação Lateral"] },
-            { nome: "E (Pull 2)", exs: ["Remada Baixa", "Puxada Triângulo", "Rosca Martelo", "Crucifixo Inverso"] },
-            { nome: "F (Legs 2)", exs: ["Levantamento Terra", "Leg Press", "Mesa Flexora", "Panturrilha Sentado"] }
-        ]
+        "3": {
+            "hipertrofia": [
+                { nome: "A (Push - Volume)", exs: ["Supino Inclinado Halter", "Supino Reto Barra", "Desenvolvimento Máquina", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
+                { nome: "B (Pull - Volume)", exs: ["Puxada Alta Aberta", "Remada Curvada", "Remada Baixa Triângulo", "Face Pull", "Rosca Direta", "Rosca Scott"] },
+                { nome: "C (Legs - Volume)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff Halter", "Panturrilha Sentado"] }
+            ],
+            "forca": [
+                { nome: "A (Push - Força)", exs: ["Supino Reto (Foco Carga)", "Desenvolvimento Militar", "Supino Fechado", "Paralelas"] },
+                { nome: "B (Pull - Força)", exs: ["Levantamento Terra", "Remada Pendlay", "Barra Fixa (com peso)", "Rosca Martelo"] },
+                { nome: "C (Legs - Força)", exs: ["Agachamento Livre (Low Bar)", "Agachamento Frontal", "Stiff Barra", "Panturrilha em Pé"] }
+            ],
+            "resistencia": [
+                { nome: "A (Full Body 1)", exs: ["Agachamento Taça", "Flexão de Braço", "Remada Invertida", "Abdominal Supra", "Polichinelo"] },
+                { nome: "B (Full Body 2)", exs: ["Afundo", "Desenvolvimento Halter", "Puxada Alta", "Prancha", "Burpees"] },
+                { nome: "C (Full Body 3)", exs: ["Leg Press", "Supino Máquina", "Rosca Direta", "Tríceps Banco", "Corrida Estacionária"] }
+            ]
+        },
+        "4": {
+            "hipertrofia": [
+                { nome: "A (Upper - Foco Peito/Costas)", exs: ["Supino Inclinado", "Remada Curvada", "Voador", "Puxada Alta", "Elevação Lateral", "Rosca Direta"] },
+                { nome: "B (Lower - Foco Quads)", exs: ["Agachamento Livre", "Leg Press", "Extensora", "Passada", "Panturrilha em Pé"] },
+                { nome: "C (Upper - Foco Ombros/Braços)", exs: ["Desenvolvimento", "Barra Fixa", "Elevação Lateral Polia", "Tríceps Corda", "Rosca Scott", "Face Pull"] },
+                { nome: "D (Lower - Foco Posterior)", exs: ["Levantamento Terra", "Mesa Flexora", "Stiff", "Cadeira Abdutora", "Panturrilha Sentado"] }
+            ],
+            "forca": [
+                { nome: "A (Upper - Pressão)", exs: ["Supino Reto (Pausa)", "Supino Inclinado", "Desenvolvimento Militar", "Tríceps Testa"] },
+                { nome: "B (Lower - Agachamento)", exs: ["Agachamento Livre", "Agachamento Pausado", "Extensora Unilateral", "Abdominal Roda"] },
+                { nome: "C (Upper - Puxada)", exs: ["Remada Curvada", "Barra Fixa (Carga)", "Remada Unilateral", "Rosca Martelo Pesada"] },
+                { nome: "D (Lower - Terra)", exs: ["Levantamento Terra", "Stiff", "Leg Press Pesado", "Prancha com Peso"] }
+            ]
+        },
+        "5": {
+            "hipertrofia": [
+                { nome: "A (Peito)", exs: ["Supino Reto", "Supino Inclinado", "Crucifixo", "Crossover", "Tríceps Corda"] },
+                { nome: "B (Costas)", exs: ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Pulldown", "Rosca Direta"] },
+                { nome: "C (Pernas)", exs: ["Agachamento", "Leg Press", "Extensora", "Flexora", "Panturrilha"] },
+                { nome: "D (Ombros)", exs: ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Encolhimento", "Face Pull"] },
+                { nome: "E (Braços)", exs: ["Rosca Direta", "Tríceps Testa", "Rosca Scott", "Tríceps Francês", "Rosca Punho"] }
+            ]
+        }
       };
 
       const STORAGE = Object.freeze({
-        draftKey: "titanpro_draft_v2",
-        historyKey: "titanpro_history_v2",
+        draftKey: "titanpro_draft_v4", // v4 pois a estrutura mudou
+        historyKey: "titanpro_history_v4",
         csvTplKey: "titanpro_csv_templates_v1",
         maxHistory: 80,
         maxTemplates: 20
@@ -261,11 +268,11 @@
       };
 
       const biblioteca = {
-        "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador", "Flexão"],
-        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra", "Pulldown"],
-        "Pernas": ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff", "Panturrilha"],
-        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso", "Encolhimento"],
-        "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott"]
+        "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador", "Flexão", "Supino Halter"],
+        "Costas": ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Levantamento Terra", "Pulldown", "Barra Fixa"],
+        "Pernas": ["Agachamento Livre", "Leg Press 45", "Extensora", "Mesa Flexora", "Stiff", "Passada", "Panturrilha"],
+        "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso", "Encolhimento", "Face Pull"],
+        "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott", "Tríceps Francês"]
       };
 
       /* =========================================
@@ -325,22 +332,30 @@
       }
 
       /* =========================================
-         3. GERAÇÃO DE PROTOCOLO (Smart)
+         3. GERAÇÃO DE PROTOCOLO (Smart Periodization)
          ========================================= */
       let currentExId = null;
       let isAddingNew = false;
 
       function gerarProtocolo() {
-        const f = document.getElementById("freq").value;
+        const f = document.getElementById("freq").value; // ex: "3"
+        const obj = document.getElementById("obj").value; // ex: "forca"
+        
         const nav = document.getElementById("nav");
         const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
 
-        const preset = TREINOS_PRONTOS[f];
+        // Tenta buscar o treino específico: Frequência -> Objetivo
+        let preset = TREINOS_PRONTOS[f]?.[obj];
+
+        // Se não houver específico (ex: força 6 dias), tenta o fallback para hipertrofia
+        if (!preset && TREINOS_PRONTOS[f]?.["hipertrofia"]) {
+            preset = TREINOS_PRONTOS[f]["hipertrofia"];
+        }
 
         if (preset) {
            preset.forEach((treino, i) => {
-             const labelCurto = treino.nome.split(" ")[0]; 
+             const labelCurto = treino.nome.split(" ")[0]; // "A", "B" etc
              nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">${labelCurto}</div>`;
              
              const sec = document.createElement("div");
@@ -354,14 +369,16 @@
              });
            });
         } else {
-           (divisoesGen[f] || ["A","B"]).forEach((nome, i) => {
+           // Fallback Genérico para quando não houver config no JSON
+           const divs = divisoesGen[f] || ["A","B"];
+           divs.forEach((nome, i) => {
              nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">Treino ${nome}</div>`;
              const sec = document.createElement("div");
              sec.id = `sec${i}`;
              sec.className = `section ${i === 0 ? "active" : ""}`;
              sec.setAttribute("data-treino-key", `Treino ${nome}`);
              cont.appendChild(sec);
-             criarCard("Exercício Base", sec.id);
+             criarCard("Exercício Livre", sec.id);
            });
         }
         addPillControls();
@@ -370,8 +387,9 @@
 
       function criarCard(nome, sectionId, series = null, reps = null, rpe = null, values = null) {
         const o = document.getElementById("obj").value;
-        const meta = reps || (o === "forca" ? "3-5 Reps" : (o === "hipertrofia" ? "8-12 Reps" : "15-20 Reps"));
-        const sets = series || (o === "forca" ? 5 : (o === "definicao" ? 3 : 4));
+        // Lógica de Sets/Reps baseada no objetivo
+        const meta = reps || (o === "forca" ? "3-5 Reps" : (o === "hipertrofia" ? "6-15 Reps" : "15-20+ Reps"));
+        const sets = series || (o === "forca" ? 3 : (o === "resistencia" ? 3 : 4));
         const id = "ex-" + Math.random().toString(36).substr(2, 7);
 
         const card = document.createElement("div");
@@ -385,14 +403,13 @@
           const kgVal = values && values[s] ? (values[s].kg ?? "") : "";
           const repsVal = values && values[s] ? (values[s].reps ?? "") : "";
           const rpeVal = values && values[s] ? (values[s].rpe ?? "") : "";
-          const placeholderRpe = (rpe || "");
           
           return `
             <div class="series-grid">
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
               <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" placeholder="${escapeAttr(placeholderRpe)}" value="${escapeAttr(rpeVal)}"></div>
+              <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input type="number" inputmode="decimal" placeholder="RPE" value="${escapeAttr(rpeVal)}" oninput="updateSuggests('${id}')" style="color:var(--orange)"></div>
             </div>`;
         }).join("");
 
@@ -400,14 +417,13 @@
           <span class="remove-ex" onclick="this.parentElement.remove(); scheduleDraftSave();">×</span>
           <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
           <span class="ex-target">${sets} Sets x ${meta}</span>
-          <span class="rpe-suggest">1RM est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
-          <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+          <span class="rpe-suggest">1RM Est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
+          <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE (0-10)</span></div>
           ${rows}
         `;
 
         document.getElementById(sectionId).appendChild(card);
         attachAutosaveToCard(card);
-        // Calcula inicial caso venha preenchido
         setTimeout(() => updateSuggests(id), 0);
         scheduleDraftSave();
       }
@@ -416,29 +432,43 @@
         const card = document.querySelector(`[data-ex-id="${id}"]`);
         if(!card) return;
         const inputs = card.querySelectorAll("input");
-        let kg = 0, reps = 0;
+        let maxKg = 0, maxReps = 0, maxRpe = 0;
         
-        // Loop para aplicar borda verde (Melhoria 1)
         for(let i=0; i < inputs.length; i+=3) {
            const kgIn = inputs[i];
            const repIn = inputs[i+1];
+           const rpeIn = inputs[i+2];
+
+           const kg = parseFloat(kgIn.value) || 0;
+           const reps = parseFloat(repIn.value) || 0;
+           const rpe = parseFloat(rpeIn.value) || 0;
            
            if(kgIn.value && repIn.value) {
               kgIn.parentElement.classList.add("filled");
               repIn.parentElement.classList.add("filled");
-              if(kg === 0) { kg = parseFloat(kgIn.value); reps = parseFloat(repIn.value); }
+              if(kg >= maxKg) { maxKg = kg; maxReps = reps; maxRpe = rpe; }
            } else {
               kgIn.parentElement.classList.remove("filled");
               repIn.parentElement.classList.remove("filled");
            }
         }
 
-        if (kg && reps) {
-            const epley1rm = kg * (1 + reps/30);
-            const el1rm = document.getElementById(`1rm-${id}`);
-            const elRpe = document.getElementById(`rpe-${id}`);
+        const el1rm = document.getElementById(`1rm-${id}`);
+        const elStatus = document.getElementById(`rpe-${id}`);
+
+        if (maxKg && maxReps) {
+            const epley1rm = maxKg * (1 + maxReps/30);
             if(el1rm) el1rm.textContent = Math.round(epley1rm) + "kg";
-            if(elRpe) elRpe.textContent = reps > 10 ? "RPE 8-9 (Resist)" : "RPE 9-10 (Força)";
+            if(elStatus) {
+                if(maxRpe >= 9) elStatus.textContent = "🔥 Falha";
+                else if(maxRpe >= 7) elStatus.textContent = "✅ Eficiente";
+                else if(maxRpe > 0) elStatus.textContent = "⚠️ Leve";
+                else elStatus.textContent = "Intensidade?";
+                elStatus.style.color = maxRpe >= 7 ? "var(--green)" : "var(--orange)";
+            }
+        } else {
+            if(el1rm) el1rm.textContent = "-";
+            if(elStatus) elStatus.textContent = "-";
         }
       }
 
@@ -449,31 +479,23 @@
         if (!input.files || !input.files[0]) return;
         const file = input.files[0];
         const btnLabel = input.parentElement;
-        
         btnLabel.innerText = "Lendo...";
-        
         try {
           const arrayBuffer = await file.arrayBuffer();
           const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
           let fullText = "TREINO,EXERCÍCIO,SÉRIES,REPS\n"; 
-
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map(item => item.str).join(" ");
             const linhas = pageText.split(/ {2,}|\n/).filter(l => l.trim().length > 3);
             linhas.forEach(linha => {
-               if(/[a-zA-Z]/.test(linha)) {
-                   fullText += `Treino A,${linha.trim().replace(/,/g, "")},4,10-12\n`; 
-               }
+               if(/[a-zA-Z]/.test(linha)) { fullText += `Treino A,${linha.trim().replace(/,/g, "")},4,8-12\n`; }
             });
           }
           document.getElementById("csvTextarea").value = fullText;
-          alert("✅ Texto extraído! Agora ajuste o texto na caixa e clique em IMPORTAR.");
-        } catch (err) {
-          console.error(err);
-          alert("❌ Erro ao ler PDF (Pode ser imagem escaneada).");
-        } finally {
+          alert("✅ Texto extraído! Ajuste o CSV e clique em IMPORTAR.");
+        } catch (err) { alert("❌ Erro ao ler PDF."); } finally {
           btnLabel.innerHTML = `📄 LER PDF <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)">`;
           input.value = "";
         }
@@ -481,20 +503,19 @@
 
       function importarCSVFromText(csvText, alsoSaveAsTemplate = false) {
         const csv = String(csvText || "").trim();
-        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return false; }
-        
+        if (!csv) { alert("⚠️ Cole o CSV!"); return false; }
         const linhas = csv.split(/\r?\n/).filter(l => l.trim());
-        if (linhas.length < 2) { alert("⚠️ CSV inválido ou muito curto!"); return false; }
-
+        if (linhas.length < 2) return false;
         const delim = detectDelimiter(linhas[0]);
         const header = splitCSVLine(linhas[0], delim).map(h => h.trim().toUpperCase());
-
+        
+        // Mapeamento básico
         const idxTreino = header.indexOf("TREINO");
         const idxEx = header.indexOf("EXERCÍCIO") >= 0 ? header.indexOf("EXERCÍCIO") : header.indexOf("EXERCICIO");
         const idxSeries = header.indexOf("SÉRIES") >= 0 ? header.indexOf("SÉRIES") : header.indexOf("SERIES");
         const idxReps = header.indexOf("REPS");
         
-        if (idxTreino < 0 || idxEx < 0) { alert("⚠️ Header precisa ter: TREINO e EXERCÍCIO."); return false; }
+        if (idxTreino < 0 || idxEx < 0) { alert("⚠️ CSV inválido. Requer colunas TREINO e EXERCÍCIO."); return false; }
 
         const grouped = {};
         const orderOfAppearance = [];
@@ -505,18 +526,12 @@
           if (!treinoKey) continue;
           const exercicio = (cols[idxEx] || "").trim();
           if (!exercicio) continue;
-          const seriesRaw = idxSeries >= 0 ? (cols[idxSeries] || "").trim() : "";
-          const seriesNum = parseInt(String(seriesRaw).replace(/\D/g, ""), 10);
-          const series = Number.isFinite(seriesNum) && seriesNum > 0 ? seriesNum : 4;
-          const reps = idxReps >= 0 ? (cols[idxReps] || "").trim() : "";
+          const series = parseInt(String(cols[idxSeries]||"").replace(/\D/g, ""), 10) || 4;
+          const reps = idxReps >= 0 ? (cols[idxReps] || "").trim() : "8-12";
 
           if (!grouped[treinoKey]) { grouped[treinoKey] = []; orderOfAppearance.push(treinoKey); }
           grouped[treinoKey].push({ exercicio, series, reps });
         }
-
-        const treinoCount = Object.keys(grouped).length;
-        if (treinoCount < 1) { alert("⚠️ Nenhuma linha válida."); return false; }
-        if (treinoCount > 6) { alert("⚠️ Apenas os 6 primeiros treinos foram importados."); }
 
         buildTabsFromGrouped(grouped, orderOfAppearance);
         scheduleDraftSave();
@@ -532,7 +547,7 @@
       }
 
       /* =========================================
-         5. FUNÇÕES AUXILIARES (UI, DATA, HIST)
+         5. FUNÇÕES AUXILIARES
          ========================================= */
       function escapeAttr(v) { return String(v ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;"); }
       function escapeHTML(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -540,7 +555,6 @@
       function attachAutosaveToCard(card) {
         card.querySelectorAll("input").forEach(inp => {
           inp.addEventListener("input", scheduleDraftSave, { passive: true });
-          inp.addEventListener("change", scheduleDraftSave, { passive: true });
         });
       }
 
@@ -611,13 +625,14 @@
           const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx+1}`;
           const cards = Array.from(sec.querySelectorAll(".exercise-card")).map(card => {
             const values = Array.from(card.querySelectorAll(".series-grid")).slice(1).map(r => {
-               const i = r.querySelectorAll("input"); return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
+               const i = r.querySelectorAll("input"); 
+               return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
             });
             return { name: card.querySelector(".ex-title").textContent, sets: values.length, meta: card.querySelector(".ex-target").textContent, values };
           });
           return { treinoKey, cards };
         });
-        return { v: 2, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
+        return { v: 4, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
       }
 
       function loadState(state) {
@@ -637,26 +652,23 @@
 
       function salvarTreino() {
         try {
-          const peso = prompt("Peso atual (kg)? Só números.");
+          const peso = prompt("Peso Corporal (kg)? (Opcional)");
           const st = serializeCurrentState();
           const item = { id: "sess_"+Date.now(), createdAt: new Date().toISOString(), state: st, bodyWeight: peso ? parseFloat(peso) : null };
           const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey)||"[]");
           hist.unshift(item); if(hist.length>STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
           localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist));
-          checkDeload(); alert("✅ Sessão Salva!");
+          alert("✅ Sessão Salva!");
         } catch { alert("⚠️ Memória cheia."); }
       }
 
-      // Melhoria 2: Função Limpar Números (Reciclar)
       function limparApenasValores() {
-        if(!confirm("Tem certeza? Isso apaga os números de séries para começar uma nova semana, mas mantém os exercícios.")) return;
+        if(!confirm("Isso apagará as cargas para iniciar nova semana. Confirmar?")) return;
         document.querySelectorAll(".input-box input").forEach(i => { i.value = ""; i.parentElement.classList.remove("filled"); });
         scheduleDraftSave();
         closeConfig();
-        alert("✅ Valores limpos! Bom treino.");
       }
 
-      // Melhoria 3: Função Backup
       function fazerBackup() {
         const dados = {
            draft: localStorage.getItem(STORAGE.draftKey),
@@ -671,17 +683,10 @@
         a.click();
       }
 
-      /* ===== COACH LOGIC: ALERTS & CHARTS ===== */
+      /* ===== ALERTS & CHARTS ===== */
       function calcVolumeTotal(state) {
         if(!state?.sections) return 0;
         return state.sections.reduce((acc, sec) => acc + sec.cards.reduce((acc2, c) => acc2 + c.values.reduce((acc3, v) => acc3 + ((parseFloat(v.kg)||0)*(parseFloat(v.reps)||0)), 0), 0), 0);
-      }
-      function checkDeload() {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey)||"[]").slice(0,7).reverse();
-        if (hist.length < 2) return;
-        const vols = hist.map(h => calcVolumeTotal(h.state));
-        const last = vols[vols.length-1], prev = vols[vols.length-2];
-        if (last > 0 && prev > 0 && ((last-prev)/prev) < -0.15) alert("⚠️ ALERTA: Volume caiu >15%. Atenção à recuperação!");
       }
 
       function showEvoChart() {
@@ -699,7 +704,7 @@
 
         new Chart(cvs, {
           type: 'line',
-          data: { labels: data.map(x=>x.d), datasets: [{ label:'Volume Total (kg)', data: data.map(x=>x.v), borderColor:'#38b2ac', backgroundColor:'rgba(56,178,172,0.2)', fill:true, tension:0.3 }] },
+          data: { labels: data.map(x=>x.d), datasets: [{ label:'Volume Total (Kg)', data: data.map(x=>x.v), borderColor:'#38b2ac', backgroundColor:'rgba(56,178,172,0.2)', fill:true, tension:0.3 }] },
           options: { responsive:true, scales: { y:{beginAtZero:true, grid:{color:'#2d3748'}}, x:{grid:{color:'#2d3748'}} }, plugins:{legend:{labels:{color:'white'}}} }
         });
       }
@@ -710,8 +715,8 @@
         list.innerHTML = hist.length ? "" : '<div class="hist-item">Sem sessões.</div>';
         hist.forEach(h => {
           const el = document.createElement("div"); el.className="hist-item";
-          el.innerHTML = `<strong>${new Date(h.createdAt).toLocaleString('pt-BR')}</strong> ${h.bodyWeight?`| ${h.bodyWeight}kg`:""}<br><small>${calcVolumeTotal(h.state)}kg vol total</small>`;
-          el.onclick = () => { if(confirm("Carregar sessão?")) { loadState(h.state); scheduleDraftSave(); document.getElementById("modalHIST").close(); }};
+          el.innerHTML = `<strong>${new Date(h.createdAt).toLocaleString('pt-BR')}</strong> ${h.bodyWeight?`| ${h.bodyWeight}kg BW`:""}<br><small>${calcVolumeTotal(h.state)}kg vol total</small>`;
+          el.onclick = () => { if(confirm("Carregar sessão antiga?")) { loadState(h.state); scheduleDraftSave(); document.getElementById("modalHIST").close(); }};
           list.appendChild(el);
         });
         document.getElementById("modalHIST").showModal();
@@ -722,7 +727,7 @@
       function adicionarTreino() {
         const st = serializeCurrentState();
         if(st.sections.length >= 7) { alert("Máximo atingido."); return; }
-        const nome = prompt("Nome do Treino (ex: Treino F):"); if(!nome) return;
+        const nome = prompt("Nome (ex: Treino F):"); if(!nome) return;
         st.sections.push({ treinoKey: normalizeTreinoKey(nome), cards: [] });
         st.pills.push({ idx: st.pills.length, label: treinoLabel(nome) });
         st.activeIdx = st.sections.length - 1; loadState(st); scheduleDraftSave();
