@@ -21,258 +21,62 @@
     <header class="top-header">
       <div class="brand">TITAN <span>PRO</span></div>
       <div class="status-indicator">Offline Moe Mode</div>
-      <div class="date-badge" id="displayDate">01/01/2026</div>
+      <div class="date-badge" id="displayDate">05/01/2026</div>
     </header>
 
-    <div class="main-dashboard">
-      <aside class="left-pane">
-        <div id="timerDisplay" class="display-time">01:00</div>
-        
-        <div class="timer-grid">
-          <button class="btn-timer-opt" onclick="setT(30, this)">30s</button>
-          <button class="btn-timer-opt active" onclick="setT(60, this)">60s</button>
-          <button class="btn-timer-opt" onclick="setT(90, this)">90s</button>
-          <button class="btn-timer-opt" onclick="setT(120, this)">120s</button>
-        </div>
+    <aside class="left-pane">
+      <div id="timerDisplay" class="display-time">01:00</div>
+      
+      <div class="timer-grid">
+        <button class="btn-timer-opt" onclick="setT(30, this)">30s</button>
+        <button class="btn-timer-opt active" onclick="setT(60, this)">60s</button>
+        <button class="btn-timer-opt" onclick="setT(90, this)">90s</button>
+        <button class="btn-timer-opt" onclick="setT(120, this)">120s</button>
+      </div>
 
-        <div class="action-stack">
-          <button id="ctrlBtn" class="btn-primary-action" onclick="toggleT()">START REST</button>
-          <button class="btn-secondary" style="flex-grow:0" onclick="resetT()">RESET</button>
-        </div>
+      <div class="action-stack">
+        <button id="ctrlBtn" class="btn-primary-action" onclick="toggleT()">START REST</button>
+        <button class="btn-secondary" style="flex-grow:0" onclick="resetT()">RESET</button>
+      </div>
 
-        <div class="setup-panel" id="setupPanel">
-            <div class="field">
-              <label>Frequência</label>
-              <select id="freq" onchange="gerarProtocolo()">
-                <option value="3" selected>ABC</option>
-                <option value="4">Upper/Lower</option>
-                <option value="5">ABCDE</option>
-              </select>
+      <div class="setup-panel" id="setupPanel">
+          <div class="field">
+            <label>Treino Ativo</label>
+            <button class="btn-tab" style="width:100%; margin-top:5px;">TREINO A</button>
+          </div>
+          <div class="field">
+            <label>Metas da Sessão</label>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:5px;">
+                Foco: Hipertrofia / RPE 8-9
             </div>
-            <div class="field">
-              <label>Objetivo</label>
-              <select id="obj" onchange="gerarProtocolo()">
-                <option value="hipertrofia" selected>Hipertrofia</option>
-                <option value="forca">Força</option>
-              </select>
-            </div>
-            <button class="btn-secondary" onclick="limparApenasValores()" style="width:100%; border-color:var(--red); color:var(--red); margin-top:10px;">♻️ LIMPAR CARGAS</button>
-        </div>
-      </aside>
+          </div>
+          <button class="btn-secondary" onclick="salvarTreino()" style="width:100%; border-color:var(--accent-green); color:var(--accent-green); margin-top:10px;">💾 SALVAR SESSÃO</button>
+      </div>
+    </aside>
 
-      <section class="exercise-carousel" id="container">
-          </section>
-    </div>
+    <main class="exercise-carousel" id="container">
+        </main>
 
     <footer class="footer-bar">
-      <div id="nav" class="pill-nav-container"></div>
-      <button class="btn-tab" id="currentTreinoBtn" onclick="openConfig()">CONFIG</button>
-      <button class="btn-secondary" onclick="verHistorico()">HIST</button>
-      <button class="btn-secondary" onclick="showEvoChart()">📈 EVOLUÇÃO</button>
-      <button class="btn-secondary" onclick="salvarTreino()" style="background:var(--accent-green); color:white; border:none;">SALVAR SESSÃO</button>
-      <button class="btn-secondary" style="flex-grow: 0; width: 50px;" onclick="abrirLibParaNovo()">+</button>
+      <button class="btn-secondary" onclick="abrirLibParaNovo()">+ EXERCÍCIO</button>
+      <button class="btn-secondary" onclick="verHistorico()">📜 HISTÓRICO</button>
+      <button class="btn-secondary">📊 DADOS</button>
+      <button class="btn-secondary" style="background:var(--red); border:none;" onclick="limparRascunho()">🗑️ LIMPAR</button>
     </footer>
 
     <dialog id="modalLib">
-      <h3 id="libHeader" style="margin:0 0 15px 0; color:var(--orange)">Trocar Exercício</h3>
-      <input type="text" id="manualName" placeholder="Nome personalizado..." style="width:100%; padding:14px; border-radius:12px; border:1px solid #1e293b; background:#070b14; color:white; margin-bottom:15px; box-sizing:border-box;">
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Biblioteca</h3>
+      <input type="text" id="manualName" placeholder="Nome do exercício..." style="width:100%; padding:14px; border-radius:12px; border:1px solid #1e293b; background:#070b14; color:white; margin-bottom:15px; box-sizing:border-box;">
       <div id="libContent" style="max-height:300px; overflow-y:auto;"></div>
       <button class="btn-secondary" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:15px;">FECHAR</button>
     </dialog>
 
     <dialog id="modalHIST">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Histórico de Sessões</h3>
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Sessões Passadas</h3>
       <div id="histList"></div>
       <button class="btn-secondary" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:15px;">FECHAR</button>
     </dialog>
 
-    <script>
-      /* ==========================================================================
-         TITAN PRO - CORE ENGINE V8 (GOD MODE - INTEGRATED)
-         ========================================================================== */
-      const STORAGE = Object.freeze({
-        draft: "titanpro_draft_v8",
-        history: "titanpro_history_v8",
-        max: 80
-      });
-
-      let prMap = new Map();
-      let isAddingNew = false;
-      let currentExId = null;
-
-      /* 1. MOTOR DE PERSISTÊNCIA E RECORDES */
-      function buildPRCache() {
-        prMap.clear();
-        const hist = JSON.parse(localStorage.getItem(STORAGE.history) || "[]");
-        hist.forEach(sessao => {
-          if (!sessao.state?.sections) return;
-          sessao.state.sections.forEach(sec => {
-            sec.cards.forEach(c => {
-              let bestRM = 0;
-              c.values.forEach(v => {
-                const k = parseFloat(v.kg) || 0, r = parseFloat(v.reps) || 0;
-                if (k > 0 && r > 0) {
-                  const epley = k * (1 + r / 30);
-                  if (epley > bestRM) bestRM = epley;
-                }
-              });
-              const current = prMap.get(c.name) || 0;
-              if (bestRM > current) prMap.set(c.name, bestRM);
-            });
-          });
-        });
-      }
-
-      function buscarSombra(nomeEx, idx) {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.history) || "[]");
-        for (let s of hist) {
-          if (!s.state?.sections) continue;
-          for (let sec of s.state.sections) {
-            const c = sec.cards.find(x => x.name === nomeEx);
-            if (c && c.values[idx] && (c.values[idx].kg || c.values[idx].reps)) return c.values[idx];
-          }
-        }
-        return null;
-      }
-
-      /* 2. RENDERIZADOR DASHBOARD */
-      function criarCard(nome, sectionId, series = 4, values = null) {
-        const id = "ex-" + Math.random().toString(36).substr(2, 7);
-        const card = document.createElement("div");
-        card.className = "exercise-card";
-        card.setAttribute("data-ex-id", id);
-        card.setAttribute("data-ex-name", nome);
-
-        let rows = "";
-        for (let i = 0; i < series; i++) {
-          const v = values?.[i] || { kg: "", reps: "", rpe: "" };
-          const smb = buscarSombra(nome, i);
-          rows += `
-            <div class="series-grid">
-              <span class="header-grid">S${i + 1}</span>
-              <div class="input-box ${v.kg ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.kg}" placeholder="${smb?.kg || '0'}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box ${v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.reps}" placeholder="${smb?.reps || '0'}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" inputmode="decimal" value="${v.rpe}" placeholder="RPE" oninput="updateSuggests('${id}')" style="color:var(--orange)"></div>
-            </div>`;
-        }
-
-        card.innerHTML = `
-          <div class="card-header">
-            <h3 class="ex-title" onclick="abrirLibParaTrocar('${id}')">${nome}</h3>
-            <span class="ex-target">${series} Sets</span>
-          </div>
-          <span class="rpe-suggest">1RM: <span id="1rm-${id}">-</span> | <span id="stat-${id}">-</span></span>
-          <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-          ${rows}`;
-
-        document.getElementById("container").appendChild(card);
-        updateSuggests(id);
-      }
-
-      function updateSuggests(id) {
-        const card = document.querySelector(`[data-ex-id="${id}"]`);
-        if (!card) return;
-        const ins = card.querySelectorAll("input"), name = card.getAttribute("data-ex-name");
-        let maxRM = 0, lastRpe = 0;
-
-        for (let i = 0; i < ins.length; i += 3) {
-          const k = parseFloat(ins[i].value) || 0, r = parseFloat(ins[i+1].value) || 0, rp = parseFloat(ins[i+2].value) || 0;
-          if (k > 0 && r > 0) {
-            ins[i].parentElement.classList.add("filled"); ins[i+1].parentElement.classList.add("filled");
-            const rm = k * (1 + r / 30); if (rm > maxRM) { maxRM = rm; lastRpe = rp; }
-          } else {
-            ins[i].parentElement.classList.remove("filled"); ins[i+1].parentElement.classList.remove("filled");
-          }
-        }
-
-        const rmEl = document.getElementById(`1rm-${id}`), stEl = document.getElementById(`stat-${id}`);
-        if (maxRM > 0) {
-          const p = prMap.get(name) || 0;
-          rmEl.innerHTML = `${Math.round(maxRM)}kg ${maxRM > (p + 0.5) ? '<b style="color:var(--green)">▲PR</b>' : ''}`;
-          stEl.textContent = lastRpe >= 9 ? "HARD" : "OPT";
-          stEl.style.color = lastRpe >= 7 ? "var(--green)" : "var(--orange)";
-        }
-        salvarRascunho();
-      }
-
-      /* 3. TIMER SYSTEM */
-      let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      function setT(s, b) {
-        if (isRunning) return;
-        timeLeft = baseTime = s;
-        document.getElementById("timerDisplay").innerText = `0${Math.floor(s/60)}:${s%60 === 0 ? '00' : s%60}`;
-        document.querySelectorAll(".btn-timer-opt").forEach(x => x.classList.remove("active"));
-        b.classList.add("active");
-      }
-
-      function toggleT() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const b = document.getElementById("ctrlBtn");
-        if (isRunning) {
-          clearInterval(timerInt); isRunning = false;
-          b.innerText = "START REST";
-        } else {
-          isRunning = true; b.innerText = "PAUSE";
-          timerInt = setInterval(() => {
-            if (timeLeft > 0) { 
-              timeLeft--; 
-              const m = Math.floor(timeLeft/60), s = timeLeft%60;
-              document.getElementById("timerDisplay").innerText = `0${m}:${s<10?'0':''}${s}`;
-            } else {
-              clearInterval(timerInt); isRunning = false;
-              b.innerText = "START REST"; timeLeft = baseTime;
-            }
-          }, 1000);
-        }
-      }
-
-      function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; document.getElementById("timerDisplay").innerText = "01:00"; }
-
-      /* 4. SETUP E NAVEGAÇÃO */
-      function gerarProtocolo() {
-        const cont = document.getElementById("container");
-        cont.innerHTML = "";
-        ["Supino", "Puxada", "Leg Press"].forEach(ex => criarCard(ex, "container"));
-      }
-
-      function salvarRascunho() {
-        const state = {
-          sections: [{
-            cards: Array.from(document.querySelectorAll(".exercise-card")).map(c => ({
-              name: c.getAttribute("data-ex-name"),
-              values: Array.from(c.querySelectorAll(".series-grid:not(.header-grid)")).map(r => {
-                const i = r.querySelectorAll("input");
-                return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
-              })
-            }))
-          }]
-        };
-        localStorage.setItem(STORAGE.draft, JSON.stringify(state));
-      }
-
-      function salvarTreino() {
-        const r = localStorage.getItem(STORAGE.draft);
-        if (!r) return;
-        const h = JSON.parse(localStorage.getItem(STORAGE.history) || "[]");
-        h.unshift({ date: new Date().toISOString(), state: JSON.parse(r) });
-        localStorage.setItem(STORAGE.history, JSON.stringify(h.slice(0, STORAGE.max)));
-        buildPRCache(); alert("SESSÃO SALVA");
-      }
-
-      function openConfig() { document.getElementById("setupPanel").classList.toggle("active"); }
-
-      window.onload = () => {
-        buildPRCache();
-        const d = localStorage.getItem(STORAGE.draft);
-        if (d) {
-          const st = JSON.parse(d);
-          st.sections[0].cards.forEach(c => criarCard(c.name, "container", c.values.length, c.values));
-        } else {
-          gerarProtocolo();
-        }
-      };
-    </script>
+    <script src="app.js"></script>
   </body>
 </html>
