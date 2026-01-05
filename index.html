@@ -10,7 +10,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-      // Configuração obrigatória do Worker do PDF
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
 
@@ -58,7 +57,9 @@
 
       .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
       .header-grid { text-align:center; font-size:.6rem; color:#718096; font-weight:bold; }
-      .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:8px 0; }
+      .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:8px 0; transition: border-color 0.3s ease; }
+      /* Melhoria Visual 1: Borda verde quando preenchido */
+      .input-box.filled { border-color: var(--green); box-shadow: 0 0 5px rgba(56, 178, 172, 0.3); }
       .input-box input { background:transparent; border:none; color:#fff; width:100%; text-align:center; font-size:1.1rem; outline:none; font-weight:bold; }
 
       .btn-add-ex { background:#1a202c; color:var(--blue); border:2px dashed var(--blue); width:calc(100% - 20px); margin:15px 10px; padding:15px; border-radius:12px; font-weight:800; cursor:pointer; }
@@ -140,6 +141,9 @@
           <option value="definicao">Definição/RML (15-20 reps)</option>
         </select>
       </div>
+      
+      <button class="btn btn-config" onclick="limparApenasValores()" style="width:100%; border:1px solid var(--red); color:var(--red); margin-top:10px;">♻️ LIMPAR VALORES (MANTER TREINO)</button>
+      
       <button class="btn btn-save" onclick="closeConfig()" style="margin-top:12px;">ABRIR TREINO</button>
     </div>
 
@@ -166,11 +170,10 @@
     </dialog>
 
     <dialog id="modalCSV">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Importar Treino</h3>
+      <h3 style="margin:0 0 15px 0; color:var(--orange)">Importar & Backup</h3>
       <div class="csv-info">
         <strong>Opção 1 (PDF):</strong> Use o botão "LER PDF" para abrir ficha do celular.<br />
         <strong>Opção 2 (CSV):</strong> Cole o CSV do Excel/Sheets.<br />
-        <small>Formato: TREINO,EXERCÍCIO,SÉRIES,REPS...</small>
       </div>
 
       <textarea id="csvTextarea" placeholder="O texto da ficha aparecerá aqui..."></textarea>
@@ -182,6 +185,8 @@
         </label>
         
         <button class="btn-import" onclick="importarCSV()">✓ IMPORTAR</button>
+        <button class="btn-config" onclick="fazerBackup()" style="background:#4a5568; color:white;">☁️ BACKUP</button>
+        
         <button class="btn-cancel" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
         <button class="btn-cancel" onclick="mostrarModelosCSV()">📚 MODELOS</button>
         <button class="btn-cancel" onclick="document.getElementById('modalCSV').close()">✕ FECHAR</button>
@@ -211,25 +216,21 @@
          1. CATÁLOGO DE TREINOS INTELIGENTES
          ========================================= */
       const TREINOS_PRONTOS = {
-        // 2 DIAS: FULL BODY
         "2": [
             { nome: "A (Full Body - Foco Agacho)", exs: ["Agachamento Livre", "Supino Reto", "Remada Curvada", "Desenvolvimento Militar", "Panturrilha em Pé"] },
             { nome: "B (Full Body - Foco Terra)", exs: ["Levantamento Terra", "Leg Press 45", "Puxada Alta", "Supino Inclinado", "Rosca Direta"] }
         ],
-        // 3 DIAS: PUSH / PULL / LEGS
         "3": [
             { nome: "A (Push: Peito/Ombro/Tri)", exs: ["Supino Reto", "Supino Inclinado", "Desenvolvimento Militar", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
             { nome: "B (Pull: Costas/Bíceps)", exs: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Crucifixo Inverso", "Rosca Direta", "Rosca Martelo"] },
             { nome: "C (Legs: Pernas)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff", "Panturrilha Sentado"] }
         ],
-        // 4 DIAS: UPPER / LOWER
         "4": [
             { nome: "A (Upper Força)", exs: ["Supino Reto", "Remada Curvada", "Desenvolvimento", "Barra Fixa (ou Graviton)"] },
             { nome: "B (Lower Força)", exs: ["Agachamento Livre", "Leg Press 45", "Extensora", "Panturrilha em Pé"] },
             { nome: "C (Upper Hipertrofia)", exs: ["Supino Inclinado", "Puxada Alta", "Elevação Lateral", "Voador", "Rosca Direta", "Tríceps Corda"] },
             { nome: "D (Lower Posterior)", exs: ["Levantamento Terra", "Mesa Flexora", "Passada", "Panturrilha Sentado"] }
         ],
-        // 5 DIAS: ABCDE (BODY PART SPLIT)
         "5": [
             { nome: "A (Peito)", exs: ["Supino Reto", "Supino Inclinado", "Crucifixo Máquina", "Crossover", "Flexão de Braço"] },
             { nome: "B (Costas)", exs: ["Puxada Alta", "Remada Curvada", "Remada Serrote", "Pulldown", "Hiperextensão Lombar"] },
@@ -237,7 +238,6 @@
             { nome: "D (Ombros)", exs: ["Desenvolvimento", "Elevação Lateral", "Elevação Frontal", "Crucifixo Inverso", "Encolhimento"] },
             { nome: "E (Braços)", exs: ["Rosca Direta", "Tríceps Testa", "Rosca Scott", "Tríceps Corda", "Rosca Punho"] }
         ],
-        // 6 DIAS: PPL x2
         "6": [
             { nome: "A (Push 1)", exs: ["Supino Reto", "Desenvolvimento", "Tríceps Testa", "Elevação Lateral"] },
             { nome: "B (Pull 1)", exs: ["Puxada Alta", "Remada Curvada", "Rosca Direta", "Face Pull"] },
@@ -256,7 +256,6 @@
         maxTemplates: 20
       });
 
-      // Bibliotecas de fallback
       const divisoesGen = {
         "2": ["A", "B"], "3": ["A", "B", "C"], "4": ["A", "B", "C", "D"], "5": ["A", "B", "C", "D", "E"], "6": ["A", "B", "C", "D", "E", "F"]
       };
@@ -351,11 +350,10 @@
              cont.appendChild(sec);
 
              treino.exs.forEach(exNome => {
-               criarCard(exNome, sec.id); // criarCard lê o objetivo para ajustar REPS
+               criarCard(exNome, sec.id); 
              });
            });
         } else {
-           // Fallback genérico
            (divisoesGen[f] || ["A","B"]).forEach((nome, i) => {
              nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">Treino ${nome}</div>`;
              const sec = document.createElement("div");
@@ -392,8 +390,8 @@
           return `
             <div class="series-grid">
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
-              <div class="input-box"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
               <div class="input-box"><input type="number" placeholder="${escapeAttr(placeholderRpe)}" value="${escapeAttr(rpeVal)}"></div>
             </div>`;
         }).join("");
@@ -409,6 +407,8 @@
 
         document.getElementById(sectionId).appendChild(card);
         attachAutosaveToCard(card);
+        // Calcula inicial caso venha preenchido
+        setTimeout(() => updateSuggests(id), 0);
         scheduleDraftSave();
       }
 
@@ -417,14 +417,22 @@
         if(!card) return;
         const inputs = card.querySelectorAll("input");
         let kg = 0, reps = 0;
-        // Pega a primeira série preenchida
+        
+        // Loop para aplicar borda verde (Melhoria 1)
         for(let i=0; i < inputs.length; i+=3) {
-           if(inputs[i].value && inputs[i+1].value) {
-               kg = parseFloat(inputs[i].value);
-               reps = parseFloat(inputs[i+1].value);
-               break; 
+           const kgIn = inputs[i];
+           const repIn = inputs[i+1];
+           
+           if(kgIn.value && repIn.value) {
+              kgIn.parentElement.classList.add("filled");
+              repIn.parentElement.classList.add("filled");
+              if(kg === 0) { kg = parseFloat(kgIn.value); reps = parseFloat(repIn.value); }
+           } else {
+              kgIn.parentElement.classList.remove("filled");
+              repIn.parentElement.classList.remove("filled");
            }
         }
+
         if (kg && reps) {
             const epley1rm = kg * (1 + reps/30);
             const el1rm = document.getElementById(`1rm-${id}`);
@@ -453,10 +461,8 @@
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map(item => item.str).join(" ");
-            // Limpeza Heurística
             const linhas = pageText.split(/ {2,}|\n/).filter(l => l.trim().length > 3);
             linhas.forEach(linha => {
-               // Se a linha tem letras, assumimos que é um exercício
                if(/[a-zA-Z]/.test(linha)) {
                    fullText += `Treino A,${linha.trim().replace(/,/g, "")},4,10-12\n`; 
                }
@@ -639,6 +645,30 @@
           localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist));
           checkDeload(); alert("✅ Sessão Salva!");
         } catch { alert("⚠️ Memória cheia."); }
+      }
+
+      // Melhoria 2: Função Limpar Números (Reciclar)
+      function limparApenasValores() {
+        if(!confirm("Tem certeza? Isso apaga os números de séries para começar uma nova semana, mas mantém os exercícios.")) return;
+        document.querySelectorAll(".input-box input").forEach(i => { i.value = ""; i.parentElement.classList.remove("filled"); });
+        scheduleDraftSave();
+        closeConfig();
+        alert("✅ Valores limpos! Bom treino.");
+      }
+
+      // Melhoria 3: Função Backup
+      function fazerBackup() {
+        const dados = {
+           draft: localStorage.getItem(STORAGE.draftKey),
+           history: localStorage.getItem(STORAGE.historyKey),
+           templates: localStorage.getItem(STORAGE.csvTplKey)
+        };
+        const blob = new Blob([JSON.stringify(dados)], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `titan_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
       }
 
       /* ===== COACH LOGIC: ALERTS & CHARTS ===== */
