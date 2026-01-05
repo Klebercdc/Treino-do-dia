@@ -5,18 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#070b14" />
     <title>TITAN PRO - Smart Workout</title>
-    
     <link rel="stylesheet" href="styles.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
-
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
     <link rel="icon" href="Logo.png" type="image/png" />
   </head>
-
   <body>
     <header class="top-header">
       <div class="brand">TITAN <span>PRO</span></div>
@@ -26,31 +20,20 @@
 
     <aside class="left-pane">
       <div id="timerDisplay" class="display-time">01:00</div>
-      
       <div class="timer-grid">
         <button class="btn-timer-opt" onclick="setT(30, this)">30s</button>
         <button class="btn-timer-opt active" onclick="setT(60, this)">60s</button>
         <button class="btn-timer-opt" onclick="setT(90, this)">90s</button>
         <button class="btn-timer-opt" onclick="setT(120, this)">120s</button>
       </div>
-
       <div class="action-stack">
         <button id="ctrlBtn" class="btn-primary-action" onclick="toggleT()">START REST</button>
         <button class="btn-secondary" style="flex-grow:0" onclick="resetT()">RESET</button>
       </div>
-
       <div class="setup-panel" id="setupPanel">
-          <div class="field">
-            <label>Treino Ativo</label>
-            <button class="btn-tab" style="width:100%; margin-top:5px;">TREINO A</button>
-          </div>
-          <div class="field">
-            <label>Metas da Sessão</label>
-            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:5px;">
-                Foco: Hipertrofia / RPE 8-9
-            </div>
-          </div>
-          <button class="btn-secondary" onclick="salvarTreino()" style="width:100%; border-color:var(--accent-green); color:var(--accent-green); margin-top:10px;">💾 SALVAR SESSÃO</button>
+          <label style="font-size:0.6rem; font-weight:800; color:var(--text-muted)">CONFIGURAÇÕES</label>
+          <button class="btn-secondary" onclick="salvarTreino()" style="width:100%; margin-top:10px; border-color:var(--accent-green)">💾 SALVAR SESSÃO</button>
+          <button class="btn-secondary" onclick="limparRascunho()" style="width:100%; margin-top:10px; border-color:var(--red)">🗑️ REINICIAR</button>
       </div>
     </aside>
 
@@ -58,24 +41,20 @@
         </main>
 
     <footer class="footer-bar">
+      <button class="btn-tab">TREINO A</button>
       <button class="btn-secondary" onclick="abrirLibParaNovo()">+ EXERCÍCIO</button>
       <button class="btn-secondary" onclick="verHistorico()">📜 HISTÓRICO</button>
       <button class="btn-secondary">📊 DADOS</button>
-      <button class="btn-secondary" style="background:var(--red); border:none;" onclick="limparRascunho()">🗑️ LIMPAR</button>
     </footer>
 
     <dialog id="modalLib">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Biblioteca</h3>
-      <input type="text" id="manualName" placeholder="Nome do exercício..." style="width:100%; padding:14px; border-radius:12px; border:1px solid #1e293b; background:#070b14; color:white; margin-bottom:15px; box-sizing:border-box;">
-      <div id="libContent" style="max-height:300px; overflow-y:auto;"></div>
-      <button class="btn-secondary" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:15px;">FECHAR</button>
+      <h3 style="color:var(--orange)">Biblioteca</h3>
+      <input type="text" id="manualName" placeholder="Nome do exercício..." style="width:100%; padding:12px; background:#05080f; color:white; border:1px solid var(--border-dim); border-radius:8px; margin-bottom:10px;">
+      <div id="libContent"></div>
+      <button class="btn-secondary" onclick="document.getElementById('modalLib').close()" style="width:100%">FECHAR</button>
     </dialog>
 
-    <dialog id="modalHIST">
-      <h3 style="margin:0 0 15px 0; color:var(--orange)">Sessões Passadas</h3>
-      <div id="histList"></div>
-      <button class="btn-secondary" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:15px;">FECHAR</button>
-    </dialog>
+    <dialog id="modalHIST"><div id="histList"></div><button onclick="document.getElementById('modalHIST').close()">FECHAR</button></dialog>
 
     <script src="app.js"></script>
   </body>
