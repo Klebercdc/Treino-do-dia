@@ -16,8 +16,7 @@
 
       .top-header { padding:15px; background:var(--card); border-bottom:1px solid #2d3748; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
       .date-badge { font-size:.8rem; color:var(--orange); font-weight:bold; background:#0b1220; padding:4px 10px; border-radius:15px; }
-      .header-left { display:flex; align-items:center; gap:12px; }
-
+      
       .timer-area { background:#1a202c; padding:12px; border-bottom:2px solid var(--blue); text-align:center; }
       #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; margin-bottom:8px; }
       .timer-btns { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
@@ -26,35 +25,33 @@
       .btn-ctrl { background:var(--green); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:.8rem; }
 
       .setup-panel { background:var(--card); padding:20px; border-bottom:3px solid var(--blue); display:block; }
-      .field { margin-bottom:15px; }
       .field label { font-size:.7rem; color:#a0aec0; display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase; }
       .field select { width:100%; padding:12px; background:#0b1220; color:#fff; border:1px solid var(--blue); border-radius:8px; font-weight:bold; }
 
       .nav-pills { display:flex; gap:8px; padding:10px; background:var(--bg); overflow-x:auto; border-bottom:1px solid #2d3748; }
       .pill { flex:none; padding:12px 20px; border-radius:8px; background:#1a202c; font-weight:bold; font-size:.75rem; border:1px solid #2d3748; cursor:pointer; color:#a0aec0; transition: transform 0.1s; }
       .pill.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-      .pill.add-pill { border:2px dashed var(--blue); color:var(--blue); }
 
       .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; animation:fadeIn .3s ease; position:relative; }
       .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration:underline dotted; cursor:pointer; }
-      .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
       .rpe-suggest { display:block; font-size:0.7rem; color:var(--green); margin-bottom:10px; font-family:monospace; }
 
       .series-grid { display:grid; grid-template-columns:40px 1fr 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px; }
-      .header-grid { text-align:center; font-size:.6rem; color:#718096; font-weight:bold; }
       .input-box { background:#0b1220; border:1px solid #2d3748; border-radius:6px; padding:8px 0; }
       .input-box.filled { border-color: var(--green); }
       .input-box input { background:transparent; border:none; color:#fff; width:100%; text-align:center; font-size:1.1rem; outline:none; font-weight:bold; }
-      .input-box input::placeholder { color: rgba(255,255,255,0.1); font-weight: normal; }
+      .input-box input::placeholder { color: rgba(255,255,255,0.1); }
 
       .footer-actions { padding:20px 10px 40px 10px; display:flex; gap:12px; background:transparent; flex-wrap:wrap;}
-      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; text-align:center; font-size:.75rem; text-transform:uppercase; }
+      .btn { padding:15px; border-radius:10px; border:none; font-weight:800; cursor:pointer; flex:1; text-align:center; font-size:.75rem; text-transform:uppercase; display: flex; align-items: center; justify-content: center; gap: 5px; }
       .btn-save { background:var(--green); color:#fff; }
       .btn-config { background:#2d3748; color:var(--blue); border:1px solid var(--blue); }
 
-      dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:90%; max-width:500px; padding:20px; }
+      dialog { background:#161e2e; color:#fff; border:1px solid var(--blue); border-radius:12px; width:90%; max-width:500px; padding:20px; border: 1px solid var(--blue); }
       dialog::backdrop { background: rgba(0,0,0,0.8); }
-      #csvTextarea { width:100%; height:180px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; font-size:.8rem; margin-bottom:12px; }
+      #csvTextarea { width:100%; height:180px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; font-size:.8rem; margin-bottom:12px; box-sizing: border-box; }
+      
+      .csv-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
       
       @keyframes fadeIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:translateY(0);} }
     </style>
@@ -87,7 +84,7 @@
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
-    <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
+    <button class="btn btn-config" style="margin: 10px; width: calc(100% - 20px); background: #1a202c; border: 2px dashed var(--blue);" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
 
     <div class="footer-actions">
       <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
@@ -100,13 +97,13 @@
     <dialog id="modalCSV">
       <h3 style="margin:0 0 15px 0; color:var(--orange)">Arquivos & Modelos</h3>
       <textarea id="csvTextarea" placeholder="Cole CSV ou texto extraído..."></textarea>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <label class="btn btn-config" style="background:var(--blue); color:white; flex:1">📄 PDF<input type="file" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"></label>
-        <button class="btn btn-save" onclick="importarCSV()">IMPORTAR</button>
+      <div class="csv-buttons">
+        <label class="btn" style="background:var(--blue); color:white;">📄 PDF<input type="file" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"></label>
+        <button class="btn" style="background:var(--green); color:white;" onclick="importarCSV()">IMPORTAR</button>
         <button class="btn btn-config" onclick="fazerBackup()">☁️ BACKUP</button>
-        <button class="btn btn-config" onclick="salvarModelo()" style="background:var(--green); color:white">💾 SALVAR MOD</button>
+        <button class="btn" style="background:var(--green); color:white;" onclick="salvarModelo()">💾 SALVAR MOD</button>
         <button class="btn btn-config" onclick="verModelos()">📚 MODELOS</button>
-        <button class="btn" onclick="document.getElementById('modalCSV').close()">✕</button>
+        <button class="btn btn-config" style="color: var(--blue);" onclick="document.getElementById('modalCSV').close()">✕</button>
       </div>
       <div id="modelosLista" style="margin-top:15px; max-height:150px; overflow-y:auto; display:none; border-top:1px solid #2d3748; padding-top:10px;"></div>
     </dialog>
@@ -114,18 +111,12 @@
     <dialog id="modalHIST">
       <h3 style="margin:0 0 15px 0; color:var(--orange)">Histórico</h3>
       <div id="histList" style="max-height:300px; overflow-y:auto;"></div>
-      <button class="btn" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:10px;">FECHAR</button>
-    </dialog>
-
-    <dialog id="modalLib">
-      <h3 id="libHeader" style="margin:0; color:var(--orange)">Exercícios</h3>
-      <div id="libContent" style="max-height:300px; overflow-y:auto; margin:15px 0;"></div>
-      <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%">FECHAR</button>
+      <button class="btn btn-config" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:10px;">FECHAR</button>
     </dialog>
 
     <script>
       const STORAGE = { draft: "titan_m_draft", hist: "titan_m_hist", mods: "titan_m_mods" };
-      const MUSCLE_MAP = { "Peito": ["Supino", "Voador", "Crossover"], "Costas": ["Puxada", "Remada", "Terra", "Barra"], "Pernas": ["Agachamento", "Leg", "Extensora", "Flexora", "Stiff"], "Ombros": ["Desenvolvimento", "Elevação"], "Braços": ["Rosca", "Tríceps"] };
+      const MUSCLE_MAP = { "Peito": ["Supino", "Voador"], "Costas": ["Puxada", "Remada"], "Pernas": ["Agachamento", "Leg"], "Ombros": ["Desenvolvimento"], "Braços": ["Rosca", "Tríceps"] };
 
       let timeLeft = 60, baseTime = 60, timerInt = null, isRunning = false;
 
@@ -134,10 +125,9 @@
       function toggleT() {
         const btn = document.getElementById("ctrlBtn");
         if (isRunning) { clearInterval(timerInt); isRunning = false; btn.innerText = "INICIAR"; } 
-        else { isRunning = true; btn.innerText = "PAUSAR"; timerInt = setInterval(() => { if (timeLeft > 0) { timeLeft--; updateT(); } else { clearInterval(timerInt); isRunning = false; playBeep(); btn.innerText = "INICIAR"; timeLeft = baseTime; updateT(); } }, 1000); }
+        else { isRunning = true; btn.innerText = "PAUSAR"; timerInt = setInterval(() => { if (timeLeft > 0) { timeLeft--; updateT(); } else { clearInterval(timerInt); isRunning = false; btn.innerText = "INICIAR"; timeLeft = baseTime; updateT(); } }, 1000); }
       }
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); }
-      function playBeep() { const a = new AudioContext(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+0.5); }
 
       function criarCard(nome, sectionId, values = null) {
         const id = "ex-" + Math.random().toString(36).substr(2, 5);
@@ -153,7 +143,7 @@
             <div class="input-box ${v.reps?'filled':''}"><input type="number" placeholder="${ghost?.[s]?.reps||''}" value="${v.reps}" oninput="updateEx('${id}')"></div>
             <div class="input-box"><input type="number" placeholder="RPE" value="${v.rpe}" oninput="updateEx('${id}')"></div></div>`;
         }
-        card.innerHTML = `<span class="ex-title" id="${id}" onclick="abrirLib('${id}')">${nome}</span><span class="rpe-suggest" id="res-${id}">1RM: -</span><div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>${rows}`;
+        card.innerHTML = `<span class="ex-title" id="${id}">${nome}</span><span class="rpe-suggest" id="res-${id}">1RM Est: -</span><div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>${rows}`;
         document.getElementById(sectionId).appendChild(card);
         card.querySelectorAll("input").forEach(i => i.addEventListener("input", saveDraft));
         addLongPress(card, () => { if(confirm("Excluir exercício?")) { card.remove(); saveDraft(); } });
@@ -247,7 +237,7 @@
 
       function addLongPress(el, cb) { 
         let t; 
-        el.onmousedown = el.ontouchstart = () => t = setTimeout(() => { el.setAttribute("data-long", "true"); cb(); }, 800);
+        el.onmousedown = el.ontouchstart = () => t = setTimeout(() => cb(), 800);
         el.onmouseup = el.ontouchend = () => clearTimeout(t);
       }
 
@@ -286,7 +276,7 @@
           for(let g in MUSCLE_MAP) if(MUSCLE_MAP[g].some(m => c.name.includes(m))) groups[g]++;
         }));
         const dialog = document.createElement("dialog");
-        dialog.innerHTML = `<canvas id="radarChart"></canvas><button class="btn" onclick="this.parentElement.close(); this.parentElement.remove()">FECHAR</button>`;
+        dialog.innerHTML = `<h3 style="color:var(--orange)">Balanço Muscular</h3><canvas id="radarChart"></canvas><button class="btn btn-config" onclick="this.parentElement.close(); this.parentElement.remove()" style="width:100%; margin-top:10px">FECHAR</button>`;
         document.body.appendChild(dialog); dialog.showModal();
         new Chart(document.getElementById("radarChart"), { type:'radar', data:{ labels:Object.keys(groups), datasets:[{data:Object.values(groups), borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.2)'}] }, options: { scales: { r: { ticks: { display: false } } } }});
       }
