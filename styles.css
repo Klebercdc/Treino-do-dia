@@ -1,200 +1,193 @@
-/* TITAN PRO - ULTRA DARK & HIGH CONTRAST 
-   Foco: Legibilidade em ambiente de treino e estética Premium
+/* TITAN PRO - LAYOUT ORIGINAL REFINADO (10/10)
+   Mantendo a estrutura fiel ao seu design, com correções técnicas.
 */
 
 :root { 
-    --bg: #000000; 
-    --card: #111111; 
-    --accent: #3b82f6; 
-    --accent-glow: rgba(59, 130, 246, 0.3);
-    --text-primary: #ffffff; 
-    --text-secondary: #888888; 
-    --green: #10b981;
-    --orange: #f59e0b;
-    --red: #ef4444;
+    --bg: #0b1220; 
+    --card: #161e2e; 
+    --blue: #3182ce; 
+    --text: #f7fafc; 
+    --orange: #f6ad55; 
+    --green: #38b2ac; 
+    --red: #e53e3e; 
 }
 
 body { 
-    background-color: var(--bg); 
-    color: var(--text-primary); 
-    font-family: 'Inter', -apple-system, sans-serif; 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: -apple-system, system-ui, sans-serif; 
     margin: 0; 
-    padding-bottom: 40px; 
-    -webkit-font-smoothing: antialiased;
+    padding-bottom: 20px; 
+    user-select: none; 
+    -webkit-user-select: none; 
+    -webkit-tap-highlight-color: transparent; 
 }
 
-/* HEADER MINIMALISTA */
+/* HEADER */
 .top-header { 
-    padding: 20px; 
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    padding: 15px; 
+    background: var(--card); 
+    border-bottom: 1px solid #2d3748; 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
     position: sticky; 
     top: 0; 
-    z-index: 1000;
-    border-bottom: 1px solid #222;
+    z-index: 100; 
 }
-
-.logo-img { height: 32px; filter: drop-shadow(0 0 5px var(--accent)); }
 
 .date-badge { 
-    font-size: 0.7rem; 
-    font-weight: 900; 
-    color: var(--orange);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    font-size: .8rem; 
+    color: var(--orange); 
+    font-weight: bold; 
+    background: #0b1220; 
+    padding: 4px 10px; 
+    border-radius: 15px; 
 }
 
-/* TIMER - O "CÉREBRO" DO APP */
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo-img { height: 45px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(49,130,206,.6)); }
+
+/* TIMER */
 .timer-area { 
-    padding: 40px 20px;
-    background: linear-gradient(to bottom, #0a0a0a, #000);
-    text-align: center;
-    border-bottom: 1px solid #222;
+    background: #1a202c; 
+    padding: 12px; 
+    border-bottom: 2px solid var(--blue); 
+    text-align: center; 
 }
 
 #timerDisplay { 
-    font-size: 4.5rem; 
-    font-weight: 900; 
-    letter-spacing: -3px;
-    margin-bottom: 25px;
+    font-size: 2.2rem; 
+    font-weight: 800; 
+    color: var(--blue); 
+    font-family: monospace; 
+    margin-bottom: 8px; 
     font-variant-numeric: tabular-nums;
-    background: linear-gradient(to bottom, #fff, #888);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
 }
 
+.timer-btns { display: flex; gap: 6px; justify-content: center; margin-bottom: 5px; }
 .btn-t { 
-    background: #111;
-    color: var(--text-secondary);
-    border: 1px solid #333;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 700;
-    transition: 0.2s;
+    background: #2d3748; 
+    color: #fff; 
+    border: none; 
+    padding: 8px 12px; 
+    border-radius: 8px; 
+    font-size: .75rem; 
+    cursor: pointer; 
+    font-weight: bold; 
+}
+.btn-t.active { background: var(--blue); }
+.btn-ctrl { 
+    background: var(--green); 
+    color: #fff; 
+    border: none; 
+    padding: 10px 20px; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    font-size: .8rem; 
 }
 
-.btn-t.active { 
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-    box-shadow: 0 0 20px var(--accent-glow);
+/* SETUP PANEL */
+.setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); }
+.field { margin-bottom: 15px; }
+.field label { font-size: .7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
+.field select { 
+    width: 100%; 
+    padding: 12px; 
+    background: #0b1220; 
+    color: #fff; 
+    border: 1px solid var(--blue); 
+    border-radius: 8px; 
+    font-weight: bold; 
 }
 
-/* CARDS DE EXERCÍCIO - DESIGN "BENTO BOX" */
+/* TABS / PILLS */
+.nav-pills { 
+    display: flex; 
+    gap: 8px; 
+    padding: 10px; 
+    background: var(--bg); 
+    overflow-x: auto; 
+    border-bottom: 1px solid #2d3748; 
+    scrollbar-width: none;
+}
+.pill { 
+    flex: none; 
+    padding: 12px 20px; 
+    border-radius: 8px; 
+    background: #1a202c; 
+    font-weight: bold; 
+    font-size: .75rem; 
+    border: 1px solid #2d3748; 
+    cursor: pointer; 
+    color: #a0aec0; 
+    transition: transform 0.1s; 
+}
+.pill.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* EXERCISES */
+.section { display: none; }
+.section.active { display: block; }
 .exercise-card { 
-    background: var(--card);
-    margin: 16px;
-    border-radius: 24px;
-    padding: 24px;
-    border: 1px solid #222;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    background: var(--card); 
+    border-radius: 12px; 
+    padding: 15px; 
+    margin: 10px; 
+    border: 1px solid #2d3748; 
+    animation: fadeIn .3s ease; 
 }
 
 .ex-title { 
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -0.5px;
+    font-weight: 800; 
+    font-size: 1.1rem; 
+    color: var(--blue); 
+    text-decoration: underline dotted; 
+    cursor: pointer; 
 }
+.ex-target { font-size: .75rem; color: var(--orange); font-weight: bold; margin: 4px 0 5px 0; display: block; }
+.rpe-suggest { display: block; font-size: 0.7rem; color: var(--green); margin-bottom: 10px; font-family: monospace; }
 
-.ex-target { 
-    font-size: 0.75rem;
-    color: var(--accent);
-    font-weight: 700;
-    text-transform: uppercase;
-    margin: 6px 0 20px 0;
-    display: inline-block;
-}
-
-.rpe-suggest { 
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-    margin-bottom: 15px;
-}
-
-/* INPUTS DE ALTA VISIBILIDADE */
-.series-grid { 
-    display: grid; 
-    grid-template-columns: 30px 1fr 1fr 1fr; 
-    gap: 12px; 
-    margin-bottom: 10px;
-}
-
-.header-grid { 
-    font-size: 0.6rem;
-    font-weight: 900;
-    color: #444;
-    text-transform: uppercase;
-}
+/* GRID DE INPUTS */
+.series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.header-grid { text-align: center; font-size: .6rem; color: #718096; font-weight: bold; }
 
 .input-box { 
-    background: #000;
-    border: 1.5px solid #333;
-    border-radius: 12px;
-    padding: 12px 0;
-    transition: all 0.2s;
+    background: #0b1220; 
+    border: 1px solid #2d3748; 
+    border-radius: 6px; 
+    padding: 8px 0; 
+    transition: border-color 0.3s; 
 }
-
-.input-box.filled { 
-    border-color: var(--green);
-    background: rgba(16, 185, 129, 0.05);
-}
-
+.input-box.filled { border-color: var(--green); box-shadow: 0 0 5px rgba(56, 178, 172, 0.3); }
 .input-box input { 
-    color: #fff;
-    font-size: 1.3rem;
-    font-weight: 900;
-    text-align: center;
-    background: transparent;
-    border: none;
-    outline: none;
+    background: transparent; 
+    border: none; 
+    color: #fff; 
+    width: 100%; 
+    text-align: center; 
+    font-size: 1.1rem; 
+    outline: none; 
+    font-weight: bold; 
 }
+.input-box input::placeholder { color: rgba(255,255,255,0.15); font-weight: normal; }
 
-.input-box input::placeholder {
-    color: #222; /* Fica bem clarinho, quase invisível até você olhar de perto */
+/* FOOTER */
+.footer-actions { padding: 20px 10px 40px 10px; display: flex; gap: 12px; flex-wrap: wrap; }
+.btn { 
+    padding: 15px; 
+    border-radius: 10px; 
+    border: none; 
+    font-weight: 800; 
+    cursor: pointer; 
+    flex: 1; 
+    font-size: .75rem; 
+    text-transform: uppercase; 
 }
+.btn-save { background: var(--green); color: #fff; box-shadow: 0 4px 0 #2d8a84; }
+.btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
 
-/* NAV PILLS MODERNO */
-.nav-pills { 
-    display: flex;
-    padding: 15px;
-    gap: 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
+/* MODALS */
+dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 500px; padding: 20px; }
+dialog::backdrop { background: rgba(0,0,0,0.8); }
 
-.pill { 
-    padding: 12px 24px;
-    border-radius: 12px;
-    background: #111;
-    color: var(--text-secondary);
-    font-weight: 700;
-    border: 1px solid #222;
-    white-space: nowrap;
-}
-
-.pill.active { 
-    background: #fff;
-    color: #000;
-    border-color: #fff;
-}
-
-/* FOOTER ACTIONS */
-.btn-save { 
-    background: var(--accent);
-    color: #fff;
-    font-weight: 900;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px var(--accent-glow);
-}
-
-.btn-config {
-    background: #111;
-    color: #fff;
-    border: 1px solid #333;
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
