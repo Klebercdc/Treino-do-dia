@@ -16,7 +16,7 @@
 
     <style>
       :root { --bg:#0b1220; --card:#161e2e; --blue:#3182ce; --text:#f7fafc; --orange:#f6ad55; --green:#38b2ac; --red:#e53e3e; }
-      body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; user-select:none; -webkit-user-select:none; }
+      body { background:var(--bg); color:var(--text); font-family:-apple-system,sans-serif; margin:0; padding-bottom:20px; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color: transparent; }
 
       /* HEADER */
       .top-header { padding:15px; background:var(--card); border-bottom:1px solid #2d3748; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
@@ -26,7 +26,7 @@
 
       /* TIMER */
       .timer-area { background:#1a202c; padding:12px; border-bottom:2px solid var(--blue); text-align:center; }
-      #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; margin-bottom:8px; }
+      #timerDisplay { font-size:2.2rem; font-weight:800; color:var(--blue); font-family:monospace; margin-bottom:8px; font-variant-numeric: tabular-nums; }
       .timer-btns { display:flex; gap:6px; justify-content:center; margin-bottom:5px; }
       .btn-t { background:#2d3748; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-size:.75rem; cursor:pointer; font-weight:bold; }
       .btn-t.active { background:var(--blue); }
@@ -49,7 +49,6 @@
       .section { display:none; }
       .section.active { display:block; }
       .exercise-card { background:var(--card); border-radius:12px; padding:15px; margin:10px; border:1px solid #2d3748; animation:fadeIn .3s ease; position:relative; transition: background 0.2s; }
-      .exercise-card:active { background:#232d3f; }
       
       .ex-title { font-weight:800; font-size:1.1rem; color:var(--blue); text-decoration:underline dotted; cursor:pointer; }
       .ex-target { font-size:.75rem; color:var(--orange); font-weight:bold; margin:4px 0 5px 0; display:block; }
@@ -75,7 +74,6 @@
       .lib-item { padding:12px; border-bottom:1px solid #2d3748; cursor:pointer; }
       
       #csvTextarea { width:100%; height:220px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; font-size:.8rem; resize:none; margin-bottom:12px; outline:none; }
-      .csv-info { font-size:.7rem; color:#a0aec0; margin-bottom:12px; line-height:1.4; }
       .csv-buttons { display:flex; gap:8px; flex-wrap:wrap; }
       .csv-buttons button, .csv-buttons label { flex:1; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; min-width:130px; text-align:center; font-size: 0.8rem; display:flex; align-items:center; justify-content:center;}
       .btn-import { background:var(--green); color:#fff; }
@@ -99,7 +97,7 @@
   <body>
     <div class="top-header">
       <div class="header-left">
-        <img src="Logo.png" alt="Logo" class="logo-img" />
+        <img src="Logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none'" />
         <h1 style="margin:0; font-size:1.1rem; color:var(--blue);">TITAN <span style="color:#fff">PRO</span></h1>
       </div>
       <div class="date-badge" id="displayDate">--/--/--</div>
@@ -201,7 +199,7 @@
 
     <script>
       /* =========================================
-         1. PERIODIZAÇÃO (CLEAN NAMES)
+         1. CONSTANTES E CACHE (OTIMIZAÇÃO 10/10)
          ========================================= */
       const TREINOS_PRONTOS = {
         "3": {
@@ -241,13 +239,8 @@
         draftKey: "titanpro_draft_v6", 
         historyKey: "titanpro_history_v4",
         csvTplKey: "titanpro_csv_templates_v1",
-        maxHistory: 80,
-        maxTemplates: 20
+        maxHistory: 80
       });
-
-      const divisoesGen = {
-        "2": ["A", "B"], "3": ["A", "B", "C"], "4": ["A", "B", "C", "D"], "5": ["A", "B", "C", "D", "E"], "6": ["A", "B", "C", "D", "E", "F"]
-      };
 
       const biblioteca = {
         "Peito": ["Supino Inclinado", "Supino Reto", "Crossover", "Voador", "Flexão", "Supino Halter"],
@@ -256,6 +249,9 @@
         "Ombros": ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso", "Encolhimento", "Face Pull"],
         "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott", "Tríceps Francês"]
       };
+
+      // Cache para busca instantânea de Recordes (PRs)
+      let prMapCache = new Map();
 
       /* =========================================
          2. CORE: TIMER & UI
@@ -273,7 +269,7 @@
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); document.getElementById("ctrlBtn").innerText = "INICIAR"; document.getElementById("ctrlBtn").style.background = "var(--green)"; }
 
       /* =========================================
-         3. GERAÇÃO DE PROTOCOLO
+         3. GERAÇÃO E LÓGICA DE EXERCÍCIOS
          ========================================= */
       let currentExId = null;
       let isAddingNew = false;
@@ -291,10 +287,7 @@
         el.addEventListener("mousedown", start);
         el.addEventListener("touchstart", start, {passive: true});
         el.addEventListener("mouseup", end);
-        el.addEventListener("mouseleave", end);
         el.addEventListener("touchend", end);
-        el.addEventListener("touchcancel", end);
-        el.addEventListener("contextmenu", e => { e.preventDefault(); return false; });
       }
 
       function gerarProtocolo() {
@@ -302,36 +295,23 @@
         const obj = document.getElementById("obj").value;
         const nav = document.getElementById("nav");
         const cont = document.getElementById("container");
-        nav.innerHTML = ""; cont.innerHTML = "";
+        
+        nav.innerHTML = ""; 
+        cont.innerHTML = "";
 
-        let preset = TREINOS_PRONTOS[f]?.[obj];
-        if (!preset && TREINOS_PRONTOS[f]?.["hipertrofia"]) preset = TREINOS_PRONTOS[f]["hipertrofia"];
+        let preset = TREINOS_PRONTOS[f]?.[obj] || TREINOS_PRONTOS[f]?.["hipertrofia"];
 
         if (preset) {
            preset.forEach((treino, i) => {
              const letra = String.fromCharCode(65 + i); 
-             const labelFinal = `TREINO ${letra}`; 
-
-             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">${labelFinal}</div>`;
+             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">TREINO ${letra}</div>`;
              
              const sec = document.createElement("div");
              sec.id = `sec${i}`;
              sec.className = `section ${i === 0 ? "active" : ""}`;
              sec.setAttribute("data-treino-key", treino.nome);
              cont.appendChild(sec);
-
              treino.exs.forEach(exNome => { criarCard(exNome, sec.id); });
-           });
-        } else {
-           const divs = divisoesGen[f] || ["A","B"];
-           divs.forEach((nome, i) => {
-             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">TREINO ${nome}</div>`;
-             const sec = document.createElement("div");
-             sec.id = `sec${i}`;
-             sec.className = `section ${i === 0 ? "active" : ""}`;
-             sec.setAttribute("data-treino-key", `Treino ${nome}`);
-             cont.appendChild(sec);
-             criarCard("Exercício Livre", sec.id);
            });
         }
         addPillControls();
@@ -348,338 +328,219 @@
         card.className = "exercise-card";
         card.setAttribute("data-ex-id", id);
         card.setAttribute("data-ex-name", nome);
-        card.setAttribute("data-ex-sets", String(sets));
-        card.setAttribute("data-ex-meta", meta);
 
         addLongPressListener(card, () => {
-           if(confirm(`Excluir o exercício "${nome}"?`)) {
-               card.remove();
-               scheduleDraftSave();
-           }
+           if(confirm(`Excluir "${nome}"?`)) { card.remove(); scheduleDraftSave(); }
         });
 
-        const rows = Array.from({ length: sets }, (_, s) => {
-          const kgVal = values && values[s] ? (values[s].kg ?? "") : "";
-          const repsVal = values && values[s] ? (values[s].reps ?? "") : "";
-          const rpeVal = values && values[s] ? (values[s].rpe ?? "") : "";
-          return `
+        let rowsHtml = "";
+        for(let s=0; s<sets; s++) {
+          const v = values && values[s] ? values[s] : { kg: "", reps: "", rpe: "" };
+          rowsHtml += `
             <div class="series-grid">
               <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
-              <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box ${kgVal && repsVal ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" inputmode="decimal" placeholder="RPE" value="${escapeAttr(rpeVal)}" oninput="updateSuggests('${id}')" style="color:var(--orange)"></div>
+              <div class="input-box ${v.kg && v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.kg}" oninput="updateSuggests('${id}')" enterkeyhint="next"></div>
+              <div class="input-box ${v.kg && v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.reps}" oninput="updateSuggests('${id}')" enterkeyhint="next"></div>
+              <div class="input-box"><input type="number" inputmode="decimal" placeholder="RPE" value="${v.rpe}" oninput="updateSuggests('${id}')" style="color:var(--orange)" enterkeyhint="done"></div>
             </div>`;
-        }).join("");
+        }
 
         card.innerHTML = `
           <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
           <span class="ex-target">${sets} Sets x ${meta}</span>
           <span class="rpe-suggest">1RM Est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
           <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-          ${rows}
+          ${rowsHtml}
         `;
 
         document.getElementById(sectionId).appendChild(card);
         attachAutosaveToCard(card);
-        setTimeout(() => updateSuggests(id), 0);
-        scheduleDraftSave();
+        updateSuggests(id);
       }
 
-      // --- FUNÇÃO ATUALIZADA: INTEGRAÇÃO COM HISTÓRICO ---
       function updateSuggests(id) {
         const card = document.querySelector(`[data-ex-id="${id}"]`);
         if (!card) return;
-        
-        const nomeEx = card.getAttribute("data-ex-name"); 
+        const name = card.getAttribute("data-ex-name");
         const inputs = card.querySelectorAll("input");
-        let maxKg = 0, maxReps = 0, maxRpe = 0;
+        let maxRM = 0, currentRpe = 0;
 
         for (let i = 0; i < inputs.length; i += 3) {
-           const kgIn = inputs[i];
-           const repIn = inputs[i + 1];
-           const rpeIn = inputs[i + 2];
-
-           const kg = parseFloat(kgIn.value) || 0;
-           const reps = parseFloat(repIn.value) || 0;
-           const rpe = parseFloat(rpeIn.value) || 0;
+           const kg = parseFloat(inputs[i].value) || 0;
+           const reps = parseFloat(inputs[i+1].value) || 0;
+           const rpe = parseFloat(inputs[i+2].value) || 0;
            
-           if(kgIn.value && repIn.value) {
-              kgIn.parentElement.classList.add("filled");
-              repIn.parentElement.classList.add("filled");
-              
-              // Verifica se esta série é a melhor da sessão (Baseado em 1RM Estimado)
-              const currentSet1RM = kg * (1 + reps/30);
-              const maxSet1RM = maxKg * (1 + maxReps/30);
-
-              if(currentSet1RM > maxSet1RM) { 
-                 maxKg = kg; 
-                 maxReps = reps; 
-                 maxRpe = rpe; 
-              }
+           if(kg > 0 && reps > 0) {
+              inputs[i].parentElement.classList.add("filled");
+              inputs[i+1].parentElement.classList.add("filled");
+              const rm = kg * (1 + reps/30);
+              if(rm > maxRM) { maxRM = rm; currentRpe = rpe; }
            } else {
-              kgIn.parentElement.classList.remove("filled");
-              repIn.parentElement.classList.remove("filled");
+              inputs[i].parentElement.classList.remove("filled");
+              inputs[i+1].parentElement.classList.remove("filled");
            }
         }
 
-        const el1rm = document.getElementById(`1rm-${id}`);
-        const elStatus = document.getElementById(`rpe-${id}`);
+        const elRM = document.getElementById(`1rm-${id}`);
+        const elStat = document.getElementById(`rpe-${id}`);
 
-        if (maxKg && maxReps) {
-            const epley1rm = maxKg * (1 + maxReps/30);
-            
-            // LÓGICA DE COMPARAÇÃO HISTÓRICA
-            const lastBest = getLastMax(nomeEx);
-            let diffIcon = "";
-            
-            if (lastBest > 0) {
-                if (epley1rm > lastBest + 1) diffIcon = " <span style='color:var(--green)'>▲Pr</span>"; 
-                else if (epley1rm < lastBest - 1) diffIcon = " <span style='color:var(--red)'>▼</span>";
-                else diffIcon = " <span style='color:#a0aec0'>=</span>";
+        if (maxRM > 0) {
+            const histMax = prMapCache.get(name) || 0;
+            let icon = "";
+            if (histMax > 0) {
+                if (maxRM > histMax + 0.5) icon = " <span style='color:var(--green)'>▲Pr</span>";
+                else if (maxRM < histMax - 0.5) icon = " <span style='color:var(--red)'>▼</span>";
+                else icon = " <span style='color:#718096'>=</span>";
             }
-
-            if(el1rm) el1rm.innerHTML = Math.round(epley1rm) + "kg" + diffIcon;
-            
-            if(elStatus) {
-                if(maxRpe >= 9) elStatus.textContent = "🔥 Falha";
-                else if(maxRpe >= 7) elStatus.textContent = "✅ Eficiente";
-                else if(maxRpe > 0) elStatus.textContent = "⚠️ Leve";
-                else elStatus.textContent = "Intensidade?";
-                elStatus.style.color = maxRpe >= 7 ? "var(--green)" : "var(--orange)";
-            }
-        } else {
-            if(el1rm) el1rm.textContent = "-";
-            if(elStatus) elStatus.textContent = "-";
+            elRM.innerHTML = Math.round(maxRM) + "kg" + icon;
+            elStat.textContent = currentRpe >= 9 ? "🔥 Falha" : (currentRpe >= 7 ? "✅ OK" : "Intensid?");
+            elStat.style.color = currentRpe >= 7 ? "var(--green)" : "var(--orange)";
         }
       }
 
-      // --- NOVO: BUSCA NO HISTÓRICO O MELHOR 1RM JÁ FEITO ---
-      function getLastMax(exName) {
-        try {
-            const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-            // Itera sobre o histórico
-            for (let h of hist) {
-                if (!h.state || !h.state.sections) continue;
-                for (let sec of h.state.sections) {
-                    if (!sec.cards) continue;
-                    // Encontra o exercício pelo nome
-                    const found = sec.cards.find(c => c.name === exName);
-                    if (found && found.values) {
-                        // Calcula o melhor set daquele dia
-                        let max1rmDay = 0;
-                        found.values.forEach(v => {
-                            const kg = parseFloat(v.kg) || 0;
-                            const reps = parseFloat(v.reps) || 0;
-                            if (kg > 0 && reps > 0) {
-                                const epley = kg * (1 + reps / 30);
-                                if (epley > max1rmDay) max1rmDay = epley;
-                            }
-                        });
-                        // Retorna o primeiro que achar (o mais recente)
-                        if (max1rmDay > 0) return max1rmDay;
-                    }
-                }
-            }
-        } catch (e) { console.error(e); }
-        return 0; // Nenhum histórico encontrado
+      // Constrói o cache de Recordes para não precisar ler o histórico toda hora
+      function buildPRCache() {
+          prMapCache.clear();
+          const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+          hist.forEach(h => {
+              h.state.sections.forEach(s => {
+                  s.cards.forEach(c => {
+                      let best = 0;
+                      c.values.forEach(v => {
+                          const k = parseFloat(v.kg)||0, r = parseFloat(v.reps)||0;
+                          if(k>0 && r>0) { const rm = k * (1 + r/30); if(rm > best) best = rm; }
+                      });
+                      if(best > (prMapCache.get(c.name)||0)) prMapCache.set(c.name, best);
+                  });
+              });
+          });
       }
 
       /* =========================================
-         4. IMPORTAÇÃO
+         4. AUXILIARES E PERSISTÊNCIA
          ========================================= */
-      async function extrairTextoPDF(input) {
-        if (!input.files || !input.files[0]) return;
-        const file = input.files[0];
-        const btnLabel = input.parentElement;
-        btnLabel.innerText = "Lendo...";
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-          let fullText = "TREINO,EXERCÍCIO,SÉRIES,REPS\n"; 
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(" ");
-            const linhas = pageText.split(/ {2,}|\n/).filter(l => l.trim().length > 3);
-            linhas.forEach(linha => {
-               if(/[a-zA-Z]/.test(linha)) { fullText += `Treino A,${linha.trim().replace(/,/g, "")},4,8-12\n`; }
-            });
-          }
-          document.getElementById("csvTextarea").value = fullText;
-          alert("✅ Texto extraído! Ajuste o CSV e clique em IMPORTAR.");
-        } catch (err) { alert("❌ Erro ao ler PDF."); } finally {
-          btnLabel.innerHTML = `📄 LER PDF <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)">`;
-          input.value = "";
-        }
-      }
-
-      function importarCSVFromText(csvText, alsoSaveAsTemplate = false) {
-        const csv = String(csvText || "").trim();
-        if (!csv) { alert("⚠️ Cole o CSV!"); return false; }
-        const linhas = csv.split(/\r?\n/).filter(l => l.trim());
-        if (linhas.length < 2) return false;
-        const delim = detectDelimiter(linhas[0]);
-        const header = splitCSVLine(linhas[0], delim).map(h => h.trim().toUpperCase());
-        const idxTreino = header.indexOf("TREINO");
-        const idxEx = header.indexOf("EXERCÍCIO") >= 0 ? header.indexOf("EXERCÍCIO") : header.indexOf("EXERCICIO");
-        const idxSeries = header.indexOf("SÉRIES") >= 0 ? header.indexOf("SÉRIES") : header.indexOf("SERIES");
-        const idxReps = header.indexOf("REPS");
-        if (idxTreino < 0 || idxEx < 0) { alert("⚠️ CSV inválido. Requer colunas TREINO e EXERCÍCIO."); return false; }
-        const grouped = {};
-        const orderOfAppearance = [];
-        for (let i = 1; i < linhas.length; i++) {
-          const cols = splitCSVLine(linhas[i], delim);
-          const treinoKey = normalizeTreinoKey(cols[idxTreino]);
-          if (!treinoKey) continue;
-          const exercicio = (cols[idxEx] || "").trim();
-          if (!exercicio) continue;
-          const series = parseInt(String(cols[idxSeries]||"").replace(/\D/g, ""), 10) || 4;
-          const reps = idxReps >= 0 ? (cols[idxReps] || "").trim() : "8-12";
-          if (!grouped[treinoKey]) { grouped[treinoKey] = []; orderOfAppearance.push(treinoKey); }
-          grouped[treinoKey].push({ exercicio, series, reps });
-        }
-        buildTabsFromGrouped(grouped, orderOfAppearance);
-        scheduleDraftSave();
-        if (alsoSaveAsTemplate) trySaveTemplate(csv);
-        return true;
-      }
-      function importarCSV() { if (importarCSVFromText(document.getElementById("csvTextarea").value, false)) { document.getElementById("modalCSV").close(); alert("✅ Treino importado!"); } }
-
-      /* =========================================
-         5. AUXILIARES
-         ========================================= */
-      function escapeAttr(v) { return String(v ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;"); }
-      function escapeHTML(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-      function attachAutosaveToCard(card) { card.querySelectorAll("input").forEach(inp => { inp.addEventListener("input", scheduleDraftSave, { passive: true }); }); }
-      function abrirLibParaNovo() { isAddingNew = true; document.getElementById("libHeader").innerText = "Adicionar Exercício"; mostrarLib(); }
-      function abrirLibParaTrocar(id) { isAddingNew = false; currentExId = id; document.getElementById("libHeader").innerText = "Trocar Exercício"; mostrarLib(); }
-      function mostrarLib() { const lib = document.getElementById("libContent"); lib.innerHTML = ""; for (let cat in biblioteca) { lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin:15px 0 5px; border-bottom:1px solid #2d3748">${cat}</div>`; biblioteca[cat].forEach(ex => { lib.innerHTML += `<div class="lib-item" onclick="selecionar('${ex}')">${ex}</div>`; }); } document.getElementById("modalLib").showModal(); }
-      function selecionar(n) { if (isAddingNew) { const active = document.querySelector(".section.active"); if (active) criarCard(n, active.id); } else { const el = document.getElementById(currentExId); if (el) { el.innerText = n; el.closest(".exercise-card").setAttribute("data-ex-name", n); scheduleDraftSave(); } } document.getElementById("modalLib").close(); }
-      function adicionarManual() { const val = document.getElementById("manualName").value; if (val) { selecionar(val); document.getElementById("manualName").value = ""; } }
-
-      function tabClick(idx, element) {
-        if (element.getAttribute("data-long-pressed") === "true") {
-            element.removeAttribute("data-long-pressed");
-            return;
-        }
-        document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
-        document.getElementById(`sec${idx}`).classList.add("active");
-        document.getElementById(`p${idx}`).classList.add("active");
-        scheduleDraftSave();
-      }
-
-      function abrirCSVModal() { document.getElementById("csvTextarea").value = ""; hideModelosCSV(); document.getElementById("modalCSV").showModal(); }
-      function normalizeTreinoKey(raw) { return String(raw || "").trim().replace(/\s+/g, " ") || null; }
+      function attachAutosaveToCard(card) { card.querySelectorAll("input").forEach(inp => { inp.addEventListener("input", scheduleDraftSave); }); }
       
-      function treinoLabel(key, idx) { 
-          if (typeof idx !== 'undefined') {
-              return `TREINO ${String.fromCharCode(65 + idx)}`;
-          }
-          const k = String(key || "").trim();
-          return k.toUpperCase().startsWith("TREINO") ? k.toUpperCase() : `TREINO ${k.toUpperCase()}`; 
+      let draftSaveTimer = null;
+      function scheduleDraftSave() { 
+        if (draftSaveTimer) clearTimeout(draftSaveTimer); 
+        draftSaveTimer = setTimeout(() => { localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState())); }, 500); 
       }
-      
-      function splitCSVLine(line, delim) { const out = []; let cur = ""; let inQuotes = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (inQuotes && line[i+1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; } } else if (!inQuotes && ch === delim) { out.push(cur.trim()); cur = ""; } else { cur += ch; } } out.push(cur.trim()); return out; }
-      function detectDelimiter(headerLine) { const cComma = (headerLine.match(/,/g)||[]).length, cSemi = (headerLine.match(/;/g)||[]).length, cTab = (headerLine.match(/\t/g)||[]).length; return (cTab >= cSemi && cTab >= cComma) ? "\t" : (cSemi >= cComma ? ";" : ","); }
-      
-      function buildTabsFromGrouped(grouped, order) {
-        const nav = document.getElementById("nav"); const cont = document.getElementById("container");
+
+      function serializeCurrentState() {
+        const sections = Array.from(document.querySelectorAll("#container .section")).map(sec => ({
+          treinoKey: sec.getAttribute("data-treino-key"),
+          cards: Array.from(sec.querySelectorAll(".exercise-card")).map(card => ({
+            name: card.getAttribute("data-ex-name"),
+            values: Array.from(card.querySelectorAll(".series-grid")).slice(1).map(row => {
+              const ins = row.querySelectorAll("input");
+              return { kg: ins[0].value, reps: ins[1].value, rpe: ins[2].value };
+            })
+          }))
+        }));
+        return { freq: document.getElementById("freq").value, obj: document.getElementById("obj").value, sections, activeIdx: getActiveIdx() };
+      }
+
+      function loadState(st) {
+        if(!st) return;
+        document.getElementById("freq").value = st.freq;
+        document.getElementById("obj").value = st.obj;
+        const nav = document.getElementById("nav");
+        const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
-        order.slice(0, 6).forEach((key, idx) => {
-          const label = treinoLabel(key, idx); 
-          nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${label}</div>`;
-          const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`; sec.setAttribute("data-treino-key", key); cont.appendChild(sec);
-          (grouped[key]||[]).forEach(ex => criarCard(ex.exercicio, sec.id, ex.series, ex.reps));
+        
+        st.sections.forEach((s, i) => {
+            nav.innerHTML += `<div class="pill ${i === st.activeIdx ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">TREINO ${String.fromCharCode(65+i)}</div>`;
+            const sec = document.createElement("div");
+            sec.id = `sec${i}`;
+            sec.className = `section ${i === st.activeIdx ? "active" : ""}`;
+            sec.setAttribute("data-treino-key", s.treinoKey);
+            cont.appendChild(sec);
+            s.cards.forEach(c => criarCard(c.name, sec.id, c.values.length, null, null, c.values));
         });
         addPillControls();
       }
 
-      let draftSaveTimer = null;
-      function scheduleDraftSave() { if (draftSaveTimer) clearTimeout(draftSaveTimer); draftSaveTimer = setTimeout(() => { try { localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState())); } catch {} }, 300); }
-      function getActiveIdx() { const p = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")); const a = p.find(x => x.classList.contains("active")); return p.indexOf(a) >= 0 ? p.indexOf(a) : 0; }
-      
-      function serializeCurrentState() {
-        const freq = document.getElementById("freq").value;
-        const obj = document.getElementById("obj").value;
-        const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")).map((p,i) => ({ idx: i, label: p.textContent.trim() }));
-        const sections = Array.from(document.querySelectorAll("#container .section")).map((sec, secIdx) => {
-          const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx+1}`;
-          const cards = Array.from(sec.querySelectorAll(".exercise-card")).map(card => {
-            const values = Array.from(card.querySelectorAll(".series-grid")).slice(1).map(r => {
-               const i = r.querySelectorAll("input"); return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
-            });
-            return { name: card.querySelector(".ex-title").textContent, sets: values.length, meta: card.querySelector(".ex-target").textContent, values };
+      function getActiveIdx() { 
+        const active = document.querySelector(".pill.active");
+        return active ? parseInt(active.id.replace("p", "")) : 0; 
+      }
+
+      function tabClick(idx, el) {
+        if (el.getAttribute("data-long-pressed") === "true") { el.removeAttribute("data-long-pressed"); return; }
+        document.querySelectorAll(".section, .pill").forEach(x => x.classList.remove("active"));
+        document.getElementById(`sec${idx}`).classList.add("active");
+        el.classList.add("active");
+        scheduleDraftSave();
+      }
+
+      function salvarTreino() {
+        const st = serializeCurrentState();
+        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+        hist.unshift({ createdAt: new Date().toISOString(), state: st });
+        localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist.slice(0, STORAGE.maxHistory)));
+        buildPRCache();
+        alert("✅ Sessão Salva!");
+      }
+
+      function limparApenasValores() {
+        if(!confirm("Zerar pesos para nova semana?")) return;
+        document.querySelectorAll(".input-box input").forEach(i => { i.value = ""; i.parentElement.classList.remove("filled"); });
+        scheduleDraftSave();
+      }
+
+      function verHistorico() {
+        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+        const list = document.getElementById("histList");
+        list.innerHTML = hist.length ? "" : "<div class='hist-item'>Vazio</div>";
+        hist.forEach(h => {
+          const div = document.createElement("div");
+          div.className = "hist-item";
+          div.innerHTML = `<strong>${new Date(h.createdAt).toLocaleDateString()}</strong> - ${h.state.sections.length} Treinos`;
+          div.onclick = () => { if(confirm("Carregar este treino?")) { loadState(h.state); document.getElementById("modalHIST").close(); } };
+          list.appendChild(div);
+        });
+        document.getElementById("modalHIST").showModal();
+      }
+
+      // Funções de Modal e Biblioteca (Apenas repassando)
+      function abrirLibParaNovo() { isAddingNew = true; mostrarLib(); }
+      function abrirLibParaTrocar(id) { isAddingNew = false; currentExId = id; mostrarLib(); }
+      function mostrarLib() { 
+        const lib = document.getElementById("libContent"); lib.innerHTML = "";
+        for (let cat in biblioteca) {
+          lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin-top:10px;">${cat}</div>`;
+          biblioteca[cat].forEach(ex => {
+            const item = document.createElement("div"); item.className="lib-item"; item.textContent = ex;
+            item.onclick = () => { selecionar(ex); }; lib.appendChild(item);
           });
-          return { treinoKey, cards };
-        });
-        return { v: 6, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
+        }
+        document.getElementById("modalLib").showModal();
       }
-
-      function loadState(state) {
-        if (!state || !Array.isArray(state.sections)) return false;
-        try { if(state.freq) document.getElementById("freq").value = state.freq; if(state.obj) document.getElementById("obj").value = state.obj; } catch{}
-        const nav = document.getElementById("nav"); const cont = document.getElementById("container");
-        nav.innerHTML = ""; cont.innerHTML = "";
-        state.sections.slice(0,6).forEach((secData, idx) => {
-           const label = `TREINO ${String.fromCharCode(65 + idx)}`;
-           nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tabClick(${idx}, this)">${label}</div>`;
-           const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`; sec.setAttribute("data-treino-key", secData.treinoKey); cont.appendChild(sec);
-           (secData.cards||[]).forEach(c => criarCard(c.name, sec.id, c.sets, c.meta.split("Sets x")[1]?.trim(), null, c.values));
-        });
-        addPillControls(); tabClick(state.activeIdx||0, document.getElementById(`p${state.activeIdx||0}`));
-        return true;
+      function selecionar(n) { 
+        if (isAddingNew) { const active = document.querySelector(".section.active"); if (active) criarCard(n, active.id); } 
+        else { const el = document.getElementById(currentExId); el.innerText = n; el.closest(".exercise-card").setAttribute("data-ex-name", n); }
+        document.getElementById("modalLib").close(); scheduleDraftSave();
       }
-
-      function salvarTreino() { try { const peso = prompt("Peso Corporal (kg)? (Opcional)"); const st = serializeCurrentState(); const item = { id: "sess_"+Date.now(), createdAt: new Date().toISOString(), state: st, bodyWeight: peso ? parseFloat(peso) : null }; const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey)||"[]"); hist.unshift(item); if(hist.length>STORAGE.maxHistory) hist.length = STORAGE.maxHistory; localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist)); alert("✅ Sessão Salva!"); } catch { alert("⚠️ Memória cheia."); } }
-      function limparApenasValores() { if(!confirm("Nova semana? Isso apaga cargas.")) return; document.querySelectorAll(".input-box input").forEach(i => { i.value = ""; i.parentElement.classList.remove("filled"); }); scheduleDraftSave(); closeConfig(); }
-      function fazerBackup() { const dados = { draft: localStorage.getItem(STORAGE.draftKey), history: localStorage.getItem(STORAGE.historyKey), templates: localStorage.getItem(STORAGE.csvTplKey) }; const blob = new Blob([JSON.stringify(dados)], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `titan_backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); }
-      function calcVolumeTotal(state) { if(!state?.sections) return 0; return state.sections.reduce((acc, sec) => acc + sec.cards.reduce((acc2, c) => acc2 + c.values.reduce((acc3, v) => acc3 + ((parseFloat(v.kg)||0)*(parseFloat(v.reps)||0)), 0), 0), 0); }
-      function showEvoChart() { const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey)||"[]").reverse(); if(!hist.length) { alert("Sem histórico."); return; } const data = hist.map(h => ({ d: new Date(h.createdAt).toLocaleDateString('pt-BR').slice(0,5), v: calcVolumeTotal(h.state) })); const dialog = document.createElement("dialog"); dialog.style.cssText = "background:#161e2e; width:95%; max-width:600px; padding:15px; border:1px solid var(--blue); border-radius:12px;"; const cvs = document.createElement("canvas"); const btn = document.createElement("button"); btn.innerText = "FECHAR"; btn.className="btn"; btn.style.cssText="background:var(--red); color:white; margin-top:10px; width:100%"; btn.onclick = () => { dialog.close(); dialog.remove(); }; dialog.appendChild(cvs); dialog.appendChild(btn); document.body.appendChild(dialog); dialog.showModal(); new Chart(cvs, { type: 'line', data: { labels: data.map(x=>x.d), datasets: [{ label:'Volume Total', data: data.map(x=>x.v), borderColor:'#38b2ac', backgroundColor:'rgba(56,178,172,0.2)', fill:true, tension:0.3 }] }, options: { responsive:true, scales: { y:{beginAtZero:true, grid:{color:'#2d3748'}}, x:{grid:{color:'#2d3748'}} }, plugins:{legend:{labels:{color:'white'}}} } }); }
-      function verHistorico() { const list = document.getElementById("histList"); const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey)||"[]"); list.innerHTML = hist.length ? "" : '<div class="hist-item">Sem sessões.</div>'; hist.forEach(h => { const el = document.createElement("div"); el.className="hist-item"; el.innerHTML = `<strong>${new Date(h.createdAt).toLocaleString('pt-BR')}</strong> ${h.bodyWeight?`| ${h.bodyWeight}kg`:""}<br><small>${calcVolumeTotal(h.state)}kg vol</small>`; el.onclick = () => { if(confirm("Carregar sessão antiga?")) { loadState(h.state); scheduleDraftSave(); document.getElementById("modalHIST").close(); }}; list.appendChild(el); }); document.getElementById("modalHIST").showModal(); }
-      function limparHistorico() { if(confirm("Apagar tudo?")) { localStorage.removeItem(STORAGE.historyKey); verHistorico(); } }
-
-      function adicionarTreino() {
-        const st = serializeCurrentState();
-        if(st.sections.length >= 7) { alert("Máximo atingido."); return; }
-        const nextLetter = String.fromCharCode(65 + st.sections.length);
-        const fullName = `TREINO ${nextLetter}`;
-        st.sections.push({ treinoKey: `Treino ${nextLetter}`, cards: [] });
-        st.pills.push({ idx: st.pills.length, label: fullName });
-        st.activeIdx = st.sections.length - 1; loadState(st); scheduleDraftSave();
-      }
-      
-      function excluirTreinoPorIdx(idx) {
-        if(!confirm(`Excluir ${document.getElementById("p"+idx).textContent}?`)) return;
-        const st = serializeCurrentState();
-        if(st.sections.length <= 1) { alert("Mantenha 1 treino."); return; }
-        st.sections.splice(idx, 1); st.pills.splice(idx, 1);
-        st.activeIdx = 0; loadState(st); scheduleDraftSave();
-      }
-
+      function adicionarManual() { const v = document.getElementById("manualName").value; if(v) { selecionar(v); document.getElementById("manualName").value = ""; } }
       function addPillControls() {
         const nav = document.getElementById("nav");
-        nav.querySelectorAll(".add-pill").forEach(e => e.remove());
-        nav.querySelectorAll(".pill").forEach((p, i) => {
-          addLongPressListener(p, () => {
-             excluirTreinoPorIdx(i);
-          });
-        });
-        const add = document.createElement("div"); add.className="pill add-pill"; add.innerText="+"; add.onclick=adicionarTreino; nav.appendChild(add);
+        nav.querySelectorAll(".add-pill").forEach(x => x.remove());
+        const add = document.createElement("div"); add.className="pill add-pill"; add.innerText="+"; 
+        add.onclick = () => {
+          const st = serializeCurrentState();
+          st.sections.push({ treinoKey: "Novo", cards: [] });
+          st.activeIdx = st.sections.length - 1;
+          loadState(st);
+        };
+        nav.appendChild(add);
       }
 
-      /* ===== TEMPLATES ===== */
-      function getCSVTemplates() { try{return JSON.parse(localStorage.getItem(STORAGE.csvTplKey))||[]}catch{return[]} }
-      function trySaveTemplate(csv) { const n = prompt("Nome do Modelo:"); if(!n) return; const arr = getCSVTemplates(); arr.unshift({id:Date.now(), name:n, date:new Date(), csv}); localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0,20))); alert("Salvo!"); }
-      function mostrarModelosCSV() { document.getElementById("tplArea").style.display="block"; const l = document.getElementById("tplList"); const arr = getCSVTemplates(); l.innerHTML = arr.length ? "" : "<div class='tpl-item'>Vazio.</div>"; arr.forEach(t => { const d = document.createElement("div"); d.className="tpl-item"; d.innerHTML = `<strong>${escapeHTML(t.name)}</strong><br><small>${new Date(t.date).toLocaleDateString()}</small>`; d.onclick = () => { if(confirm("Carregar?")) { importarCSVFromText(t.csv, false); document.getElementById("modalCSV").close(); }}; d.oncontextmenu = (e) => { e.preventDefault(); if(confirm("Deletar?")) { localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.filter(x=>x.id!==t.id))); mostrarModelosCSV(); }}; l.appendChild(d); }); }
-      function limparModelosCSV() { if(confirm("Apagar tudo?")) localStorage.removeItem(STORAGE.csvTplKey); mostrarModelosCSV(); }
-      function hideModelosCSV() { document.getElementById("tplArea").style.display="none"; }
-      function salvarModeloCSV() { const v = document.getElementById("csvTextarea").value; if(v) trySaveTemplate(v); else alert("Cole o CSV."); }
-
       window.onload = () => {
-        try { document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR"); } catch{}
-        let loaded = false;
-        try { const r = localStorage.getItem(STORAGE.draftKey); if(r) loaded = loadState(JSON.parse(r)); } catch{}
-        if(!loaded) gerarProtocolo();
+        document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
+        buildPRCache();
+        const saved = localStorage.getItem(STORAGE.draftKey);
+        if(saved) loadState(JSON.parse(saved)); else gerarProtocolo();
         openConfig();
       };
     </script>
