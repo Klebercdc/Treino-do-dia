@@ -1,163 +1,104 @@
-/* ==========================================================================
-   TITAN PRO - CORE ENGINE V9 (ESTRUTURA BLINDADA)
-   ========================================================================== */
+/* ========= UTIL ========= */
+function toNum(x){const n=parseFloat(x);return isNaN(n)?0:n}
+function calcRM(kg,reps){return kg && reps ? kg*(1+reps/30):0}
+function alvoReps(){
+  const o=document.getElementById("obj").value
+  if(o==="forca") return 4
+  if(o==="definicao") return 17
+  return 10
+}
+function calcKgSug(rm){
+  const r=alvoReps()
+  return Math.round((rm/(1+r/30))/2.5)*2.5
+}
 
-const APP_CONFIG = Object.freeze({
-    keys: {
-        draft: "titan_v9_draft",
-        history: "titan_v9_history"
-    },
-    limits: {
-        history: 100,
-        maxSets: 10
-    }
-});
+/* ========= TIMER ========= */
+let timeLeft=60,baseTime=60,isRunning=false,timerInt=null
+function setT(s,b){if(isRunning)return;baseTime=timeLeft=s;updT()}
+function updT(){const m=Math.floor(timeLeft/60),s=timeLeft%60;timerDisplay.innerText=`${m}:${s<10?"0":""}${s}`}
+function toggleT(){
+  const b=ctrlBtn
+  if(isRunning){clearInterval(timerInt);isRunning=false;b.innerText="CONTINUAR"}
+  else{
+    isRunning=true;b.innerText="PAUSAR"
+    timerInt=setInterval(()=>{timeLeft?timeLeft--:(clearInterval(timerInt),isRunning=false,timeLeft=baseTime);updT()},1000)
+  }
+}
+function resetT(){clearInterval(timerInt);isRunning=false;timeLeft=baseTime;updT()}
 
-let globalPRMap = new Map();
+/* ========= TREINO ========= */
+const STORAGE={hist:"titan_hist_v3"}
+let treino=[]
 
-/* 1. MOTOR DE CÁLCULO E RECORDES */
-const TitanMath = {
-    estimate1RM: (kg, reps) => kg * (1 + reps / 30),
-    
-    calcVolume: (values) => values.reduce((acc, v) => acc + (parseFloat(v.kg || 0) * parseFloat(v.reps || 0)), 0),
-    
-    buildPRCache: () => {
-        globalPRMap.clear();
-        const history = JSON.parse(localStorage.getItem(APP_CONFIG.keys.history) || "[]");
-        history.forEach(session => {
-            session.state?.sections?.forEach(sec => {
-                sec.cards?.forEach(card => {
-                    card.values?.forEach(v => {
-                        const rm = TitanMath.estimate1RM(parseFloat(v.kg || 0), parseFloat(v.reps || 0));
-                        if (rm > (globalPRMap.get(card.name) || 0)) globalPRMap.set(card.name, rm);
-                    });
-                });
-            });
-        });
-    }
-};
+function gerarProtocolo(){
+  nav.innerHTML=""
+  container.innerHTML=""
+  ["A","B","C"].forEach((t,i)=>{
+    nav.innerHTML+=`<div class="pill ${i==0?"active":""}" onclick="tab(${i})">${t}</div>`
+    const sec=document.createElement("div")
+    sec.className="section"
+    if(i==0) sec.classList.add("active")
+    sec.dataset.treino=t
+    container.appendChild(sec)
+    criarCard("Rosca Direta",sec)
+  })
+}
 
-/* 2. GHOST LOADING (CARGA FANTASMA) */
-const GhostEngine = {
-    getLastPerformance: (exerciseName, setIndex) => {
-        const history = JSON.parse(localStorage.getItem(APP_CONFIG.keys.history) || "[]");
-        for (let session of history) {
-            const section = session.state?.sections?.find(s => s.cards?.some(c => c.name === exerciseName));
-            const card = section?.cards?.find(c => c.name === exerciseName);
-            if (card?.values?.[setIndex] && (card.values[setIndex].kg || card.values[setIndex].reps)) {
-                return card.values[setIndex];
-            }
-        }
-        return null;
-    }
-};
+function criarCard(nome,sec){
+  const card=document.createElement("div")
+  card.className="exercise-card"
+  card.innerHTML=`<strong>${nome}</strong>`
+  for(let i=0;i<3;i++){
+    card.innerHTML+=`
+    <div class="series-grid">
+      <div>S${i+1}<div class="rmmini" id="rm-${nome}-${i}"></div></div>
+      <div class="input-box"><input oninput="updRM(this,'${nome}',${i})"></div>
+      <div class="input-box"><input oninput="updRM(this,'${nome}',${i})"></div>
+      <div class="input-box"><input></div>
+    </div>`
+  }
+  sec.appendChild(card)
+}
 
-/* 3. CONTROLADOR DE UI E RENDERIZAÇÃO */
-const UIRenderer = {
-    renderCard: (name, sectionId, series = 4, values = null) => {
-        const id = `ex-${Math.random().toString(36).substr(2, 7)}`;
-        const container = document.getElementById(sectionId);
-        if (!container) return;
+function updRM(inp,nome,i){
+  const row=inp.closest(".series-grid")
+  const kg=toNum(row.children[1].querySelector("input").value)
+  const reps=toNum(row.children[2].querySelector("input").value)
+  const rm=Math.round(calcRM(kg,reps))
+  document.getElementById(`rm-${nome}-${i}`).innerText=rm?`RM ${rm}`:""
+}
 
-        const card = document.createElement("div");
-        card.className = "exercise-card";
-        card.id = id;
-        card.setAttribute("data-name", name);
+/* ========= HISTÓRICO ========= */
+function salvarTreino(){
+  const state=[...document.querySelectorAll(".exercise-card")].map(c=>{
+    const nome=c.querySelector("strong").innerText
+    const series=[...c.querySelectorAll(".series-grid")].map(r=>{
+      const kg=toNum(r.children[1].querySelector("input").value)
+      const reps=toNum(r.children[2].querySelector("input").value)
+      const rpe=toNum(r.children[3].querySelector("input").value)
+      return {kg,reps,rpe,rm:Math.round(calcRM(kg,reps))}
+    })
+    return {nome,series}
+  })
+  const hist=JSON.parse(localStorage.getItem(STORAGE.hist)||"[]")
+  hist.unshift({date:new Date(),state})
+  localStorage.setItem(STORAGE.hist,JSON.stringify(hist))
+  alert("Sessão salva com RM por série")
+}
 
-        let rows = "";
-        for (let i = 0; i < series; i++) {
-            const v = values?.[i] || { kg: "", reps: "", rpe: "" };
-            const ghost = GhostEngine.getLastPerformance(name, i);
-            
-            rows += `
-                <div class="series-grid">
-                    <span class="header-grid">S${i + 1}</span>
-                    <div class="input-box">
-                        <input type="number" inputmode="decimal" step="any" value="${v.kg}" 
-                               placeholder="${ghost?.kg || 'kg'}" oninput="UIRenderer.sync('${id}')">
-                    </div>
-                    <div class="input-box">
-                        <input type="number" inputmode="decimal" value="${v.reps}" 
-                               placeholder="${ghost?.reps || 'reps'}" oninput="UIRenderer.sync('${id}')">
-                    </div>
-                    <div class="input-box">
-                        <input type="number" inputmode="decimal" value="${v.rpe}" 
-                               placeholder="RPE" oninput="UIRenderer.sync('${id}')">
-                    </div>
-                </div>`;
-        }
+function verHistorico(){
+  const hist=JSON.parse(localStorage.getItem(STORAGE.hist)||"[]")
+  histList.innerHTML=""
+  hist.forEach(h=>{
+    const d=document.createElement("div")
+    d.innerHTML=`<strong>${new Date(h.date).toLocaleString()}</strong><pre>${JSON.stringify(h.state,null,2)}</pre>`
+    histList.appendChild(d)
+  })
+  modalHIST.showModal()
+}
 
-        card.innerHTML = `
-            <span class="remove-ex" onclick="document.getElementById('${id}').remove(); UIRenderer.saveDraft();">×</span>
-            <div class="card-header">
-                <h3 class="ex-title">${name}</h3>
-                <span class="ex-target">${series} Séries</span>
-            </div>
-            <div class="rpe-suggest">
-                Est. 1RM: <span id="rm-${id}">-</span> | Recorde: <span id="pr-${id}">-</span>
-            </div>
-            <div class="series-grid header-grid">
-                <span>SET</span><span>KG</span><span>REPS</span><span>RPE</span>
-            </div>
-            ${rows}`;
-
-        container.appendChild(card);
-        UIRenderer.sync(id);
-    },
-
-    sync: (id) => {
-        const card = document.getElementById(id);
-        const name = card.getAttribute("data-name");
-        const inputs = card.querySelectorAll("input");
-        let bestRM = 0;
-
-        for (let i = 0; i < inputs.length; i += 3) {
-            const kg = parseFloat(inputs[i].value) || 0;
-            const reps = parseFloat(inputs[i+1].value) || 0;
-            if (kg > 0 && reps > 0) {
-                const currentRM = TitanMath.estimate1RM(kg, reps);
-                if (currentRM > bestRM) bestRM = currentRM;
-                inputs[i].parentElement.classList.add("filled");
-            } else {
-                inputs[i].parentElement.classList.remove("filled");
-            }
-        }
-
-        const pr = globalPRMap.get(name) || 0;
-        document.getElementById(`rm-${id}`).innerText = bestRM ? Math.round(bestRM) + "kg" : "-";
-        document.getElementById(`pr-${id}`).innerText = pr ? Math.round(pr) + "kg" : "-";
-        
-        if (bestRM > pr + 0.1 && pr > 0) {
-            document.getElementById(`rm-${id}`).style.color = "var(--green)";
-        }
-        UIRenderer.saveDraft();
-    },
-
-    saveDraft: () => {
-        const state = {
-            sections: Array.from(document.querySelectorAll(".section")).map(sec => ({
-                treinoKey: sec.getAttribute("data-treino-key"),
-                cards: Array.from(sec.querySelectorAll(".exercise-card")).map(c => ({
-                    name: c.getAttribute("data-name"),
-                    values: Array.from(c.querySelectorAll(".series-grid:not(.header-grid)")).map(r => {
-                        const i = r.querySelectorAll("input");
-                        return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
-                    })
-                }))
-            }))
-        };
-        localStorage.setItem(APP_CONFIG.keys.draft, JSON.stringify(state));
-    }
-};
-
-/* 4. BOOTSTRAP */
-window.onload = () => {
-    TitanMath.buildPRCache();
-    const draft = JSON.parse(localStorage.getItem(APP_CONFIG.keys.draft));
-    if (draft && draft.sections) {
-        // Lógica de reidratação de abas e cards
-        draft.sections.forEach((sec, i) => {
-            // Renderiza conforme a estrutura de abas existente
-        });
-    }
-};
+/* ========= INIT ========= */
+window.onload=()=>{
+  displayDate.innerText=new Date().toLocaleDateString("pt-BR")
+  gerarProtocolo()
+}
