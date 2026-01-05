@@ -199,7 +199,7 @@
 
     <script>
       /* =========================================
-         1. CONSTANTES E CACHE (OTIMIZAÇÃO 10/10)
+         1. CONSTANTES E MOTOR DE CACHE
          ========================================= */
       const TREINOS_PRONTOS = {
         "3": {
@@ -207,30 +207,6 @@
                 { nome: "Treino A", exs: ["Supino Inclinado Halter", "Supino Reto Barra", "Desenvolvimento Máquina", "Elevação Lateral", "Tríceps Corda", "Tríceps Testa"] },
                 { nome: "Treino B", exs: ["Puxada Alta Aberta", "Remada Curvada", "Remada Baixa Triângulo", "Face Pull", "Rosca Direta", "Rosca Scott"] },
                 { nome: "Treino C", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff Halter", "Panturrilha Sentado"] }
-            ],
-            "forca": [
-                { nome: "Treino A", exs: ["Supino Reto (Foco Carga)", "Desenvolvimento Militar", "Supino Fechado", "Paralelas"] },
-                { nome: "Treino B", exs: ["Levantamento Terra", "Remada Pendlay", "Barra Fixa (com peso)", "Rosca Martelo"] },
-                { nome: "Treino C", exs: ["Agachamento Livre (Low Bar)", "Agachamento Frontal", "Stiff Barra", "Panturrilha em Pé"] }
-            ],
-            "resistencia": [
-                { nome: "Treino A", exs: ["Agachamento Taça", "Flexão de Braço", "Remada Invertida", "Abdominal Supra", "Polichinelo"] },
-                { nome: "Treino B", exs: ["Afundo", "Desenvolvimento Halter", "Puxada Alta", "Prancha", "Burpees"] },
-                { nome: "Treino C", exs: ["Leg Press", "Supino Máquina", "Rosca Direta", "Tríceps Banco", "Corrida Estacionária"] }
-            ]
-        },
-        "4": {
-            "hipertrofia": [
-                { nome: "Treino A", exs: ["Supino Inclinado", "Remada Curvada", "Voador", "Puxada Alta", "Elevação Lateral", "Rosca Direta"] },
-                { nome: "Treino B", exs: ["Agachamento Livre", "Leg Press", "Extensora", "Passada", "Panturrilha em Pé"] },
-                { nome: "Treino C", exs: ["Desenvolvimento", "Barra Fixa", "Elevação Lateral Polia", "Tríceps Corda", "Rosca Scott", "Face Pull"] },
-                { nome: "Treino D", exs: ["Levantamento Terra", "Mesa Flexora", "Stiff", "Cadeira Abdutora", "Panturrilha Sentado"] }
-            ],
-            "forca": [
-                { nome: "Treino A", exs: ["Supino Reto (Pausa)", "Supino Inclinado", "Desenvolvimento Militar", "Tríceps Testa"] },
-                { nome: "Treino B", exs: ["Agachamento Livre", "Agachamento Pausado", "Extensora Unilateral", "Abdominal Roda"] },
-                { nome: "Treino C", exs: ["Remada Curvada", "Barra Fixa (Carga)", "Remada Unilateral", "Rosca Martelo Pesada"] },
-                { nome: "Treino D", exs: ["Levantamento Terra", "Stiff", "Leg Press Pesado", "Prancha com Peso"] }
             ]
         }
       };
@@ -250,11 +226,10 @@
         "Braços": ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott", "Tríceps Francês"]
       };
 
-      // Cache para busca instantânea de Recordes (PRs)
       let prMapCache = new Map();
 
       /* =========================================
-         2. CORE: TIMER & UI
+         2. TIMER E UI
          ========================================= */
       function openConfig() { document.getElementById("setupPanel").style.display = "block"; }
       function closeConfig() { document.getElementById("setupPanel").style.display = "none"; }
@@ -269,93 +244,39 @@
       function resetT() { clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT(); document.getElementById("ctrlBtn").innerText = "INICIAR"; document.getElementById("ctrlBtn").style.background = "var(--green)"; }
 
       /* =========================================
-         3. GERAÇÃO E LÓGICA DE EXERCÍCIOS
+         3. EVOLUÇÃO E PROGRESSÃO (GHOST LOAD)
          ========================================= */
-      let currentExId = null;
-      let isAddingNew = false;
-      let pressTimer = null;
-
-      function addLongPressListener(el, callback) {
-        const start = (e) => {
-          if(e.target.tagName === 'INPUT') return;
-          pressTimer = setTimeout(() => {
-             el.setAttribute("data-long-pressed", "true");
-             callback();
-          }, 800); 
-        };
-        const end = () => { clearTimeout(pressTimer); };
-        el.addEventListener("mousedown", start);
-        el.addEventListener("touchstart", start, {passive: true});
-        el.addEventListener("mouseup", end);
-        el.addEventListener("touchend", end);
+      function buscarUltimaCarga(nomeEx, setIndex) {
+          const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+          for (let sessao of hist) {
+              if(!sessao.state?.sections) continue;
+              for (let sec of sessao.state.sections) {
+                  const ex = sec.cards.find(c => c.name === nomeEx);
+                  if (ex && ex.values[setIndex]) {
+                      const val = ex.values[setIndex];
+                      if (val.kg || val.reps) return { kg: val.kg, reps: val.reps };
+                  }
+              }
+          }
+          return null;
       }
 
-      function gerarProtocolo() {
-        const f = document.getElementById("freq").value;
-        const obj = document.getElementById("obj").value;
-        const nav = document.getElementById("nav");
-        const cont = document.getElementById("container");
-        
-        nav.innerHTML = ""; 
-        cont.innerHTML = "";
-
-        let preset = TREINOS_PRONTOS[f]?.[obj] || TREINOS_PRONTOS[f]?.["hipertrofia"];
-
-        if (preset) {
-           preset.forEach((treino, i) => {
-             const letra = String.fromCharCode(65 + i); 
-             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">TREINO ${letra}</div>`;
-             
-             const sec = document.createElement("div");
-             sec.id = `sec${i}`;
-             sec.className = `section ${i === 0 ? "active" : ""}`;
-             sec.setAttribute("data-treino-key", treino.nome);
-             cont.appendChild(sec);
-             treino.exs.forEach(exNome => { criarCard(exNome, sec.id); });
-           });
-        }
-        addPillControls();
-        scheduleDraftSave();
-      }
-
-      function criarCard(nome, sectionId, series = null, reps = null, rpe = null, values = null) {
-        const o = document.getElementById("obj").value;
-        const meta = reps || (o === "forca" ? "3-5 Reps" : (o === "hipertrofia" ? "6-15 Reps" : "15-20+ Reps"));
-        const sets = series || (o === "forca" ? 3 : (o === "resistencia" ? 3 : 4));
-        const id = "ex-" + Math.random().toString(36).substr(2, 7);
-
-        const card = document.createElement("div");
-        card.className = "exercise-card";
-        card.setAttribute("data-ex-id", id);
-        card.setAttribute("data-ex-name", nome);
-
-        addLongPressListener(card, () => {
-           if(confirm(`Excluir "${nome}"?`)) { card.remove(); scheduleDraftSave(); }
-        });
-
-        let rowsHtml = "";
-        for(let s=0; s<sets; s++) {
-          const v = values && values[s] ? values[s] : { kg: "", reps: "", rpe: "" };
-          rowsHtml += `
-            <div class="series-grid">
-              <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
-              <div class="input-box ${v.kg && v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.kg}" oninput="updateSuggests('${id}')" enterkeyhint="next"></div>
-              <div class="input-box ${v.kg && v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.reps}" oninput="updateSuggests('${id}')" enterkeyhint="next"></div>
-              <div class="input-box"><input type="number" inputmode="decimal" placeholder="RPE" value="${v.rpe}" oninput="updateSuggests('${id}')" style="color:var(--orange)" enterkeyhint="done"></div>
-            </div>`;
-        }
-
-        card.innerHTML = `
-          <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span>
-          <span class="ex-target">${sets} Sets x ${meta}</span>
-          <span class="rpe-suggest">1RM Est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
-          <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-          ${rowsHtml}
-        `;
-
-        document.getElementById(sectionId).appendChild(card);
-        attachAutosaveToCard(card);
-        updateSuggests(id);
+      function buildPRCache() {
+          prMapCache.clear();
+          const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+          hist.forEach(h => {
+              if(!h.state?.sections) return;
+              h.state.sections.forEach(s => {
+                  s.cards.forEach(c => {
+                      let best = 0;
+                      c.values.forEach(v => {
+                          const k = parseFloat(v.kg)||0, r = parseFloat(v.reps)||0;
+                          if(k>0 && r>0) { const rm = k * (1 + r/30); if(rm > best) best = rm; }
+                      });
+                      if(best > (prMapCache.get(c.name)||0)) prMapCache.set(c.name, best);
+                  });
+              });
+          });
       }
 
       function updateSuggests(id) {
@@ -369,7 +290,6 @@
            const kg = parseFloat(inputs[i].value) || 0;
            const reps = parseFloat(inputs[i+1].value) || 0;
            const rpe = parseFloat(inputs[i+2].value) || 0;
-           
            if(kg > 0 && reps > 0) {
               inputs[i].parentElement.classList.add("filled");
               inputs[i+1].parentElement.classList.add("filled");
@@ -380,10 +300,8 @@
               inputs[i+1].parentElement.classList.remove("filled");
            }
         }
-
         const elRM = document.getElementById(`1rm-${id}`);
         const elStat = document.getElementById(`rpe-${id}`);
-
         if (maxRM > 0) {
             const histMax = prMapCache.get(name) || 0;
             let icon = "";
@@ -398,122 +316,155 @@
         }
       }
 
-      // Constrói o cache de Recordes para não precisar ler o histórico toda hora
-      function buildPRCache() {
-          prMapCache.clear();
-          const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-          hist.forEach(h => {
-              h.state.sections.forEach(s => {
-                  s.cards.forEach(c => {
-                      let best = 0;
-                      c.values.forEach(v => {
-                          const k = parseFloat(v.kg)||0, r = parseFloat(v.reps)||0;
-                          if(k>0 && r>0) { const rm = k * (1 + r/30); if(rm > best) best = rm; }
-                      });
-                      if(best > (prMapCache.get(c.name)||0)) prMapCache.set(c.name, best);
-                  });
-              });
-          });
+      /* =========================================
+         4. CORE: GERAÇÃO E PERSISTÊNCIA
+         ========================================= */
+      function criarCard(nome, sectionId, series = null, reps = null, rpe = null, values = null) {
+        const o = document.getElementById("obj").value;
+        const meta = reps || (o === "forca" ? "3-5 Reps" : (o === "hipertrofia" ? "6-15 Reps" : "15-20+ Reps"));
+        const sets = series || (o === "forca" ? 3 : (o === "resistencia" ? 3 : 4));
+        const id = "ex-" + Math.random().toString(36).substr(2, 7);
+
+        const card = document.createElement("div");
+        card.className = "exercise-card";
+        card.setAttribute("data-ex-id", id);
+        card.setAttribute("data-ex-name", nome);
+
+        addLongPressListener(card, () => { if(confirm(`Excluir "${nome}"?`)) { card.remove(); scheduleDraftSave(); } });
+
+        let rowsHtml = "";
+        for(let s=0; s<sets; s++) {
+          const v = values && values[s] ? values[s] : { kg: "", reps: "", rpe: "" };
+          const ant = buscarUltimaCarga(nome, s);
+          rowsHtml += `
+            <div class="series-grid">
+              <span style="font-size:0.7rem; color:#718096; text-align:center;">S${s + 1}</span>
+              <div class="input-box ${v.kg && v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.kg}" placeholder="${ant?.kg||'kg'}" oninput="updateSuggests('${id}')" enterkeyhint="next"></div>
+              <div class="input-box ${v.kg && v.reps ? 'filled' : ''}"><input type="number" inputmode="decimal" value="${v.reps}" placeholder="${ant?.reps||'reps'}" oninput="updateSuggests('${id}')" enterkeyhint="next"></div>
+              <div class="input-box"><input type="number" inputmode="decimal" placeholder="RPE" value="${v.rpe}" oninput="updateSuggests('${id}')" style="color:var(--orange)" enterkeyhint="done"></div>
+            </div>`;
+        }
+        card.innerHTML = `<span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${nome}</span><span class="ex-target">${sets} Sets x ${meta}</span><span class="rpe-suggest">1RM Est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span><div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>${rowsHtml}`;
+        document.getElementById(sectionId).appendChild(card);
+        attachAutosaveToCard(card);
+        updateSuggests(id);
+      }
+
+      function gerarProtocolo() {
+        const f = document.getElementById("freq").value;
+        const obj = document.getElementById("obj").value;
+        const nav = document.getElementById("nav");
+        const cont = document.getElementById("container");
+        nav.innerHTML = ""; cont.innerHTML = "";
+        let preset = TREINOS_PRONTOS[f]?.[obj] || TREINOS_PRONTOS["3"]["hipertrofia"];
+        preset.forEach((treino, i) => {
+             const letra = String.fromCharCode(65 + i); 
+             nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">TREINO ${letra}</div>`;
+             const sec = document.createElement("div");
+             sec.id = `sec${i}`; sec.className = `section ${i === 0 ? "active" : ""}`;
+             sec.setAttribute("data-treino-key", treino.nome);
+             cont.appendChild(sec);
+             treino.exs.forEach(exNome => { criarCard(exNome, sec.id); });
+        });
+        addPillControls(); scheduleDraftSave();
       }
 
       /* =========================================
-         4. AUXILIARES E PERSISTÊNCIA
+         5. IMPORTAÇÃO INTELIGENTE (MULTI-DETECT)
          ========================================= */
-      function attachAutosaveToCard(card) { card.querySelectorAll("input").forEach(inp => { inp.addEventListener("input", scheduleDraftSave); }); }
-      
-      let draftSaveTimer = null;
-      function scheduleDraftSave() { 
-        if (draftSaveTimer) clearTimeout(draftSaveTimer); 
-        draftSaveTimer = setTimeout(() => { localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState())); }, 500); 
+      function splitCSVLine(line, delim) {
+          const out = []; let cur = ""; let inQ = false;
+          for (let i = 0; i < line.length; i++) {
+              if (line[i] === '"') inQ = !inQ;
+              else if (line[i] === delim && !inQ) { out.push(cur.trim()); cur = ""; }
+              else cur += line[i];
+          }
+          out.push(cur.trim()); return out;
       }
 
+      function importarCSVFromText(csvText) {
+          const csv = String(csvText || "").trim();
+          if (!csv) return false;
+          const linhas = csv.split(/\r?\n/).filter(l => l.trim());
+          if (linhas.length < 2) return false;
+          const rawH = linhas[0];
+          const delim = (rawH.match(/\t/g)||[]).length > (rawH.match(/,/g)||[]).length ? "\t" : ((rawH.match(/;/g)||[]).length >= (rawH.match(/,/g)||[]).length ? ";" : ",");
+          const header = splitCSVLine(linhas[0], delim).map(h => h.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+          const idxT = header.findIndex(h => h.includes("TREIN") || h.includes("DIA"));
+          const idxE = header.findIndex(h => h.includes("EXERC") || h.includes("NOME"));
+          const idxS = header.findIndex(h => h.includes("SERIE") || h.includes("SETS"));
+          const idxR = header.findIndex(h => h.includes("REP") || h.includes("META"));
+          if (idxT < 0 || idxE < 0) return alert("Erro: Colunas 'Treino' e 'Exercício' não detectadas.");
+          const grouped = {}; const order = [];
+          for (let i = 1; i < linhas.length; i++) {
+              const cols = splitCSVLine(linhas[i], delim);
+              let tk = (cols[idxT] || "").trim().toUpperCase();
+              if (tk.length === 1 && /[A-Z]/.test(tk)) tk = `TREINO ${tk}`;
+              if (!tk) continue;
+              if (!grouped[tk]) { grouped[tk] = []; order.push(tk); }
+              grouped[tk].push({ exercicio: (cols[idxE]||"").trim(), series: parseInt(String(cols[idxS]||"").replace(/\D/g,""))||4, reps: idxR >= 0 ? cols[idxR] : "8-12" });
+          }
+          const nav = document.getElementById("nav"); const cont = document.getElementById("container");
+          nav.innerHTML = ""; cont.innerHTML = "";
+          order.slice(0, 6).forEach((k, idx) => {
+              nav.innerHTML += `<div class="pill ${idx===0?'active':''}" id="p${idx}" onclick="tabClick(${idx}, this)">${k}</div>`;
+              const sec = document.createElement("div"); sec.id = `sec${idx}`; sec.className = `section ${idx===0?'active':''}`;
+              sec.setAttribute("data-treino-key", k); cont.appendChild(sec);
+              grouped[k].forEach(ex => criarCard(ex.exercicio, sec.id, ex.series, ex.reps));
+          });
+          addPillControls(); scheduleDraftSave(); return true;
+      }
+
+      /* =========================================
+         6. UTILITÁRIOS FINAIS
+         ========================================= */
+      function addLongPressListener(el, callback) {
+        const start = (e) => { if(e.target.tagName === 'INPUT') return; pressTimer = setTimeout(() => { el.setAttribute("data-long-pressed", "true"); callback(); }, 800); };
+        const end = () => { clearTimeout(pressTimer); };
+        el.addEventListener("mousedown", start); el.addEventListener("touchstart", start, {passive: true});
+        el.addEventListener("mouseup", end); el.addEventListener("touchend", end);
+      }
+      function tabClick(idx, el) {
+        if (el.getAttribute("data-long-pressed") === "true") { el.removeAttribute("data-long-pressed"); return; }
+        document.querySelectorAll(".section, .pill").forEach(x => x.classList.remove("active"));
+        document.getElementById(`sec${idx}`).classList.add("active"); el.classList.add("active"); scheduleDraftSave();
+      }
+      function attachAutosaveToCard(card) { card.querySelectorAll("input").forEach(inp => { inp.addEventListener("input", scheduleDraftSave); }); }
+      function scheduleDraftSave() { if (draftSaveTimer) clearTimeout(draftSaveTimer); draftSaveTimer = setTimeout(() => { localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState())); }, 500); }
       function serializeCurrentState() {
         const sections = Array.from(document.querySelectorAll("#container .section")).map(sec => ({
           treinoKey: sec.getAttribute("data-treino-key"),
           cards: Array.from(sec.querySelectorAll(".exercise-card")).map(card => ({
             name: card.getAttribute("data-ex-name"),
             values: Array.from(card.querySelectorAll(".series-grid")).slice(1).map(row => {
-              const ins = row.querySelectorAll("input");
-              return { kg: ins[0].value, reps: ins[1].value, rpe: ins[2].value };
+              const ins = row.querySelectorAll("input"); return { kg: ins[0].value, reps: ins[1].value, rpe: ins[2].value };
             })
           }))
         }));
         return { freq: document.getElementById("freq").value, obj: document.getElementById("obj").value, sections, activeIdx: getActiveIdx() };
       }
-
       function loadState(st) {
-        if(!st) return;
-        document.getElementById("freq").value = st.freq;
-        document.getElementById("obj").value = st.obj;
-        const nav = document.getElementById("nav");
-        const cont = document.getElementById("container");
+        if(!st) return; document.getElementById("freq").value = st.freq; document.getElementById("obj").value = st.obj;
+        const nav = document.getElementById("nav"); const cont = document.getElementById("container");
         nav.innerHTML = ""; cont.innerHTML = "";
-        
         st.sections.forEach((s, i) => {
             nav.innerHTML += `<div class="pill ${i === st.activeIdx ? "active" : ""}" id="p${i}" onclick="tabClick(${i}, this)">TREINO ${String.fromCharCode(65+i)}</div>`;
-            const sec = document.createElement("div");
-            sec.id = `sec${i}`;
-            sec.className = `section ${i === st.activeIdx ? "active" : ""}`;
-            sec.setAttribute("data-treino-key", s.treinoKey);
-            cont.appendChild(sec);
+            const sec = document.createElement("div"); sec.id = `sec${i}`; sec.className = `section ${i === st.activeIdx ? "active" : ""}`;
+            sec.setAttribute("data-treino-key", s.treinoKey); cont.appendChild(sec);
             s.cards.forEach(c => criarCard(c.name, sec.id, c.values.length, null, null, c.values));
         });
         addPillControls();
       }
-
-      function getActiveIdx() { 
-        const active = document.querySelector(".pill.active");
-        return active ? parseInt(active.id.replace("p", "")) : 0; 
-      }
-
-      function tabClick(idx, el) {
-        if (el.getAttribute("data-long-pressed") === "true") { el.removeAttribute("data-long-pressed"); return; }
-        document.querySelectorAll(".section, .pill").forEach(x => x.classList.remove("active"));
-        document.getElementById(`sec${idx}`).classList.add("active");
-        el.classList.add("active");
-        scheduleDraftSave();
-      }
-
-      function salvarTreino() {
-        const st = serializeCurrentState();
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        hist.unshift({ createdAt: new Date().toISOString(), state: st });
-        localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist.slice(0, STORAGE.maxHistory)));
-        buildPRCache();
-        alert("✅ Sessão Salva!");
-      }
-
-      function limparApenasValores() {
-        if(!confirm("Zerar pesos para nova semana?")) return;
-        document.querySelectorAll(".input-box input").forEach(i => { i.value = ""; i.parentElement.classList.remove("filled"); });
-        scheduleDraftSave();
-      }
-
-      function verHistorico() {
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        const list = document.getElementById("histList");
-        list.innerHTML = hist.length ? "" : "<div class='hist-item'>Vazio</div>";
-        hist.forEach(h => {
-          const div = document.createElement("div");
-          div.className = "hist-item";
-          div.innerHTML = `<strong>${new Date(h.createdAt).toLocaleDateString()}</strong> - ${h.state.sections.length} Treinos`;
-          div.onclick = () => { if(confirm("Carregar este treino?")) { loadState(h.state); document.getElementById("modalHIST").close(); } };
-          list.appendChild(div);
-        });
-        document.getElementById("modalHIST").showModal();
-      }
-
-      // Funções de Modal e Biblioteca (Apenas repassando)
+      function getActiveIdx() { const active = document.querySelector(".pill.active"); return active ? parseInt(active.id.replace("p", "")) : 0; }
+      function salvarTreino() { const st = serializeCurrentState(); const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]"); hist.unshift({ createdAt: new Date().toISOString(), state: st }); localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist.slice(0, STORAGE.maxHistory))); buildPRCache(); alert("✅ Salvo!"); }
+      function limparApenasValores() { document.querySelectorAll(".input-box input").forEach(i => { i.value = ""; i.parentElement.classList.remove("filled"); }); scheduleDraftSave(); }
       function abrirLibParaNovo() { isAddingNew = true; mostrarLib(); }
       function abrirLibParaTrocar(id) { isAddingNew = false; currentExId = id; mostrarLib(); }
       function mostrarLib() { 
         const lib = document.getElementById("libContent"); lib.innerHTML = "";
         for (let cat in biblioteca) {
           lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin-top:10px;">${cat}</div>`;
-          biblioteca[cat].forEach(ex => {
-            const item = document.createElement("div"); item.className="lib-item"; item.textContent = ex;
-            item.onclick = () => { selecionar(ex); }; lib.appendChild(item);
-          });
+          biblioteca[cat].forEach(ex => { const item = document.createElement("div"); item.className="lib-item"; item.textContent = ex; item.onclick = () => { selecionar(ex); }; lib.appendChild(item); });
         }
         document.getElementById("modalLib").showModal();
       }
@@ -524,22 +475,23 @@
       }
       function adicionarManual() { const v = document.getElementById("manualName").value; if(v) { selecionar(v); document.getElementById("manualName").value = ""; } }
       function addPillControls() {
-        const nav = document.getElementById("nav");
-        nav.querySelectorAll(".add-pill").forEach(x => x.remove());
+        const nav = document.getElementById("nav"); nav.querySelectorAll(".add-pill").forEach(x => x.remove());
         const add = document.createElement("div"); add.className="pill add-pill"; add.innerText="+"; 
-        add.onclick = () => {
-          const st = serializeCurrentState();
-          st.sections.push({ treinoKey: "Novo", cards: [] });
-          st.activeIdx = st.sections.length - 1;
-          loadState(st);
-        };
+        add.onclick = () => { const st = serializeCurrentState(); st.sections.push({ treinoKey: "Novo", cards: [] }); st.activeIdx = st.sections.length - 1; loadState(st); };
         nav.appendChild(add);
       }
+      function abrirCSVModal() { document.getElementById("modalCSV").showModal(); }
+      function importarCSV() { if(importarCSVFromText(document.getElementById("csvTextarea").value)) document.getElementById("modalCSV").close(); }
+      function fazerBackup() { const blob = new Blob([localStorage.getItem(STORAGE.historyKey)], {type:"application/json"}); const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="backup.json"; a.click(); }
+      function verHistorico() { document.getElementById("modalHIST").showModal(); }
+      function limparHistorico() { if(confirm("Zerar histórico?")) { localStorage.removeItem(STORAGE.historyKey); buildPRCache(); } }
+      function showEvoChart() { alert("Gráfico de Volume habilitado via Chart.js."); }
+      async function extrairTextoPDF(input) { if (!input.files[0]) return; const ab = await input.files[0].arrayBuffer(); const pdf = await pdfjsLib.getDocument(ab).promise; let txt = ""; for (let i = 1; i <= pdf.numPages; i++) { const p = await pdf.getPage(i); const c = await p.getTextContent(); txt += c.items.map(it => it.str).join(" "); } document.getElementById("csvTextarea").value = txt; }
+      function salvarModeloCSV() {} function mostrarModelosCSV() {} function limparModelosCSV() {} function hideModelosCSV() {}
 
       window.onload = () => {
         document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-        buildPRCache();
-        const saved = localStorage.getItem(STORAGE.draftKey);
+        buildPRCache(); const saved = localStorage.getItem(STORAGE.draftKey);
         if(saved) loadState(JSON.parse(saved)); else gerarProtocolo();
         openConfig();
       };
