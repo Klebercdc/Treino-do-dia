@@ -32,7 +32,6 @@
         font-family: -apple-system, sans-serif;
         margin: 0;
         padding-bottom: 20px;
-        -webkit-tap-highlight-color: transparent;
       }
 
       .top-header {
@@ -153,13 +152,16 @@
         border: 1px solid #2d3748;
         cursor: pointer;
         color: #a0aec0;
-        user-select: none; /* Importante para o Long Press não selecionar texto */
+        position: relative;
+        /* Removido padding extra pois não há mais o X */
       }
       .pill.active {
         background: var(--blue);
         border-color: var(--blue);
         color: #fff;
       }
+      /* Classe .pill-x removida/inutilizada */
+      
       .pill.add-pill {
         padding-right: 20px;
         padding-left: 20px;
@@ -264,7 +266,10 @@
         color: rgba(255, 255, 255, 0.25);
         font-style: italic;
       }
-      
+      .ghost {
+        /* Classe marcadora */
+      }
+
       .btn-add-ex {
         background: #1a202c;
         color: var(--blue);
@@ -526,7 +531,6 @@
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
-    
     <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
 
     <div class="footer-actions">
@@ -850,21 +854,6 @@
         }
         return rebuildPrevMapFromLatestHistory();
       }
-      
-      // ✅ FUNÇÃO PARA EXCLUIR TREINO (LONG PRESS / BOTÃO DIREITO)
-      function menuDeletarTreino(e, idx) {
-        e.preventDefault();
-        const st = serializeCurrentState();
-        if (st.sections.length <= 1) {
-          alert("Você precisa manter pelo menos um treino.");
-          return;
-        }
-        
-        const label = st.pills[idx]?.label || "este treino";
-        if (confirm(`🗑️ Excluir "${label}" inteiro e todos os exercícios dele?`)) {
-            excluirTreinoPorIdx(idx);
-        }
-      }
 
       function gerarProtocolo() {
         const f = document.getElementById("freq").value;
@@ -878,8 +867,7 @@
         if (preset) {
           preset.forEach((treino, i) => {
             const labelCurto = treino.nome.split(" ")[0];
-            // Injeta o oncontextmenu para deletar
-            nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})" oncontextmenu="menuDeletarTreino(event, ${i})">${labelCurto}</div>`;
+            nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">${labelCurto}</div>`;
 
             const sec = document.createElement("div");
             sec.id = `sec${i}`;
@@ -893,7 +881,7 @@
           });
         } else {
           (divisoesGen[f] || ["A", "B"]).forEach((nome, i) => {
-            nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})" oncontextmenu="menuDeletarTreino(event, ${i})">Treino ${nome}</div>`;
+            nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" id="p${i}" onclick="tab(${i})">Treino ${nome}</div>`;
             const sec = document.createElement("div");
             sec.id = `sec${i}`;
             sec.className = `section ${i === 0 ? "active" : ""}`;
@@ -1256,8 +1244,7 @@
         nav.innerHTML = "";
         cont.innerHTML = "";
         order.slice(0, 6).forEach((key, idx) => {
-          // Injeta o oncontextmenu para deletar
-          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})" oncontextmenu="menuDeletarTreino(event, ${idx})">${escapeHTML(treinoLabel(key))}</div>`;
+          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(treinoLabel(key))}</div>`;
           const sec = document.createElement("div");
           sec.id = `sec${idx}`;
           sec.className = `section ${idx === 0 ? "active" : ""}`;
@@ -1330,8 +1317,7 @@
 
         state.sections.slice(0, 6).forEach((secData, idx) => {
           const label = state.pills && state.pills[idx] ? state.pills[idx].label : secData.treinoKey;
-          // Injeta o oncontextmenu para deletar
-          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})" oncontextmenu="menuDeletarTreino(event, ${idx})">${escapeHTML(label)}</div>`;
+          nav.innerHTML += `<div class="pill ${idx === 0 ? "active" : ""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(label)}</div>`;
           const sec = document.createElement("div");
           sec.id = `sec${idx}`;
           sec.className = `section ${idx === 0 ? "active" : ""}`;
@@ -1594,6 +1580,8 @@
       }
       
       function excluirTreinoPorIdx(idx) {
+        // Função mantida para lógica interna, mas sem botão UI por padrão
+        if (!confirm("Excluir treino?")) return;
         const st = serializeCurrentState();
         if (st.sections.length <= 1) {
           alert("Mantenha 1 treino.");
@@ -1608,8 +1596,10 @@
       
       function addPillControls() {
         const nav = document.getElementById("nav");
-        // Limpa qualquer coisa extra, mantém só a ação de clique e long press
+        // Limpa qualquer X antigo se houver
         nav.querySelectorAll(".pill-x, .add-pill").forEach((e) => e.remove());
+        
+        // ❌ X removido: Não adiciona mais o span .pill-x
         
         const add = document.createElement("div");
         add.className = "pill add-pill";
