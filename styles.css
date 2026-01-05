@@ -1,23 +1,26 @@
-/* TITAN PRO - INDUSTRIAL DASHBOARD CSS */
+/* TITAN PRO - INDUSTRIAL DASHBOARD CSS (V8) */
 
 :root {
-    --bg-dark: #070b14;
-    --sidebar-bg: #0c121d;
-    --card-bg: rgba(17, 24, 39, 0.8);
-    --border-color: #1e293b;
+    --bg-black: #05080f;
+    --sidebar-surface: #0c121d;
+    --card-surface: rgba(15, 23, 42, 0.7);
+    --border-dim: #1e293b;
     --accent-blue: #3b82f6;
     --accent-green: #10b981;
-    --text-main: #f3f4f6;
+    --text-primary: #f3f4f6;
     --text-muted: #64748b;
+    --orange: #fbbf24;
+    --red: #ef4444;
 }
 
-/* ESTRUTURA GLOBAL */
+/* 1. VIEWPORT LOCKING */
 body {
-    background-color: var(--bg-dark);
-    color: var(--text-main);
+    background-color: var(--bg-black);
+    color: var(--text-primary);
     font-family: 'Inter', -apple-system, sans-serif;
     margin: 0;
     height: 100vh;
+    width: 100vw;
     display: grid;
     grid-template-areas: 
         "header header"
@@ -28,41 +31,42 @@ body {
     overflow: hidden;
 }
 
-/* HEADER - ESTILO MONITORAMENTO */
+/* 2. HEADER: ÁREA SUPERIOR */
 .top-header {
     grid-area: header;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 12px 25px;
-    background: var(--bg-dark);
-    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-black);
+    border-bottom: 1px solid var(--border-dim);
 }
 
 .brand { font-size: 1.4rem; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; }
 .brand span { color: var(--accent-blue); }
 .status-indicator { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.status-indicator::before { content: ""; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #10b981; }
+.status-indicator::before { content: ""; width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; display: inline-block; box-shadow: 0 0 10px var(--accent-green); }
 
-/* SIDEBAR - CONTROLE DE TIMER */
-.left-pane, .timer-area {
+/* 3. SIDEBAR: ÁREA DE CONTROLE (TIMER & SETUP) */
+.left-pane {
     grid-area: sidebar;
-    background: var(--sidebar-bg);
-    border-right: 1px solid var(--border-color);
+    background: var(--sidebar-surface);
+    border-right: 1px solid var(--border-dim);
     padding: 25px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 25px;
+    overflow-y: auto;
 }
 
-#timerDisplay {
-    font-size: 5rem;
+.display-time {
+    font-size: 4.8rem;
     font-weight: 800;
     text-align: center;
     color: var(--accent-blue);
     font-family: 'JetBrains Mono', monospace;
     text-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
-    margin-bottom: 10px;
+    margin: 10px 0;
 }
 
 .timer-grid {
@@ -71,21 +75,21 @@ body {
     gap: 8px;
 }
 
-.btn-t, .btn-timer-opt {
+.btn-timer-opt {
     background: #1e293b;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-dim);
     color: var(--text-muted);
-    padding: 12px 5px;
+    padding: 12px 0;
     border-radius: 8px;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 0.7rem;
     cursor: pointer;
 }
 
-.btn-t.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+.btn-timer-opt.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
 
 .action-stack { display: flex; gap: 10px; }
-.btn-ctrl, .btn-primary {
+.btn-primary-action {
     flex: 1;
     background: var(--accent-green);
     color: white;
@@ -97,32 +101,50 @@ body {
     cursor: pointer;
 }
 
-/* MAIN - CAROUSEL DE EXERCÍCIOS */
-#container, .exercise-carousel {
+.setup-panel {
+    background: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--border-dim);
+}
+
+.setup-panel .field { margin-bottom: 15px; }
+.setup-panel label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
+.setup-panel select { 
+    width: 100%; padding: 12px; background: #05080f; 
+    border: 1px solid var(--border-dim); color: white; border-radius: 8px; margin-top: 5px;
+}
+
+/* 4. MAIN: ÁREA DO CAROUSEL DE EXERCÍCIOS */
+.exercise-carousel {
     grid-area: main;
     display: flex;
     flex-direction: row;
     overflow-x: auto;
-    padding: 25px;
+    padding: 30px;
     gap: 20px;
-    scrollbar-width: none; /* Firefox */
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
 }
 
-#container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+.exercise-carousel::-webkit-scrollbar { display: none; }
 
 .exercise-card {
-    min-width: 340px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
+    min-width: 350px;
+    background: var(--card-surface);
+    border: 1px solid var(--border-dim);
     border-radius: 20px;
     padding: 25px;
+    scroll-snap-align: start;
     height: fit-content;
 }
 
-.ex-title { font-size: 1.2rem; font-weight: 800; color: white; display: block; margin-bottom: 5px; }
-.ex-target { font-size: 0.8rem; color: var(--accent-blue); font-weight: 700; margin-bottom: 20px; display: block; }
+.card-header h3 { margin: 0; font-size: 1.3rem; font-weight: 800; color: white; }
+.card-header span { font-size: 0.8rem; color: var(--accent-blue); font-weight: 700; }
 
-/* GRID DE DADOS DOS EXERCÍCIOS */
+.rpe-suggest { display: block; font-size: 0.75rem; color: var(--text-muted); margin: 10px 0; font-family: monospace; }
+
+/* DATA GRID INTERNO DOS CARDS */
 .series-grid {
     display: grid;
     grid-template-columns: 40px 1fr 1fr 1fr;
@@ -133,12 +155,12 @@ body {
 
 .header-grid { text-align: center; font-size: 0.65rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; }
 
-.input-box, .input-field {
+.input-box {
     background: #060b14;
-    border: 1px solid #1e293b;
+    border: 1px solid var(--border-dim);
     border-radius: 10px;
     padding: 12px 0;
-    transition: 0.2s;
+    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .input-box.filled { border-color: var(--accent-green); background: rgba(16, 185, 129, 0.05); }
@@ -149,24 +171,25 @@ body {
     color: white;
     width: 100%;
     text-align: center;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 800;
     outline: none;
 }
 
-.input-box input::placeholder { color: rgba(255,255,255,0.15); font-weight: 400; }
+.input-box input::placeholder { color: rgba(255,255,255,0.08); font-weight: 400; }
 
-/* FOOTER - BARRA DE NAVEGAÇÃO */
-.footer-bar, .footer-actions {
+/* 5. FOOTER: ÁREA DE NAVEGAÇÃO GLOBAL */
+.footer-bar {
     grid-area: footer;
     display: flex;
     padding: 15px 25px;
     gap: 15px;
-    background: var(--bg-dark);
-    border-top: 1px solid var(--border-color);
+    background: var(--bg-black);
+    border-top: 1px solid var(--border-dim);
+    align-items: center;
 }
 
-.btn-tab, .btn-save {
+.btn-tab {
     background: var(--accent-blue);
     color: white;
     border: none;
@@ -174,16 +197,35 @@ body {
     border-radius: 15px;
     font-weight: 900;
     min-width: 180px;
+    cursor: pointer;
 }
 
-.btn-secondary, .btn-config {
+.btn-secondary {
     background: #1e293b;
     color: white;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-dim);
     padding: 15px 20px;
     border-radius: 15px;
     font-weight: 700;
     flex: 1;
+    cursor: pointer;
 }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+/* MODALS */
+dialog {
+    background: #0f172a;
+    border: 1px solid var(--accent-blue);
+    border-radius: 20px;
+    color: white;
+    padding: 25px;
+    width: 90%;
+    max-width: 450px;
+}
+
+dialog::backdrop { background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
+
+/* ANIMAÇÃO */
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateX(20px); } 
+    to { opacity: 1; transform: translateX(0); } 
+}
