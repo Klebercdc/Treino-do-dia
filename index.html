@@ -153,28 +153,18 @@
         cursor: pointer;
         color: #a0aec0;
         position: relative;
-        padding-right: 34px;
+        /* Removido padding extra pois não há mais o X */
       }
       .pill.active {
         background: var(--blue);
         border-color: var(--blue);
         color: #fff;
       }
-      .pill .pill-x {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--red);
-        font-weight: 900;
-        font-size: 1rem;
-        line-height: 1;
-        padding: 2px 6px;
-        border-radius: 8px;
-        cursor: pointer;
-      }
+      /* Classe .pill-x removida/inutilizada */
+      
       .pill.add-pill {
         padding-right: 20px;
+        padding-left: 20px;
         border: 2px dashed var(--blue);
         color: var(--blue);
         background: #1a202c;
@@ -273,10 +263,11 @@
       }
 
       .ghost::placeholder {
-        color: rgba(255, 255, 255, 0.38);
+        color: rgba(255, 255, 255, 0.25);
+        font-style: italic;
       }
       .ghost {
-        opacity: 0.96;
+        /* Classe marcadora */
       }
 
       .btn-add-ex {
@@ -390,7 +381,7 @@
       }
 
       #histList {
-        max-height: 360px;
+        max-height: 400px;
         overflow-y: auto;
         border: 1px solid #2d3748;
         border-radius: 10px;
@@ -398,11 +389,39 @@
       .hist-item {
         padding: 12px;
         border-bottom: 1px solid #2d3748;
+      }
+      .hist-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         cursor: pointer;
       }
-      .hist-item strong {
+      .hist-header strong {
         color: var(--orange);
       }
+      .hist-details {
+        display: none;
+        margin-top: 10px;
+        background: #0b1220;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        color: #cbd5e0;
+      }
+      .hist-details.open {
+        display: block;
+      }
+      .hist-ex-row {
+        margin-bottom: 6px;
+        border-bottom: 1px dashed #2d3748;
+        padding-bottom: 4px;
+      }
+      .hist-ex-name {
+        color: var(--blue);
+        font-weight: bold;
+        display: block;
+      }
+
       .hist-actions {
         display: flex;
         gap: 8px;
@@ -587,7 +606,7 @@
       <h3 style="margin: 0 0 15px 0; color: var(--orange)">Histórico de Sessões</h3>
       <div id="histList"></div>
       <div class="hist-actions">
-        <button class="btn-cancel" onclick="limparHistorico()">🗑️ LIMPAR</button>
+        <button class="btn-cancel" onclick="limparHistorico()">🗑️ LIMPAR TUDO</button>
         <button class="btn-import" onclick="document.getElementById('modalHIST').close()">FECHAR</button>
       </div>
     </dialog>
@@ -765,7 +784,7 @@
         if (!K || !R) return 0;
         return K * (1 + R / 30);
       }
-
+      
       function roundRM(x) {
         const n = toNum(x);
         if (!n) return 0;
@@ -897,33 +916,23 @@
 
         const rows = Array.from({ length: sets }, (_, s) => {
           const cur = values && values[s] ? values[s] : null;
-
+          
           const kgVal = cur ? cur.kg ?? "" : "";
           const repsVal = cur ? cur.reps ?? "" : "";
           const rpeVal = cur ? cur.rpe ?? "" : "";
 
-          const prevRow = prev && prev[s] ? prev[s] : null;
-          const phKg = prevRow ? prevRow.kg ?? "" : "";
-          const phReps = prevRow ? prevRow.reps ?? "" : "";
-          const phRpe = prevRow ? prevRow.rpe ?? "" : "";
-          const phRm = prevRow ? prevRow.rm ?? (prevRow.kg && prevRow.reps ? roundRM(calcRM(prevRow.kg, prevRow.reps)) : "") : "";
-
+          // RM Atual da sessão
           const rmNow = cur?.rm ?? (cur?.kg && cur?.reps ? roundRM(calcRM(cur.kg, cur.reps)) : 0);
-          const rmTxt = rmNow ? `${rmNow}kg` : phRm ? `${phRm}kg` : "-";
-
-          const ghostKg = !kgVal && phKg ? "ghost" : "";
-          const ghostReps = !repsVal && phReps ? "ghost" : "";
-          const ghostRpe = !rpeVal && phRpe ? "ghost" : "";
-
+          
           return `
             <div class="series-grid" data-row="1">
               <span class="setcell" onclick="onPressSetCell(this)">
                 <span class="slabel">S${s + 1}</span>
-                <span class="rmmini" id="rm-${id}-${s}">RM: ${escapeHTML(rmTxt)}</span>
+                <span class="rmmini" id="rm-${id}-${s}">RM: ${escapeHTML(rmNow ? rmNow + "kg" : "-")}</span>
               </span>
-              <div class="input-box"><input class="${ghostKg}" type="number" inputmode="decimal" placeholder="${escapeAttr(phKg)}" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input class="${ghostReps}" type="number" placeholder="${escapeAttr(phReps)}" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input class="${ghostRpe}" type="number" placeholder="${escapeAttr(phRpe || (rpe || ''))}" value="${escapeAttr(rpeVal)}"></div>
+              <div class="input-box"><input type="number" inputmode="decimal" placeholder="" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input type="number" placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input type="number" placeholder="" value="${escapeAttr(rpeVal)}"></div>
             </div>`;
         }).join("");
 
@@ -938,6 +947,8 @@
         sec.appendChild(card);
         attachAutosaveToCard(card);
         scheduleDraftSave();
+        // Aplica os fantasmas (placeholders) se os inputs estiverem vazios
+        applyPrevGhostsToCard(card); 
         updateSuggests(id);
       }
 
@@ -993,9 +1004,12 @@
             firstReps = toNum(reps);
           }
 
-          const rm = roundRM(calcRM(kg, reps));
-          const rmEl = document.getElementById(`rm-${id}-${idx}`);
-          if (rmEl) rmEl.textContent = `RM: ${rm ? rm + "kg" : "-"}`;
+          // Se tem valor atual, mostra o RM atual. Se não tem, deixa o placeholder (controlado pelo applyPrevGhosts)
+          if (kg && reps) {
+             const rm = roundRM(calcRM(kg, reps));
+             const rmEl = document.getElementById(`rm-${id}-${idx}`);
+             if (rmEl) rmEl.textContent = `RM: ${rm ? rm + "kg" : "-"}`;
+          }
         });
 
         if (firstKg && firstReps) {
@@ -1274,6 +1288,7 @@
               const reps = i[1].value;
               const rpe = i[2].value;
               const rm = roundRM(calcRM(kg, reps));
+              // ✅ Salva RM por série
               return { kg, reps, rpe, rm: rm ? rm : "" };
             });
             return {
@@ -1330,7 +1345,6 @@
             const i = r.querySelectorAll("input");
             i.forEach((inp) => (inp.value = ""));
           });
-          updateSuggests(card.getAttribute("data-ex-id"));
         });
         scheduleDraftSave();
       }
@@ -1346,12 +1360,17 @@
           localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist));
 
           savePrevSnapshotFromState(st);
+          // Atualiza mapa de "anteriores" imediatamente para uso no modo fantasma
           prevMap = getPrevMap();
-          applyPrevGhostsToAll();
+          
+          // Limpa inputs
           clearAllInputsToGhost();
+          
+          // Aplica o "modo fantasma" com os dados recém salvos
+          applyPrevGhostsToAll();
 
           checkDeload();
-          alert("✅ Sessão Salva! (Valores anteriores ficaram como transparente)");
+          alert("✅ Sessão Salva! (Modo Fantasma Ativado)");
         } catch {
           alert("⚠️ Memória cheia.");
         }
@@ -1377,8 +1396,16 @@
             if (!pv) return;
             const i = r.querySelectorAll("input");
 
+            // ✅ Lógica de Peso Sugerido (KG Sug)
+            // Se existe um RM anterior, calcula o peso necessário para manter esse RM com as Reps anteriores
+            // Fórmula Inversa Epley: Peso = RM / (1 + Reps/30)
+            let kgSug = pv.kg;
+            if(pv.rm && pv.reps) {
+                kgSug = Math.round(pv.rm / (1 + (toNum(pv.reps)/30)));
+            }
+
             if (!i[0].value && String(pv.kg ?? "").trim()) {
-              i[0].placeholder = String(pv.kg);
+              i[0].placeholder = String(kgSug); // Mostra o Sugerido como placeholder
               i[0].classList.add("ghost");
             }
             if (!i[1].value && String(pv.reps ?? "").trim()) {
@@ -1391,13 +1418,12 @@
             }
 
             const rmEl = card.querySelector(`#rm-${card.getAttribute("data-ex-id")}-${idx}`);
-            if (rmEl && !rmEl.textContent.includes("kg")) {
+            // Mostra RM anterior se o atual estiver vazio
+            if (rmEl && !i[0].value) {
               const pr = pv.rm ?? (pv.kg && pv.reps ? roundRM(calcRM(pv.kg, pv.reps)) : "");
-              if (pr) rmEl.textContent = `RM: ${pr}kg`;
+              if (pr) rmEl.textContent = `Ant: ${pr}kg`;
             }
           });
-
-          updateSuggests(card.getAttribute("data-ex-id"));
         } catch {}
       }
 
@@ -1471,29 +1497,66 @@
         });
       }
 
+      function toggleHistDetails(header) {
+        const details = header.nextElementSibling;
+        if(details.classList.contains("open")) {
+            details.classList.remove("open");
+        } else {
+            details.classList.add("open");
+        }
+      }
+
       function verHistorico() {
         const list = document.getElementById("histList");
         const hist = safeJSON(STORAGE.historyKey, []);
         list.innerHTML = hist.length ? "" : '<div class="hist-item">Sem sessões.</div>';
+        
         hist.forEach((h) => {
           const el = document.createElement("div");
           el.className = "hist-item";
-          el.innerHTML = `<strong>${new Date(h.createdAt).toLocaleString("pt-BR")}</strong> ${
-            h.bodyWeight ? `| ${h.bodyWeight}kg` : ""
-          }<br><small>${calcVolumeTotal(h.state)}kg vol total</small>`;
-          el.onclick = () => {
-            if (confirm("Carregar sessão?")) {
-              loadState(h.state);
-              scheduleDraftSave();
-              document.getElementById("modalHIST").close();
-            }
-          };
+          
+          // ✅ Constrói HTML detalhado
+          let detailsHTML = "";
+          if (h.state && h.state.sections) {
+              h.state.sections.forEach(sec => {
+                  (sec.cards || []).forEach(card => {
+                      const setsStr = (card.values || [])
+                          .filter(v => v.kg && v.reps)
+                          .map(v => `[${v.kg}kg x ${v.reps}]`)
+                          .join(" ");
+                      
+                      if(setsStr) {
+                          detailsHTML += `
+                          <div class="hist-ex-row">
+                              <span class="hist-ex-name">${escapeHTML(card.name)}</span>
+                              <span>${setsStr}</span>
+                          </div>`;
+                      }
+                  });
+              });
+          }
+
+          el.innerHTML = `
+            <div class="hist-header" onclick="toggleHistDetails(this)">
+                <div>
+                    <strong>${new Date(h.createdAt).toLocaleString("pt-BR")}</strong>
+                    ${h.bodyWeight ? ` | ${h.bodyWeight}kg BW` : ""}
+                    <br><small style="color:#a0aec0">${calcVolumeTotal(h.state)}kg vol total (Toque p/ detalhar)</small>
+                </div>
+                <div style="font-size:1.2rem; color:var(--blue)">+</div>
+            </div>
+            <div class="hist-details">
+                ${detailsHTML || "Sem dados detalhados."}
+                <button style="margin-top:10px; width:100%; padding:8px; background:var(--blue); border:none; color:white; border-radius:6px; font-weight:bold" onclick="if(confirm('Carregar esta sessão?')) { loadState(${JSON.stringify(h.state).replace(/"/g, '&quot;')}); scheduleDraftSave(); document.getElementById('modalHIST').close(); }">CARREGAR SESSÃO</button>
+            </div>
+          `;
           list.appendChild(el);
         });
         document.getElementById("modalHIST").showModal();
       }
+      
       function limparHistorico() {
-        if (confirm("Apagar tudo?")) {
+        if (confirm("Apagar tudo? Irreversível.")) {
           localStorage.removeItem(STORAGE.historyKey);
           localStorage.removeItem(STORAGE.prevKey);
           prevMap = Object.create(null);
@@ -1515,7 +1578,9 @@
         loadState(st);
         scheduleDraftSave();
       }
+      
       function excluirTreinoPorIdx(idx) {
+        // Função mantida para lógica interna, mas sem botão UI por padrão
         if (!confirm("Excluir treino?")) return;
         const st = serializeCurrentState();
         if (st.sections.length <= 1) {
@@ -1528,19 +1593,14 @@
         loadState(st);
         scheduleDraftSave();
       }
+      
       function addPillControls() {
         const nav = document.getElementById("nav");
+        // Limpa qualquer X antigo se houver
         nav.querySelectorAll(".pill-x, .add-pill").forEach((e) => e.remove());
-        nav.querySelectorAll(".pill").forEach((p, i) => {
-          const x = document.createElement("span");
-          x.className = "pill-x";
-          x.innerText = "×";
-          x.onclick = (e) => {
-            e.stopPropagation();
-            excluirTreinoPorIdx(i);
-          };
-          p.appendChild(x);
-        });
+        
+        // ❌ X removido: Não adiciona mais o span .pill-x
+        
         const add = document.createElement("div");
         add.className = "pill add-pill";
         add.innerText = "+";
