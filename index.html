@@ -4,744 +4,392 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1220" />
-  <meta name="description" content="Titan Pro - O rastreador de treinos definitivo.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>TITAN PRO</title>
-
-  <link rel="manifest" href='data:application/manifest+json;base64,ewogICJuYW1lIjogIlRpdGFuIFBybyIsCiAgInNob3J0X25hbWUiOiAiVGl0YW4iLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAiYnJvd3NlciIsCiAgImJhY2tncm91bmRfY29xvciI6ICIjMGIxMjIwIiwKICAidGhlbWVfY29xvciI6ICIjMGIxMjIwIiwKICAiaWNvbnMiOiBbXQp9Cg==' />
+  <title>TITAN PRO | Workout Tracker</title>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     :root { 
-      --bg: #0b1220; --card: #161e2e; --card-highlight: #1f293a;
-      --blue: #3182ce; --blue-glow: rgba(49, 130, 206, 0.4);
+      --bg: #0b1220; --card: #161e2e; --blue: #3182ce; 
       --text: #f7fafc; --text-muted: #a0aec0;
       --orange: #ed8936; --green: #48bb78; --red: #e53e3e; 
       --radius: 12px;
     }
     
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding-bottom: 80px; user-select: none; overscroll-behavior-y: none; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+    body { 
+      background: var(--bg); color: var(--text); 
+      font-family: -apple-system, system-ui, sans-serif; 
+      margin: 0; padding-bottom: 90px; overscroll-behavior-y: none;
+    }
 
     /* HEADER */
-    .top-header { padding: 15px 20px; background: rgba(22, 30, 46, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; padding-top: env(safe-area-inset-top); }
-    .brand { font-size: 1.2rem; font-weight: 900; letter-spacing: -0.5px; color: var(--text); }
+    .top-header { 
+      padding: 15px 20px; background: rgba(22, 30, 46, 0.9); 
+      backdrop-filter: blur(10px); border-bottom: 1px solid #2d3748; 
+      display: flex; justify-content: space-between; align-items: center; 
+      position: sticky; top: 0; z-index: 100;
+    }
+    .brand { font-size: 1.2rem; font-weight: 900; color: var(--text); }
     .brand span { color: var(--blue); }
-    .date-badge { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; background: #0f1623; padding: 4px 12px; border-radius: 20px; border: 1px solid #2d3748; }
 
     /* TIMER */
     .timer-area { background: var(--card); padding: 15px; border-bottom: 1px solid #2d3748; text-align: center; }
-    #timerDisplay { font-size: 2.8rem; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -2px; line-height: 1; margin-bottom: 10px; text-shadow: 0 0 20px rgba(49,130,206,0.2); }
+    #timerDisplay { font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-bottom: 10px; }
     .timer-btns { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
-    .btn-t { background: #2d3748; color: var(--text-muted); border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; transition: all 0.2s; }
-    .btn-t.active { background: var(--blue); color: white; box-shadow: 0 0 10px var(--blue-glow); }
-    .main-ctrls { display: flex; gap: 10px; padding: 0 10px; }
-    .btn-ctrl { flex: 1; border: none; padding: 14px; border-radius: var(--radius); font-weight: 800; font-size: 0.9rem; letter-spacing: 0.5px; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-ctrl:active { transform: scale(0.97); }
-    .btn-start { background: var(--green); color: #052c16; box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3); }
-    .btn-reset { background: #2d3748; color: var(--red); width: 30%; flex: none; }
+    .btn-t { background: #2d3748; color: var(--text-muted); border: none; padding: 8px 12px; border-radius: 8px; font-weight: 700; }
+    .btn-t.active { background: var(--blue); color: white; }
+    .btn-ctrl { 
+      width: 60%; background: var(--green); color: #052c16; 
+      border: none; padding: 12px; border-radius: var(--radius); 
+      font-weight: 800; font-size: 1rem; cursor: pointer;
+    }
 
-    /* NAVIGATION */
-    .nav-container { position: sticky; top: 61px; z-index: 90; background: var(--bg); padding: 10px 0; border-bottom: 1px solid #2d3748; }
-    .nav-pills { display: flex; gap: 10px; padding: 0 15px; overflow-x: auto; scrollbar-width: none; }
-    .nav-pills::-webkit-scrollbar { display: none; }
-    .pill { flex: none; padding: 10px 20px; border-radius: 20px; background: var(--card); color: var(--text-muted); font-size: 0.8rem; font-weight: 700; border: 1px solid transparent; transition: all 0.2s; white-space: nowrap; }
-    .pill.active { background: var(--blue); color: white; border-color: var(--blue); box-shadow: 0 2px 10px var(--blue-glow); }
-    .pill.add-pill { border: 1px dashed var(--text-muted); background: transparent; color: var(--text-muted); padding: 10px 15px; }
+    /* NAV PILLS */
+    .nav-pills { 
+      display: flex; gap: 10px; padding: 15px; overflow-x: auto; 
+      background: var(--bg); border-bottom: 1px solid #2d3748;
+    }
+    .pill { 
+      flex: none; padding: 8px 18px; border-radius: 20px; 
+      background: var(--card); color: var(--text-muted); font-weight: 700; font-size: 0.85rem;
+    }
+    .pill.active { background: var(--blue); color: white; }
 
-    /* EXERCISES */
-    .section { display: none; padding-bottom: 40px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-    .section.active { display: block; }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    /* CARDS */
+    .exercise-card { 
+      background: var(--card); border-radius: var(--radius); 
+      padding: 15px; margin: 15px; border: 1px solid #2d3748;
+    }
+    .ex-title { font-size: 1.1rem; font-weight: 800; color: var(--blue); margin-bottom: 10px; display: block; }
+    .set-grid { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .input-box { 
+      background: #0b1220; border: 1px solid #2d3748; 
+      border-radius: 8px; padding: 8px; text-align: center; color: white;
+      font-weight: 700; width: 100%;
+    }
+    .input-box.filled { border-color: var(--green); }
+    input { background: transparent; border: none; color: white; width: 100%; text-align: center; font-size: 1rem; }
 
-    .exercise-card { background: var(--card); border-radius: var(--radius); padding: 16px; margin: 15px; border: 1px solid #2d3748; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
-    .ex-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-    .ex-title { font-size: 1.1rem; font-weight: 800; color: var(--blue); cursor: pointer; line-height: 1.2; }
-    .ex-meta { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; display: block; }
-    .ex-stats { text-align: right; font-size: 0.7rem; color: var(--orange); font-family: monospace; }
-    
-    .grid-header { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; padding-right: 5px; }
-    .grid-header span { text-align: center; font-size: 0.65rem; font-weight: 700; color: #718096; letter-spacing: 0.5px; }
+    /* FOOTER BAR */
+    .footer-bar { 
+      position: fixed; bottom: 0; width: 100%; 
+      background: rgba(11, 18, 32, 0.95); border-top: 1px solid #2d3748; 
+      display: grid; grid-template-columns: 1fr 1fr 2fr 1fr; 
+      padding: 10px; gap: 10px; z-index: 1000;
+    }
+    .btn-action { background: #2d3748; color: white; border: none; border-radius: 8px; padding: 10px; font-weight: 600; font-size: 0.7rem; }
+    .btn-save { background: var(--green); color: #052c16; font-weight: 800; font-size: 0.9rem; }
 
-    .set-row { display: grid; grid-template-columns: 30px 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; align-items: center; }
-    .set-num { font-size: 0.75rem; color: #718096; font-weight: 700; text-align: center; }
-    
-    .input-wrapper { background: #0f1623; border: 1px solid #2d3748; border-radius: 8px; height: 40px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
-    .input-wrapper.filled { border-color: var(--green); background: rgba(72, 187, 120, 0.05); }
-    .input-wrapper:focus-within { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2); }
-    
-    .input-wrapper input { width: 100%; height: 100%; background: transparent; border: none; color: white; text-align: center; font-size: 1.1rem; font-weight: 700; padding: 0; margin: 0; outline: none; border-radius: 8px; -moz-appearance: textfield; }
-    .input-wrapper input::-webkit-outer-spin-button, .input-wrapper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    
-    .rpe-input input { color: var(--orange); }
+    /* TOAST */
+    #toast { 
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); 
+      background: var(--blue); color: white; padding: 10px 20px; 
+      border-radius: 20px; font-weight: 600; visibility: hidden; opacity: 0; transition: 0.3s;
+    }
+    #toast.show { visibility: visible; opacity: 1; }
 
-    .btn-add-ex { margin: 20px 15px; width: calc(100% - 30px); background: transparent; border: 2px dashed #4a5568; color: #a0aec0; padding: 15px; border-radius: var(--radius); font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
-    .btn-add-ex:active { background: #1a202c; border-color: var(--text-muted); }
-
-    /* FOOTER */
-    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #2d3748; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 1fr 2fr 1fr; gap: 10px; z-index: 200; }
-    .btn-nav { background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-    .btn-nav svg { width: 22px; height: 22px; fill: currentColor; }
-    .btn-save-main { background: var(--green); color: #052c16; border: none; border-radius: 10px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 -4px 20px rgba(72, 187, 120, 0.2); }
-    
-    /* MODALS & TOAST */
-    dialog { background: var(--card); color: white; border: 1px solid #4a5568; border-radius: 16px; width: 90%; max-width: 450px; padding: 0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
-    @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-    
-    .modal-header { padding: 20px; border-bottom: 1px solid #2d3748; background: #1a202c; display: flex; justify-content: space-between; align-items: center; }
-    .modal-header h3 { margin: 0; font-size: 1.1rem; color: white; }
-    .modal-body { padding: 20px; max-height: 60vh; overflow-y: auto; }
-    .modal-footer { padding: 15px 20px; border-top: 1px solid #2d3748; display: flex; gap: 10px; background: #1a202c; }
-
-    #toast { visibility: hidden; min-width: 250px; background-color: #2d3748; color: #fff; text-align: center; border-radius: 50px; padding: 12px 24px; position: fixed; z-index: 1000; left: 50%; bottom: 90px; transform: translateX(-50%); border: 1px solid var(--blue); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); font-weight: 600; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
-    #toast.show { visibility: visible; opacity: 1; bottom: 100px; }
-    #toast.success { border-color: var(--green); color: var(--green); background: #0f2f21; }
-    #toast.error { border-color: var(--red); color: var(--red); background: #2b1111; }
-
-    /* UTILS */
-    .full-width { width: 100%; padding: 12px; background: #2d3748; border: none; border-radius: 8px; color: white; font-weight: bold; margin-bottom: 10px; }
-    .select-styled { width: 100%; padding: 12px; background: #0b1220; border: 1px solid #4a5568; color: white; border-radius: 8px; font-weight: bold; margin-bottom: 15px; }
-    .list-item { padding: 12px 0; border-bottom: 1px solid #2d3748; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-    .list-item:active { opacity: 0.7; }
-
-    /* CONFETTI ANIMATION */
-    .confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none; }
+    dialog { background: var(--card); color: white; border: 1px solid var(--blue); border-radius: 15px; width: 90%; max-width: 400px; padding: 20px; }
+    dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(3px); }
   </style>
 </head>
-
 <body>
+
   <div class="top-header">
     <div class="brand">TITAN <span>PRO</span></div>
-    <div class="date-badge" id="displayDate">--/--</div>
+    <div id="syncStatus" style="font-size: 0.6rem; color: var(--text-muted);">● Offline Mode</div>
   </div>
 
   <div class="timer-area">
-    <div id="timerDisplay">00:00</div>
+    <div id="timerDisplay">02:00</div>
     <div class="timer-btns">
-      <button class="btn-t" onclick="setT(60, this)">1m</button>
-      <button class="btn-t" onclick="setT(90, this)">1.5m</button>
-      <button class="btn-t active" onclick="setT(120, this)">2m</button>
-      <button class="btn-t" onclick="setT(180, this)">3m</button>
+      <button class="btn-t" onclick="setTimer(60, this)">1m</button>
+      <button class="btn-t active" onclick="setTimer(120, this)">2m</button>
+      <button class="btn-t" onclick="setTimer(180, this)">3m</button>
     </div>
-    <div class="main-ctrls">
-      <button id="ctrlBtn" class="btn-ctrl btn-start" onclick="toggleT()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> INICIAR
-      </button>
-      <button class="btn-ctrl btn-reset" onclick="resetT()">ZERAR</button>
-    </div>
+    <button id="timerBtn" class="btn-ctrl" onclick="toggleTimer()">INICIAR DESCANSO</button>
   </div>
 
-  <div class="nav-container">
-    <div class="nav-pills" id="nav"></div>
-  </div>
+  <div class="nav-pills" id="nav"></div>
+  <main id="container"></main>
 
-  <main id="container" style="min-height: 50vh;"></main>
-  
-  <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
-
-  <div class="bottom-bar">
-    <button class="btn-nav" onclick="openConfig()">
-      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-      Ajustes
-    </button>
-    <button class="btn-nav" onclick="abrirCSVModal()">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-      Dados
-    </button>
-    <button class="btn-save-main" onclick="salvarTreino()">SALVAR</button>
-    <button class="btn-nav" onclick="verHistorico()">
-      <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-      Hist
-    </button>
+  <div class="footer-bar">
+    <button class="btn-action" onclick="openConfig()">AJUSTES</button>
+    <button class="btn-action" onclick="verHistorico()">HIST</button>
+    <button class="btn-action btn-save" onclick="salvarSessao()">FINALIZAR TREINO</button>
+    <button class="btn-action" onclick="exportarDados()">DADOS</button>
   </div>
 
   <div id="toast">Notificação</div>
-  
-  <canvas id="confetti" class="confetti"></canvas>
 
   <dialog id="modalConfig">
-    <div class="modal-header"><h3>Configuração do Mesociclo</h3><span onclick="document.getElementById('modalConfig').close()" style="cursor:pointer; font-size:1.2rem;">✕</span></div>
-    <div class="modal-body">
-      <label style="font-size:0.8rem; color:#a0aec0; display:block; margin-bottom:5px;">FREQUÊNCIA</label>
-      <select id="freq" class="select-styled" onchange="gerarProtocolo()">
-        <option value="2">2 Dias (Full Body)</option>
-        <option value="3" selected>3 Dias (ABC)</option>
-        <option value="4">4 Dias (Upper/Lower)</option>
-        <option value="5">5 Dias (ABCDE)</option>
-        <option value="6">6 Dias (PPL x2)</option>
-      </select>
-
-      <label style="font-size:0.8rem; color:#a0aec0; display:block; margin-bottom:5px;">FOCO</label>
-      <select id="obj" class="select-styled" onchange="gerarProtocolo()">
-        <option value="hipertrofia">Hipertrofia (6-15 reps)</option>
-        <option value="forca">Força Pura (3-5 reps)</option>
-        <option value="resistencia">Resistência (15+ reps)</option>
-      </select>
-      
-      <div style="margin-top:20px; padding-top:20px; border-top:1px solid #2d3748;">
-        <button class="full-width" style="background:transparent; border:1px solid var(--red); color:var(--red);" onclick="limparApenasValores()">♻️ NOVA SEMANA (LIMPAR CARGAS)</button>
-        <button class="full-width" style="background:#2d3748; color:var(--blue);" onclick="showEvoChart()">📈 VER GRÁFICO DE EVOLUÇÃO</button>
-      </div>
-    </div>
+    <h3>Configurações</h3>
+    <label>Frequência:</label>
+    <select id="freq" style="width:100%; padding:10px; margin:10px 0; background:#0b1220; color:white; border-radius:8px;">
+      <option value="3">ABC (3 dias)</option>
+      <option value="4">Upper/Lower (4 dias)</option>
+      <option value="5">ABCDE (5 dias)</option>
+    </select>
+    <button class="btn-ctrl" style="width:100%" onclick="gerarNovoProtocolo()">REGERAR PROTOCOLO</button>
+    <button class="btn-action" style="width:100%; margin-top:10px;" onclick="this.closest('dialog').close()">FECHAR</button>
   </dialog>
 
-  <dialog id="modalLib">
-    <div class="modal-header"><h3 id="libHeader">Biblioteca</h3><span onclick="document.getElementById('modalLib').close()" style="cursor:pointer;">✕</span></div>
-    <div class="modal-body">
-      <div style="display:flex; gap:10px; margin-bottom:15px;">
-        <input type="text" id="manualName" placeholder="Nome do exercício..." style="flex:1; padding:12px; border-radius:8px; border:1px solid #4a5568; background:#0b1220; color:white;">
-        <button onclick="adicionarManual()" style="background:var(--blue); color:white; border:none; border-radius:8px; padding:0 20px; font-weight:bold;">OK</button>
-      </div>
-      <div id="libContent"></div>
-    </div>
-  </dialog>
-
-  <dialog id="modalCSV">
-    <div class="modal-header"><h3>Dados & Backup</h3><span onclick="document.getElementById('modalCSV').close()" style="cursor:pointer;">✕</span></div>
-    <div class="modal-body">
-      <textarea id="csvTextarea" style="width:100%; height:150px; padding:12px; background:#0b1220; border:1px solid var(--blue); border-radius:8px; color:#fff; font-family:monospace; resize:none; margin-bottom:12px;" placeholder="Cole o CSV aqui..."></textarea>
-      
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <label class="full-width" style="background:var(--blue); text-align:center; margin:0; cursor:pointer;">
-          📄 LER PDF
-          <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)">
-        </label>
-        <button class="full-width" style="background:var(--green); margin:0;" onclick="importarCSV()">IMPORTAR</button>
-      </div>
-      
-      <div style="margin-top:15px;">
-        <button class="full-width" style="background:#4a5568;" onclick="fazerBackup()">☁️ BAIXAR BACKUP COMPLETO</button>
-        <button class="full-width" style="background:#2d3748; color:var(--text-muted);" onclick="restaurarBackup()">📥 RESTAURAR BACKUP</button>
-      </div>
-    </div>
-  </dialog>
-
-  <dialog id="modalHIST">
-    <div class="modal-header"><h3>Histórico</h3><span onclick="document.getElementById('modalHIST').close()" style="cursor:pointer;">✕</span></div>
-    <div class="modal-body" id="histList"></div>
-    <div class="modal-footer">
-      <button class="full-width" style="background:var(--red); margin:0;" onclick="limparHistorico()">LIMPAR TUDO</button>
-    </div>
+  <dialog id="modalHist">
+    <h3>Histórico de Treinos</h3>
+    <div id="histContent" style="max-height: 300px; overflow-y: auto;"></div>
+    <button class="btn-action" style="width:100%; margin-top:10px;" onclick="this.closest('dialog').close()">FECHAR</button>
   </dialog>
 
   <script>
-    // --- 1. CONFIG & DATA ---
-    const CONFIG = {
-       draftKey: "titanpro_v7_draft",
-       histKey: "titanpro_v7_hist",
-       tplKey: "titanpro_v7_tpl"
+    // --- CONFIGURAÇÃO SUPABASE ---
+    // Substitua pelas suas chaves quando quiser ativar a nuvem
+    const SUPABASE_URL = ''; 
+    const SUPABASE_KEY = '';
+    const supabase = (SUPABASE_URL && SUPABASE_KEY) ? supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+    const STORAGE_KEYS = {
+      draft: 'titan_draft_v1',
+      history: 'titan_history_v1'
     };
 
-    const EXERCISES = {
-      "Peito": ["Supino Inclinado Halter", "Supino Reto Barra", "Crossover Polia Alta", "Peck Deck (Voador)", "Flexão de Braço", "Supino Máquina"],
-      "Costas": ["Puxada Alta (Frente)", "Remada Curvada", "Remada Baixa Triângulo", "Levantamento Terra", "Pulldown Corda", "Barra Fixa"],
-      "Pernas": ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Stiff", "Afundo/Passada", "Panturrilha Sentado"],
-      "Ombros": ["Desenvolvimento Halter", "Elevação Lateral", "Crucifixo Inverso", "Encolhimento", "Face Pull", "Desenvolvimento Máquina"],
-      "Braços": ["Rosca Direta Barra", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott", "Tríceps Francês", "Tríceps Banco"]
-    };
+    let timer = { time: 120, base: 120, interval: null, running: false };
 
-    const TREINOS_DEFAULT = {
-      "3": [
-        { nome: "Treino A (Empurrar)", exs: ["Supino Inclinado Halter", "Supino Reto Barra", "Desenvolvimento Máquina", "Elevação Lateral", "Tríceps Corda"] },
-        { nome: "Treino B (Puxar)", exs: ["Puxada Alta", "Remada Curvada", "Face Pull", "Rosca Direta", "Rosca Scott"] },
-        { nome: "Treino C (Pernas)", exs: ["Agachamento Livre", "Leg Press 45", "Cadeira Extensora", "Mesa Flexora", "Panturrilha Sentado"] }
-      ]
-    };
-
-    let state = { unsaved: false };
-    let prCache = new Map();
-    let pressTimer = null;
-    let currentExId = null;
-
-    // --- 2. CORE UI ---
-    function showToast(msg, type='info') {
-       const t = document.getElementById("toast");
-       t.textContent = msg;
-       t.className = type === 'success' ? 'success' : (type === 'error' ? 'error' : '');
-       t.classList.add("show");
-       setTimeout(() => t.classList.remove("show"), 3000);
+    // --- INTERFACE & TOAST ---
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg; t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 3000);
     }
 
-    function triggerConfetti() {
-       const canvas = document.getElementById("confetti");
-       canvas.style.display = 'block';
-       // Simples confetti logic para não precisar de lib externa pesada
-       const ctx = canvas.getContext('2d');
-       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-       const pieces = Array.from({length: 100}).map(() => ({
-         x: Math.random() * canvas.width, y: -20, 
-         color: `hsl(${Math.random()*360}, 70%, 50%)`,
-         v: Math.random() * 5 + 2, a: Math.random() * 0.1 - 0.05
-       }));
-       function draw() {
-         ctx.clearRect(0,0,canvas.width,canvas.height);
-         let active = false;
-         pieces.forEach(p => {
-           p.y += p.v; p.x += p.a;
-           if(p.y < canvas.height) { active = true; ctx.fillStyle=p.color; ctx.fillRect(p.x, p.y, 6, 6); }
-         });
-         if(active) requestAnimationFrame(draw); else canvas.style.display='none';
-       }
-       draw();
-    }
-
-    // --- 3. TIMER LOGIC ---
-    let timerState = { time: 120, base: 120, running: false, int: null };
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    function setT(s, btn) { 
-       if(timerState.running) return; 
-       timerState.base = timerState.time = s; 
-       updateTimerUI();
-       document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active"));
-       btn.classList.add("active");
-    }
-
-    function toggleT() {
-       const btn = document.getElementById("ctrlBtn");
-       if(timerState.running) {
-          clearInterval(timerState.int); timerState.running = false;
-          btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> CONTINUAR`;
-          btn.style.background = "var(--green)";
-       } else {
-          if(audioCtx.state === 'suspended') audioCtx.resume();
-          timerState.running = true;
-          btn.innerHTML = `PAUSAR`;
-          btn.style.background = "var(--orange)";
-          timerState.int = setInterval(() => {
-             if(timerState.time > 0) {
-                timerState.time--; updateTimerUI();
-             } else {
-                finishTimer();
-             }
-          }, 1000);
-       }
-    }
-
-    function finishTimer() {
-       clearInterval(timerState.int); timerState.running = false;
-       playBeep(); setTimeout(playBeep, 400); setTimeout(playBeep, 800);
-       // Reset UI
-       const btn = document.getElementById("ctrlBtn");
-       btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> INICIAR`;
-       btn.style.background = "var(--green)";
-       timerState.time = timerState.base; updateTimerUI();
-    }
-
-    function resetT() {
-       clearInterval(timerState.int); timerState.running = false;
-       timerState.time = timerState.base; updateTimerUI();
-       document.getElementById("ctrlBtn").innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> INICIAR`;
-       document.getElementById("ctrlBtn").style.background = "var(--green)";
+    // --- TIMER ---
+    function setTimer(s, btn) {
+      if(timer.running) return;
+      timer.base = timer.time = s;
+      updateTimerUI();
+      document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
     }
 
     function updateTimerUI() {
-       const m = Math.floor(timerState.time / 60);
-       const s = timerState.time % 60;
-       document.getElementById("timerDisplay").textContent = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-       document.title = timerState.running ? `(${m}:${s < 10 ? '0'+s : s}) Titan Pro` : "Titan Pro";
+      const m = Math.floor(timer.time / 60);
+      const s = timer.time % 60;
+      document.getElementById("timerDisplay").textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
-    function playBeep() {
-       try {
-         const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-         o.connect(g); g.connect(audioCtx.destination);
-         o.frequency.value = 880; g.gain.value = 0.1;
-         o.start(); o.stop(audioCtx.currentTime + 0.3);
-       } catch(e){}
-    }
-
-    // --- 4. EXERCISE LOGIC (OTIMIZADA) ---
-    function gerarProtocolo() {
-       if(!confirm("Gerar novo protocolo apagará o atual. Continuar?")) return;
-       const f = document.getElementById("freq").value;
-       const nav = document.getElementById("nav");
-       const cont = document.getElementById("container");
-       nav.innerHTML = ""; cont.innerHTML = "";
-
-       const preset = TREINOS_DEFAULT[f] || TREINOS_DEFAULT["3"];
-       const divs = preset.length > 0 ? preset : Array.from({length:f}, (_,i)=>({nome:`Treino ${String.fromCharCode(65+i)}`, exs:["Exercício Livre"]}));
-
-       divs.forEach((t, i) => {
-          nav.appendChild(createPill(t.nome, i));
-          const sec = document.createElement("div");
-          sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`;
-          sec.dataset.key = t.nome;
-          t.exs.forEach(ex => sec.appendChild(createCard(ex)));
-          cont.appendChild(sec);
-       });
-       
-       saveDraft();
-       document.getElementById("modalConfig").close();
-    }
-
-    function createPill(label, i) {
-       const p = document.createElement("div");
-       p.className = `pill ${i===0?'active':''}`;
-       p.textContent = label.split(" ")[1] || label; // Short label
-       p.onclick = () => switchTab(i);
-       return p;
-    }
-
-    function switchTab(i) {
-       document.querySelectorAll(".pill").forEach((p, idx) => p.classList.toggle("active", idx === i));
-       document.querySelectorAll(".section").forEach((s, idx) => s.classList.toggle("active", idx === i));
-       window.scrollTo(0,0);
-    }
-
-    function createCard(nome, sets=4, values=[]) {
-       const id = "ex-" + Math.random().toString(36).substr(2, 6);
-       const card = document.createElement("div");
-       card.className = "exercise-card";
-       card.dataset.id = id;
-       card.dataset.name = nome;
-       
-       let rows = '';
-       for(let s=0; s<sets; s++) {
-         const v = values[s] || {kg:'', reps:'', rpe:''};
-         rows += `
-           <div class="set-row">
-             <span class="set-num">${s+1}</span>
-             <div class="input-wrapper ${v.kg&&v.reps?'filled':''}">
-               <input type="number" inputmode="decimal" placeholder="kg" value="${v.kg}" oninput="handleInput(this)" onblur="saveDraft()" enterkeyhint="next">
-             </div>
-             <div class="input-wrapper ${v.kg&&v.reps?'filled':''}">
-               <input type="number" inputmode="decimal" placeholder="reps" value="${v.reps}" oninput="handleInput(this)" onblur="saveDraft()" enterkeyhint="next">
-             </div>
-             <div class="input-wrapper rpe-input">
-               <input type="number" inputmode="decimal" placeholder="RPE" value="${v.rpe}" onblur="saveDraft()" enterkeyhint="done">
-             </div>
-           </div>
-         `;
-       }
-
-       card.innerHTML = `
-         <div class="ex-header">
-           <div>
-             <div class="ex-title" onclick="openLib('${id}')">${nome}</div>
-             <span class="ex-meta">${sets} Séries</span>
-           </div>
-           <div class="ex-stats">
-             PR: <span id="pr-${id}">-</span><br>
-             1RM: <span id="rm-${id}">-</span>
-           </div>
-         </div>
-         <div class="grid-header"><span></span><span>KG</span><span>REPS</span><span>RPE</span></div>
-         <div class="sets-container">${rows}</div>
-         <div style="text-align:center; margin-top:10px;">
-            <small style="color:#e53e3e; font-weight:bold; cursor:pointer;" onclick="removerEx('${id}')">Remover</small>
-         </div>
-       `;
-       
-       // Calculate initial stats
-       requestAnimationFrame(() => updateStats(id));
-       return card;
-    }
-
-    function handleInput(inp) {
-       const row = inp.closest('.set-row');
-       const k = row.querySelector('input[placeholder="kg"]').value;
-       const r = row.querySelector('input[placeholder="reps"]').value;
-       
-       // Visual feedback
-       if(k && r) {
-          row.querySelectorAll('.input-wrapper:not(.rpe-input)').forEach(el => el.classList.add('filled'));
-       } else {
-          row.querySelectorAll('.input-wrapper').forEach(el => el.classList.remove('filled'));
-       }
-       
-       // Update logic
-       const card = inp.closest('.exercise-card');
-       updateStats(card.dataset.id);
-       state.unsaved = true;
-    }
-
-    function updateStats(id) {
-       const card = document.querySelector(`.exercise-card[data-id="${id}"]`);
-       if(!card) return;
-       
-       const name = card.dataset.name;
-       const rows = card.querySelectorAll('.set-row');
-       let max1RM = 0;
-
-       rows.forEach(r => {
-          const k = parseFloat(r.querySelector('input[placeholder="kg"]').value) || 0;
-          const rep = parseFloat(r.querySelector('input[placeholder="reps"]').value) || 0;
-          if(k > 0 && rep > 0) {
-             const rm = k * (1 + rep/30);
-             if(rm > max1RM) max1RM = rm;
-          }
-       });
-
-       // Update DOM
-       const elRM = document.getElementById(`rm-${id}`);
-       const elPR = document.getElementById(`pr-${id}`);
-       
-       if(max1RM > 0) {
-          elRM.textContent = Math.round(max1RM) + 'kg';
-          elRM.style.color = 'white';
-          
-          // Check PR Cache
-          const histPR = prCache.get(name) || 0;
-          if(histPR > 0) {
-             elPR.textContent = Math.round(histPR) + 'kg';
-             if(max1RM > histPR) elRM.innerHTML += " <span style='color:var(--green)'>▲</span>";
+    function toggleTimer() {
+      const btn = document.getElementById("timerBtn");
+      if(timer.running) {
+        clearInterval(timer.interval);
+        timer.running = false;
+        btn.textContent = "CONTINUAR";
+        btn.style.background = var(--orange);
+      } else {
+        timer.running = true;
+        btn.textContent = "PAUSAR";
+        btn.style.background = "var(--red)";
+        timer.interval = setInterval(() => {
+          if(timer.time > 0) {
+            timer.time--; updateTimerUI();
           } else {
-             elPR.textContent = "-";
+            clearInterval(timer.interval);
+            timer.running = false;
+            btn.textContent = "INICIAR DESCANSO";
+            btn.style.background = "var(--green)";
+            timer.time = timer.base; updateTimerUI();
+            navigator.vibrate?.([200, 100, 200]);
           }
-       } else {
-          elRM.textContent = "-";
-       }
+        }, 1000);
+      }
     }
 
-    function removerEx(id) {
-       if(confirm("Remover este exercício?")) {
-          document.querySelector(`[data-id="${id}"]`).remove();
-          saveDraft();
-       }
+    // --- LÓGICA DE TREINO ---
+    function gerarNovoProtocolo() {
+      const f = document.getElementById("freq").value;
+      const treinos = {
+        "3": [
+          { n: "Treino A", e: ["Supino Inclinado", "Supino Reto", "Desenvolvimento", "Tríceps Corda"] },
+          { n: "Treino B", e: ["Puxada Alta", "Remada Curvada", "Rosca Direta", "Rosca Martelo"] },
+          { n: "Treino C", e: ["Agachamento", "Leg Press", "Extensora", "Mesa Flexora"] }
+        ]
+      };
+      
+      const data = treinos[f] || treinos["3"];
+      renderizarTreinos(data);
+      saveDraft();
+      document.getElementById("modalConfig").close();
     }
 
-    // --- 5. LIBRARY & MODALS ---
-    function openConfig() { document.getElementById("modalConfig").showModal(); }
-    function openLib(id) { 
-       currentExId = id; 
-       const div = document.getElementById("libContent");
-       div.innerHTML = "";
-       for(let cat in EXERCISES) {
-          const h = document.createElement("div");
-          h.textContent = cat;
-          h.style.cssText = "color:var(--blue); font-weight:800; margin-top:15px; border-bottom:1px solid #2d3748";
-          div.appendChild(h);
-          EXERCISES[cat].forEach(ex => {
-             const i = document.createElement("div");
-             i.className = "list-item";
-             i.textContent = ex;
-             i.onclick = () => selectEx(ex);
-             div.appendChild(i);
+    function renderizarTreinos(treinos) {
+      const nav = document.getElementById("nav");
+      const cont = document.getElementById("container");
+      nav.innerHTML = ""; cont.innerHTML = "";
+
+      treinos.forEach((t, i) => {
+        const pill = document.createElement("div");
+        pill.className = `pill ${i===0?'active':''}`;
+        pill.textContent = t.n;
+        pill.onclick = () => {
+          document.querySelectorAll(".pill, .section").forEach(el => el.classList.remove("active"));
+          pill.classList.add("active");
+          document.getElementById(`sec-${i}`).classList.add("active");
+        };
+        nav.appendChild(pill);
+
+        const sec = document.createElement("div");
+        sec.id = `sec-${i}`;
+        sec.className = `section ${i===0?'active':''}`;
+        sec.style.display = i===0 ? 'block' : 'none';
+        
+        t.e.forEach(exName => {
+          sec.appendChild(createExerciseCard(exName));
+        });
+        cont.appendChild(sec);
+      });
+      
+      // Update toggle visibility
+      document.querySelectorAll(".pill").forEach((p, idx) => {
+        p.addEventListener('click', () => {
+          document.querySelectorAll(".section").forEach((s, sIdx) => {
+            s.style.display = idx === sIdx ? 'block' : 'none';
           });
-       }
-       document.getElementById("modalLib").showModal();
+        });
+      });
     }
 
-    function abrirLibParaNovo() { openLib(null); }
-    
-    function selectEx(name) {
-       if(currentExId) {
-          const card = document.querySelector(`[data-id="${currentExId}"]`);
-          card.dataset.name = name;
-          card.querySelector(".ex-title").textContent = name;
-          updateStats(currentExId);
-       } else {
-          const activeSec = document.querySelector(".section.active");
-          if(activeSec) {
-             activeSec.appendChild(createCard(name));
-             // Scroll to bottom
-             window.scrollTo(0, document.body.scrollHeight);
-          }
-       }
-       document.getElementById("modalLib").close();
-       saveDraft();
-    }
-    
-    function adicionarManual() {
-       const n = document.getElementById("manualName").value;
-       if(n) { selectEx(n); document.getElementById("manualName").value = ""; }
+    function createExerciseCard(name, sets = 4, values = []) {
+      const card = document.createElement("div");
+      card.className = "exercise-card";
+      let rows = "";
+      for(let i=0; i<sets; i++) {
+        const v = values[i] || {k:'', r:''};
+        rows += `
+          <div class="set-grid">
+            <span style="font-size:0.7rem; color:gray">${i+1}</span>
+            <div class="input-box ${v.k?'filled':''}"><input type="number" placeholder="kg" value="${v.k}" oninput="validateInput(this)"></div>
+            <div class="input-box ${v.r?'filled':''}"><input type="number" placeholder="reps" value="${v.r}" oninput="validateInput(this)"></div>
+            <div class="input-box"><input type="number" placeholder="rpe" value=""></div>
+          </div>
+        `;
+      }
+      card.innerHTML = `<span class="ex-title">${name}</span>${rows}`;
+      return card;
     }
 
-    // --- 6. PERSISTENCE (DRAFT & HISTORY) ---
+    function validateInput(inp) {
+      inp.parentElement.classList.toggle("filled", inp.value > 0);
+      saveDraft();
+    }
+
+    // --- PERSISTÊNCIA ---
     function serialize() {
-       const pills = Array.from(document.querySelectorAll(".pill")).map(p => p.textContent);
-       const sections = Array.from(document.querySelectorAll(".section")).map(sec => {
-          return {
-             key: sec.dataset.key,
-             cards: Array.from(sec.querySelectorAll(".exercise-card")).map(c => ({
-                name: c.dataset.name,
-                sets: c.querySelectorAll(".set-row").length,
-                values: Array.from(c.querySelectorAll(".set-row")).map(r => ({
-                   kg: r.querySelector('input[placeholder="kg"]').value,
-                   reps: r.querySelector('input[placeholder="reps"]').value,
-                   rpe: r.querySelector('input[placeholder="reps"]').value
-                }))
-             }))
-          };
-       });
-       return { date: new Date().toISOString(), pills, sections };
+      const sections = Array.from(document.querySelectorAll(".section"));
+      return sections.map(sec => ({
+        n: document.querySelector(`[onclick*="sec-${sec.id.split('-')[1]}"]`)?.textContent || "Treino",
+        e: Array.from(sec.querySelectorAll(".exercise-card")).map(card => ({
+          name: card.querySelector(".ex-title").textContent,
+          values: Array.from(card.querySelectorAll(".set-grid")).map(row => ({
+            k: row.querySelector("input[placeholder='kg']").value,
+            r: row.querySelector("input[placeholder='reps']").value
+          }))
+        }))
+      }));
     }
 
     function saveDraft() {
-       localStorage.setItem(CONFIG.draftKey, JSON.stringify(serialize()));
-       state.unsaved = false;
+      localStorage.setItem(STORAGE_KEYS.draft, JSON.stringify(serialize()));
     }
 
     function loadDraft() {
-       try {
-          const d = JSON.parse(localStorage.getItem(CONFIG.draftKey));
-          if(!d || !d.sections) return;
-          
-          const nav = document.getElementById("nav");
-          const cont = document.getElementById("container");
-          nav.innerHTML = ""; cont.innerHTML = "";
-          
-          d.sections.forEach((s, i) => {
-             nav.appendChild(createPill(s.key || `Treino ${String.fromCharCode(65+i)}`, i));
-             const sec = document.createElement("div");
-             sec.id = `sec${i}`; sec.className = `section ${i===0?'active':''}`;
-             sec.dataset.key = s.key;
-             s.cards.forEach(c => sec.appendChild(createCard(c.name, c.sets, c.values)));
-             cont.appendChild(sec);
+      const raw = localStorage.getItem(STORAGE_KEYS.draft);
+      if(!raw) return gerarNovoProtocolo();
+      const data = JSON.parse(raw);
+      
+      // Adaptar renderização para o formato salvo
+      const nav = document.getElementById("nav");
+      const cont = document.getElementById("container");
+      nav.innerHTML = ""; cont.innerHTML = "";
+      
+      data.forEach((t, i) => {
+        const pill = document.createElement("div");
+        pill.className = `pill ${i===0?'active':''}`;
+        pill.textContent = t.n;
+        nav.appendChild(pill);
+        const sec = document.createElement("div");
+        sec.id = `sec-${i}`; sec.className = "section";
+        sec.style.display = i===0 ? 'block' : 'none';
+        t.e.forEach(ex => {
+          sec.appendChild(createExerciseCard(ex.name, ex.values.length, ex.values));
+        });
+        cont.appendChild(sec);
+      });
+      
+      // Reatribuir cliques
+      document.querySelectorAll(".pill").forEach((p, idx) => {
+        p.onclick = () => {
+          document.querySelectorAll(".pill").forEach(el => el.classList.remove("active"));
+          p.classList.add("active");
+          document.querySelectorAll(".section").forEach((s, sIdx) => {
+            s.style.display = idx === sIdx ? 'block' : 'none';
           });
-       } catch(e) { console.error("Erro loading draft", e); }
+        };
+      });
     }
 
-    function salvarTreino() {
-       const vol = document.querySelectorAll(".filled").length;
-       if(vol === 0) { showToast("Treino vazio!", "error"); return; }
-       
-       try {
-          const hist = JSON.parse(localStorage.getItem(CONFIG.histKey) || "[]");
-          hist.unshift(serialize());
-          if(hist.length > 50) hist.pop(); // Limit history
-          localStorage.setItem(CONFIG.histKey, JSON.stringify(hist));
-          
-          buildCache();
-          triggerConfetti();
-          showToast("Treino Salvo com Sucesso!", "success");
-          
-          // Limpar valores (mas manter exercícios)
-          if(confirm("Limpar valores para a próxima semana?")) {
-             document.querySelectorAll("input").forEach(i => i.value = "");
-             document.querySelectorAll(".filled").forEach(d => d.classList.remove("filled"));
-             saveDraft();
-          }
-       } catch(e) { showToast("Memória cheia. Faça backup.", "error"); }
-    }
+    async function salvarSessao() {
+      const payload = {
+        date: new Date().toISOString(),
+        data: serialize()
+      };
 
-    function buildCache() {
-       const hist = JSON.parse(localStorage.getItem(CONFIG.histKey) || "[]");
-       prCache.clear();
-       hist.forEach(sess => {
-          sess.sections.forEach(sec => {
-             sec.cards.forEach(c => {
-                let max = 0;
-                c.values.forEach(v => {
-                   const k = parseFloat(v.kg)||0; const r = parseFloat(v.reps)||0;
-                   if(k>0&&r>0) { const rm = k*(1+r/30); if(rm>max) max=rm; }
-                });
-                const cur = prCache.get(c.name)||0;
-                if(max > cur) prCache.set(c.name, max);
-             });
-          });
-       });
-    }
+      // 1. Salva Local
+      const hist = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]");
+      hist.unshift(payload);
+      localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(hist.slice(0, 50)));
 
-    // --- 7. DATA MGMT & INIT ---
-    function fazerBackup() {
-       const data = {
-          d: localStorage.getItem(CONFIG.draftKey),
-          h: localStorage.getItem(CONFIG.histKey)
-       };
-       const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-       const a = document.createElement("a");
-       a.href = URL.createObjectURL(blob);
-       a.download = `titan_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.json`;
-       a.click();
-    }
-    
-    function restaurarBackup() {
-       const inp = document.createElement("input"); type="file"; inp.accept=".json";
-       inp.onchange = e => {
-          const f = e.target.files[0];
-          const r = new FileReader();
-          r.onload = (evt) => {
-             try {
-                const d = JSON.parse(evt.target.result);
-                if(d.d) localStorage.setItem(CONFIG.draftKey, d.d);
-                if(d.h) localStorage.setItem(CONFIG.histKey, d.h);
-                alert("Restaurado! A página irá recarregar.");
-                location.reload();
-             } catch { showToast("Arquivo inválido", "error"); }
-          };
-          r.readAsText(f);
-       };
-       inp.click();
+      // 2. Tenta Nuvem (Supabase)
+      if(supabase) {
+        document.getElementById("syncStatus").textContent = "● Sincronizando...";
+        const { error } = await supabase.from('workouts').insert([{ payload }]);
+        if(!error) {
+          document.getElementById("syncStatus").textContent = "● Sincronizado";
+          document.getElementById("syncStatus").style.color = "var(--green)";
+        }
+      }
+
+      showToast("Treino finalizado e salvo!");
+      if(confirm("Limpar cargas para o próximo treino?")) {
+        document.querySelectorAll("input").forEach(i => i.value = "");
+        document.querySelectorAll(".filled").forEach(f => f.classList.remove("filled"));
+        saveDraft();
+      }
     }
 
     function verHistorico() {
-       const hist = JSON.parse(localStorage.getItem(CONFIG.histKey)||"[]");
-       const list = document.getElementById("histList");
-       list.innerHTML = "";
-       if(hist.length === 0) list.innerHTML = "<div style='padding:15px; color:#718096; text-align:center'>Sem treinos salvos.</div>";
-       
-       hist.forEach(h => {
-          const el = document.createElement("div");
-          el.className = "list-item";
-          el.innerHTML = `<div><strong>${new Date(h.date).toLocaleDateString('pt-BR')}</strong><br><small>${h.sections.length} partes</small></div> <span style='color:var(--blue)'>Carregar</span>`;
-          el.onclick = () => {
-             if(confirm("Carregar este treino antigo? (O atual será substituído)")) {
-                localStorage.setItem(CONFIG.draftKey, JSON.stringify(h));
-                loadDraft();
-                document.getElementById("modalHIST").close();
-             }
-          };
-          list.appendChild(el);
-       });
-       document.getElementById("modalHIST").showModal();
+      const hist = JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || "[]");
+      const content = document.getElementById("histContent");
+      content.innerHTML = hist.map(h => `
+        <div style="padding:10px; border-bottom:1px solid #2d3748;">
+          <small>${new Date(h.date).toLocaleDateString()}</small>
+          <div style="color:var(--blue); font-weight:bold;">Sessão Finalizada</div>
+        </div>
+      `).join("") || "Nenhum treino salvo.";
+      document.getElementById("modalHist").showModal();
     }
 
-    function limparHistorico() {
-       if(confirm("Certeza absoluta? Apaga todo o progresso.")) {
-          localStorage.removeItem(CONFIG.histKey);
-          buildCache();
-          verHistorico();
-       }
+    function openConfig() { document.getElementById("modalConfig").showModal(); }
+
+    // --- SERVICE WORKER REGISTRATION ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
     }
 
-    // --- IMPORT CSV/PDF (MANTIDO E SIMPLIFICADO) ---
-    function abrirCSVModal() { document.getElementById("modalCSV").showModal(); }
-    
-    async function extrairTextoPDF(input) {
-        if(!input.files[0]) return;
-        const btn = input.parentElement; btn.style.opacity = "0.5";
-        try {
-            const ab = await input.files[0].arrayBuffer();
-            const pdf = await pdfjsLib.getDocument(ab).promise;
-            let txt = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
-            for(let i=1; i<=pdf.numPages; i++) {
-                const p = await pdf.getPage(i);
-                const c = await p.getTextContent();
-                txt += "Treino A," + c.items.map(s=>s.str).join(" ") + ",4,10\n";
-            }
-            document.getElementById("csvTextarea").value = txt;
-            showToast("PDF processado. Ajuste o CSV.");
-        } catch(e) { showToast("Erro no PDF", "error"); }
-        btn.style.opacity = "1";
-    }
-
-    function importarCSV() {
-        const txt = document.getElementById("csvTextarea").value;
-        if(!txt) return;
-        // Lógica simplificada de CSV parser para popular o state
-        // (Para fins de brevidade, assume formato padrão)
-        alert("Importação simulada com sucesso! (Lógica completa mantida da versão anterior)");
-        document.getElementById("modalCSV").close();
-    }
-
-    // --- INIT ---
-    window.onload = () => {
-       document.getElementById("displayDate").textContent = new Date().toLocaleDateString('pt-BR', {weekday:'short', day:'numeric'});
-       if(localStorage.getItem(CONFIG.draftKey)) loadDraft();
-       else gerarProtocolo(); // Default init
-       buildCache();
-    };
-
-    window.onbeforeunload = () => {
-       if(state.unsaved) return "Há alterações não salvas.";
-    };
+    window.onload = loadDraft;
   </script>
 </body>
 </html>
