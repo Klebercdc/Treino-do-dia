@@ -1,5 +1,4 @@
-/* TITAN PRO - INDUSTRIAL DASHBOARD CSS (V8) */
-
+/* STYLES.CSS - ESTRUTURA DASHBOARD INDUSTRIAL */
 :root {
     --bg-black: #05080f;
     --sidebar-surface: #0c121d;
@@ -13,14 +12,11 @@
     --red: #ef4444;
 }
 
-/* 1. VIEWPORT LOCKING */
 body {
     background-color: var(--bg-black);
     color: var(--text-primary);
-    font-family: 'Inter', -apple-system, sans-serif;
     margin: 0;
     height: 100vh;
-    width: 100vw;
     display: grid;
     grid-template-areas: 
         "header header"
@@ -31,201 +27,37 @@ body {
     overflow: hidden;
 }
 
-/* 2. HEADER: ÁREA SUPERIOR */
-.top-header {
-    grid-area: header;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 25px;
-    background: var(--bg-black);
-    border-bottom: 1px solid var(--border-dim);
-}
-
-.brand { font-size: 1.4rem; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; }
+.top-header { grid-area: header; display: flex; justify-content: space-between; padding: 12px 25px; border-bottom: 1px solid var(--border-dim); }
+.brand { font-weight: 900; text-transform: uppercase; }
 .brand span { color: var(--accent-blue); }
-.status-indicator { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.status-indicator::before { content: ""; width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; display: inline-block; box-shadow: 0 0 10px var(--accent-green); }
 
-/* 3. SIDEBAR: ÁREA DE CONTROLE (TIMER & SETUP) */
-.left-pane {
-    grid-area: sidebar;
-    background: var(--sidebar-surface);
-    border-right: 1px solid var(--border-dim);
-    padding: 25px;
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-    overflow-y: auto;
+.left-pane { grid-area: sidebar; background: var(--sidebar-surface); border-right: 1px solid var(--border-dim); padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+.display-time { font-size: 4rem; font-weight: 800; color: var(--accent-blue); text-align: center; font-family: monospace; }
+
+.exercise-carousel { 
+    grid-area: main; 
+    display: flex; 
+    flex-direction: row; 
+    overflow-x: auto; 
+    padding: 30px; 
+    gap: 20px; 
+    scroll-snap-type: x mandatory; 
 }
 
-.display-time {
-    font-size: 4.8rem;
-    font-weight: 800;
-    text-align: center;
-    color: var(--accent-blue);
-    font-family: 'JetBrains Mono', monospace;
-    text-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
-    margin: 10px 0;
-}
-
-.timer-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-}
-
-.btn-timer-opt {
-    background: #1e293b;
-    border: 1px solid var(--border-dim);
-    color: var(--text-muted);
-    padding: 12px 0;
-    border-radius: 8px;
-    font-weight: 800;
-    font-size: 0.7rem;
-    cursor: pointer;
-}
-
-.btn-timer-opt.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
-
-.action-stack { display: flex; gap: 10px; }
-.btn-primary-action {
-    flex: 1;
-    background: var(--accent-green);
-    color: white;
-    border: none;
-    padding: 18px;
-    border-radius: 12px;
-    font-weight: 900;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-.setup-panel {
-    background: rgba(0,0,0,0.2);
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid var(--border-dim);
-}
-
-.setup-panel .field { margin-bottom: 15px; }
-.setup-panel label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
-.setup-panel select { 
-    width: 100%; padding: 12px; background: #05080f; 
-    border: 1px solid var(--border-dim); color: white; border-radius: 8px; margin-top: 5px;
-}
-
-/* 4. MAIN: ÁREA DO CAROUSEL DE EXERCÍCIOS */
-.exercise-carousel {
-    grid-area: main;
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 30px;
-    gap: 20px;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-}
-
-.exercise-carousel::-webkit-scrollbar { display: none; }
-
-.exercise-card {
-    min-width: 350px;
-    background: var(--card-surface);
-    border: 1px solid var(--border-dim);
-    border-radius: 20px;
-    padding: 25px;
-    scroll-snap-align: start;
+.exercise-card { 
+    min-width: 350px; 
+    background: var(--card-surface); 
+    border-radius: 20px; 
+    padding: 25px; 
+    border: 1px solid var(--border-dim); 
+    scroll-snap-align: start; 
     height: fit-content;
 }
 
-.card-header h3 { margin: 0; font-size: 1.3rem; font-weight: 800; color: white; }
-.card-header span { font-size: 0.8rem; color: var(--accent-blue); font-weight: 700; }
+.series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
+.input-box { background: #060b14; border: 1px solid var(--border-dim); border-radius: 8px; padding: 10px 0; }
+.input-box input { background: transparent; border: none; color: white; width: 100%; text-align: center; font-weight: 800; outline: none; }
 
-.rpe-suggest { display: block; font-size: 0.75rem; color: var(--text-muted); margin: 10px 0; font-family: monospace; }
-
-/* DATA GRID INTERNO DOS CARDS */
-.series-grid {
-    display: grid;
-    grid-template-columns: 40px 1fr 1fr 1fr;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.header-grid { text-align: center; font-size: 0.65rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; }
-
-.input-box {
-    background: #060b14;
-    border: 1px solid var(--border-dim);
-    border-radius: 10px;
-    padding: 12px 0;
-    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.input-box.filled { border-color: var(--accent-green); background: rgba(16, 185, 129, 0.05); }
-
-.input-box input {
-    background: transparent;
-    border: none;
-    color: white;
-    width: 100%;
-    text-align: center;
-    font-size: 1.2rem;
-    font-weight: 800;
-    outline: none;
-}
-
-.input-box input::placeholder { color: rgba(255,255,255,0.08); font-weight: 400; }
-
-/* 5. FOOTER: ÁREA DE NAVEGAÇÃO GLOBAL */
-.footer-bar {
-    grid-area: footer;
-    display: flex;
-    padding: 15px 25px;
-    gap: 15px;
-    background: var(--bg-black);
-    border-top: 1px solid var(--border-dim);
-    align-items: center;
-}
-
-.btn-tab {
-    background: var(--accent-blue);
-    color: white;
-    border: none;
-    padding: 15px 35px;
-    border-radius: 15px;
-    font-weight: 900;
-    min-width: 180px;
-    cursor: pointer;
-}
-
-.btn-secondary {
-    background: #1e293b;
-    color: white;
-    border: 1px solid var(--border-dim);
-    padding: 15px 20px;
-    border-radius: 15px;
-    font-weight: 700;
-    flex: 1;
-    cursor: pointer;
-}
-
-/* MODALS */
-dialog {
-    background: #0f172a;
-    border: 1px solid var(--accent-blue);
-    border-radius: 20px;
-    color: white;
-    padding: 25px;
-    width: 90%;
-    max-width: 450px;
-}
-
-dialog::backdrop { background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
-
-/* ANIMAÇÃO */
-@keyframes fadeIn { 
-    from { opacity: 0; transform: translateX(20px); } 
-    to { opacity: 1; transform: translateX(0); } 
-}
+.footer-bar { grid-area: footer; display: flex; padding: 15px 25px; gap: 15px; border-top: 1px solid var(--border-dim); background: var(--bg-black); }
+.btn-tab { background: var(--accent-blue); color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: 900; }
+.btn-secondary { background: #1e293b; color: white; border: 1px solid var(--border-dim); padding: 15px; border-radius: 12px; flex: 1; font-weight: 700; cursor: pointer; }
