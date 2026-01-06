@@ -54,21 +54,19 @@
 
     <script>
         const KEY_STORAGE = "titanpro_key";
-        const DRAFT_STORAGE = "titanpro_draft";
 
         function saveKey() {
             localStorage.setItem(KEY_STORAGE, document.getElementById('apiKeyInput').value.trim());
         }
 
-        function criarCard(nome, secId, values = null) {
-            const id = "ex-" + Math.random().toString(36).slice(2, 7);
+        function criarCard(nome, secId) {
             const sec = document.getElementById(secId);
             const card = document.createElement("div");
             card.className = "exercise-card";
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px">
                     <strong style="color:var(--blue)">${nome}</strong>
-                    <span style="color:var(--red)" onclick="this.closest('.exercise-card').remove()">[X]</span>
+                    <span style="color:var(--red); font-weight:bold; cursor:pointer" onclick="this.closest('.exercise-card').remove()">[X]</span>
                 </div>
                 ${[1,2,3,4].map(s => `
                     <div class="series-grid">
@@ -80,12 +78,11 @@
             sec.appendChild(card);
         }
 
-        // LÓGICA LONG PRESS PARA APAGAR ABAS
         function bindLongPress() {
             document.querySelectorAll(".pill").forEach((pill, idx) => {
                 let timer;
                 const start = () => timer = setTimeout(() => {
-                    if(confirm(`Deseja apagar o ${pill.innerText}?`)) {
+                    if(confirm(`Excluir ${pill.innerText}?`)) {
                         pill.remove();
                         document.getElementById("sec"+idx).remove();
                     }
@@ -98,14 +95,14 @@
 
         async function enviarParaIA() {
             const key = localStorage.getItem(KEY_STORAGE);
-            if(!key) return alert("⚠️ Configure a API Key em CONFIG.");
+            if(!key) return alert("Configure a API Key em CONFIG.");
 
             const btn = document.getElementById('btnIA');
-            btn.innerText = "⏳ CONECTANDO...";
+            btn.innerText = "⏳ ANALISANDO...";
             btn.disabled = true;
 
             const treino = [...document.querySelectorAll(".exercise-card")].map(c => ({
-                nome: c.querySelector("strong").innerText,
+                ex: c.querySelector("strong").innerText,
                 series: [...c.querySelectorAll(".series-grid")].map(r => ({
                     kg: r.querySelector(".kg").value,
                     reps: r.querySelector(".reps").value,
@@ -114,28 +111,22 @@
             }));
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seg timeout
-
                 const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-                    signal: controller.signal,
                     body: JSON.stringify({
-                        model: "meta/llama-3.1-405b-instruct",
-                        messages: [{ role: "user", content: `Analise meu treino: ${JSON.stringify(treino)}` }],
+                        model: "meta/llama-3.1-405b-instruct", // MODELO CORRETO DE INSTRUÇÃO
+                        messages: [{ role: "user", content: `Analise o volume e intensidade deste treino e sugira progressão: ${JSON.stringify(treino)}` }],
                         temperature: 0.5
                     })
                 });
 
-                clearTimeout(timeoutId);
                 const data = await res.json();
-                
-                if (data.choices) alert("🤖 IA ANALYST:\n" + data.choices[0].message.content);
-                else alert("❌ Erro na Chave ou Modelo. Verifique sua conta NVIDIA.");
+                if (data.choices) alert("🤖 SUGESTÃO IA:\n\n" + data.choices[0].message.content);
+                else alert("Erro na API. Verifique se a sua chave nvapi- está correta e tem saldo.");
 
             } catch(e) {
-                alert("❌ Erro de Conexão ou Timeout. Tente novamente em 4G ou Wi-Fi estável.");
+                alert("❌ Erro de Conexão. Verifique seu 4G/Wi-Fi.");
             } finally {
                 btn.innerText = "🤖 IA ANALYST";
                 btn.disabled = false;
@@ -148,7 +139,11 @@
             document.querySelectorAll(".pill")[idx].classList.add("active");
         }
 
-        function gerarPadrao() {
+        window.onload = () => {
+            document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
+            const saved = localStorage.getItem(KEY_STORAGE);
+            if(saved) document.getElementById("apiKeyInput").value = saved;
+            
             const nav = document.getElementById("nav");
             const cont = document.getElementById("container");
             ["Treino A", "Treino B", "Treino C"].forEach((t, i) => {
@@ -159,16 +154,9 @@
                 criarCard("Supino Reto", "sec"+i);
             });
             bindLongPress();
-        }
-
-        window.onload = () => {
-            document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-            const saved = localStorage.getItem(KEY_STORAGE);
-            if(saved) document.getElementById("apiKeyInput").value = saved;
-            gerarPadrao();
         };
         
-        function salvarSessao() { alert("Treino Salvo Localmente!"); }
+        function salvarSessao() { alert("Treino Salvo!"); }
     </script>
 </body>
 </html>
