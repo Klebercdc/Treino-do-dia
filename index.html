@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
+    <link rel="icon" href="Logo.png" type="image/png" />
     <style>
         :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -28,12 +29,12 @@
         .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; }
         .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; padding: 8px 0; outline: none; font-weight: bold; }
         .input-box input::placeholder { color: rgba(255,255,255,0.15); font-style: italic; font-size: 0.8rem; }
-        .rmmini { font-size: 0.55rem; color: var(--green); text-align: center; font-family: monospace; line-height: 1.2; }
+        .rm-mini-badge { font-size: 0.55rem; color: var(--green); text-align: center; font-family: monospace; line-height: 1.2; }
         .footer-actions { padding: 20px 10px; display: flex; gap: 8px; flex-wrap: wrap; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.7rem; text-transform: uppercase; }
         .btn-save { background: var(--green); color: #fff; box-shadow: 0 4px 0 #2d8a84; }
         .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
-        dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 95%; max-width: 500px; padding: 20px; box-sizing: border-box; }
+        dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 95%; max-width: 500px; padding: 20px; box-sizing: border-box; border: 1px solid var(--blue); }
         dialog::backdrop { background: rgba(0,0,0,0.8); }
         #csvTextarea { width: 100%; height: 180px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; padding: 10px; box-sizing: border-box; font-family: monospace; resize: none; }
         .tpl-item { padding: 12px; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
@@ -45,54 +46,69 @@
         <h1 style="margin:0; font-size:1.1rem; color:var(--blue)">TITAN <span style="color:#fff">PRO</span></h1>
         <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
-
     <div class="setup-panel" id="setupPanel">
         <div class="field">
-            <label>NVIDIA API KEY (Nemotron-70B)</label>
-            <input type="password" id="apiKeyInput" placeholder="Sua chave fica segura no localStorage" onchange="saveApiKey()">
+            <label>NVIDIA API KEY (Segurança Local)</label>
+            <input type="password" id="apiKeyInput" onchange="saveApiKey()" placeholder="Sua chave fica no navegador">
         </div>
         <div class="field">
             <label>Divisão de Treino</label>
             <select id="freq" onchange="gerarProtocolo()"><option value="3">ABC</option><option value="4">ABCD</option><option value="5">ABCDE</option><option value="6">PPL x2</option></select>
         </div>
-        <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'" style="width:100%">ABRIR TREINO</button>
+        <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'" style="width:100%">FECHAR CONFIG</button>
     </div>
-
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
-    <button class="btn" style="background: #1a202c; color: var(--blue); border: 2px dashed var(--blue); margin: 10px; width: calc(100% - 20px);" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
-
     <div class="footer-actions">
         <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ CONFIG</button>
         <button class="btn btn-config" onclick="document.getElementById('modalCSV').showModal()">📊 ARQUIVOS</button>
         <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
-        <button class="btn btn-config" onclick="enviarParaIA()" style="background:var(--blue); color:white">🤖 ANALISAR IA</button>
+        <button class="btn btn-config" onclick="enviarParaIA()" style="background:var(--blue); color:white">🤖 IA</button>
+        <button class="btn btn-config" onclick="verHistorico()" style="flex:0.4">📜 HIST</button>
     </div>
 
     <dialog id="modalCSV">
-        <h3 style="color:var(--orange)">CSV & Modelos de Treino</h3>
-        <textarea id="csvTextarea" placeholder="Cole o CSV ou use o PDF..."></textarea>
-        <div style="display:flex; gap:8px; margin-top:12px">
+        <h3 style="color:var(--orange)">CSV & Modelos</h3>
+        <textarea id="csvTextarea" placeholder="Cole seu CSV aqui..."></textarea>
+        <div style="display:flex; gap:5px; margin-top:10px">
+            <button class="btn btn-save" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
+            <button class="btn btn-config" onclick="mostrarModelosCSV()">📚 LISTAR MOD</button>
             <label class="btn btn-config" style="flex:1">📄 PDF <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"></label>
-            <button class="btn btn-save" onclick="importarCSV()">✓ IMPORTAR</button>
         </div>
-        <div style="display:flex; gap:8px; margin-top:8px">
-            <button class="btn btn-config" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
-            <button class="btn btn-config" onclick="mostrarModelosCSV()">📚 LISTAR</button>
-        </div>
-        <div id="tplArea" style="margin-top:12px; display:none; border-top:1px solid #2d3748">
-            <div id="tplList"></div>
-            <button class="btn" style="width:100%; margin-top:5px; background:var(--red); font-size:0.6rem" onclick="localStorage.removeItem('tpro_tpl'); mostrarModelosCSV();">LIMPAR TUDO</button>
-        </div>
-        <button class="btn" style="width:100%; margin-top:12px; background:#2d3748; color:white" onclick="document.getElementById('modalCSV').close()">FECHAR</button>
+        <div id="tplArea" style="margin-top:10px; display:none"><div id="tplList"></div></div>
+        <button class="btn" style="width:100%; margin-top:10px; background:var(--red); color:white" onclick="document.getElementById('modalCSV').close()">FECHAR</button>
     </dialog>
 
+    <dialog id="modalLib">
+        <h3 id="libHeader" style="color: var(--orange)">Biblioteca</h3>
+        <div id="libContent" style="max-height: 300px; overflow-y: auto;"></div>
+        <button class="btn" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:10px">FECHAR</button>
+    </dialog>
+
+    <dialog id="modalHIST">
+        <h3 style="color: var(--orange)">Histórico</h3>
+        <div id="histList" style="max-height: 300px; overflow-y: auto;"></div>
+        <button class="btn" onclick="document.getElementById('modalHIST').close()" style="width:100%; margin-top:10px">FECHAR</button>
+    </dialog>
     <script>
-        const STORAGE = { hist: "tpro_hist", draft: "tpro_draft", key: "tpro_key", tpl: "tpro_tpl" };
+        const STORAGE = { 
+            hist: "titanpro_hist_v3", 
+            draft: "titanpro_draft_v3", 
+            key: "titanpro_key_v3", 
+            tpl: "titanpro_tpl_v3" 
+        };
+
+        const biblioteca = {
+            Peito: ["Supino Inclinado", "Supino Reto", "Crossover", "Voador"],
+            Costas: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra"],
+            Pernas: ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff", "Panturrilha"],
+            Ombros: ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso"],
+            Braços: ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa"]
+        };
 
         function toNum(x) { const n = parseFloat(String(x || "").replace(",", ".")); return isNaN(n) ? 0 : n; }
 
-        // CÁLCULO BRZYCKI COM RPE
+        // CÁLCULO BRZYCKI COM RPE (SÉRIE A SÉRIE)
         function calcRM(kg, reps, rpe) {
             const K = toNum(kg), R = toNum(reps), E = toNum(rpe) || 10;
             if (!K || !R) return 0;
@@ -100,16 +116,16 @@
             return K / (1.0278 - (0.0278 * (R + rir)));
         }
 
-        // GHOST MODE REAL
+        // BUSCA VALORES DA ÚLTIMA SESSÃO (GHOST MODE)
         function getGhost(exNome, idx) {
             const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
             if (!h.length) return null;
-            const lastSession = h[0].state;
-            const ex = lastSession.find(e => e.nome === exNome);
-            return ex ? ex.series[idx] : null;
+            // Busca o exercício pelo nome em qualquer treino anterior
+            const lastEx = h[0].state.sections.flatMap(s => s.cards).find(e => e.nome === exNome);
+            return lastEx ? lastEx.series[idx] : null;
         }
 
-        // CRIAR CARD COM LONG PRESS
+        // FUNÇÃO CRIAR CARD (INJETANDO CÁLCULO E GHOST)
         function criarCard(nome, secId, values = null) {
             const id = "ex-" + Math.random().toString(36).slice(2, 9);
             const sec = document.getElementById(secId);
@@ -119,7 +135,7 @@
 
             card.innerHTML = `
                 <div class="ex-header">
-                    <strong style="color:var(--blue); font-size:1.1rem">${nome}</strong>
+                    <strong class="ex-title" onclick="abrirLibParaTrocar('${id}')">${nome}</strong>
                     <span style="color:var(--red); font-weight:bold; cursor:pointer" onclick="confirmExDelete(this)">[X]</span>
                 </div>`;
 
@@ -128,10 +144,10 @@
                 const v = values ? values[i] : { kg: "", reps: "", rpe: "" };
                 card.innerHTML += `
                 <div class="series-grid">
-                    <div class="rmmini">S${i+1}<br><span id="rm-${id}-${i}">${v.kg?Math.round(calcRM(v.kg,v.reps,v.rpe))+'kg':''}</span></div>
-                    <div class="input-box"><input type="number" value="${v.kg}" placeholder="${g?g.kg:'KG'}" oninput="updRM('${id}',${i},this)"></div>
-                    <div class="input-box"><input type="number" value="${v.reps}" placeholder="${g?g.reps:'REPS'}" oninput="updRM('${id}',${i},this)"></div>
-                    <div class="input-box"><input type="number" value="${v.rpe}" placeholder="${g?g.rpe:'RPE'}" oninput="updRM('${id}',${i},this)"></div>
+                    <div class="rm-mini-badge">S${i+1}<br><span id="rm-${id}-${i}">${v.kg ? Math.round(calcRM(v.kg,v.reps,v.rpe))+'kg' : ''}</span></div>
+                    <div class="input-box"><input type="number" value="${v.kg}" placeholder="${g ? g.kg : 'KG'}" oninput="updRM('${id}',${i},this)"></div>
+                    <div class="input-box"><input type="number" value="${v.reps}" placeholder="${g ? g.reps : 'REPS'}" oninput="updRM('${id}',${i},this)"></div>
+                    <div class="input-box"><input type="number" value="${v.rpe}" placeholder="${g ? g.rpe : 'RPE'}" oninput="updRM('${id}',${i},this)"></div>
                 </div>`;
             }
             sec.appendChild(card);
@@ -141,17 +157,35 @@
             const row = el.closest(".series-grid");
             const ins = row.querySelectorAll("input");
             const rm = calcRM(ins[0].value, ins[1].value, ins[2].value);
-            document.getElementById(`rm-${id}-${i}`).innerText = rm ? Math.round(rm) + "kg" : "";
+            const display = document.getElementById(`rm-${id}-${i}`);
+            if (display) display.innerText = rm ? Math.round(rm) + "kg" : "";
             saveDraft();
         }
 
-        // LÓGICA DE LONG PRESS PARA ABAS (MOBILE COMPATÍVEL)
+        // SERIALIZAÇÃO COMPLETA DO ESTADO
+        function serialize() {
+            return {
+                sections: [...document.querySelectorAll(".section")].map(sec => ({
+                    nome: sec.dataset.nome,
+                    cards: [...sec.querySelectorAll(".exercise-card")].map(c => ({
+                        nome: c.dataset.nome,
+                        series: [...c.querySelectorAll(".series-grid")].map(r => {
+                            const i = r.querySelectorAll("input");
+                            return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
+                        })
+                    }))
+                }))
+            };
+        }
+
+        function saveDraft() { localStorage.setItem(STORAGE.draft, JSON.stringify(serialize())); }
+        function saveApiKey() { localStorage.setItem(STORAGE.key, document.getElementById("apiKeyInput").value); }
+        // LÓGICA DE EXCLUSÃO DE ABA (LONG PRESS)
         function bindLongPress() {
             document.querySelectorAll(".pill").forEach((pill, idx) => {
                 let timer;
                 const start = () => { timer = setTimeout(() => deletePill(idx), 800); };
                 const end = () => clearTimeout(timer);
-
                 pill.onmousedown = pill.ontouchstart = start;
                 pill.onmouseup = pill.onmouseleave = pill.ontouchend = end;
                 pill.oncontextmenu = (e) => { e.preventDefault(); deletePill(idx); };
@@ -169,13 +203,12 @@
 
         function confirmExDelete(el) { if (confirm("Apagar este exercício?")) { el.closest(".exercise-card").remove(); saveDraft(); } }
 
-        // MODELOS CSV - CORREÇÃO DE GRAVAÇÃO
+        // SISTEMA DE MODELOS CSV (SALVAR MOD)
         function salvarModeloCSV() {
             const txt = document.getElementById("csvTextarea").value;
             if (!txt.trim()) return alert("Área de texto vazia!");
-            const nome = prompt("Nome do Modelo:");
+            const nome = prompt("Nome do Modelo (ex: Ficha ABC):");
             if (!nome) return;
-
             const tpls = JSON.parse(localStorage.getItem(STORAGE.tpl) || "{}");
             tpls[nome] = txt;
             localStorage.setItem(STORAGE.tpl, JSON.stringify(tpls));
@@ -187,12 +220,11 @@
             const list = document.getElementById("tplList");
             const tpls = JSON.parse(localStorage.getItem(STORAGE.tpl) || "{}");
             const keys = Object.keys(tpls);
-            
             list.innerHTML = keys.length ? "" : "<div class='tpl-item'>Nenhum modelo salvo.</div>";
             keys.forEach(k => {
                 const item = document.createElement("div");
                 item.className = "tpl-item";
-                item.innerHTML = `<span style="flex:1" onclick="useTpl('${k}')">${k}</span><span onclick="delTpl('${k}')" style="color:var(--red); padding:0 10px">🗑️</span>`;
+                item.innerHTML = `<span style="flex:1" onclick="useTpl('${k}')">📄 ${k}</span><span onclick="delTpl('${k}')" style="color:var(--red); padding-left:15px">🗑️</span>`;
                 list.appendChild(item);
             });
             document.getElementById("tplArea").style.display = "block";
@@ -213,46 +245,77 @@
             }
         }
 
-        // IA E PERSISTÊNCIA
-        async function enviarIA() {
+        // INTEGRAÇÃO NEMOTRON (IA)
+        async function enviarParaIA() {
             const key = localStorage.getItem(STORAGE.key);
-            if (!key) return alert("Configure a API Key!");
+            if (!key) return alert("🔑 Configure a NVIDIA API Key no painel CONFIG.");
             const data = serialize();
             try {
                 const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
                     method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: "nvidia/nemotron-70b-instruct", messages: [{ role: "user", content: `Analise meu treino: ${JSON.stringify(data)}` }] })
+                    body: JSON.stringify({ 
+                        model: "nvidia/nemotron-70b-instruct", 
+                        messages: [{ role: "user", content: `Analise meu e1RM e sugira progressões: ${JSON.stringify(data)}` }] 
+                    })
                 });
-                const json = await res.json(); alert(json.choices[0].message.content);
-            } catch (e) { alert("Erro na API."); }
+                const json = await res.json();
+                alert("🤖 ANÁLISE IA:\n" + json.choices[0].message.content);
+            } catch (e) { alert("❌ Erro na conexão com a NVIDIA."); }
         }
 
-        function serialize() {
-            return {
-                sections: [...document.querySelectorAll(".section")].map(sec => ({
-                    nome: sec.dataset.nome,
-                    cards: [...sec.querySelectorAll(".exercise-card")].map(c => ({
-                        nome: c.dataset.nome,
-                        series: [...c.querySelectorAll(".series-grid")].map(r => {
-                            const i = r.querySelectorAll("input");
-                            return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
-                        })
-                    }))
-                }))
+        // PDF E IMPORTAÇÃO
+        async function extrairTextoPDF(input) {
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async function() {
+                const typed = new Uint8Array(this.result);
+                const pdf = await pdfjsLib.getDocument(typed).promise;
+                let txt = "";
+                for(let i=1; i<=pdf.numPages; i++){ const p = await pdf.getPage(i); const c = await p.getTextContent(); txt += c.items.map(s=>s.str).join(" "); }
+                document.getElementById("csvTextarea").value = txt;
+                alert("✅ PDF Lido! Ajuste e clique em IMPORTAR.");
             };
+            reader.readAsArrayBuffer(file);
         }
 
-        function saveDraft() { localStorage.setItem(STORAGE.draft, JSON.stringify(serialize())); }
-        function saveApiKey() { localStorage.setItem(STORAGE.key, document.getElementById("apiKeyInput").value); }
-        
+        function importarCSV() {
+            const raw = document.getElementById("csvTextarea").value;
+            const linhas = raw.split("\n").filter(l => l.trim().length > 3);
+            const currentTab = document.querySelector(".section.active");
+            if(!currentTab) return alert("Crie uma aba de treino primeiro.");
+            linhas.forEach(l => criarCard(l.trim(), currentTab.id));
+            saveDraft();
+            document.getElementById("modalCSV").close();
+        }
+
+        // INICIALIZAÇÃO E HISTÓRICO
         function salvarTreino() {
             const data = serialize();
             const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
-            // Salva apenas os cards da sessão atual para o ghost mode
-            h.unshift({ date: new Date().toISOString(), state: data.sections.flatMap(s => s.cards) });
+            h.unshift({ date: new Date().toISOString(), state: data });
             localStorage.setItem(STORAGE.hist, JSON.stringify(h.slice(0, 50)));
             localStorage.removeItem(STORAGE.draft);
-            alert("Sessão Salva! Próximo treino exibirá os fantasmas."); location.reload();
+            alert("✅ Sessão Salva! Ghost Mode ativo para o próximo treino.");
+            location.reload();
+        }
+
+        function verHistorico() {
+            const list = document.getElementById("histList");
+            const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
+            list.innerHTML = h.length ? "" : "Nenhum histórico.";
+            h.forEach((s, idx) => {
+                const d = document.createElement("div");
+                d.className = "hist-item";
+                d.innerHTML = `<strong>${new Date(s.date).toLocaleDateString()}</strong> - ${s.state.sections.length} abas. <button onclick="restaurarHist(${idx})" style="font-size:0.6rem">VER</button>`;
+                list.appendChild(d);
+            });
+            document.getElementById("modalHIST").showModal();
+        }
+
+        function restaurarHist(idx) {
+            const h = JSON.parse(localStorage.getItem(STORAGE.hist))[idx];
+            render(h.state);
+            document.getElementById("modalHIST").close();
         }
 
         function render(data) {
@@ -270,20 +333,16 @@
         }
 
         function tab(i) {
-            const sections = document.querySelectorAll(".section");
-            const pills = document.querySelectorAll(".pill");
-            if (!sections[i]) return;
-            sections.forEach(s => s.classList.remove("active"));
-            pills.forEach(p => p.classList.remove("active"));
-            sections[i].classList.add("active");
-            pills[i].classList.add("active");
+            document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
+            document.getElementById("sec"+i).classList.add("active");
+            document.querySelectorAll(".pill")[i].classList.add("active");
         }
 
         function gerarProtocolo() {
             const f = document.getElementById("freq").value;
             const sections = [];
             for (let i = 0; i < f; i++) {
-                sections.push({ nome: "Treino " + String.fromCharCode(65+i), cards: [{ nome: "Supino", series: null }] });
+                sections.push({ nome: "Treino " + String.fromCharCode(65+i), cards: [{ nome: "Exercício Inicial", series: null }] });
             }
             render({ sections });
         }
@@ -296,31 +355,9 @@
             if(d) render(JSON.parse(d)); else gerarProtocolo();
         };
 
-        async function extrairTextoPDF(input) {
-            const file = input.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async function() {
-                const typed = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typed).promise;
-                let txt = "";
-                for(let i=1; i<=pdf.numPages; i++){ const p = await pdf.getPage(i); const c = await p.getTextContent(); txt += c.items.map(s=>s.str).join(" "); }
-                document.getElementById("csvTextarea").value = txt;
-                alert("PDF lido! Clique em Importar.");
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function importarCSV() { 
-            const txt = document.getElementById("csvTextarea").value;
-            if(!txt.trim()) return;
-            const linhas = txt.split("\n").filter(l => l.trim().length > 3);
-            const cards = linhas.map(l => ({ nome: l.trim(), series: null }));
-            const currentTab = document.querySelector(".section.active");
-            if(currentTab) {
-                cards.forEach(c => criarCard(c.nome, currentTab.id));
-                saveDraft();
-                document.getElementById("modalCSV").close();
-            }
+        function abrirLibParaNovo() { 
+            const activeSec = document.querySelector(".section.active");
+            if(activeSec) criarCard("Novo Exercício", activeSec.id);
         }
     </script>
 </body>
