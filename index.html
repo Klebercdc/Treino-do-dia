@@ -1,162 +1,88 @@
-<!doctype html>
-<html lang="pt-PT">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <meta name="theme-color" content="#0b1220" />
-    <title>TITAN PRO - Smart Log</title>
-    <style>
-        :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .date-badge { font-size: 0.8rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 4px 10px; border-radius: 15px; }
-        .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); }
-        .field label { font-size: 0.7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-        .field input { width: 100%; padding: 12px; background: #0b1220; color: #fff; border: 1px solid var(--blue); border-radius: 8px; box-sizing: border-box; outline: none; margin-bottom: 10px; }
-        .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); overflow-x: auto; border-bottom: 1px solid #2d3748; }
-        .pill { flex: none; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; transition: 0.2s; position: relative; }
-        .pill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-        .section { display: none; }
-        .section.active { display: block; }
-        .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
-        .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-        .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; }
-        .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; padding: 8px 0; outline: none; }
-        .footer-actions { padding: 20px 10px; display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.7rem; text-transform: uppercase; }
-        .btn-save { background: var(--green); color: #fff; }
-        .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
-        .btn-ia { background: #1a202c; color: var(--orange); border: 1px solid var(--orange); }
-    </style>
-</head>
-<body>
-    <div class="top-header">
-        <h1 style="margin:0; font-size:1.1rem; color:var(--blue)">TITAN <span style="color:#fff">PRO</span></h1>
-        <div class="date-badge" id="displayDate">--/--/--</div>
-    </div>
+<script>
+  // ... (Mantenha as constantes STORAGE e PDF)
 
-    <div class="setup-panel" id="setupPanel">
-        <div class="field">
-            <label>NVIDIA API KEY (nvapi-...)</label>
-            <input type="password" id="apiKeyInput" placeholder="Cole sua chave aqui" oninput="saveKey()">
-        </div>
-        <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">ABRIR SMART LOG</button>
-    </div>
+  // 1. SEGURANÇA: Feedback visual da Chave
+  function checkApiKeyStatus() {
+    const key = localStorage.getItem(STORAGE.apiKey);
+    const input = document.getElementById('apiKeyInput');
+    if (key && key.length > 20) {
+      input.style.borderColor = "var(--green)";
+      return true;
+    }
+    input.style.borderColor = "var(--red)";
+    return false;
+  }
 
-    <div class="nav-pills" id="nav"></div>
-    <main id="container"></main>
+  function saveApiKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem(STORAGE.apiKey, val);
+    checkApiKeyStatus();
+  }
 
-    <div class="footer-actions">
-        <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ CONFIG</button>
-        <button class="btn btn-ia" id="btnIA" onclick="enviarParaIA()">🤖 IA ANALYST</button>
-        <button class="btn btn-save" onclick="salvarSessao()">SALVAR SESSÃO</button>
-    </div>
+  // 2. CIÊNCIA DO EXERCÍCIO: Brzycki + Autorregulação
+  function calcularBrzycki(peso, reps, rpe) {
+    const K = parseFloat(String(peso || "").replace(",", "."));
+    const R = parseFloat(reps);
+    const E = parseFloat(rpe);
+    
+    if (!K || !R) return 0;
 
-    <script>
-        const KEY_STORAGE = "titanpro_key";
+    // Se RPE não for preenchido, assume-se esforço máximo (10)
+    // RIR (Repetições em Reserva) = 10 - RPE
+    const rir = isNaN(E) ? 0 : (10 - E);
+    const esforçoEstimado = R + rir;
 
-        function saveKey() {
-            localStorage.setItem(KEY_STORAGE, document.getElementById('apiKeyInput').value.trim());
-        }
+    // Fórmula de Brzycki: 1RM = Peso / (1.0278 - (0.0278 * Reps))
+    const rm = K / (1.0278 - (0.0278 * esforçoEstimado));
+    return rm;
+  }
 
-        function criarCard(nome, secId) {
-            const sec = document.getElementById(secId);
-            const card = document.createElement("div");
-            card.className = "exercise-card";
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px">
-                    <strong style="color:var(--blue)">${nome}</strong>
-                    <span style="color:var(--red); font-weight:bold; cursor:pointer" onclick="this.closest('.exercise-card').remove()">[X]</span>
-                </div>
-                ${[1,2,3,4].map(s => `
-                    <div class="series-grid">
-                        <span style="font-size:0.7rem; color:#718096">S${s}</span>
-                        <div class="input-box"><input type="number" class="kg" placeholder="KG"></div>
-                        <div class="input-box"><input type="number" class="reps" placeholder="REPS"></div>
-                        <div class="input-box"><input type="number" class="rpe" placeholder="RPE"></div>
-                    </div>`).join('')}`;
-            sec.appendChild(card);
-        }
+  // 3. IA: Nemotron-70B Analyst
+  async function enviarParaIA() {
+    const key = localStorage.getItem(STORAGE.apiKey);
+    if(!key) { 
+        alert("❌ ERRO DE SEGURANÇA: Chave NVIDIA ausente. Vá em CONFIG."); 
+        openConfig();
+        return; 
+    }
 
-        function bindLongPress() {
-            document.querySelectorAll(".pill").forEach((pill, idx) => {
-                let timer;
-                const start = () => timer = setTimeout(() => {
-                    if(confirm(`Excluir ${pill.innerText}?`)) {
-                        pill.remove();
-                        document.getElementById("sec"+idx).remove();
-                    }
-                }, 800);
-                const cancel = () => clearTimeout(timer);
-                pill.onmousedown = pill.ontouchstart = start;
-                pill.onmouseup = pill.onmouseleave = pill.ontouchend = cancel;
-            });
-        }
+    const btn = document.querySelector(".btn-ia");
+    btn.innerText = "ANALISANDO...";
+    
+    const dadosTreino = serializeCurrentState();
+    
+    const promptSistema = {
+      role: "system",
+      content: "Você é um Especialista em Fisiologia do Exercício. Analise os dados de e1RM (RM Estimado) e RPE. Identifique se o volume está excessivo ou se há progressão de carga real. Seja direto e técnico."
+    };
 
-        async function enviarParaIA() {
-            const key = localStorage.getItem(KEY_STORAGE);
-            if(!key) return alert("Configure a API Key em CONFIG.");
+    try {
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: { 
+            "Authorization": `Bearer ${key}`, 
+            "Content-Type": "application/json" 
+        },
+        body: JSON.stringify({
+          model: "nvidia/nemotron-70b-instruct",
+          messages: [promptSistema, { role: "user", content: JSON.stringify(dadosTreino) }],
+          temperature: 0.5,
+          max_tokens: 500
+        })
+      });
 
-            const btn = document.getElementById('btnIA');
-            btn.innerText = "⏳ ANALISANDO...";
-            btn.disabled = true;
+      const data = await response.json();
+      if(data.choices) {
+        alert("📊 ANÁLISE TITAN PRO:\n\n" + data.choices[0].message.content);
+      } else {
+        throw new Error("Resposta inválida da API");
+      }
+    } catch(e) {
+      alert("❌ Falha na API: Verifique sua chave ou conexão.");
+    } finally {
+      btn.innerText = "🤖 IA ANALYST";
+    }
+  }
 
-            const treino = [...document.querySelectorAll(".exercise-card")].map(c => ({
-                ex: c.querySelector("strong").innerText,
-                series: [...c.querySelectorAll(".series-grid")].map(r => ({
-                    kg: r.querySelector(".kg").value,
-                    reps: r.querySelector(".reps").value,
-                    rpe: r.querySelector(".rpe").value
-                }))
-            }));
-
-            try {
-                const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "meta/llama-3.1-405b-instruct", // MODELO CORRETO DE INSTRUÇÃO
-                        messages: [{ role: "user", content: `Analise o volume e intensidade deste treino e sugira progressão: ${JSON.stringify(treino)}` }],
-                        temperature: 0.5
-                    })
-                });
-
-                const data = await res.json();
-                if (data.choices) alert("🤖 SUGESTÃO IA:\n\n" + data.choices[0].message.content);
-                else alert("Erro na API. Verifique se a sua chave nvapi- está correta e tem saldo.");
-
-            } catch(e) {
-                alert("❌ Erro de Conexão. Verifique seu 4G/Wi-Fi.");
-            } finally {
-                btn.innerText = "🤖 IA ANALYST";
-                btn.disabled = false;
-            }
-        }
-
-        function tab(idx) {
-            document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
-            document.getElementById("sec"+idx).classList.add("active");
-            document.querySelectorAll(".pill")[idx].classList.add("active");
-        }
-
-        window.onload = () => {
-            document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-            const saved = localStorage.getItem(KEY_STORAGE);
-            if(saved) document.getElementById("apiKeyInput").value = saved;
-            
-            const nav = document.getElementById("nav");
-            const cont = document.getElementById("container");
-            ["Treino A", "Treino B", "Treino C"].forEach((t, i) => {
-                nav.innerHTML += `<div class="pill ${i==0?'active':''}" onclick="tab(${i})">${t}</div>`;
-                const d = document.createElement("div");
-                d.id = "sec"+i; d.className = "section "+(i==0?'active':'');
-                cont.appendChild(d);
-                criarCard("Supino Reto", "sec"+i);
-            });
-            bindLongPress();
-        };
-        
-        function salvarSessao() { alert("Treino Salvo!"); }
-    </script>
-</body>
-</html>
+  // ... (Restante das funções de UI)
+</script>
