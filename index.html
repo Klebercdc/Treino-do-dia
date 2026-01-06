@@ -10,31 +10,34 @@
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
     <style>
         :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 20px; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
         .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         .date-badge { font-size: 0.8rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 4px 10px; border-radius: 15px; }
         .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); }
         .field { margin-bottom: 15px; }
         .field label { font-size: 0.7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-        .field select, .field input { width: 100%; padding: 12px; background: #0b1220; color: #fff; border: 1px solid var(--blue); border-radius: 8px; box-sizing: border-box; }
+        .field select, .field input { width: 100%; padding: 12px; background: #0b1220; color: #fff; border: 1px solid var(--blue); border-radius: 8px; box-sizing: border-box; outline: none; }
         .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); overflow-x: auto; border-bottom: 1px solid #2d3748; }
-        .pill { flex: none; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
-        .pill.active { background: var(--blue); color: #fff; }
+        .pill { flex: none; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; transition: background 0.2s; position: relative; }
+        .pill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
         .section { display: none; }
         .section.active { display: block; }
-        .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
+        .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; animation: fadeIn 0.3s ease; }
+        .ex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .series-grid { display: grid; grid-template-columns: 45px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
         .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; }
         .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; padding: 8px 0; outline: none; font-weight: bold; }
-        .input-box input::placeholder { color: rgba(255,255,255,0.2); font-style: italic; }
-        .rmmini { font-size: 0.6rem; color: var(--green); text-align: center; }
+        .input-box input::placeholder { color: rgba(255,255,255,0.15); font-style: italic; font-size: 0.8rem; }
+        .rmmini { font-size: 0.55rem; color: var(--green); text-align: center; font-family: monospace; line-height: 1.2; }
         .footer-actions { padding: 20px 10px; display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.75rem; text-transform: uppercase; }
-        .btn-save { background: var(--green); color: #fff; }
+        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.7rem; text-transform: uppercase; }
+        .btn-save { background: var(--green); color: #fff; box-shadow: 0 4px 0 #2d8a84; }
         .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
-        dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; max-width: 500px; padding: 20px; }
-        #csvTextarea { width: 100%; height: 150px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; }
-        .tpl-item { padding: 10px; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; cursor: pointer; }
+        dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 95%; max-width: 500px; padding: 20px; box-sizing: border-box; }
+        dialog::backdrop { background: rgba(0,0,0,0.8); }
+        #csvTextarea { width: 100%; height: 180px; background: #0b1220; color: white; border: 1px solid var(--blue); border-radius: 8px; padding: 10px; box-sizing: border-box; font-family: monospace; resize: none; }
+        .tpl-item { padding: 12px; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -45,70 +48,90 @@
 
     <div class="setup-panel" id="setupPanel">
         <div class="field">
-            <label>NVIDIA API KEY (Nemotron)</label>
-            <input type="password" id="apiKeyInput" onchange="saveApiKey()" placeholder="Sua chave fica no navegador">
+            <label>NVIDIA API KEY (Nemotron-70B)</label>
+            <input type="password" id="apiKeyInput" placeholder="Sua chave fica segura no localStorage" onchange="saveApiKey()">
         </div>
         <div class="field">
-            <label>Frequência</label>
-            <select id="freq" onchange="gerarProtocolo()"><option value="3">ABC</option><option value="4">Upper/Lower</option><option value="5">ABCDE</option></select>
+            <label>Divisão de Treino</label>
+            <select id="freq" onchange="gerarProtocolo()"><option value="3">ABC</option><option value="4">ABCD</option><option value="5">ABCDE</option><option value="6">PPL x2</option></select>
         </div>
-        <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">ABRIR TREINO</button>
+        <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'" style="width:100%">ABRIR TREINO</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
+    <button class="btn" style="background: #1a202c; color: var(--blue); border: 2px dashed var(--blue); margin: 10px; width: calc(100% - 20px);" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
 
     <div class="footer-actions">
         <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ CONFIG</button>
         <button class="btn btn-config" onclick="document.getElementById('modalCSV').showModal()">📊 ARQUIVOS</button>
         <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
-        <button class="btn btn-config" onclick="enviarParaIA()" style="background:var(--blue); color:white">🤖 IA</button>
+        <button class="btn btn-config" onclick="enviarParaIA()" style="background:var(--blue); color:white">🤖 ANALISAR IA</button>
     </div>
 
     <dialog id="modalCSV">
-        <h3 style="color:var(--orange)">CSV & Modelos</h3>
-        <textarea id="csvTextarea" placeholder="Cole seu CSV aqui..."></textarea>
-        <div style="display:flex; gap:5px; margin-top:10px">
-            <button class="btn btn-save" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
-            <button class="btn btn-config" onclick="mostrarModelosCSV()">📚 LISTAR MOD</button>
+        <h3 style="color:var(--orange)">CSV & Modelos de Treino</h3>
+        <textarea id="csvTextarea" placeholder="Cole o CSV ou use o PDF..."></textarea>
+        <div style="display:flex; gap:8px; margin-top:12px">
+            <label class="btn btn-config" style="flex:1">📄 PDF <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"></label>
+            <button class="btn btn-save" onclick="importarCSV()">✓ IMPORTAR</button>
         </div>
-        <div id="tplArea" style="margin-top:10px; display:none"><div id="tplList"></div></div>
-        <button class="btn" style="width:100%; margin-top:10px" onclick="document.getElementById('modalCSV').close()">FECHAR</button>
+        <div style="display:flex; gap:8px; margin-top:8px">
+            <button class="btn btn-config" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
+            <button class="btn btn-config" onclick="mostrarModelosCSV()">📚 LISTAR</button>
+        </div>
+        <div id="tplArea" style="margin-top:12px; display:none; border-top:1px solid #2d3748">
+            <div id="tplList"></div>
+            <button class="btn" style="width:100%; margin-top:5px; background:var(--red); font-size:0.6rem" onclick="localStorage.removeItem('tpro_tpl'); mostrarModelosCSV();">LIMPAR TUDO</button>
+        </div>
+        <button class="btn" style="width:100%; margin-top:12px; background:#2d3748; color:white" onclick="document.getElementById('modalCSV').close()">FECHAR</button>
     </dialog>
 
     <script>
-        const STORAGE = { hist: "t_hist", draft: "t_draft", apiKey: "t_key", tpl: "t_tpl" };
+        const STORAGE = { hist: "tpro_hist", draft: "tpro_draft", key: "tpro_key", tpl: "tpro_tpl" };
 
         function toNum(x) { const n = parseFloat(String(x || "").replace(",", ".")); return isNaN(n) ? 0 : n; }
-        
+
+        // CÁLCULO BRZYCKI COM RPE
         function calcRM(kg, reps, rpe) {
             const K = toNum(kg), R = toNum(reps), E = toNum(rpe) || 10;
             if (!K || !R) return 0;
-            return K / (1.0278 - (0.0278 * (R + (10 - E))));
+            const rir = 10 - E;
+            return K / (1.0278 - (0.0278 * (R + rir)));
         }
 
+        // GHOST MODE REAL
         function getGhost(exNome, idx) {
             const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
             if (!h.length) return null;
-            const ex = h[0].state.find(e => e.nome === exNome);
+            const lastSession = h[0].state;
+            const ex = lastSession.find(e => e.nome === exNome);
             return ex ? ex.series[idx] : null;
         }
 
-        function criarCard(nome, sec, values = null) {
+        // CRIAR CARD COM LONG PRESS
+        function criarCard(nome, secId, values = null) {
             const id = "ex-" + Math.random().toString(36).slice(2, 9);
+            const sec = document.getElementById(secId);
             const card = document.createElement("div");
             card.className = "exercise-card";
-            card.innerHTML = `<div style="display:flex; justify-content:space-between"><strong>${nome}</strong><span onclick="this.closest('.exercise-card').remove(); saveDraft()" style="color:var(--red); cursor:pointer">[X]</span></div>`;
-            
+            card.dataset.nome = nome;
+
+            card.innerHTML = `
+                <div class="ex-header">
+                    <strong style="color:var(--blue); font-size:1.1rem">${nome}</strong>
+                    <span style="color:var(--red); font-weight:bold; cursor:pointer" onclick="confirmExDelete(this)">[X]</span>
+                </div>`;
+
             for (let i = 0; i < 4; i++) {
                 const g = getGhost(nome, i);
                 const v = values ? values[i] : { kg: "", reps: "", rpe: "" };
                 card.innerHTML += `
                 <div class="series-grid">
-                    <div class="rmmini">S${i+1}<br><span id="rm-${id}-${i}">${v.kg?Math.round(calcRM(v.kg,v.reps,v.rpe)):''}</span></div>
-                    <div class="input-box"><input type="number" value="${v.kg}" placeholder="${g?g.kg:''}" oninput="updRM('${id}',${i},this)"></div>
-                    <div class="input-box"><input type="number" value="${v.reps}" placeholder="${g?g.reps:''}" oninput="updRM('${id}',${i},this)"></div>
-                    <div class="input-box"><input type="number" value="${v.rpe}" placeholder="${g?g.rpe:''}" oninput="updRM('${id}',${i},this)"></div>
+                    <div class="rmmini">S${i+1}<br><span id="rm-${id}-${i}">${v.kg?Math.round(calcRM(v.kg,v.reps,v.rpe))+'kg':''}</span></div>
+                    <div class="input-box"><input type="number" value="${v.kg}" placeholder="${g?g.kg:'KG'}" oninput="updRM('${id}',${i},this)"></div>
+                    <div class="input-box"><input type="number" value="${v.reps}" placeholder="${g?g.reps:'REPS'}" oninput="updRM('${id}',${i},this)"></div>
+                    <div class="input-box"><input type="number" value="${v.rpe}" placeholder="${g?g.rpe:'RPE'}" oninput="updRM('${id}',${i},this)"></div>
                 </div>`;
             }
             sec.appendChild(card);
@@ -118,80 +141,186 @@
             const row = el.closest(".series-grid");
             const ins = row.querySelectorAll("input");
             const rm = calcRM(ins[0].value, ins[1].value, ins[2].value);
-            document.getElementById(`rm-${id}-${i}`).innerText = rm ? Math.round(rm) : "";
+            document.getElementById(`rm-${id}-${i}`).innerText = rm ? Math.round(rm) + "kg" : "";
             saveDraft();
         }
 
+        // LÓGICA DE LONG PRESS PARA ABAS (MOBILE COMPATÍVEL)
+        function bindLongPress() {
+            document.querySelectorAll(".pill").forEach((pill, idx) => {
+                let timer;
+                const start = () => { timer = setTimeout(() => deletePill(idx), 800); };
+                const end = () => clearTimeout(timer);
+
+                pill.onmousedown = pill.ontouchstart = start;
+                pill.onmouseup = pill.onmouseleave = pill.ontouchend = end;
+                pill.oncontextmenu = (e) => { e.preventDefault(); deletePill(idx); };
+            });
+        }
+
+        function deletePill(idx) {
+            if (confirm("Apagar esta aba de treino inteira?")) {
+                const s = serialize();
+                s.sections.splice(idx, 1);
+                render(s);
+                saveDraft();
+            }
+        }
+
+        function confirmExDelete(el) { if (confirm("Apagar este exercício?")) { el.closest(".exercise-card").remove(); saveDraft(); } }
+
+        // MODELOS CSV - CORREÇÃO DE GRAVAÇÃO
         function salvarModeloCSV() {
             const txt = document.getElementById("csvTextarea").value;
+            if (!txt.trim()) return alert("Área de texto vazia!");
             const nome = prompt("Nome do Modelo:");
-            if (!txt || !nome) return;
+            if (!nome) return;
+
             const tpls = JSON.parse(localStorage.getItem(STORAGE.tpl) || "{}");
             tpls[nome] = txt;
             localStorage.setItem(STORAGE.tpl, JSON.stringify(tpls));
-            alert("Modelo Salvo!");
+            alert("Modelo '" + nome + "' salvo com sucesso!");
+            mostrarModelosCSV();
         }
 
         function mostrarModelosCSV() {
             const list = document.getElementById("tplList");
             const tpls = JSON.parse(localStorage.getItem(STORAGE.tpl) || "{}");
-            list.innerHTML = "";
-            Object.keys(tpls).forEach(k => {
-                list.innerHTML += `<div class="tpl-item" onclick="document.getElementById('csvTextarea').value='${tpls[k]}'"><span>${k}</span><span onclick="deleteTpl('${k}')">🗑️</span></div>`;
+            const keys = Object.keys(tpls);
+            
+            list.innerHTML = keys.length ? "" : "<div class='tpl-item'>Nenhum modelo salvo.</div>";
+            keys.forEach(k => {
+                const item = document.createElement("div");
+                item.className = "tpl-item";
+                item.innerHTML = `<span style="flex:1" onclick="useTpl('${k}')">${k}</span><span onclick="delTpl('${k}')" style="color:var(--red); padding:0 10px">🗑️</span>`;
+                list.appendChild(item);
             });
             document.getElementById("tplArea").style.display = "block";
         }
 
-        function serializeCurrent() {
-            return [...document.querySelectorAll(".exercise-card")].map(c => ({
-                nome: c.querySelector("strong").innerText,
-                series: [...c.querySelectorAll(".series-grid")].map(r => {
-                    const i = r.querySelectorAll("input");
-                    return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
-                })
-            }));
+        function useTpl(k) {
+            const tpls = JSON.parse(localStorage.getItem(STORAGE.tpl));
+            document.getElementById("csvTextarea").value = tpls[k];
+            alert("Modelo '" + k + "' carregado.");
         }
 
-        function saveDraft() { localStorage.setItem(STORAGE.draft, JSON.stringify(serializeCurrent())); }
-        function saveApiKey() { localStorage.setItem(STORAGE.apiKey, document.getElementById("apiKeyInput").value); }
+        function delTpl(k) {
+            if (confirm("Deletar modelo '" + k + "'?")) {
+                const tpls = JSON.parse(localStorage.getItem(STORAGE.tpl));
+                delete tpls[k];
+                localStorage.setItem(STORAGE.tpl, JSON.stringify(tpls));
+                mostrarModelosCSV();
+            }
+        }
+
+        // IA E PERSISTÊNCIA
+        async function enviarIA() {
+            const key = localStorage.getItem(STORAGE.key);
+            if (!key) return alert("Configure a API Key!");
+            const data = serialize();
+            try {
+                const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+                    method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: "nvidia/nemotron-70b-instruct", messages: [{ role: "user", content: `Analise meu treino: ${JSON.stringify(data)}` }] })
+                });
+                const json = await res.json(); alert(json.choices[0].message.content);
+            } catch (e) { alert("Erro na API."); }
+        }
+
+        function serialize() {
+            return {
+                sections: [...document.querySelectorAll(".section")].map(sec => ({
+                    nome: sec.dataset.nome,
+                    cards: [...sec.querySelectorAll(".exercise-card")].map(c => ({
+                        nome: c.dataset.nome,
+                        series: [...c.querySelectorAll(".series-grid")].map(r => {
+                            const i = r.querySelectorAll("input");
+                            return { kg: i[0].value, reps: i[1].value, rpe: i[2].value };
+                        })
+                    }))
+                }))
+            };
+        }
+
+        function saveDraft() { localStorage.setItem(STORAGE.draft, JSON.stringify(serialize())); }
+        function saveApiKey() { localStorage.setItem(STORAGE.key, document.getElementById("apiKeyInput").value); }
+        
         function salvarTreino() {
+            const data = serialize();
             const h = JSON.parse(localStorage.getItem(STORAGE.hist) || "[]");
-            h.unshift({ date: new Date().toISOString(), state: serializeCurrent() });
-            localStorage.setItem(STORAGE.hist, JSON.stringify(h.slice(0, 80)));
+            // Salva apenas os cards da sessão atual para o ghost mode
+            h.unshift({ date: new Date().toISOString(), state: data.sections.flatMap(s => s.cards) });
+            localStorage.setItem(STORAGE.hist, JSON.stringify(h.slice(0, 50)));
             localStorage.removeItem(STORAGE.draft);
-            alert("Sessão Salva!"); location.reload();
+            alert("Sessão Salva! Próximo treino exibirá os fantasmas."); location.reload();
         }
 
-        function tab(idx) {
-            document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
-            document.getElementById("sec"+idx).classList.add("active");
-            document.querySelectorAll(".pill")[idx].classList.add("active");
+        function render(data) {
+            const nav = document.getElementById("nav");
+            const cont = document.getElementById("container");
+            nav.innerHTML = ""; cont.innerHTML = "";
+            data.sections.forEach((sec, i) => {
+                nav.innerHTML += `<div class="pill ${i==0?'active':''}" onclick="tab(${i})">${sec.nome}</div>`;
+                const d = document.createElement("div");
+                d.id = "sec"+i; d.className = "section "+(i==0?'active':''); d.dataset.nome = sec.nome;
+                cont.appendChild(d);
+                sec.cards.forEach(c => criarCard(c.nome, d.id, c.series));
+            });
+            bindLongPress();
+        }
+
+        function tab(i) {
+            const sections = document.querySelectorAll(".section");
+            const pills = document.querySelectorAll(".pill");
+            if (!sections[i]) return;
+            sections.forEach(s => s.classList.remove("active"));
+            pills.forEach(p => p.classList.remove("active"));
+            sections[i].classList.add("active");
+            pills[i].classList.add("active");
         }
 
         function gerarProtocolo() {
             const f = document.getElementById("freq").value;
-            const nav = document.getElementById("nav");
-            const cont = document.getElementById("container");
-            nav.innerHTML = ""; cont.innerHTML = "";
+            const sections = [];
             for (let i = 0; i < f; i++) {
-                const label = "Treino " + String.fromCharCode(65+i);
-                nav.innerHTML += `<div class="pill ${i==0?'active':''}" onclick="tab(${i})">${label}</div>`;
-                const sec = document.createElement("div");
-                sec.id = "sec"+i; sec.className = "section " + (i==0?'active':'');
-                cont.appendChild(sec);
-                criarCard("Exercício", sec.id);
+                sections.push({ nome: "Treino " + String.fromCharCode(65+i), cards: [{ nome: "Supino", series: null }] });
             }
+            render({ sections });
         }
 
         window.onload = () => {
             document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-            const draft = localStorage.getItem(STORAGE.draft);
-            const key = localStorage.getItem(STORAGE.apiKey);
-            if(key) document.getElementById("apiKeyInput").value = key;
-            if(draft) {
-                // Lógica de carregar rascunho
+            const d = localStorage.getItem(STORAGE.draft);
+            const k = localStorage.getItem(STORAGE.key);
+            if(k) document.getElementById("apiKeyInput").value = k;
+            if(d) render(JSON.parse(d)); else gerarProtocolo();
+        };
+
+        async function extrairTextoPDF(input) {
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async function() {
+                const typed = new Uint8Array(this.result);
+                const pdf = await pdfjsLib.getDocument(typed).promise;
+                let txt = "";
+                for(let i=1; i<=pdf.numPages; i++){ const p = await pdf.getPage(i); const c = await p.getTextContent(); txt += c.items.map(s=>s.str).join(" "); }
+                document.getElementById("csvTextarea").value = txt;
+                alert("PDF lido! Clique em Importar.");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function importarCSV() { 
+            const txt = document.getElementById("csvTextarea").value;
+            if(!txt.trim()) return;
+            const linhas = txt.split("\n").filter(l => l.trim().length > 3);
+            const cards = linhas.map(l => ({ nome: l.trim(), series: null }));
+            const currentTab = document.querySelector(".section.active");
+            if(currentTab) {
+                cards.forEach(c => criarCard(c.nome, currentTab.id));
+                saveDraft();
+                document.getElementById("modalCSV").close();
             }
-            gerarProtocolo();
         }
     </script>
 </body>
