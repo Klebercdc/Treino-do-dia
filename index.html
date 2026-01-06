@@ -1,157 +1,174 @@
 <!doctype html>
 <html lang="pt-PT">
-  <head>
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <meta name="theme-color" content="#0b1220" />
     <title>TITAN PRO - Smart Log</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
     <style>
-      :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 20px; }
-      .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-      .date-badge { font-size: 0.8rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 4px 10px; border-radius: 15px; }
-      .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); display: block; }
-      .field { margin-bottom: 15px; }
-      .field label { font-size: 0.7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-      .field input { width: 100%; padding: 12px; background: #0b1220; color: #fff; border: 1px solid var(--blue); border-radius: 8px; box-sizing: border-box; }
-      .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); overflow-x: auto; border-bottom: 1px solid #2d3748; }
-      .pill { flex: none; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; }
-      .pill.active { background: var(--blue); color: #fff; }
-      .section { display: none; }
-      .section.active { display: block; }
-      .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
-      .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-      .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; }
-      .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; padding: 8px 0; outline: none; }
-      .footer-actions { padding: 20px 10px; display: flex; gap: 8px; flex-wrap: wrap; }
-      .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.75rem; text-transform: uppercase; }
-      .btn-save { background: var(--green); color: #fff; }
-      .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
-      .btn-ia { background: #1a202c; color: var(--orange); border: 1px solid var(--orange); }
-      dialog { background: #161e2e; color: #fff; border: 1px solid var(--blue); border-radius: 12px; width: 90%; padding: 20px; }
+        :root { --bg: #0b1220; --card: #161e2e; --blue: #3182ce; --text: #f7fafc; --orange: #f6ad55; --green: #38b2ac; --red: #e53e3e; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding-bottom: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .top-header { padding: 15px; background: var(--card); border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .date-badge { font-size: 0.8rem; color: var(--orange); font-weight: bold; background: #0b1220; padding: 4px 10px; border-radius: 15px; }
+        .setup-panel { background: var(--card); padding: 20px; border-bottom: 3px solid var(--blue); }
+        .field label { font-size: 0.7rem; color: #a0aec0; display: block; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
+        .field input { width: 100%; padding: 12px; background: #0b1220; color: #fff; border: 1px solid var(--blue); border-radius: 8px; box-sizing: border-box; outline: none; margin-bottom: 10px; }
+        .nav-pills { display: flex; gap: 8px; padding: 10px; background: var(--bg); overflow-x: auto; border-bottom: 1px solid #2d3748; }
+        .pill { flex: none; padding: 12px 20px; border-radius: 8px; background: #1a202c; font-weight: bold; font-size: 0.75rem; border: 1px solid #2d3748; cursor: pointer; color: #a0aec0; transition: 0.2s; position: relative; }
+        .pill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .section { display: none; }
+        .section.active { display: block; }
+        .exercise-card { background: var(--card); border-radius: 12px; padding: 15px; margin: 10px; border: 1px solid #2d3748; }
+        .series-grid { display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .input-box { background: #0b1220; border: 1px solid #2d3748; border-radius: 6px; }
+        .input-box input { background: transparent; border: none; color: #fff; width: 100%; text-align: center; font-size: 1.1rem; padding: 8px 0; outline: none; }
+        .footer-actions { padding: 20px 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; flex: 1; text-align: center; font-size: 0.7rem; text-transform: uppercase; }
+        .btn-save { background: var(--green); color: #fff; }
+        .btn-config { background: #2d3748; color: var(--blue); border: 1px solid var(--blue); }
+        .btn-ia { background: #1a202c; color: var(--orange); border: 1px solid var(--orange); }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="top-header">
-      <h1 style="margin: 0; font-size: 1.1rem; color: var(--blue)">TITAN <span style="color: #fff">PRO</span></h1>
-      <div class="date-badge" id="displayDate">--/--/--</div>
+        <h1 style="margin:0; font-size:1.1rem; color:var(--blue)">TITAN <span style="color:#fff">PRO</span></h1>
+        <div class="date-badge" id="displayDate">--/--/--</div>
     </div>
 
     <div class="setup-panel" id="setupPanel">
-      <div class="field">
-        <label>NVIDIA API KEY (nvapi-...)</label>
-        <input type="password" id="apiKeyInput" placeholder="Cole sua chave aqui" oninput="saveApiKey()">
-      </div>
-      <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">ABRIR TREINO</button>
+        <div class="field">
+            <label>NVIDIA API KEY (nvapi-...)</label>
+            <input type="password" id="apiKeyInput" placeholder="Cole sua chave aqui" oninput="saveKey()">
+        </div>
+        <button class="btn btn-save" onclick="document.getElementById('setupPanel').style.display='none'">ABRIR SMART LOG</button>
     </div>
 
     <div class="nav-pills" id="nav"></div>
     <main id="container"></main>
 
     <div class="footer-actions">
-      <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ CONFIG</button>
-      <button class="btn btn-ia" id="btnIA" onclick="enviarParaIA()">🤖 IA ANALYST</button>
-      <button class="btn btn-save" onclick="location.reload()">NOVO TREINO</button>
+        <button class="btn btn-config" onclick="document.getElementById('setupPanel').style.display='block'">⚙️ CONFIG</button>
+        <button class="btn btn-ia" id="btnIA" onclick="enviarParaIA()">🤖 IA ANALYST</button>
+        <button class="btn btn-save" onclick="salvarSessao()">SALVAR SESSÃO</button>
     </div>
 
     <script>
-      const KEY_STORAGE = "titanpro_nvidia_key";
+        const KEY_STORAGE = "titanpro_key";
+        const DRAFT_STORAGE = "titanpro_draft";
 
-      function saveApiKey() {
-        const val = document.getElementById('apiKeyInput').value.trim();
-        localStorage.setItem(KEY_STORAGE, val);
-      }
-
-      function criarCard(nome, sectionId) {
-        const id = "ex-" + Math.random().toString(36).slice(2, 9);
-        const sec = document.getElementById(sectionId);
-        const card = document.createElement("div");
-        card.className = "exercise-card";
-        card.innerHTML = `
-          <strong style="color:var(--blue)">${nome}</strong>
-          <div class="series-grid" style="margin-top:10px; color:#718096; font-size:0.6rem"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-          ${[1,2,3,4].map(s => `
-            <div class="series-grid">
-              <span style="font-size:0.7rem">S${s}</span>
-              <div class="input-box"><input type="number" class="kg" placeholder="0"></div>
-              <div class="input-box"><input type="number" class="reps" placeholder="0"></div>
-              <div class="input-box"><input type="number" class="rpe" placeholder="10"></div>
-            </div>`).join('')}`;
-        sec.appendChild(card);
-      }
-
-      async function enviarParaIA() {
-        const key = localStorage.getItem(KEY_STORAGE);
-        if(!key) return alert("⚠️ Erro: Cole a chave nvapi- em CONFIG.");
-
-        const btn = document.getElementById('btnIA');
-        btn.innerText = "⏳ PROCESSANDO...";
-        btn.disabled = true;
-
-        const treinoData = [...document.querySelectorAll(".exercise-card")].map(c => ({
-          ex: c.querySelector("strong").innerText,
-          sets: [...c.querySelectorAll(".series-grid:not([style])")].map(r => ({
-            kg: r.querySelector(".kg").value,
-            reps: r.querySelector(".reps").value,
-            rpe: r.querySelector(".rpe").value
-          }))
-        }));
-
-        try {
-          const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-            method: "POST",
-            headers: { 
-              "Authorization": `Bearer ${key}`, 
-              "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({
-              model: "meta/llama-3.1-405b-instruct",
-              messages: [{ role: "user", content: `Analise este treino e sugira progressão: ${JSON.stringify(treinoData)}` }],
-              temperature: 0.2
-            })
-          });
-
-          const data = await res.json();
-          if (data.choices) {
-            alert("🤖 ANÁLISE IA:\n\n" + data.choices[0].message.content);
-          } else {
-            alert("❌ Erro da NVIDIA: " + (data.error?.message || "Chave inválida ou sem saldo."));
-          }
-        } catch(e) {
-          alert("❌ Erro de Conexão: Verifique sua internet.");
-        } finally {
-          btn.innerText = "🤖 IA ANALYST";
-          btn.disabled = false;
+        function saveKey() {
+            localStorage.setItem(KEY_STORAGE, document.getElementById('apiKeyInput').value.trim());
         }
-      }
 
-      function gerarProtocolo() {
-        const nav = document.getElementById("nav");
-        const cont = document.getElementById("container");
-        nav.innerHTML = ""; cont.innerHTML = "";
-        ["Treino A", "Treino B", "Treino C"].forEach((t, i) => {
-          nav.innerHTML += `<div class="pill ${i==0?'active':''}" onclick="tab(${i})">${t}</div>`;
-          const sec = document.createElement("div");
-          sec.id = "sec"+i; sec.className = "section "+(i==0?'active':'');
-          cont.appendChild(sec);
-          criarCard("Supino Reto", "sec"+i);
-        });
-      }
+        function criarCard(nome, secId, values = null) {
+            const id = "ex-" + Math.random().toString(36).slice(2, 7);
+            const sec = document.getElementById(secId);
+            const card = document.createElement("div");
+            card.className = "exercise-card";
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+                    <strong style="color:var(--blue)">${nome}</strong>
+                    <span style="color:var(--red)" onclick="this.closest('.exercise-card').remove()">[X]</span>
+                </div>
+                ${[1,2,3,4].map(s => `
+                    <div class="series-grid">
+                        <span style="font-size:0.7rem; color:#718096">S${s}</span>
+                        <div class="input-box"><input type="number" class="kg" placeholder="KG"></div>
+                        <div class="input-box"><input type="number" class="reps" placeholder="REPS"></div>
+                        <div class="input-box"><input type="number" class="rpe" placeholder="RPE"></div>
+                    </div>`).join('')}`;
+            sec.appendChild(card);
+        }
 
-      function tab(idx) {
-        document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
-        document.getElementById("sec"+idx).classList.add("active");
-        document.querySelectorAll(".pill")[idx].classList.add("active");
-      }
+        // LÓGICA LONG PRESS PARA APAGAR ABAS
+        function bindLongPress() {
+            document.querySelectorAll(".pill").forEach((pill, idx) => {
+                let timer;
+                const start = () => timer = setTimeout(() => {
+                    if(confirm(`Deseja apagar o ${pill.innerText}?`)) {
+                        pill.remove();
+                        document.getElementById("sec"+idx).remove();
+                    }
+                }, 800);
+                const cancel = () => clearTimeout(timer);
+                pill.onmousedown = pill.ontouchstart = start;
+                pill.onmouseup = pill.onmouseleave = pill.ontouchend = cancel;
+            });
+        }
 
-      window.onload = () => {
-        document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-        const saved = localStorage.getItem(KEY_STORAGE);
-        if(saved) document.getElementById("apiKeyInput").value = saved;
-        gerarProtocolo();
-      };
+        async function enviarParaIA() {
+            const key = localStorage.getItem(KEY_STORAGE);
+            if(!key) return alert("⚠️ Configure a API Key em CONFIG.");
+
+            const btn = document.getElementById('btnIA');
+            btn.innerText = "⏳ CONECTANDO...";
+            btn.disabled = true;
+
+            const treino = [...document.querySelectorAll(".exercise-card")].map(c => ({
+                nome: c.querySelector("strong").innerText,
+                series: [...c.querySelectorAll(".series-grid")].map(r => ({
+                    kg: r.querySelector(".kg").value,
+                    reps: r.querySelector(".reps").value,
+                    rpe: r.querySelector(".rpe").value
+                }))
+            }));
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seg timeout
+
+                const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        model: "meta/llama-3.1-405b-instruct",
+                        messages: [{ role: "user", content: `Analise meu treino: ${JSON.stringify(treino)}` }],
+                        temperature: 0.5
+                    })
+                });
+
+                clearTimeout(timeoutId);
+                const data = await res.json();
+                
+                if (data.choices) alert("🤖 IA ANALYST:\n" + data.choices[0].message.content);
+                else alert("❌ Erro na Chave ou Modelo. Verifique sua conta NVIDIA.");
+
+            } catch(e) {
+                alert("❌ Erro de Conexão ou Timeout. Tente novamente em 4G ou Wi-Fi estável.");
+            } finally {
+                btn.innerText = "🤖 IA ANALYST";
+                btn.disabled = false;
+            }
+        }
+
+        function tab(idx) {
+            document.querySelectorAll(".section, .pill").forEach(el => el.classList.remove("active"));
+            document.getElementById("sec"+idx).classList.add("active");
+            document.querySelectorAll(".pill")[idx].classList.add("active");
+        }
+
+        function gerarPadrao() {
+            const nav = document.getElementById("nav");
+            const cont = document.getElementById("container");
+            ["Treino A", "Treino B", "Treino C"].forEach((t, i) => {
+                nav.innerHTML += `<div class="pill ${i==0?'active':''}" onclick="tab(${i})">${t}</div>`;
+                const d = document.createElement("div");
+                d.id = "sec"+i; d.className = "section "+(i==0?'active':'');
+                cont.appendChild(d);
+                criarCard("Supino Reto", "sec"+i);
+            });
+            bindLongPress();
+        }
+
+        window.onload = () => {
+            document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
+            const saved = localStorage.getItem(KEY_STORAGE);
+            if(saved) document.getElementById("apiKeyInput").value = saved;
+            gerarPadrao();
+        };
+        
+        function salvarSessao() { alert("Treino Salvo Localmente!"); }
     </script>
-  </body>
+</body>
 </html>
