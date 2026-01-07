@@ -374,7 +374,7 @@
 
     <div class="footer-actions">
       <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
-      <button class="btn btn-ia" onclick="513
+      <button class="btn btn-ia" onclick="enviarParaIA
         ()">🤖 IA ANALYST</button>
       <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
       <button class="btn btn-config" onclick="abrirCSVModal()" style="background: var(--orange); color: white; flex: 0.5">
@@ -913,7 +913,7 @@ endpoint: "https://square-poetry-636b.kle-cdc.workers.dev/v1/chat/completions", 
         document.getElementById("modalIA").showModal();
       }
 
-      async function 927
+      async function enviarParaIA
         () {
         const key = getApiKey();
         if (!key) {
