@@ -374,7 +374,8 @@
 
     <div class="footer-actions">
       <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
-      <button class="btn btn-ia" onclick="enviarParaIA()">🤖 IA ANALYST</button>
+      <button class="btn btn-ia" onclick="513
+        ()">🤖 IA ANALYST</button>
       <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
       <button class="btn btn-config" onclick="abrirCSVModal()" style="background: var(--orange); color: white; flex: 0.5">
         📊 ARQUIVOS
@@ -509,9 +510,9 @@
       });
 
       // NVIDIA (endpoint + modelo)
-      // Endpoint  e modelo "meta/llama-3.1-nemotron-70b-instruct-70b-instruct" conforme docs atuais.
+      // Endpoint  e modelo "nvidia/llama-3.1-nemotron-nano-8b-v1" conforme docs atuais.
       const NVIDIA = Object.freeze({
-endpoint: "https://square-poetry-636b.kle-cdc.workers.dev/v1/chat/completions",        model: "meta/llama-3.1-nemotron-70b-instruct-70b-instruct",
+endpoint: "https://square-poetry-636b.kle-cdc.workers.dev/v1/chat/completions",        model: "nvidia/llama-3.1-nemotron-nano-8b-v1",
       });
 
       function saveApiKey() {
@@ -912,7 +913,8 @@ endpoint: "https://square-poetry-636b.kle-cdc.workers.dev/v1/chat/completions", 
         document.getElementById("modalIA").showModal();
       }
 
-      async function enviarParaIA() {
+      async function 927
+        () {
         const key = getApiKey();
         if (!key) {
           alert("⚠️ Insira a NVIDIA API Key nas configurações primeiro.");
