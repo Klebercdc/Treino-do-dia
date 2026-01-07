@@ -1,180 +1,360 @@
-/* eslint-disable no-var */
 /**
- * TITAN PRO — GAS Gateway (Agentic Orchestrator)
+ * TITAN PRO — Orchestrator (Cloudflare Worker)
+ * - Planner: Nemotron via NVIDIA NIM (HTTP)
+ * - Verifier: valida/“hardening” do plano
+ * - Writer: (1) writer remoto via NIM (meta/llama-3.1-8b-instruct) ou (2) template local
+ * - Fallback: heurísticas locais se NIM indisponível/erro
  *
- * Endpoints (Web App):
- *   GET  /exec                          -> health
- *   POST /exec/v1/titanpro/analyze      -> planner + verifier + writer (Nemotron via NIM)
- *
- * Script Properties (Project Settings -> Script properties):
- *   NVIDIA_API_KEY         (obrigatório)
- *   NVIDIA_MODEL           (opcional; default: nvidia/llama-3.1-nemotron-70b-instruct)
- *   NVIDIA_ENDPOINT        (opcional; default: https://integrate.api.nvidia.com/v1/chat/completions)
- *   GATEWAY_SECRET         (opcional; se setado, o cliente precisa enviar auth.secret no body)
- *
- * Observação: Apps Script não permite setar status HTTP custom via ContentService.
- * Portanto a API sempre responde 200, mas inclui { ok: true/false }.
+ * Rotas:
+ *   GET  /                         health
+ *   POST /v1/titanpro/analyze      orchestrator
+ *   POST /v1/chat/completions      passthrough (OpenAI-compatible)
  */
 
-const CONST = Object.freeze({
-  SERVICE: "titanpro_gateway",
-  VERSION: "gas_v1",
-  DEFAULT_NIM_ENDPOINT: "https://integrate.api.nvidia.com/v1/chat/completions",
-  DEFAULT_NIM_MODEL: "nvidia/llama-3.1-nemotron-70b-instruct",
-  MAX_BODY_CHARS: 500_000, // guardrail
+const DEFAULTS = Object.freeze({
+  SERVICE: "titanpro_orchestrator",
+  VERSION: "cfw_v1",
+  NIM_ENDPOINT: "https://integrate.api.nvidia.com/v1/chat/completions",
+  PLANNER_MODEL: "nvidia/llama-3.1-nemotron-70b-instruct",
+  WRITER_MODEL: "meta/llama-3.1-8b-instruct",
+  TIMEOUT_MS: 25000,
+  MAX_BODY_BYTES: 800_000,
 });
 
-function doGet() {
-  return jsonOut({
-    ok: true,
-    service: CONST.SERVICE,
-    version: CONST.VERSION,
-    now: new Date().toISOString(),
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (request.method === "OPTIONS") return handleOptions(request);
+
+    if (request.method === "GET" && (path === "/" || path === "/v1/health")) {
+      return json(
+        {
+          ok: true,
+          service: DEFAULTS.SERVICE,
+          version: DEFAULTS.VERSION,
+          now: new Date().toISOString(),
+        },
+        200,
+        request
+      );
+    }
+
+    if (request.method === "POST" && path === "/v1/titanpro/analyze") {
+      return handleAnalyze(request, env);
+    }
+
+    // Compat/debug: funciona como “gateway OpenAI”
+    if (request.method === "POST" && path === "/v1/chat/completions") {
+      return handleChatPassthrough(request, env);
+    }
+
+    return json(
+      { ok: false, error: { code: "NOT_FOUND", message: "Rota não encontrada." } },
+      404,
+      request
+    );
+  },
+};
+
+// -------------------------
+// CORS
+// -------------------------
+function corsHeaders(request) {
+  const origin = request.headers.get("Origin");
+  const allowOrigin = origin && origin !== "null" ? origin : "*";
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+}
+
+function handleOptions(request) {
+  return new Response(null, { status: 204, headers: corsHeaders(request) });
+}
+
+function json(obj, status, request) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...corsHeaders(request),
+    },
   });
 }
 
-function doPost(e) {
-  const requestId = Utilities.getUuid();
+function text(str, status, request) {
+  return new Response(String(str ?? ""), {
+    status,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      ...corsHeaders(request),
+    },
+  });
+}
+
+// -------------------------
+// Main route: /v1/titanpro/analyze
+// -------------------------
+async function handleAnalyze(request, env) {
+  const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
   try {
-    const path = normalizePath((e && e.pathInfo) || "/");
-    const bodyText = getBodyText(e);
+    const body = await readBodyText(request);
+    if (byteLength(body) > DEFAULTS.MAX_BODY_BYTES) {
+      return json(
+        { ok: false, requestId, error: { code: "BODY_TOO_LARGE", message: "Body muito grande." } },
+        413,
+        request
+      );
+    }
 
-    if (bodyText && bodyText.length > CONST.MAX_BODY_CHARS) {
-      return jsonOut({
-        ok: false,
+    const req = safeJsonParse(body) || {};
+
+    // (Opcional) trava de acesso
+    const expectedSecret = (env.GATEWAY_SECRET || "").trim();
+    if (expectedSecret) {
+      const got = String(req?.auth?.secret || "");
+      if (got !== expectedSecret) {
+        return json(
+          { ok: false, requestId, error: { code: "UNAUTHORIZED", message: "Secret inválido." } },
+          401,
+          request
+        );
+      }
+    }
+
+    // Aceita wrapper (gateway_request) ou sessão direta
+    const session = extractSession(req);
+    const history = extractHistory(req);
+
+    if (!session || session.schema !== "titanpro_session_v3") {
+      return json(
+        {
+          ok: false,
+          requestId,
+          error: { code: "BAD_REQUEST", message: "Esperado session.schema = titanpro_session_v3." },
+        },
+        400,
+        request
+      );
+    }
+
+    // Chave NVIDIA: preferir secret do Worker; se não existir, usa Authorization Bearer do client (compatibilidade).
+    const nvidiaKey = pickNvidiaKey(request, env, req);
+    if (!nvidiaKey) {
+      return json(
+        { ok: false, requestId, error: { code: "NO_NVIDIA_API_KEY", message: "NVIDIA_API_KEY ausente." } },
+        401,
+        request
+      );
+    }
+
+    const nimEndpoint = (env.NVIDIA_ENDPOINT || DEFAULTS.NIM_ENDPOINT).trim();
+    const plannerModel = (env.PLANNER_MODEL || env.NVIDIA_MODEL || DEFAULTS.PLANNER_MODEL).trim();
+    const writerModel = (env.WRITER_MODEL || DEFAULTS.WRITER_MODEL).trim();
+
+    const normalized = normalizeWorkout(session, history);
+    const flags = computeFlags(normalized);
+
+    // 1) Planner (Nemotron)
+    let plannerEngine = "nemotron";
+    let plan = null;
+
+    try {
+      plan = await nemotronPlan(
+        {
+          endpoint: nimEndpoint,
+          apiKey: nvidiaKey,
+          model: plannerModel,
+          context: {
+            requestId,
+            session: normalized.sessionSlim,
+            trends: normalized.trends,
+            flags,
+          },
+        },
+        DEFAULTS.TIMEOUT_MS
+      );
+
+      // 2) Verifier + hardening
+      plan = verifyAndHardenPlan(plan, normalized);
+    } catch (err) {
+      plannerEngine = "fallback_heuristics";
+      plan = fallbackPlan(normalized, flags, String(err?.message || err));
+    }
+
+    // 3) Writer (remoto via NIM) — se falhar, template local
+    let writerEngine = "nim_writer";
+    let writerText = "";
+
+    try {
+      writerText = await remoteWriter(
+        {
+          endpoint: nimEndpoint,
+          apiKey: nvidiaKey,
+          model: writerModel,
+          plan,
+          normalized,
+          flags,
+        },
+        DEFAULTS.TIMEOUT_MS
+      );
+    } catch (err) {
+      writerEngine = "template_writer";
+      writerText = templateWriter(plan);
+    }
+
+    return json(
+      {
+        ok: true,
         requestId,
-        error: { code: "BODY_TOO_LARGE", message: "Body muito grande." },
-      });
-    }
-
-    const req = safeJsonParse(bodyText) || {};
-    const secretOk = verifyGatewaySecret(req);
-    if (!secretOk) {
-      return jsonOut({
-        ok: false,
-        requestId,
-        error: { code: "UNAUTHORIZED", message: "Secret inválido." },
-      });
-    }
-
-    if (path === "/v1/titanpro/analyze") {
-      const result = Orchestrator.handleTitanProAnalyze(req, requestId);
-      result.meta = Object.assign({}, result.meta || {}, {
-        service: CONST.SERVICE,
-        version: CONST.VERSION,
-        path,
-        tookMs: Date.now() - startedAt,
-      });
-      return jsonOut(result);
-    }
-
-    return jsonOut({
-      ok: false,
-      requestId,
-      error: { code: "NOT_FOUND", message: `Rota desconhecida: ${path}` },
-      meta: { service: CONST.SERVICE, version: CONST.VERSION, path, tookMs: Date.now() - startedAt },
-    });
+        planner: { engine: plannerEngine, model: plannerModel, plan },
+        writer: { engine: writerEngine, model: writerModel, text: writerText },
+        meta: { service: DEFAULTS.SERVICE, version: DEFAULTS.VERSION, tookMs: Date.now() - startedAt },
+      },
+      200,
+      request
+    );
   } catch (err) {
-    return jsonOut({
-      ok: false,
-      requestId,
-      error: { code: "UNHANDLED", message: String(err && err.message ? err.message : err) },
-      meta: { service: CONST.SERVICE, version: CONST.VERSION, tookMs: Date.now() - startedAt },
-    });
+    return json(
+      {
+        ok: false,
+        requestId,
+        error: { code: "UNHANDLED", message: String(err?.message || err) },
+        meta: { service: DEFAULTS.SERVICE, version: DEFAULTS.VERSION, tookMs: Date.now() - startedAt },
+      },
+      500,
+      request
+    );
   }
 }
 
-// =========================
-// Orchestrator (agentic core)
-// =========================
-const Orchestrator = {
-  handleTitanProAnalyze(req, requestId) {
-    const session = req && req.session ? req.session : null;
-    const history = Array.isArray(req && req.history) ? req.history : [];
-
-    if (!session || session.schema !== "titanpro_session_v3") {
-      return {
-        ok: false,
-        requestId,
-        error: { code: "BAD_REQUEST", message: "session.schema inválido (esperado titanpro_session_v3)." },
-      };
+// -------------------------
+// Passthrough: /v1/chat/completions (debug/compat)
+// -------------------------
+async function handleChatPassthrough(request, env) {
+  const requestId = crypto.randomUUID();
+  try {
+    const body = await readBodyText(request);
+    if (byteLength(body) > DEFAULTS.MAX_BODY_BYTES) {
+      return json(
+        { ok: false, requestId, error: { code: "BODY_TOO_LARGE", message: "Body muito grande." } },
+        413,
+        request
+      );
     }
 
-    const normalized = Normalizer.normalizeWorkout(session, history);
-    const flags = RulesEngine.computeFlags(normalized);
-
-    const planner = new NemotronPlanner({
-      endpoint: getProp("NVIDIA_ENDPOINT", CONST.DEFAULT_NIM_ENDPOINT),
-      model: getProp("NVIDIA_MODEL", CONST.DEFAULT_NIM_MODEL),
-      apiKey: getRequiredProp("NVIDIA_API_KEY"),
-    });
-
-    // 1) Planner (Nemotron) — se falhar, cai em fallback
-    let plan = null;
-    let plannerEngine = "nemotron";
-    let plannerModel = planner.model;
-
-    try {
-      plan = planner.planWorkout({
-        requestId,
-        session: normalized.sessionSlim, // reduz tokens
-        trends: normalized.trends,
-        flags,
-      });
-
-      // 2) Verifier + hardening
-      const verified = Verifier.verifyWorkoutPlan(plan, normalized);
-      if (!verified.ok) {
-        throw new Error("Plano inválido pelo verifier: " + verified.message);
-      }
-      plan = verified.plan;
-    } catch (err) {
-      plannerEngine = "fallback_heuristics";
-      plannerModel = "local_rules";
-      plan = FallbackPlanner.planWorkout(normalized, flags, String(err && err.message ? err.message : err));
+    const payload = safeJsonParse(body);
+    if (!payload || typeof payload !== "object") {
+      return json(
+        { ok: false, requestId, error: { code: "BAD_REQUEST", message: "JSON inválido." } },
+        400,
+        request
+      );
     }
 
-    // 3) Writer (texto final) — aqui em GAS (template) para manter o fluxo completo
-    const writerText = Writer.writeWorkout(plan);
+    const nvidiaKey = pickNvidiaKey(request, env, payload);
+    if (!nvidiaKey) {
+      return json(
+        { ok: false, requestId, error: { code: "NO_NVIDIA_API_KEY", message: "NVIDIA_API_KEY ausente." } },
+        401,
+        request
+      );
+    }
 
-    return {
-      ok: true,
-      requestId,
-      planner: {
-        engine: plannerEngine,
-        model: plannerModel,
-        plan,
+    const nimEndpoint = (env.NVIDIA_ENDPOINT || DEFAULTS.NIM_ENDPOINT).trim();
+
+    const out = await nimChat(
+      {
+        endpoint: nimEndpoint,
+        apiKey: nvidiaKey,
+        payload,
       },
-      writer: {
-        engine: "gas_template_writer",
-        text: writerText,
-      },
-      meta: {
-        now: new Date().toISOString(),
-      },
-    };
-  },
-};
+      DEFAULTS.TIMEOUT_MS
+    );
 
-// =========================
-// Normalizer
-// =========================
-const Normalizer = {
-  normalizeWorkout(session, history) {
-    const sessionSlim = slimSession(session);
-    const lastSession = history && history.length ? history[0] : null;
-    const prevMap = lastSession ? indexBestE1rmByExercise(lastSession) : {};
+    return json(out, 200, request);
+  } catch (err) {
+    return json(
+      { ok: false, requestId, error: { code: "PASSTHROUGH_ERROR", message: String(err?.message || err) } },
+      500,
+      request
+    );
+  }
+}
 
-    const trends = computeTrends(sessionSlim, prevMap);
+// -------------------------
+// Request parsing helpers
+// -------------------------
+function extractSession(req) {
+  if (req && req.schema === "titanpro_session_v3") return req;
+  if (req && req.session && req.session.schema === "titanpro_session_v3") return req.session;
+  return null;
+}
 
-    return {
-      sessionSlim,
-      trends,
-    };
-  },
-};
+function extractHistory(req) {
+  const h = req && Array.isArray(req.history) ? req.history : [];
+  // permite array de sessões diretas ou wrappers {session:...}
+  return h
+    .map((x) => {
+      if (x && x.schema === "titanpro_session_v3") return x;
+      if (x && x.session && x.session.schema === "titanpro_session_v3") return x.session;
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function pickNvidiaKey(request, env, req) {
+  const envKey = String(env.NVIDIA_API_KEY || "").trim();
+  if (envKey) return envKey;
+
+  const auth = request.headers.get("Authorization") || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (m && m[1]) return String(m[1]).trim();
+
+  const bodyKey = String(req?.auth?.nvidiaApiKey || "").trim();
+  if (bodyKey) return bodyKey;
+
+  return "";
+}
+
+async function readBodyText(request) {
+  // suporta application/json e text/plain
+  return await request.text();
+}
+
+function safeJsonParse(text) {
+  try {
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function byteLength(str) {
+  return new TextEncoder().encode(String(str ?? "")).length;
+}
+
+// -------------------------
+// Normalization (workout -> sessionSlim + trends)
+// -------------------------
+function normalizeWorkout(session, historySessions) {
+  const sessionSlim = slimSession(session);
+  const prev = historySessions && historySessions.length ? slimSession(historySessions[0]) : null;
+
+  const prevBest = prev ? indexBestE1rm(prev) : {};
+  const trends = computeTrends(sessionSlim, prevBest);
+
+  return { sessionSlim, trends };
+}
 
 function slimSession(session) {
   const out = {
@@ -186,101 +366,82 @@ function slimSession(session) {
   };
 
   const sections = Array.isArray(session.sections) ? session.sections : [];
-  for (var i = 0; i < sections.length; i++) {
-    const sec = sections[i] || {};
-    const treinoKey = String(sec.treinoKey || "Treino");
-    const exercises = Array.isArray(sec.exercises) ? sec.exercises : [];
-
+  for (const sec of sections) {
+    const treinoKey = String(sec?.treinoKey || "Treino");
+    const exercises = Array.isArray(sec?.exercises) ? sec.exercises : [];
     const exOut = [];
-    for (var j = 0; j < exercises.length; j++) {
-      const ex = exercises[j] || {};
-      const name = String(ex.name || "Exercício");
-      const sets = Array.isArray(ex.sets) ? ex.sets : [];
 
-      const validSets = [];
-      for (var k = 0; k < sets.length; k++) {
-        const s = sets[k] || {};
-        const kg = Number(s.kg || 0);
-        const reps = Number(s.reps || 0);
-        const rpe = clampIntGAS(s.rpe, 1, 10, 10);
+    for (const ex of exercises) {
+      const name = String(ex?.name || "Exercício");
+      const sets = Array.isArray(ex?.sets) ? ex.sets : [];
+      const valid = [];
+
+      for (const s of sets) {
+        const kg = toNum(s?.kg);
+        const reps = toNum(s?.reps);
+        const rpe = clampInt(toNum(s?.rpe), 1, 10, 10);
         if (!(kg > 0) || !(reps > 0)) continue;
-        validSets.push({ kg: kg, reps: reps, rpe: rpe, e1rm: Number(s.e1rm || 0) });
+
+        const e1rm = toNum(s?.e1rm) > 0 ? toNum(s?.e1rm) : brzyckiE1rm(kg, reps);
+        valid.push({ kg, reps, rpe, e1rm });
       }
 
-      const metrics = calcMetrics(validSets);
-      exOut.push({
-        name,
-        metrics,
-      });
+      const metrics = calcMetrics(valid);
+      exOut.push({ name, metrics });
     }
 
-    out.sections.push({
-      treinoKey,
-      exercises: exOut,
-    });
+    out.sections.push({ treinoKey, exercises: exOut });
   }
 
   return out;
 }
 
 function calcMetrics(validSets) {
-  if (!validSets || !validSets.length) {
-    return { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: null };
-  }
-  var best = 0;
-  var vol = 0;
-  var sumRpe = 0;
-  var sumKg = 0;
-
-  for (var i = 0; i < validSets.length; i++) {
-    var s = validSets[i];
-    best = Math.max(best, Number(s.e1rm || 0));
-    vol += Number(s.kg || 0) * Number(s.reps || 0);
-    sumRpe += Number(s.rpe || 0);
-    sumKg += Number(s.kg || 0);
+  if (!validSets.length) {
+    return { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: 0, setCount: 0 };
   }
 
-  var avgRpe = sumRpe / validSets.length;
-  var avgKg = sumKg / validSets.length;
+  let best = 0;
+  let vol = 0;
+  let sumRpe = 0;
+  let sumKg = 0;
 
+  for (const s of validSets) {
+    best = Math.max(best, toNum(s.e1rm));
+    vol += toNum(s.kg) * toNum(s.reps);
+    sumRpe += toNum(s.rpe);
+    sumKg += toNum(s.kg);
+  }
+
+  const n = validSets.length;
   return {
     bestE1RM: round1(best),
     volume: Math.round(vol),
-    avgRPE: round1(avgRpe),
-    avgKg: round1(avgKg),
+    avgRPE: round1(sumRpe / n),
+    avgKg: round1(sumKg / n),
+    setCount: n,
   };
 }
 
-function indexBestE1rmByExercise(session) {
-  try {
-    const s = slimSession(session);
-    const map = {};
-    for (var i = 0; i < s.sections.length; i++) {
-      const sec = s.sections[i];
-      for (var j = 0; j < sec.exercises.length; j++) {
-        const ex = sec.exercises[j];
-        const name = ex.name;
-        const best = ex.metrics && ex.metrics.bestE1RM ? ex.metrics.bestE1RM : 0;
-        if (!map[name] || best > map[name]) map[name] = best;
-      }
+function indexBestE1rm(sessionSlim) {
+  const map = Object.create(null);
+  for (const sec of sessionSlim.sections) {
+    for (const ex of sec.exercises) {
+      const best = toNum(ex?.metrics?.bestE1RM);
+      if (!map[ex.name] || best > map[ex.name]) map[ex.name] = best;
     }
-    return map;
-  } catch (e) {
-    return {};
   }
+  return map;
 }
 
-function computeTrends(sessionSlim, prevMap) {
-  const trendByExercise = {};
-  for (var i = 0; i < sessionSlim.sections.length; i++) {
-    const sec = sessionSlim.sections[i];
-    for (var j = 0; j < sec.exercises.length; j++) {
-      const ex = sec.exercises[j];
-      const curr = Number(ex.metrics && ex.metrics.bestE1RM ? ex.metrics.bestE1RM : 0);
-      const prev = Number(prevMap && prevMap[ex.name] ? prevMap[ex.name] : 0);
+function computeTrends(sessionSlim, prevBestMap) {
+  const trendByExercise = Object.create(null);
+  for (const sec of sessionSlim.sections) {
+    for (const ex of sec.exercises) {
+      const curr = toNum(ex?.metrics?.bestE1RM);
+      const prev = toNum(prevBestMap?.[ex.name]);
       if (prev > 0 && curr > 0) {
-        const pct = ((curr - prev) / prev) * 100;
-        trendByExercise[ex.name] = round1(pct);
+        trendByExercise[ex.name] = round1(((curr - prev) / prev) * 100);
       } else {
         trendByExercise[ex.name] = null;
       }
@@ -289,416 +450,349 @@ function computeTrends(sessionSlim, prevMap) {
   return { trendByExercise };
 }
 
-// =========================
-// RulesEngine (flags tipo KDIGO -> aqui para treino)
-// =========================
-const RulesEngine = {
-  computeFlags(normalized) {
-    const flags = {
-      highRPE: [],
-      lowRPE: [],
-      e1rmDrop: [],
-      notes: [],
-    };
+// -------------------------
+// Flags (equivalente ao “critical_flags” no seu padrão)
+// -------------------------
+function computeFlags(normalized) {
+  const flags = {
+    highRPE: [],
+    lowRPE: [],
+    e1rmDrop: [],
+    notes: [],
+  };
 
-    const s = normalized.sessionSlim;
-    const trend = normalized.trends && normalized.trends.trendByExercise ? normalized.trends.trendByExercise : {};
+  const trend = normalized?.trends?.trendByExercise || {};
 
-    for (var i = 0; i < s.sections.length; i++) {
-      const sec = s.sections[i];
-      for (var j = 0; j < sec.exercises.length; j++) {
-        const ex = sec.exercises[j];
-        const m = ex.metrics || {};
-        const avgRPE = Number(m.avgRPE || 0);
-        const delta = trend[ex.name];
+  for (const sec of normalized.sessionSlim.sections) {
+    for (const ex of sec.exercises) {
+      const avgRPE = toNum(ex?.metrics?.avgRPE);
+      const delta = trend[ex.name];
 
-        if (avgRPE >= 9) flags.highRPE.push(ex.name);
-        if (avgRPE > 0 && avgRPE <= 7) flags.lowRPE.push(ex.name);
-        if (typeof delta === "number" && delta <= -3) flags.e1rmDrop.push({ name: ex.name, pct: delta });
-      }
+      if (avgRPE >= 9) flags.highRPE.push(ex.name);
+      if (avgRPE > 0 && avgRPE <= 7.5) flags.lowRPE.push(ex.name);
+      if (typeof delta === "number" && delta <= -3) flags.e1rmDrop.push({ name: ex.name, pct: delta });
     }
-
-    if (flags.highRPE.length) flags.notes.push("Há exercícios com RPE médio alto (>=9).");
-    if (flags.e1rmDrop.length) flags.notes.push("Há queda relevante de e1RM vs última sessão em alguns exercícios.");
-
-    return flags;
-  },
-};
-
-// =========================
-// Nemotron Planner (NIM via HTTP) — encapsulado
-// =========================
-class NemotronPlanner {
-  constructor(opts) {
-    this.endpoint = String(opts && opts.endpoint ? opts.endpoint : CONST.DEFAULT_NIM_ENDPOINT);
-    this.model = String(opts && opts.model ? opts.model : CONST.DEFAULT_NIM_MODEL);
-    this.apiKey = String(opts && opts.apiKey ? opts.apiKey : "");
-    if (!this.apiKey) throw new Error("NVIDIA_API_KEY ausente nas Script Properties.");
   }
 
-  planWorkout(context) {
-    const system = [
-      "Você é um PLANNER de treino (não é o redator final).",
-      "Você recebe métricas agregadas (best e1RM, volume, avgRPE) e tendências vs sessão anterior.",
-      "Tarefa: produzir um PLANO estruturado (JSON) com ajustes práticos para a próxima sessão.",
-      "",
-      "Responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON).",
-      "JSON obrigatório:",
-      "{",
-      '  "summary": string,',
-      '  "perTreino": [',
-      "    {",
-      '      "treinoKey": string,',
-      '      "notes": string,',
-      '      "exercises": [',
-      "        {",
-      '          "name": string,',
-      '          "metrics": { "bestE1RM": number, "volume": number, "avgRPE": number|null },',
-      '          "trendPctVsLast": number|null,',
-      '          "next": {',
-      '             "action": "increase"|"maintain"|"decrease",',
-      '             "deltaKg": number,',
-      '             "repGoal": string,',
-      '             "rpeGoal": number',
-      "          },",
-      '          "why": string',
-      "        }",
-      "      ]",
-      "    }",
-      "  ],",
-      '  "alerts": [ { "level": "info"|"warning"|"critical", "message": string } ]',
-      "}",
-      "",
-      "Regras de ajuste (resumo):",
-      "- Se avgRPE <= 7.5: sugerir increase pequeno (ex.: +2.5kg ou +1-3%).",
-      "- Se avgRPE ~ 8-8.5: maintain ou micro-aumento.",
-      "- Se avgRPE >= 9: maintain/decrease; priorizar técnica/repGoal.",
-      "- Se trendPctVsLast <= -3: alerta de fadiga; sugerir ajuste conservador.",
-    ].join("\n");
+  if (flags.highRPE.length) flags.notes.push("Há exercícios com RPE médio alto (>=9).");
+  if (flags.e1rmDrop.length) flags.notes.push("Há queda relevante de e1RM vs sessão anterior.");
 
-    const user = JSON.stringify(context);
-
-    const payload = {
-      model: this.model,
-      temperature: 0.2,
-      max_tokens: 900,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    };
-
-    const resp = nimCall(this.endpoint, this.apiKey, payload);
-    const content = extractAssistantContent(resp);
-    const plan = parseJsonFromModel(content);
-    if (!plan) throw new Error("Planner retornou JSON inválido.");
-    return plan;
-  }
+  return flags;
 }
 
-function nimCall(endpoint, apiKey, payloadObj) {
-  const res = UrlFetchApp.fetch(endpoint, {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payloadObj),
-    headers: {
-      Authorization: "Bearer " + apiKey,
-    },
-    muteHttpExceptions: true,
-  });
+// -------------------------
+// Planner (Nemotron via NIM) — retorna JSON do plano
+// -------------------------
+async function nemotronPlan({ endpoint, apiKey, model, context }, timeoutMs) {
+  const system = [
+    "Você é um PLANNER de treino (não é o redator final).",
+    "Saída: JSON válido e somente JSON (sem markdown, sem texto fora do JSON).",
+    "",
+    "Objetivo: gerar um plano estruturado para a próxima sessão com base em métricas agregadas (best e1RM, volume, avgRPE) e tendência vs sessão anterior.",
+    "",
+    "Formato obrigatório:",
+    "{",
+    '  "summary": string,',
+    '  "perTreino": [',
+    "    {",
+    '      "treinoKey": string,',
+    '      "notes": string,',
+    '      "exercises": [',
+    "        {",
+    '          "name": string,',
+    '          "metrics": { "bestE1RM": number, "volume": number, "avgRPE": number|null, "avgKg": number },',
+    '          "trendPctVsLast": number|null,',
+    '          "next": { "action": "increase"|"maintain"|"decrease", "deltaKg": number, "repGoal": string, "rpeGoal": number },',
+    '          "why": string',
+    "        }",
+    "      ]",
+    "    }",
+    "  ],",
+    '  "alerts": [ { "level": "info"|"warning"|"critical", "message": string } ]',
+    "}",
+    "",
+    "Regras de ajuste:",
+    "- Se avgRPE <= 7.5: increase pequeno (≈ +1–3% ou +2.5kg quando fizer sentido).",
+    "- Se avgRPE 8.0–8.5: maintain ou micro-aumento.",
+    "- Se avgRPE >= 9.0: maintain/decrease; ajustar repGoal e técnica.",
+    "- Se trendPctVsLast <= -3: alerta de fadiga; ajuste conservador.",
+  ].join("\n");
 
-  const status = res.getResponseCode();
-  const text = res.getContentText() || "";
-  if (!(status >= 200 && status < 300)) {
-    throw new Error("NIM HTTP " + status + ": " + text.slice(0, 1500));
-  }
-  const data = safeJsonParse(text);
-  if (!data) throw new Error("Resposta NIM não-JSON.");
-  return data;
+  const messages = [
+    { role: "system", content: system },
+    { role: "user", content: JSON.stringify(context) },
+  ];
+
+  const payload = {
+    model,
+    temperature: 0.2,
+    max_tokens: 900,
+    messages,
+  };
+
+  const resp = await nimChat({ endpoint, apiKey, payload }, timeoutMs);
+  const content = String(resp?.choices?.[0]?.message?.content || "");
+  const plan = parseJsonFromText(content);
+  if (!plan) throw new Error("Planner retornou JSON inválido.");
+  return plan;
 }
 
-function extractAssistantContent(nimJson) {
-  const choices = nimJson && nimJson.choices ? nimJson.choices : null;
-  if (!choices || !choices.length) return "";
-  const msg = choices[0] && choices[0].message ? choices[0].message : null;
-  return msg && msg.content ? String(msg.content) : "";
-}
+// -------------------------
+// Verifier + hardening
+// -------------------------
+function verifyAndHardenPlan(plan, normalized) {
+  if (!plan || typeof plan !== "object") throw new Error("Plano não é objeto.");
+  if (typeof plan.summary !== "string") throw new Error("summary ausente.");
+  if (!Array.isArray(plan.perTreino)) throw new Error("perTreino não é array.");
+  if (!Array.isArray(plan.alerts)) plan.alerts = [];
 
-function parseJsonFromModel(text) {
-  if (!text) return null;
-
-  // Tentativa 1: JSON puro
-  const direct = safeJsonParse(text);
-  if (direct) return direct;
-
-  // Tentativa 2: extrair do primeiro { ao último }
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first >= 0 && last > first) {
-    const sliced = text.slice(first, last + 1);
-    return safeJsonParse(sliced);
-  }
-
-  return null;
-}
-
-// =========================
-// Verifier (estrutura + hardening)
-// =========================
-const Verifier = {
-  verifyWorkoutPlan(plan, normalized) {
-    if (!plan || typeof plan !== "object") return { ok: false, message: "Plano não é objeto.", plan: null };
-
-    if (typeof plan.summary !== "string") return { ok: false, message: "summary ausente.", plan: null };
-    if (!Array.isArray(plan.perTreino)) return { ok: false, message: "perTreino não é array.", plan: null };
-    if (!Array.isArray(plan.alerts)) plan.alerts = [];
-
-    // Hardening: deltaKg não pode ser absurdo
-    // (Clampa com base na avgKg do exercício, quando disponível)
-    const sessionSlim = normalized.sessionSlim;
-    const avgKgByName = {};
-    for (var i = 0; i < sessionSlim.sections.length; i++) {
-      const sec = sessionSlim.sections[i];
-      for (var j = 0; j < sec.exercises.length; j++) {
-        const ex = sec.exercises[j];
-        avgKgByName[ex.name] = ex.metrics && ex.metrics.avgKg ? ex.metrics.avgKg : 0;
-      }
+  const avgKgByName = Object.create(null);
+  for (const sec of normalized.sessionSlim.sections) {
+    for (const ex of sec.exercises) {
+      avgKgByName[ex.name] = toNum(ex?.metrics?.avgKg);
     }
+  }
 
-    for (var a = 0; a < plan.perTreino.length; a++) {
-      const t = plan.perTreino[a];
-      if (!t || typeof t.treinoKey !== "string") return { ok: false, message: "treinoKey inválido.", plan: null };
-      if (!Array.isArray(t.exercises)) return { ok: false, message: "exercises inválido.", plan: null };
-      if (typeof t.notes !== "string") t.notes = "";
+  for (const t of plan.perTreino) {
+    if (!t || typeof t.treinoKey !== "string") throw new Error("treinoKey inválido.");
+    if (!Array.isArray(t.exercises)) throw new Error("exercises inválido.");
+    if (typeof t.notes !== "string") t.notes = "";
 
-      for (var b = 0; b < t.exercises.length; b++) {
-        const ex = t.exercises[b];
-        if (!ex || typeof ex.name !== "string") return { ok: false, message: "exercise.name inválido.", plan: null };
-        if (!ex.next || typeof ex.next !== "object") return { ok: false, message: "next ausente.", plan: null };
+    for (const ex of t.exercises) {
+      if (!ex || typeof ex.name !== "string") throw new Error("exercise.name inválido.");
+      if (!ex.next || typeof ex.next !== "object") throw new Error("next ausente.");
 
-        const action = String(ex.next.action || "");
-        if (["increase", "maintain", "decrease"].indexOf(action) < 0) {
-          ex.next.action = "maintain";
-        }
+      const action = String(ex.next.action || "maintain");
+      ex.next.action = ["increase", "maintain", "decrease"].includes(action) ? action : "maintain";
 
-        const delta = Number(ex.next.deltaKg || 0);
-        const base = Number(avgKgByName[ex.name] || 0);
+      const base = toNum(avgKgByName[ex.name]);
+      const maxDelta = base > 0 ? Math.max(2.5, round1(base * 0.06)) : 2.5;
+      ex.next.deltaKg = round1(clampNum(toNum(ex.next.deltaKg), -maxDelta, maxDelta, 0));
 
-        // Se não tem base, aceita delta pequeno padrão
-        const maxDelta = base > 0 ? Math.max(2.5, round1(base * 0.06)) : 2.5; // ~6%
-        const clamped = clampNumberGAS(delta, -maxDelta, maxDelta, 0);
+      ex.next.repGoal = typeof ex.next.repGoal === "string" ? ex.next.repGoal : "8-12";
+      ex.next.rpeGoal = clampInt(toNum(ex.next.rpeGoal), 6, 10, 8);
 
-        ex.next.deltaKg = round1(clamped);
-        if (typeof ex.next.repGoal !== "string") ex.next.repGoal = "8-12";
-        ex.next.rpeGoal = clampIntGAS(ex.next.rpeGoal, 6, 10, 8);
-
-        if (typeof ex.why !== "string") ex.why = "";
-        if (!ex.metrics || typeof ex.metrics !== "object") ex.metrics = { bestE1RM: 0, volume: 0, avgRPE: null };
-        if (typeof ex.trendPctVsLast !== "number" && ex.trendPctVsLast !== null) ex.trendPctVsLast = null;
+      if (!ex.metrics || typeof ex.metrics !== "object") {
+        ex.metrics = { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: base };
+      } else {
+        ex.metrics.avgKg = toNum(ex.metrics.avgKg || base);
       }
+
+      if (typeof ex.trendPctVsLast !== "number" && ex.trendPctVsLast !== null) ex.trendPctVsLast = null;
+      if (typeof ex.why !== "string") ex.why = "";
     }
+  }
 
-    return { ok: true, message: "ok", plan };
-  },
-};
+  return plan;
+}
 
-// =========================
-// Fallback Planner (heurístico local)
-// =========================
-const FallbackPlanner = {
-  planWorkout(normalized, flags, reason) {
-    const s = normalized.sessionSlim;
-    const trend = normalized.trends && normalized.trends.trendByExercise ? normalized.trends.trendByExercise : {};
+// -------------------------
+// Fallback heurístico
+// -------------------------
+function fallbackPlan(normalized, flags, reason) {
+  const trend = normalized?.trends?.trendByExercise || {};
+  const perTreino = [];
 
-    const perTreino = [];
-    for (var i = 0; i < s.sections.length; i++) {
-      const sec = s.sections[i];
-      const exs = [];
+  for (const sec of normalized.sessionSlim.sections) {
+    const exercises = [];
 
-      for (var j = 0; j < sec.exercises.length; j++) {
-        const ex = sec.exercises[j];
-        const m = ex.metrics || { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: 0 };
+    for (const ex of sec.exercises) {
+      const m = ex.metrics || {};
+      const avgRPE = toNum(m.avgRPE);
+      const avgKg = toNum(m.avgKg);
+      const deltaTrend = trend[ex.name];
 
-        const avgRPE = Number(m.avgRPE || 0);
-        const avgKg = Number(m.avgKg || 0);
-        const deltaTrend = trend[ex.name];
+      let action = "maintain";
+      let deltaKg = 0;
+      let repGoal = "8-12";
+      let rpeGoal = 8.5;
 
-        let action = "maintain";
-        let deltaKg = 0;
-        let repGoal = "8-12";
-        let rpeGoal = 8;
-
-        if (avgRPE > 0 && avgRPE <= 7.5) {
-          action = "increase";
-          deltaKg = avgKg > 0 ? round1(Math.min(2.5, avgKg * 0.03)) : 2.5;
-          rpeGoal = 8;
-        } else if (avgRPE >= 9) {
-          action = "decrease";
-          deltaKg = avgKg > 0 ? round1(-Math.min(2.5, avgKg * 0.03)) : -2.5;
-          repGoal = "6-10";
-          rpeGoal = 8.5;
-        } else {
-          action = "maintain";
-          deltaKg = 0;
-          rpeGoal = 8.5;
-        }
-
-        if (typeof deltaTrend === "number" && deltaTrend <= -3) {
-          // Conservador se caiu e1RM
-          action = "maintain";
-          deltaKg = 0;
-          repGoal = "6-10";
-          rpeGoal = 8;
-        }
-
-        exs.push({
-          name: ex.name,
-          metrics: {
-            bestE1RM: m.bestE1RM,
-            volume: m.volume,
-            avgRPE: m.avgRPE,
-          },
-          trendPctVsLast: typeof deltaTrend === "number" ? deltaTrend : null,
-          next: { action, deltaKg: round1(deltaKg), repGoal, rpeGoal },
-          why:
-            "Plano gerado por regras locais (fallback). " +
-            (reason ? "Motivo: " + reason : ""),
-        });
+      if (avgRPE > 0 && avgRPE <= 7.5) {
+        action = "increase";
+        deltaKg = avgKg > 0 ? Math.min(2.5, avgKg * 0.03) : 2.5;
+        rpeGoal = 8;
+      } else if (avgRPE >= 9) {
+        action = "decrease";
+        deltaKg = avgKg > 0 ? -Math.min(2.5, avgKg * 0.03) : -2.5;
+        repGoal = "6-10";
+        rpeGoal = 8.5;
       }
 
-      perTreino.push({
-        treinoKey: sec.treinoKey,
-        notes: "Fallback ativo: ajuste conservador por RPE/tendência.",
-        exercises: exs,
+      if (typeof deltaTrend === "number" && deltaTrend <= -3) {
+        action = "maintain";
+        deltaKg = 0;
+        repGoal = "6-10";
+        rpeGoal = 8;
+      }
+
+      exercises.push({
+        name: ex.name,
+        metrics: {
+          bestE1RM: round1(toNum(m.bestE1RM)),
+          volume: Math.round(toNum(m.volume)),
+          avgRPE: m.avgRPE == null ? null : round1(toNum(m.avgRPE)),
+          avgKg: round1(avgKg),
+        },
+        trendPctVsLast: typeof deltaTrend === "number" ? deltaTrend : null,
+        next: { action, deltaKg: round1(deltaKg), repGoal, rpeGoal },
+        why: `Fallback local (motivo: ${String(reason || "indisponível")}).`,
       });
     }
 
-    const alerts = [];
-    if (flags && flags.highRPE && flags.highRPE.length) {
-      alerts.push({ level: "warning", message: "RPE alto em: " + flags.highRPE.join(", ") });
-    }
-    if (flags && flags.e1rmDrop && flags.e1rmDrop.length) {
-      alerts.push({ level: "warning", message: "Queda de e1RM vs última sessão em alguns exercícios." });
-    }
-    alerts.push({ level: "info", message: "Fallback heurístico usado (Nemotron indisponível ou plano inválido)." });
+    perTreino.push({
+      treinoKey: sec.treinoKey,
+      notes: "Fallback ativo: ajuste conservador por RPE/tendência.",
+      exercises,
+    });
+  }
 
-    return {
-      summary:
-        "Plano (fallback): ajustes conservadores com base em RPE médio e tendência de e1RM. " +
-        "Se o RPE estava baixo, aumenta pouco; se estava alto, mantém/recua.",
-      perTreino,
-      alerts,
-    };
-  },
-};
+  const alerts = [];
+  if (flags?.highRPE?.length) alerts.push({ level: "warning", message: `RPE alto em: ${flags.highRPE.join(", ")}` });
+  if (flags?.e1rmDrop?.length) alerts.push({ level: "warning", message: "Queda de e1RM vs sessão anterior em alguns exercícios." });
+  alerts.push({ level: "info", message: "Fallback heurístico usado (planner indisponível/erro/JSON inválido)." });
 
-// =========================
-// Writer (GGUF no outro projeto; aqui template para manter pipeline completo)
-// =========================
-const Writer = {
-  writeWorkout(plan) {
-    const lines = [];
-    lines.push(plan.summary || "Plano gerado.");
+  return {
+    summary: "Plano (fallback): ajustes conservadores por RPE médio e tendência de e1RM.",
+    perTreino,
+    alerts,
+  };
+}
+
+// -------------------------
+// Writer remoto (NIM) e writer local (template)
+// -------------------------
+async function remoteWriter({ endpoint, apiKey, model, plan, normalized, flags }, timeoutMs) {
+  const system = [
+    "Você é um redator de relatório de treino.",
+    "Entrada: plano estruturado (JSON) + contexto resumido.",
+    "Saída: texto em pt-BR, objetivo e prático.",
+    "Estrutura: (1) resumo geral; (2) por treino; (3) recomendações de próxima sessão; (4) alertas/fadiga se existirem.",
+    "Não invente exercícios que não estejam no plano.",
+  ].join("\n");
+
+  const user = JSON.stringify({
+    plan,
+    flags,
+    session: normalized.sessionSlim,
+    trends: normalized.trends,
+  });
+
+  const payload = {
+    model,
+    temperature: 0.2,
+    max_tokens: 700,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  };
+
+  const resp = await nimChat({ endpoint, apiKey, payload }, timeoutMs);
+  const content = String(resp?.choices?.[0]?.message?.content || "");
+  if (!content.trim()) throw new Error("Writer remoto retornou vazio.");
+  return content.trim();
+}
+
+function templateWriter(plan) {
+  const lines = [];
+  lines.push(plan.summary || "Plano gerado.");
+  lines.push("");
+
+  if (Array.isArray(plan.alerts) && plan.alerts.length) {
+    lines.push("ALERTAS:");
+    for (const a of plan.alerts) {
+      lines.push(`- [${String(a.level || "info").toUpperCase()}] ${String(a.message || "")}`);
+    }
+    lines.push("");
+  }
+
+  const perTreino = Array.isArray(plan.perTreino) ? plan.perTreino : [];
+  for (const t of perTreino) {
+    lines.push(String(t.treinoKey || "Treino"));
+    if (t.notes) lines.push("• " + String(t.notes));
     lines.push("");
 
-    if (Array.isArray(plan.alerts) && plan.alerts.length) {
-      lines.push("ALERTAS:");
-      for (var i = 0; i < plan.alerts.length; i++) {
-        const a = plan.alerts[i] || {};
-        lines.push(`- [${String(a.level || "info").toUpperCase()}] ${String(a.message || "")}`);
-      }
-      lines.push("");
+    const exs = Array.isArray(t.exercises) ? t.exercises : [];
+    for (const ex of exs) {
+      const m = ex.metrics || {};
+      const next = ex.next || {};
+      const trend = ex.trendPctVsLast;
+
+      lines.push(
+        `- ${String(ex.name)} | best e1RM: ${toNum(m.bestE1RM)} | vol: ${toNum(m.volume)} | avg RPE: ${m.avgRPE == null ? "-" : toNum(m.avgRPE)}`
+      );
+      lines.push(
+        `  Próxima: ${String(next.action || "maintain")} (${toNum(next.deltaKg) >= 0 ? "+" : ""}${round1(toNum(next.deltaKg))}kg), reps ${String(next.repGoal || "8-12")}, alvo RPE ${toNum(next.rpeGoal) || 8}` +
+          (typeof trend === "number" ? ` | tendência: ${trend >= 0 ? "+" : ""}${trend}%` : "")
+      );
+      if (ex.why) lines.push("  Motivo: " + String(ex.why));
     }
+    lines.push("");
+  }
 
-    const perTreino = Array.isArray(plan.perTreino) ? plan.perTreino : [];
-    for (var t = 0; t < perTreino.length; t++) {
-      const treino = perTreino[t] || {};
-      lines.push(String(treino.treinoKey || "Treino"));
-      if (treino.notes) lines.push("• " + String(treino.notes));
-      lines.push("");
-
-      const exs = Array.isArray(treino.exercises) ? treino.exercises : [];
-      for (var e = 0; e < exs.length; e++) {
-        const ex = exs[e] || {};
-        const m = ex.metrics || {};
-        const trend = ex.trendPctVsLast;
-
-        const best = m.bestE1RM != null ? m.bestE1RM : 0;
-        const vol = m.volume != null ? m.volume : 0;
-        const rpe = m.avgRPE != null ? m.avgRPE : null;
-
-        const next = ex.next || {};
-        const action = String(next.action || "maintain");
-        const delta = Number(next.deltaKg || 0);
-        const repGoal = String(next.repGoal || "8-12");
-        const rpeGoal = next.rpeGoal != null ? next.rpeGoal : 8;
-
-        lines.push(
-          `- ${String(ex.name || "Exercício")} | best e1RM: ${best} | vol: ${vol} | avg RPE: ${rpe}`
-        );
-        lines.push(
-          `  Próxima: ${action} (${delta >= 0 ? "+" : ""}${round1(delta)}kg), reps ${repGoal}, alvo RPE ${rpeGoal}` +
-            (typeof trend === "number" ? ` | tendência vs última: ${trend >= 0 ? "+" : ""}${trend}%` : "")
-        );
-        if (ex.why) lines.push("  Motivo: " + String(ex.why));
-      }
-      lines.push("");
-    }
-
-    return lines.join("\n").trim();
-  },
-};
-
-// =========================
-// Helpers
-// =========================
-function jsonOut(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+  return lines.join("\n").trim();
 }
 
-function normalizePath(path) {
-  const s = String(path || "/").trim();
-  if (!s) return "/";
-  const cleaned = s.replace(/\/+$/, "");
-  return cleaned ? cleaned : "/";
-}
+// -------------------------
+// NIM client (HTTP)
+// -------------------------
+async function nimChat({ endpoint, apiKey, payload }, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-function getBodyText(e) {
   try {
-    const txt = e && e.postData && typeof e.postData.contents === "string" ? e.postData.contents : "";
-    return String(txt || "");
-  } catch (err) {
-    return "";
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const raw = await res.text();
+    let data = null;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      const msg = data?.error?.message || data?.detail || raw || `HTTP ${res.status}`;
+      throw new Error(`NIM ${res.status}: ${msg}`);
+    }
+
+    if (!data) throw new Error("Resposta NIM não-JSON.");
+    return data;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-function safeJsonParse(text) {
-  try {
-    if (!text) return null;
-    return JSON.parse(text);
-  } catch (err) {
-    return null;
+function parseJsonFromText(text) {
+  if (!text) return null;
+
+  // JSON direto
+  const direct = safeJsonParse(text);
+  if (direct) return direct;
+
+  // Extrai do primeiro { ao último }
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    return safeJsonParse(text.slice(first, last + 1));
   }
+  return null;
 }
 
-function getProp(key, fallback) {
-  const v = PropertiesService.getScriptProperties().getProperty(String(key));
-  return v != null && String(v).trim() !== "" ? String(v) : fallback;
-}
-
-function getRequiredProp(key) {
-  const v = PropertiesService.getScriptProperties().getProperty(String(key));
-  const s = v != null ? String(v).trim() : "";
-  if (!s) throw new Error("Script property obrigatória ausente: " + key);
-  return s;
-}
-
-function verifyGatewaySecret(req) {
-  const expected = getProp("GATEWAY_SECRET", "");
-  if (!expected) return true;
-
-  const got = req && req.auth && typeof req.auth.secret === "string" ? String(req.auth.secret) : "";
-  return got === expected;
+// -------------------------
+// Math helpers
+// -------------------------
+function toNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function round1(n) {
@@ -707,14 +801,24 @@ function round1(n) {
   return Math.round(x * 10) / 10;
 }
 
-function clampIntGAS(v, min, max, fallback) {
-  const n = parseInt(String(v), 10);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
+function clampInt(n, min, max, fallback) {
+  const x = Number.parseInt(String(n), 10);
+  if (!Number.isFinite(x)) return fallback;
+  return Math.min(max, Math.max(min, x));
 }
 
-function clampNumberGAS(v, min, max, fallback) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
+function clampNum(n, min, max, fallback) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fallback;
+  return Math.min(max, Math.max(min, x));
+}
+
+// Brzycki e1RM (aprox) — usado só se set.e1rm não vier do client
+function brzyckiE1rm(kg, reps) {
+  const r = toNum(reps);
+  const w = toNum(kg);
+  if (!(w > 0) || !(r > 0)) return 0;
+  const denom = 1.0278 - 0.0278 * r;
+  if (!(denom > 0)) return 0;
+  return w / denom;
 }
