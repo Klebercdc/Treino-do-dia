@@ -1,1022 +1,720 @@
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <meta name="theme-color" content="#0b1220" />
-    <title>TITAN PRO - Smart Log</title>
+/* eslint-disable no-var */
+/**
+ * TITAN PRO — GAS Gateway (Agentic Orchestrator)
+ *
+ * Endpoints (Web App):
+ *   GET  /exec                          -> health
+ *   POST /exec/v1/titanpro/analyze      -> planner + verifier + writer (Nemotron via NIM)
+ *
+ * Script Properties (Project Settings -> Script properties):
+ *   NVIDIA_API_KEY         (obrigatório)
+ *   NVIDIA_MODEL           (opcional; default: nvidia/llama-3.1-nemotron-70b-instruct)
+ *   NVIDIA_ENDPOINT        (opcional; default: https://integrate.api.nvidia.com/v1/chat/completions)
+ *   GATEWAY_SECRET         (opcional; se setado, o cliente precisa enviar auth.secret no body)
+ *
+ * Observação: Apps Script não permite setar status HTTP custom via ContentService.
+ * Portanto a API sempre responde 200, mas inclui { ok: true/false }.
+ */
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-    </script>
+const CONST = Object.freeze({
+  SERVICE: "titanpro_gateway",
+  VERSION: "gas_v1",
+  DEFAULT_NIM_ENDPOINT: "https://integrate.api.nvidia.com/v1/chat/completions",
+  DEFAULT_NIM_MODEL: "nvidia/llama-3.1-nemotron-70b-instruct",
+  MAX_BODY_CHARS: 500_000, // guardrail
+});
 
-    <link rel="icon" href="Logo.png" type="image/png" />
+function doGet() {
+  return jsonOut({
+    ok: true,
+    service: CONST.SERVICE,
+    version: CONST.VERSION,
+    now: new Date().toISOString(),
+  });
+}
 
-    <style>
-      :root {
-        --bg: #0b1220;
-        --card: #161e2e;
-        --blue: #3182ce;
-        --text: #f7fafc;
-        --orange: #f6ad55;
-        --green: #38b2ac;
-        --red: #e53e3e;
-      }
+function doPost(e) {
+  const requestId = Utilities.getUuid();
+  const startedAt = Date.now();
 
-      body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: -apple-system, sans-serif;
-        margin: 0;
-        padding-bottom: 20px;
-      }
+  try {
+    const path = normalizePath((e && e.pathInfo) || "/");
+    const bodyText = getBodyText(e);
 
-      .top-header {
-        padding: 15px;
-        background: var(--card);
-        border-bottom: 1px solid #2d3748;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-      }
-      .date-badge {
-        font-size: 0.8rem;
-        color: var(--orange);
-        font-weight: bold;
-        background: #0b1220;
-        padding: 4px 10px;
-        border-radius: 15px;
-      }
+    if (bodyText && bodyText.length > CONST.MAX_BODY_CHARS) {
+      return jsonOut({
+        ok: false,
+        requestId,
+        error: { code: "BODY_TOO_LARGE", message: "Body muito grande." },
+      });
+    }
 
-      /* Painel de Configuração */
-      .setup-panel {
-        background: var(--card);
-        padding: 20px;
-        border-bottom: 3px solid var(--blue);
-        display: block;
-      }
-      .field {
-        margin-bottom: 15px;
-      }
-      .field label {
-        font-size: 0.7rem;
-        color: #a0aec0;
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        text-transform: uppercase;
-      }
-      .field select,
-      .field input {
-        width: 100%;
-        padding: 12px;
-        background: #0b1220;
-        color: #fff;
-        border: 1px solid var(--blue);
-        border-radius: 8px;
-        box-sizing: border-box;
-      }
+    const req = safeJsonParse(bodyText) || {};
+    const secretOk = verifyGatewaySecret(req);
+    if (!secretOk) {
+      return jsonOut({
+        ok: false,
+        requestId,
+        error: { code: "UNAUTHORIZED", message: "Secret inválido." },
+      });
+    }
 
-      .nav-pills {
-        display: flex;
-        gap: 8px;
-        padding: 10px;
-        background: var(--bg);
-        overflow-x: auto;
-        border-bottom: 1px solid #2d3748;
-      }
-      .pill {
-        flex: none;
-        padding: 12px 20px;
-        border-radius: 8px;
-        background: #1a202c;
-        font-weight: bold;
-        font-size: 0.75rem;
-        border: 1px solid #2d3748;
-        cursor: pointer;
-        color: #a0aec0;
-        position: relative;
-      }
-      .pill.active {
-        background: var(--blue);
-        border-color: var(--blue);
-        color: #fff;
-      }
-      .pill.add-pill {
-        border: 2px dashed var(--blue);
-        color: var(--blue);
-      }
+    if (path === "/v1/titanpro/analyze") {
+      const result = Orchestrator.handleTitanProAnalyze(req, requestId);
+      result.meta = Object.assign({}, result.meta || {}, {
+        service: CONST.SERVICE,
+        version: CONST.VERSION,
+        path,
+        tookMs: Date.now() - startedAt,
+      });
+      return jsonOut(result);
+    }
 
-      .section {
-        display: none;
-      }
-      .section.active {
-        display: block;
-      }
+    return jsonOut({
+      ok: false,
+      requestId,
+      error: { code: "NOT_FOUND", message: `Rota desconhecida: ${path}` },
+      meta: { service: CONST.SERVICE, version: CONST.VERSION, path, tookMs: Date.now() - startedAt },
+    });
+  } catch (err) {
+    return jsonOut({
+      ok: false,
+      requestId,
+      error: { code: "UNHANDLED", message: String(err && err.message ? err.message : err) },
+      meta: { service: CONST.SERVICE, version: CONST.VERSION, tookMs: Date.now() - startedAt },
+    });
+  }
+}
 
-      /* Exercise Card */
-      .exercise-card {
-        background: var(--card);
-        border-radius: 12px;
-        padding: 15px;
-        margin: 10px;
-        border: 1px solid #2d3748;
-        animation: fadeIn 0.3s ease;
-        position: relative;
-      }
-      .ex-title {
-        font-weight: 800;
-        font-size: 1.1rem;
-        color: var(--blue);
-        text-decoration: underline dotted;
-        cursor: pointer;
-      }
-      .ex-target {
-        font-size: 0.75rem;
-        color: var(--orange);
-        font-weight: bold;
-        margin: 4px 0 5px 0;
-        display: block;
-        cursor: pointer;
-      }
+// =========================
+// Orchestrator (agentic core)
+// =========================
+const Orchestrator = {
+  handleTitanProAnalyze(req, requestId) {
+    const session = req && req.session ? req.session : null;
+    const history = Array.isArray(req && req.history) ? req.history : [];
 
-      /* e1RM por série */
-      .rm-mini-badge {
-        font-size: 0.6rem;
-        color: var(--green);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        display: block;
-        margin-top: 2px;
-        line-height: 1.1;
-      }
+    if (!session || session.schema !== "titanpro_session_v3") {
+      return {
+        ok: false,
+        requestId,
+        error: { code: "BAD_REQUEST", message: "session.schema inválido (esperado titanpro_session_v3)." },
+      };
+    }
 
-      .series-grid {
-        display: grid;
-        grid-template-columns: 40px 1fr 1fr 1fr;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      .header-grid {
-        text-align: center;
-        font-size: 0.6rem;
-        color: #718096;
-        font-weight: bold;
-      }
+    const normalized = Normalizer.normalizeWorkout(session, history);
+    const flags = RulesEngine.computeFlags(normalized);
 
-      .input-box {
-        background: #0b1220;
-        border: 1px solid #2d3748;
-        border-radius: 6px;
-      }
-      .input-box input {
-        background: transparent;
-        border: none;
-        color: #fff;
-        width: 100%;
-        text-align: center;
-        font-size: 1.1rem;
-        padding: 8px 0;
-        outline: none;
-        font-weight: bold;
-      }
-      .input-box input::placeholder {
-        color: rgba(255, 255, 255, 0.15);
-      }
+    const planner = new NemotronPlanner({
+      endpoint: getProp("NVIDIA_ENDPOINT", CONST.DEFAULT_NIM_ENDPOINT),
+      model: getProp("NVIDIA_MODEL", CONST.DEFAULT_NIM_MODEL),
+      apiKey: getRequiredProp("NVIDIA_API_KEY"),
+    });
 
-      /* Seletor RPE minimalista (1-10) */
-      .input-box select {
-        background: transparent;
-        border: none;
-        color: #fff;
-        width: 100%;
-        text-align: center;
-        font-size: 1.05rem;
-        padding: 8px 0;
-        outline: none;
-        font-weight: 800;
-        appearance: none;
-        -webkit-appearance: none;
-      }
-      .input-box select option {
-        background: var(--bg);
-        color: #fff;
-      }
+    // 1) Planner (Nemotron) — se falhar, cai em fallback
+    let plan = null;
+    let plannerEngine = "nemotron";
+    let plannerModel = planner.model;
 
-      .btn-add-ex {
-        background: #1a202c;
-        color: var(--blue);
-        border: 2px dashed var(--blue);
-        width: calc(100% - 20px);
-        margin: 15px 10px;
-        padding: 15px;
-        border-radius: 12px;
-        font-weight: 800;
-        cursor: pointer;
-      }
-
-      .footer-actions {
-        padding: 20px 10px;
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .btn {
-        padding: 15px;
-        border-radius: 10px;
-        border: none;
-        font-weight: 800;
-        cursor: pointer;
-        flex: 1;
-        text-align: center;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        min-width: 80px;
-      }
-      .btn-save {
-        background: var(--green);
-        color: #fff;
-        box-shadow: 0 4px 0 #2d8a84;
-      }
-      .btn-config {
-        background: #2d3748;
-        color: var(--blue);
-        border: 1px solid var(--blue);
-      }
-      .btn-ia {
-        background: #1a202c;
-        color: var(--orange);
-        border: 1px solid var(--orange);
-      }
-
-      dialog {
-        background: #161e2e;
-        color: #fff;
-        border: 1px solid var(--blue);
-        border-radius: 12px;
-        width: 90%;
-        max-width: 500px;
-        padding: 20px;
-      }
-
-      #csvTextarea {
-        width: 100%;
-        height: 200px;
-        padding: 12px;
-        background: #0b1220;
-        border: 1px solid var(--blue);
-        border-radius: 8px;
-        color: #fff;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        resize: none;
-        outline: none;
-      }
-
-      /* Histórico e Templates */
-      #histList,
-      #tplList {
-        max-height: 400px;
-        overflow-y: auto;
-        border: 1px solid #2d3748;
-        border-radius: 10px;
-      }
-      .hist-item,
-      .tpl-item {
-        padding: 12px;
-        border-bottom: 1px solid #2d3748;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="top-header">
-      <div class="header-left">
-        <h1 style="margin: 0; font-size: 1.1rem; color: var(--blue)">
-          TITAN <span style="color: #fff">PRO</span>
-        </h1>
-      </div>
- <div class="date-badge" id="displayDate"></div>    </div>
-
-    <div class="setup-panel" id="setupPanel">
-      <div class="field">
-        <label>NVIDIA API KEY (Nemotron-70B)</label>
-        <div style="display: flex; gap: 8px; align-items: center">
-          <input
-            type="password"
-            id="apiKeyInput"
-            placeholder="Cole aqui (fica só no seu navegador)"
-            autocomplete="off"
-            onchange="saveApiKey()"
-            style="flex: 1; width: auto"
-          />
-          <button
-            onclick="clearApiKey()"
-            title="Apagar chave salva"
-            style="
-              flex: 0 0 auto;
-              padding: 12px 14px;
-              background: #2d3748;
-              color: var(--red);
-              border: 1px solid #2d3748;
-              border-radius: 8px;
-              font-weight: 800;
-              cursor: pointer;
-            "
-          >
-            LIMPAR
-          </button>
-        </div>
-        <div id="apiKeyStatus" style="margin-top: 6px; font-size: 0.7rem; color: #a0aec0"></div>
-      </div>
-
-      <div class="field">
-        <label>Frequência Semanal</label>
-        <select id="freq" onchange="gerarProtocolo()">
-          <option value="2">2 Dias (Full Body)</option>
-          <option value="3" selected>3 Dias (ABC)</option>
-          <option value="4">4 Dias (Upper/Lower)</option>
-          <option value="5">5 Dias (ABCDE)</option>
-          <option value="6">6 Dias (PPL x2)</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Objetivo Principal</label>
-        <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia (8-12 reps)</option>
-          <option value="forca">Força Bruta (3-5 reps)</option>
-        </select>
-      </div>
-
-      <button class="btn btn-save" onclick="closeConfig()" style="margin-top: 12px">ABRIR TREINO</button>
-    </div>
-
-    <div class="nav-pills" id="nav"></div>
-    <main id="container"></main>
-    <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
-
-    <div class="footer-actions">
-      <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
-      <button class="btn btn-ia" onclick="enviarParaIA
-        ()">🤖 IA ANALYST</button>
-      <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
-      <button class="btn btn-config" onclick="abrirCSVModal()" style="background: var(--orange); color: white; flex: 0.5">
-        📊 ARQUIVOS
-      </button>
-      <button class="btn btn-config" onclick="verHistorico()" style="flex: 0.4">📜 HIST</button>
-    </div>
-
-    <dialog id="modalLib">
-      <h3 id="libHeader" style="margin: 0 0 15px 0; color: var(--orange)">Trocar Exercício</h3>
-      <div style="margin-bottom: 15px; display: flex; gap: 5px">
-        <input
-          type="text"
-          id="manualName"
-          placeholder="Nome personalizado..."
-          style="
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid var(--blue);
-            background: #0b1220;
-            color: white;
-            outline: none;
-          "
-        />
-        <button
-          onclick="adicionarManual()"
-          style="background: var(--blue); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold"
-        >
-          +
-        </button>
-      </div>
-      <div id="libContent" style="max-height: 300px; overflow-y: auto"></div>
-      <button
-        class="btn"
-        onclick="document.getElementById('modalLib').close()"
-        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
-      >
-        Fechar
-      </button>
-    </dialog>
-
-    <dialog id="modalCSV">
-      <h3 style="margin: 0 0 15px 0; color: var(--orange)">Arquivos e Fichas</h3>
-      <div style="font-size: 0.7rem; color: #a0aec0; margin-bottom: 12px; line-height: 1.4">
-        <strong>PDF:</strong> Use "LER PDF" para extrair texto da sua ficha.<br />
-        <strong>CSV:</strong> Cole o texto ou salve modelos para uso rápido.
-      </div>
-      <textarea id="csvTextarea" placeholder="Cole o CSV aqui..."></textarea>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px">
-        <label
-          class="btn"
-          style="
-            background: var(--blue);
-            color: white;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          "
-        >
-          📄 LER PDF
-          <input type="file" id="pdfUpload" accept=".pdf" style="display: none" onchange="extrairTextoPDF(this)" />
-        </label>
-        <button class="btn" style="background: var(--green); color: white; flex: 1" onclick="importarCSV()">✓ IMPORTAR</button>
-        <button class="btn" style="background: #2d3748; color: var(--orange); flex: 1" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
-        <button class="btn" style="background: #2d3748; color: var(--blue); flex: 1" onclick="mostrarModelosCSV()">📚 MODELOS</button>
-      </div>
-      <div id="tplArea" style="display: none; margin-top: 12px">
-        <div id="tplList"></div>
-        <button class="btn" onclick="limparModelosCSV()" style="width: 100%; background: var(--red); color: white; margin-top: 5px">
-          LIMPAR TUDO
-        </button>
-      </div>
-      <button
-        class="btn"
-        onclick="document.getElementById('modalCSV').close()"
-        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
-      >
-        Fechar
-      </button>
-    </dialog>
-
-    <dialog id="modalHIST">
-      <h3 style="margin: 0 0 15px 0; color: var(--orange)">Histórico de Sessões</h3>
-      <div id="histList"></div>
-      <div style="display: flex; gap: 8px; margin-top: 12px">
-        <button class="btn" style="background: var(--red); color: white" onclick="limparHistorico()">🗑️ LIMPAR</button>
-        <button class="btn" style="background: var(--blue); color: white" onclick="document.getElementById('modalHIST').close()">
-          FECHAR
-        </button>
-      </div>
-    </dialog>
-
-    <dialog id="modalIA">
-      <h3 style="margin: 0 0 12px 0; color: var(--orange)">Nemotron Analyst</h3>
-      <pre
-        id="iaOutput"
-        style="
-          white-space: pre-wrap;
-          word-break: break-word;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-          font-size: 0.85rem;
-          background: #0b1220;
-          padding: 12px;
-          border-radius: 8px;
-          border: 1px solid #2d3748;
-          max-height: 55vh;
-          overflow: auto;
-          margin: 0;
-        "
-      ></pre>
-      <button
-        class="btn"
-        onclick="document.getElementById('modalIA').close()"
-        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
-      >
-        Fechar
-      </button>
-    </dialog>
-
-    <script>
-      // =========================
-      // STORAGE / CONFIG
-      // =========================
-      const STORAGE = Object.freeze({
-        draftKey: "titanpro_draft_v2",
-        historyKey: "titanpro_history_v2",
-        csvTplKey: "titanpro_csv_templates_v1",
-        prevKey: "titanpro_prev_v1",
-        apiKey: "titanpro_nvidia_key",
-        maxHistory: 80,
+    try {
+      plan = planner.planWorkout({
+        requestId,
+        session: normalized.sessionSlim, // reduz tokens
+        trends: normalized.trends,
+        flags,
       });
 
-      // NVIDIA (endpoint + modelo)
-      // Endpoint  e modelo "meta/llama-3.1-nemotron-8b-v1" conforme docs atuais.
-      const NVIDIA = Object.freeze({
-endpoint: "https://square-poetry-636b.kle-cdc.workers.dev/v1/chat/completions",        model: "meta/llama-3.1-nemotron-8b-v1",
-      });
+      // 2) Verifier + hardening
+      const verified = Verifier.verifyWorkoutPlan(plan, normalized);
+      if (!verified.ok) {
+        throw new Error("Plano inválido pelo verifier: " + verified.message);
+      }
+      plan = verified.plan;
+    } catch (err) {
+      plannerEngine = "fallback_heuristics";
+      plannerModel = "local_rules";
+      plan = FallbackPlanner.planWorkout(normalized, flags, String(err && err.message ? err.message : err));
+    }
 
-      function saveApiKey() {
-        const input = document.getElementById("apiKeyInput");
-        const raw = (input?.value || "").trim();
-        if (!raw) {
-          localStorage.removeItem(STORAGE.apiKey);
+    // 3) Writer (texto final) — aqui em GAS (template) para manter o fluxo completo
+    const writerText = Writer.writeWorkout(plan);
+
+    return {
+      ok: true,
+      requestId,
+      planner: {
+        engine: plannerEngine,
+        model: plannerModel,
+        plan,
+      },
+      writer: {
+        engine: "gas_template_writer",
+        text: writerText,
+      },
+      meta: {
+        now: new Date().toISOString(),
+      },
+    };
+  },
+};
+
+// =========================
+// Normalizer
+// =========================
+const Normalizer = {
+  normalizeWorkout(session, history) {
+    const sessionSlim = slimSession(session);
+    const lastSession = history && history.length ? history[0] : null;
+    const prevMap = lastSession ? indexBestE1rmByExercise(lastSession) : {};
+
+    const trends = computeTrends(sessionSlim, prevMap);
+
+    return {
+      sessionSlim,
+      trends,
+    };
+  },
+};
+
+function slimSession(session) {
+  const out = {
+    schema: "titanpro_session_slim_v1",
+    capturedAt: session.capturedAt || null,
+    objetivo: session.objetivo || null,
+    frequenciaSemanal: session.frequenciaSemanal || null,
+    sections: [],
+  };
+
+  const sections = Array.isArray(session.sections) ? session.sections : [];
+  for (var i = 0; i < sections.length; i++) {
+    const sec = sections[i] || {};
+    const treinoKey = String(sec.treinoKey || "Treino");
+    const exercises = Array.isArray(sec.exercises) ? sec.exercises : [];
+
+    const exOut = [];
+    for (var j = 0; j < exercises.length; j++) {
+      const ex = exercises[j] || {};
+      const name = String(ex.name || "Exercício");
+      const sets = Array.isArray(ex.sets) ? ex.sets : [];
+
+      const validSets = [];
+      for (var k = 0; k < sets.length; k++) {
+        const s = sets[k] || {};
+        const kg = Number(s.kg || 0);
+        const reps = Number(s.reps || 0);
+        const rpe = clampIntGAS(s.rpe, 1, 10, 10);
+        if (!(kg > 0) || !(reps > 0)) continue;
+        validSets.push({ kg: kg, reps: reps, rpe: rpe, e1rm: Number(s.e1rm || 0) });
+      }
+
+      const metrics = calcMetrics(validSets);
+      exOut.push({
+        name,
+        metrics,
+      });
+    }
+
+    out.sections.push({
+      treinoKey,
+      exercises: exOut,
+    });
+  }
+
+  return out;
+}
+
+function calcMetrics(validSets) {
+  if (!validSets || !validSets.length) {
+    return { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: null };
+  }
+  var best = 0;
+  var vol = 0;
+  var sumRpe = 0;
+  var sumKg = 0;
+
+  for (var i = 0; i < validSets.length; i++) {
+    var s = validSets[i];
+    best = Math.max(best, Number(s.e1rm || 0));
+    vol += Number(s.kg || 0) * Number(s.reps || 0);
+    sumRpe += Number(s.rpe || 0);
+    sumKg += Number(s.kg || 0);
+  }
+
+  var avgRpe = sumRpe / validSets.length;
+  var avgKg = sumKg / validSets.length;
+
+  return {
+    bestE1RM: round1(best),
+    volume: Math.round(vol),
+    avgRPE: round1(avgRpe),
+    avgKg: round1(avgKg),
+  };
+}
+
+function indexBestE1rmByExercise(session) {
+  try {
+    const s = slimSession(session);
+    const map = {};
+    for (var i = 0; i < s.sections.length; i++) {
+      const sec = s.sections[i];
+      for (var j = 0; j < sec.exercises.length; j++) {
+        const ex = sec.exercises[j];
+        const name = ex.name;
+        const best = ex.metrics && ex.metrics.bestE1RM ? ex.metrics.bestE1RM : 0;
+        if (!map[name] || best > map[name]) map[name] = best;
+      }
+    }
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+function computeTrends(sessionSlim, prevMap) {
+  const trendByExercise = {};
+  for (var i = 0; i < sessionSlim.sections.length; i++) {
+    const sec = sessionSlim.sections[i];
+    for (var j = 0; j < sec.exercises.length; j++) {
+      const ex = sec.exercises[j];
+      const curr = Number(ex.metrics && ex.metrics.bestE1RM ? ex.metrics.bestE1RM : 0);
+      const prev = Number(prevMap && prevMap[ex.name] ? prevMap[ex.name] : 0);
+      if (prev > 0 && curr > 0) {
+        const pct = ((curr - prev) / prev) * 100;
+        trendByExercise[ex.name] = round1(pct);
+      } else {
+        trendByExercise[ex.name] = null;
+      }
+    }
+  }
+  return { trendByExercise };
+}
+
+// =========================
+// RulesEngine (flags tipo KDIGO -> aqui para treino)
+// =========================
+const RulesEngine = {
+  computeFlags(normalized) {
+    const flags = {
+      highRPE: [],
+      lowRPE: [],
+      e1rmDrop: [],
+      notes: [],
+    };
+
+    const s = normalized.sessionSlim;
+    const trend = normalized.trends && normalized.trends.trendByExercise ? normalized.trends.trendByExercise : {};
+
+    for (var i = 0; i < s.sections.length; i++) {
+      const sec = s.sections[i];
+      for (var j = 0; j < sec.exercises.length; j++) {
+        const ex = sec.exercises[j];
+        const m = ex.metrics || {};
+        const avgRPE = Number(m.avgRPE || 0);
+        const delta = trend[ex.name];
+
+        if (avgRPE >= 9) flags.highRPE.push(ex.name);
+        if (avgRPE > 0 && avgRPE <= 7) flags.lowRPE.push(ex.name);
+        if (typeof delta === "number" && delta <= -3) flags.e1rmDrop.push({ name: ex.name, pct: delta });
+      }
+    }
+
+    if (flags.highRPE.length) flags.notes.push("Há exercícios com RPE médio alto (>=9).");
+    if (flags.e1rmDrop.length) flags.notes.push("Há queda relevante de e1RM vs última sessão em alguns exercícios.");
+
+    return flags;
+  },
+};
+
+// =========================
+// Nemotron Planner (NIM via HTTP) — encapsulado
+// =========================
+class NemotronPlanner {
+  constructor(opts) {
+    this.endpoint = String(opts && opts.endpoint ? opts.endpoint : CONST.DEFAULT_NIM_ENDPOINT);
+    this.model = String(opts && opts.model ? opts.model : CONST.DEFAULT_NIM_MODEL);
+    this.apiKey = String(opts && opts.apiKey ? opts.apiKey : "");
+    if (!this.apiKey) throw new Error("NVIDIA_API_KEY ausente nas Script Properties.");
+  }
+
+  planWorkout(context) {
+    const system = [
+      "Você é um PLANNER de treino (não é o redator final).",
+      "Você recebe métricas agregadas (best e1RM, volume, avgRPE) e tendências vs sessão anterior.",
+      "Tarefa: produzir um PLANO estruturado (JSON) com ajustes práticos para a próxima sessão.",
+      "",
+      "Responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON).",
+      "JSON obrigatório:",
+      "{",
+      '  "summary": string,',
+      '  "perTreino": [',
+      "    {",
+      '      "treinoKey": string,',
+      '      "notes": string,',
+      '      "exercises": [',
+      "        {",
+      '          "name": string,',
+      '          "metrics": { "bestE1RM": number, "volume": number, "avgRPE": number|null },',
+      '          "trendPctVsLast": number|null,',
+      '          "next": {',
+      '             "action": "increase"|"maintain"|"decrease",',
+      '             "deltaKg": number,',
+      '             "repGoal": string,',
+      '             "rpeGoal": number',
+      "          },",
+      '          "why": string',
+      "        }",
+      "      ]",
+      "    }",
+      "  ],",
+      '  "alerts": [ { "level": "info"|"warning"|"critical", "message": string } ]',
+      "}",
+      "",
+      "Regras de ajuste (resumo):",
+      "- Se avgRPE <= 7.5: sugerir increase pequeno (ex.: +2.5kg ou +1-3%).",
+      "- Se avgRPE ~ 8-8.5: maintain ou micro-aumento.",
+      "- Se avgRPE >= 9: maintain/decrease; priorizar técnica/repGoal.",
+      "- Se trendPctVsLast <= -3: alerta de fadiga; sugerir ajuste conservador.",
+    ].join("\n");
+
+    const user = JSON.stringify(context);
+
+    const payload = {
+      model: this.model,
+      temperature: 0.2,
+      max_tokens: 900,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    };
+
+    const resp = nimCall(this.endpoint, this.apiKey, payload);
+    const content = extractAssistantContent(resp);
+    const plan = parseJsonFromModel(content);
+    if (!plan) throw new Error("Planner retornou JSON inválido.");
+    return plan;
+  }
+}
+
+function nimCall(endpoint, apiKey, payloadObj) {
+  const res = UrlFetchApp.fetch(endpoint, {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payloadObj),
+    headers: {
+      Authorization: "Bearer " + apiKey,
+    },
+    muteHttpExceptions: true,
+  });
+
+  const status = res.getResponseCode();
+  const text = res.getContentText() || "";
+  if (!(status >= 200 && status < 300)) {
+    throw new Error("NIM HTTP " + status + ": " + text.slice(0, 1500));
+  }
+  const data = safeJsonParse(text);
+  if (!data) throw new Error("Resposta NIM não-JSON.");
+  return data;
+}
+
+function extractAssistantContent(nimJson) {
+  const choices = nimJson && nimJson.choices ? nimJson.choices : null;
+  if (!choices || !choices.length) return "";
+  const msg = choices[0] && choices[0].message ? choices[0].message : null;
+  return msg && msg.content ? String(msg.content) : "";
+}
+
+function parseJsonFromModel(text) {
+  if (!text) return null;
+
+  // Tentativa 1: JSON puro
+  const direct = safeJsonParse(text);
+  if (direct) return direct;
+
+  // Tentativa 2: extrair do primeiro { ao último }
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    const sliced = text.slice(first, last + 1);
+    return safeJsonParse(sliced);
+  }
+
+  return null;
+}
+
+// =========================
+// Verifier (estrutura + hardening)
+// =========================
+const Verifier = {
+  verifyWorkoutPlan(plan, normalized) {
+    if (!plan || typeof plan !== "object") return { ok: false, message: "Plano não é objeto.", plan: null };
+
+    if (typeof plan.summary !== "string") return { ok: false, message: "summary ausente.", plan: null };
+    if (!Array.isArray(plan.perTreino)) return { ok: false, message: "perTreino não é array.", plan: null };
+    if (!Array.isArray(plan.alerts)) plan.alerts = [];
+
+    // Hardening: deltaKg não pode ser absurdo
+    // (Clampa com base na avgKg do exercício, quando disponível)
+    const sessionSlim = normalized.sessionSlim;
+    const avgKgByName = {};
+    for (var i = 0; i < sessionSlim.sections.length; i++) {
+      const sec = sessionSlim.sections[i];
+      for (var j = 0; j < sec.exercises.length; j++) {
+        const ex = sec.exercises[j];
+        avgKgByName[ex.name] = ex.metrics && ex.metrics.avgKg ? ex.metrics.avgKg : 0;
+      }
+    }
+
+    for (var a = 0; a < plan.perTreino.length; a++) {
+      const t = plan.perTreino[a];
+      if (!t || typeof t.treinoKey !== "string") return { ok: false, message: "treinoKey inválido.", plan: null };
+      if (!Array.isArray(t.exercises)) return { ok: false, message: "exercises inválido.", plan: null };
+      if (typeof t.notes !== "string") t.notes = "";
+
+      for (var b = 0; b < t.exercises.length; b++) {
+        const ex = t.exercises[b];
+        if (!ex || typeof ex.name !== "string") return { ok: false, message: "exercise.name inválido.", plan: null };
+        if (!ex.next || typeof ex.next !== "object") return { ok: false, message: "next ausente.", plan: null };
+
+        const action = String(ex.next.action || "");
+        if (["increase", "maintain", "decrease"].indexOf(action) < 0) {
+          ex.next.action = "maintain";
+        }
+
+        const delta = Number(ex.next.deltaKg || 0);
+        const base = Number(avgKgByName[ex.name] || 0);
+
+        // Se não tem base, aceita delta pequeno padrão
+        const maxDelta = base > 0 ? Math.max(2.5, round1(base * 0.06)) : 2.5; // ~6%
+        const clamped = clampNumberGAS(delta, -maxDelta, maxDelta, 0);
+
+        ex.next.deltaKg = round1(clamped);
+        if (typeof ex.next.repGoal !== "string") ex.next.repGoal = "8-12";
+        ex.next.rpeGoal = clampIntGAS(ex.next.rpeGoal, 6, 10, 8);
+
+        if (typeof ex.why !== "string") ex.why = "";
+        if (!ex.metrics || typeof ex.metrics !== "object") ex.metrics = { bestE1RM: 0, volume: 0, avgRPE: null };
+        if (typeof ex.trendPctVsLast !== "number" && ex.trendPctVsLast !== null) ex.trendPctVsLast = null;
+      }
+    }
+
+    return { ok: true, message: "ok", plan };
+  },
+};
+
+// =========================
+// Fallback Planner (heurístico local)
+// =========================
+const FallbackPlanner = {
+  planWorkout(normalized, flags, reason) {
+    const s = normalized.sessionSlim;
+    const trend = normalized.trends && normalized.trends.trendByExercise ? normalized.trends.trendByExercise : {};
+
+    const perTreino = [];
+    for (var i = 0; i < s.sections.length; i++) {
+      const sec = s.sections[i];
+      const exs = [];
+
+      for (var j = 0; j < sec.exercises.length; j++) {
+        const ex = sec.exercises[j];
+        const m = ex.metrics || { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: 0 };
+
+        const avgRPE = Number(m.avgRPE || 0);
+        const avgKg = Number(m.avgKg || 0);
+        const deltaTrend = trend[ex.name];
+
+        let action = "maintain";
+        let deltaKg = 0;
+        let repGoal = "8-12";
+        let rpeGoal = 8;
+
+        if (avgRPE > 0 && avgRPE <= 7.5) {
+          action = "increase";
+          deltaKg = avgKg > 0 ? round1(Math.min(2.5, avgKg * 0.03)) : 2.5;
+          rpeGoal = 8;
+        } else if (avgRPE >= 9) {
+          action = "decrease";
+          deltaKg = avgKg > 0 ? round1(-Math.min(2.5, avgKg * 0.03)) : -2.5;
+          repGoal = "6-10";
+          rpeGoal = 8.5;
         } else {
-          localStorage.setItem(STORAGE.apiKey, raw);
-          // Limpa o campo para não ficar “exposto” na tela
-          input.value = "";
+          action = "maintain";
+          deltaKg = 0;
+          rpeGoal = 8.5;
         }
-        renderApiKeyStatus();
-      }
 
-      function clearApiKey() {
-        const ok = confirm("Apagar a chave salva neste dispositivo?");
-        if (!ok) return;
-        localStorage.removeItem(STORAGE.apiKey);
-        const input = document.getElementById("apiKeyInput");
-        if (input) input.value = "";
-        renderApiKeyStatus();
-      }
+        if (typeof deltaTrend === "number" && deltaTrend <= -3) {
+          // Conservador se caiu e1RM
+          action = "maintain";
+          deltaKg = 0;
+          repGoal = "6-10";
+          rpeGoal = 8;
+        }
 
-      function renderApiKeyStatus() {
-        const el = document.getElementById("apiKeyStatus");
-        if (!el) return;
-        const hasKey = !!localStorage.getItem(STORAGE.apiKey);
-        el.textContent = hasKey ? "Chave salva neste dispositivo." : "Nenhuma chave salva.";
-        el.style.color = hasKey ? "var(--green)" : "#a0aec0";
-      }
-
-      function getApiKey() {
-        return localStorage.getItem(STORAGE.apiKey) || "";
-      }
-
-      // =========================
-      // HELPERS (parsing / escape)
-      // =========================
-      function toNumber(value) {
-        const s = String(value ?? "").trim().replace(",", ".");
-        const n = Number(s);
-        return Number.isFinite(n) ? n : NaN;
-      }
-
-      function clampNumber(n, min, max, fallback) {
-        const v = Number(n);
-        if (!Number.isFinite(v)) return fallback;
-        return Math.min(max, Math.max(min, v));
-      }
-
-      function clampInt(value, min, max, fallback) {
-        const n = Number.parseInt(String(value ?? ""), 10);
-        if (!Number.isFinite(n)) return fallback;
-        return Math.min(max, Math.max(min, n));
-      }
-
-      function escapeHtml(str) {
-        return String(str ?? "").replace(/[&<>"']/g, (m) => {
-          const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
-          return map[m] || m;
+        exs.push({
+          name: ex.name,
+          metrics: {
+            bestE1RM: m.bestE1RM,
+            volume: m.volume,
+            avgRPE: m.avgRPE,
+          },
+          trendPctVsLast: typeof deltaTrend === "number" ? deltaTrend : null,
+          next: { action, deltaKg: round1(deltaKg), repGoal, rpeGoal },
+          why:
+            "Plano gerado por regras locais (fallback). " +
+            (reason ? "Motivo: " + reason : ""),
         });
       }
 
-      function escapeAttr(str) {
-        return String(str ?? "").replace(/"/g, "&quot;");
+      perTreino.push({
+        treinoKey: sec.treinoKey,
+        notes: "Fallback ativo: ajuste conservador por RPE/tendência.",
+        exercises: exs,
+      });
+    }
+
+    const alerts = [];
+    if (flags && flags.highRPE && flags.highRPE.length) {
+      alerts.push({ level: "warning", message: "RPE alto em: " + flags.highRPE.join(", ") });
+    }
+    if (flags && flags.e1rmDrop && flags.e1rmDrop.length) {
+      alerts.push({ level: "warning", message: "Queda de e1RM vs última sessão em alguns exercícios." });
+    }
+    alerts.push({ level: "info", message: "Fallback heurístico usado (Nemotron indisponível ou plano inválido)." });
+
+    return {
+      summary:
+        "Plano (fallback): ajustes conservadores com base em RPE médio e tendência de e1RM. " +
+        "Se o RPE estava baixo, aumenta pouco; se estava alto, mantém/recua.",
+      perTreino,
+      alerts,
+    };
+  },
+};
+
+// =========================
+// Writer (GGUF no outro projeto; aqui template para manter pipeline completo)
+// =========================
+const Writer = {
+  writeWorkout(plan) {
+    const lines = [];
+    lines.push(plan.summary || "Plano gerado.");
+    lines.push("");
+
+    if (Array.isArray(plan.alerts) && plan.alerts.length) {
+      lines.push("ALERTAS:");
+      for (var i = 0; i < plan.alerts.length; i++) {
+        const a = plan.alerts[i] || {};
+        lines.push(`- [${String(a.level || "info").toUpperCase()}] ${String(a.message || "")}`);
       }
+      lines.push("");
+    }
 
-      // =========================
-      // e1RM (Brzycki) + RPE/RIR
-      // =========================
-      // Regras:
-      // e1RM = Peso / (1.0278 - (0.0278 * RepsEfetivas))
-      // RepsEfetivas = Reps + RIR, onde RIR = (10 - RPE), se RPE < 10.
-      function calcSetMetrics(peso, reps, rpe) {
-        const weight = toNumber(peso);
-        const r = toNumber(reps);
-        const rpeClamped = clampInt(rpe, 1, 10, 10);
+    const perTreino = Array.isArray(plan.perTreino) ? plan.perTreino : [];
+    for (var t = 0; t < perTreino.length; t++) {
+      const treino = perTreino[t] || {};
+      lines.push(String(treino.treinoKey || "Treino"));
+      if (treino.notes) lines.push("• " + String(treino.notes));
+      lines.push("");
 
-        if (!(weight > 0) || !(r > 0)) {
-          return { rpe: rpeClamped, rir: null, repsEff: null, e1rm: 0 };
-        }
+      const exs = Array.isArray(treino.exercises) ? treino.exercises : [];
+      for (var e = 0; e < exs.length; e++) {
+        const ex = exs[e] || {};
+        const m = ex.metrics || {};
+        const trend = ex.trendPctVsLast;
 
-        const rir = Math.max(0, 10 - rpeClamped);
-        const repsEff = r + (rpeClamped < 10 ? rir : 0);
+        const best = m.bestE1RM != null ? m.bestE1RM : 0;
+        const vol = m.volume != null ? m.volume : 0;
+        const rpe = m.avgRPE != null ? m.avgRPE : null;
 
-        const denom = 1.0278 - 0.0278 * repsEff;
-        if (!(denom > 0)) {
-          return { rpe: rpeClamped, rir, repsEff, e1rm: 0 };
-        }
+        const next = ex.next || {};
+        const action = String(next.action || "maintain");
+        const delta = Number(next.deltaKg || 0);
+        const repGoal = String(next.repGoal || "8-12");
+        const rpeGoal = next.rpeGoal != null ? next.rpeGoal : 8;
 
-        const e1rm = weight / denom;
-        return { rpe: rpeClamped, rir, repsEff, e1rm };
+        lines.push(
+          `- ${String(ex.name || "Exercício")} | best e1RM: ${best} | vol: ${vol} | avg RPE: ${rpe}`
+        );
+        lines.push(
+          `  Próxima: ${action} (${delta >= 0 ? "+" : ""}${round1(delta)}kg), reps ${repGoal}, alvo RPE ${rpeGoal}` +
+            (typeof trend === "number" ? ` | tendência vs última: ${trend >= 0 ? "+" : ""}${trend}%` : "")
+        );
+        if (ex.why) lines.push("  Motivo: " + String(ex.why));
       }
+      lines.push("");
+    }
 
-      function renderRpeOptions(selected) {
-        const sel = clampInt(selected, 1, 10, 10);
-        let html = "";
-        for (let v = 10; v >= 1; v--) {
-          html += `<option value="${v}" ${v === sel ? "selected" : ""}>${v}</option>`;
-        }
-        return html;
-      }
+    return lines.join("\n").trim();
+  },
+};
 
-      // =========================
-      // PDF EXTRACTION (seu fluxo)
-      // =========================
-      async function extrairTextoPDF(input) {
-        if (!input.files || !input.files[0]) return;
-        const file = input.files[0];
-        const btn = input.parentElement;
-        const originalTxt = btn.innerText;
-        btn.innerText = "LENDO...";
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-          let fullText = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            fullText += content.items.map((item) => item.str).join(" ") + "\n";
-          }
-          document.getElementById("csvTextarea").value = fullText;
-          alert("✅ Texto extraído! Ajuste se necessário e clique em IMPORTAR.");
-        } catch (err) {
-          alert("❌ Erro ao ler PDF.");
-        } finally {
-          btn.innerText = originalTxt;
-        }
-      }
+// =========================
+// Helpers
+// =========================
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
 
-      // =========================
-      // BIBLIOTECA (mantida)
-      // =========================
-      let prevMap = Object.create(null);
-      const biblioteca = {
-        Peito: ["Supino Inclinado", "Supino Reto", "Crossover", "Voador"],
-        Costas: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra"],
-        Pernas: ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff", "Panturrilha"],
-        Ombros: ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso"],
-        Braços: ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa"],
-      };
+function normalizePath(path) {
+  const s = String(path || "/").trim();
+  if (!s) return "/";
+  const cleaned = s.replace(/\/+$/, "");
+  return cleaned ? cleaned : "/";
+}
 
-      // =========================
-      // CRIAR CARD (RPE SELECT + e1RM)
-      // =========================
-      function criarCard(nome, sectionId, series = 4, repsMeta = "8-12", values = null) {
-        const id = "ex-" + Math.random().toString(36).slice(2, 9);
-        const sec = document.getElementById(sectionId);
-        const safeName = escapeHtml(nome);
+function getBodyText(e) {
+  try {
+    const txt = e && e.postData && typeof e.postData.contents === "string" ? e.postData.contents : "";
+    return String(txt || "");
+  } catch (err) {
+    return "";
+  }
+}
 
-        const card = document.createElement("div");
-        card.className = "exercise-card";
-        card.setAttribute("data-ex-id", id);
-        card.setAttribute("data-ex-name", nome);
+function safeJsonParse(text) {
+  try {
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch (err) {
+    return null;
+  }
+}
 
-        let rowsHtml = "";
-        for (let s = 0; s < series; s++) {
-          const v = values && values[s] ? values[s] : { kg: "", reps: "", rpe: 10 };
-          const rpeOptions = renderRpeOptions(v.rpe);
+function getProp(key, fallback) {
+  const v = PropertiesService.getScriptProperties().getProperty(String(key));
+  return v != null && String(v).trim() !== "" ? String(v) : fallback;
+}
 
-          rowsHtml += `
-            <div class="series-grid">
-              <div style="text-align:center">
-                <span style="font-size:0.7rem; font-weight:bold; color:#718096">S${s + 1}</span>
-                <span class="rm-mini-badge" id="rm-val-${id}-${s}">-</span>
-              </div>
+function getRequiredProp(key) {
+  const v = PropertiesService.getScriptProperties().getProperty(String(key));
+  const s = v != null ? String(v).trim() : "";
+  if (!s) throw new Error("Script property obrigatória ausente: " + key);
+  return s;
+}
 
-              <div class="input-box">
-                <input
-                  data-field="kg"
-                  type="number"
-                  inputmode="decimal"
-                  placeholder="KG"
-                  value="${escapeAttr(v.kg)}"
-                  oninput="updateRowRM('${id}', ${s})"
-                />
-              </div>
+function verifyGatewaySecret(req) {
+  const expected = getProp("GATEWAY_SECRET", "");
+  if (!expected) return true;
 
-              <div class="input-box">
-                <input
-                  data-field="reps"
-                  type="number"
-                  inputmode="numeric"
-                  placeholder="REPS"
-                  value="${escapeAttr(v.reps)}"
-                  oninput="updateRowRM('${id}', ${s})"
-                />
-              </div>
+  const got = req && req.auth && typeof req.auth.secret === "string" ? String(req.auth.secret) : "";
+  return got === expected;
+}
 
-              <div class="input-box">
-                <select data-field="rpe" onchange="updateRowRM('${id}', ${s})" aria-label="RPE">
-                  ${rpeOptions}
-                </select>
-              </div>
-            </div>`;
-        }
+function round1(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.round(x * 10) / 10;
+}
 
-        card.innerHTML = `
-          <span class="ex-title" onclick="abrirLibParaTrocar('${id}')">${safeName}</span>
-          <span class="ex-target" onclick="confirmDeleteExercise(this)">${series} Sets x ${escapeHtml(repsMeta)} (Toque p/ Apagar)</span>
-          <div class="series-grid header-grid"><span>SET/e1RM</span><span>KG</span><span>REPS</span><span>RPE</span></div>
-          ${rowsHtml}
-        `;
+function clampIntGAS(v, min, max, fallback) {
+  const n = parseInt(String(v), 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
 
-        sec.appendChild(card);
-
-        // Calcula e1RM inicial (se houver valores)
-        for (let s = 0; s < series; s++) updateRowRM(id, s);
-      }
-
-      function updateRowRM(exId, rowIdx) {
-        const card = document.querySelector(`[data-ex-id="${exId}"]`);
-        if (!card) return;
-
-        const row = card.querySelectorAll(".series-grid:not(.header-grid)")[rowIdx];
-        if (!row) return;
-
-        const kg = row.querySelector('[data-field="kg"]')?.value ?? "";
-        const reps = row.querySelector('[data-field="reps"]')?.value ?? "";
-        const rpe = row.querySelector('[data-field="rpe"]')?.value ?? "10";
-
-        const { e1rm } = calcSetMetrics(kg, reps, rpe);
-        const display = document.getElementById(`rm-val-${exId}-${rowIdx}`);
-        if (display) display.innerText = e1rm > 0 ? `e1RM ${Math.round(e1rm)}kg` : "-";
-
-        scheduleDraftSave();
-      }
-
-      // =========================
-      // DELETE (mantido)
-      // =========================
-      function bindPillDeleteHandlers() {
-        const pills = document.querySelectorAll(".pill:not(.add-pill)");
-        pills.forEach((pill, idx) => {
-          pill.oncontextmenu = (e) => {
-            e.preventDefault();
-            if (confirm("Excluir este treino inteiro?")) excluirTreino(idx);
-          };
-        });
-      }
-
-      function excluirTreino(idx) {
-        const st = serializeCurrentState();
-        st.sections.splice(idx, 1);
-        loadState(st);
-      }
-
-      function confirmDeleteExercise(el) {
-        if (confirm("Deseja apagar este exercício?")) {
-          el.closest(".exercise-card").remove();
-          scheduleDraftSave();
-        }
-      }
-
-      // =========================
-      // SERIALIZAÇÃO (inclui métricas por set)
-      // =========================
-      function serializeCurrentState() {
-        const sections = Array.from(document.querySelectorAll(".section")).map((sec) => ({
-          treinoKey: sec.getAttribute("data-treino-key"),
-          cards: Array.from(sec.querySelectorAll(".exercise-card")).map((card) => ({
-            name: card.getAttribute("data-ex-name"),
-            values: Array.from(card.querySelectorAll(".series-grid:not(.header-grid)")).map((row) => {
-              const kg = row.querySelector('[data-field="kg"]')?.value ?? "";
-              const reps = row.querySelector('[data-field="reps"]')?.value ?? "";
-              const rpe = row.querySelector('[data-field="rpe"]')?.value ?? "10";
-              const m = calcSetMetrics(kg, reps, rpe);
-              return { kg, reps, rpe, rir: m.rir, repsEff: m.repsEff, e1rm: m.e1rm };
-            }),
-          })),
-        }));
-
-        return {
-          sections,
-          freq: document.getElementById("freq")?.value ?? "3",
-          obj: document.getElementById("obj")?.value ?? "hipertrofia",
-        };
-      }
-
-      function scheduleDraftSave() {
-        localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState()));
-      }
-
-      function salvarTreino() {
-        const st = serializeCurrentState();
-        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
-        hist.unshift({ date: new Date().toISOString(), state: st });
-        localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist.slice(0, STORAGE.maxHistory)));
-        alert("Sessão Salva! Ghost Mode Ativado para o próximo treino.");
-        location.reload();
-      }
-
-      function loadState(st) {
-        const cont = document.getElementById("container");
-        const nav = document.getElementById("nav");
-        cont.innerHTML = "";
-        nav.innerHTML = "";
-
-        st.sections.forEach((sec, i) => {
-          nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" onclick="tab(${i})">${escapeHtml(sec.treinoKey)}</div>`;
-          const div = document.createElement("div");
-          div.id = `sec${i}`;
-          div.className = `section ${i === 0 ? "active" : ""}`;
-          div.setAttribute("data-treino-key", sec.treinoKey);
-          cont.appendChild(div);
-
-          sec.cards.forEach((c) => criarCard(c.name, div.id, c.values.length, "Meta", c.values));
-        });
-
-        bindPillDeleteHandlers();
-        scheduleDraftSave();
-      }
-
-      function tab(idx) {
-        document.querySelectorAll(".section, .pill").forEach((el) => el.classList.remove("active"));
-        document.getElementById(`sec${idx}`).classList.add("active");
-        document.querySelectorAll(".pill")[idx].classList.add("active");
-      }
-
-      function openConfig() {
-        document.getElementById("setupPanel").style.display = "block";
-        renderApiKeyStatus();
-      }
-      function closeConfig() {
-        document.getElementById("setupPanel").style.display = "none";
-      }
-
-      function abrirCSVModal() {
-        document.getElementById("modalCSV").showModal();
-      }
-      function verHistorico() {
-        document.getElementById("modalHistorico").showModal();
-      }
-
-      // =========================
-      // BUILD JSON (Nemotron) + modalHIST  modalHistorico
-      // =========================
-      function buildWorkoutForNemotron() {
-        const st = serializeCurrentState();
-
-        const sections = st.sections.map((sec) => {
-          const exercises = sec.cards.map((card) => {
-            const sets = (card.values || []).map((set) => ({
-              kg: toNumber(set.kg),
-              reps: toNumber(set.reps),
-              rpe: clampInt(set.rpe, 1, 10, 10),
-              rir: set.rir ?? null,
-              repsEff: set.repsEff ?? null,
-              e1rm: set.e1rm ?? 0,
-            }));
-
-            const valid = sets.filter((s) => s.kg > 0 && s.reps > 0);
-            const bestE1RM = valid.reduce((m, s) => Math.max(m, s.e1rm || 0), 0);
-            const volume = valid.reduce((sum, s) => sum + s.kg * s.reps, 0);
-            const avgRPE = valid.length ? valid.reduce((sum, s) => sum + (s.rpe || 0), 0) / valid.length : null;
-
-            return {
-              name: card.name,
-              sets,
-              bestE1RM: bestE1RM ? Math.round(bestE1RM * 10) / 10 : 0,
-              volume: volume ? Math.round(volume) : 0,
-              avgRPE: avgRPE ? Math.round(avgRPE * 10) / 10 : null,
-            };
-          });
-
-          return { treinoKey: sec.treinoKey, exercises };
-        });
-
-        return {
-          schema: "titanpro_session_v3",
-          capturedAt: new Date().toISOString(),
-          objetivo: st.obj,
-          frequenciaSemanal: st.freq,
-          sections,
-        };
-      }
-
-      function buildNemotronPayload(workout) {
-        return {
-          model: NVIDIA.model,
-          temperature: 0.2,
-          max_tokens: 900,
-          messages: [
-            {
-              role: "system",
-              content:
-                "Você é um analista de treino focado em autorregulação por RPE/RIR e e1RM (Brzycki). Responda em pt-BR. Entregue: (1) resumo por treino e exercício; (2) melhores e1RM por exercício; (3) ajustes de carga/reps para a próxima sessão com base em RPE; (4) alertas de excesso (ex.: queda de e1RM, RPE alto com carga menor). Seja objetivo e prático.",
-            },
-            { role: "user", content: JSON.stringify(workout) },
-          ],
-        };
-      }
-
-      function showNemotronOutput(text) {
-        const out = document.getElementById("iaOutput");
-        out.textContent = String(text || "(sem conteúdo)");
-        document.getElementById("modalIA").showModal();
-      }
-
-      async function enviarParaIA
-        () {
-        const key = getApiKey();
-        if (!key) {
-          alert("⚠️ Insira a NVIDIA API Key nas configurações primeiro.");
-          openConfig();
-          return;
-        }
-
-        const workout = buildWorkoutForNemotron();
-        const payload = buildNemotronPayload(workout);
-
-        try {
-          const res = await fetch(NVIDIA.endpoint, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${key}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
-
-          const data = await res.json().catch(() => null);
-
-          if (!res.ok) {
-            const msg = data?.error?.message || `HTTP ${res.status}`;
-            throw new Error(msg);
-          }
-
-          const content = data?.choices?.[0]?.message?.content;
-          showNemotronOutput(content || JSON.stringify(data, null, 2));
-        } catch (e) {
-          showNemotronOutput(`Erro ao conectar: ${e?.message || "falha desconhecida"}`);
-        }
-      }
-
-      // =========================
-      // INIT / PROTOCOLO (mantido)
-      // =========================
-      window.onload = () => {
-        document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-        renderApiKeyStatus();
-
-        const draft = localStorage.getItem(STORAGE.draftKey);
-        if (draft) loadState(JSON.parse(draft));
-        else gerarProtocolo();
-      };
-
-      function gerarProtocolo() {
-        const f = Number(document.getElementById("freq").value || 3);
-        const nav = document.getElementById("nav");
-        const cont = document.getElementById("container");
-        nav.innerHTML = "";
-        cont.innerHTML = "";
-
-        for (let i = 0; i < f; i++) {
-          const label = "Treino " + String.fromCharCode(65 + i);
-          nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" onclick="tab(${i})">${label}</div>`;
-          const sec = document.createElement("div");
-          sec.id = "sec" + i;
-          sec.className = "section " + (i === 0 ? "active" : "");
-          sec.setAttribute("data-treino-key", label);
-          cont.appendChild(sec);
-          criarCard("Supino Reto", sec.id);
-        }
-
-        bindPillDeleteHandlers();
-        scheduleDraftSave();
-      }
-
-      // =========================
-      // Placeholders do seu fluxo (mantidos)
-      // =========================
-      function importarCSV() {
-        alert("Processando CSV...");
-        document.getElementById("modalCSV").close();
-      }
-      function mostrarModelosCSV() {
-        document.getElementById("tplArea").style.display = "block";
-      }
-      function abrirLibParaNovo() {
-        document.getElementById("modalLib").showModal();
-      }
-      function abrirLibParaTrocar(id) {
-        document.getElementById("modalLib").showModal();
-      }
-
-      // TODO: se você já tem essas funções em outro trecho, mantenha-as.
-      function adicionarManual() {
-        const name = (document.getElementById("manualName")?.value || "").trim();
-        if (!name) return;
-        const activeSec = document.querySelector(".section.active");
-        if (!activeSec) return;
-        criarCard(name, activeSec.id);
-        document.getElementById("manualName").value = "";
-        document.getElementById("modalLib").close();
-        scheduleDraftSave();
-      }
-
-      function limparHistorico() {
-        if (!confirm("Apagar todo o histórico?")) return;
-        localStorage.removeItem(STORAGE.historyKey);
-        document.getElementById("histList").innerHTML = "";
-      }
-    </script>
-  </body>
-</html>
+function clampNumberGAS(v, min, max, fallback) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
