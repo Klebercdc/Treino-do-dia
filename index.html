@@ -512,7 +512,7 @@
       // NVIDIA (endpoint + modelo)
       // Endpoint  e modelo "nvidia/nemotron-70b-instruct" conforme docs atuais.
       const NVIDIA = Object.freeze({
-        endpoint: "https://square-poetry-636b.kle-cdc.workers.dev",
+        endpoint: "https://square-poetry-636b.kle-cdc.workers.dev"/v1/chat/completions,
         model: "nvidia/nemotron-70b-instruct",
       });
 
@@ -846,11 +846,11 @@
         document.getElementById("modalCSV").showModal();
       }
       function verHistorico() {
-        document.getElementById("modalHIST").showModal();
+        document.getElementById("modalHistorico").showModal();
       }
 
       // =========================
-      // BUILD JSON (Nemotron) + envio
+      // BUILD JSON (Nemotron) + modalHIST  modalHistorico
       // =========================
       function buildWorkoutForNemotron() {
         const st = serializeCurrentState();
