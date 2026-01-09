@@ -1,824 +1,1022 @@
-/**
- * TITAN PRO — Orchestrator (Cloudflare Worker)
- * - Planner: Nemotron via NVIDIA NIM (HTTP)
- * - Verifier: valida/“hardening” do plano
- * - Writer: (1) writer remoto via NIM (meta/llama-3.1-8b-instruct) ou (2) template local
- * - Fallback: heurísticas locais se NIM indisponível/erro
- *
- * Rotas:
- *   GET  /                         health
- *   POST /v1/titanpro/analyze      orchestrator
- *   POST /v1/chat/completions      passthrough (OpenAI-compatible)
- */
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>TITAN PRO - Smart Log</title>
 
-const DEFAULTS = Object.freeze({
-  SERVICE: "titanpro_orchestrator",
-  VERSION: "cfw_v1",
-  NIM_ENDPOINT: "https://integrate.api.nvidia.com/v1/chat/completions",
-  PLANNER_MODEL: "nvidia/llama-3.1-nemotron-70b-instruct",
-  WRITER_MODEL: "meta/llama-3.1-8b-instruct",
-  TIMEOUT_MS: 25000,
-  MAX_BODY_BYTES: 800_000,
-});
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+    </script>
 
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const path = url.pathname;
+    <link rel="icon" href="Logo.png" type="image/png" />
 
-    if (request.method === "OPTIONS") return handleOptions(request);
-
-    if (request.method === "GET" && (path === "/" || path === "/v1/health")) {
-      return json(
-        {
-          ok: true,
-          service: DEFAULTS.SERVICE,
-          version: DEFAULTS.VERSION,
-          now: new Date().toISOString(),
-        },
-        200,
-        request
-      );
-    }
-
-    if (request.method === "POST" && path === "/v1/titanpro/analyze") {
-      return handleAnalyze(request, env);
-    }
-
-    // Compat/debug: funciona como “gateway OpenAI”
-    if (request.method === "POST" && path === "/v1/chat/completions") {
-      return handleChatPassthrough(request, env);
-    }
-
-    return json(
-      { ok: false, error: { code: "NOT_FOUND", message: "Rota não encontrada." } },
-      404,
-      request
-    );
-  },
-};
-
-// -------------------------
-// CORS
-// -------------------------
-function corsHeaders(request) {
-  const origin = request.headers.get("Origin");
-  const allowOrigin = origin && origin !== "null" ? origin : "*";
-
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
-  };
-}
-
-function handleOptions(request) {
-  return new Response(null, { status: 204, headers: corsHeaders(request) });
-}
-
-function json(obj, status, request) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...corsHeaders(request),
-    },
-  });
-}
-
-function text(str, status, request) {
-  return new Response(String(str ?? ""), {
-    status,
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      ...corsHeaders(request),
-    },
-  });
-}
-
-// -------------------------
-// Main route: /v1/titanpro/analyze
-// -------------------------
-async function handleAnalyze(request, env) {
-  const requestId = crypto.randomUUID();
-  const startedAt = Date.now();
-
-  try {
-    const body = await readBodyText(request);
-    if (byteLength(body) > DEFAULTS.MAX_BODY_BYTES) {
-      return json(
-        { ok: false, requestId, error: { code: "BODY_TOO_LARGE", message: "Body muito grande." } },
-        413,
-        request
-      );
-    }
-
-    const req = safeJsonParse(body) || {};
-
-    // (Opcional) trava de acesso
-    const expectedSecret = (env.GATEWAY_SECRET || "").trim();
-    if (expectedSecret) {
-      const got = String(req?.auth?.secret || "");
-      if (got !== expectedSecret) {
-        return json(
-          { ok: false, requestId, error: { code: "UNAUTHORIZED", message: "Secret inválido." } },
-          401,
-          request
-        );
-      }
-    }
-
-    // Aceita wrapper (gateway_request) ou sessão direta
-    const session = extractSession(req);
-    const history = extractHistory(req);
-
-    if (!session || session.schema !== "titanpro_session_v3") {
-      return json(
-        {
-          ok: false,
-          requestId,
-          error: { code: "BAD_REQUEST", message: "Esperado session.schema = titanpro_session_v3." },
-        },
-        400,
-        request
-      );
-    }
-
-    // Chave NVIDIA: preferir secret do Worker; se não existir, usa Authorization Bearer do client (compatibilidade).
-    const nvidiaKey = pickNvidiaKey(request, env, req);
-    if (!nvidiaKey) {
-      return json(
-        { ok: false, requestId, error: { code: "NO_NVIDIA_API_KEY", message: "NVIDIA_API_KEY ausente." } },
-        401,
-        request
-      );
-    }
-
-    const nimEndpoint = (env.NVIDIA_ENDPOINT || DEFAULTS.NIM_ENDPOINT).trim();
-    const plannerModel = (env.PLANNER_MODEL || env.NVIDIA_MODEL || DEFAULTS.PLANNER_MODEL).trim();
-    const writerModel = (env.WRITER_MODEL || DEFAULTS.WRITER_MODEL).trim();
-
-    const normalized = normalizeWorkout(session, history);
-    const flags = computeFlags(normalized);
-
-    // 1) Planner (Nemotron)
-    let plannerEngine = "nemotron";
-    let plan = null;
-
-    try {
-      plan = await nemotronPlan(
-        {
-          endpoint: nimEndpoint,
-          apiKey: nvidiaKey,
-          model: plannerModel,
-          context: {
-            requestId,
-            session: normalized.sessionSlim,
-            trends: normalized.trends,
-            flags,
-          },
-        },
-        DEFAULTS.TIMEOUT_MS
-      );
-
-      // 2) Verifier + hardening
-      plan = verifyAndHardenPlan(plan, normalized);
-    } catch (err) {
-      plannerEngine = "fallback_heuristics";
-      plan = fallbackPlan(normalized, flags, String(err?.message || err));
-    }
-
-    // 3) Writer (remoto via NIM) — se falhar, template local
-    let writerEngine = "nim_writer";
-    let writerText = "";
-
-    try {
-      writerText = await remoteWriter(
-        {
-          endpoint: nimEndpoint,
-          apiKey: nvidiaKey,
-          model: writerModel,
-          plan,
-          normalized,
-          flags,
-        },
-        DEFAULTS.TIMEOUT_MS
-      );
-    } catch (err) {
-      writerEngine = "template_writer";
-      writerText = templateWriter(plan);
-    }
-
-    return json(
-      {
-        ok: true,
-        requestId,
-        planner: { engine: plannerEngine, model: plannerModel, plan },
-        writer: { engine: writerEngine, model: writerModel, text: writerText },
-        meta: { service: DEFAULTS.SERVICE, version: DEFAULTS.VERSION, tookMs: Date.now() - startedAt },
-      },
-      200,
-      request
-    );
-  } catch (err) {
-    return json(
-      {
-        ok: false,
-        requestId,
-        error: { code: "UNHANDLED", message: String(err?.message || err) },
-        meta: { service: DEFAULTS.SERVICE, version: DEFAULTS.VERSION, tookMs: Date.now() - startedAt },
-      },
-      500,
-      request
-    );
-  }
-}
-
-// -------------------------
-// Passthrough: /v1/chat/completions (debug/compat)
-// -------------------------
-async function handleChatPassthrough(request, env) {
-  const requestId = crypto.randomUUID();
-  try {
-    const body = await readBodyText(request);
-    if (byteLength(body) > DEFAULTS.MAX_BODY_BYTES) {
-      return json(
-        { ok: false, requestId, error: { code: "BODY_TOO_LARGE", message: "Body muito grande." } },
-        413,
-        request
-      );
-    }
-
-    const payload = safeJsonParse(body);
-    if (!payload || typeof payload !== "object") {
-      return json(
-        { ok: false, requestId, error: { code: "BAD_REQUEST", message: "JSON inválido." } },
-        400,
-        request
-      );
-    }
-
-    const nvidiaKey = pickNvidiaKey(request, env, payload);
-    if (!nvidiaKey) {
-      return json(
-        { ok: false, requestId, error: { code: "NO_NVIDIA_API_KEY", message: "NVIDIA_API_KEY ausente." } },
-        401,
-        request
-      );
-    }
-
-    const nimEndpoint = (env.NVIDIA_ENDPOINT || DEFAULTS.NIM_ENDPOINT).trim();
-
-    const out = await nimChat(
-      {
-        endpoint: nimEndpoint,
-        apiKey: nvidiaKey,
-        payload,
-      },
-      DEFAULTS.TIMEOUT_MS
-    );
-
-    return json(out, 200, request);
-  } catch (err) {
-    return json(
-      { ok: false, requestId, error: { code: "PASSTHROUGH_ERROR", message: String(err?.message || err) } },
-      500,
-      request
-    );
-  }
-}
-
-// -------------------------
-// Request parsing helpers
-// -------------------------
-function extractSession(req) {
-  if (req && req.schema === "titanpro_session_v3") return req;
-  if (req && req.session && req.session.schema === "titanpro_session_v3") return req.session;
-  return null;
-}
-
-function extractHistory(req) {
-  const h = req && Array.isArray(req.history) ? req.history : [];
-  // permite array de sessões diretas ou wrappers {session:...}
-  return h
-    .map((x) => {
-      if (x && x.schema === "titanpro_session_v3") return x;
-      if (x && x.session && x.session.schema === "titanpro_session_v3") return x.session;
-      return null;
-    })
-    .filter(Boolean);
-}
-
-function pickNvidiaKey(request, env, req) {
-  const envKey = String(env.NVIDIA_API_KEY || "").trim();
-  if (envKey) return envKey;
-
-  const auth = request.headers.get("Authorization") || "";
-  const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (m && m[1]) return String(m[1]).trim();
-
-  const bodyKey = String(req?.auth?.nvidiaApiKey || "").trim();
-  if (bodyKey) return bodyKey;
-
-  return "";
-}
-
-async function readBodyText(request) {
-  // suporta application/json e text/plain
-  return await request.text();
-}
-
-function safeJsonParse(text) {
-  try {
-    if (!text) return null;
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-function byteLength(str) {
-  return new TextEncoder().encode(String(str ?? "")).length;
-}
-
-// -------------------------
-// Normalization (workout -> sessionSlim + trends)
-// -------------------------
-function normalizeWorkout(session, historySessions) {
-  const sessionSlim = slimSession(session);
-  const prev = historySessions && historySessions.length ? slimSession(historySessions[0]) : null;
-
-  const prevBest = prev ? indexBestE1rm(prev) : {};
-  const trends = computeTrends(sessionSlim, prevBest);
-
-  return { sessionSlim, trends };
-}
-
-function slimSession(session) {
-  const out = {
-    schema: "titanpro_session_slim_v1",
-    capturedAt: session.capturedAt || null,
-    objetivo: session.objetivo || null,
-    frequenciaSemanal: session.frequenciaSemanal || null,
-    sections: [],
-  };
-
-  const sections = Array.isArray(session.sections) ? session.sections : [];
-  for (const sec of sections) {
-    const treinoKey = String(sec?.treinoKey || "Treino");
-    const exercises = Array.isArray(sec?.exercises) ? sec.exercises : [];
-    const exOut = [];
-
-    for (const ex of exercises) {
-      const name = String(ex?.name || "Exercício");
-      const sets = Array.isArray(ex?.sets) ? ex.sets : [];
-      const valid = [];
-
-      for (const s of sets) {
-        const kg = toNum(s?.kg);
-        const reps = toNum(s?.reps);
-        const rpe = clampInt(toNum(s?.rpe), 1, 10, 10);
-        if (!(kg > 0) || !(reps > 0)) continue;
-
-        const e1rm = toNum(s?.e1rm) > 0 ? toNum(s?.e1rm) : brzyckiE1rm(kg, reps);
-        valid.push({ kg, reps, rpe, e1rm });
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #161e2e;
+        --blue: #3182ce;
+        --text: #f7fafc;
+        --orange: #f6ad55;
+        --green: #38b2ac;
+        --red: #e53e3e;
       }
 
-      const metrics = calcMetrics(valid);
-      exOut.push({ name, metrics });
-    }
-
-    out.sections.push({ treinoKey, exercises: exOut });
-  }
-
-  return out;
-}
-
-function calcMetrics(validSets) {
-  if (!validSets.length) {
-    return { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: 0, setCount: 0 };
-  }
-
-  let best = 0;
-  let vol = 0;
-  let sumRpe = 0;
-  let sumKg = 0;
-
-  for (const s of validSets) {
-    best = Math.max(best, toNum(s.e1rm));
-    vol += toNum(s.kg) * toNum(s.reps);
-    sumRpe += toNum(s.rpe);
-    sumKg += toNum(s.kg);
-  }
-
-  const n = validSets.length;
-  return {
-    bestE1RM: round1(best),
-    volume: Math.round(vol),
-    avgRPE: round1(sumRpe / n),
-    avgKg: round1(sumKg / n),
-    setCount: n,
-  };
-}
-
-function indexBestE1rm(sessionSlim) {
-  const map = Object.create(null);
-  for (const sec of sessionSlim.sections) {
-    for (const ex of sec.exercises) {
-      const best = toNum(ex?.metrics?.bestE1RM);
-      if (!map[ex.name] || best > map[ex.name]) map[ex.name] = best;
-    }
-  }
-  return map;
-}
-
-function computeTrends(sessionSlim, prevBestMap) {
-  const trendByExercise = Object.create(null);
-  for (const sec of sessionSlim.sections) {
-    for (const ex of sec.exercises) {
-      const curr = toNum(ex?.metrics?.bestE1RM);
-      const prev = toNum(prevBestMap?.[ex.name]);
-      if (prev > 0 && curr > 0) {
-        trendByExercise[ex.name] = round1(((curr - prev) / prev) * 100);
-      } else {
-        trendByExercise[ex.name] = null;
-      }
-    }
-  }
-  return { trendByExercise };
-}
-
-// -------------------------
-// Flags (equivalente ao “critical_flags” no seu padrão)
-// -------------------------
-function computeFlags(normalized) {
-  const flags = {
-    highRPE: [],
-    lowRPE: [],
-    e1rmDrop: [],
-    notes: [],
-  };
-
-  const trend = normalized?.trends?.trendByExercise || {};
-
-  for (const sec of normalized.sessionSlim.sections) {
-    for (const ex of sec.exercises) {
-      const avgRPE = toNum(ex?.metrics?.avgRPE);
-      const delta = trend[ex.name];
-
-      if (avgRPE >= 9) flags.highRPE.push(ex.name);
-      if (avgRPE > 0 && avgRPE <= 7.5) flags.lowRPE.push(ex.name);
-      if (typeof delta === "number" && delta <= -3) flags.e1rmDrop.push({ name: ex.name, pct: delta });
-    }
-  }
-
-  if (flags.highRPE.length) flags.notes.push("Há exercícios com RPE médio alto (>=9).");
-  if (flags.e1rmDrop.length) flags.notes.push("Há queda relevante de e1RM vs sessão anterior.");
-
-  return flags;
-}
-
-// -------------------------
-// Planner (Nemotron via NIM) — retorna JSON do plano
-// -------------------------
-async function nemotronPlan({ endpoint, apiKey, model, context }, timeoutMs) {
-  const system = [
-    "Você é um PLANNER de treino (não é o redator final).",
-    "Saída: JSON válido e somente JSON (sem markdown, sem texto fora do JSON).",
-    "",
-    "Objetivo: gerar um plano estruturado para a próxima sessão com base em métricas agregadas (best e1RM, volume, avgRPE) e tendência vs sessão anterior.",
-    "",
-    "Formato obrigatório:",
-    "{",
-    '  "summary": string,',
-    '  "perTreino": [',
-    "    {",
-    '      "treinoKey": string,',
-    '      "notes": string,',
-    '      "exercises": [',
-    "        {",
-    '          "name": string,',
-    '          "metrics": { "bestE1RM": number, "volume": number, "avgRPE": number|null, "avgKg": number },',
-    '          "trendPctVsLast": number|null,',
-    '          "next": { "action": "increase"|"maintain"|"decrease", "deltaKg": number, "repGoal": string, "rpeGoal": number },',
-    '          "why": string',
-    "        }",
-    "      ]",
-    "    }",
-    "  ],",
-    '  "alerts": [ { "level": "info"|"warning"|"critical", "message": string } ]',
-    "}",
-    "",
-    "Regras de ajuste:",
-    "- Se avgRPE <= 7.5: increase pequeno (≈ +1–3% ou +2.5kg quando fizer sentido).",
-    "- Se avgRPE 8.0–8.5: maintain ou micro-aumento.",
-    "- Se avgRPE >= 9.0: maintain/decrease; ajustar repGoal e técnica.",
-    "- Se trendPctVsLast <= -3: alerta de fadiga; ajuste conservador.",
-  ].join("\n");
-
-  const messages = [
-    { role: "system", content: system },
-    { role: "user", content: JSON.stringify(context) },
-  ];
-
-  const payload = {
-    model,
-    temperature: 0.2,
-    max_tokens: 900,
-    messages,
-  };
-
-  const resp = await nimChat({ endpoint, apiKey, payload }, timeoutMs);
-  const content = String(resp?.choices?.[0]?.message?.content || "");
-  const plan = parseJsonFromText(content);
-  if (!plan) throw new Error("Planner retornou JSON inválido.");
-  return plan;
-}
-
-// -------------------------
-// Verifier + hardening
-// -------------------------
-function verifyAndHardenPlan(plan, normalized) {
-  if (!plan || typeof plan !== "object") throw new Error("Plano não é objeto.");
-  if (typeof plan.summary !== "string") throw new Error("summary ausente.");
-  if (!Array.isArray(plan.perTreino)) throw new Error("perTreino não é array.");
-  if (!Array.isArray(plan.alerts)) plan.alerts = [];
-
-  const avgKgByName = Object.create(null);
-  for (const sec of normalized.sessionSlim.sections) {
-    for (const ex of sec.exercises) {
-      avgKgByName[ex.name] = toNum(ex?.metrics?.avgKg);
-    }
-  }
-
-  for (const t of plan.perTreino) {
-    if (!t || typeof t.treinoKey !== "string") throw new Error("treinoKey inválido.");
-    if (!Array.isArray(t.exercises)) throw new Error("exercises inválido.");
-    if (typeof t.notes !== "string") t.notes = "";
-
-    for (const ex of t.exercises) {
-      if (!ex || typeof ex.name !== "string") throw new Error("exercise.name inválido.");
-      if (!ex.next || typeof ex.next !== "object") throw new Error("next ausente.");
-
-      const action = String(ex.next.action || "maintain");
-      ex.next.action = ["increase", "maintain", "decrease"].includes(action) ? action : "maintain";
-
-      const base = toNum(avgKgByName[ex.name]);
-      const maxDelta = base > 0 ? Math.max(2.5, round1(base * 0.06)) : 2.5;
-      ex.next.deltaKg = round1(clampNum(toNum(ex.next.deltaKg), -maxDelta, maxDelta, 0));
-
-      ex.next.repGoal = typeof ex.next.repGoal === "string" ? ex.next.repGoal : "8-12";
-      ex.next.rpeGoal = clampInt(toNum(ex.next.rpeGoal), 6, 10, 8);
-
-      if (!ex.metrics || typeof ex.metrics !== "object") {
-        ex.metrics = { bestE1RM: 0, volume: 0, avgRPE: null, avgKg: base };
-      } else {
-        ex.metrics.avgKg = toNum(ex.metrics.avgKg || base);
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, sans-serif;
+        margin: 0;
+        padding-bottom: 20px;
       }
 
-      if (typeof ex.trendPctVsLast !== "number" && ex.trendPctVsLast !== null) ex.trendPctVsLast = null;
-      if (typeof ex.why !== "string") ex.why = "";
-    }
-  }
-
-  return plan;
-}
-
-// -------------------------
-// Fallback heurístico
-// -------------------------
-function fallbackPlan(normalized, flags, reason) {
-  const trend = normalized?.trends?.trendByExercise || {};
-  const perTreino = [];
-
-  for (const sec of normalized.sessionSlim.sections) {
-    const exercises = [];
-
-    for (const ex of sec.exercises) {
-      const m = ex.metrics || {};
-      const avgRPE = toNum(m.avgRPE);
-      const avgKg = toNum(m.avgKg);
-      const deltaTrend = trend[ex.name];
-
-      let action = "maintain";
-      let deltaKg = 0;
-      let repGoal = "8-12";
-      let rpeGoal = 8.5;
-
-      if (avgRPE > 0 && avgRPE <= 7.5) {
-        action = "increase";
-        deltaKg = avgKg > 0 ? Math.min(2.5, avgKg * 0.03) : 2.5;
-        rpeGoal = 8;
-      } else if (avgRPE >= 9) {
-        action = "decrease";
-        deltaKg = avgKg > 0 ? -Math.min(2.5, avgKg * 0.03) : -2.5;
-        repGoal = "6-10";
-        rpeGoal = 8.5;
+      .top-header {
+        padding: 15px;
+        background: var(--card);
+        border-bottom: 1px solid #2d3748;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .date-badge {
+        font-size: 0.8rem;
+        color: var(--orange);
+        font-weight: bold;
+        background: #0b1220;
+        padding: 4px 10px;
+        border-radius: 15px;
       }
 
-      if (typeof deltaTrend === "number" && deltaTrend <= -3) {
-        action = "maintain";
-        deltaKg = 0;
-        repGoal = "6-10";
-        rpeGoal = 8;
+      /* Painel de Configuração */
+      .setup-panel {
+        background: var(--card);
+        padding: 20px;
+        border-bottom: 3px solid var(--blue);
+        display: block;
+      }
+      .field {
+        margin-bottom: 15px;
+      }
+      .field label {
+        font-size: 0.7rem;
+        color: #a0aec0;
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+      .field select,
+      .field input {
+        width: 100%;
+        padding: 12px;
+        background: #0b1220;
+        color: #fff;
+        border: 1px solid var(--blue);
+        border-radius: 8px;
+        box-sizing: border-box;
       }
 
-      exercises.push({
-        name: ex.name,
-        metrics: {
-          bestE1RM: round1(toNum(m.bestE1RM)),
-          volume: Math.round(toNum(m.volume)),
-          avgRPE: m.avgRPE == null ? null : round1(toNum(m.avgRPE)),
-          avgKg: round1(avgKg),
-        },
-        trendPctVsLast: typeof deltaTrend === "number" ? deltaTrend : null,
-        next: { action, deltaKg: round1(deltaKg), repGoal, rpeGoal },
-        why: `Fallback local (motivo: ${String(reason || "indisponível")}).`,
+      .nav-pills {
+        display: flex;
+        gap: 8px;
+        padding: 10px;
+        background: var(--bg);
+        overflow-x: auto;
+        border-bottom: 1px solid #2d3748;
+      }
+      .pill {
+        flex: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        background: #1a202c;
+        font-weight: bold;
+        font-size: 0.75rem;
+        border: 1px solid #2d3748;
+        cursor: pointer;
+        color: #a0aec0;
+        position: relative;
+      }
+      .pill.active {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #fff;
+      }
+      .pill.add-pill {
+        border: 2px dashed var(--blue);
+        color: var(--blue);
+      }
+
+      .section {
+        display: none;
+      }
+      .section.active {
+        display: block;
+      }
+
+      /* Exercise Card */
+      .exercise-card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 15px;
+        margin: 10px;
+        border: 1px solid #2d3748;
+        animation: fadeIn 0.3s ease;
+        position: relative;
+      }
+      .ex-title {
+        font-weight: 800;
+        font-size: 1.1rem;
+        color: var(--blue);
+        text-decoration: underline dotted;
+        cursor: pointer;
+      }
+      .ex-target {
+        font-size: 0.75rem;
+        color: var(--orange);
+        font-weight: bold;
+        margin: 4px 0 5px 0;
+        display: block;
+        cursor: pointer;
+      }
+
+      /* e1RM por série */
+      .rm-mini-badge {
+        font-size: 0.6rem;
+        color: var(--green);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        display: block;
+        margin-top: 2px;
+        line-height: 1.1;
+      }
+
+      .series-grid {
+        display: grid;
+        grid-template-columns: 40px 1fr 1fr 1fr;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .header-grid {
+        text-align: center;
+        font-size: 0.6rem;
+        color: #718096;
+        font-weight: bold;
+      }
+
+      .input-box {
+        background: #0b1220;
+        border: 1px solid #2d3748;
+        border-radius: 6px;
+      }
+      .input-box input {
+        background: transparent;
+        border: none;
+        color: #fff;
+        width: 100%;
+        text-align: center;
+        font-size: 1.1rem;
+        padding: 8px 0;
+        outline: none;
+        font-weight: bold;
+      }
+      .input-box input::placeholder {
+        color: rgba(255, 255, 255, 0.15);
+      }
+
+      /* Seletor RPE minimalista (1-10) */
+      .input-box select {
+        background: transparent;
+        border: none;
+        color: #fff;
+        width: 100%;
+        text-align: center;
+        font-size: 1.05rem;
+        padding: 8px 0;
+        outline: none;
+        font-weight: 800;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+      .input-box select option {
+        background: var(--bg);
+        color: #fff;
+      }
+
+      .btn-add-ex {
+        background: #1a202c;
+        color: var(--blue);
+        border: 2px dashed var(--blue);
+        width: calc(100% - 20px);
+        margin: 15px 10px;
+        padding: 15px;
+        border-radius: 12px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .footer-actions {
+        padding: 20px 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 15px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 800;
+        cursor: pointer;
+        flex: 1;
+        text-align: center;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        min-width: 80px;
+      }
+      .btn-save {
+        background: var(--green);
+        color: #fff;
+        box-shadow: 0 4px 0 #2d8a84;
+      }
+      .btn-config {
+        background: #2d3748;
+        color: var(--blue);
+        border: 1px solid var(--blue);
+      }
+      .btn-ia {
+        background: #1a202c;
+        color: var(--orange);
+        border: 1px solid var(--orange);
+      }
+
+      dialog {
+        background: #161e2e;
+        color: #fff;
+        border: 1px solid var(--blue);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        padding: 20px;
+      }
+
+      #csvTextarea {
+        width: 100%;
+        height: 200px;
+        padding: 12px;
+        background: #0b1220;
+        border: 1px solid var(--blue);
+        border-radius: 8px;
+        color: #fff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        resize: none;
+        outline: none;
+      }
+
+      /* Histórico e Templates */
+      #histList,
+      #tplList {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #2d3748;
+        border-radius: 10px;
+      }
+      .hist-item,
+      .tpl-item {
+        padding: 12px;
+        border-bottom: 1px solid #2d3748;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="top-header">
+      <div class="header-left">
+        <h1 style="margin: 0; font-size: 1.1rem; color: var(--blue)">
+          TITAN <span style="color: #fff">PRO</span>
+        </h1>
+      </div>
+ <div class="date-badge" id="displayDate"></div>    </div>
+
+    <div class="setup-panel" id="setupPanel">
+      <div class="field">
+        <label>NVIDIA API KEY (Nemotron-70B)</label>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            type="password"
+            id="apiKeyInput"
+            placeholder="Cole aqui (fica só no seu navegador)"
+            autocomplete="off"
+            onchange="saveApiKey()"
+            style="flex: 1; width: auto"
+          />
+          <button
+            onclick="clearApiKey()"
+            title="Apagar chave salva"
+            style="
+              flex: 0 0 auto;
+              padding: 12px 14px;
+              background: #2d3748;
+              color: var(--red);
+              border: 1px solid #2d3748;
+              border-radius: 8px;
+              font-weight: 800;
+              cursor: pointer;
+            "
+          >
+            LIMPAR
+          </button>
+        </div>
+        <div id="apiKeyStatus" style="margin-top: 6px; font-size: 0.7rem; color: #a0aec0"></div>
+      </div>
+
+      <div class="field">
+        <label>Frequência Semanal</label>
+        <select id="freq" onchange="gerarProtocolo()">
+          <option value="2">2 Dias (Full Body)</option>
+          <option value="3" selected>3 Dias (ABC)</option>
+          <option value="4">4 Dias (Upper/Lower)</option>
+          <option value="5">5 Dias (ABCDE)</option>
+          <option value="6">6 Dias (PPL x2)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Objetivo Principal</label>
+        <select id="obj" onchange="gerarProtocolo()">
+          <option value="hipertrofia">Hipertrofia (8-12 reps)</option>
+          <option value="forca">Força Bruta (3-5 reps)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-save" onclick="closeConfig()" style="margin-top: 12px">ABRIR TREINO</button>
+    </div>
+
+    <div class="nav-pills" id="nav"></div>
+    <main id="container"></main>
+    <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
+
+    <div class="footer-actions">
+      <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
+      <button class="btn btn-ia" onclick="enviarParaIA
+        ()">🤖 IA ANALYST</button>
+      <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
+      <button class="btn btn-config" onclick="abrirCSVModal()" style="background: var(--orange); color: white; flex: 0.5">
+        📊 ARQUIVOS
+      </button>
+      <button class="btn btn-config" onclick="verHistorico()" style="flex: 0.4">📜 HIST</button>
+    </div>
+
+    <dialog id="modalLib">
+      <h3 id="libHeader" style="margin: 0 0 15px 0; color: var(--orange)">Trocar Exercício</h3>
+      <div style="margin-bottom: 15px; display: flex; gap: 5px">
+        <input
+          type="text"
+          id="manualName"
+          placeholder="Nome personalizado..."
+          style="
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--blue);
+            background: #0b1220;
+            color: white;
+            outline: none;
+          "
+        />
+        <button
+          onclick="adicionarManual()"
+          style="background: var(--blue); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold"
+        >
+          +
+        </button>
+      </div>
+      <div id="libContent" style="max-height: 300px; overflow-y: auto"></div>
+      <button
+        class="btn"
+        onclick="document.getElementById('modalLib').close()"
+        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
+      >
+        Fechar
+      </button>
+    </dialog>
+
+    <dialog id="modalCSV">
+      <h3 style="margin: 0 0 15px 0; color: var(--orange)">Arquivos e Fichas</h3>
+      <div style="font-size: 0.7rem; color: #a0aec0; margin-bottom: 12px; line-height: 1.4">
+        <strong>PDF:</strong> Use "LER PDF" para extrair texto da sua ficha.<br />
+        <strong>CSV:</strong> Cole o texto ou salve modelos para uso rápido.
+      </div>
+      <textarea id="csvTextarea" placeholder="Cole o CSV aqui..."></textarea>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px">
+        <label
+          class="btn"
+          style="
+            background: var(--blue);
+            color: white;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          "
+        >
+          📄 LER PDF
+          <input type="file" id="pdfUpload" accept=".pdf" style="display: none" onchange="extrairTextoPDF(this)" />
+        </label>
+        <button class="btn" style="background: var(--green); color: white; flex: 1" onclick="importarCSV()">✓ IMPORTAR</button>
+        <button class="btn" style="background: #2d3748; color: var(--orange); flex: 1" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
+        <button class="btn" style="background: #2d3748; color: var(--blue); flex: 1" onclick="mostrarModelosCSV()">📚 MODELOS</button>
+      </div>
+      <div id="tplArea" style="display: none; margin-top: 12px">
+        <div id="tplList"></div>
+        <button class="btn" onclick="limparModelosCSV()" style="width: 100%; background: var(--red); color: white; margin-top: 5px">
+          LIMPAR TUDO
+        </button>
+      </div>
+      <button
+        class="btn"
+        onclick="document.getElementById('modalCSV').close()"
+        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
+      >
+        Fechar
+      </button>
+    </dialog>
+
+    <dialog id="modalHIST">
+      <h3 style="margin: 0 0 15px 0; color: var(--orange)">Histórico de Sessões</h3>
+      <div id="histList"></div>
+      <div style="display: flex; gap: 8px; margin-top: 12px">
+        <button class="btn" style="background: var(--red); color: white" onclick="limparHistorico()">🗑️ LIMPAR</button>
+        <button class="btn" style="background: var(--blue); color: white" onclick="document.getElementById('modalHIST').close()">
+          FECHAR
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="modalIA">
+      <h3 style="margin: 0 0 12px 0; color: var(--orange)">Nemotron Analyst</h3>
+      <pre
+        id="iaOutput"
+        style="
+          white-space: pre-wrap;
+          word-break: break-word;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+          font-size: 0.85rem;
+          background: #0b1220;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #2d3748;
+          max-height: 55vh;
+          overflow: auto;
+          margin: 0;
+        "
+      ></pre>
+      <button
+        class="btn"
+        onclick="document.getElementById('modalIA').close()"
+        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
+      >
+        Fechar
+      </button>
+    </dialog>
+
+    <script>
+      // =========================
+      // STORAGE / CONFIG
+      // =========================
+      const STORAGE = Object.freeze({
+        draftKey: "titanpro_draft_v2",
+        historyKey: "titanpro_history_v2",
+        csvTplKey: "titanpro_csv_templates_v1",
+        prevKey: "titanpro_prev_v1",
+        apiKey: "titanpro_nvidia_key",
+        maxHistory: 80,
       });
-    }
 
-    perTreino.push({
-      treinoKey: sec.treinoKey,
-      notes: "Fallback ativo: ajuste conservador por RPE/tendência.",
-      exercises,
-    });
-  }
+      // NVIDIA (endpoint + modelo)
+      // Endpoint  e modelo "meta/llama-3.1-nemotron-8b-v1" conforme docs atuais.
+      const NVIDIA = Object.freeze({
+endpoint: "https://square-poetry-636b.kle-cdc.workers.dev/v1/chat/completions",        model: "meta/llama-3.1-nemotron-8b-v1",
+      });
 
-  const alerts = [];
-  if (flags?.highRPE?.length) alerts.push({ level: "warning", message: `RPE alto em: ${flags.highRPE.join(", ")}` });
-  if (flags?.e1rmDrop?.length) alerts.push({ level: "warning", message: "Queda de e1RM vs sessão anterior em alguns exercícios." });
-  alerts.push({ level: "info", message: "Fallback heurístico usado (planner indisponível/erro/JSON inválido)." });
+      function saveApiKey() {
+        const input = document.getElementById("apiKeyInput");
+        const raw = (input?.value || "").trim();
+        if (!raw) {
+          localStorage.removeItem(STORAGE.apiKey);
+        } else {
+          localStorage.setItem(STORAGE.apiKey, raw);
+          // Limpa o campo para não ficar “exposto” na tela
+          input.value = "";
+        }
+        renderApiKeyStatus();
+      }
 
-  return {
-    summary: "Plano (fallback): ajustes conservadores por RPE médio e tendência de e1RM.",
-    perTreino,
-    alerts,
-  };
-}
+      function clearApiKey() {
+        const ok = confirm("Apagar a chave salva neste dispositivo?");
+        if (!ok) return;
+        localStorage.removeItem(STORAGE.apiKey);
+        const input = document.getElementById("apiKeyInput");
+        if (input) input.value = "";
+        renderApiKeyStatus();
+      }
 
-// -------------------------
-// Writer remoto (NIM) e writer local (template)
-// -------------------------
-async function remoteWriter({ endpoint, apiKey, model, plan, normalized, flags }, timeoutMs) {
-  const system = [
-    "Você é um redator de relatório de treino.",
-    "Entrada: plano estruturado (JSON) + contexto resumido.",
-    "Saída: texto em pt-BR, objetivo e prático.",
-    "Estrutura: (1) resumo geral; (2) por treino; (3) recomendações de próxima sessão; (4) alertas/fadiga se existirem.",
-    "Não invente exercícios que não estejam no plano.",
-  ].join("\n");
+      function renderApiKeyStatus() {
+        const el = document.getElementById("apiKeyStatus");
+        if (!el) return;
+        const hasKey = !!localStorage.getItem(STORAGE.apiKey);
+        el.textContent = hasKey ? "Chave salva neste dispositivo." : "Nenhuma chave salva.";
+        el.style.color = hasKey ? "var(--green)" : "#a0aec0";
+      }
 
-  const user = JSON.stringify({
-    plan,
-    flags,
-    session: normalized.sessionSlim,
-    trends: normalized.trends,
-  });
+      function getApiKey() {
+        return localStorage.getItem(STORAGE.apiKey) || "";
+      }
 
-  const payload = {
-    model,
-    temperature: 0.2,
-    max_tokens: 700,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-  };
+      // =========================
+      // HELPERS (parsing / escape)
+      // =========================
+      function toNumber(value) {
+        const s = String(value ?? "").trim().replace(",", ".");
+        const n = Number(s);
+        return Number.isFinite(n) ? n : NaN;
+      }
 
-  const resp = await nimChat({ endpoint, apiKey, payload }, timeoutMs);
-  const content = String(resp?.choices?.[0]?.message?.content || "");
-  if (!content.trim()) throw new Error("Writer remoto retornou vazio.");
-  return content.trim();
-}
+      function clampNumber(n, min, max, fallback) {
+        const v = Number(n);
+        if (!Number.isFinite(v)) return fallback;
+        return Math.min(max, Math.max(min, v));
+      }
 
-function templateWriter(plan) {
-  const lines = [];
-  lines.push(plan.summary || "Plano gerado.");
-  lines.push("");
+      function clampInt(value, min, max, fallback) {
+        const n = Number.parseInt(String(value ?? ""), 10);
+        if (!Number.isFinite(n)) return fallback;
+        return Math.min(max, Math.max(min, n));
+      }
 
-  if (Array.isArray(plan.alerts) && plan.alerts.length) {
-    lines.push("ALERTAS:");
-    for (const a of plan.alerts) {
-      lines.push(`- [${String(a.level || "info").toUpperCase()}] ${String(a.message || "")}`);
-    }
-    lines.push("");
-  }
+      function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>"']/g, (m) => {
+          const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+          return map[m] || m;
+        });
+      }
 
-  const perTreino = Array.isArray(plan.perTreino) ? plan.perTreino : [];
-  for (const t of perTreino) {
-    lines.push(String(t.treinoKey || "Treino"));
-    if (t.notes) lines.push("• " + String(t.notes));
-    lines.push("");
+      function escapeAttr(str) {
+        return String(str ?? "").replace(/"/g, "&quot;");
+      }
 
-    const exs = Array.isArray(t.exercises) ? t.exercises : [];
-    for (const ex of exs) {
-      const m = ex.metrics || {};
-      const next = ex.next || {};
-      const trend = ex.trendPctVsLast;
+      // =========================
+      // e1RM (Brzycki) + RPE/RIR
+      // =========================
+      // Regras:
+      // e1RM = Peso / (1.0278 - (0.0278 * RepsEfetivas))
+      // RepsEfetivas = Reps + RIR, onde RIR = (10 - RPE), se RPE < 10.
+      function calcSetMetrics(peso, reps, rpe) {
+        const weight = toNumber(peso);
+        const r = toNumber(reps);
+        const rpeClamped = clampInt(rpe, 1, 10, 10);
 
-      lines.push(
-        `- ${String(ex.name)} | best e1RM: ${toNum(m.bestE1RM)} | vol: ${toNum(m.volume)} | avg RPE: ${m.avgRPE == null ? "-" : toNum(m.avgRPE)}`
-      );
-      lines.push(
-        `  Próxima: ${String(next.action || "maintain")} (${toNum(next.deltaKg) >= 0 ? "+" : ""}${round1(toNum(next.deltaKg))}kg), reps ${String(next.repGoal || "8-12")}, alvo RPE ${toNum(next.rpeGoal) || 8}` +
-          (typeof trend === "number" ? ` | tendência: ${trend >= 0 ? "+" : ""}${trend}%` : "")
-      );
-      if (ex.why) lines.push("  Motivo: " + String(ex.why));
-    }
-    lines.push("");
-  }
+        if (!(weight > 0) || !(r > 0)) {
+          return { rpe: rpeClamped, rir: null, repsEff: null, e1rm: 0 };
+        }
 
-  return lines.join("\n").trim();
-}
+        const rir = Math.max(0, 10 - rpeClamped);
+        const repsEff = r + (rpeClamped < 10 ? rir : 0);
 
-// -------------------------
-// NIM client (HTTP)
-// -------------------------
-async function nimChat({ endpoint, apiKey, payload }, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const denom = 1.0278 - 0.0278 * repsEff;
+        if (!(denom > 0)) {
+          return { rpe: rpeClamped, rir, repsEff, e1rm: 0 };
+        }
 
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+        const e1rm = weight / denom;
+        return { rpe: rpeClamped, rir, repsEff, e1rm };
+      }
 
-    const raw = await res.text();
-    let data = null;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      data = null;
-    }
+      function renderRpeOptions(selected) {
+        const sel = clampInt(selected, 1, 10, 10);
+        let html = "";
+        for (let v = 10; v >= 1; v--) {
+          html += `<option value="${v}" ${v === sel ? "selected" : ""}>${v}</option>`;
+        }
+        return html;
+      }
 
-    if (!res.ok) {
-      const msg = data?.error?.message || data?.detail || raw || `HTTP ${res.status}`;
-      throw new Error(`NIM ${res.status}: ${msg}`);
-    }
+      // =========================
+      // PDF EXTRACTION (seu fluxo)
+      // =========================
+      async function extrairTextoPDF(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const btn = input.parentElement;
+        const originalTxt = btn.innerText;
+        btn.innerText = "LENDO...";
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+          let fullText = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            fullText += content.items.map((item) => item.str).join(" ") + "\n";
+          }
+          document.getElementById("csvTextarea").value = fullText;
+          alert("✅ Texto extraído! Ajuste se necessário e clique em IMPORTAR.");
+        } catch (err) {
+          alert("❌ Erro ao ler PDF.");
+        } finally {
+          btn.innerText = originalTxt;
+        }
+      }
 
-    if (!data) throw new Error("Resposta NIM não-JSON.");
-    return data;
-  } finally {
-    clearTimeout(timer);
-  }
-}
+      // =========================
+      // BIBLIOTECA (mantida)
+      // =========================
+      let prevMap = Object.create(null);
+      const biblioteca = {
+        Peito: ["Supino Inclinado", "Supino Reto", "Crossover", "Voador"],
+        Costas: ["Puxada Alta", "Remada Curvada", "Remada Baixa", "Terra"],
+        Pernas: ["Agachamento", "Leg Press 45", "Extensora", "Flexora", "Stiff", "Panturrilha"],
+        Ombros: ["Desenvolvimento", "Elevação Lateral", "Crucifixo Inverso"],
+        Braços: ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa"],
+      };
 
-function parseJsonFromText(text) {
-  if (!text) return null;
+      // =========================
+      // CRIAR CARD (RPE SELECT + e1RM)
+      // =========================
+      function criarCard(nome, sectionId, series = 4, repsMeta = "8-12", values = null) {
+        const id = "ex-" + Math.random().toString(36).slice(2, 9);
+        const sec = document.getElementById(sectionId);
+        const safeName = escapeHtml(nome);
 
-  // JSON direto
-  const direct = safeJsonParse(text);
-  if (direct) return direct;
+        const card = document.createElement("div");
+        card.className = "exercise-card";
+        card.setAttribute("data-ex-id", id);
+        card.setAttribute("data-ex-name", nome);
 
-  // Extrai do primeiro { ao último }
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first >= 0 && last > first) {
-    return safeJsonParse(text.slice(first, last + 1));
-  }
-  return null;
-}
+        let rowsHtml = "";
+        for (let s = 0; s < series; s++) {
+          const v = values && values[s] ? values[s] : { kg: "", reps: "", rpe: 10 };
+          const rpeOptions = renderRpeOptions(v.rpe);
 
-// -------------------------
-// Math helpers
-// -------------------------
-function toNum(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
+          rowsHtml += `
+            <div class="series-grid">
+              <div style="text-align:center">
+                <span style="font-size:0.7rem; font-weight:bold; color:#718096">S${s + 1}</span>
+                <span class="rm-mini-badge" id="rm-val-${id}-${s}">-</span>
+              </div>
 
-function round1(n) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return 0;
-  return Math.round(x * 10) / 10;
-}
+              <div class="input-box">
+                <input
+                  data-field="kg"
+                  type="number"
+                  inputmode="decimal"
+                  placeholder="KG"
+                  value="${escapeAttr(v.kg)}"
+                  oninput="updateRowRM('${id}', ${s})"
+                />
+              </div>
 
-function clampInt(n, min, max, fallback) {
-  const x = Number.parseInt(String(n), 10);
-  if (!Number.isFinite(x)) return fallback;
-  return Math.min(max, Math.max(min, x));
-}
+              <div class="input-box">
+                <input
+                  data-field="reps"
+                  type="number"
+                  inputmode="numeric"
+                  placeholder="REPS"
+                  value="${escapeAttr(v.reps)}"
+                  oninput="updateRowRM('${id}', ${s})"
+                />
+              </div>
 
-function clampNum(n, min, max, fallback) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return fallback;
-  return Math.min(max, Math.max(min, x));
-}
+              <div class="input-box">
+                <select data-field="rpe" onchange="updateRowRM('${id}', ${s})" aria-label="RPE">
+                  ${rpeOptions}
+                </select>
+              </div>
+            </div>`;
+        }
 
-// Brzycki e1RM (aprox) — usado só se set.e1rm não vier do client
-function brzyckiE1rm(kg, reps) {
-  const r = toNum(reps);
-  const w = toNum(kg);
-  if (!(w > 0) || !(r > 0)) return 0;
-  const denom = 1.0278 - 0.0278 * r;
-  if (!(denom > 0)) return 0;
-  return w / denom;
-}
+        card.innerHTML = `
+          <span class="ex-title" onclick="abrirLibParaTrocar('${id}')">${safeName}</span>
+          <span class="ex-target" onclick="confirmDeleteExercise(this)">${series} Sets x ${escapeHtml(repsMeta)} (Toque p/ Apagar)</span>
+          <div class="series-grid header-grid"><span>SET/e1RM</span><span>KG</span><span>REPS</span><span>RPE</span></div>
+          ${rowsHtml}
+        `;
+
+        sec.appendChild(card);
+
+        // Calcula e1RM inicial (se houver valores)
+        for (let s = 0; s < series; s++) updateRowRM(id, s);
+      }
+
+      function updateRowRM(exId, rowIdx) {
+        const card = document.querySelector(`[data-ex-id="${exId}"]`);
+        if (!card) return;
+
+        const row = card.querySelectorAll(".series-grid:not(.header-grid)")[rowIdx];
+        if (!row) return;
+
+        const kg = row.querySelector('[data-field="kg"]')?.value ?? "";
+        const reps = row.querySelector('[data-field="reps"]')?.value ?? "";
+        const rpe = row.querySelector('[data-field="rpe"]')?.value ?? "10";
+
+        const { e1rm } = calcSetMetrics(kg, reps, rpe);
+        const display = document.getElementById(`rm-val-${exId}-${rowIdx}`);
+        if (display) display.innerText = e1rm > 0 ? `e1RM ${Math.round(e1rm)}kg` : "-";
+
+        scheduleDraftSave();
+      }
+
+      // =========================
+      // DELETE (mantido)
+      // =========================
+      function bindPillDeleteHandlers() {
+        const pills = document.querySelectorAll(".pill:not(.add-pill)");
+        pills.forEach((pill, idx) => {
+          pill.oncontextmenu = (e) => {
+            e.preventDefault();
+            if (confirm("Excluir este treino inteiro?")) excluirTreino(idx);
+          };
+        });
+      }
+
+      function excluirTreino(idx) {
+        const st = serializeCurrentState();
+        st.sections.splice(idx, 1);
+        loadState(st);
+      }
+
+      function confirmDeleteExercise(el) {
+        if (confirm("Deseja apagar este exercício?")) {
+          el.closest(".exercise-card").remove();
+          scheduleDraftSave();
+        }
+      }
+
+      // =========================
+      // SERIALIZAÇÃO (inclui métricas por set)
+      // =========================
+      function serializeCurrentState() {
+        const sections = Array.from(document.querySelectorAll(".section")).map((sec) => ({
+          treinoKey: sec.getAttribute("data-treino-key"),
+          cards: Array.from(sec.querySelectorAll(".exercise-card")).map((card) => ({
+            name: card.getAttribute("data-ex-name"),
+            values: Array.from(card.querySelectorAll(".series-grid:not(.header-grid)")).map((row) => {
+              const kg = row.querySelector('[data-field="kg"]')?.value ?? "";
+              const reps = row.querySelector('[data-field="reps"]')?.value ?? "";
+              const rpe = row.querySelector('[data-field="rpe"]')?.value ?? "10";
+              const m = calcSetMetrics(kg, reps, rpe);
+              return { kg, reps, rpe, rir: m.rir, repsEff: m.repsEff, e1rm: m.e1rm };
+            }),
+          })),
+        }));
+
+        return {
+          sections,
+          freq: document.getElementById("freq")?.value ?? "3",
+          obj: document.getElementById("obj")?.value ?? "hipertrofia",
+        };
+      }
+
+      function scheduleDraftSave() {
+        localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState()));
+      }
+
+      function salvarTreino() {
+        const st = serializeCurrentState();
+        const hist = JSON.parse(localStorage.getItem(STORAGE.historyKey) || "[]");
+        hist.unshift({ date: new Date().toISOString(), state: st });
+        localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist.slice(0, STORAGE.maxHistory)));
+        alert("Sessão Salva! Ghost Mode Ativado para o próximo treino.");
+        location.reload();
+      }
+
+      function loadState(st) {
+        const cont = document.getElementById("container");
+        const nav = document.getElementById("nav");
+        cont.innerHTML = "";
+        nav.innerHTML = "";
+
+        st.sections.forEach((sec, i) => {
+          nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" onclick="tab(${i})">${escapeHtml(sec.treinoKey)}</div>`;
+          const div = document.createElement("div");
+          div.id = `sec${i}`;
+          div.className = `section ${i === 0 ? "active" : ""}`;
+          div.setAttribute("data-treino-key", sec.treinoKey);
+          cont.appendChild(div);
+
+          sec.cards.forEach((c) => criarCard(c.name, div.id, c.values.length, "Meta", c.values));
+        });
+
+        bindPillDeleteHandlers();
+        scheduleDraftSave();
+      }
+
+      function tab(idx) {
+        document.querySelectorAll(".section, .pill").forEach((el) => el.classList.remove("active"));
+        document.getElementById(`sec${idx}`).classList.add("active");
+        document.querySelectorAll(".pill")[idx].classList.add("active");
+      }
+
+      function openConfig() {
+        document.getElementById("setupPanel").style.display = "block";
+        renderApiKeyStatus();
+      }
+      function closeConfig() {
+        document.getElementById("setupPanel").style.display = "none";
+      }
+
+      function abrirCSVModal() {
+        document.getElementById("modalCSV").showModal();
+      }
+      function verHistorico() {
+        document.getElementById("modalHistorico").showModal();
+      }
+
+      // =========================
+      // BUILD JSON (Nemotron) + modalHIST  modalHistorico
+      // =========================
+      function buildWorkoutForNemotron() {
+        const st = serializeCurrentState();
+
+        const sections = st.sections.map((sec) => {
+          const exercises = sec.cards.map((card) => {
+            const sets = (card.values || []).map((set) => ({
+              kg: toNumber(set.kg),
+              reps: toNumber(set.reps),
+              rpe: clampInt(set.rpe, 1, 10, 10),
+              rir: set.rir ?? null,
+              repsEff: set.repsEff ?? null,
+              e1rm: set.e1rm ?? 0,
+            }));
+
+            const valid = sets.filter((s) => s.kg > 0 && s.reps > 0);
+            const bestE1RM = valid.reduce((m, s) => Math.max(m, s.e1rm || 0), 0);
+            const volume = valid.reduce((sum, s) => sum + s.kg * s.reps, 0);
+            const avgRPE = valid.length ? valid.reduce((sum, s) => sum + (s.rpe || 0), 0) / valid.length : null;
+
+            return {
+              name: card.name,
+              sets,
+              bestE1RM: bestE1RM ? Math.round(bestE1RM * 10) / 10 : 0,
+              volume: volume ? Math.round(volume) : 0,
+              avgRPE: avgRPE ? Math.round(avgRPE * 10) / 10 : null,
+            };
+          });
+
+          return { treinoKey: sec.treinoKey, exercises };
+        });
+
+        return {
+          schema: "titanpro_session_v3",
+          capturedAt: new Date().toISOString(),
+          objetivo: st.obj,
+          frequenciaSemanal: st.freq,
+          sections,
+        };
+      }
+
+      function buildNemotronPayload(workout) {
+        return {
+          model: NVIDIA.model,
+          temperature: 0.2,
+          max_tokens: 900,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Você é um analista de treino focado em autorregulação por RPE/RIR e e1RM (Brzycki). Responda em pt-BR. Entregue: (1) resumo por treino e exercício; (2) melhores e1RM por exercício; (3) ajustes de carga/reps para a próxima sessão com base em RPE; (4) alertas de excesso (ex.: queda de e1RM, RPE alto com carga menor). Seja objetivo e prático.",
+            },
+            { role: "user", content: JSON.stringify(workout) },
+          ],
+        };
+      }
+
+      function showNemotronOutput(text) {
+        const out = document.getElementById("iaOutput");
+        out.textContent = String(text || "(sem conteúdo)");
+        document.getElementById("modalIA").showModal();
+      }
+
+      async function enviarParaIA
+        () {
+        const key = getApiKey();
+        if (!key) {
+          alert("⚠️ Insira a NVIDIA API Key nas configurações primeiro.");
+          openConfig();
+          return;
+        }
+
+        const workout = buildWorkoutForNemotron();
+        const payload = buildNemotronPayload(workout);
+
+        try {
+          const res = await fetch(NVIDIA.endpoint, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok) {
+            const msg = data?.error?.message || `HTTP ${res.status}`;
+            throw new Error(msg);
+          }
+
+          const content = data?.choices?.[0]?.message?.content;
+          showNemotronOutput(content || JSON.stringify(data, null, 2));
+        } catch (e) {
+          showNemotronOutput(`Erro ao conectar: ${e?.message || "falha desconhecida"}`);
+        }
+      }
+
+      // =========================
+      // INIT / PROTOCOLO (mantido)
+      // =========================
+      window.onload = () => {
+        document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
+        renderApiKeyStatus();
+
+        const draft = localStorage.getItem(STORAGE.draftKey);
+        if (draft) loadState(JSON.parse(draft));
+        else gerarProtocolo();
+      };
+
+      function gerarProtocolo() {
+        const f = Number(document.getElementById("freq").value || 3);
+        const nav = document.getElementById("nav");
+        const cont = document.getElementById("container");
+        nav.innerHTML = "";
+        cont.innerHTML = "";
+
+        for (let i = 0; i < f; i++) {
+          const label = "Treino " + String.fromCharCode(65 + i);
+          nav.innerHTML += `<div class="pill ${i === 0 ? "active" : ""}" onclick="tab(${i})">${label}</div>`;
+          const sec = document.createElement("div");
+          sec.id = "sec" + i;
+          sec.className = "section " + (i === 0 ? "active" : "");
+          sec.setAttribute("data-treino-key", label);
+          cont.appendChild(sec);
+          criarCard("Supino Reto", sec.id);
+        }
+
+        bindPillDeleteHandlers();
+        scheduleDraftSave();
+      }
+
+      // =========================
+      // Placeholders do seu fluxo (mantidos)
+      // =========================
+      function importarCSV() {
+        alert("Processando CSV...");
+        document.getElementById("modalCSV").close();
+      }
+      function mostrarModelosCSV() {
+        document.getElementById("tplArea").style.display = "block";
+      }
+      function abrirLibParaNovo() {
+        document.getElementById("modalLib").showModal();
+      }
+      function abrirLibParaTrocar(id) {
+        document.getElementById("modalLib").showModal();
+      }
+
+      // TODO: se você já tem essas funções em outro trecho, mantenha-as.
+      function adicionarManual() {
+        const name = (document.getElementById("manualName")?.value || "").trim();
+        if (!name) return;
+        const activeSec = document.querySelector(".section.active");
+        if (!activeSec) return;
+        criarCard(name, activeSec.id);
+        document.getElementById("manualName").value = "";
+        document.getElementById("modalLib").close();
+        scheduleDraftSave();
+      }
+
+      function limparHistorico() {
+        if (!confirm("Apagar todo o histórico?")) return;
+        localStorage.removeItem(STORAGE.historyKey);
+        document.getElementById("histList").innerHTML = "";
+      }
+    </script>
+  </body>
+</html>
