@@ -926,8 +926,7 @@ endpoint: "https://integrate.api.nvidia.com/v1/chat/completions",        model: 
         const payload = buildNemotronPayload(workout);
 
         try {
-          const res = await fetch("https://api.allorigins.win/raw?url=https://integrate.api.nvidia.com/v1/chat/completions{
-            method: "POST",
+const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {            method: "POST",
             headers: {
               Authorization: `Bearer ${key}`,
               "Content-Type": "application/json",
