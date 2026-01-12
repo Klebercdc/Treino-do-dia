@@ -926,7 +926,7 @@ endpoint: "https://integrate.api.nvidia.com/v1/chat/completions",        model: 
         const payload = buildNemotronPayload(workout);
 
         try {
-          const res = await fetch(NVIDIA.endpoint, {
+          const res = await fetch("https://red-base-f49etitan-nvidia-proxy.kle-cdc.workers.dev/nvidia" {
             method: "POST",
             headers: {
               Authorization: `Bearer ${key}`,
