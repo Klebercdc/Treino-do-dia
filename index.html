@@ -1,606 +1,725 @@
 <!doctype html>
+
 <html lang="pt-PT">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-    <meta name="theme-color" content="#0b1220" />
-    <title>TITAN PRO - Smart Log</title>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0"/>
+  <meta name="theme-color" content="#f8fafc"/>
+  <meta name="color-scheme" content="light"/>
+  <title>TITAN PRO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
+  <link rel="icon" href="Logo.png" type="image/png"/>
+  <style>
+    :root {
+      --bg:          #f0f2f5;
+      --surface:     #ffffff;
+      --card:        #ffffff;
+      --border:      #e4e8ef;
+      --border-soft: #f0f2f5;
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+```
+  --accent:      #2563eb;
+  --accent-bg:   #eff4ff;
+  --accent-soft: rgba(37,99,235,0.08);
+  --teal:        #0891b2;
+  --teal-bg:     #ecfeff;
+  --green:       #059669;
+  --green-bg:    #ecfdf5;
+  --amber:       #d97706;
+  --amber-bg:    #fffbeb;
+  --red:         #dc2626;
+  --red-bg:      #fef2f2;
+  --purple:      #7c3aed;
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-    </script>
+  --text:        #0f172a;
+  --text-2:      #475569;
+  --muted:       #94a3b8;
 
-    <link rel="icon" href="Logo.png" type="image/png" />
+  --font:        'DM Sans', sans-serif;
+  --mono:        'DM Mono', monospace;
+  --r:           12px;
+  --r-sm:        8px;
+  --r-xs:        6px;
 
-    <style>
-      :root {
-        --bg: #0b1220;
-        --card: #161e2e;
-        --blue: #3182ce;
-        --text: #f7fafc;
-        --orange: #f6ad55;
-        --green: #38b2ac;
-        --red: #e53e3e;
-      }
-      body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: -apple-system, sans-serif;
-        margin: 0;
-        padding-bottom: 20px;
-      }
+  color-scheme: light;
+}
 
-      .top-header {
-        padding: 15px;
-        background: var(--card);
-        border-bottom: 1px solid #2d3748;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-      }
-      .date-badge {
-        font-size: 0.8rem;
-        color: var(--orange);
-        font-weight: bold;
-        background: #0b1220;
-        padding: 4px 10px;
-        border-radius: 15px;
-      }
-      .header-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .logo-img {
-        height: 45px;
-        width: auto;
-        object-fit: contain;
-        filter: drop-shadow(0 0 8px rgba(49, 130, 206, 0.6));
-      }
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 90px;
+  min-height: 100dvh;
+}
 
-      .timer-area {
-        background: #1a202c;
-        padding: 12px;
-        border-bottom: 2px solid var(--blue);
-        text-align: center;
-      }
-      #timerDisplay {
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: var(--blue);
-        font-family: monospace;
-        margin-bottom: 8px;
-      }
-      .timer-btns {
-        display: flex;
-        gap: 6px;
-        justify-content: center;
-        margin-bottom: 5px;
-      }
-      .btn-t {
-        background: #2d3748;
-        color: #fff;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-        cursor: pointer;
-        font-weight: bold;
-      }
-      .btn-t.active {
-        background: var(--blue);
-      }
-      .btn-ctrl {
-        background: var(--green);
-        color: #fff;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: bold;
-        font-size: 0.8rem;
-      }
+/* ── Custom Modal ── */
+#customModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,0.5);
+  z-index: 9999; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#customModal.show { display: flex; }
+#customModal .cm-box {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 28px 22px 20px;
+  width: 88%; max-width: 340px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(15,23,42,0.2), 0 2px 8px rgba(15,23,42,0.08);
+  animation: popIn .18s cubic-bezier(.34,1.56,.64,1);
+}
+#customModal .cm-msg {
+  font-size: 1rem; font-weight: 600;
+  color: var(--text); margin-bottom: 18px;
+  line-height: 1.45;
+}
+#customModal input {
+  width: 100%; padding: 11px 14px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text); font-size: 1rem;
+  font-family: var(--font);
+  margin-bottom: 16px; outline: none;
+  text-align: center; transition: border-color .2s;
+}
+#customModal input:focus { border-color: var(--accent); }
+#customModal .cm-btns { display: flex; gap: 10px; }
+#customModal .cm-btns button {
+  flex: 1; padding: 13px; border-radius: var(--r-sm);
+  border: none; font-family: var(--font);
+  font-weight: 700; font-size: 0.9rem; cursor: pointer;
+  transition: transform .1s, opacity .15s;
+}
+#customModal .cm-btns button:active { transform: scale(.97); opacity:.85; }
+#customModal .cm-ok  { background: var(--accent); color: #fff; }
+#customModal .cm-no  { background: var(--bg); color: var(--text-2); }
 
-      .setup-panel {
-        background: var(--card);
-        padding: 20px;
-        border-bottom: 3px solid var(--blue);
-        display: block;
-      }
-      .field {
-        margin-bottom: 15px;
-      }
-      .field label {
-        font-size: 0.7rem;
-        color: #a0aec0;
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        text-transform: uppercase;
-      }
-      .field select {
-        width: 100%;
-        padding: 12px;
-        background: #0b1220;
-        color: #fff;
-        border: 1px solid var(--blue);
-        border-radius: 8px;
-        font-weight: bold;
-      }
+/* ── Header ── */
+.top-header {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+}
+.brand {
+  font-size: 1.2rem; font-weight: 800;
+  color: var(--text); letter-spacing: -0.01em;
+}
+.brand span { color: var(--accent); }
+.date-badge {
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-bg);
+  padding: 4px 12px; border-radius: 20px;
+  letter-spacing: 0.02em;
+}
 
-      .nav-pills {
-        display: flex;
-        gap: 8px;
-        padding: 10px;
-        background: var(--bg);
-        overflow-x: auto;
-        border-bottom: 1px solid #2d3748;
-      }
-      .pill {
-        flex: none;
-        padding: 12px 20px;
-        border-radius: 8px;
-        background: #1a202c;
-        font-weight: bold;
-        font-size: 0.75rem;
-        border: 1px solid #2d3748;
-        cursor: pointer;
-        color: #a0aec0;
-        position: relative;
-      }
-      .pill.active {
-        background: var(--blue);
-        border-color: var(--blue);
-        color: #fff;
-      }
+/* ── Timer ── */
+.timer-area {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 14px;
+}
+.timer-top {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 10px;
+}
+#timerDisplay {
+  font-family: var(--mono);
+  font-size: 2.6rem; font-weight: 500;
+  color: var(--accent); line-height: 1;
+  letter-spacing: -0.02em;
+}
+.timer-controls { display: flex; gap: 8px; }
+.btn-ctrl {
+  font-family: var(--font); font-size: 0.8rem;
+  font-weight: 700; letter-spacing: 0.03em;
+  padding: 9px 18px; border-radius: var(--r-sm);
+  border: none; cursor: pointer;
+  transition: transform .1s, box-shadow .15s;
+}
+.btn-ctrl:active { transform: scale(.96); }
+.btn-ctrl-start {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+}
+.btn-ctrl-reset {
+  background: var(--bg); color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.timer-btns { display: flex; gap: 6px; }
+.btn-t {
+  flex: 1; font-family: var(--font);
+  font-size: 0.8rem; font-weight: 600;
+  padding: 7px 0; border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  background: transparent; color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.btn-t.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
-      .pill.add-pill {
-        padding-right: 20px;
-        padding-left: 20px;
-        border: 2px dashed var(--blue);
-        color: var(--blue);
-        background: #1a202c;
-      }
+/* ── Setup Panel ── */
+.setup-panel {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 16px;
+}
+.setup-title {
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+}
+.fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.field label {
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted); display: block; margin-bottom: 5px;
+}
+.field select {
+  width: 100%; padding: 10px 12px;
+  background: var(--bg); color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font); font-size: 0.88rem;
+  font-weight: 600; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%2394a3b8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer; transition: border-color .2s;
+}
+.field select:focus { outline: none; border-color: var(--accent); }
+.btn-open-training {
+  width: 100%; padding: 13px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r-sm);
+  font-family: var(--font); font-size: 0.95rem;
+  font-weight: 700; letter-spacing: 0.02em;
+  cursor: pointer; transition: opacity .15s, transform .1s;
+  box-shadow: 0 2px 10px rgba(37,99,235,0.25);
+}
+.btn-open-training:active { opacity:.88; transform: scale(.99); }
 
-      .section {
-        display: none;
-      }
-      .section.active {
-        display: block;
-      }
-      .exercise-card {
-        background: var(--card);
-        border-radius: 12px;
-        padding: 15px;
-        margin: 10px;
-        border: 1px solid #2d3748;
-        animation: fadeIn 0.3s ease;
-        position: relative;
-      }
-      .ex-title {
-        font-weight: 800;
-        font-size: 1.1rem;
-        color: var(--blue);
-        text-decoration: underline dotted;
-        cursor: pointer;
-      }
-      .ex-target {
-        font-size: 0.75rem;
-        color: var(--orange);
-        font-weight: bold;
-        margin: 4px 0 5px 0;
-        display: block;
-        cursor: pointer;
-      }
+/* ── Tab Nav ── */
+.nav-pills {
+  display: flex; gap: 0; padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
+}
+.nav-pills::-webkit-scrollbar { display: none; }
+.pill {
+  flex: none; padding: 14px 16px 12px;
+  font-size: 0.82rem; font-weight: 700;
+  letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  background: transparent; border-top: none;
+  border-left: none; border-right: none;
+  white-space: nowrap;
+  transition: color .2s, border-color .2s;
+}
+.pill.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pill.add-pill { color: var(--accent); opacity:.55; }
+.pill.add-pill:hover { opacity:1; }
 
-      .rpe-suggest {
-        display: block;
-        font-size: 0.7rem;
-        color: var(--green);
-        margin-bottom: 10px;
-        font-family: monospace;
-      }
+/* ── Sections / Container ── */
+.section { display: none; }
+.section.active { display: block; }
+#container { padding: 12px 12px 0; }
 
-      .series-grid {
-        display: grid;
-        grid-template-columns: 40px 1fr 1fr 1fr;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      .header-grid {
-        text-align: center;
-        font-size: 0.6rem;
-        color: #718096;
-        font-weight: bold;
-      }
-      .input-box {
-        background: #0b1220;
-        border: 1px solid #2d3748;
-        border-radius: 6px;
-        padding: 8px 0;
-      }
-      .input-box input {
-        background: transparent;
-        border: none;
-        color: #fff;
-        width: 100%;
-        text-align: center;
-        font-size: 1.1rem;
-        outline: none;
-        font-weight: bold;
-      }
+/* ── Exercise Card ── */
+.exercise-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 14px 12px;
+  margin-bottom: 10px;
+  position: relative; overflow: hidden;
+  animation: slideUp .2s ease;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+  transition: border-color .2s, box-shadow .2s;
+}
+.exercise-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--teal) 100%);
+  border-radius: 3px 0 0 3px;
+}
+.exercise-card.deleting {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-bg);
+}
+.exercise-card.deleting::before { background: var(--red); }
 
-      .setcell {
-        text-align: center;
-        user-select: none;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-      }
-      .setcell .slabel {
-        font-size: 0.7rem;
-        color: #718096;
-        font-weight: 800;
-        line-height: 1.05;
-      }
-      .setcell .rmmini {
-        font-size: 0.58rem;
-        color: #a0aec0;
-        font-family: monospace;
-        line-height: 1.05;
-        opacity: 0.95;
-      }
+.card-header { padding-left: 12px; margin-bottom: 3px; }
+.ex-title {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--text); cursor: pointer;
+  line-height: 1.25; display: block;
+  transition: color .15s;
+}
+.ex-title:active { color: var(--accent); }
+.ex-target {
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--amber); padding-left: 12px;
+  display: block; margin-bottom: 10px;
+}
+.rpe-suggest {
+  font-family: var(--mono); font-size: 0.65rem;
+  color: var(--teal); padding-left: 12px;
+  display: block; margin-bottom: 10px;
+}
 
-      .ghost::placeholder {
-        color: rgba(255, 255, 255, 0.25);
-        font-style: italic;
-      }
-      .ghost {
-      }
+/* ── Series Grid ── */
+.series-grid {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 1fr;
+  gap: 5px; align-items: center; margin-bottom: 5px;
+}
+.header-grid {
+  font-size: 0.58rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); text-align: center;
+}
+.input-box {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); padding: 7px 0;
+  transition: border-color .15s;
+}
+.input-box:focus-within { border-color: var(--accent); background: var(--surface); }
+.input-box input {
+  background: transparent; border: none;
+  color: var(--text); width: 100%;
+  text-align: center; font-family: var(--font);
+  font-size: 1.05rem; font-weight: 700;
+  outline: none;
+}
+.input-box input::placeholder { color: var(--muted); font-weight: 400; }
+.setcell {
+  text-align: center; cursor: pointer;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px; user-select: none;
+}
+.setcell .slabel { font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+.setcell .rmmini { font-family: var(--mono); font-size: 0.5rem; color: var(--muted); line-height: 1; }
+.ghost::placeholder { color: rgba(37,99,235,0.35) !important; }
 
-      .btn-add-ex {
-        background: #1a202c;
-        color: var(--blue);
-        border: 2px dashed var(--blue);
-        width: calc(100% - 20px);
-        margin: 15px 10px;
-        padding: 15px;
-        border-radius: 12px;
-        font-weight: 800;
-        cursor: pointer;
-      }
+/* ── Add Exercise ── */
+.btn-add-ex {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: calc(100% - 24px); margin: 10px 12px 0;
+  padding: 13px; background: transparent;
+  border: 1.5px dashed #c7d2e8;
+  border-radius: var(--r);
+  font-family: var(--font); font-size: 0.85rem;
+  font-weight: 600; color: var(--accent);
+  cursor: pointer; transition: all .2s;
+}
+.btn-add-ex:active { background: var(--accent-bg); border-color: var(--accent); }
 
-      .footer-actions {
-        padding: 20px 10px 40px 10px;
-        display: flex;
-        gap: 12px;
-        background: transparent;
-        flex-wrap: wrap;
-      }
-      .btn {
-        padding: 15px;
-        border-radius: 10px;
-        border: none;
-        font-weight: 800;
-        cursor: pointer;
-        flex: 1;
-        text-align: center;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        min-width: 80px;
-      }
-      .btn-save {
-        background: var(--green);
-        color: #fff;
-        box-shadow: 0 4px 0 #2d8a84;
-        flex: 2;
-      }
-      .btn-config {
-        background: #2d3748;
-        color: var(--blue);
-        border: 1px solid var(--blue);
-      }
+/* ── Footer Dock ── */
+.footer-actions {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 150;
+  display: flex; background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 16px rgba(15,23,42,0.08);
+}
+.btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  padding: 7px 4px; border: none;
+  background: transparent; border-radius: var(--r-sm);
+  cursor: pointer; transition: background .15s;
+}
+.btn:active { background: var(--bg); }
+.btn .btn-icon { font-size: 1.25rem; line-height: 1; }
+.btn .btn-label {
+  font-size: 0.55rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--muted);
+}
+.btn-save {
+  flex: 2;
+  background: var(--accent); border-radius: var(--r-sm);
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+.btn-save .btn-icon, .btn-save .btn-label { color: #fff; }
+.btn-save:active { background: #1d4ed8; }
 
-      dialog {
-        background: #161e2e;
-        color: #fff;
-        border: 1px solid var(--blue);
-        border-radius: 12px;
-        width: 90%;
-        max-width: 500px;
-        padding: 20px;
-      }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.8);
-      }
-      .lib-item {
-        padding: 12px;
-        border-bottom: 1px solid #2d3748;
-        cursor: pointer;
-      }
+/* ── Dialogs ── */
+dialog {
+  background: var(--surface); color: var(--text);
+  border: none; border-radius: var(--r) var(--r) 0 0;
+  width: 100%; max-width: 540px;
+  max-height: 90dvh; padding: 20px 16px 24px;
+  margin: auto auto 0;
+  overflow-y: auto;
+  box-shadow: 0 -8px 40px rgba(15,23,42,0.14);
+}
+dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); }
+.dialog-title {
+  font-size: 1rem; font-weight: 800;
+  color: var(--text); margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+.dialog-title::before {
+  content: '';
+  display: inline-block; width: 4px; height: 14px;
+  background: var(--accent); border-radius: 2px;
+  margin-right: 8px; vertical-align: middle;
+}
 
-      #csvTextarea {
-        width: 100%;
-        height: 220px;
-        padding: 12px;
-        background: #0b1220;
-        border: 1px solid var(--blue);
-        border-radius: 8px;
-        color: #fff;
-        font-family: monospace;
-        font-size: 0.8rem;
-        resize: none;
-        margin-bottom: 12px;
-        outline: none;
-      }
-      .csv-info {
-        font-size: 0.7rem;
-        color: #a0aec0;
-        margin-bottom: 12px;
-        line-height: 1.4;
-      }
-      .csv-buttons {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .csv-buttons button,
-      .csv-buttons label {
-        flex: 1;
-        padding: 12px;
-        border-radius: 8px;
-        border: none;
-        font-weight: bold;
-        cursor: pointer;
-        min-width: 130px;
-        text-align: center;
-        font-size: 0.8rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .btn-import {
-        background: var(--green);
-        color: #fff;
-      }
-      .btn-cancel {
-        background: #2d3748;
-        color: var(--blue);
-      }
+.lib-cat {
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); padding: 10px 0 5px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.lib-item {
+  padding: 11px 4px; border-bottom: 1px solid var(--border-soft);
+  cursor: pointer; font-weight: 500; color: var(--text);
+  transition: color .15s, padding-left .15s;
+}
+.lib-item:active { color: var(--accent); padding-left: 8px; }
 
-      #histList {
-        max-height: 400px;
-        overflow-y: auto;
-        border: 1px solid #2d3748;
-        border-radius: 10px;
-      }
-      .hist-item {
-        padding: 12px;
-        border-bottom: 1px solid #2d3748;
-      }
-      .hist-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: pointer;
-      }
-      .hist-header strong {
-        color: var(--orange);
-      }
-      .hist-details {
-        display: none;
-        margin-top: 10px;
-        background: #0b1220;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-        color: #cbd5e0;
-      }
-      .hist-details.open {
-        display: block;
-      }
-      .hist-ex-row {
-        margin-bottom: 6px;
-        border-bottom: 1px dashed #2d3748;
-        padding-bottom: 4px;
-      }
-      .hist-ex-name {
-        color: var(--blue);
-        font-weight: bold;
-        display: block;
-      }
+.modal-input {
+  width: 100%; padding: 10px 14px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text);
+  font-family: var(--font); font-size: 0.95rem;
+  outline: none; transition: border-color .2s;
+}
+.modal-input:focus { border-color: var(--accent); background: var(--surface); }
 
-      .hist-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 12px;
-      }
-      .hist-actions button {
-        flex: 1;
-        padding: 12px;
-        border-radius: 8px;
-        border: none;
-        font-weight: bold;
-        cursor: pointer;
-      }
+/* Dialog Buttons */
+.d-btn {
+  padding: 11px 16px; border-radius: var(--r-sm);
+  border: none; font-family: var(--font);
+  font-size: 0.82rem; font-weight: 700;
+  letter-spacing: 0.02em; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.d-btn:active { opacity:.82; transform: scale(.97); }
+.d-btn-primary { background: var(--green); color: #fff; }
+.d-btn-secondary { background: var(--bg); color: var(--text-2); border: 1px solid var(--border); }
+.d-btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid rgba(220,38,38,0.2); }
+.d-btn-blue { background: var(--accent); color: #fff; }
+.d-btn-purple { background: #f3f0ff; color: var(--purple); border: 1px solid rgba(124,58,237,0.2); }
 
-      #tplList {
-        max-height: 220px;
-        overflow-y: auto;
-        border: 1px solid #2d3748;
-        border-radius: 10px;
-        margin-top: 10px;
-      }
-      .tpl-item {
-        padding: 10px 12px;
-        border-bottom: 1px solid #2d3748;
-        cursor: pointer;
-      }
-      .tpl-item small {
-        color: #a0aec0;
-        display: block;
-        margin-top: 4px;
-        font-size: 0.7rem;
-      }
-      .tpl-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      .tpl-actions button {
-        flex: 1;
-        padding: 12px;
-        border-radius: 8px;
-        border: none;
-        font-weight: bold;
-        cursor: pointer;
-      }
+#csvTextarea {
+  width: 100%; height: 160px; padding: 12px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text);
+  font-family: var(--mono); font-size: 0.75rem;
+  resize: none; margin-bottom: 12px;
+  outline: none; box-sizing: border-box;
+  transition: border-color .2s;
+}
+#csvTextarea:focus { border-color: var(--accent); }
 
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    </style>
-  </head>
+.csv-info {
+  font-size: 0.75rem; color: var(--text-2);
+  margin-bottom: 12px; padding: 10px 12px;
+  background: var(--accent-bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  line-height: 1.5;
+}
+.csv-buttons { display: flex; flex-wrap: wrap; gap: 7px; }
+.csv-buttons button, .csv-buttons label {
+  flex: 1; min-width: 110px; padding: 10px 10px;
+  border-radius: var(--r-sm); border: none;
+  font-family: var(--font); font-weight: 700;
+  font-size: 0.78rem; cursor: pointer;
+  text-align: center; display: flex;
+  align-items: center; justify-content: center;
+  transition: opacity .15s;
+}
+.csv-buttons button:active, .csv-buttons label:active { opacity:.8; }
+.btn-import { background: var(--green); color: #fff; }
+.btn-cancel { background: var(--bg); color: var(--text-2); border: 1px solid var(--border); }
 
-  <body>
-    <div class="top-header">
-      <div class="header-left">
-        <h1 style="margin: 0; font-size: 1.1rem; color: var(--blue)">
-          TITAN <span style="color: #fff">PRO</span>
-        </h1>
-      </div>
-      <div class="date-badge" id="displayDate">--/--/--</div>
+#histList {
+  max-height: 360px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+}
+.hist-item { border-bottom: 1px solid var(--border-soft); }
+.hist-header {
+  display: flex; justify-content: space-between;
+  align-items: center; cursor: pointer;
+  padding: 12px; transition: background .15s;
+}
+.hist-header:active { background: var(--bg); }
+.hist-header strong { color: var(--amber); font-size: 0.88rem; font-weight: 700; }
+.hist-details {
+  display: none; padding: 10px 12px;
+  background: var(--bg); font-size: 0.75rem;
+  color: var(--text-2); border-top: 1px solid var(--border);
+}
+.hist-details.open { display: block; }
+.hist-ex-row { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-soft); }
+.hist-ex-name { display: block; color: var(--accent); font-weight: 700; font-size: 0.82rem; margin-bottom: 2px; }
+.hist-actions { display: flex; gap: 8px; margin-top: 14px; }
+.hist-actions button { flex: 1; }
+
+#tplList {
+  max-height: 190px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: var(--r-sm); margin-top: 10px;
+}
+.tpl-item { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); cursor: pointer; font-weight: 600; }
+.tpl-item:active { background: var(--accent-bg); }
+.tpl-item small { display: block; margin-top: 2px; color: var(--muted); font-size: 0.7rem; }
+.tpl-actions { display: flex; gap: 8px; margin-top: 10px; }
+.tpl-actions button { flex: 1; }
+
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(10px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes popIn {
+  from { opacity:0; transform: scale(.92); }
+  to   { opacity:1; transform: scale(1); }
+}
+```
+
+  </style>
+</head>
+<body>
+
+<!-- Modal -->
+
+<div id="customModal">
+  <div class="cm-box">
+    <div class="cm-msg" id="cmMsg"></div>
+    <input type="text" id="cmInput" style="display:none"/>
+    <div class="cm-btns">
+      <button class="cm-no" id="cmNo">Cancelar</button>
+      <button class="cm-ok" id="cmOk">Confirmar</button>
     </div>
+  </div>
+</div>
 
-    <div class="setup-panel" id="setupPanel">
-      <div class="field">
-        <label>Frequência Semanal</label>
-        <select id="freq" onchange="gerarProtocolo()">
-          <option value="2">2 Dias (Full Body)</option>
-          <option value="3" selected>3 Dias (ABC)</option>
-          <option value="4">4 Dias (Upper/Lower)</option>
-          <option value="5">5 Dias (ABCDE)</option>
-          <option value="6">6 Dias (PPL x2)</option>
-        </select>
-      </div>
+<!-- Header -->
 
-      <div class="field">
-        <label>Objetivo (Define Reps)</label>
-        <select id="obj" onchange="gerarProtocolo()">
-          <option value="hipertrofia">Hipertrofia (8-12 reps)</option>
-          <option value="forca">Força Bruta (3-5 reps)</option>
-          <option value="definicao">Definição/RML (15-20 reps)</option>
-        </select>
-      </div>
-      <button class="btn btn-save" onclick="closeConfig()" style="margin-top: 12px">ABRIR TREINO</button>
+<div class="top-header">
+  <div class="brand"><span>TITAN</span> PRO</div>
+  <div class="date-badge" id="displayDate">--/--/--</div>
+</div>
+
+<!-- Timer -->
+
+<div class="timer-area">
+  <div class="timer-top">
+    <div id="timerDisplay">1:00</div>
+    <div class="timer-controls">
+      <button class="btn-ctrl btn-ctrl-start" id="ctrlBtn" onclick="toggleT()">INICIAR</button>
+      <button class="btn-ctrl btn-ctrl-reset" onclick="resetT()">↺</button>
     </div>
+  </div>
+  <div class="timer-btns">
+    <button class="btn-t active" onclick="setT(60,this)">60s</button>
+    <button class="btn-t" onclick="setT(90,this)">90s</button>
+    <button class="btn-t" onclick="setT(120,this)">2 min</button>
+    <button class="btn-t" onclick="setT(180,this)">3 min</button>
+  </div>
+</div>
 
-    <div class="nav-pills" id="nav"></div>
-    <main id="container"></main>
-    <button class="btn-add-ex" onclick="abrirLibParaNovo()">+ ADICIONAR EXERCÍCIO</button>
+<!-- Config -->
 
-    <div class="footer-actions">
-      <button class="btn btn-config" onclick="openConfig()">⚙️ CONFIG</button>
-      <button class="btn btn-config" onclick="showEvoChart()">📈 EVOLUÇÃO</button>
-      <button class="btn btn-save" onclick="salvarTreino()">SALVAR SESSÃO</button>
-      <button class="btn btn-config" onclick="abrirCSVModal()" style="flex: 0.5; background: var(--orange); color: white">
-        📊 ARQUIVOS
-      </button>
-      <button class="btn btn-config" onclick="verHistorico()" style="flex: 0.4">📜 HIST</button>
+<div class="setup-panel" id="setupPanel">
+  <div class="setup-title">Configuração do Treino</div>
+  <div class="fields-row">
+    <div class="field">
+      <label>Frequência</label>
+      <select id="freq" onchange="confirmarGerarProtocolo()">
+        <option value="2">2 Dias</option>
+        <option value="3" selected>3 Dias (ABC)</option>
+        <option value="4">4 Dias</option>
+        <option value="5">5 Dias</option>
+        <option value="6">6 Dias (PPL)</option>
+      </select>
     </div>
+    <div class="field">
+      <label>Objetivo</label>
+      <select id="obj" onchange="confirmarGerarProtocolo()">
+        <option value="hipertrofia">Hipertrofia</option>
+        <option value="forca">Força</option>
+        <option value="definicao">Definição</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn-open-training" onclick="closeConfig()">Abrir Treino →</button>
+</div>
 
-    <dialog id="modalLib">
-      <h3 id="libHeader" style="margin: 0 0 15px 0; color: var(--orange)">Trocar Exercício</h3>
-      <div style="margin-bottom: 15px; display: flex; gap: 5px">
-        <input
-          type="text"
-          id="manualName"
-          placeholder="Nome personalizado..."
-          style="
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid var(--blue);
-            background: #0b1220;
-            color: white;
-            outline: none;
-          "
-        />
-        <button
-          onclick="adicionarManual()"
-          style="background: var(--blue); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold"
-        >
-          +
-        </button>
-      </div>
-      <div id="libContent" style="max-height: 300px; overflow-y: auto"></div>
-      <button
-        class="btn"
-        onclick="document.getElementById('modalLib').close()"
-        style="width: 100%; margin-top: 10px; background: #2d3748; color: white"
-      >
-        Fechar
-      </button>
-    </dialog>
+<!-- Tabs -->
 
-    <dialog id="modalCSV">
-      <h3 style="margin: 0 0 15px 0; color: var(--orange)">Importar Treino</h3>
-      <div class="csv-info">
-        <strong>Opção 1 (PDF):</strong> Use o botão "LER PDF" para abrir ficha do celular.<br />
-        <strong>Opção 2 (CSV):</strong> Cole o CSV do Excel/Sheets.<br />
-        <small>Formato: TREINO,EXERCÍCIO,SÉRIES,REPS...</small>
-      </div>
+<div class="nav-pills" id="nav"></div>
 
-      <textarea id="csvTextarea" placeholder="O texto da ficha aparecerá aqui..."></textarea>
+<!-- Exercises -->
 
-      <div class="csv-buttons">
-        <label class="btn-cancel" style="background: var(--blue); color: white">
-          📄 LER PDF
-          <input type="file" id="pdfUpload" accept=".pdf" style="display: none" onchange="extrairTextoPDF(this)" />
-        </label>
+<main id="container"></main>
+<button class="btn-add-ex" onclick="abrirLibParaNovo()">+ Adicionar Exercício</button>
 
-        <button class="btn-import" onclick="importarCSV()">✓ IMPORTAR</button>
-        <button class="btn-cancel" onclick="salvarModeloCSV()">💾 SALVAR MOD</button>
-        <button class="btn-cancel" onclick="mostrarModelosCSV()">📚 MODELOS</button>
-        <button class="btn-cancel" onclick="document.getElementById('modalCSV').close()">✕ FECHAR</button>
-      </div>
+<!-- Footer -->
 
-      <div id="tplArea" style="display: none; margin-top: 12px">
-        <div style="color: var(--orange); font-weight: bold; margin-bottom: 8px">Modelos salvos</div>
-        <div id="tplList"></div>
-        <div class="tpl-actions">
-          <button class="btn-cancel" onclick="limparModelosCSV()">🗑️ LIMPAR MODELOS</button>
-          <button class="btn-import" onclick="hideModelosCSV()">OK</button>
-        </div>
-      </div>
-    </dialog>
+<div class="footer-actions">
+  <button class="btn" onclick="openConfig()">
+    <span class="btn-icon">⚙️</span>
+    <span class="btn-label">Config</span>
+  </button>
+  <button class="btn" onclick="showEvoChart()">
+    <span class="btn-icon">📈</span>
+    <span class="btn-label">Evolução</span>
+  </button>
+  <button class="btn btn-save" onclick="salvarTreino()">
+    <span class="btn-icon">💾</span>
+    <span class="btn-label">Salvar</span>
+  </button>
+  <button class="btn" onclick="abrirCSVModal()">
+    <span class="btn-icon">📁</span>
+    <span class="btn-label">Arquivos</span>
+  </button>
+  <button class="btn" onclick="verHistorico()">
+    <span class="btn-icon">📜</span>
+    <span class="btn-label">Histórico</span>
+  </button>
+</div>
 
-    <dialog id="modalHIST">
-      <h3 style="margin: 0 0 15px 0; color: var(--orange)">Histórico de Sessões</h3>
-      <div id="histList"></div>
-      <div class="hist-actions">
-        <button class="btn-cancel" onclick="limparHistorico()">🗑️ LIMPAR TUDO</button>
-        <button class="btn-import" onclick="document.getElementById('modalHIST').close()">FECHAR</button>
-      </div>
-    </dialog>
+<!-- Modal: Biblioteca -->
 
-    <script>
+<dialog id="modalLib">
+  <div class="dialog-title" id="libHeader">Trocar Exercício</div>
+  <div style="display:flex; gap:8px; margin-bottom:14px">
+    <input type="text" id="manualName" class="modal-input" placeholder="Nome personalizado..." style="flex:1"/>
+    <button onclick="adicionarManual()" class="d-btn d-btn-blue" style="padding:0 18px">+</button>
+  </div>
+  <div id="libContent" style="max-height:320px; overflow-y:auto"></div>
+  <button class="d-btn d-btn-secondary" onclick="document.getElementById('modalLib').close()" style="width:100%; margin-top:14px">Fechar</button>
+</dialog>
+
+<!-- Modal: Arquivos -->
+
+<dialog id="modalCSV">
+  <div class="dialog-title">Importar Treino</div>
+  <div class="csv-info">
+    <strong>PDF:</strong> Extraia exercícios da ficha com "Ler PDF".<br/>
+    <strong>CSV:</strong> Cole no formato <code>TREINO,EXERCÍCIO,SÉRIES,REPS</code>
+  </div>
+  <textarea id="csvTextarea" placeholder="Texto da ficha aparecerá aqui..."></textarea>
+
+  <!-- Linha 1: ações principais -->
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+    <label class="d-btn d-btn-blue" style="cursor:pointer; justify-content:center; display:flex; align-items:center; gap:6px; padding:12px">
+      📄 Ler PDF
+      <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"/>
+    </label>
+    <button class="btn-import" style="border-radius:var(--r-sm); padding:12px; font-family:var(--font); font-weight:700; font-size:.85rem; border:none; cursor:pointer" onclick="importarCSV()">✓ Importar</button>
+  </div>
+
+  <!-- Linha 2: ações secundárias -->
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+    <button class="d-btn d-btn-secondary" style="text-align:center" onclick="salvarModeloCSV()">💾 Salvar CSV</button>
+    <button class="d-btn d-btn-purple" style="text-align:center" onclick="salvarTreinoAtualComoModelo()">📋 Treino Atual</button>
+  </div>
+
+  <!-- Linha 3: modelos + fechar -->
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+    <button class="d-btn d-btn-secondary" style="text-align:center" onclick="mostrarModelosCSV()">📚 Ver Modelos</button>
+    <button class="d-btn d-btn-danger" style="text-align:center" onclick="document.getElementById('modalCSV').close()">✕ Fechar</button>
+  </div>
+
+  <div id="tplArea" style="display:none; margin-top:16px">
+    <div style="font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px">Modelos Salvos</div>
+    <div id="tplList"></div>
+    <div class="tpl-actions">
+      <button class="d-btn d-btn-danger" onclick="limparModelosCSV()">🗑️ Limpar</button>
+      <button class="d-btn d-btn-primary" onclick="hideModelosCSV()">OK</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Modal: Histórico -->
+
+<dialog id="modalHIST">
+  <div class="dialog-title">Histórico de Sessões</div>
+  <div id="histList"></div>
+  <div class="hist-actions">
+    <button class="d-btn d-btn-danger" onclick="limparHistorico()">🗑️ Limpar Tudo</button>
+    <button class="d-btn d-btn-primary" onclick="document.getElementById('modalHIST').close()">Fechar</button>
+  </div>
+</dialog>
+
+<script>
+      /* ════════════════════════════════════════════════════
+         DADOS & CONSTANTES
+      ════════════════════════════════════════════════════ */
+
+      /* ══════════════════════════════════════════════
+         MODAL CUSTOMIZADO – substitui confirm/prompt
+         Retorna Promise<string|boolean>
+      ══════════════════════════════════════════════ */
+      function _showModal(msg, withInput, inputPlaceholder) {
+        return new Promise((resolve) => {
+          const modal  = document.getElementById("customModal");
+          const msgEl  = document.getElementById("cmMsg");
+          const inputEl= document.getElementById("cmInput");
+          const okBtn  = document.getElementById("cmOk");
+          const noBtn  = document.getElementById("cmNo");
+
+          msgEl.textContent = msg;
+
+          if (withInput) {
+            inputEl.type        = inputPlaceholder === "number" ? "number" : "text";
+            inputEl.placeholder = inputPlaceholder === "number" ? "0" : (inputPlaceholder || "");
+            inputEl.value       = "";
+            inputEl.style.display = "block";
+            setTimeout(() => inputEl.focus(), 80);
+          } else {
+            inputEl.style.display = "none";
+          }
+
+          modal.classList.add("show");
+
+          function done(ok) {
+            modal.classList.remove("show");
+            okBtn.removeEventListener("click", onOk);
+            noBtn.removeEventListener("click", onNo);
+            if (!ok) { resolve(null); return; }
+            resolve(withInput ? inputEl.value.trim() : true);
+          }
+          function onOk() { done(true);  }
+          function onNo() { done(false); }
+          okBtn.addEventListener("click", onOk);
+          noBtn.addEventListener("click", onNo);
+        });
+      }
+
+      /* Substitutos de confirm() e prompt() */
+      async function dlgConfirm(msg)               { return await _showModal(msg, false, null); }
+      async function dlgPrompt(msg, placeholder)   { return await _showModal(msg, true, placeholder || ""); }
+
       const TREINOS_PRONTOS = {
         "2": [
           { nome: "A (Full Body - Foco Agacho)", exs: ["Agachamento Livre", "Supino Reto", "Remada Curvada", "Desenvolvimento Militar", "Panturrilha em Pé"] },
@@ -659,6 +778,9 @@
         Braços: ["Rosca Direta", "Tríceps Corda", "Rosca Martelo", "Tríceps Testa", "Rosca Scott"],
       };
 
+      /* ════════════════════════════════════════════════════
+         CONFIG PANEL
+      ════════════════════════════════════════════════════ */
       function openConfig() {
         document.getElementById("setupPanel").style.display = "block";
       }
@@ -666,6 +788,29 @@
         document.getElementById("setupPanel").style.display = "none";
       }
 
+      /* FIX 4: confirma antes de destruir treino atual ao trocar selects */
+      async function confirmarGerarProtocolo() {
+        const sections = document.querySelectorAll("#container .section");
+        const hasData = sections.length > 0;
+        if (hasData) {
+          if (!await dlgConfirm("Apagar treino atual e gerar novo?")) {
+            // Recarregar do draft para reverter o select visualmente
+            try {
+              const draft = safeJSON(STORAGE.draftKey, null);
+              if (draft) {
+                if (draft.freq) document.getElementById("freq").value = draft.freq;
+                if (draft.obj)  document.getElementById("obj").value  = draft.obj;
+              }
+            } catch {}
+            return;
+          }
+        }
+        gerarProtocolo();
+      }
+
+      /* ════════════════════════════════════════════════════
+         TIMER
+      ════════════════════════════════════════════════════ */
       let timeLeft = 60,
         baseTime = 60,
         timerInt = null,
@@ -700,25 +845,25 @@
       function updateT() {
         const m = Math.floor(timeLeft / 60);
         const s = timeLeft % 60;
-        document.getElementById("timerDisplay").innerText = `${m}:${s < 10 ? "0" : ""}${s}`;
+        const el = document.getElementById("timerDisplay");
+        if (el) el.innerText = `${m}:${s < 10 ? "0" : ""}${s}`;
       }
       function toggleT() {
         const ctx = getAudioCtx();
         if (ctx.state === "suspended") {
-          try {
-            ctx.resume();
-          } catch (_) {}
+          try { ctx.resume(); } catch (_) {}
         }
         const btn = document.getElementById("ctrlBtn");
+        if (!btn) return;
         if (isRunning) {
           clearInterval(timerInt);
           isRunning = false;
           btn.innerText = "CONTINUAR";
-          btn.style.background = "var(--green)";
+          btn.style.background = ''; btn.className = 'btn-ctrl btn-ctrl-start';
         } else {
           isRunning = true;
           btn.innerText = "PAUSAR";
-          btn.style.background = "var(--orange)";
+          btn.style.background = ''; btn.className = 'btn-ctrl btn-ctrl-reset';
           timerInt = setInterval(() => {
             if (timeLeft > 0) {
               timeLeft--;
@@ -729,7 +874,7 @@
               playBeep();
               setTimeout(playBeep, 600);
               btn.innerText = "INICIAR";
-              btn.style.background = "var(--green)";
+              btn.style.background = ''; btn.className = 'btn-ctrl btn-ctrl-start';
               timeLeft = baseTime;
               updateT();
             }
@@ -741,14 +886,22 @@
         isRunning = false;
         timeLeft = baseTime;
         updateT();
-        document.getElementById("ctrlBtn").innerText = "INICIAR";
-        document.getElementById("ctrlBtn").style.background = "var(--green)";
+        const btn = document.getElementById("ctrlBtn");
+        if (btn) {
+          btn.innerText = "INICIAR";
+          btn.style.background = ''; btn.className = 'btn-ctrl btn-ctrl-start';
+        }
       }
 
+      /* ════════════════════════════════════════════════════
+         ESTADO & HELPERS
+      ════════════════════════════════════════════════════ */
       let currentExId = null;
       let isAddingNew = false;
-
       let prevMap = Object.create(null);
+
+      /* FIX 2: array global para histórico – evita JSON inline em onclick */
+      let _histSessions = [];
 
       function escapeAttr(v) {
         return String(v ?? "")
@@ -791,7 +944,7 @@
         if (!latest?.sections) return Object.create(null);
         const map = Object.create(null);
         latest.sections.forEach((sec) => {
-          const treinoKey = sec.treinoKey || sec?.treinoKey || sec?.treino || sec?.key;
+          const treinoKey = sec.treinoKey || sec?.treino || sec?.key;
           (sec.cards || []).forEach((c) => {
             const exName = c?.name || "";
             const k = prevKeyOf(treinoKey, exName);
@@ -827,7 +980,7 @@
         if (snap?.state?.sections) {
           const map = Object.create(null);
           snap.state.sections.forEach((sec) => {
-            const treinoKey = sec.treinoKey || sec?.treinoKey || sec?.treino || sec?.key;
+            const treinoKey = sec.treinoKey || sec?.treino || sec?.key;
             (sec.cards || []).forEach((c) => {
               const exName = c?.name || "";
               const k = prevKeyOf(treinoKey, exName);
@@ -844,6 +997,9 @@
         return rebuildPrevMapFromLatestHistory();
       }
 
+      /* ════════════════════════════════════════════════════
+         GERAR PROTOCOLO
+      ════════════════════════════════════════════════════ */
       function gerarProtocolo() {
         const f = document.getElementById("freq").value;
         const nav = document.getElementById("nav");
@@ -885,6 +1041,9 @@
         applyPrevGhostsToAll();
       }
 
+      /* ════════════════════════════════════════════════════
+         CARDS DE EXERCÍCIO
+      ════════════════════════════════════════════════════ */
       function criarCard(nome, sectionId, series = null, reps = null, rpe = null, values = null) {
         const o = document.getElementById("obj").value;
         const meta = reps || (o === "forca" ? "3-5 Reps" : o === "hipertrofia" ? "8-12 Reps" : "15-20 Reps");
@@ -905,11 +1064,9 @@
 
         const rows = Array.from({ length: sets }, (_, s) => {
           const cur = values && values[s] ? values[s] : null;
-
-          const kgVal = cur ? cur.kg ?? "" : "";
+          const kgVal   = cur ? cur.kg   ?? "" : "";
           const repsVal = cur ? cur.reps ?? "" : "";
-          const rpeVal = cur ? cur.rpe ?? "" : "";
-
+          const rpeVal  = cur ? cur.rpe  ?? "" : "";
           const rmNow = cur?.rm ?? (cur?.kg && cur?.reps ? roundRM(calcRM(cur.kg, cur.reps)) : 0);
 
           return `
@@ -918,40 +1075,101 @@
                 <span class="slabel">S${s + 1}</span>
                 <span class="rmmini" id="rm-${id}-${s}">RM: ${escapeHTML(rmNow ? rmNow + "kg" : "-")}</span>
               </span>
-              <div class="input-box"><input type="number" inputmode="decimal" placeholder="" value="${escapeAttr(kgVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number" placeholder="" value="${escapeAttr(rpeVal)}"></div>
+              <div class="input-box"><input type="number" inputmode="decimal" placeholder="" value="${escapeAttr(kgVal)}"  oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
+              <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(rpeVal)}"></div>
             </div>`;
         }).join("");
 
         card.innerHTML = `
-          <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${escapeHTML(nome)}</span>
-          <span class="ex-target" onclick="confirmDeleteExercise(this)"> ${sets} Sets x ${escapeHTML(meta)} </span>
-          <span class="rpe-suggest">1RM est: <span id="1rm-${id}">-</span> | <span id="rpe-${id}">-</span></span>
+          <div class="card-header">
+            <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${escapeHTML(nome)}</span>
+          </div>
+          <span class="ex-target">${sets} sets · ${escapeHTML(meta)}</span>
+          <span class="rpe-suggest">1RM estimado: <span id="1rm-${id}">—</span> &nbsp;·&nbsp; <span id="rpe-${id}">—</span></span>
           <div class="series-grid header-grid"><span>SET</span><span>KG</span><span>REPS</span><span>RPE</span></div>
           ${rows}
         `;
 
         sec.appendChild(card);
         attachAutosaveToCard(card);
+        bindCardLongPress(card);   // long press para apagar
         scheduleDraftSave();
         applyPrevGhostsToCard(card);
         updateSuggests(id);
       }
 
-      function confirmDeleteExercise(elTarget) {
+      async function confirmDeleteExercise(card) {
         try {
-          const card = elTarget.closest(".exercise-card");
-          if (!card) return;
           const nome = card.querySelector(".ex-title")?.textContent || "Exercício";
-          if (confirm(`Apagar exercício "${nome}"?`)) {
+          if (await dlgConfirm(`Apagar exercício "${nome}"?`)) {
             card.remove();
             scheduleDraftSave();
+          } else {
+            card.classList.remove("deleting");
           }
         } catch {}
       }
 
-      function onPressSetCell(el) {
+      /* Long press no título do exercício para apagar (700ms) */
+      function bindCardLongPress(card) {
+        const title = card.querySelector(".ex-title");
+        if (!title) return;
+
+        let touchStartTime = 0;
+        let visualTimer = null;
+        let suppressClick = false;
+
+        title.addEventListener("touchstart", () => {
+          touchStartTime = Date.now();
+          suppressClick = false;
+          visualTimer = setTimeout(() => card.classList.add("deleting"), 700);
+        }, { passive: true });
+
+        title.addEventListener("touchend", async () => {
+          clearTimeout(visualTimer);
+          const elapsed = Date.now() - touchStartTime;
+          card.classList.remove("deleting");
+
+          if (elapsed >= 700) {
+            suppressClick = true;
+            const nome = card.querySelector(".ex-title")?.textContent || "Exercício";
+            if (await dlgConfirm(`Apagar "${nome}"?`)) {
+              card.remove();
+              scheduleDraftSave();
+            }
+          }
+        }, { passive: true });
+
+        title.addEventListener("touchmove", () => {
+          clearTimeout(visualTimer);
+          touchStartTime = 0;
+          card.classList.remove("deleting");
+        }, { passive: true });
+
+        title.addEventListener("touchcancel", () => {
+          clearTimeout(visualTimer);
+          touchStartTime = 0;
+          card.classList.remove("deleting");
+        }, { passive: true });
+
+        /* Bloqueia o click (que abre biblioteca) se veio de long press */
+        title.addEventListener("click", (e) => {
+          if (suppressClick) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            suppressClick = false;
+          }
+        }, true);
+
+        /* Desktop: botão direito apaga */
+        title.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          confirmDeleteExercise(card);
+        });
+      }
+
+      async function onPressSetCell(el) {
         try {
           const row = el.closest(".series-grid");
           if (!row) return;
@@ -959,12 +1177,9 @@
           if (inputs.length !== 3) return;
 
           const hasAny = Array.from(inputs).some((i) => String(i.value || "").trim().length);
-          if (!hasAny) {
-            inputs[0].focus();
-            return;
-          }
+          if (!hasAny) { inputs[0].focus(); return; }
 
-          if (confirm("Apagar esta série (KG/REPS/RPE)?")) {
+          if (await dlgConfirm("Apagar esta série (KG/REPS/RPE)?")) {
             inputs.forEach((i) => (i.value = ""));
             const card = row.closest(".exercise-card");
             if (card) updateSuggests(card.getAttribute("data-ex-id"));
@@ -978,13 +1193,11 @@
         if (!card) return;
 
         const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
-        let firstKg = 0;
-        let firstReps = 0;
+        let firstKg = 0, firstReps = 0;
 
         rows.forEach((r, idx) => {
           const i = r.querySelectorAll("input");
-          const kg = i[0].value;
-          const reps = i[1].value;
+          const kg = i[0].value, reps = i[1].value;
 
           if (!firstKg && !firstReps && kg && reps) {
             firstKg = toNum(kg);
@@ -1007,11 +1220,13 @@
         }
       }
 
+      /* ════════════════════════════════════════════════════
+         PDF
+      ════════════════════════════════════════════════════ */
       async function extrairTextoPDF(input) {
         if (!input.files || !input.files[0]) return;
         const file = input.files[0];
         const btnLabel = input.parentElement;
-
         btnLabel.innerText = "Lendo...";
 
         try {
@@ -1041,31 +1256,25 @@
         }
       }
 
+      /* ════════════════════════════════════════════════════
+         IMPORTAR CSV
+      ════════════════════════════════════════════════════ */
       function importarCSVFromText(csvText, alsoSaveAsTemplate = false) {
         const csv = String(csvText || "").trim();
-        if (!csv) {
-          alert("⚠️ Cole o CSV primeiro!");
-          return false;
-        }
+        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return false; }
 
         const linhas = csv.split(/\r?\n/).filter((l) => l.trim());
-        if (linhas.length < 2) {
-          alert("⚠️ CSV inválido ou muito curto!");
-          return false;
-        }
+        if (linhas.length < 2) { alert("⚠️ CSV inválido ou muito curto!"); return false; }
 
         const delim = detectDelimiter(linhas[0]);
         const header = splitCSVLine(linhas[0], delim).map((h) => h.trim().toUpperCase());
 
-        const idxTreino = header.indexOf("TREINO");
-        const idxEx = header.indexOf("EXERCÍCIO") >= 0 ? header.indexOf("EXERCÍCIO") : header.indexOf("EXERCICIO");
-        const idxSeries = header.indexOf("SÉRIES") >= 0 ? header.indexOf("SÉRIES") : header.indexOf("SERIES");
-        const idxReps = header.indexOf("REPS");
+        const idxTreino  = header.indexOf("TREINO");
+        const idxEx      = header.indexOf("EXERCÍCIO") >= 0 ? header.indexOf("EXERCÍCIO") : header.indexOf("EXERCICIO");
+        const idxSeries  = header.indexOf("SÉRIES") >= 0 ? header.indexOf("SÉRIES") : header.indexOf("SERIES");
+        const idxReps    = header.indexOf("REPS");
 
-        if (idxTreino < 0 || idxEx < 0) {
-          alert("⚠️ Header precisa ter: TREINO e EXERCÍCIO.");
-          return false;
-        }
+        if (idxTreino < 0 || idxEx < 0) { alert("⚠️ Header precisa ter: TREINO e EXERCÍCIO."); return false; }
 
         const grouped = {};
         const orderOfAppearance = [];
@@ -1081,21 +1290,13 @@
           const series = Number.isFinite(seriesNum) && seriesNum > 0 ? seriesNum : 4;
           const reps = idxReps >= 0 ? (cols[idxReps] || "").trim() : "";
 
-          if (!grouped[treinoKey]) {
-            grouped[treinoKey] = [];
-            orderOfAppearance.push(treinoKey);
-          }
+          if (!grouped[treinoKey]) { grouped[treinoKey] = []; orderOfAppearance.push(treinoKey); }
           grouped[treinoKey].push({ exercicio, series, reps });
         }
 
         const treinoCount = Object.keys(grouped).length;
-        if (treinoCount < 1) {
-          alert("⚠️ Nenhuma linha válida.");
-          return false;
-        }
-        if (treinoCount > 6) {
-          alert("⚠️ Apenas os 6 primeiros treinos foram importados.");
-        }
+        if (treinoCount < 1) { alert("⚠️ Nenhuma linha válida."); return false; }
+        if (treinoCount > 6) { alert("⚠️ Apenas os 6 primeiros treinos foram importados."); }
 
         buildTabsFromGrouped(grouped, orderOfAppearance);
         scheduleDraftSave();
@@ -1111,13 +1312,24 @@
         }
       }
 
+      /* ════════════════════════════════════════════════════
+         AUTOSAVE & GHOST
+      ════════════════════════════════════════════════════ */
       function attachAutosaveToCard(card) {
         card.querySelectorAll("input").forEach((inp) => {
           inp.addEventListener("input", scheduleDraftSave, { passive: true });
           inp.addEventListener("change", scheduleDraftSave, { passive: true });
+
+          /* FIX 5: remove classe ghost quando o usuário começa a digitar */
+          inp.addEventListener("input", function () {
+            if (this.value) this.classList.remove("ghost");
+          }, { passive: true });
         });
       }
 
+      /* ════════════════════════════════════════════════════
+         BIBLIOTECA DE EXERCÍCIOS
+      ════════════════════════════════════════════════════ */
       function abrirLibParaNovo() {
         isAddingNew = true;
         document.getElementById("libHeader").innerText = "Adicionar Exercício";
@@ -1129,12 +1341,11 @@
         document.getElementById("libHeader").innerText = "Trocar Exercício";
         mostrarLib();
       }
-
       function mostrarLib() {
         const lib = document.getElementById("libContent");
         lib.innerHTML = "";
         for (let cat in biblioteca) {
-          lib.innerHTML += `<div style="color:var(--blue); font-weight:bold; margin:15px 0 5px; border-bottom:1px solid #2d3748">${cat}</div>`;
+          lib.innerHTML += `<div class="lib-cat">${cat}</div>`;
           biblioteca[cat].forEach((ex) => {
             lib.innerHTML += `<div class="lib-item" onclick="selecionar('${escapeAttr(ex)}')">${escapeHTML(ex)}</div>`;
           });
@@ -1166,13 +1377,13 @@
         document.getElementById("modalLib").close();
       }
       function adicionarManual() {
-        const val = document.getElementById("manualName").value;
-        if (val) {
-          selecionar(val);
-          document.getElementById("manualName").value = "";
-        }
+        const val = document.getElementById("manualName").value.trim();
+        if (val) { selecionar(val); document.getElementById("manualName").value = ""; }
       }
 
+      /* ════════════════════════════════════════════════════
+         TABS / NAVEGAÇÃO
+      ════════════════════════════════════════════════════ */
       function tab(idx) {
         document.querySelectorAll(".section, .pill").forEach((el) => el.classList.remove("active"));
         document.getElementById(`sec${idx}`).classList.add("active");
@@ -1181,6 +1392,9 @@
         applyPrevGhostsToAll();
       }
 
+      /* ════════════════════════════════════════════════════
+         MODAL CSV
+      ════════════════════════════════════════════════════ */
       function abrirCSVModal() {
         document.getElementById("csvTextarea").value = "";
         hideModelosCSV();
@@ -1197,31 +1411,22 @@
 
       function splitCSVLine(line, delim) {
         const out = [];
-        let cur = "";
-        let inQuotes = false;
+        let cur = "", inQuotes = false;
         for (let i = 0; i < line.length; i++) {
           const ch = line[i];
           if (ch === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-              cur += '"';
-              i++;
-            } else {
-              inQuotes = !inQuotes;
-            }
+            if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; }
           } else if (!inQuotes && ch === delim) {
-            out.push(cur.trim());
-            cur = "";
-          } else {
-            cur += ch;
-          }
+            out.push(cur.trim()); cur = "";
+          } else { cur += ch; }
         }
         out.push(cur.trim());
         return out;
       }
       function detectDelimiter(headerLine) {
         const cComma = (headerLine.match(/,/g) || []).length,
-          cSemi = (headerLine.match(/;/g) || []).length,
-          cTab = (headerLine.match(/\t/g) || []).length;
+              cSemi  = (headerLine.match(/;/g) || []).length,
+              cTab   = (headerLine.match(/\t/g) || []).length;
         return cTab >= cSemi && cTab >= cComma ? "\t" : cSemi >= cComma ? ";" : ",";
       }
       function buildTabsFromGrouped(grouped, order) {
@@ -1241,13 +1446,14 @@
         addPillControls();
       }
 
+      /* ════════════════════════════════════════════════════
+         DRAFT / SERIALIZAÇÃO
+      ════════════════════════════════════════════════════ */
       let draftSaveTimer = null;
       function scheduleDraftSave() {
         if (draftSaveTimer) clearTimeout(draftSaveTimer);
         draftSaveTimer = setTimeout(() => {
-          try {
-            localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState()));
-          } catch {}
+          try { localStorage.setItem(STORAGE.draftKey, JSON.stringify(serializeCurrentState())); } catch {}
         }, 300);
       }
       function getActiveIdx() {
@@ -1270,9 +1476,7 @@
             const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
             const values = rows.map((r) => {
               const i = r.querySelectorAll("input");
-              const kg = i[0].value;
-              const reps = i[1].value;
-              const rpe = i[2].value;
+              const kg = i[0].value, reps = i[1].value, rpe = i[2].value;
               const rm = roundRM(calcRM(kg, reps));
               return { kg, reps, rpe, rm: rm ? rm : "" };
             });
@@ -1293,11 +1497,12 @@
         if (!state || !Array.isArray(state.sections)) return false;
         try {
           if (state.freq) document.getElementById("freq").value = state.freq;
-          if (state.obj) document.getElementById("obj").value = state.obj;
+          if (state.obj)  document.getElementById("obj").value  = state.obj;
         } catch {}
-        const nav = document.getElementById("nav");
+
+        const nav  = document.getElementById("nav");
         const cont = document.getElementById("container");
-        nav.innerHTML = "";
+        nav.innerHTML  = "";
         cont.innerHTML = "";
 
         state.sections.slice(0, 6).forEach((secData, idx) => {
@@ -1317,26 +1522,38 @@
         });
 
         addPillControls();
-        tab(state.activeIdx || 0);
-        applyPrevGhostsToAll();
+
+        /* FIX 6: tab() já chama applyPrevGhostsToAll internamente,
+           então não precisamos chamar novamente aqui */
+        const targetIdx = state.activeIdx || 0;
+        const tabEl = document.getElementById(`p${targetIdx}`);
+        if (tabEl) {
+          document.querySelectorAll(".section, .pill").forEach((el) => el.classList.remove("active"));
+          const secEl = document.getElementById(`sec${targetIdx}`);
+          if (secEl) secEl.classList.add("active");
+          tabEl.classList.add("active");
+          scheduleDraftSave();
+          applyPrevGhostsToAll(); // chamada única
+        }
+
         return true;
       }
 
       function clearAllInputsToGhost() {
-        const cards = Array.from(document.querySelectorAll(".exercise-card"));
-        cards.forEach((card) => {
-          const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
-          rows.forEach((r) => {
-            const i = r.querySelectorAll("input");
-            i.forEach((inp) => (inp.value = ""));
-          });
+        document.querySelectorAll(".exercise-card").forEach((card) => {
+          Array.from(card.querySelectorAll(".series-grid"))
+            .filter((r) => r.querySelectorAll("input").length === 3)
+            .forEach((r) => r.querySelectorAll("input").forEach((inp) => (inp.value = "")));
         });
         scheduleDraftSave();
       }
 
-      function salvarTreino() {
+      /* ════════════════════════════════════════════════════
+         SALVAR SESSÃO
+      ════════════════════════════════════════════════════ */
+      async function salvarTreino() {
         try {
-          const peso = prompt("Peso atual (kg)? Só números.");
+          const peso = await dlgPrompt("Peso corporal atual (kg)?", "number");
           const st = serializeCurrentState();
           const item = { id: "sess_" + Date.now(), createdAt: new Date().toISOString(), state: st, bodyWeight: peso ? parseFloat(peso) : null };
           const hist = safeJSON(STORAGE.historyKey, []);
@@ -1348,7 +1565,6 @@
           prevMap = getPrevMap();
 
           clearAllInputsToGhost();
-
           applyPrevGhostsToAll();
 
           checkDeload();
@@ -1358,9 +1574,11 @@
         }
       }
 
+      /* ════════════════════════════════════════════════════
+         FANTASMAS (PREV SESSION HINTS)
+      ════════════════════════════════════════════════════ */
       function applyPrevGhostsToAll() {
-        const cards = Array.from(document.querySelectorAll(".exercise-card"));
-        cards.forEach(applyPrevGhostsToCard);
+        document.querySelectorAll(".exercise-card").forEach(applyPrevGhostsToCard);
       }
 
       function applyPrevGhostsToCard(card) {
@@ -1383,18 +1601,9 @@
               kgSug = Math.round(pv.rm / (1 + toNum(pv.reps) / 30));
             }
 
-            if (!i[0].value && String(pv.kg ?? "").trim()) {
-              i[0].placeholder = String(kgSug);
-              i[0].classList.add("ghost");
-            }
-            if (!i[1].value && String(pv.reps ?? "").trim()) {
-              i[1].placeholder = String(pv.reps);
-              i[1].classList.add("ghost");
-            }
-            if (!i[2].value && String(pv.rpe ?? "").trim()) {
-              i[2].placeholder = String(pv.rpe);
-              i[2].classList.add("ghost");
-            }
+            if (!i[0].value && String(pv.kg ?? "").trim()) { i[0].placeholder = String(kgSug);   i[0].classList.add("ghost"); }
+            if (!i[1].value && String(pv.reps ?? "").trim()) { i[1].placeholder = String(pv.reps); i[1].classList.add("ghost"); }
+            if (!i[2].value && String(pv.rpe ?? "").trim()) { i[2].placeholder = String(pv.rpe);  i[2].classList.add("ghost"); }
 
             const rmEl = card.querySelector(`#rm-${card.getAttribute("data-ex-id")}-${idx}`);
             if (rmEl && !i[0].value) {
@@ -1405,12 +1614,14 @@
         } catch {}
       }
 
+      /* ════════════════════════════════════════════════════
+         VOLUME & DELOAD
+      ════════════════════════════════════════════════════ */
       function calcVolumeTotal(state) {
         if (!state?.sections) return 0;
         return state.sections.reduce(
           (acc, sec) =>
-            acc +
-            (sec.cards || []).reduce(
+            acc + (sec.cards || []).reduce(
               (acc2, c) => acc2 + (c.values || []).reduce((acc3, v) => acc3 + toNum(v.kg) * toNum(v.reps), 0),
               0
             ),
@@ -1421,31 +1632,31 @@
         const hist = safeJSON(STORAGE.historyKey, []).slice(0, 7).reverse();
         if (hist.length < 2) return;
         const vols = hist.map((h) => calcVolumeTotal(h.state));
-        const last = vols[vols.length - 1],
-          prev = vols[vols.length - 2];
-        if (last > 0 && prev > 0 && (last - prev) / prev < -0.15) alert("⚠️ ALERTA: Volume caiu >15%. Atenção à recuperação!");
+        const last = vols[vols.length - 1], prev = vols[vols.length - 2];
+        if (last > 0 && prev > 0 && (last - prev) / prev < -0.15)
+          alert("⚠️ ALERTA: Volume caiu >15%. Atenção à recuperação!");
       }
 
+      /* ════════════════════════════════════════════════════
+         GRÁFICO DE EVOLUÇÃO
+      ════════════════════════════════════════════════════ */
       function showEvoChart() {
         const hist = safeJSON(STORAGE.historyKey, []).reverse();
-        if (!hist.length) {
-          alert("Sem histórico.");
-          return;
-        }
-        const data = hist.map((h) => ({ d: new Date(h.createdAt).toLocaleDateString("pt-BR").slice(0, 5), v: calcVolumeTotal(h.state) }));
+        if (!hist.length) { alert("Sem histórico."); return; }
+
+        const data = hist.map((h) => ({
+          d: new Date(h.createdAt).toLocaleDateString("pt-BR").slice(0, 5),
+          v: calcVolumeTotal(h.state),
+        }));
 
         const dialog = document.createElement("dialog");
-        dialog.style.cssText =
-          "background:#161e2e; width:95%; max-width:600px; padding:15px; border:1px solid var(--blue); border-radius:12px;";
+        dialog.style.cssText = "background:#161e2e; width:95%; max-width:600px; padding:15px; border:1px solid var(--blue); border-radius:12px;";
         const cvs = document.createElement("canvas");
         const btn = document.createElement("button");
         btn.innerText = "FECHAR";
         btn.className = "btn";
-        btn.style.cssText = "background:var(--red); color:white; margin-top:10px; width:100%";
-        btn.onclick = () => {
-          dialog.close();
-          dialog.remove();
-        };
+        btn.style.cssText = "background:var(--red); color:#fff; margin-top:10px; width:100%";
+        btn.onclick = () => { dialog.close(); dialog.remove(); };
         dialog.appendChild(cvs);
         dialog.appendChild(btn);
         document.body.appendChild(dialog);
@@ -1455,58 +1666,64 @@
           type: "line",
           data: {
             labels: data.map((x) => x.d),
-            datasets: [
-              {
-                label: "Volume Total (kg)",
-                data: data.map((x) => x.v),
-                borderColor: "#38b2ac",
-                backgroundColor: "rgba(56,178,172,0.2)",
-                fill: true,
-                tension: 0.3,
-              },
-            ],
+            datasets: [{
+              label: "Volume Total (kg)",
+              data: data.map((x) => x.v),
+              borderColor: "#00cfb4",
+              backgroundColor: "rgba(0,207,180,0.15)",
+              fill: true,
+              tension: 0.3,
+            }],
           },
           options: {
             responsive: true,
-            scales: { y: { beginAtZero: true, grid: { color: "#2d3748" } }, x: { grid: { color: "#2d3748" } } },
-            plugins: { legend: { labels: { color: "white" } } },
+            scales: { y: { beginAtZero: true, grid: { color: "#e4e8ef" } }, x: { grid: { color: "#e4e8ef" } } },
+            plugins: { legend: { labels: { color: "#1e293b" } } },
           },
         });
       }
 
+      /* ════════════════════════════════════════════════════
+         FIX 2: HISTÓRICO – sem JSON inline em onclick
+      ════════════════════════════════════════════════════ */
       function toggleHistDetails(header) {
         const details = header.nextElementSibling;
-        if (details.classList.contains("open")) {
-          details.classList.remove("open");
-        } else {
-          details.classList.add("open");
-        }
+        details.classList.toggle("open");
+      }
+
+      /* FIX 2: função separada que usa o array global _histSessions */
+      async function loadHistSession(idx) {
+        if (!await dlgConfirm("Carregar esta sessão?")) return;
+        const sess = _histSessions[idx];
+        if (!sess) return;
+        loadState(sess.state);
+        scheduleDraftSave();
+        document.getElementById("modalHIST").close();
       }
 
       function verHistorico() {
+        _histSessions = safeJSON(STORAGE.historyKey, []); // popula array global
         const list = document.getElementById("histList");
-        const hist = safeJSON(STORAGE.historyKey, []);
-        list.innerHTML = hist.length ? "" : '<div class="hist-item">Sem sessões.</div>';
+        list.innerHTML = _histSessions.length ? "" : '<div class="hist-item">Sem sessões.</div>';
 
-        hist.forEach((h) => {
+        _histSessions.forEach((h, idx) => {
           const el = document.createElement("div");
           el.className = "hist-item";
 
           let detailsHTML = "";
-          if (h.state && h.state.sections) {
+          if (h.state?.sections) {
             h.state.sections.forEach((sec) => {
               (sec.cards || []).forEach((card) => {
                 const setsStr = (card.values || [])
                   .filter((v) => v.kg && v.reps)
                   .map((v) => `[${v.kg}kg x ${v.reps}]`)
                   .join(" ");
-
                 if (setsStr) {
                   detailsHTML += `
-                          <div class="hist-ex-row">
-                              <span class="hist-ex-name">${escapeHTML(card.name)}</span>
-                              <span>${setsStr}</span>
-                          </div>`;
+                    <div class="hist-ex-row">
+                      <span class="hist-ex-name">${escapeHTML(card.name)}</span>
+                      <span>${setsStr}</span>
+                    </div>`;
                 }
               });
             });
@@ -1514,41 +1731,48 @@
 
           el.innerHTML = `
             <div class="hist-header" onclick="toggleHistDetails(this)">
-                <div>
-                    <strong>${new Date(h.createdAt).toLocaleString("pt-BR")}</strong>
-                    ${h.bodyWeight ? ` | ${h.bodyWeight}kg BW` : ""}
-                    <br><small style="color:#a0aec0">${calcVolumeTotal(h.state)}kg vol total (Toque p/ detalhar)</small>
-                </div>
-                <div style="font-size:1.2rem; color:var(--blue)">+</div>
+              <div>
+                <strong>${new Date(h.createdAt).toLocaleString("pt-BR")}</strong>
+                ${h.bodyWeight ? ` | ${h.bodyWeight}kg BW` : ""}
+                <br><small style="color:#a0aec0">${calcVolumeTotal(h.state)}kg vol total (Toque p/ detalhar)</small>
+              </div>
+              <div style="font-size:1.2rem; color:var(--accent)">+</div>
             </div>
             <div class="hist-details">
-                ${detailsHTML || "Sem dados detalhados."}
-                <button style="margin-top:10px; width:100%; padding:8px; background:var(--blue); border:none; color:white; border-radius:6px; font-weight:bold" onclick="if(confirm('Carregar esta sessão?')) { loadState(${JSON.stringify(
-                  h.state
-                ).replace(/"/g, "&quot;")}); scheduleDraftSave(); document.getElementById('modalHIST').close(); }">CARREGAR SESSÃO</button>
-            </div>
-          `;
+              ${detailsHTML || "Sem dados detalhados."}
+              <button
+                style="margin-top:10px; width:100%; padding:10px; background:var(--accent); border:none; color:#fff; border-radius:var(--radius-xs); font-family:var(--font-display); font-weight:700; letter-spacing:.04em; cursor:pointer;"
+                onclick="loadHistSession(${idx})">
+                CARREGAR SESSÃO
+              </button>
+            </div>`;
           list.appendChild(el);
         });
+
         document.getElementById("modalHIST").showModal();
       }
 
-      function limparHistorico() {
-        if (confirm("Apagar tudo? Irreversível.")) {
+      async function limparHistorico() {
+        if (await dlgConfirm("Apagar tudo? Irreversível.")) {
           localStorage.removeItem(STORAGE.historyKey);
           localStorage.removeItem(STORAGE.prevKey);
           prevMap = Object.create(null);
+          _histSessions = [];
           verHistorico();
         }
       }
 
-      function adicionarTreino() {
+      /* ════════════════════════════════════════════════════
+         GERENCIAR TREINOS (ADICIONAR / EXCLUIR)
+      ════════════════════════════════════════════════════ */
+      async function adicionarTreino() {
         const st = serializeCurrentState();
-        if (st.sections.length >= 7) {
-          alert("Máximo atingido.");
+        /* FIX 3: limite correto é 6 (buildTabsFromGrouped/loadState só renderizam 6) */
+        if (st.sections.length >= 6) {
+          alert("Máximo de 6 treinos atingido.");
           return;
         }
-        const nome = prompt("Nome do Treino (ex: Treino F):");
+        const nome = await dlgPrompt("Nome do Treino (ex: Treino F):", "text");
         if (!nome) return;
         st.sections.push({ treinoKey: normalizeTreinoKey(nome), cards: [] });
         st.pills.push({ idx: st.pills.length, label: treinoLabel(nome) });
@@ -1557,13 +1781,10 @@
         scheduleDraftSave();
       }
 
-      function excluirTreinoPorIdx(idx) {
-        if (!confirm("Excluir treino?")) return;
+      async function excluirTreinoPorIdx(idx) {
+        if (!await dlgConfirm("Excluir treino?")) return;
         const st = serializeCurrentState();
-        if (st.sections.length <= 1) {
-          alert("Mantenha 1 treino.");
-          return;
-        }
+        if (st.sections.length <= 1) { alert("Mantenha pelo menos 1 treino."); return; }
         st.sections.splice(idx, 1);
         st.pills.splice(idx, 1);
         st.activeIdx = 0;
@@ -1575,79 +1796,70 @@
       function bindPillDeleteHandlers() {
         const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)"));
         pills.forEach((p, idx) => {
-          p.oncontextmenu = (e) => {
-            e.preventDefault();
-            excluirTreinoPorIdx(idx);
-            return false;
-          };
+          p.oncontextmenu = (e) => { e.preventDefault(); excluirTreinoPorIdx(idx); return false; };
 
           let t = null;
-          p.addEventListener(
-            "touchstart",
-            () => {
-              t = setTimeout(() => {
-                lastLongPressAt = Date.now();
-                excluirTreinoPorIdx(idx);
-              }, 650);
-            },
-            { passive: true }
-          );
-          p.addEventListener(
-            "touchend",
-            () => {
-              if (t) clearTimeout(t);
-              t = null;
-            },
-            { passive: true }
-          );
-          p.addEventListener(
-            "touchmove",
-            () => {
-              if (t) clearTimeout(t);
-              t = null;
-            },
-            { passive: true }
-          );
-
-          p.addEventListener(
-            "click",
-            (e) => {
-              if (Date.now() - lastLongPressAt < 900) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-              }
-            },
-            true
-          );
+          p.addEventListener("touchstart", () => { t = setTimeout(() => { lastLongPressAt = Date.now(); excluirTreinoPorIdx(idx); }, 650); }, { passive: true });
+          p.addEventListener("touchend",   () => { if (t) clearTimeout(t); t = null; }, { passive: true });
+          p.addEventListener("touchmove",  () => { if (t) clearTimeout(t); t = null; }, { passive: true });
+          p.addEventListener("click", (e) => {
+            if (Date.now() - lastLongPressAt < 900) { e.preventDefault(); e.stopImmediatePropagation(); }
+          }, true);
         });
       }
 
       function addPillControls() {
         const nav = document.getElementById("nav");
         nav.querySelectorAll(".pill-x, .add-pill").forEach((e) => e.remove());
-
         const add = document.createElement("div");
         add.className = "pill add-pill";
         add.innerText = "+";
         add.onclick = adicionarTreino;
         nav.appendChild(add);
-
         bindPillDeleteHandlers();
       }
 
+      /* ════════════════════════════════════════════════════
+         TEMPLATES CSV
+      ════════════════════════════════════════════════════ */
       function getCSVTemplates() {
-        try {
-          return JSON.parse(localStorage.getItem(STORAGE.csvTplKey)) || [];
-        } catch {
-          return [];
-        }
+        try { return JSON.parse(localStorage.getItem(STORAGE.csvTplKey)) || []; } catch { return []; }
       }
-      function trySaveTemplate(csv) {
-        const n = prompt("Nome do Modelo:");
+
+      /* Converte o treino atual em texto CSV */
+      function exportarTreinoAtualComoCSV() {
+        const state = serializeCurrentState();
+        if (!state.sections || !state.sections.length) return "";
+        let csv = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
+        state.sections.forEach((sec) => {
+          (sec.cards || []).forEach((card) => {
+            const metaTxt = String(card.meta || "");
+            const reps = metaTxt.includes("Sets x") ? metaTxt.split("Sets x")[1]?.trim() : "10-12";
+            const sets = card.sets || 4;
+            csv += `${sec.treinoKey},${card.name},${sets},${reps}\n`;
+          });
+        });
+        return csv;
+      }
+
+      /* Salva o treino aberto como modelo — sem precisar colar CSV */
+      async function salvarTreinoAtualComoModelo() {
+        const csv = exportarTreinoAtualComoCSV();
+        if (!csv) { alert("⚠️ Nenhum exercício para salvar."); return; }
+        const n = await dlgPrompt("Nome do Modelo:", "text");
         if (!n) return;
         const arr = getCSVTemplates();
-        arr.unshift({ id: Date.now(), name: n, date: new Date(), csv });
-        localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0, 20)));
+        arr.unshift({ id: Date.now(), name: n, date: new Date().toISOString(), csv });
+        localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0, STORAGE.maxTemplates)));
+        alert(`✅ Modelo "${n}" salvo!`);
+        mostrarModelosCSV();
+      }
+      async function trySaveTemplate(csv) {
+        const n = await dlgPrompt("Nome do Modelo:", "text");
+        if (!n) return;
+        const arr = getCSVTemplates();
+        arr.unshift({ id: Date.now(), name: n, date: new Date().toISOString(), csv });
+        localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0, STORAGE.maxTemplates)));
         alert("Salvo!");
       }
       function mostrarModelosCSV() {
@@ -1660,38 +1872,35 @@
           d.className = "tpl-item";
           d.innerHTML = `<strong>${escapeHTML(t.name)}</strong><br><small>${new Date(t.date).toLocaleDateString()}</small>`;
           d.onclick = () => {
-            if (confirm("Carregar?")) {
-              importarCSVFromText(t.csv, false);
-              document.getElementById("modalCSV").close();
-            }
+            dlgConfirm("Carregar este modelo?").then(ok => { if(ok) { importarCSVFromText(t.csv, false); document.getElementById("modalCSV").close(); } });
           };
           d.oncontextmenu = (e) => {
             e.preventDefault();
-            if (confirm("Deletar?")) {
+            dlgConfirm("Deletar modelo?").then(ok => { if(ok) {
               localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.filter((x) => x.id !== t.id)));
               mostrarModelosCSV();
-            }
+            }});
           };
           l.appendChild(d);
         });
       }
-      function limparModelosCSV() {
-        if (confirm("Apagar tudo?")) localStorage.removeItem(STORAGE.csvTplKey);
+      async function limparModelosCSV() {
+        if (await dlgConfirm("Apagar todos os modelos?")) localStorage.removeItem(STORAGE.csvTplKey);
         mostrarModelosCSV();
       }
-      function hideModelosCSV() {
-        document.getElementById("tplArea").style.display = "none";
-      }
+      function hideModelosCSV() { document.getElementById("tplArea").style.display = "none"; }
       function salvarModeloCSV() {
         const v = document.getElementById("csvTextarea").value;
-        if (v) trySaveTemplate(v);
-        else alert("Cole o CSV.");
+        if (v) trySaveTemplate(v); else alert("Cole o CSV.");
       }
 
+      /* ════════════════════════════════════════════════════
+         INICIALIZAÇÃO
+      ════════════════════════════════════════════════════ */
       window.onload = () => {
-        try {
-          document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR");
-        } catch {}
+        try { document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR"); } catch {}
+
+        updateT(); // garante display do timer correto logo ao carregar
 
         prevMap = getPrevMap();
 
@@ -1706,5 +1915,6 @@
         applyPrevGhostsToAll();
       };
     </script>
-  </body>
+
+</body>
 </html>
