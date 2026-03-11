@@ -340,7 +340,7 @@ body {
   align-items: center; gap: 2px; user-select: none;
 }
 .setcell .slabel { font-size: 0.72rem; font-weight: 800; color: #3d5068; }
-.setcell .rmmini { font-family: var(--mono); font-size: 0.5rem; color: var(--muted); line-height: 1; }
+.setcell .rmmini { font-family: var(--mono); font-size: 0.62rem; color: var(--accent); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
 .ghost::placeholder { color: rgba(37,99,235,0.35) !important; }
 
 /* ── Add Exercise ── */
@@ -1311,7 +1311,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
               </span>
               <div class="input-box"><input type="number" inputmode="decimal" placeholder="" value="${escapeAttr(kgVal)}"  oninput="updateSuggests('${id}')"></div>
               <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-              <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(rpeVal)}"></div>
+              <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(rpeVal)}" oninput="updateSuggests('${id}')"></div>
             </div>`;
         }).join("");
 
@@ -1442,31 +1442,27 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
         if (!card) return;
 
         const rows = Array.from(card.querySelectorAll(".series-grid")).filter((r) => r.querySelectorAll("input").length === 3);
-        let firstKg = 0, firstReps = 0;
+        let bestRM = 0, bestReps = 0;
 
         rows.forEach((r, idx) => {
           const i = r.querySelectorAll("input");
-          const kg = i[0].value, reps = i[1].value;
-
-          if (!firstKg && !firstReps && kg && reps) {
-            firstKg = toNum(kg);
-            firstReps = toNum(reps);
-          }
+          const kg = toNum(i[0].value);
+          const reps = toNum(i[1].value);
+          const rmEl = document.getElementById(`rm-${id}-${idx}`);
 
           if (kg && reps) {
             const rm = roundRM(calcRM(kg, reps));
-            const rmEl = document.getElementById(`rm-${id}-${idx}`);
-            if (rmEl) rmEl.textContent = `RM: ${rm ? rm + "kg" : "-"}`;
+            if (rmEl) { rmEl.textContent = rm + "kg"; }
+            if (rm > bestRM) { bestRM = rm; bestReps = reps; }
+          } else {
+            if (rmEl && !rmEl.textContent.startsWith("Ant")) rmEl.textContent = "-";
           }
         });
 
-        if (firstKg && firstReps) {
-          const epley1rm = firstKg * (1 + firstReps / 30);
-          const el1rm = document.getElementById(`1rm-${id}`);
-          const elRpe = document.getElementById(`rpe-${id}`);
-          if (el1rm) el1rm.textContent = Math.round(epley1rm) + "kg";
-          if (elRpe) elRpe.textContent = firstReps > 10 ? "RPE 8-9 (Resist)" : "RPE 9-10 (Força)";
-        }
+        const el1rm = document.getElementById(`1rm-${id}`);
+        const elRpe = document.getElementById(`rpe-${id}`);
+        if (el1rm) el1rm.textContent = bestRM ? bestRM + "kg" : "—";
+        if (elRpe) elRpe.textContent = bestReps ? (bestReps > 10 ? "Resist." : bestReps > 6 ? "Hipert." : "Força") : "—";
       }
 
       /* ════════════════════════════════════════════════════
