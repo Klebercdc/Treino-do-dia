@@ -847,6 +847,65 @@
     body.dark-mode {
       /* No dark-mode override — o app já é escuro por padrão */
     }
+    /* ══════════════════════════════════════════
+       AI COACH
+    ══════════════════════════════════════════ */
+    #aiModal.show { display: flex !important; }
+
+    @keyframes aiPulse {
+      0%, 100% { box-shadow: 0 4px 20px var(--accent-glow), 0 0 0 0 var(--accent-glow); }
+      50%       { box-shadow: 0 4px 20px var(--accent-glow), 0 0 0 10px rgba(249,115,22,0); }
+    }
+
+    .ai-quick-btn {
+      flex: none; padding: 6px 12px; border-radius: 20px;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text-2); font-family: var(--font);
+      font-size: 0.72rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: all .15s;
+    }
+    .ai-quick-btn:active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+    .ai-msg { display: flex; flex-direction: column; max-width: 88%; animation: fadeIn .2s ease; }
+    .ai-msg.user { align-self: flex-end; align-items: flex-end; }
+    .ai-msg.assistant { align-self: flex-start; align-items: flex-start; }
+
+    .ai-bubble {
+      padding: 10px 14px; border-radius: 16px;
+      font-size: 0.88rem; line-height: 1.6;
+    }
+    .ai-msg.user .ai-bubble {
+      background: var(--accent); color: #fff;
+      border-radius: 16px 16px 4px 16px;
+    }
+    .ai-msg.assistant .ai-bubble {
+      background: var(--card); color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 16px 16px 16px 4px;
+    }
+    .ai-msg.assistant .ai-bubble.thinking {
+      color: var(--muted); font-style: italic;
+    }
+    .ai-msg-time {
+      font-size: 0.58rem; color: var(--muted);
+      margin-top: 3px; padding: 0 4px;
+    }
+
+    /* Typing dots */
+    .ai-dots span {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--muted);
+      margin: 0 2px; animation: dotBounce 1.2s infinite;
+    }
+    .ai-dots span:nth-child(2) { animation-delay: .2s; }
+    .ai-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes dotBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity:.4; }
+      30%            { transform: translateY(-6px); opacity:1; }
+    }
+
+    #aiInput:focus { border-color: var(--accent) !important; }
+
   </style>
 
 </head>
@@ -928,9 +987,67 @@
       <div class="sum-pr-title">🏆 Novos Recordes</div>
       <div id="sumPRList"></div>
     </div>
+    <!-- AI Coach pós-treino -->
+    <div id="aiCoachSummary" style="display:none;margin-bottom:16px">
+      <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2zm0 3a7 7 0 0 0 0 14 7 7 0 0 0 0-14zm0 2a5 5 0 1 1 0 10A5 5 0 0 1 12 7z" opacity=".3"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+        ANÁLISE DO COACH IA
+      </div>
+      <div id="aiCoachText" style="font-size:0.82rem;line-height:1.7;color:var(--text-2);background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:12px 14px;"></div>
+    </div>
     <button class="sum-close" onclick="closeSummary()">Fechar</button>
   </div>
 </div>
+
+<!-- AI COACH MODAL -->
+
+<div id="aiModal" style="display:none;position:fixed;inset:0;z-index:7000;background:rgba(0,0,0,0.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);flex-direction:column;">
+  <div id="aiBox" style="display:flex;flex-direction:column;height:100%;max-width:600px;margin:0 auto;width:100%;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border);background:var(--bg);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--accent-glow);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+        </div>
+        <div>
+          <div style="font-family:var(--display);font-size:1.1rem;letter-spacing:.05em;color:var(--text)">TITAN COACH</div>
+          <div style="font-size:0.6rem;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase">IA Powered</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="clearAIChat()" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--muted);font-size:0.7rem;font-family:var(--font);font-weight:600;cursor:pointer;">Limpar</button>
+        <button onclick="closeAI()" style="width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:50%;color:var(--text-2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+    </div>
+    <!-- Ações rápidas -->
+    <div id="aiQuickActions" style="padding:10px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;">
+      <button class="ai-quick-btn" onclick="aiQuick('analise')">📊 Análise</button>
+      <button class="ai-quick-btn" onclick="aiQuick('gerar')">⚡ Gerar Treino</button>
+      <button class="ai-quick-btn" onclick="aiQuick('platô')">📉 Detectar Platô</button>
+      <button class="ai-quick-btn" onclick="aiQuick('dica')">💡 Dica de Hoje</button>
+      <button class="ai-quick-btn" onclick="aiQuick('rpe')">🎯 Ajuste RPE</button>
+    </div>
+    <!-- Mensagens -->
+    <div id="aiMessages" style="flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:12px;background:var(--bg);"></div>
+    <!-- Input -->
+    <div style="padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;">
+      <textarea id="aiInput" placeholder="Pergunte ao Coach..." rows="1"
+        style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:0.9rem;resize:none;outline:none;line-height:1.4;max-height:100px;transition:border-color .2s;"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+      <button onclick="sendAI()" id="aiSendBtn"
+        style="width:40px;height:40px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s,opacity .15s;box-shadow:0 2px 10px var(--accent-glow);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Botão flutuante AI Coach -->
+
+<button id="aiFloatBtn" onclick="openAI()" style="position:fixed;bottom:96px;right:16px;z-index:500;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;cursor:pointer;box-shadow:0 4px 20px var(--accent-glow),0 0 0 0 var(--accent-glow);display:flex;align-items:center;justify-content:center;animation:aiPulse 3s ease-in-out infinite;">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+</button>
 
 <!-- Modal customizado -->
 
@@ -1429,7 +1546,7 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
       </span>
       <div class="input-box"><input type="number" inputmode="decimal" placeholder="" value="${escapeAttr(kgVal)}"  oninput="updateSuggests('${id}')"></div>
       <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}')"></div>
-      <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(rpeVal)}"  oninput="updateSuggests('${id}')"></div>
+      <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(rpeVal)}"  oninput="updateSuggests('${id}');checkRPEAlert(this)"></div>
     </div>`;
   }).join("");
   card.innerHTML = `
@@ -1589,7 +1706,7 @@ function adicionarSerie(btn) {
     </span>
     <div class="input-box"><input type="number" inputmode="decimal" placeholder="" oninput="updateSuggests('${id}')"></div>
     <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}')"></div>
-    <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}')"></div>`;
+    <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}');checkRPEAlert(this)"></div>`;
   btn.before(row);
   // Copiar último ghost se houver
   const prevRow = existingRows[existingRows.length-1];
@@ -2362,6 +2479,10 @@ function showSummary(state, prs, durationMin) {
   } else { prSection.style.display="none"; }
   document.getElementById("summaryModal").classList.add("show");
   if (navigator.vibrate) navigator.vibrate([50,30,80,30,120]);
+  // Limpar análise anterior e rodar nova
+  const aiSection = document.getElementById("aiCoachSummary");
+  if (aiSection) aiSection.style.display = "none";
+  runAICoachPostWorkout(state, prs, durationMin);
 }
 function closeSummary() { document.getElementById("summaryModal").classList.remove("show"); }
 
@@ -2432,7 +2553,228 @@ function scrollToTimer() {
   _timerArea?.scrollIntoView({ behavior:"smooth" });
 }
 
-/* PWA */
+/* ═══════════════════════════════════════════════════
+   AI COACH — TITAN PRO
+   • Chat livre com contexto completo do treino
+   • Análise pós-treino automática
+   • Gerador de treino por linguagem natural
+   • Detecção de platô e sugestão RPE
+═══════════════════════════════════════════════════ */
+let _aiHistory = [];
+let _aiTyping  = false;
+
+function buildTrainingContext() {
+  const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 10);
+  const current = serializeCurrentState();
+  const streak  = calcStreak();
+  const freq    = document.getElementById("freq")?.value || "3";
+  const obj     = document.getElementById("obj")?.value  || "hipertrofia";
+
+  // Resumo das últimas sessões
+  const histSummary = hist.slice(0, 5).map((h, i) => {
+    const vol   = Math.round(calcVolumeTotal(h.state));
+    const date  = new Date(h.createdAt).toLocaleDateString("pt-BR");
+    const exs   = (h.state?.sections||[]).flatMap(s => (s.cards||[]).map(c => c.name)).slice(0, 6).join(", ");
+    return `Sessão ${i+1} (${date}): volume ${vol}kg — ${exs}`;
+  }).join("\n");
+
+  // Treino atual
+  const currentSummary = (current.sections||[]).map(sec => {
+    const exs = (sec.cards||[]).map(c => {
+      const sets = (c.values||[]).filter(v=>v.kg&&v.reps).map(v=>`${v.kg}kg×${v.reps}reps`).join(", ");
+      return `${c.name}: ${sets || "sem dados"}`;
+    }).join(" | ");
+    return `${sec.treinoKey}: ${exs}`;
+  }).join("\n");
+
+  return `Você é o TITAN COACH, personal trainer especialista em musculação integrado ao app TITAN PRO.
+Seja direto, técnico e motivador. Use português brasileiro. Responda de forma concisa (máx 200 palavras).
+Formate com emojis no início de pontos chave quando útil.
+
+CONTEXTO DO ATLETA:
+- Frequência: ${freq}x/semana | Objetivo: ${obj} | Streak: ${streak} dias
+- Histórico recente (últimas 5 sessões):
+${histSummary || "Sem histórico ainda"}
+- Treino atual em progresso:
+${currentSummary || "Nenhum dado registrado ainda"}`;
+}
+
+function openAI() {
+  document.getElementById("aiModal").classList.add("show");
+  document.getElementById("aiModal").style.display = "flex";
+  if (_aiHistory.length === 0) {
+    addAIMessage("assistant", `Olá! Sou o **TITAN COACH**, seu personal trainer com IA. 💪\n\nAnalisei seu histórico e estou pronto para te ajudar. Use os atalhos acima ou me pergunte qualquer coisa sobre seu treino.`);
+  }
+  setTimeout(() => document.getElementById("aiInput")?.focus(), 300);
+}
+
+function closeAI() {
+  document.getElementById("aiModal").style.display = "none";
+  document.getElementById("aiModal").classList.remove("show");
+}
+
+function clearAIChat() {
+  _aiHistory = [];
+  document.getElementById("aiMessages").innerHTML = "";
+  addAIMessage("assistant", "Chat limpo. Como posso te ajudar? 💪");
+}
+
+function addAIMessage(role, text, isThinking = false) {
+  const container = document.getElementById("aiMessages");
+  if (!container) return;
+
+  const div  = document.createElement("div");
+  div.className = `ai-msg ${role}`;
+  const now  = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
+
+  if (isThinking) {
+    div.id = "aiThinking";
+    div.innerHTML = `<div class="ai-bubble thinking"><div class="ai-dots"><span></span><span></span><span></span></div></div>`;
+  } else {
+    // Renderizar markdown básico: **bold**, *italic*, listas com -
+    const html = String(text)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/^- (.+)$/gm, "• $1")
+      .replace(/\n/g, "<br>");
+    div.innerHTML = `<div class="ai-bubble">${html}</div><div class="ai-msg-time">${now}</div>`;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function removeThinking() {
+  document.getElementById("aiThinking")?.remove();
+}
+
+async function sendAI(overrideText) {
+  if (_aiTyping) return;
+  const input = document.getElementById("aiInput");
+  const text  = overrideText || input?.value?.trim();
+  if (!text) return;
+
+  if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
+
+  addAIMessage("user", text);
+  _aiHistory.push({ role: "user", content: text });
+
+  _aiTyping = true;
+  const sendBtn = document.getElementById("aiSendBtn");
+  if (sendBtn) sendBtn.style.opacity = "0.4";
+  addAIMessage("assistant", "", true);
+
+  try {
+    const systemPrompt = buildTrainingContext();
+    const messages = _aiHistory.slice(-12); // janela de contexto
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    const reply = data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
+
+    removeThinking();
+    addAIMessage("assistant", reply);
+    _aiHistory.push({ role: "assistant", content: reply });
+
+  } catch (err) {
+    removeThinking();
+    addAIMessage("assistant", "⚠️ Erro de conexão. Verifique sua internet e tente novamente.");
+  } finally {
+    _aiTyping = false;
+    if (sendBtn) sendBtn.style.opacity = "1";
+  }
+}
+
+function aiQuick(tipo) {
+  const prompts = {
+    analise: "Analise meu histórico de treinos e me dê um diagnóstico detalhado: pontos fortes, pontos fracos, e 3 recomendações práticas.",
+    gerar:   "Com base no meu objetivo e histórico, gere um treino personalizado para hoje no formato: Exercício — Séries × Reps — Dica.",
+    platô:   "Analise meu histórico e identifique quais exercícios estão em platô (sem evolução). Sugira estratégias para quebrar cada um.",
+    dica:    "Com base no meu treino atual e objetivo, me dê a dica mais importante que posso aplicar hoje para maximizar meus resultados.",
+    rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
+  };
+  const text = prompts[tipo];
+  if (text) sendAI(text);
+}
+
+async function runAICoachPostWorkout(state, prs, durationMin) {
+  const vol       = Math.round(calcVolumeTotal(state));
+  const totalSets = (state.sections||[]).reduce((a,s)=>a+(s.cards||[]).reduce((b,c)=>b+(c.values||[]).filter(v=>v.kg&&v.reps).length,0),0);
+  const prNames   = prs.map(p=>p.name).join(", ");
+  const hist      = safeJSON(STORAGE.historyKey,[]).slice(1,4);
+  const avgVol    = hist.length ? Math.round(hist.reduce((a,h)=>a+calcVolumeTotal(h.state),0)/hist.length) : 0;
+  const diff      = avgVol > 0 ? Math.round((vol-avgVol)/avgVol*100) : 0;
+  const freq      = document.getElementById("freq")?.value || "3";
+  const obj       = document.getElementById("obj")?.value  || "hipertrofia";
+
+  const prompt = `Treino concluído. Gere uma análise concisa (3-4 frases, máx 120 palavras) no estilo de um coach motivador.
+Dados: volume ${vol}kg (${diff>=0?"+":""}${diff}% vs média), ${totalSets} séries, ${durationMin||"?"}min, objetivo: ${obj}, frequência: ${freq}x/sem.
+${prNames ? `PRs batidos: ${prNames}.` : "Sem PRs desta vez."}
+Inclua: 1 ponto positivo, 1 ponto de atenção, e 1 ação específica para o próximo treino.`;
+
+  const aiSection = document.getElementById("aiCoachSummary");
+  const aiText    = document.getElementById("aiCoachText");
+  if (!aiSection || !aiText) return;
+
+  aiSection.style.display = "block";
+  aiText.innerHTML = `<div class="ai-dots" style="padding:4px 0"><span></span><span></span><span></span></div>`;
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: "Você é o TITAN COACH, personal trainer especialista. Responda em português brasileiro, seja direto e motivador.",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data  = await response.json();
+    const reply = data?.content?.[0]?.text || "";
+    if (reply) {
+      const html = reply
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br>");
+      aiText.innerHTML = html;
+    } else {
+      aiSection.style.display = "none";
+    }
+  } catch {
+    aiSection.style.display = "none";
+  }
+}
+
+/* Sugestão de ajuste por RPE — aparece ao digitar RPE ≥ 9 */
+function checkRPEAlert(input) {
+  const row  = input.closest(".series-grid");
+  if (!row) return;
+  const inputs = row.querySelectorAll("input");
+  const rpe  = parseFloat(inputs[2]?.value);
+  const kg   = parseFloat(inputs[0]?.value);
+  const reps = parseFloat(inputs[1]?.value);
+  if (rpe >= 9 && kg > 0) {
+    const suggest = Math.round((kg * 0.95) * 2) / 2; // -5%, arredondado para 0.5
+    showToast(`🎯 RPE ${rpe} — Próxima série: tente ${suggest}kg`, "warning", 4000);
+  }
+  if (rpe <= 6 && kg > 0 && reps > 0) {
+    const suggest = Math.round((kg * 1.05) * 2) / 2; // +5%
+    showToast(`💡 RPE ${rpe} — Você tem espaço! Tente ${suggest}kg`, "info", 4000);
+  }
+}
+
 if ("serviceWorker" in navigator) {
   const swCode = `self.addEventListener("fetch",e=>{});`;
   const blob = new Blob([swCode], { type:"application/javascript" });
