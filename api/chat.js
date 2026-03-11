@@ -57,4 +57,4 @@ return res.status(200).json({ content: [{ type: "text", text: text }] });
 } catch (err) {
 return res.status(500).json({ error: err.message });
 }
-};
+}
