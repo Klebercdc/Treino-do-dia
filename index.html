@@ -95,14 +95,15 @@ body {
 #customModal input:focus { border-color: var(--accent); }
 #customModal .cm-btns { display: flex; gap: 10px; }
 #customModal .cm-btns button {
-  flex: 1; padding: 13px; border-radius: var(--r-sm);
-  border: none; font-family: var(--font);
-  font-weight: 700; font-size: 0.9rem; cursor: pointer;
+  flex: 1; padding: 14px; border-radius: var(--r-sm);
+  border: none !important; font-family: var(--font) !important;
+  font-weight: 700 !important; font-size: 0.9rem; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
   transition: transform .1s, opacity .15s;
 }
 #customModal .cm-btns button:active { transform: scale(.97); opacity:.85; }
-#customModal .cm-ok  { background: var(--accent); color: #fff; }
-#customModal .cm-no  { background: var(--bg); color: var(--text-2); }
+#customModal .cm-ok  { background: var(--accent) !important; color: #fff !important; box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
+#customModal .cm-no  { background: var(--bg) !important; color: var(--text-2) !important; border: 1.5px solid var(--border) !important; }
 
 /* ── Header ── */
 .top-header {
