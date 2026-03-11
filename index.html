@@ -2587,16 +2587,22 @@ function buildTrainingContext() {
     return `${sec.treinoKey}: ${exs}`;
   }).join("\n");
 
-  return `Você é o TITAN COACH, personal trainer especialista em musculação integrado ao app TITAN PRO.
-Seja direto, técnico e motivador. Use português brasileiro. Responda de forma concisa (máx 200 palavras).
-Formate com emojis no início de pontos chave quando útil.
+  return `Você é o TITAN COACH — personal trainer do Kleber, integrado ao app TITAN PRO.
 
-CONTEXTO DO ATLETA:
-- Frequência: ${freq}x/semana | Objetivo: ${obj} | Streak: ${streak} dias
-- Histórico recente (últimas 5 sessões):
-${histSummary || "Sem histórico ainda"}
-- Treino atual em progresso:
-${currentSummary || "Nenhum dado registrado ainda"}`;
+REGRAS ABSOLUTAS:
+- Máximo 100 palavras por resposta. Seja CIRÚRGICO.
+- Português brasileiro informal. Fale como um coach que conhece bem o atleta.
+- Use os dados reais do histórico abaixo. Nunca dê conselhos genéricos.
+- Responda direto, sem introduções como "Olá!" ou "Ótima pergunta!".
+- Se tiver dados de treino, cite números reais (kg, séries, exercícios).
+- Emojis: no máximo 2 por resposta.
+
+DADOS REAIS DO KLEBER:
+- Objetivo: ${obj} | Frequência: ${freq}x/semana | Streak: ${streak} dias
+- Histórico (últimas sessões):
+${histSummary || "Primeira sessão — sem histórico ainda"}
+- Treino atual:
+${currentSummary || "Nenhum dado ainda"}`;
 }
 
 function openAI() {
@@ -2619,25 +2625,29 @@ function clearAIChat() {
   addAIMessage("assistant", "Chat limpo. Como posso te ajudar? 💪");
 }
 
+function renderMarkdown(text) {
+  return String(text)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
+    .replace(/^#{1,3} (.+)$/gm, "<strong>$1</strong>")
+    .replace(/^[-•] (.+)$/gm, "• $1")
+    .replace(/\n{2,}/g, "<br><br>")
+    .replace(/\n/g, "<br>");
+}
+
 function addAIMessage(role, text, isThinking = false) {
   const container = document.getElementById("aiMessages");
   if (!container) return;
 
-  const div  = document.createElement("div");
+  const div = document.createElement("div");
   div.className = `ai-msg ${role}`;
-  const now  = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
+  const now = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
 
   if (isThinking) {
     div.id = "aiThinking";
     div.innerHTML = `<div class="ai-bubble thinking"><div class="ai-dots"><span></span><span></span><span></span></div></div>`;
   } else {
-    // Renderizar markdown básico: **bold**, *italic*, listas com -
-    const html = String(text)
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/^- (.+)$/gm, "• $1")
-      .replace(/\n/g, "<br>");
-    div.innerHTML = `<div class="ai-bubble">${html}</div><div class="ai-msg-time">${now}</div>`;
+    div.innerHTML = `<div class="ai-bubble">${renderMarkdown(text)}</div><div class="ai-msg-time">${now}</div>`;
   }
 
   container.appendChild(div);
@@ -2663,30 +2673,50 @@ async function sendAI(overrideText) {
   _aiTyping = true;
   const sendBtn = document.getElementById("aiSendBtn");
   if (sendBtn) sendBtn.style.opacity = "0.4";
-  addAIMessage("assistant", "", true);
+  addAIMessage("assistant", "", true); // dots animados
 
   try {
     const systemPrompt = buildTrainingContext();
-    const messages = _aiHistory.slice(-12); // janela de contexto
+    const messages = _aiHistory.slice(-12);
 
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "meta/llama-3.1-70b-instruct",
         max_tokens: 1000,
         system: systemPrompt,
         messages
       })
     });
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    const reply = data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
+    if (!response.ok) throw new Error("Erro " + response.status);
 
+    // Remover dots e criar bolha vazia para streaming
     removeThinking();
-    addAIMessage("assistant", reply);
-    _aiHistory.push({ role: "assistant", content: reply });
+    const msgDiv = addAIMessage("assistant", "");
+    const bubble = msgDiv?.querySelector(".ai-bubble");
+    const container = document.getElementById("aiMessages");
+
+    // Ler stream token a token
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText  = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      fullText += chunk;
+
+      // Renderizar markdown em tempo real
+      if (bubble) {
+        bubble.innerHTML = renderMarkdown(fullText);
+        if (container) container.scrollTop = container.scrollHeight;
+      }
+    }
+
+    _aiHistory.push({ role: "assistant", content: fullText });
 
   } catch (err) {
     removeThinking();
