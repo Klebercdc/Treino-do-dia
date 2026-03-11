@@ -13,6 +13,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
   <link rel="icon" href="Logo.png" type="image/png"/>
+  <link rel="manifest" href="data:application/json,{%22name%22:%22TITAN%20PRO%22,%22short_name%22:%22TITAN%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23eef2f8%22,%22theme_color%22:%22%232563eb%22,%22icons%22:[{%22src%22:%22Logo.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]}"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="TITAN PRO"/>
+  <link rel="apple-touch-icon" href="Logo.png"/>
   <style>
     :root {
       --bg:          #eef2f8;
@@ -367,7 +372,7 @@ body {
   cursor: pointer; transition: background .15s;
 }
 .btn:active { background: var(--bg); }
-.btn .btn-icon { font-size: 1.25rem; line-height: 1; }
+.btn .btn-icon { display: flex; align-items: center; justify-content: center; height: 22px; }
 .btn .btn-label {
   font-size: 0.55rem; font-weight: 700;
   letter-spacing: 0.05em; text-transform: uppercase;
@@ -507,6 +512,116 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
 .tpl-actions { display: flex; gap: 8px; margin-top: 10px; }
 .tpl-actions button { flex: 1; }
 
+
+/* ── SET DONE checkmark ── */
+.series-grid.done .setcell .slabel {
+  color: #16a34a;
+}
+.series-grid.done .input-box {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+.series-grid.done .input-box input { color: #15803d !important; }
+.setcell-done-badge {
+  width: 18px; height: 18px;
+  background: #16a34a; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; color: #fff; font-weight: 800;
+  margin-top: 2px;
+}
+
+/* ── FLOATING TIMER PILL ── */
+#timerPill {
+  display: none;
+  position: fixed; top: 60px; right: 12px; z-index: 300;
+  background: #2563eb; color: #fff;
+  padding: 8px 14px; border-radius: 24px;
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem; font-weight: 600;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.4);
+  cursor: pointer;
+  animation: popIn .2s ease;
+}
+#timerPill.running { background: #f59e0b; }
+#timerPill.done-flash { background: #16a34a; }
+
+/* ── ONBOARDING ── */
+#onboarding {
+  display: none;
+  position: fixed; inset: 0; z-index: 8000;
+  background: #fff;
+  flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+#onboarding.show { display: flex; }
+.ob-step { display: none; width: 100%; }
+.ob-step.active { display: block; }
+.ob-icon { margin-bottom: 28px; display: flex; justify-content: center; align-items: center; }
+.ob-title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.2; }
+.ob-sub { font-size: 0.95rem; color: #6b7280; line-height: 1.5; margin-bottom: 32px; }
+.ob-btn {
+  width: 100%; padding: 15px;
+  background: #2563eb; color: #fff;
+  border: none; border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer; margin-bottom: 12px;
+}
+.ob-skip { font-size: 0.85rem; color: #94a3b8; cursor: pointer; padding: 8px; }
+.ob-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 28px; }
+.ob-dot { width: 7px; height: 7px; border-radius: 50%; background: #e2e8f4; }
+.ob-dot.active { background: #2563eb; width: 20px; border-radius: 4px; }
+
+/* ── EVO MODAL improved ── */
+#evoModal {
+  display: none; position: fixed; inset: 0; z-index: 5000;
+  background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+  align-items: flex-end; justify-content: center;
+}
+#evoModal.show { display: flex; }
+#evoBox {
+  background: #fff; width: 100%; max-width: 600px;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px 32px;
+  max-height: 88dvh; overflow-y: auto;
+  animation: slideUp .25s ease;
+}
+.evo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.evo-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; }
+.evo-close { width: 30px; height: 30px; border-radius: 50%; background: #f1f5fb; border: none; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+.evo-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+.evo-tab {
+  flex: none; padding: 7px 14px; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 700;
+  background: #f1f5fb; color: #6b7280;
+  cursor: pointer; white-space: nowrap;
+  border: none; font-family: 'DM Sans', sans-serif;
+  -webkit-appearance: none;
+}
+.evo-tab.active { background: #2563eb; color: #fff; }
+.evo-select {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid #c8d3e6; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  background: #fff; color: #0f172a;
+  -webkit-appearance: none; appearance: none;
+  margin-bottom: 14px; cursor: pointer;
+}
+.evo-stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.evo-stat {
+  background: #f8fafc; border: 1.5px solid #e2e8f4;
+  border-radius: 10px; padding: 10px 8px; text-align: center;
+}
+.evo-stat-val { font-size: 1.1rem; font-weight: 800; color: #2563eb; }
+.evo-stat-lbl { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-top: 2px; }
+.evo-pr-badge {
+  display: inline-block; background: #fef3c7; color: #b45309;
+  font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; margin-left: 6px;
+}
+
 @keyframes slideUp {
   from { opacity:0; transform: translateY(10px); }
   to   { opacity:1; transform: translateY(0); }
@@ -520,6 +635,85 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
   </style>
 </head>
 <body>
+
+<!-- Onboarding -->
+
+<div id="onboarding">
+  <div class="ob-content">
+    <div class="ob-step active" id="ob-step-0">
+      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#2563eb,#3b82f6)">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="21" width="40" height="6" rx="3" fill="white" opacity="0.3"/>
+          <rect x="20" y="18" width="8" height="12" rx="2" fill="white"/>
+          <rect x="2" y="17" width="6" height="14" rx="3" fill="white"/>
+          <rect x="40" y="17" width="6" height="14" rx="3" fill="white"/>
+          <rect x="8" y="19" width="4" height="10" rx="2" fill="white" opacity="0.7"/>
+          <rect x="36" y="19" width="4" height="10" rx="2" fill="white" opacity="0.7"/>
+        </svg>
+      </div></div>
+      <div class="ob-title">Bem-vindo ao<br>TITAN PRO</div>
+      <div class="ob-sub">Seu diário de treino inteligente. Registre séries, acompanhe sua evolução e supere seus limites.</div>
+    </div>
+    <div class="ob-step" id="ob-step-1">
+      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 8C16.268 8 10 14.268 10 22V40L14 36L18 40L22 36L26 40L30 36L34 40L38 36V22C38 14.268 31.732 8 24 8Z" fill="white" opacity="0.9"/>
+          <circle cx="19" cy="22" r="3" fill="#6366f1"/>
+          <circle cx="29" cy="22" r="3" fill="#6366f1"/>
+          <rect x="17" y="29" width="14" height="2" rx="1" fill="#6366f1" opacity="0.5"/>
+        </svg>
+      </div></div>
+      <div class="ob-title">Valores Fantasma</div>
+      <div class="ob-sub">Após salvar, seus valores anteriores aparecem como guia nos campos. Use como referência para superar a sessão passada.</div>
+    </div>
+    <div class="ob-step" id="ob-step-2">
+      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="24" cy="26" r="16" fill="white" opacity="0.15"/>
+          <circle cx="24" cy="26" r="13" stroke="white" stroke-width="2.5" fill="none"/>
+          <path d="M24 14V10M21 10H27" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M24 26L24 19" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M24 26L30 22" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="24" cy="26" r="2" fill="white"/>
+        </svg>
+      </div></div>
+      <div class="ob-title">Timer de Descanso</div>
+      <div class="ob-sub">Cronômetro de descanso integrado. Ao rolar a tela, um indicador flutuante mantém o tempo sempre visível.</div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <div class="ob-dots" style="margin-bottom:28px">
+      <div class="ob-dot active" id="ob-dot-0"></div>
+      <div class="ob-dot" id="ob-dot-1"></div>
+      <div class="ob-dot" id="ob-dot-2"></div>
+    </div>
+    <div id="ob-main-btn" onclick="obNext(1)" class="ob-btn">Continuar</div>
+    <div class="ob-skip" onclick="obFinish()">Pular introdução</div>
+  </div>
+</div>
+
+<!-- Floating timer pill -->
+
+<div id="timerPill" onclick="scrollToTimer()">1:00</div>
+
+<!-- Evolution Modal -->
+
+<div id="evoModal">
+  <div id="evoBox">
+    <div class="evo-header">
+      <div class="evo-title">Evolução</div>
+      <div class="evo-close" onclick="closeEvo()">✕</div>
+    </div>
+    <div class="evo-tabs">
+      <div class="evo-tab active" onclick="setEvoTab('volume',this)">Volume Total</div>
+      <div class="evo-tab" onclick="setEvoTab('rm',this)">1RM por Exercício</div>
+      <div class="evo-tab" onclick="setEvoTab('freq',this)">Frequência</div>
+    </div>
+    <select class="evo-select" id="evoExSelect" style="display:none" onchange="renderEvoChart()"></select>
+    <div class="evo-stat-row" id="evoStats"></div>
+    <canvas id="evoCanvas" style="max-height:240px"></canvas>
+  </div>
+</div>
 
 <!-- Modal -->
 
@@ -599,23 +793,23 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
 
 <div class="footer-actions">
   <button class="btn" onclick="openConfig()">
-    <span class="btn-icon">⚙️</span>
+    <span class="btn-icon" style="color:#6b7280"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
     <span class="btn-label">Config</span>
   </button>
   <button class="btn" onclick="showEvoChart()">
-    <span class="btn-icon">📈</span>
+    <span class="btn-icon" style="color:#6b7280"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
     <span class="btn-label">Evolução</span>
   </button>
   <button class="btn btn-save" onclick="salvarTreino()">
-    <span class="btn-icon">💾</span>
+    <span class="btn-icon" style="color:#fff"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
     <span class="btn-label">Salvar</span>
   </button>
   <button class="btn" onclick="abrirCSVModal()">
-    <span class="btn-icon">📁</span>
+    <span class="btn-icon" style="color:#6b7280"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
     <span class="btn-label">Arquivos</span>
   </button>
   <button class="btn" onclick="verHistorico()">
-    <span class="btn-icon">📜</span>
+    <span class="btn-icon" style="color:#6b7280"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
     <span class="btn-label">Histórico</span>
   </button>
 </div>
@@ -642,36 +836,50 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
   </div>
   <textarea id="csvTextarea" placeholder="Texto da ficha aparecerá aqui..."></textarea>
 
-  <!-- Linha 1: ações principais -->
+  <!-- Grid de ações -->
 
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
-    <label class="d-btn d-btn-blue" style="cursor:pointer; justify-content:center; display:flex; align-items:center; gap:6px; padding:12px">
-      📄 Ler PDF
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+    <label style="display:flex;align-items:center;justify-content:center;
+      background:#2563eb;color:#fff;border-radius:8px;padding:11px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.82rem;text-align:center;
+      box-shadow:0 2px 6px rgba(37,99,235,0.3);user-select:none">
+      Ler PDF
       <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"/>
     </label>
-    <button class="btn-import" style="border-radius:var(--r-sm); padding:12px; font-family:var(--font); font-weight:700; font-size:.85rem; border:none; cursor:pointer" onclick="importarCSV()">✓ Importar</button>
+    <div onclick="importarCSV()" style="display:flex;align-items:center;justify-content:center;
+      background:#16a34a;color:#fff;border-radius:8px;padding:11px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.82rem;text-align:center;
+      box-shadow:0 2px 6px rgba(22,163,74,0.25);user-select:none">
+      Importar
+    </div>
+    <div onclick="salvarModeloCSV()" style="display:flex;align-items:center;justify-content:center;
+      background:#fff;color:#374151;border:1.5px solid #c8d3e6;border-radius:8px;padding:11px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.82rem;text-align:center;user-select:none">
+      Salvar CSV
+    </div>
+    <div onclick="salvarTreinoAtualComoModelo()" style="display:flex;align-items:center;justify-content:center;
+      background:#f3f0ff;color:#6d28d9;border:1.5px solid #ddd6fe;border-radius:8px;padding:11px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.82rem;text-align:center;user-select:none">
+      Treino Atual
+    </div>
+    <div onclick="mostrarModelosCSV()" style="display:flex;align-items:center;justify-content:center;
+      background:#fff;color:#374151;border:1.5px solid #c8d3e6;border-radius:8px;padding:11px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.82rem;text-align:center;user-select:none">
+      Ver Modelos
+    </div>
+    <div onclick="document.getElementById('modalCSV').close()" style="display:flex;align-items:center;justify-content:center;
+      background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:11px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.82rem;text-align:center;user-select:none">
+      Fechar
+    </div>
   </div>
 
-  <!-- Linha 2: ações secundárias -->
-
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
-    <button class="d-btn d-btn-secondary" style="text-align:center" onclick="salvarModeloCSV()">💾 Salvar CSV</button>
-    <button class="d-btn d-btn-purple" style="text-align:center" onclick="salvarTreinoAtualComoModelo()">📋 Treino Atual</button>
-  </div>
-
-  <!-- Linha 3: modelos + fechar -->
-
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
-    <button class="d-btn d-btn-secondary" style="text-align:center" onclick="mostrarModelosCSV()">📚 Ver Modelos</button>
-    <button class="d-btn d-btn-danger" style="text-align:center" onclick="document.getElementById('modalCSV').close()">✕ Fechar</button>
-  </div>
-
-  <div id="tplArea" style="display:none; margin-top:16px">
-    <div style="font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px">Modelos Salvos</div>
+  <div id="tplArea" style="display:none; margin-top:14px">
+    <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Modelos Salvos</div>
     <div id="tplList"></div>
     <div class="tpl-actions">
-      <button class="d-btn d-btn-danger" onclick="limparModelosCSV()">🗑️ Limpar</button>
-      <button class="d-btn d-btn-primary" onclick="hideModelosCSV()">OK</button>
+      <div onclick="limparModelosCSV()" style="flex:1;padding:11px;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;text-align:center;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.82rem">Limpar</div>
+      <div onclick="hideModelosCSV()" style="flex:1;padding:11px;background:#16a34a;color:#fff;border-radius:8px;text-align:center;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.82rem">OK</div>
     </div>
   </div>
 </dialog>
@@ -682,7 +890,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
   <div class="dialog-title">Histórico de Sessões</div>
   <div id="histList"></div>
   <div class="hist-actions">
-    <button class="d-btn d-btn-danger" onclick="limparHistorico()">🗑️ Limpar Tudo</button>
+    <button class="d-btn d-btn-danger" onclick="limparHistorico()">Limpar Tudo</button>
     <button class="d-btn d-btn-primary" onclick="document.getElementById('modalHIST').close()">Fechar</button>
   </div>
 </dialog>
@@ -861,8 +1069,14 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
       function updateT() {
         const m = Math.floor(timeLeft / 60);
         const s = timeLeft % 60;
+        const txt = `${m}:${s < 10 ? "0" : ""}${s}`;
         const el = document.getElementById("timerDisplay");
-        if (el) el.innerText = `${m}:${s < 10 ? "0" : ""}${s}`;
+        if (el) el.innerText = txt;
+        const pill = document.getElementById("timerPill");
+        if (pill) {
+          pill.textContent = txt;
+          pill.className = isRunning ? "running" : (timeLeft === 0 ? "done-flash" : "");
+        }
       }
       function toggleT() {
         const ctx = getAudioCtx();
@@ -1281,7 +1495,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
             });
           }
           document.getElementById("csvTextarea").value = fullText;
-          alert("✅ Texto extraído! Agora ajuste o texto na caixa e clique em IMPORTAR.");
+          alert("Texto extraído. Ajuste se necessário e clique em Importar.");
         } catch (err) {
           console.error(err);
           alert("❌ Erro ao ler PDF (Pode ser imagem escaneada).");
@@ -1296,10 +1510,10 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
       ════════════════════════════════════════════════════ */
       function importarCSVFromText(csvText, alsoSaveAsTemplate = false) {
         const csv = String(csvText || "").trim();
-        if (!csv) { alert("⚠️ Cole o CSV primeiro!"); return false; }
+        if (!csv) { alert("Cole o CSV primeiro."); return false; }
 
         const linhas = csv.split(/\r?\n/).filter((l) => l.trim());
-        if (linhas.length < 2) { alert("⚠️ CSV inválido ou muito curto!"); return false; }
+        if (linhas.length < 2) { alert("CSV inválido ou muito curto."); return false; }
 
         const delim = detectDelimiter(linhas[0]);
         const header = splitCSVLine(linhas[0], delim).map((h) => h.trim().toUpperCase());
@@ -1309,7 +1523,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
         const idxSeries  = header.indexOf("SÉRIES") >= 0 ? header.indexOf("SÉRIES") : header.indexOf("SERIES");
         const idxReps    = header.indexOf("REPS");
 
-        if (idxTreino < 0 || idxEx < 0) { alert("⚠️ Header precisa ter: TREINO e EXERCÍCIO."); return false; }
+        if (idxTreino < 0 || idxEx < 0) { alert("Header precisa ter: TREINO e EXERCÍCIO."); return false; }
 
         const grouped = {};
         const orderOfAppearance = [];
@@ -1330,8 +1544,8 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
         }
 
         const treinoCount = Object.keys(grouped).length;
-        if (treinoCount < 1) { alert("⚠️ Nenhuma linha válida."); return false; }
-        if (treinoCount > 6) { alert("⚠️ Apenas os 6 primeiros treinos foram importados."); }
+        if (treinoCount < 1) { alert("Nenhuma linha válida."); return false; }
+        if (treinoCount > 6) { alert("Apenas os 6 primeiros treinos foram importados."); }
 
         buildTabsFromGrouped(grouped, orderOfAppearance);
         scheduleDraftSave();
@@ -1343,7 +1557,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
       function importarCSV() {
         if (importarCSVFromText(document.getElementById("csvTextarea").value, false)) {
           document.getElementById("modalCSV").close();
-          alert("✅ Treino importado!");
+          alert("Treino importado com sucesso.");
         }
       }
 
@@ -1603,9 +1817,9 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
           applyPrevGhostsToAll();
 
           checkDeload();
-          alert("✅ Sessão Salva! (Modo Fantasma Ativado)");
+          alert("Sessão salva. Modo fantasma ativado.");
         } catch {
-          alert("⚠️ Memória cheia.");
+          alert("Memória cheia.");
         }
       }
 
@@ -1669,51 +1883,144 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
         const vols = hist.map((h) => calcVolumeTotal(h.state));
         const last = vols[vols.length - 1], prev = vols[vols.length - 2];
         if (last > 0 && prev > 0 && (last - prev) / prev < -0.15)
-          alert("⚠️ ALERTA: Volume caiu >15%. Atenção à recuperação!");
+          alert("Volume caiu mais de 15%. Atenção à recuperação.");
       }
 
       /* ════════════════════════════════════════════════════
          GRÁFICO DE EVOLUÇÃO
       ════════════════════════════════════════════════════ */
+      let _evoChart = null;
+      let _evoTab = 'volume';
+
       function showEvoChart() {
-        const hist = safeJSON(STORAGE.historyKey, []).reverse();
-        if (!hist.length) { alert("Sem histórico."); return; }
+        const hist = safeJSON(STORAGE.historyKey, []);
+        if (!hist.length) { alert("Sem histórico ainda. Salve uma sessão primeiro!"); return; }
+        populateEvoExSelect(hist);
+        renderEvoChart();
+        document.getElementById('evoModal').classList.add('show');
+      }
 
-        const data = hist.map((h) => ({
-          d: new Date(h.createdAt).toLocaleDateString("pt-BR").slice(0, 5),
-          v: calcVolumeTotal(h.state),
-        }));
+      function closeEvo() {
+        document.getElementById('evoModal').classList.remove('show');
+      }
 
-        const dialog = document.createElement("dialog");
-        dialog.style.cssText = "background:#161e2e; width:95%; max-width:600px; padding:15px; border:1px solid var(--blue); border-radius:12px;";
-        const cvs = document.createElement("canvas");
-        const btn = document.createElement("button");
-        btn.innerText = "FECHAR";
-        btn.className = "btn";
-        btn.style.cssText = "background:var(--red); color:#fff; margin-top:10px; width:100%";
-        btn.onclick = () => { dialog.close(); dialog.remove(); };
-        dialog.appendChild(cvs);
-        dialog.appendChild(btn);
-        document.body.appendChild(dialog);
-        dialog.showModal();
+      function setEvoTab(tab, el) {
+        _evoTab = tab;
+        document.querySelectorAll('.evo-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        const sel = document.getElementById('evoExSelect');
+        sel.style.display = (tab === 'rm') ? 'block' : 'none';
+        renderEvoChart();
+      }
 
-        new Chart(cvs, {
-          type: "line",
+      function populateEvoExSelect(hist) {
+        const names = new Set();
+        hist.forEach(h => {
+          (h.state?.sections || []).forEach(sec => {
+            (sec.cards || []).forEach(c => { if(c.name) names.add(c.name); });
+          });
+        });
+        const sel = document.getElementById('evoExSelect');
+        sel.innerHTML = Array.from(names).map(n => `<option value="${escapeAttr(n)}">${escapeHTML(n)}</option>`).join('');
+      }
+
+      function renderEvoChart() {
+        const hist = safeJSON(STORAGE.historyKey, []).slice().reverse(); // oldest first
+        if (!hist.length) return;
+
+        let labels = [], values = [], label = '', pr = 0, total = 0, sessions = 0;
+
+        if (_evoTab === 'volume') {
+          labels = hist.map(h => new Date(h.createdAt).toLocaleDateString('pt-BR').slice(0,5));
+          values = hist.map(h => Math.round(calcVolumeTotal(h.state)));
+          label = 'Volume (kg)';
+          total = values.reduce((a,b) => a+b, 0);
+          pr = Math.max(...values);
+          sessions = hist.length;
+        } else if (_evoTab === 'rm') {
+          const exName = document.getElementById('evoExSelect').value;
+          hist.forEach(h => {
+            let found = null;
+            (h.state?.sections || []).forEach(sec => {
+              (sec.cards || []).forEach(c => {
+                if (c.name === exName) {
+                  const maxRM = (c.values || []).reduce((mx, v) => {
+                    const rm = v.kg && v.reps ? calcRM(toNum(v.kg), toNum(v.reps)) : 0;
+                    return rm > mx ? rm : mx;
+                  }, 0);
+                  if (maxRM > 0) found = maxRM;
+                }
+              });
+            });
+            if (found !== null) {
+              labels.push(new Date(h.createdAt).toLocaleDateString('pt-BR').slice(0,5));
+              values.push(Math.round(found));
+            }
+          });
+          label = '1RM Estimado (kg)';
+          pr = values.length ? Math.max(...values) : 0;
+          sessions = values.length;
+          total = pr;
+        } else if (_evoTab === 'freq') {
+          const weeks = {};
+          hist.forEach(h => {
+            const d = new Date(h.createdAt);
+            const week = `Sem ${Math.ceil(d.getDate()/7)}/${d.getMonth()+1}`;
+            weeks[week] = (weeks[week] || 0) + 1;
+          });
+          labels = Object.keys(weeks);
+          values = Object.values(weeks);
+          label = 'Treinos / Semana';
+          pr = values.length ? Math.max(...values) : 0;
+          sessions = hist.length;
+          total = sessions;
+        }
+
+        // Stats
+        const last = values.length ? values[values.length-1] : 0;
+        const prev2 = values.length >= 2 ? values[values.length-2] : last;
+        const delta = prev2 > 0 ? Math.round((last - prev2) / prev2 * 100) : 0;
+        const statsEl = document.getElementById('evoStats');
+        statsEl.innerHTML = `
+          <div class="evo-stat">
+            <div class="evo-stat-val">${_evoTab === 'freq' ? sessions : (pr > 0 ? pr + 'kg' : '-')}</div>
+            <div class="evo-stat-lbl">${_evoTab === 'freq' ? 'Total Treinos' : 'Recorde'}</div>
+          </div>
+          <div class="evo-stat">
+            <div class="evo-stat-val">${last > 0 ? last + (_evoTab === 'freq' ? '' : 'kg') : '-'}</div>
+            <div class="evo-stat-lbl">Última Sessão</div>
+          </div>
+          <div class="evo-stat">
+            <div class="evo-stat-val" style="color:${delta >= 0 ? '#16a34a' : '#dc2626'}">${delta >= 0 ? '+' : ''}${delta}%</div>
+            <div class="evo-stat-lbl">vs Anterior</div>
+          </div>`;
+
+        // Chart
+        if (_evoChart) { _evoChart.destroy(); _evoChart = null; }
+        const ctx = document.getElementById('evoCanvas');
+        _evoChart = new Chart(ctx, {
+          type: 'line',
           data: {
-            labels: data.map((x) => x.d),
+            labels,
             datasets: [{
-              label: "Volume Total (kg)",
-              data: data.map((x) => x.v),
-              borderColor: "#00cfb4",
-              backgroundColor: "rgba(0,207,180,0.15)",
+              label,
+              data: values,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37,99,235,0.08)',
               fill: true,
-              tension: 0.3,
+              tension: 0.35,
+              pointBackgroundColor: '#2563eb',
+              pointRadius: 4,
+              pointHoverRadius: 6,
             }],
           },
           options: {
             responsive: true,
-            scales: { y: { beginAtZero: true, grid: { color: "#e4e8ef" } }, x: { grid: { color: "#e4e8ef" } } },
-            plugins: { legend: { labels: { color: "#1e293b" } } },
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: false, grid: { color: '#e2e8f4' }, ticks: { color: '#6b7280', font: { size: 11 } } },
+              x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 10 }, maxRotation: 0 } }
+            },
           },
         });
       }
@@ -1880,7 +2187,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
       /* Salva o treino aberto como modelo — sem precisar colar CSV */
       async function salvarTreinoAtualComoModelo() {
         const csv = exportarTreinoAtualComoCSV();
-        if (!csv) { alert("⚠️ Nenhum exercício para salvar."); return; }
+        if (!csv) { alert("Nenhum exercício para salvar."); return; }
         const n = await dlgPrompt("Nome do Modelo:", "text");
         if (!n) return;
         const arr = getCSVTemplates();
@@ -1932,6 +2239,52 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
       /* ════════════════════════════════════════════════════
          INICIALIZAÇÃO
       ════════════════════════════════════════════════════ */
+      // PWA service worker
+      if ('serviceWorker' in navigator) {
+        const swCode = `self.addEventListener('fetch',e=>{});`;
+        const blob = new Blob([swCode], {type:'application/javascript'});
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+      }
+
+      // Onboarding
+      function obNext(step) {
+        document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.ob-dot').forEach(d => d.classList.remove('active'));
+        document.getElementById('ob-step-' + step).classList.add('active');
+        document.getElementById('ob-dot-' + step).classList.add('active');
+        const btn = document.getElementById('ob-main-btn');
+        if (step === 2) {
+          btn.textContent = 'Começar Treino';
+          btn.style.background = '#16a34a';
+          btn.style.boxShadow = '0 4px 14px rgba(22,163,74,0.3)';
+          btn.onclick = obFinish;
+        } else {
+          btn.textContent = 'Continuar';
+          btn.style.background = '#2563eb';
+          btn.style.boxShadow = '0 4px 14px rgba(37,99,235,0.3)';
+          btn.onclick = () => obNext(step + 1);
+        }
+      }
+      function obFinish() {
+        localStorage.setItem('titan_onboarded','1');
+        document.getElementById('onboarding').classList.remove('show');
+      }
+
+      // Floating timer pill
+      const _timerArea = document.querySelector('.timer-area');
+      const _pill = document.getElementById('timerPill');
+      const _obs = new IntersectionObserver(entries => {
+        const visible = entries[0].isIntersecting;
+        _pill.style.display = visible ? 'none' : 'flex';
+        _pill.style.alignItems = 'center';
+        _pill.style.gap = '6px';
+      }, { threshold: 0.1 });
+      if (_timerArea) _obs.observe(_timerArea);
+
+      function scrollToTimer() {
+        _timerArea?.scrollIntoView({ behavior: 'smooth' });
+      }
+
       window.onload = () => {
         try { document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR"); } catch {}
 
@@ -1948,6 +2301,10 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
         if (!loaded) gerarProtocolo();
         openConfig();
         applyPrevGhostsToAll();
+        // Show onboarding on first visit
+        if (!localStorage.getItem('titan_onboarded')) {
+          document.getElementById('onboarding').classList.add('show');
+        }
       };
     </script>
 
