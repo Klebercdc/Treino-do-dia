@@ -490,13 +490,34 @@
     .setcell .rmmini { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); font-weight: 500; line-height: 1.2; }
     .ghost::placeholder { color: rgba(249,115,22,0.3) !important; }
 
-    /* Set done */
-    .series-grid.done .setcell .slabel { color: var(--green); }
+    /* Set done — destaque premium */
+    .series-grid.done .setcell .slabel {
+      color: var(--green);
+    }
     .series-grid.done .input-box {
-      border-color: rgba(34,197,94,0.3);
-      background: rgba(34,197,94,0.05);
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.06);
     }
     .series-grid.done .input-box input { color: var(--green); }
+    .series-grid.done .setcell {
+      position: relative;
+    }
+    .series-grid.done .setcell::after {
+      content: '✓';
+      position: absolute;
+      bottom: -2px;
+      font-size: 0.55rem;
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    /* Botão adicionar série */
+    .btn-add-set:active {
+      background: var(--accent-dim) !important;
+      border-color: var(--accent) !important;
+      border-style: solid !important;
+      color: var(--accent) !important;
+    }
 
     /* ══════════════════════════════════════════
        FLOATING TIMER PILL
@@ -1417,8 +1438,10 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
       <span class="card-rm-badge" id="1rm-${id}"></span>
     </div>
     <span class="ex-target">${sets} sets · ${escapeHTML(meta)}</span>
+    <div class="card-load-suggest" style="display:none;font-size:0.72rem;color:var(--accent);padding:0 12px 8px;opacity:.85"></div>
     <div class="series-grid header-grid" style="margin-top:8px"><span></span><span>KG</span><span>REPS</span><span>RPE</span></div>
-    ${rows}`;
+    ${rows}
+    <button class="btn-add-set" onclick="adicionarSerie(this)" style="width:100%;padding:8px;margin-top:6px;background:transparent;border:1px dashed var(--border);border-radius:var(--r-sm);color:var(--muted);font-family:var(--font);font-size:0.75rem;font-weight:600;cursor:pointer;transition:all .15s;">+ Série</button>`;
   sec.appendChild(card);
   attachAutosaveToCard(card);
   bindCardLongPress(card);
@@ -1480,12 +1503,29 @@ async function onPressSetCell(el) {
     const inputs = row.querySelectorAll("input");
     if (inputs.length !== 3) return;
     const hasAny = Array.from(inputs).some(i => String(i.value||"").trim().length);
-    if (!hasAny) { inputs[0].focus(); return; }
-    if (await dlgConfirm("Apagar esta série (KG/REPS/RPE)?")) {
-      inputs.forEach(i => i.value = "");
-      const card = row.closest(".exercise-card");
-      if (card) updateSuggests(card.getAttribute("data-ex-id"));
-      scheduleDraftSave();
+
+    // Se tem dados: toggle done / confirmar apagar
+    if (hasAny) {
+      if (row.classList.contains("done")) {
+        // já concluída: perguntar se quer apagar
+        if (await dlgConfirm("Apagar esta série (KG/REPS/RPE)?")) {
+          inputs.forEach(i => i.value = "");
+          row.classList.remove("done");
+          const card = row.closest(".exercise-card");
+          if (card) updateSuggests(card.getAttribute("data-ex-id"));
+          scheduleDraftSave(); updateSessionStrip();
+        }
+      } else {
+        // Marcar como concluída
+        row.classList.add("done");
+        updateSessionStrip(); scheduleDraftSave();
+        if (navigator.vibrate) navigator.vibrate(40);
+        // Auto-start do timer de descanso
+        if (!isRunning) { timeLeft = baseTime; toggleT(); }
+        else { clearInterval(timerInt); isRunning=false; timeLeft=baseTime; toggleT(); }
+      }
+    } else {
+      inputs[0].focus();
     }
   } catch {}
 }
@@ -1512,10 +1552,63 @@ function updateSuggests(id) {
     if (bestRM) { el1rm.textContent = "1RM " + bestRM + "kg"; el1rm.style.display = ""; }
     else el1rm.style.display = "none";
   }
+  // Sugestão de carga baseada no histórico
+  const sec = card.closest(".section");
+  const treinoKey = sec?.getAttribute("data-treino-key") || "";
+  const exName = card.querySelector(".ex-title")?.textContent || "";
+  const k = prevKeyOf(treinoKey, exName);
+  const prev = prevMap[k];
+  const sugEl = card.querySelector(".card-load-suggest");
+  if (sugEl && prev && prev[0]) {
+    const prevKg = toNum(prev[0].kg);
+    if (prevKg > 0) {
+      const allFilled = rows.every(r => toNum(r.querySelectorAll("input")[0].value) > 0);
+      if (!allFilled) {
+        sugEl.textContent = `💡 Última: ${prevKg}kg → tente ${prevKg+2.5}kg`;
+        sugEl.style.display = "block";
+      } else {
+        sugEl.style.display = "none";
+      }
+    }
+  }
+}
+
+function adicionarSerie(btn) {
+  const card = btn.closest(".exercise-card");
+  if (!card) return;
+  const id = card.getAttribute("data-ex-id");
+  const existingRows = Array.from(card.querySelectorAll(".series-grid")).filter(r => r.querySelectorAll("input").length===3);
+  const sNum = existingRows.length + 1;
+  const row = document.createElement("div");
+  row.className = "series-grid";
+  row.setAttribute("data-row","1");
+  row.innerHTML = `
+    <span class="setcell" onclick="onPressSetCell(this)">
+      <span class="slabel">S${sNum}</span>
+      <span class="rmmini" id="rm-${id}-${sNum-1}">-</span>
+    </span>
+    <div class="input-box"><input type="number" inputmode="decimal" placeholder="" oninput="updateSuggests('${id}')"></div>
+    <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}')"></div>
+    <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}')"></div>`;
+  btn.before(row);
+  // Copiar último ghost se houver
+  const prevRow = existingRows[existingRows.length-1];
+  if (prevRow) {
+    const pi = prevRow.querySelectorAll("input");
+    const ni = row.querySelectorAll("input");
+    [0,1,2].forEach(j => { if (pi[j]?.placeholder) { ni[j].placeholder=pi[j].placeholder; ni[j].classList.add("ghost"); } });
+  }
+  row.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("input", scheduleDraftSave, { passive:true });
+    inp.addEventListener("input", function() { if(this.value) this.classList.remove("ghost"); startSessionTimer(); updateSessionStrip(); }, { passive:true });
+  });
+  card.setAttribute("data-ex-sets", String(sNum));
+  scheduleDraftSave();
+  if (navigator.vibrate) navigator.vibrate(20);
 }
 
 /* ═══════════════════════════════════════════════════
-   PDF
+   ALIASES E UTILITÁRIOS DE IMPORTAÇÃO
 ═══════════════════════════════════════════════════ */
 async function extrairTextoPDF(input) {
   if (!input.files || !input.files[0]) return;
@@ -1587,7 +1680,7 @@ function importarCSVFromText(csvText, alsoSaveAsTemplate=false) {
 function importarCSV() {
   if (importarCSVFromText(document.getElementById("csvTextarea").value, false)) {
     document.getElementById("modalCSV").close();
-    alert("Treino importado com sucesso.");
+    showToast("✅ Treino importado com sucesso!", "success");
   }
 }
 
@@ -1803,7 +1896,8 @@ async function salvarTreino() {
     _sessionStart = null;
     updateStreakUI(); updateWorkoutProgress();
     showSummary(st, prs, dur);
-  } catch { alert("Memória cheia."); }
+    if (prs.length > 0) setTimeout(() => showToast(`🏆 ${prs.length} PR${prs.length>1?"s":""} batido${prs.length>1?"s":""}!`, "success", 4000), 800);
+  } catch { showToast("Erro ao salvar. Memória cheia?", "error"); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1848,12 +1942,38 @@ function calcVolumeTotal(state) {
     acc + (sec.cards||[]).reduce((acc2,c) =>
       acc2 + (c.values||[]).reduce((acc3,v) => acc3+toNum(v.kg)*toNum(v.reps), 0), 0), 0);
 }
+function showToast(msg, type="info", duration=3500) {
+  let toast = document.getElementById("titanToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "titanToast";
+    toast.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--card);border:1px solid var(--border);color:var(--text);
+      padding:12px 20px;border-radius:24px;font-size:0.85rem;font-weight:600;
+      box-shadow:var(--shadow-lg);z-index:9998;opacity:0;transition:opacity .25s,transform .25s;
+      white-space:nowrap;max-width:90vw;text-align:center;`;
+    document.body.appendChild(toast);
+  }
+  const colors = { info:"var(--accent)", success:"var(--green)", warning:"#f59e0b", error:"var(--red)" };
+  toast.style.borderColor = colors[type] || "var(--border)";
+  toast.textContent = msg;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateX(-50%) translateY(0)";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(-50%) translateY(10px)";
+  }, duration);
+}
+
 function checkDeload() {
   const hist = safeJSON(STORAGE.historyKey,[]).slice(0,7).reverse();
   if (hist.length < 2) return;
   const vols = hist.map(h => calcVolumeTotal(h.state));
   const last=vols[vols.length-1], prev=vols[vols.length-2];
-  if (last>0 && prev>0 && (last-prev)/prev < -0.15) alert("Volume caiu mais de 15%. Atenção à recuperação.");
+  if (last>0 && prev>0 && (last-prev)/prev < -0.15) {
+    showToast("⚠️ Volume caiu >15%. Atenção à recuperação.", "warning", 5000);
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1926,8 +2046,8 @@ function renderEvoChart() {
   if (_evoChart) { _evoChart.destroy(); _evoChart=null; }
   _evoChart = new Chart(document.getElementById("evoCanvas"), {
     type:"line",
-    data: { labels, datasets: [{ label, data:values, borderColor:"#2563eb", backgroundColor:"rgba(37,99,235,0.08)", fill:true, tension:.35, pointBackgroundColor:"#2563eb", pointRadius:4, pointHoverRadius:6 }] },
-    options: { responsive:true, plugins:{legend:{display:false}}, scales: { y:{beginAtZero:false,grid:{color:"#e2e8f4"},ticks:{color:"#6b7280",font:{size:11}}}, x:{grid:{display:false},ticks:{color:"#6b7280",font:{size:10},maxRotation:0}} } },
+    data: { labels, datasets: [{ label, data:values, borderColor:"#f97316", backgroundColor:"rgba(249,115,22,0.08)", fill:true, tension:.35, pointBackgroundColor:"#f97316", pointRadius:4, pointHoverRadius:6 }] },
+    options: { responsive:true, plugins:{legend:{display:false}}, scales: { y:{beginAtZero:false,grid:{color:"rgba(255,255,255,0.05)"},ticks:{color:"#a3a3a3",font:{size:11}}}, x:{grid:{display:false},ticks:{color:"#a3a3a3",font:{size:10},maxRotation:0}} } },
   });
 }
 
@@ -2050,13 +2170,13 @@ function exportarTreinoAtualComoCSV() {
 }
 async function salvarTreinoAtualComoModelo() {
   const csv = exportarTreinoAtualComoCSV();
-  if (!csv) { alert("Nenhum exercício para salvar."); return; }
+  if (!csv) { showToast("Nenhum exercício para salvar.", "error"); return; }
   const n = await dlgPrompt("Nome do Modelo:", "text");
   if (!n) return;
   const arr = getCSVTemplates();
   arr.unshift({ id:Date.now(), name:n, date:new Date().toISOString(), csv });
   localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0,STORAGE.maxTemplates)));
-  alert(`✅ Modelo "${n}" salvo!`);
+  showToast(`✅ Modelo "${n}" salvo!`, "success");
   mostrarModelosCSV();
 }
 async function trySaveTemplate(csv) {
@@ -2210,20 +2330,38 @@ function showSummary(state, prs, durationMin) {
   const totalSets = (state.sections||[]).reduce((acc,sec)=>acc+(sec.cards||[]).reduce((a2,c)=>a2+(c.values||[]).filter(v=>v.kg&&v.reps).length,0),0);
   const totalEx   = (state.sections||[]).reduce((acc,sec)=>acc+(sec.cards||[]).length,0);
   const dateStr   = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
-  document.getElementById("sumSub").textContent = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
+
+  // Mensagem motivacional dinâmica
+  const motivos = [
+    "Consistência é tudo. Você apareceu. 🔥",
+    "Cada série conta. Cada rep importa. 💪",
+    "Progresso, não perfeição. Continue. ⚡",
+    "Disciplina supera motivação. Sempre. 🏆",
+    "Mais um treino no banco. Invencível. 🦾",
+  ];
+  const mot = prs.length > 0
+    ? `🏆 ${prs.length} NOVO${prs.length>1?"S":""} RECORDE${prs.length>1?"S":""}!`
+    : motivos[Math.floor(Math.random()*motivos.length)];
+
+  document.getElementById("sumTitle").textContent = "TREINO CONCLUÍDO";
+  document.getElementById("sumSub").innerHTML = `<span style="color:var(--accent);font-weight:700">${mot}</span><br><small style="color:var(--muted)">${dateStr.charAt(0).toUpperCase()+dateStr.slice(1)}</small>`;
   document.getElementById("sumGrid").innerHTML = `
-    <div class="summary-stat"><div class="summary-stat-val">${vol>0?vol.toLocaleString("pt-BR"):"—"}</div><div class="summary-stat-lbl">Volume (kg)</div></div>
+    <div class="summary-stat"><div class="summary-stat-val">${vol>0?vol.toLocaleString("pt-BR"):"—"}</div><div class="summary-stat-lbl">Volume kg</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${totalSets}</div><div class="summary-stat-lbl">Séries</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${totalEx}</div><div class="summary-stat-lbl">Exercícios</div></div>
-    <div class="summary-stat"><div class="summary-stat-val">${durationMin!==null?durationMin+" min":"—"}</div><div class="summary-stat-lbl">Duração</div></div>`;
+    <div class="summary-stat"><div class="summary-stat-val">${durationMin!==null?durationMin+"min":"—"}</div><div class="summary-stat-lbl">Duração</div></div>`;
   const prSection = document.getElementById("sumPRs");
   const prList    = document.getElementById("sumPRList");
   if (prs.length>0) {
     prSection.style.display="block";
-    prList.innerHTML=prs.map(p=>`<div class="summary-pr-item"><span>${escapeHTML(p.name)}</span><span class="summary-pr-val">${p.rm}kg 1RM</span></div>`).join("");
+    prList.innerHTML=prs.map(p=>`
+      <div class="summary-pr-item">
+        <span>${escapeHTML(p.name)}</span>
+        <span class="summary-pr-val">${p.rm}kg<small style="font-size:.65rem;color:var(--muted);margin-left:4px">1RM</small></span>
+      </div>`).join("");
   } else { prSection.style.display="none"; }
   document.getElementById("summaryModal").classList.add("show");
-  if (navigator.vibrate) navigator.vibrate([50,30,80]);
+  if (navigator.vibrate) navigator.vibrate([50,30,80,30,120]);
 }
 function closeSummary() { document.getElementById("summaryModal").classList.remove("show"); }
 
@@ -2266,10 +2404,10 @@ function obNext(step) {
   document.getElementById("ob-dot-"+step)?.classList.add("active");
   const btn = document.getElementById("ob-main-btn");
   if (step===2) {
-    btn.textContent="Começar Treino"; btn.style.background="#16a34a";
+    btn.textContent="Começar Treino"; btn.style.background="var(--green)";
     btn.onclick=obFinish;
   } else {
-    btn.textContent="Continuar"; btn.style.background="#2563eb";
+    btn.textContent="Continuar"; btn.style.background="var(--accent)";
     btn.onclick=()=>obNext(step+1);
   }
 }
@@ -2337,6 +2475,14 @@ window.onload = () => {
 
   // Session strip — 1 único intervalo (corrigido bug duplicado)
   setInterval(() => { if (_sessionStart) updateSessionStrip(); }, 30000);
+
+  // Toast de boas-vindas para quem já treinou
+  if (localStorage.getItem("titan_onboarded")) {
+    const streak = calcStreak();
+    if (streak >= 2) {
+      setTimeout(() => showToast(`🔥 ${streak} dias seguidos. Continue assim!`, "success", 4000), 1200);
+    }
+  }
 
   // Onboarding apenas na primeira visita
   if (!localStorage.getItem("titan_onboarded")) {
