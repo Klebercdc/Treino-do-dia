@@ -112,3 +112,4 @@ JSON.stringify({ error: “Erro interno: “ + err.message }),
 { status: 500, headers: { “Content-Type”: “application/json”, “Access-Control-Allow-Origin”: “*” } }
 );
 }
+}
