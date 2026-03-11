@@ -10,16 +10,17 @@ const NVIDIA_KEY = process.env.NVIDIA_API_KEY;
 if (!NVIDIA_KEY) return res.status(500).json({ error: “NVIDIA_API_KEY não configurada.” });
 
 try {
-// Ler body manualmente caso não venha parseado
+// Parse body — Vercel às vezes entrega como string
 let body = req.body;
-if (!body || typeof body === “string”) {
-try { body = JSON.parse(body || “{}”); } catch { body = {}; }
+if (typeof body === “string”) {
+try { body = JSON.parse(body); } catch { body = {}; }
 }
+if (!body || typeof body !== “object”) body = {};
 
 ```
-const system = body.system || "";
-const messages = body.messages || [];
-const max_tokens = body.max_tokens || 800;
+const system     = body.system    || "";
+const messages   = Array.isArray(body.messages) ? body.messages : [];
+const max_tokens = Number(body.max_tokens) || 800;
 
 const msgs = [];
 if (system) msgs.push({ role: "system", content: system });
@@ -46,15 +47,22 @@ const upstream = await fetch("https://integrate.api.nvidia.com/v1/chat/completio
 
 const raw = await upstream.text();
 let data;
-try { data = JSON.parse(raw); } catch { return res.status(500).json({ error: "Resposta inválida da NVIDIA: " + raw.slice(0, 200) }); }
+try { data = JSON.parse(raw); } catch {
+  return res.status(500).json({ error: "Resposta inválida da NVIDIA: " + raw.slice(0, 300) });
+}
 
-if (data.error) return res.status(500).json({ error: data.error });
+if (!upstream.ok || data.error) {
+  return res.status(upstream.status || 500).json({
+    error: data?.error?.message || data?.error || "Erro NVIDIA status " + upstream.status
+  });
+}
 
-const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
-return res.status(200).json({ content: [{ type: "text", text: text }] });
+const text = data?.choices?.[0]?.message?.content || "";
+return res.status(200).json({ content: [{ type: "text", text }] });
 ```
 
 } catch (err) {
+console.error(“chat.js crash:”, err);
 return res.status(500).json({ error: err.message });
 }
 };
