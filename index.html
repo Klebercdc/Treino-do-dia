@@ -94,16 +94,17 @@ body {
 }
 #customModal input:focus { border-color: var(--accent); }
 #customModal .cm-btns { display: flex; gap: 10px; }
-#customModal .cm-btns button {
+#customModal .cm-btn {
   flex: 1; padding: 14px; border-radius: var(--r-sm);
-  border: none !important; font-family: var(--font) !important;
-  font-weight: 700 !important; font-size: 0.9rem; cursor: pointer;
-  -webkit-appearance: none; appearance: none;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700; font-size: 0.9rem; cursor: pointer;
+  text-align: center; user-select: none;
   transition: transform .1s, opacity .15s;
+  display: flex; align-items: center; justify-content: center;
 }
-#customModal .cm-btns button:active { transform: scale(.97); opacity:.85; }
-#customModal .cm-ok  { background: var(--accent) !important; color: #fff !important; box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
-#customModal .cm-no  { background: var(--bg) !important; color: var(--text-2) !important; border: 1.5px solid var(--border) !important; }
+#customModal .cm-btn:active { transform: scale(.97); opacity:.85; }
+#customModal .cm-ok  { background: #2563eb; color: #ffffff; box-shadow: 0 2px 8px rgba(37,99,235,0.35); border-radius: var(--r-sm); }
+#customModal .cm-no  { background: #eef2f9; color: #3d4f6b; border: 1.5px solid #c8d3e6; border-radius: var(--r-sm); }
 
 /* ── Header ── */
 .top-header {
@@ -111,7 +112,7 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px; height: 56px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid #b0c0d8;
   box-shadow: 0 1px 3px rgba(15,23,42,0.06);
 }
 .brand {
@@ -130,7 +131,7 @@ body {
 /* ── Timer ── */
 .timer-area {
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid #b0c0d8;
   padding: 14px 16px 14px;
 }
 .timer-top {
@@ -185,7 +186,7 @@ body {
 /* ── Setup Panel ── */
 .setup-panel {
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid #b0c0d8;
   padding: 18px 16px;
 }
 .setup-title {
@@ -230,7 +231,7 @@ body {
 .nav-pills {
   display: flex; gap: 0; padding: 0 16px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid #b0c0d8;
   overflow-x: auto; scrollbar-width: none;
 }
 .nav-pills::-webkit-scrollbar { display: none; }
@@ -256,14 +257,14 @@ body {
 
 /* ── Exercise Card ── */
 .exercise-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  border: 1.5px solid #b0c0d8;
   border-radius: var(--r);
   padding: 14px 14px 12px;
   margin-bottom: 10px;
   position: relative; overflow: hidden;
   animation: slideUp .2s ease;
-  box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+  box-shadow: 0 2px 10px rgba(15,23,42,0.10);
   transition: border-color .2s, box-shadow .2s;
 }
 .exercise-card::before {
@@ -281,7 +282,7 @@ body {
 .card-header { padding-left: 12px; margin-bottom: 3px; }
 .ex-title {
   font-size: 1.05rem; font-weight: 700;
-  color: var(--text); cursor: pointer;
+  color: #0d1424 !important; cursor: pointer;
   line-height: 1.25; display: block;
   transition: color .15s;
 }
@@ -305,16 +306,16 @@ body {
   gap: 5px; align-items: center; margin-bottom: 5px;
 }
 .header-grid {
-  font-size: 0.58rem; font-weight: 700;
+  font-size: 0.6rem; font-weight: 800;
   letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted); text-align: center;
+  color: #5a6e8a; text-align: center;
 }
 .input-box {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: #f1f5fb;
+  border: 1.5px solid #b0c0d8;
   border-radius: var(--r-sm); padding: 8px 0;
   transition: border-color .15s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
 }
 .input-box:focus-within {
   border-color: var(--accent);
@@ -333,7 +334,7 @@ body {
   display: flex; flex-direction: column;
   align-items: center; gap: 2px; user-select: none;
 }
-.setcell .slabel { font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+.setcell .slabel { font-size: 0.72rem; font-weight: 800; color: #3d5068; }
 .setcell .rmmini { font-family: var(--mono); font-size: 0.5rem; color: var(--muted); line-height: 1; }
 .ghost::placeholder { color: rgba(37,99,235,0.35) !important; }
 
@@ -527,8 +528,8 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
     <div class="cm-msg" id="cmMsg"></div>
     <input type="text" id="cmInput" style="display:none"/>
     <div class="cm-btns">
-      <button class="cm-no" id="cmNo">Cancelar</button>
-      <button class="cm-ok" id="cmOk">Confirmar</button>
+      <div class="cm-btn cm-no" id="cmNo">Cancelar</div>
+      <div class="cm-btn cm-ok" id="cmOk">Confirmar</div>
     </div>
   </div>
 </div>
@@ -1135,14 +1136,22 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
         const title = card.querySelector(".ex-title");
         if (!title) return;
 
+        const LONG_MS = 1100;   // aumentado: requer segurar mais tempo
         let touchStartTime = 0;
+        let startX = 0, startY = 0;
         let visualTimer = null;
         let suppressClick = false;
+        let moved = false;
 
-        title.addEventListener("touchstart", () => {
+        title.addEventListener("touchstart", (e) => {
           touchStartTime = Date.now();
           suppressClick = false;
-          visualTimer = setTimeout(() => card.classList.add("deleting"), 700);
+          moved = false;
+          const t = e.touches[0];
+          startX = t.clientX; startY = t.clientY;
+          visualTimer = setTimeout(() => {
+            if (!moved) card.classList.add("deleting");
+          }, LONG_MS);
         }, { passive: true });
 
         title.addEventListener("touchend", async () => {
@@ -1150,7 +1159,7 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
           const elapsed = Date.now() - touchStartTime;
           card.classList.remove("deleting");
 
-          if (elapsed >= 700) {
+          if (elapsed >= LONG_MS && !moved) {
             suppressClick = true;
             const nome = card.querySelector(".ex-title")?.textContent || "Exercício";
             if (await dlgConfirm(`Apagar "${nome}"?`)) {
@@ -1160,15 +1169,22 @@ dialog::backdrop { background: rgba(15,23,42,0.45); backdrop-filter: blur(3px); 
           }
         }, { passive: true });
 
-        title.addEventListener("touchmove", () => {
-          clearTimeout(visualTimer);
-          touchStartTime = 0;
-          card.classList.remove("deleting");
+        title.addEventListener("touchmove", (e) => {
+          const t = e.touches[0];
+          const dx = Math.abs(t.clientX - startX);
+          const dy = Math.abs(t.clientY - startY);
+          if (dx > 8 || dy > 8) {   // movimento real, cancela
+            moved = true;
+            clearTimeout(visualTimer);
+            touchStartTime = 0;
+            card.classList.remove("deleting");
+          }
         }, { passive: true });
 
         title.addEventListener("touchcancel", () => {
           clearTimeout(visualTimer);
           touchStartTime = 0;
+          moved = true;
           card.classList.remove("deleting");
         }, { passive: true });
 
