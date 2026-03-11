@@ -2684,39 +2684,20 @@ async function sendAI(overrideText) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "meta/llama-3.1-70b-instruct",
-        max_tokens: 1000,
+        max_tokens: 800,
         system: systemPrompt,
         messages
       })
     });
 
     if (!response.ok) throw new Error("Erro " + response.status);
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    const reply = data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
 
-    // Remover dots e criar bolha vazia para streaming
     removeThinking();
-    const msgDiv = addAIMessage("assistant", "");
-    const bubble = msgDiv?.querySelector(".ai-bubble");
-    const container = document.getElementById("aiMessages");
-
-    // Ler stream token a token
-    const reader  = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullText  = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      fullText += chunk;
-
-      // Renderizar markdown em tempo real
-      if (bubble) {
-        bubble.innerHTML = renderMarkdown(fullText);
-        if (container) container.scrollTop = container.scrollHeight;
-      }
-    }
-
-    _aiHistory.push({ role: "assistant", content: fullText });
+    addAIMessage("assistant", reply);
+    _aiHistory.push({ role: "assistant", content: reply });
 
   } catch (err) {
     removeThinking();
