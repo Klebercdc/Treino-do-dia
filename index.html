@@ -2811,132 +2811,103 @@ function aiQuick(tipo) {
 
 function applyAIWorkoutFromText() {
   const reply = window._lastWorkoutReply || "";
-  let exercicios = [];
 
-  // Tentar JSON primeiro
-  if (window._lastWorkoutJson) {
-    return applyAIWorkout(window._lastWorkoutJson);
-  }
+  // Detectar grupos de treino (Treino A, Dia 1, etc.)
+  const grupos = [];
+  let grupoAtual = null;
 
-  // Formato pipe: "Supino Reto | 4 | 8-12" — pode vir tudo numa linha só
-  // Separar por padrão "NOME | NUM | REPS"
-  const pipePattern = /([A-ZÀ-Úa-záàâãéêíóôõúüç][A-Za-záàâãéêíóôõúüç\s\/]+?)\s*\|\s*(\d+)\s*\|\s*([\d\-–]+)/g;
-  let m;
-  while ((m = pipePattern.exec(reply)) !== null) {
-    const nome = m[1].trim();
-    if (nome.length < 3) continue;
-    exercicios.push({ nome, series: parseInt(m[2]) || 3, reps: m[3] || "8-12" });
-  }
+  const lines = reply.split("\n").map(l => l.trim());
+  lines.forEach(line => {
+    // Detectar título de grupo: "Treino A", "Dia 1: Push", "Treino A (Push...)", etc.
+    const tituloMatch = line.match(/^[*#]?\s*(treino\s*[A-Z]|dia\s*\d+)[:\s\-–]*(.*)/i);
+    if (tituloMatch) {
+      grupoAtual = { nome: (tituloMatch[1] + " " + tituloMatch[2]).trim().substring(0, 20), exercicios: [] };
+      grupos.push(grupoAtual);
+      return;
+    }
+    // Linha de exercício com * ou formato pipe
+    const isPipe = line.includes("|") && /\d+/.test(line);
+    const isBullet = /^[*•\-]\s+[A-Za-zÀ-ú]/.test(line);
+    if (!isPipe && !isBullet) return;
 
-  // Fallback: formato "* Supino Reto: 4 séries de 8-12 reps"
-  if (exercicios.length < 2) {
-    const lines = reply.split("\n").map(l => l.trim()).filter(l => l.length > 3);
-    lines.forEach(line => {
-      if (/^(treino|dia|volume|progressão|descanso|proteína|sono|lembre|vamos|consider)/i.test(line)) return;
-      const clean = line.replace(/^[*•\-\d\.]+\s*/, "").trim();
-      const nomeMatch = clean.match(/^([A-ZÀ-Úa-z][a-zA-ZÀ-ú\s\/]+?)[\s:]/);
-      if (!nomeMatch) return;
-      const nome = nomeMatch[1].trim();
-      if (nome.length < 4) return;
-      const seriesMatch = line.match(/(\d+)\s*s[eé]ries?/i);
-      const repsMatch = line.match(/(\d+[-–x]\d+|\d+)\s*reps?/i);
-      exercicios.push({ nome, series: seriesMatch ? parseInt(seriesMatch[1]) : 3, reps: repsMatch ? repsMatch[1] : "8-12" });
-    });
-  }
+    let nome, series, reps;
+    if (isPipe) {
+      const p = line.split("|").map(x => x.trim());
+      nome = p[0].replace(/^[*•\-\d.]+\s*/, "").trim();
+      series = parseInt(p[1]) || 3;
+      reps = p[2] || "8-12";
+    } else {
+      nome = line.replace(/^[*•\-]\s+/, "").split(":")[0].split("—")[0].trim();
+      const sm = line.match(/(\d+)\s*s[eé]ries?/i);
+      const rm = line.match(/(\d+[-–]\d+|\d+)\s*reps?/i);
+      series = sm ? parseInt(sm[1]) : 3;
+      reps = rm ? rm[1] : "8-12";
+    }
+    if (!nome || nome.length < 3) return;
 
-  if (exercicios.length < 2) {
+    if (!grupoAtual) {
+      grupoAtual = { nome: "Treino A", exercicios: [] };
+      grupos.push(grupoAtual);
+    }
+    grupoAtual.exercicios.push({ nome, series, reps });
+  });
+
+  // Filtrar grupos sem exercícios
+  const gruposValidos = grupos.filter(g => g.exercicios.length > 0);
+
+  if (gruposValidos.length === 0) {
     showToast("Não consegui extrair exercícios. Tente novamente.", "error");
     return;
   }
 
-  applyAIWorkout({ treino: { nome: "Treino IA", exercicios } });
+  // Aplicar — múltiplos grupos viram múltiplas abas
+  applyAIWorkout({ treino: { grupos: gruposValidos } });
 }
 
 function applyAIWorkout(json) {
   try {
     const data = typeof json === "string" ? JSON.parse(json) : json;
     const treino = data.treino;
-    if (!treino || !Array.isArray(treino.exercicios)) { showToast("Formato inválido", "error"); return; }
+    if (!treino) { showToast("Formato inválido", "error"); return; }
 
-    // Pegar aba ativa
-    const activeIdx = getActiveIdx();
-    const secEl = document.getElementById("sec" + activeIdx);
-    if (!secEl) { showToast("Nenhuma aba ativa", "error"); return; }
+    const nav  = document.getElementById("nav");
+    const cont = document.getElementById("container");
 
-    // Limpar cards existentes
-    secEl.innerHTML = "";
+    // Suporte a múltiplos grupos (abas separadas)
+    let grupos = treino.grupos;
+    if (!grupos && Array.isArray(treino.exercicios)) {
+      grupos = [{ nome: treino.nome || "Treino IA", exercicios: treino.exercicios }];
+    }
+    if (!grupos || grupos.length === 0) { showToast("Nenhum exercício encontrado", "error"); return; }
 
-    // Criar cards com os exercícios do Coach
-    treino.exercicios.forEach(ex => {
-      criarCard(ex.nome, "sec" + activeIdx, ex.series || 3, ex.reps || "8-12", null, []);
+    // Apagar tudo e recriar com os grupos gerados
+    nav.innerHTML = "";
+    cont.innerHTML = "";
+
+    grupos.forEach((grupo, idx) => {
+      const label = grupo.nome.replace(/treino\s*/i, "").trim() || String.fromCharCode(65 + idx);
+      nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(label)}</div>`;
+      const sec = document.createElement("div");
+      sec.id = "sec" + idx;
+      sec.className = "section " + (idx===0 ? "active" : "");
+      sec.setAttribute("data-treino-key", grupo.nome);
+      cont.appendChild(sec);
+      grupo.exercicios.forEach(ex => {
+        criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
+      });
     });
 
-    // Atualizar label da aba se tiver nome
-    if (treino.nome) {
-      const pill = document.getElementById("p" + activeIdx);
-      if (pill) pill.textContent = treino.nome;
-      const sec = document.getElementById("sec" + activeIdx);
-      if (sec) sec.setAttribute("data-treino-key", treino.nome);
-    }
-
+    addPillControls();
     applyPrevGhostsToAll();
     scheduleDraftSave();
     closeAI();
-    showToast("✅ Treino aplicado! " + (treino.exercicios.length) + " exercícios carregados.", "success", 3000);
+    const total = grupos.reduce((a, g) => a + g.exercicios.length, 0);
+    showToast("✅ " + grupos.length + " treinos aplicados — " + total + " exercícios!", "success", 3000);
   } catch(e) {
-    showToast("Erro ao aplicar treino: " + e.message, "error");
+    showToast("Erro: " + e.message, "error");
   }
 }
 
-async function runAICoachPostWorkout(state, prs, durationMin) {
-  const vol       = Math.round(calcVolumeTotal(state));
-  const totalSets = (state.sections||[]).reduce((a,s)=>a+(s.cards||[]).reduce((b,c)=>b+(c.values||[]).filter(v=>v.kg&&v.reps).length,0),0);
-  const prNames   = prs.map(p=>p.name).join(", ");
-  const hist      = safeJSON(STORAGE.historyKey,[]).slice(1,4);
-  const avgVol    = hist.length ? Math.round(hist.reduce((a,h)=>a+calcVolumeTotal(h.state),0)/hist.length) : 0;
-  const diff      = avgVol > 0 ? Math.round((vol-avgVol)/avgVol*100) : 0;
-  const freq      = document.getElementById("freq")?.value || "3";
-  const obj       = document.getElementById("obj")?.value  || "hipertrofia";
-
-  const prompt = `Treino concluído. Gere uma análise concisa (3-4 frases, máx 120 palavras) no estilo de um coach motivador.
-Dados: volume ${vol}kg (${diff>=0?"+":""}${diff}% vs média), ${totalSets} séries, ${durationMin||"?"}min, objetivo: ${obj}, frequência: ${freq}x/sem.
-${prNames ? `PRs batidos: ${prNames}.` : "Sem PRs desta vez."}
-Inclua: 1 ponto positivo, 1 ponto de atenção, e 1 ação específica para o próximo treino.`;
-
-  const aiSection = document.getElementById("aiCoachSummary");
-  const aiText    = document.getElementById("aiCoachText");
-  if (!aiSection || !aiText) return;
-
-  aiSection.style.display = "block";
-  aiText.innerHTML = `<div class="ai-dots" style="padding:4px 0"><span></span><span></span><span></span></div>`;
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: "Você é o TITAN COACH, personal trainer especialista. Responda em português brasileiro, seja direto e motivador.",
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-    const data  = await response.json();
-    const reply = data?.content?.[0]?.text || "";
-    if (reply) {
-      const html = reply
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\n/g, "<br>");
-      aiText.innerHTML = html;
-    } else {
-      aiSection.style.display = "none";
-    }
-  } catch {
-    aiSection.style.display = "none";
-  }
-}
-
-/* Sugestão de ajuste por RPE — aparece ao digitar RPE ≥ 9 */
 function checkRPEAlert(input) {
   const row  = input.closest(".series-grid");
   if (!row) return;
