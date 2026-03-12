@@ -17,7 +17,7 @@ if (body.system) msgs.push({ role: “system”, content: body.system });
 (body.messages || []).forEach(function(m) { msgs.push(m); });
 
 var payload = JSON.stringify({
-model: “meta/llama-3.1-70b-instruct”,
+model: “nvidia/llama-3.1-nemotron-70b-instruct”,
 messages: msgs,
 max_tokens: body.max_tokens || 800,
 temperature: 0.75,
@@ -41,10 +41,14 @@ res2.on(“data”, function(chunk) { data += chunk; });
 res2.on(“end”, function() {
 try {
 var parsed = JSON.parse(data);
+if (parsed.error) {
+res.status(500).json({ error: JSON.stringify(parsed.error) });
+return;
+}
 var text = (parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content) || “”;
 res.status(200).json({ content: [{ type: “text”, text: text }] });
 } catch(e) {
-res.status(500).json({ error: “Parse error: “ + data.slice(0, 100) });
+res.status(500).json({ error: “Resposta NVIDIA: “ + data.slice(0, 200) });
 }
 });
 });
