@@ -2706,18 +2706,42 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
     removeThinking();
 
-    // Detectar formato EXERCICIO | SERIES | REPS
+    // Detectar treino gerado pelo Coach — múltiplos formatos
     let workoutJson = null;
     if (isGerarTreino) {
       try {
-        const lines = reply.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
-        if (lines.length >= 2) {
-          const exercicios = lines.map(line => {
-            const parts = line.split("|").map(p => p.trim());
-            return { nome: parts[0], series: parseInt(parts[1]) || 3, reps: parts[2] || "8-12" };
+        // Formato 1: pipe  "Supino Reto | 4 | 8-10"
+        const pipeLines = reply.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
+        if (pipeLines.length >= 2) {
+          const exs = pipeLines.map(line => {
+            const p = line.split("|").map(x => x.trim());
+            return { nome: p[0].replace(/^[*•\-\d\.]+\s*/, ""), series: parseInt(p[1]) || 3, reps: p[2] || "8-12" };
           }).filter(e => e.nome && e.nome.length > 2);
-          if (exercicios.length >= 2) {
-            workoutJson = { treino: { nome: "Treino IA", exercicios } };
+          if (exs.length >= 2) workoutJson = { treino: { nome: "Treino IA", exercicios: exs } };
+        }
+        // Formato 2: "* Supino Reto: 4 séries de 8-10 reps"
+        if (!workoutJson) {
+          const bulletLines = reply.split("\n").map(l => l.trim()).filter(l => /^[*•\-]\s+\w/.test(l) && /s[eé]ries?/i.test(l));
+          if (bulletLines.length >= 2) {
+            const exs = bulletLines.map(line => {
+              const nome = line.replace(/^[*•\-]\s+/, "").split(":")[0].split("—")[0].trim();
+              const seriesMatch = line.match(/(\d+)\s*s[eé]ries?/i);
+              const repsMatch = line.match(/(\d+[-–]\d+|\d+)\s*reps?/i);
+              return { nome, series: seriesMatch ? parseInt(seriesMatch[1]) : 3, reps: repsMatch ? repsMatch[1] : "8-12" };
+            }).filter(e => e.nome && e.nome.length > 2);
+            if (exs.length >= 2) workoutJson = { treino: { nome: "Treino IA", exercicios: exs } };
+          }
+        }
+        // Formato 3: "Supino Reto: 4x8-10"
+        if (!workoutJson) {
+          const xLines = reply.split("\n").map(l => l.trim()).filter(l => /\d+x\d/i.test(l));
+          if (xLines.length >= 2) {
+            const exs = xLines.map(line => {
+              const nome = line.replace(/^[*•\-\d\.]+\s*/, "").split(":")[0].split("-")[0].trim();
+              const match = line.match(/(\d+)x(\d+[-–]?\d*)/i);
+              return { nome, series: match ? parseInt(match[1]) : 3, reps: match ? match[2] : "8-12" };
+            }).filter(e => e.nome && e.nome.length > 2);
+            if (exs.length >= 2) workoutJson = { treino: { nome: "Treino IA", exercicios: exs } };
           }
         }
       } catch {}
