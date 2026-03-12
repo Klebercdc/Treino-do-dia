@@ -2709,9 +2709,12 @@ async function sendAI(overrideText, isGerarTreino = false) {
     // Detectar se é JSON de treino gerado pelo Coach
     let workoutJson = null;
     try {
-      const clean = reply.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
-      if (parsed.treino && Array.isArray(parsed.treino.exercicios)) workoutJson = parsed;
+      // Tenta extrair JSON mesmo que venha com texto ao redor
+      const jsonMatch = reply.match(/\{[\s\S]*"treino"[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.treino && Array.isArray(parsed.treino.exercicios)) workoutJson = parsed;
+      }
     } catch {}
 
     if (workoutJson && isGerarTreino) {
@@ -2744,8 +2747,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 function aiQuick(tipo) {
   const prompts = {
     analise: "Analise meu histórico de treinos e me dê um diagnóstico detalhado: pontos fortes, pontos fracos, e 3 recomendações práticas.",
-    gerar:   `Gere um treino completo para hoje baseado no meu objetivo e histórico. Responda APENAS com um JSON válido neste formato exato, sem texto antes ou depois:
-{"treino":{"nome":"Treino A - Push","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-10"},{"nome":"Supino Inclinado","series":3,"reps":"10-12"}]}}`,
+    gerar:   `RESPONDA APENAS COM JSON PURO, SEM NENHUM TEXTO ANTES OU DEPOIS, SEM MARKDOWN, SEM EXPLICAÇÕES. Formato obrigatório: {"treino":{"nome":"NOME DO TREINO","exercicios":[{"nome":"EXERCICIO","series":4,"reps":"8-10"}]}} — Gere um treino para hoje baseado no meu histórico e objetivo.`,
     platô:   "Analise meu histórico e identifique quais exercícios estão em platô (sem evolução). Sugira estratégias para quebrar cada um.",
     dica:    "Com base no meu treino atual e objetivo, me dê a dica mais importante que posso aplicar hoje para maximizar meus resultados.",
     rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
