@@ -2695,15 +2695,41 @@ async function sendAI(overrideText, isGerarTreino = false) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "meta/llama-3.1-70b-instruct",
-        max_tokens: 800,
+        max_tokens: 1000,
         system: systemPrompt,
-        messages
+        messages,
+        isGerarTreino
       })
     });
 
     if (!response.ok) throw new Error("Erro " + response.status);
     const data = await response.json();
     if (data.error) throw new Error(data.error);
+
+    // Resposta JSON estruturada de treino
+    if (data?.content?.[0]?.type === "workout_json") {
+      removeThinking();
+      const treino = data.content[0].data;
+      const grupos = treino.treinos.map(t => ({ nome: t.nome + (t.grupo ? " - " + t.grupo : ""), exercicios: t.exercicios }));
+      const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
+      addAIMessage("assistant", "✅ Treino gerado: " + grupos.map(g => g.nome).join(", ") + " — " + total + " exercícios.");
+      const container = document.getElementById("aiMessages");
+      const btnDiv = document.createElement("div");
+      btnDiv.className = "ai-msg assistant";
+      btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
+        <button onclick="applyAIWorkout({treino:{grupos:window._pendingGrupos}})"
+          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
+          ⚡ Aplicar este treino na tela
+        </button>
+      </div>`;
+      window._pendingGrupos = grupos;
+      container.appendChild(btnDiv);
+      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+      _aiTyping = false;
+      if (sendBtn) sendBtn.style.opacity = "1";
+      return;
+    }
+
     const reply = data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
 
     removeThinking();
@@ -2720,21 +2746,18 @@ async function sendAI(overrideText, isGerarTreino = false) {
       if (jm) { const d = JSON.parse(jm[0]); hasExercicios = d.treinos?.length > 0; }
     } catch(e) {}
     if (!hasExercicios) {
-      const grupos = extrairGruposDaResposta(reply);
-      hasExercicios = grupos.length > 0 && grupos.reduce((a,g) => a + g.exercicios.length, 0) >= 2;
+      const gruposDetect = extrairGruposDaResposta(reply);
+      hasExercicios = gruposDetect.length > 0 && gruposDetect.reduce((a,g) => a + g.exercicios.length, 0) >= 2;
     }
 
     addAIMessage("assistant", reply);
 
     // Mostrar botão se tiver exercícios
     if (hasExercicios) {
-      window._lastWorkoutGrupos = grupos;
       const container = document.getElementById("aiMessages");
       const btnDiv = document.createElement("div");
       btnDiv.className = "ai-msg assistant";
-      const nGrupos = grupos.length;
-      const nEx = grupos.reduce((a,g) => a + g.exercicios.length, 0);
-      const label = nGrupos > 1 ? `⚡ Aplicar ${nGrupos} treinos (${nEx} exercícios) na tela` : `⚡ Aplicar treino (${nEx} exercícios) na tela`;
+      const label = "⚡ Aplicar este treino na tela";
       btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
         <button onclick="applyAIWorkoutFromText()"
           style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
