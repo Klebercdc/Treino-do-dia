@@ -2760,9 +2760,10 @@ async function sendAI(overrideText, isGerarTreino = false) {
     }
 
     // Detectar exercícios em qualquer formato
-    const pipeCount = (reply.match(/[A-Za-zÀ-ú].*\|\s*\d+\s*\|/g) || []).length;
+    const pipeCount   = (reply.match(/[A-Za-zÀ-ú].*\|\s*\d+\s*\|/g) || []).length;
     const bulletCount = (reply.match(/^[*•\-]\s+[A-Za-zÀ-ú]/gm) || []).length;
-    const hasExercicios = pipeCount >= 2 || bulletCount >= 3;
+    const numbCount   = (reply.match(/^\d+\.\s+[A-Za-zÀ-ú]/gm) || []).length;
+    const hasExercicios = pipeCount >= 2 || bulletCount >= 3 || numbCount >= 3;
 
     // Guardar para applyAIWorkoutFromText
     if (hasExercicios || isGerarTreino) {
@@ -2819,7 +2820,7 @@ function applyAIWorkoutFromText() {
   const lines = reply.split("\n").map(l => l.trim());
   lines.forEach(line => {
     // Detectar título de grupo: "Treino A", "Dia 1: Push", "Treino A (Push...)", etc.
-    const tituloMatch = line.match(/^[*#]?\s*(treino\s*[A-Z]|dia\s*\d+)[:\s\-–]*(.*)/i);
+    const tituloMatch = line.match(/^[*#\d.]?\s*(treino\s*[A-Z]|dia\s*\d+)[:\s\-–(]*(.*)/i);
     if (tituloMatch) {
       grupoAtual = { nome: (tituloMatch[1] + " " + tituloMatch[2]).trim().substring(0, 20), exercicios: [] };
       grupos.push(grupoAtual);
@@ -2827,8 +2828,9 @@ function applyAIWorkoutFromText() {
     }
     // Linha de exercício com * ou formato pipe
     const isPipe = line.includes("|") && /\d+/.test(line);
-    const isBullet = /^[*•\-]\s+[A-Za-zÀ-ú]/.test(line);
-    if (!isPipe && !isBullet) return;
+    const isBullet  = /^[*•\-]\s+[A-Za-zÀ-ú]/.test(line);
+    const isNumber  = /^\d+\.\s+[A-Za-zÀ-ú]/.test(line);
+    if (!isPipe && !isBullet && !isNumber) return;
 
     let nome, series, reps;
     if (isPipe) {
@@ -2837,7 +2839,7 @@ function applyAIWorkoutFromText() {
       series = parseInt(p[1]) || 3;
       reps = p[2] || "8-12";
     } else {
-      nome = line.replace(/^[*•\-]\s+/, "").split(":")[0].split("—")[0].trim();
+      nome = line.replace(/^[*•\-\d.]+\s+/, "").split(":")[0].split("—")[0].split("(")[0].trim();
       const sm = line.match(/(\d+)\s*s[eé]ries?/i);
       const rm = line.match(/(\d+[-–]\d+|\d+)\s*reps?/i);
       series = sm ? parseInt(sm[1]) : 3;
