@@ -1,6 +1,37 @@
 var https = require(`https`);
 
-var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown. Formato: {"treinos":[{"nome":"A","grupo":"Peito","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12"}]}]} Use nomes A,B,C,D,E. 4-6 exercicios por treino. APENAS JSON.`;
+var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
+
+SEMPRE use este formato — com ou sem periodização:
+{
+  "treinos": [
+    {
+      "nome": "A",
+      "grupo": "Peito/Tríceps",
+      "exercicios": [
+        {
+          "nome": "Supino Reto",
+          "fases": [
+            {"fase": "Sem 1-4", "descricao": "MEV", "series": 3, "reps": "8-12"},
+            {"fase": "Sem 5-8", "descricao": "MAV", "series": 4, "reps": "10-12"},
+            {"fase": "Sem 9-12", "descricao": "MRV", "series": 5, "reps": "6-10"}
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Regras:
+- Use nomes A,B,C,D,E (ou dias da semana se pedido)
+- 4-6 exercicios por treino
+- Sempre 3 fases seguindo MEV→MAV→MRV de Mike Israetel
+- Fase 1 (Sem 1-4): MEV — volume mínimo efetivo, técnica
+- Fase 2 (Sem 5-8): MAV — volume máximo adaptativo, progressão
+- Fase 3 (Sem 9-12): MRV — volume máximo recuperável, intensidade
+- Se usuário pedir treino simples SEM periodização, use apenas series e reps normais sem fases
+- Adapte ao objetivo e frequência do usuário
+- APENAS JSON. Nada mais.`;
 
 var COACH_SYSTEM_TEMPLATE = `Você é o TITAN COACH, o coach pessoal de musculação e nutrição do app TITAN PRO.
 
