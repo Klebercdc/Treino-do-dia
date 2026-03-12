@@ -25,4 +25,4 @@ res.status(500).json({ error: d.slice(0, 100) });
 r.on(`error`, function(e) { res.status(500).json({ error: e.message }); });
 r.write(p);
 r.end();
-}
+};
