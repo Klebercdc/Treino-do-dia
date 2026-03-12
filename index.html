@@ -2706,16 +2706,32 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
     removeThinking();
 
-    // Detectar se é JSON de treino gerado pelo Coach
+    // Detectar formato EXERCICIO | SERIES | REPS
     let workoutJson = null;
-    try {
-      // Tenta extrair JSON mesmo que venha com texto ao redor
-      const jsonMatch = reply.match(/\{[\s\S]*"treino"[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.treino && Array.isArray(parsed.treino.exercicios)) workoutJson = parsed;
+    if (isGerarTreino) {
+      try {
+        const lines = reply.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
+        if (lines.length >= 2) {
+          const exercicios = lines.map(line => {
+            const parts = line.split("|").map(p => p.trim());
+            return { nome: parts[0], series: parseInt(parts[1]) || 3, reps: parts[2] || "8-12" };
+          }).filter(e => e.nome && e.nome.length > 2);
+          if (exercicios.length >= 2) {
+            workoutJson = { treino: { nome: "Treino IA", exercicios } };
+          }
+        }
+      } catch {}
+      // Fallback: tentar JSON
+      if (!workoutJson) {
+        try {
+          const jsonMatch = reply.match(/\{[\s\S]*"treino"[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.treino && Array.isArray(parsed.treino.exercicios)) workoutJson = parsed;
+          }
+        } catch {}
       }
-    } catch {}
+    }
 
     if (workoutJson && isGerarTreino) {
       const nomes = workoutJson.treino.exercicios.map(e => e.nome).join(", ");
@@ -2747,7 +2763,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 function aiQuick(tipo) {
   const prompts = {
     analise: "Analise meu histórico de treinos e me dê um diagnóstico detalhado: pontos fortes, pontos fracos, e 3 recomendações práticas.",
-    gerar:   `RESPONDA APENAS COM JSON PURO, SEM NENHUM TEXTO ANTES OU DEPOIS, SEM MARKDOWN, SEM EXPLICAÇÕES. Formato obrigatório: {"treino":{"nome":"NOME DO TREINO","exercicios":[{"nome":"EXERCICIO","series":4,"reps":"8-10"}]}} — Gere um treino para hoje baseado no meu histórico e objetivo.`,
+    gerar:   "Gere um treino para hoje. Liste APENAS os exercícios neste formato exato, um por linha:\nEXERCICIO | SERIES | REPS\nExemplo:\nSupino Reto | 4 | 8-10\nSupino Inclinado | 3 | 10-12\nNão escreva mais nada além da lista.",
     platô:   "Analise meu histórico e identifique quais exercícios estão em platô (sem evolução). Sugira estratégias para quebrar cada um.",
     dica:    "Com base no meu treino atual e objetivo, me dê a dica mais importante que posso aplicar hoje para maximizar meus resultados.",
     rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
