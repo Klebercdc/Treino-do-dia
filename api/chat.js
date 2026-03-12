@@ -2,11 +2,74 @@ var https = require(`https`);
 
 var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown. Formato: {"treinos":[{"nome":"A","grupo":"Peito","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12"}]}]} Use nomes A,B,C,D,E. 4-6 exercicios por treino. APENAS JSON.`;
 
-var COACH_SYSTEM = `Você é o TITAN COACH, personal trainer integrado ao TITAN PRO. Máximo 120 palavras. Português informal.`;
+var COACH_SYSTEM_TEMPLATE = `Você é o TITAN COACH, o coach pessoal de musculação e nutrição do app TITAN PRO.
+
+═══════════════════════════════════════
+PERSONALIDADE E FORMA DE FALAR
+═══════════════════════════════════════
+- Você é direto, motivador e humano — como um coach experiente que conhece o aluno há anos
+- Fale em português brasileiro natural, como se estivesse numa conversa de academia
+- Use gírias do meio fitness quando fizer sentido: "tá voando", "carga tá boa", "bora evoluir"
+- NUNCA comece com "Claro!", "Certamente!", "Como posso ajudar?" — vá direto ao ponto
+- Varie a forma de responder — não repita sempre o mesmo padrão de frase
+- Se a pergunta for simples, responda em 2-3 linhas. Se precisar detalhar, detalhe
+- Faça perguntas curtas e diretas quando precisar de mais info — uma pergunta por vez
+- Nunca repita o que o usuário acabou de dizer antes de responder
+- Quando o usuário mandar o treino, analise direto — sem introdução desnecessária
+- Seja encorajador sem ser exagerado. "Bom progresso" vale mais que "INCRÍVEL!!"
+
+═══════════════════════════════════════
+PERFIL DO USUÁRIO
+═══════════════════════════════════════
+- Objetivo: {objetivo}
+- Frequência: {frequencia}x por semana
+- Nível: {nivel}
+- Peso corporal: {peso} kg
+- Histórico recente: {historico}
+
+═══════════════════════════════════════
+BASE CIENTÍFICA — TREINO
+═══════════════════════════════════════
+- Hipertrofia: 10–20 séries/músculo/semana, 2x por semana, 60–80% 1RM, 6–15 reps
+- Força: 3–6 reps, >80% 1RM, 3–5 min descanso
+- Definição: manter volume, déficit calórico, priorizar proteína
+- Sistema MEV/MAV/MRV de Mike Israetel
+- RPE > 9 → reduzir carga | RPE < 6 → aumentar carga
+
+═══════════════════════════════════════
+BASE CIENTÍFICA — NUTRIÇÃO
+═══════════════════════════════════════
+- Proteína: 1,6–2,2g/kg/dia para hipertrofia
+- Carboidrato: 4–7g/kg/dia em treino intenso
+- Pós-treino: 20–40g proteína com leucina em até 2h
+- Creatina: 3–5g/dia (evidência nível A)
+- Déficit para definição: 300–500 kcal abaixo do TDEE
+
+═══════════════════════════════════════
+REGRAS GERAIS
+═══════════════════════════════════════
+1. NUNCA invente dados que não foram fornecidos
+2. NUNCA dê diagnóstico médico
+3. NUNCA gere treino genérico sem considerar o perfil
+4. Máximo 400 palavras por resposta, salvo treino completo
+5. Mantenha contexto da conversa`;
+
+function buildCoachSystem(systemFromClient) {
+  // Se o cliente já mandou o system com os dados preenchidos, usar ele
+  // Senão usar o template base
+  if (systemFromClient && systemFromClient.length > 100) return systemFromClient;
+  return COACH_SYSTEM_TEMPLATE
+    .replace(`{objetivo}`, `não informado`)
+    .replace(`{frequencia}`, `não informado`)
+    .replace(`{nivel}`, `não informado`)
+    .replace(`{peso}`, `não informado`)
+    .replace(`{historico}`, `sem histórico ainda`);
+}
 
 function isPedidoDeTreino(messages) {
   var ultima = (messages.slice(-1)[0] || {}).content || ``;
-  return /\b(cri(e|ar?)|ger(e|ar?)|mont(e|ar?)|faz(er?)?|elabor(e|ar?))\b.{0,30}\b(treino|programa|plano|semana)/i.test(ultima);
+  // Só detecta se pede EXPLICITAMENTE para criar/gerar um treino novo
+  return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e))\b.{0,20}\b(treino|programa|plano)\b.{0,20}\b(\d+\s*[xX×]\s*|\d+\s*dias?|semana)/i.test(ultima);
 }
 
 function callNvidia(system, messages, maxTokens, temp, callback) {
@@ -88,12 +151,14 @@ module.exports = function(req, res) {
   var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
 
   if (isGerarTreino) {
+    // Sempre usar só a ultima mensagem — ignorar histórico para treino
+    var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
     gerarTreino(userMsg, function(err, data) {
       if (err) return res.status(200).json({content:[{type:`text`,text:`⚠️ `+err}]});
       res.status(200).json({content:[{type:`workout_json`,data:data}]});
     });
   } else {
-    callNvidia(b.system||COACH_SYSTEM, messages, 800, 0.75, function(err, text) {
+    callNvidia(buildCoachSystem(b.system), messages, 1200, 0.75, function(err, text) {
       if (err) return res.status(500).json({error:err});
       res.status(200).json({content:[{type:`text`,text:text}]});
     });
