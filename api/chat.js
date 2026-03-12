@@ -36,13 +36,12 @@ headers: {
 };
 
 var r = https.request(options, function(res2) {
-var data = `; res2.on(`data`, function(chunk) { data += chunk; }); res2.on(`end`, function() { try { var p = JSON.parse(data); var text = (p.choices && p.choices[0] && p.choices[0].message && p.choices[0].message.content) || `;
-res.status(200).json({ content: [{ type: `text`, text: text }] });
-} catch(e) {
-res.status(500).json({ error: data.slice(0, 200) });
-}
-});
-});
+var data = ``;
+res2.on(`data`, function(chunk) { data += chunk; });
+res2.on(`end`, function() {
+try {
+var p = JSON.parse(data);
+var text = (p.choices && p.choices[0] && p.choices[0].message && p.choices[0].message.content) || ``;
 
 r.on(`error`, function(e) { res.status(500).json({ error: e.message }); });
 r.write(payload);
