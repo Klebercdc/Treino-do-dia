@@ -2713,9 +2713,16 @@ async function sendAI(overrideText, isGerarTreino = false) {
     window._lastWorkoutJson  = null;
     window._lastWorkoutGrupos = null; // reset cache de grupos
 
-    // Detectar se resposta contém exercícios (qualquer formato)
-    const grupos = extrairGruposDaResposta(reply);
-    const hasExercicios = grupos.length > 0 && grupos.reduce((a,g) => a + g.exercicios.length, 0) >= 2;
+    // Detectar se resposta contém exercícios — JSON ou texto
+    let hasExercicios = false;
+    try {
+      const jm = reply.match(/\{[\s\S]*"treinos"[\s\S]*\}/);
+      if (jm) { const d = JSON.parse(jm[0]); hasExercicios = d.treinos?.length > 0; }
+    } catch(e) {}
+    if (!hasExercicios) {
+      const grupos = extrairGruposDaResposta(reply);
+      hasExercicios = grupos.length > 0 && grupos.reduce((a,g) => a + g.exercicios.length, 0) >= 2;
+    }
 
     addAIMessage("assistant", reply);
 
@@ -2750,7 +2757,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 function aiQuick(tipo) {
   const prompts = {
     analise: "Analise meu histórico de treinos e me dê um diagnóstico detalhado: pontos fortes, pontos fracos, e 3 recomendações práticas.",
-    gerar:   "Gere um treino completo para hoje baseado no meu objetivo e histórico. Use o formato:\nTreino A (Grupo muscular)\n1. Exercício (X séries de Y-Z reps)\nTreino B (Grupo muscular)\n1. Exercício...",
+        gerar:   'Gere um treino baseado no meu objetivo e histórico. Responda APENAS com JSON, sem texto antes/depois: {"treinos":[{"nome":"A","grupo":"Peito","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12"}]}]}',
     platô:   "Analise meu histórico e identifique quais exercícios estão em platô (sem evolução). Sugira estratégias para quebrar cada um.",
     dica:    "Com base no meu treino atual e objetivo, me dê a dica mais importante que posso aplicar hoje para maximizar meus resultados.",
     rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
@@ -2776,12 +2783,15 @@ function extrairGruposDaResposta(reply) {
       return;
     }
 
-    // Detectar exercício: "1. Nome", "* Nome", "- Nome"
-    const isEx = /^(\d+[.)]\s+|[*•\-]\s+)[A-Za-zÀ-ú]/.test(line);
+    // Ignorar linhas de dia da semana
+    if (/^[*+•\-]\s*(segunda|terça|quarta|quinta|sexta|sábado|domingo)/i.test(line)) return;
+
+    // Detectar exercício: "1. Nome", "* Nome", "- Nome", "+ Nome"
+    const isEx = /^(\d+[.)]\s+|[*•\-+]\s+)[A-Za-zÀ-ú]/.test(line);
     if (!isEx) return;
 
     const nome = line
-      .replace(/^[\d.)*\-•\s]+/, "")
+      .replace(/^[\d.)*\-•+\s]+/, "")
       .split(/[:(]/)[0]
       .trim();
     if (nome.length < 3) return;
@@ -2804,15 +2814,27 @@ function applyAIWorkoutFromText() {
   const reply = window._lastWorkoutReply || "";
   if (!reply) { showToast("Nenhum treino para aplicar.", "error"); return; }
 
-  const grupos = extrairGruposDaResposta(reply);
-  
-  console.log("GRUPOS DETECTADOS:", grupos.length, grupos.map(g => g.nome + ":" + g.exercicios.length));
+  // Tentar JSON primeiro
+  try {
+    const jsonMatch = reply.match(/\{[\s\S]*"treinos"[\s\S]*\}/);
+    if (jsonMatch) {
+      const data = JSON.parse(jsonMatch[0]);
+      if (data.treinos && data.treinos.length > 0) {
+        const grupos = data.treinos.map(t => ({
+          nome: t.nome,
+          exercicios: t.exercicios || []
+        }));
+        return applyAIWorkout({ treino: { grupos } });
+      }
+    }
+  } catch(e) {}
 
+  // Fallback: extrair do texto
+  const grupos = extrairGruposDaResposta(reply);
   if (grupos.length === 0) {
     showToast("Não consegui extrair exercícios. Tente novamente.", "error");
     return;
   }
-
   applyAIWorkout({ treino: { grupos } });
 }
 
