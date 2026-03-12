@@ -2701,7 +2701,7 @@ async function sendAI(overrideText) {
 
   } catch (err) {
     removeThinking();
-    addAIMessage("assistant", "⚠️ Erro de conexão. Verifique sua internet e tente novamente.");
+    addAIMessage("assistant", "⚠️ Erro: " + err.message);
   } finally {
     _aiTyping = false;
     if (sendBtn) sendBtn.style.opacity = "1";
