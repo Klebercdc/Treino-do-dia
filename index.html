@@ -2767,22 +2767,15 @@ async function sendAI(overrideText, isGerarTreino = false) {
       const treino = data.content[0].data;
       let grupos = [];
 
-      // Processar treinos — suporta fases MEV/MAV/MRV por exercício
+      // Processar treinos com fases MEV/MAV/MRV
       grupos = (treino.treinos || []).map(t => ({
         nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
-        exercicios: (t.exercicios || []).map(ex => {
-          // Se tem fases, usar a fase 1 como padrão + guardar progressão
-          if (ex.fases && ex.fases.length > 0) {
-            const f1 = ex.fases[0];
-            return {
-              nome: ex.nome,
-              series: f1.series || 3,
-              reps: f1.reps || "8-12",
-              progressao: ex.fases.map(f => f.fase + ": " + f.series + "x" + f.reps + " (" + (f.descricao||"") + ")").join(" → ")
-            };
-          }
-          return { nome: ex.nome, series: ex.series || 3, reps: ex.reps || "8-12" };
-        })
+        exercicios: (t.exercicios || []).map(ex => ({
+          nome: ex.nome,
+          series: ex.fases ? ex.fases[0].series : (ex.series || 3),
+          reps: ex.fases ? ex.fases[0].reps : (ex.reps || "8-12"),
+          fases: ex.fases || null
+        }))
       }));
 
       const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
@@ -2969,12 +2962,21 @@ function applyAIWorkout(data) {
 
       grupo.exercicios.forEach(ex => {
         const cardEl = criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
-        // Mostrar progressão MEV/MAV/MRV se existir
-        if (ex.progressao && cardEl) {
-          const progDiv = document.createElement("div");
-          progDiv.style.cssText = "font-size:11px;color:var(--text-2);padding:4px 12px 8px;line-height:1.6;border-top:1px solid var(--border-soft);margin-top:4px";
-          progDiv.innerHTML = "<span style='color:var(--accent);font-weight:600'>PROGRESSÃO: </span>" + ex.progressao;
-          cardEl.appendChild(progDiv);
+        if (ex.fases && ex.fases.length > 0 && cardEl) {
+          const fasesDiv = document.createElement("div");
+          fasesDiv.style.cssText = "padding:6px 12px 10px;border-top:1px solid var(--border-soft);margin-top:4px";
+          fasesDiv.innerHTML = `
+            <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">PERIODIZAÇÃO MEV→MAV→MRV</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${ex.fases.map((f,fi) => `
+                <div style="flex:1;min-width:80px;background:var(--card);border:1px solid ${fi===0?'var(--accent)':'var(--border)'};border-radius:8px;padding:6px 8px;text-align:center">
+                  <div style="font-size:9px;color:var(--accent);font-weight:700">${f.label||f.fase}</div>
+                  <div style="font-size:11px;color:var(--text);font-weight:600">${f.series}x${f.reps}</div>
+                  <div style="font-size:9px;color:var(--text-2)">${f.fase}</div>
+                </div>
+              `).join("")}
+            </div>`;
+          cardEl.appendChild(fasesDiv);
         }
       });
     });
