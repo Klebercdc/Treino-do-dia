@@ -2676,7 +2676,9 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
   if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
 
-  addAIMessage("user", text);
+  // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
+  const displayText = isGerarTreino ? "⚡ Gerar treino para hoje" : text;
+  addAIMessage("user", displayText);
   _aiHistory.push({ role: "user", content: text });
 
   _aiTyping = true;
@@ -2781,7 +2783,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
         </button>
       </div>`;
       container.appendChild(btnDiv);
-      container.scrollTop = 999999;
+      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
     }
     _aiHistory.push({ role: "assistant", content: reply });
 
