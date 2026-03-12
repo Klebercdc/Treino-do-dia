@@ -2757,26 +2757,31 @@ async function sendAI(overrideText, isGerarTreino = false) {
       }
     }
 
-    if (isGerarTreino) {
-      // Sempre mostra botão ao gerar treino
-      addAIMessage("assistant", reply);
-      // Guardar resposta para usar no applyAIWorkoutFromText
+    // Detectar exercícios em qualquer resposta com formato pipe
+    const pipeCount = (reply.match(/[A-Za-zÀ-ú].*\|\s*\d+\s*\|/g) || []).length;
+    const hasExercicios = pipeCount >= 2;
+
+    // Guardar para applyAIWorkoutFromText
+    if (hasExercicios || isGerarTreino) {
       window._lastWorkoutReply = reply;
       window._lastWorkoutJson = workoutJson;
-      // Adicionar botão
+    }
+
+    addAIMessage("assistant", reply);
+
+    // Mostrar botão logo abaixo se tiver exercícios
+    if (hasExercicios || isGerarTreino) {
       const container = document.getElementById("aiMessages");
       const btnDiv = document.createElement("div");
       btnDiv.className = "ai-msg assistant";
-      btnDiv.innerHTML = `<div class="ai-bubble" style="padding:4px">
+      btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
         <button onclick="applyAIWorkoutFromText()" 
-          style="padding:12px 18px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
+          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%;letter-spacing:0.5px">
           ⚡ Aplicar este treino na tela
         </button>
       </div>`;
       container.appendChild(btnDiv);
       container.scrollTop = 999999;
-    } else {
-      addAIMessage("assistant", reply);
     }
     _aiHistory.push({ role: "assistant", content: reply });
 
@@ -2810,26 +2815,31 @@ function applyAIWorkoutFromText() {
     return applyAIWorkout(window._lastWorkoutJson);
   }
 
-  // Extrair exercícios do texto: "* Supino Reto: 4 séries de 8-12 reps"
-  const lines = reply.split("\n").map(l => l.trim()).filter(l => l.length > 3);
-  lines.forEach(line => {
-    // Pular linhas que são títulos ou explicações
-    if (/^(treino|dia|volume|progressão|descanso|proteína|sono|lembre|vamos|consider)/i.test(line)) return;
-    if (line.length > 80) return;
-    // Detectar linha de exercício
-    const clean = line.replace(/^[*•\-\d\.]+\s*/, "").trim();
-    const nomeMatch = clean.match(/^([A-ZÀ-Ú][a-zA-ZÀ-ú\s\/]+?)[\s:]/);
-    if (!nomeMatch) return;
-    const nome = nomeMatch[1].trim();
-    if (nome.length < 4) return;
-    const seriesMatch = line.match(/(\d+)\s*s[eé]ries?/i);
-    const repsMatch = line.match(/(\d+[-–x]\d+|\d+)\s*reps?/i);
-    exercicios.push({
-      nome,
-      series: seriesMatch ? parseInt(seriesMatch[1]) : 3,
-      reps: repsMatch ? repsMatch[1].replace("x","-") : "8-12"
+  // Formato pipe: "Supino Reto | 4 | 8-12" — pode vir tudo numa linha só
+  // Separar por padrão "NOME | NUM | REPS"
+  const pipePattern = /([A-ZÀ-Úa-záàâãéêíóôõúüç][A-Za-záàâãéêíóôõúüç\s\/]+?)\s*\|\s*(\d+)\s*\|\s*([\d\-–]+)/g;
+  let m;
+  while ((m = pipePattern.exec(reply)) !== null) {
+    const nome = m[1].trim();
+    if (nome.length < 3) continue;
+    exercicios.push({ nome, series: parseInt(m[2]) || 3, reps: m[3] || "8-12" });
+  }
+
+  // Fallback: formato "* Supino Reto: 4 séries de 8-12 reps"
+  if (exercicios.length < 2) {
+    const lines = reply.split("\n").map(l => l.trim()).filter(l => l.length > 3);
+    lines.forEach(line => {
+      if (/^(treino|dia|volume|progressão|descanso|proteína|sono|lembre|vamos|consider)/i.test(line)) return;
+      const clean = line.replace(/^[*•\-\d\.]+\s*/, "").trim();
+      const nomeMatch = clean.match(/^([A-ZÀ-Úa-z][a-zA-ZÀ-ú\s\/]+?)[\s:]/);
+      if (!nomeMatch) return;
+      const nome = nomeMatch[1].trim();
+      if (nome.length < 4) return;
+      const seriesMatch = line.match(/(\d+)\s*s[eé]ries?/i);
+      const repsMatch = line.match(/(\d+[-–x]\d+|\d+)\s*reps?/i);
+      exercicios.push({ nome, series: seriesMatch ? parseInt(seriesMatch[1]) : 3, reps: repsMatch ? repsMatch[1] : "8-12" });
     });
-  });
+  }
 
   if (exercicios.length < 2) {
     showToast("Não consegui extrair exercícios. Tente novamente.", "error");
