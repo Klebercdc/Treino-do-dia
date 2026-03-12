@@ -2759,9 +2759,10 @@ async function sendAI(overrideText, isGerarTreino = false) {
       }
     }
 
-    // Detectar exercícios em qualquer resposta com formato pipe
+    // Detectar exercícios em qualquer formato
     const pipeCount = (reply.match(/[A-Za-zÀ-ú].*\|\s*\d+\s*\|/g) || []).length;
-    const hasExercicios = pipeCount >= 2;
+    const bulletCount = (reply.match(/[*•\-]\s+[A-Za-zÀ-ú].+s[eé]ries?/gi) || []).length;
+    const hasExercicios = pipeCount >= 2 || bulletCount >= 2;
 
     // Guardar para applyAIWorkoutFromText
     if (hasExercicios || isGerarTreino) {
