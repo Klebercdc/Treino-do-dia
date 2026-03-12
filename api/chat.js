@@ -1,10 +1,38 @@
 var https = require(`https`);
 
-var TREINO_SYSTEM = `Você é o TITAN COACH. O usuário quer gerar um treino.
-Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown, sem explicações.
-Formato obrigatório:
-{"treinos":[{"nome":"A","grupo":"Peito/Tríceps","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12"}]}]}
-Use quantos treinos forem necessários (A, B, C...). Cada treino 4-6 exercícios. Adapte ao objetivo e frequência do usuário. APENAS JSON.`;
+var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
+Formato obrigatório exato:
+{"treinos":[{"nome":"A","grupo":"Peito/Tríceps","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12","tipo":"forca"}]}]}
+Regras:
+- Use nome A, B, C, D, E para cada dia
+- 4-6 exercicios por treino
+- Para cardio use tipo "cardio" e reps como "30min"
+- Adapte ao objetivo e frequencia do usuario
+- APENAS JSON. Absolutamente nada mais.`;
+
+var COACH_SYSTEM = `Você é o TITAN COACH, personal trainer do usuário integrado ao app TITAN PRO.
+Máximo 120 palavras. Português informal. Use dados reais do histórico quando disponível.`;
+
+function callNvidia(messages, system, maxTokens, callback) {
+  var m = [];
+  if (system) m.push({ role: `system`, content: system });
+  messages.forEach(function(x) { m.push(x); });
+  var p = JSON.stringify({ model: `meta/llama-3.1-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: 0.3, stream: false });
+  var o = { hostname: `integrate.api.nvidia.com`, path: `/v1/chat/completions`, method: `POST`, headers: { [`Content-Type`]: `application/json`, [`Authorization`]: `Bearer ` + process.env.NVIDIA_API_KEY, [`Content-Length`]: Buffer.byteLength(p) } };
+  var r = https.request(o, function(s) {
+    var d = ``;
+    s.on(`data`, function(c) { d += c; });
+    s.on(`end`, function() {
+      try {
+        var j = JSON.parse(d);
+        callback(null, (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || ``);
+      } catch(e) { callback(e.message, null); }
+    });
+  });
+  r.on(`error`, function(e) { callback(e.message, null); });
+  r.write(p);
+  r.end();
+}
 
 module.exports = function(req, res) {
   res.setHeader(`Access-Control-Allow-Origin`, `*`);
@@ -12,37 +40,44 @@ module.exports = function(req, res) {
   res.setHeader(`Access-Control-Allow-Headers`, `Content-Type`);
   if (req.method === `OPTIONS`) { res.status(200).end(); return; }
   if (req.method !== `POST`) { res.status(405).end(); return; }
-  var KEY = process.env.NVIDIA_API_KEY;
-  if (!KEY) { res.status(500).json({ error: `KEY missing` }); return; }
+  if (!process.env.NVIDIA_API_KEY) { res.status(500).json({ error: `KEY missing` }); return; }
+
   var b = req.body || {};
   var isGerarTreino = b.isGerarTreino === true;
-  var systemPrompt = isGerarTreino ? TREINO_SYSTEM : (b.system || ``);
-  var m = [];
-  if (systemPrompt) m.push({ role: `system`, content: systemPrompt });
-  (b.messages || []).forEach(function(x) { m.push(x); });
-  var p = JSON.stringify({ model: `meta/llama-3.1-70b-instruct`, messages: m, max_tokens: 1000, temperature: 0.7, stream: false });
-  var o = { hostname: `integrate.api.nvidia.com`, path: `/v1/chat/completions`, method: `POST`, headers: { [`Content-Type`]: `application/json`, [`Authorization`]: `Bearer ` + KEY, [`Content-Length`]: Buffer.byteLength(p) } };
-  var r = https.request(o, function(s) {
-    var d = ``;
-    s.on(`data`, function(c) { d += c; });
-    s.on(`end`, function() {
-      try {
-        var j = JSON.parse(d);
-        var t = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || ``;
-        if (isGerarTreino) {
-          try {
-            var jm = t.match(/\{[\s\S]*"treinos"[\s\S]*\}/);
-            if (jm) {
-              var parsed = JSON.parse(jm[0]);
-              return res.status(200).json({ content: [{ type: `workout_json`, data: parsed }] });
-            }
-          } catch(e2) {}
+
+  if (isGerarTreino) {
+    // Tentar até 3 vezes para garantir JSON válido
+    var userMsg = (b.messages || []).slice(-1)[0] || { role: `user`, content: `Gere um treino` };
+    var tentativas = 0;
+
+    function tentar() {
+      tentativas++;
+      callNvidia([userMsg], TREINO_SYSTEM, 1200, function(err, text) {
+        if (err) { return res.status(500).json({ error: err }); }
+        try {
+          // Limpar markdown se houver
+          var clean = text.replace(/```json|```/g, ``).trim();
+          // Encontrar JSON
+          var start = clean.indexOf(`{`);
+          var end = clean.lastIndexOf(`}`);
+          if (start === -1 || end === -1) throw new Error(`no json`);
+          var parsed = JSON.parse(clean.slice(start, end + 1));
+          if (!parsed.treinos || !Array.isArray(parsed.treinos) || parsed.treinos.length === 0) throw new Error(`invalid`);
+          return res.status(200).json({ content: [{ type: `workout_json`, data: parsed }] });
+        } catch(e) {
+          if (tentativas < 3) return tentar();
+          // Fallback: retornar texto
+          return res.status(200).json({ content: [{ type: `text`, text: text }] });
         }
-        res.status(200).json({ content: [{ type: `text`, text: t }] });
-      } catch(e) { res.status(500).json({ error: d.slice(0, 100) }); }
+      });
+    }
+    tentar();
+
+  } else {
+    var system = b.system || COACH_SYSTEM;
+    callNvidia(b.messages || [], system, 800, function(err, text) {
+      if (err) { return res.status(500).json({ error: err }); }
+      res.status(200).json({ content: [{ type: `text`, text: text }] });
     });
-  });
-  r.on(`error`, function(e) { res.status(500).json({ error: e.message }); });
-  r.write(p);
-  r.end();
+  }
 };
