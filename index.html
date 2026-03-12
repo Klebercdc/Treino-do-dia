@@ -2708,86 +2708,34 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
     removeThinking();
 
-    // Detectar treino gerado pelo Coach — múltiplos formatos
-    let workoutJson = null;
-    if (isGerarTreino) {
-      try {
-        // Formato 1: pipe  "Supino Reto | 4 | 8-10"
-        const pipeLines = reply.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
-        if (pipeLines.length >= 2) {
-          const exs = pipeLines.map(line => {
-            const p = line.split("|").map(x => x.trim());
-            return { nome: p[0].replace(/^[*•\-\d\.]+\s*/, ""), series: parseInt(p[1]) || 3, reps: p[2] || "8-12" };
-          }).filter(e => e.nome && e.nome.length > 2);
-          if (exs.length >= 2) workoutJson = { treino: { nome: "Treino IA", exercicios: exs } };
-        }
-        // Formato 2: "* Supino Reto: 4 séries de 8-10 reps"
-        if (!workoutJson) {
-          const bulletLines = reply.split("\n").map(l => l.trim()).filter(l => /^[*•\-]\s+\w/.test(l) && /s[eé]ries?/i.test(l));
-          if (bulletLines.length >= 2) {
-            const exs = bulletLines.map(line => {
-              const nome = line.replace(/^[*•\-]\s+/, "").split(":")[0].split("—")[0].trim();
-              const seriesMatch = line.match(/(\d+)\s*s[eé]ries?/i);
-              const repsMatch = line.match(/(\d+[-–]\d+|\d+)\s*reps?/i);
-              return { nome, series: seriesMatch ? parseInt(seriesMatch[1]) : 3, reps: repsMatch ? repsMatch[1] : "8-12" };
-            }).filter(e => e.nome && e.nome.length > 2);
-            if (exs.length >= 2) workoutJson = { treino: { nome: "Treino IA", exercicios: exs } };
-          }
-        }
-        // Formato 3: "Supino Reto: 4x8-10"
-        if (!workoutJson) {
-          const xLines = reply.split("\n").map(l => l.trim()).filter(l => /\d+x\d/i.test(l));
-          if (xLines.length >= 2) {
-            const exs = xLines.map(line => {
-              const nome = line.replace(/^[*•\-\d\.]+\s*/, "").split(":")[0].split("-")[0].trim();
-              const match = line.match(/(\d+)x(\d+[-–]?\d*)/i);
-              return { nome, series: match ? parseInt(match[1]) : 3, reps: match ? match[2] : "8-12" };
-            }).filter(e => e.nome && e.nome.length > 2);
-            if (exs.length >= 2) workoutJson = { treino: { nome: "Treino IA", exercicios: exs } };
-          }
-        }
-      } catch {}
-      // Fallback: tentar JSON
-      if (!workoutJson) {
-        try {
-          const jsonMatch = reply.match(/\{[\s\S]*"treino"[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.treino && Array.isArray(parsed.treino.exercicios)) workoutJson = parsed;
-          }
-        } catch {}
-      }
-    }
+    // Guardar resposta para aplicar treino
+    window._lastWorkoutReply = reply;
+    window._lastWorkoutJson  = null;
 
-    // Detectar exercícios em qualquer formato
-    const pipeCount   = (reply.match(/[A-Za-zÀ-ú].*\|\s*\d+\s*\|/g) || []).length;
-    const bulletCount = (reply.match(/^[*•\-]\s+[A-Za-zÀ-ú]/gm) || []).length;
-    const numbCount   = (reply.match(/^\d+\.\s+[A-Za-zÀ-ú]/gm) || []).length;
-    const hasExercicios = pipeCount >= 2 || bulletCount >= 3 || numbCount >= 3;
-
-    // Guardar para applyAIWorkoutFromText
-    if (hasExercicios || isGerarTreino) {
-      window._lastWorkoutReply = reply;
-      window._lastWorkoutJson = workoutJson;
-    }
+    // Detectar se resposta contém exercícios (qualquer formato)
+    const grupos = extrairGruposDaResposta(reply);
+    const hasExercicios = grupos.length > 0 && grupos.reduce((a,g) => a + g.exercicios.length, 0) >= 2;
 
     addAIMessage("assistant", reply);
 
-    // Mostrar botão logo abaixo se tiver exercícios
-    if (hasExercicios || isGerarTreino) {
+    // Mostrar botão se tiver exercícios
+    if (hasExercicios) {
+      window._lastWorkoutGrupos = grupos;
       const container = document.getElementById("aiMessages");
       const btnDiv = document.createElement("div");
       btnDiv.className = "ai-msg assistant";
+      const nGrupos = grupos.length;
+      const nEx = grupos.reduce((a,g) => a + g.exercicios.length, 0);
+      const label = nGrupos > 1 ? `⚡ Aplicar ${nGrupos} treinos (${nEx} exercícios) na tela` : `⚡ Aplicar treino (${nEx} exercícios) na tela`;
       btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
-        <button onclick="applyAIWorkoutFromText()" 
-          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%;letter-spacing:0.5px">
-          ⚡ Aplicar este treino na tela
+        <button onclick="applyAIWorkoutFromText()"
+          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
+          ${label}
         </button>
       </div>`;
       container.appendChild(btnDiv);
       setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
     }
-    _aiHistory.push({ role: "assistant", content: reply });
 
   } catch (err) {
     removeThinking();
@@ -2801,7 +2749,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 function aiQuick(tipo) {
   const prompts = {
     analise: "Analise meu histórico de treinos e me dê um diagnóstico detalhado: pontos fortes, pontos fracos, e 3 recomendações práticas.",
-    gerar:   "Gere um treino para hoje. Liste APENAS os exercícios neste formato exato, um por linha:\nEXERCICIO | SERIES | REPS\nExemplo:\nSupino Reto | 4 | 8-10\nSupino Inclinado | 3 | 10-12\nNão escreva mais nada além da lista.",
+    gerar:   "Gere um treino completo para hoje baseado no meu objetivo e histórico. Use o formato:\nTreino A (Grupo muscular)\n1. Exercício (X séries de Y-Z reps)\nTreino B (Grupo muscular)\n1. Exercício...",
     platô:   "Analise meu histórico e identifique quais exercícios estão em platô (sem evolução). Sugira estratégias para quebrar cada um.",
     dica:    "Com base no meu treino atual e objetivo, me dê a dica mais importante que posso aplicar hoje para maximizar meus resultados.",
     rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
@@ -2810,90 +2758,90 @@ function aiQuick(tipo) {
   if (text) sendAI(text, tipo === "gerar");
 }
 
-function applyAIWorkoutFromText() {
-  const reply = window._lastWorkoutReply || "";
-
-  // Detectar grupos de treino (Treino A, Dia 1, etc.)
+function extrairGruposDaResposta(reply) {
   const grupos = [];
   let grupoAtual = null;
 
-  const lines = reply.split("\n").map(l => l.trim());
+  const lines = reply.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
   lines.forEach(line => {
-    // Detectar título de grupo: "Treino A", "Dia 1: Push", "Treino A (Push...)", etc.
-    const tituloMatch = line.match(/^[*#\d.]?\s*(treino\s*[A-Z]|dia\s*\d+)[:\s\-–(]*(.*)/i);
-    if (tituloMatch) {
-      grupoAtual = { nome: (tituloMatch[1] + " " + tituloMatch[2]).trim().substring(0, 20), exercicios: [] };
+    // Detectar título de grupo: "Treino A", "Treino A (Push)", "Dia 1:", etc.
+    const isTitulo = /^(treino\s+[A-Za-z]|dia\s+\d+)/i.test(line) ||
+                     /^[#*]?\s*(treino\s+[A-Za-z])/i.test(line);
+    if (isTitulo) {
+      const nome = line.replace(/^[#*\s]+/, "").replace(/\(.*\)/, "").trim().substring(0, 15);
+      grupoAtual = { nome, exercicios: [] };
       grupos.push(grupoAtual);
       return;
     }
-    // Linha de exercício com * ou formato pipe
-    const isPipe = line.includes("|") && /\d+/.test(line);
-    const isBullet  = /^[*•\-]\s+[A-Za-zÀ-ú]/.test(line);
-    const isNumber  = /^\d+\.\s+[A-Za-zÀ-ú]/.test(line);
-    if (!isPipe && !isBullet && !isNumber) return;
 
-    let nome, series, reps;
-    if (isPipe) {
-      const p = line.split("|").map(x => x.trim());
-      nome = p[0].replace(/^[*•\-\d.]+\s*/, "").trim();
-      series = parseInt(p[1]) || 3;
-      reps = p[2] || "8-12";
-    } else {
-      nome = line.replace(/^[*•\-\d.]+\s+/, "").split(":")[0].split("—")[0].split("(")[0].trim();
-      const sm = line.match(/(\d+)\s*s[eé]ries?/i);
-      const rm = line.match(/(\d+[-–]\d+|\d+)\s*reps?/i);
-      series = sm ? parseInt(sm[1]) : 3;
-      reps = rm ? rm[1] : "8-12";
-    }
-    if (!nome || nome.length < 3) return;
+    // Detectar exercício: "1. Nome", "* Nome", "- Nome"
+    const isEx = /^(\d+[.)]\s+|[*•\-]\s+)[A-Za-zÀ-ú]/.test(line);
+    if (!isEx) return;
+
+    const nome = line
+      .replace(/^[\d.)*\-•\s]+/, "")
+      .split(/[:(]/)[0]
+      .trim();
+    if (nome.length < 3) return;
+
+    const sm = line.match(/(\d+)\s*s[eé]ries?/i);
+    const rm = line.match(/(\d+[-–]\d+|\d+)\s*reps?/i);
+    const ex = { nome, series: sm ? parseInt(sm[1]) : 3, reps: rm ? rm[1] : "8-12" };
 
     if (!grupoAtual) {
       grupoAtual = { nome: "Treino A", exercicios: [] };
       grupos.push(grupoAtual);
     }
-    grupoAtual.exercicios.push({ nome, series, reps });
+    grupoAtual.exercicios.push(ex);
   });
 
-  // Filtrar grupos sem exercícios
-  const gruposValidos = grupos.filter(g => g.exercicios.length > 0);
+  return grupos.filter(g => g.exercicios.length > 0);
+}
 
-  if (gruposValidos.length === 0) {
+function applyAIWorkoutFromText() {
+  const reply = window._lastWorkoutReply || "";
+  if (!reply) { showToast("Nenhum treino para aplicar.", "error"); return; }
+
+  const grupos = extrairGruposDaResposta(reply);
+
+  if (grupos.length === 0) {
     showToast("Não consegui extrair exercícios. Tente novamente.", "error");
     return;
   }
 
-  // Aplicar — múltiplos grupos viram múltiplas abas
-  applyAIWorkout({ treino: { grupos: gruposValidos } });
+  applyAIWorkout({ treino: { grupos } });
 }
 
-function applyAIWorkout(json) {
+function applyAIWorkout(data) {
   try {
-    const data = typeof json === "string" ? JSON.parse(json) : json;
     const treino = data.treino;
     if (!treino) { showToast("Formato inválido", "error"); return; }
 
-    const nav  = document.getElementById("nav");
-    const cont = document.getElementById("container");
-
-    // Suporte a múltiplos grupos (abas separadas)
     let grupos = treino.grupos;
     if (!grupos && Array.isArray(treino.exercicios)) {
-      grupos = [{ nome: treino.nome || "Treino IA", exercicios: treino.exercicios }];
+      grupos = [{ nome: treino.nome || "Treino A", exercicios: treino.exercicios }];
     }
     if (!grupos || grupos.length === 0) { showToast("Nenhum exercício encontrado", "error"); return; }
 
-    // Apagar tudo e recriar com os grupos gerados
-    nav.innerHTML = "";
+    const nav  = document.getElementById("nav");
+    const cont = document.getElementById("container");
+    nav.innerHTML  = "";
     cont.innerHTML = "";
 
     grupos.forEach((grupo, idx) => {
-      const label = grupo.nome.replace(/treino\s*/i, "").trim() || String.fromCharCode(65 + idx);
+      // Label curto: pegar só a letra/número do treino
+      const labelMatch = grupo.nome.match(/[A-Za-z]\s*[\-–]?\s*[A-Za-z]*/);
+      const label = grupo.nome.replace(/treino\s*/i, "").trim().substring(0, 12) || String.fromCharCode(65 + idx);
+
       nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(label)}</div>`;
+
       const sec = document.createElement("div");
       sec.id = "sec" + idx;
-      sec.className = "section " + (idx===0 ? "active" : "");
+      sec.className = "section " + (idx === 0 ? "active" : "");
       sec.setAttribute("data-treino-key", grupo.nome);
       cont.appendChild(sec);
+
       grupo.exercicios.forEach(ex => {
         criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
       });
@@ -2903,10 +2851,12 @@ function applyAIWorkout(json) {
     applyPrevGhostsToAll();
     scheduleDraftSave();
     closeAI();
+
     const total = grupos.reduce((a, g) => a + g.exercicios.length, 0);
-    showToast("✅ " + grupos.length + " treinos aplicados — " + total + " exercícios!", "success", 3000);
+    showToast("✅ " + grupos.length + " treino(s) aplicado(s) — " + total + " exercícios!", "success", 3000);
+
   } catch(e) {
-    showToast("Erro: " + e.message, "error");
+    showToast("Erro ao aplicar: " + e.message, "error");
   }
 }
 
