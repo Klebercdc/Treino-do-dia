@@ -2712,17 +2712,19 @@ async function sendAI(overrideText, isGerarTreino = false) {
       const treino = data.content[0].data;
       const grupos = treino.treinos.map(t => ({ nome: t.nome + (t.grupo ? " - " + t.grupo : ""), exercicios: t.exercicios }));
       const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
+      window._pendingGrupos = grupos;
       addAIMessage("assistant", "✅ Treino gerado: " + grupos.map(g => g.nome).join(", ") + " — " + total + " exercícios.");
       const container = document.getElementById("aiMessages");
       const btnDiv = document.createElement("div");
       btnDiv.className = "ai-msg assistant";
+      const btnId = "btnAplicar_" + Date.now();
+      window[btnId] = function() { applyAIWorkout({ treino: { grupos: window._pendingGrupos } }); };
       btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
-        <button onclick="applyAIWorkout({treino:{grupos:window._pendingGrupos}})"
-          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
+        <button onclick="window['${btnId}']()"
+          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent">
           ⚡ Aplicar este treino na tela
         </button>
       </div>`;
-      window._pendingGrupos = grupos;
       container.appendChild(btnDiv);
       setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
       _aiTyping = false;
