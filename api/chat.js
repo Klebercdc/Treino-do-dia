@@ -1,60 +1,58 @@
-export const config = { runtime: "edge" };
+const https = require(“https”);
 
-export default async function handler(req) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin":  "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
-  }
+module.exports = function(req, res) {
+res.setHeader(“Access-Control-Allow-Origin”, “*”);
+res.setHeader(“Access-Control-Allow-Methods”, “POST, OPTIONS”);
+res.setHeader(“Access-Control-Allow-Headers”, “Content-Type”);
 
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
+if (req.method === “OPTIONS”) { res.status(200).end(); return; }
+if (req.method !== “POST”) { res.status(405).json({ error: “Method not allowed” }); return; }
 
-  const NVIDIA_KEY = process.env.NVIDIA_API_KEY;
-  if (!NVIDIA_KEY) {
-    return new Response(
-      JSON.stringify({ error: "NVIDIA_API_KEY não configurada no Vercel." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
+var NVIDIA_KEY = process.env.NVIDIA_API_KEY;
+if (!NVIDIA_KEY) { res.status(500).json({ error: “NVIDIA_API_KEY nao configurada.” }); return; }
 
-  try {
-    const body = await req.json();
-    const openaiMessages = [];
-    if (body.system) openaiMessages.push({ role: "system", content: body.system });
-    (body.messages || []).forEach(m => openaiMessages.push(m));
+var body = req.body || {};
+var msgs = [];
+if (body.system) msgs.push({ role: “system”, content: body.system });
+(body.messages || []).forEach(function(m) { msgs.push(m); });
 
-    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${NVIDIA_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "nvidia/llama-3.1-nemotron-nano-8b-v1",
-        messages: openaiMessages,
-        max_tokens: body.max_tokens || 1000,
-        temperature: 0.7,
-        stream: false,
-      }),
-    });
+var payload = JSON.stringify({
+model: “meta/llama-3.1-70b-instruct”,
+messages: msgs,
+max_tokens: body.max_tokens || 800,
+temperature: 0.75,
+stream: false
+});
 
-    const data = await response.json();
-    const replyText = data?.choices?.[0]?.message?.content || "";
+var options = {
+hostname: “integrate.api.nvidia.com”,
+path: “/v1/chat/completions”,
+method: “POST”,
+headers: {
+“Content-Type”: “application/json”,
+“Authorization”: “Bearer “ + NVIDIA_KEY,
+“Content-Length”: Buffer.byteLength(payload)
+}
+};
 
-    return new Response(JSON.stringify({ content: [{ type: "text", text: replyText }] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: "Erro interno: " + err.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
+var req2 = https.request(options, function(res2) {
+var data = “”;
+res2.on(“data”, function(chunk) { data += chunk; });
+res2.on(“end”, function() {
+try {
+var parsed = JSON.parse(data);
+var text = (parsed.choices && parsed.choices[0] && parsed.choices[0].message && parsed.choices[0].message.content) || “”;
+res.status(200).json({ content: [{ type: “text”, text: text }] });
+} catch(e) {
+res.status(500).json({ error: “Parse error: “ + data.slice(0, 100) });
+}
+});
+});
+
+req2.on(“error”, function(e) {
+res.status(500).json({ error: e.message });
+});
+
+req2.write(payload);
+req2.end();
 }
