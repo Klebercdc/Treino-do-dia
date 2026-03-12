@@ -2708,9 +2708,10 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
     removeThinking();
 
-    // Guardar resposta para aplicar treino
+    // Guardar resposta para aplicar treino — sempre a mais recente
     window._lastWorkoutReply = reply;
     window._lastWorkoutJson  = null;
+    window._lastWorkoutGrupos = null; // reset cache de grupos
 
     // Detectar se resposta contém exercícios (qualquer formato)
     const grupos = extrairGruposDaResposta(reply);
@@ -2804,6 +2805,8 @@ function applyAIWorkoutFromText() {
   if (!reply) { showToast("Nenhum treino para aplicar.", "error"); return; }
 
   const grupos = extrairGruposDaResposta(reply);
+  
+  console.log("GRUPOS DETECTADOS:", grupos.length, grupos.map(g => g.nome + ":" + g.exercicios.length));
 
   if (grupos.length === 0) {
     showToast("Não consegui extrair exercícios. Tente novamente.", "error");
