@@ -1565,6 +1565,7 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
   scheduleDraftSave();
   applyPrevGhostsToCard(card);
   updateSuggests(id);
+  return card;
 }
 
 async function confirmDeleteExercise(card) {
@@ -2764,7 +2765,26 @@ async function sendAI(overrideText, isGerarTreino = false) {
     if (data?.content?.[0]?.type === "workout_json") {
       removeThinking();
       const treino = data.content[0].data;
-      const grupos = treino.treinos.map(t => ({ nome: t.nome + (t.grupo ? " - " + t.grupo : ""), exercicios: t.exercicios }));
+      let grupos = [];
+
+      // Processar treinos — suporta fases MEV/MAV/MRV por exercício
+      grupos = (treino.treinos || []).map(t => ({
+        nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
+        exercicios: (t.exercicios || []).map(ex => {
+          // Se tem fases, usar a fase 1 como padrão + guardar progressão
+          if (ex.fases && ex.fases.length > 0) {
+            const f1 = ex.fases[0];
+            return {
+              nome: ex.nome,
+              series: f1.series || 3,
+              reps: f1.reps || "8-12",
+              progressao: ex.fases.map(f => f.fase + ": " + f.series + "x" + f.reps + " (" + (f.descricao||"") + ")").join(" → ")
+            };
+          }
+          return { nome: ex.nome, series: ex.series || 3, reps: ex.reps || "8-12" };
+        })
+      }));
+
       const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
       addAIMessage("assistant", "✅ Treino gerado: " + grupos.map(g => g.nome).join(", ") + " — " + total + " exercícios.");
       const container = document.getElementById("aiMessages");
@@ -2948,7 +2968,14 @@ function applyAIWorkout(data) {
       cont.appendChild(sec);
 
       grupo.exercicios.forEach(ex => {
-        criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
+        const cardEl = criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
+        // Mostrar progressão MEV/MAV/MRV se existir
+        if (ex.progressao && cardEl) {
+          const progDiv = document.createElement("div");
+          progDiv.style.cssText = "font-size:11px;color:var(--text-2);padding:4px 12px 8px;line-height:1.6;border-top:1px solid var(--border-soft);margin-top:4px";
+          progDiv.innerHTML = "<span style='color:var(--accent);font-weight:600'>PROGRESSÃO: </span>" + ex.progressao;
+          cardEl.appendChild(progDiv);
+        }
       });
     });
 
