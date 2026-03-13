@@ -2991,25 +2991,98 @@ function updateSuggests(id) {
     if (bestRM) { el1rm.textContent = "1RM " + bestRM + "kg"; el1rm.style.display = ""; }
     else el1rm.style.display = "none";
   }
-  // Sugestão de carga baseada no histórico
+  // Sugestão de carga entre sessões — Dupla Progressão
+  // Base: Helms et al. 2016; Zourdos et al. 2016; NSCA (Haff & Triplett)
   const sec = card.closest(".section");
   const treinoKey = sec?.getAttribute("data-treino-key") || "";
   const exName = card.querySelector(".ex-title")?.textContent || "";
   const k = prevKeyOf(treinoKey, exName);
   const prev = prevMap[k];
   const sugEl = card.querySelector(".card-load-suggest");
-  if (sugEl && prev && prev[0]) {
-    const prevKg = toNum(prev[0].kg);
-    if (prevKg > 0) {
-      const allFilled = rows.every(r => toNum(r.querySelectorAll("input")[0].value) > 0);
-      if (!allFilled) {
-        sugEl.textContent = `💡 Última: ${prevKg}kg → tente ${prevKg+2.5}kg`;
+  if (sugEl && prev && prev.length) {
+    const allFilled = rows.every(r => toNum(r.querySelectorAll("input")[0].value) > 0);
+    if (!allFilled) {
+      const result = calcNextSessionLoad(prev, card.querySelector(".ex-target")?.textContent || "");
+      if (result) {
+        sugEl.textContent = result.msg;
         sugEl.style.display = "block";
+        sugEl.style.color = result.color;
       } else {
         sugEl.style.display = "none";
       }
+    } else {
+      sugEl.style.display = "none";
     }
   }
+}
+
+// Progressão de carga entre sessões baseada em RPE + Reps (Dupla Progressão)
+// Helms et al. 2016; Zourdos et al. 2016; NSCA Essentials of Strength & Conditioning
+function calcNextSessionLoad(prevValues, targetMeta) {
+  // Parseiar faixa de repetições alvo (ex: "8-12 REPS" → min:8, max:12)
+  const rangeMatch = targetMeta.match(/(\d+)\s*[-–]\s*(\d+)/);
+  const repMin = rangeMatch ? parseInt(rangeMatch[1]) : 6;
+  const repMax = rangeMatch ? parseInt(rangeMatch[2]) : 12;
+
+  const sets = prevValues.filter(v => toNum(v.kg) > 0 && toNum(v.reps) > 0);
+  if (!sets.length) return null;
+
+  const baseKg   = toNum(sets[0].kg);
+  const avgReps  = sets.reduce((s, v) => s + toNum(v.reps), 0) / sets.length;
+  const rpesets  = sets.filter(v => toNum(v.rpe) > 0);
+  const avgRPE   = rpesets.length ? rpesets.reduce((s, v) => s + toNum(v.rpe), 0) / rpesets.length : null;
+
+  let suggest, msg, color = "var(--accent)";
+
+  if (avgRPE !== null) {
+    if (avgRPE >= 9.5) {
+      // RPE muito alto → reduzir 5% (2 pontos acima do alvo RPE 8)
+      suggest = Math.round(baseKg * 0.95 * 2) / 2;
+      msg = `⬇️ Último treino RPE ${avgRPE.toFixed(1)} — Use ${suggest}kg`;
+      color = "var(--red)";
+    } else if (avgRPE >= 9) {
+      // RPE alto → reduzir 2,5% (1 ponto acima do alvo)
+      suggest = Math.round(baseKg * 0.975 * 2) / 2;
+      msg = `⬇️ RPE ${avgRPE.toFixed(1)} alto — Use ${suggest}kg`;
+      color = "var(--red)";
+    } else if (avgRPE >= 7 && avgRPE <= 8.5) {
+      // RPE ideal (zona alvo)
+      if (avgReps >= repMax) {
+        // Bateu topo da faixa → aumentar peso (progressão de carga)
+        suggest = Math.round((baseKg + 2.5) * 2) / 2;
+        msg = `⬆️ ${avgReps.toFixed(0)} reps com RPE ${avgRPE.toFixed(1)} — Tente ${suggest}kg`;
+        color = "var(--green)";
+      } else if (avgReps >= repMin) {
+        // Dentro da faixa → progredir reps antes de aumentar peso
+        suggest = baseKg;
+        msg = `🎯 RPE ideal — Mantenha ${suggest}kg, aumente as reps`;
+        color = "var(--accent)";
+      } else {
+        // Abaixo da faixa mínima → ajustar peso
+        suggest = Math.round(baseKg * 0.975 * 2) / 2;
+        msg = `⚠️ Reps abaixo do alvo — Ajuste para ${suggest}kg`;
+        color = "var(--accent)";
+      }
+    } else {
+      // RPE baixo (≤6) → aumentar carga mais agressivamente
+      const pct = avgRPE <= 5 ? 1.075 : 1.05;
+      suggest = Math.round(baseKg * pct * 2) / 2;
+      msg = `⬆️ RPE ${avgRPE.toFixed(1)} fácil — Tente ${suggest}kg`;
+      color = "var(--green)";
+    }
+  } else {
+    // Sem RPE registrado → usar apenas reps (progressão conservadora)
+    if (avgReps >= repMax) {
+      suggest = Math.round((baseKg + 2.5) * 2) / 2;
+      msg = `⬆️ ${avgReps.toFixed(0)} reps completas — Tente ${suggest}kg`;
+      color = "var(--green)";
+    } else {
+      suggest = baseKg;
+      msg = `🎯 Mantenha ${baseKg}kg — Aumente as reps primeiro`;
+      color = "var(--accent)";
+    }
+  }
+  return { suggest, msg, color };
 }
 
 function adicionarSerie(btn) {
