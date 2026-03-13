@@ -537,7 +537,15 @@
       align-items: center; gap: 2px; user-select: none;
     }
     .setcell .slabel { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.85); }
-    .setcell .rmmini { font-family: var(--mono); font-size: 0.92rem; color: rgba(255,255,255,0.65); font-weight: 500; line-height: 1.2; }
+    .setcell .rmmini { display: none; }
+    .rpe-inline-alert {
+      grid-column: 1 / -1; margin: -2px 0 4px;
+      padding: 6px 10px; border-radius: 8px;
+      font-size: 0.72rem; font-weight: 600; font-family: var(--font);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .rpe-inline-alert.warning { background: rgba(249,115,22,0.15); color: var(--accent); border: 1px solid rgba(249,115,22,0.25); }
+    .rpe-inline-alert.info    { background: rgba(34,197,94,0.12);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
     .ghost::placeholder { color: rgba(249,115,22,0.3) !important; }
     .btn-confirm {
       width: 36px; height: 36px; border-radius: 10px;
@@ -4132,6 +4140,9 @@ function applyAIWorkout(data) {
 function checkRPEAlert(input) {
   const row  = input.closest(".series-grid");
   if (!row) return;
+  // Remove alerta anterior desta linha
+  const prev = row.nextElementSibling;
+  if (prev && prev.classList.contains("rpe-inline-alert")) prev.remove();
   const inputs = row.querySelectorAll("input");
   const rpe  = parseFloat(inputs[2]?.value);
   const kg   = parseFloat(inputs[0]?.value);
@@ -4142,12 +4153,21 @@ function checkRPEAlert(input) {
   const TARGET_RPE = 8;
   const ADJUST_PER_POINT = 0.025;
   const diff = rpe - TARGET_RPE;
+  let msg = null, type = null;
   if (rpe >= 9) {
     const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
-    showToast(`⚠️ RPE alto — Na próxima série use ${suggest}kg`, "warning", 4000);
+    msg = `⚠️ Próxima série: ${suggest}kg`;
+    type = "warning";
   } else if (rpe <= 6 && reps > 0) {
     const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
-    showToast(`💡 RPE baixo — Você tem espaço! Tente ${suggest}kg`, "info", 4000);
+    msg = `💡 Próxima série: ${suggest}kg`;
+    type = "info";
+  }
+  if (msg) {
+    const alert = document.createElement("div");
+    alert.className = `rpe-inline-alert ${type}`;
+    alert.textContent = msg;
+    row.after(alert);
   }
 }
 
