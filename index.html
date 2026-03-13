@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" crossorigin="anonymous" onerror="window._pdfjsFailed=true"></script>
+  <script>if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
   <link rel="icon" href="Logo.png" type="image/png"/>
   <link rel="manifest" href="data:application/json,{%22name%22:%22TITAN%20PRO%22,%22short_name%22:%22TITAN%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%220f0f0f%22,%22theme_color%22:%22f97316%22,%22icons%22:[{%22src%22:%22Logo.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]}"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -480,7 +480,7 @@
     }
     .exercise-card.deleting::before { background: var(--red); }
 
-    .card-header { padding-left: 12px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; }
+    .card-header { padding-left: 12px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
     .ex-title {
       font-size: 1rem; font-weight: 700;
       color: var(--text); cursor: pointer;
@@ -546,6 +546,7 @@
     }
     .rpe-inline-alert.warning { background: rgba(249,115,22,0.15); color: var(--accent); border: 1px solid rgba(249,115,22,0.25); }
     .rpe-inline-alert.info    { background: rgba(34,197,94,0.12);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
+    .rpe-inline-alert.ideal   { background: rgba(34,197,94,0.08);  color: var(--green);  border: 1px solid rgba(34,197,94,0.15); }
     .ghost::placeholder { color: rgba(249,115,22,0.3) !important; }
     .btn-confirm {
       width: 36px; height: 36px; border-radius: 10px;
@@ -1085,7 +1086,24 @@
     /* ══════════════════════════════════════════
        TELA DE PERFIL
     ══════════════════════════════════════════ */
-    #perfilScreen {
+    .btn-voltar {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: none;
+      color: var(--accent); font-family: var(--font);
+      font-size: 0.9rem; font-weight: 700;
+      padding: 16px 20px 0;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .btn-voltar svg { flex-shrink: 0; }
+    .btn-voltar {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: none; border: none;
+      color: var(--accent); font-family: var(--font);
+      font-size: 0.9rem; font-weight: 700;
+      padding: 16px 20px 0;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+        #perfilScreen {
       display: none; position: fixed; inset: 0; z-index: 3500;
       background: var(--bg); flex-direction: column; overflow-y: auto;
     }
@@ -1300,7 +1318,201 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+  
+    /* ── GUIA DE EXERCÍCIO ── */
+    #guiaModal {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    #guiaModal.show { opacity: 1; pointer-events: auto; }
+    #guiaModal.show .guia-sheet { transform: translateY(0); }
+    .guia-sheet {
+      background: #161616; border-radius: 24px 24px 0 0;
+      width: 100%; max-height: 92vh; overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform .38s cubic-bezier(.32,1,.6,1);
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+    .guia-handle {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+      margin: 12px auto 0;
+    }
+    .guia-header {
+      padding: 16px 20px 0;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .guia-back {
+      background: none; border: none;
+      color: var(--accent); font-family: var(--font);
+      font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; padding: 0;
+      display: flex; align-items: center; gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .guia-name {
+      font-family: var(--display); font-size: 1.8rem;
+      letter-spacing: .06em; padding: 10px 20px 2px;
+    }
+    .guia-muscles {
+      font-size: 0.72rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--accent); padding: 0 20px 18px;
+    }
+    .guia-figure-wrap {
+      margin: 0 16px 16px;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 18px;
+      padding: 12px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .guia-svg { width: 140px; height: 140px; }
+    .guia-play-btn {
+      margin-top: 8px;
+      background: rgba(249,115,22,0.12);
+      border: 1px solid rgba(249,115,22,0.3);
+      border-radius: 20px; padding: 6px 18px;
+      color: var(--accent); font-family: var(--font);
+      font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .guia-steps { padding: 0 16px 20px; }
+    .guia-steps-title {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: #525252; margin-bottom: 10px;
+    }
+    .guia-step {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 10px 12px; border-radius: 10px;
+      margin-bottom: 6px; cursor: pointer;
+      border: 1px solid transparent;
+      transition: all .2s;
+    }
+    .guia-step.active {
+      background: rgba(249,115,22,0.08);
+      border-color: rgba(249,115,22,0.25);
+    }
+    .guia-step-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      flex-shrink: 0; display: flex; align-items: center;
+      justify-content: center; font-size: 0.72rem; font-weight: 800;
+      background: #212121; border: 1.5px solid rgba(255,255,255,0.1);
+      color: #737373; transition: all .2s;
+    }
+    .guia-step.active .guia-step-num {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+    .guia-step-txt {
+      font-size: 0.86rem; line-height: 1.45;
+      color: #737373; padding-top: 3px; transition: color .2s;
+    }
+    .guia-step.active .guia-step-txt { color: var(--text); }
+    .guia-btn-icon {
+      background: none; border: none;
+      color: rgba(255,255,255,0.3); cursor: pointer;
+      padding: 4px; border-radius: 6px;
+      display: flex; align-items: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: color .15s;
+    }
+    .guia-btn-icon:hover { color: var(--accent); }
+
+    
+    /* ── PLAYER DE VÍDEO YOUTUBE ── */
+    .guia-tabs {
+      display: flex; gap: 0;
+      margin: 0 16px 16px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 4px;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .guia-tab-btn {
+      flex: 1; padding: 9px 8px;
+      border: none; border-radius: 9px;
+      background: transparent;
+      color: #737373; font-family: var(--font);
+      font-size: 0.8rem; font-weight: 700;
+      cursor: pointer; transition: all .2s;
+      display: flex; align-items: center;
+      justify-content: center; gap: 5px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .guia-tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .guia-panel { display: none; }
+    .guia-panel.active { display: block; }
+    .guia-video-wrap {
+      margin: 0 16px 20px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 16/9;
+      position: relative;
+    }
+    .guia-video-placeholder {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+      background: #111;
+      min-height: 200px;
+    }
+    .guia-yt-btn {
+      background: #FF0000; color: #fff;
+      border: none; border-radius: 12px;
+      padding: 14px 24px; font-family: var(--font);
+      font-size: 0.95rem; font-weight: 800;
+      cursor: pointer; display: flex;
+      align-items: center; gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .1s;
+    }
+    .guia-yt-btn:active { transform: scale(.97); }
+    .guia-yt-tip {
+      font-size: 0.72rem; color: #525252;
+      text-align: center; padding: 0 20px;
+      line-height: 1.5;
+    }
+
+    
+    /* ── SUGESTÃO INLINE POR SÉRIE ── */
+    .row-suggest {
+      display: none;
+      grid-column: 1 / -1;
+      margin: -4px 0 6px 0;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      line-height: 1.3;
+      letter-spacing: .01em;
+      animation: suggestFade .3s ease;
+    }
+    .row-suggest.up {
+      background: rgba(249,115,22,0.1);
+      border-left: 3px solid var(--accent);
+      color: var(--accent);
+    }
+    .row-suggest.down {
+      background: rgba(234,179,8,0.1);
+      border-left: 3px solid #eab308;
+      color: #eab308;
+    }
+    @keyframes suggestFade {
+      from { opacity:0; transform: translateY(-4px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    </style>
 
 </head>
 <body>
@@ -1534,6 +1746,18 @@
 ══════════════════════════════════════════ -->
 
 <div id="homeScreen">
+  <!-- Banner de setup se perfil vazio -->
+  <div id="homeBannerSetup" style="display:none;background:linear-gradient(135deg,var(--accent-dim),rgba(251,191,36,0.1));border:1px solid var(--accent);border-radius:16px;padding:16px;margin-bottom:16px">
+    <div style="font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">👋 Bem-vindo ao TITAN PRO!</div>
+    <div style="font-size:0.88rem;color:var(--text);margin-bottom:12px;line-height:1.5">Configure seu perfil para gerar um treino personalizado para você.</div>
+    <button onclick="navTo('programa');openConfig()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer">⚡ Configurar agora</button>
+  </div>
+  <!-- Banner setup -->
+  <div id="homeBannerSetup" style="display:none;background:linear-gradient(135deg,var(--accent-dim),rgba(251,191,36,0.08));border:1px solid var(--accent);border-radius:16px;padding:16px;margin-bottom:16px">
+    <div style="font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">👋 Bem-vindo ao TITAN PRO!</div>
+    <div style="font-size:0.88rem;color:var(--text);margin-bottom:12px;line-height:1.5">Configure seu perfil para gerar um treino totalmente personalizado para você.</div>
+    <button onclick="navTo('programa');openConfig()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer">⚡ Configurar agora</button>
+  </div>
   <div class="home-header">
     <div class="home-greeting" id="homeGreeting">Bom treino</div>
     <div class="home-title">BORA <span id="homeTreinoNome">TREINAR</span></div>
@@ -1620,6 +1844,10 @@
 ══════════════════════════════════════════ -->
 
 <div id="perfilScreen">
+  <button class="btn-voltar" onclick="navTo('inicio');openHome()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Início
+  </button>
   <div class="perfil-header">
     <div class="perfil-avatar" id="perfilAvatar">K</div>
     <div class="perfil-name" id="perfilNome">ATLETA</div>
@@ -1773,11 +2001,12 @@
 ══════════════════════════════════════════ -->
 
 <div id="orientacaoScreen">
-  <div class="orient-header">
-    <div class="orient-title">ORIENTAÇÃO</div>
-    <button onclick="closeOrientacao()" style="background:var(--bg2);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  <div class="orient-header" style="justify-content:flex-start;padding:0">
+    <button class="btn-voltar" onclick="closeOrientacao()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar
     </button>
+    <div class="orient-title" style="flex:1;text-align:center;padding-right:60px">ORIENTAÇÃO</div>
   </div>
   <div class="orient-tabs">
     <div class="orient-tab active" onclick="switchOrientTab('coach',this)">Coach</div>
@@ -1964,7 +2193,11 @@
 <!-- Header -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
   <div class="config-title" style="margin:0">Programa de Treino</div>
-  <button onclick="closeConfig()" style="background:var(--bg2);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted)">
+  <button class="btn-voltar" style="padding:0" onclick="closeConfig()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Voltar
+  </button>
+  <button onclick="closeConfig()" style="display:none">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
 </div>
@@ -1991,9 +2224,28 @@
   </div>
 </div>
 
+<!-- Nível -->
+<div class="config-section">
+  <div class="config-section-lbl">Seu nível de experiência</div>
+  <div class="config-chips" id="nivelChips">
+    <div class="config-chip active" data-val="iniciante" onclick="selectNivel(this)">
+      <div style="font-size:0.8rem;font-weight:700">🌱 Iniciante</div>
+      <div style="font-size:0.62rem;opacity:.7;margin-top:2px">Menos de 1 ano</div>
+    </div>
+    <div class="config-chip" data-val="intermediario" onclick="selectNivel(this)">
+      <div style="font-size:0.8rem;font-weight:700">💪 Intermediário</div>
+      <div style="font-size:0.62rem;opacity:.7;margin-top:2px">1 a 3 anos</div>
+    </div>
+    <div class="config-chip" data-val="avancado" onclick="selectNivel(this)">
+      <div style="font-size:0.8rem;font-weight:700">🔥 Avançado</div>
+      <div style="font-size:0.62rem;opacity:.7;margin-top:2px">Mais de 3 anos</div>
+    </div>
+  </div>
+</div>
+
 <!-- Músculos alvo -->
 <div class="config-section">
-  <div class="config-section-lbl">Ênfase muscular <span style="color:var(--text-2);font-weight:400;text-transform:none;letter-spacing:0">(pode selecionar mais de um)</span></div>
+  <div class="config-section-lbl">Quero focar em <span style="color:var(--text-2);font-weight:400;text-transform:none;letter-spacing:0">(opcional — pode escolher mais de um)</span></div>
   <div class="config-chips" id="muscChips" style="gap:6px">
     <div class="config-chip config-chip-musc" data-val="peito" onclick="toggleMusc(this)">Peito</div>
     <div class="config-chip config-chip-musc" data-val="costas" onclick="toggleMusc(this)">Costas</div>
@@ -2009,32 +2261,34 @@
 
 <!-- Restrições -->
 <div class="config-section">
-  <div class="config-section-lbl">Restrições / Lesões</div>
+  <div class="config-section-lbl">Tem alguma dor ou limitação? <span style="color:var(--text-2);font-weight:400;text-transform:none;letter-spacing:0">(o treino será adaptado)</span></div>
   <div class="config-chips" id="restricChips" style="gap:6px">
-    <div class="config-chip config-chip-restric active" data-val="nenhuma" onclick="toggleRestric(this)">Nenhuma</div>
-    <div class="config-chip config-chip-restric" data-val="joelho" onclick="toggleRestric(this)">Joelho</div>
-    <div class="config-chip config-chip-restric" data-val="ombro" onclick="toggleRestric(this)">Ombro</div>
-    <div class="config-chip config-chip-restric" data-val="lombar" onclick="toggleRestric(this)">Lombar</div>
-    <div class="config-chip config-chip-restric" data-val="cervical" onclick="toggleRestric(this)">Cervical</div>
-    <div class="config-chip config-chip-restric" data-val="punho" onclick="toggleRestric(this)">Punho</div>
+    <div class="config-chip config-chip-restric active" data-val="nenhuma" onclick="toggleRestric(this)">✅ Nenhuma</div>
+    <div class="config-chip config-chip-restric" data-val="joelho" onclick="toggleRestric(this)">🦵 Joelho</div>
+    <div class="config-chip config-chip-restric" data-val="ombro" onclick="toggleRestric(this)">💪 Ombro</div>
+    <div class="config-chip config-chip-restric" data-val="lombar" onclick="toggleRestric(this)">🔙 Lombar</div>
+    <div class="config-chip config-chip-restric" data-val="cervical" onclick="toggleRestric(this)">🫁 Cervical</div>
+    <div class="config-chip config-chip-restric" data-val="punho" onclick="toggleRestric(this)">✋ Punho</div>
+    <div class="config-chip config-chip-restric" data-val="cotovelo" onclick="toggleRestric(this)">🦾 Cotovelo</div>
+    <div class="config-chip config-chip-restric" data-val="quadril" onclick="toggleRestric(this)">🦴 Quadril</div>
   </div>
 </div>
 
 <!-- Fase atual -->
 <div class="config-section">
-  <div class="config-section-lbl">Fase atual do programa</div>
+  <div class="config-section-lbl">Onde você está agora?</div>
   <div class="config-chips" id="faseChips">
     <div class="config-chip active" data-val="1" onclick="selectFase(this)">
-      <div style="font-size:0.75rem;font-weight:700">Sem 1–4</div>
-      <div style="font-size:0.6rem;opacity:.7;margin-top:2px">MEV · Técnica</div>
+      <div style="font-size:0.78rem;font-weight:700">🟢 Começando</div>
+      <div style="font-size:0.6rem;opacity:.7;margin-top:2px">Aprendendo a técnica</div>
     </div>
     <div class="config-chip" data-val="2" onclick="selectFase(this)">
-      <div style="font-size:0.75rem;font-weight:700">Sem 5–8</div>
-      <div style="font-size:0.6rem;opacity:.7;margin-top:2px">MAV · Progressão</div>
+      <div style="font-size:0.78rem;font-weight:700">🟡 Evoluindo</div>
+      <div style="font-size:0.6rem;opacity:.7;margin-top:2px">Aumentando a carga</div>
     </div>
     <div class="config-chip" data-val="3" onclick="selectFase(this)">
-      <div style="font-size:0.75rem;font-weight:700">Sem 9–12</div>
-      <div style="font-size:0.6rem;opacity:.7;margin-top:2px">MRV · Intensidade</div>
+      <div style="font-size:0.78rem;font-weight:700">🔴 No limite</div>
+      <div style="font-size:0.6rem;opacity:.7;margin-top:2px">Máxima intensidade</div>
     </div>
   </div>
 </div>
@@ -2064,15 +2318,10 @@
 </div>
 
 <!-- Botões -->
-<div style="display:flex;gap:10px;margin-top:4px">
-  <button class="config-apply" style="flex:1;background:var(--bg2);color:var(--text);box-shadow:none;border:1px solid var(--border)" onclick="applyConfig()">
-    Aplicar Configuração
-  </button>
-  <button class="config-apply" style="flex:1.4" onclick="gerarTreinoDoPrograma()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:6px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    Gerar Treino com IA
-  </button>
-</div>
+<button class="config-apply" style="width:100%;margin-top:4px;font-size:1rem;padding:16px" onclick="gerarTreinoDoPrograma()">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+  Gerar Meu Treino
+</button>
 ```
 
   </div>
@@ -2080,6 +2329,18 @@
 
 <!-- Tabs -->
 
+<div id="treinoHeader" style="display:none;padding:12px 16px 0;align-items:center;gap:12px">
+  <button class="btn-voltar" style="padding:0" onclick="navTo('inicio');openHome()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Início
+  </button>
+</div>
+<div id="treinoHeader" style="display:none;padding:12px 16px 0;align-items:center">
+  <button class="btn-voltar" style="padding:0" onclick="navTo('inicio');openHome()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Início
+  </button>
+</div>
 <div class="nav-pills" id="nav"></div>
 
 <!-- Exercises -->
@@ -2250,6 +2511,7 @@ function _showModal(msg, withInput, inputPlaceholder) {
   });
 }
 async function dlgConfirm(msg)             { return await _showModal(msg, false, null); }
+async function dlgAlert(msg)               { return await _showModal(msg, false, "OK"); }
 async function dlgPrompt(msg, placeholder) { return await _showModal(msg, true, placeholder || ""); }
 
 /* ═══════════════════════════════════════════════════
@@ -2569,11 +2831,16 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
       <button class="btn-confirm" onclick="onPressSetCell(this.closest('.series-grid').querySelector('.setcell'))" type="button">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
-    </div>`;
+    </div>
+    <div class="row-suggest" id="sug-${id}-${s}"></div>`;
   }).join("");
   card.innerHTML = `
     <div class="card-header">
       <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${escapeHTML(nome)}</span>
+      <button onclick="abrirGuia('${escapeHTML(nome)}')" title="Ver como fazer" style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-family:var(--font);font-size:0.68rem;font-weight:700;-webkit-tap-highlight-color:transparent;flex-shrink:0" type="button">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+        VER
+      </button>
       <span class="card-rm-badge" id="1rm-${id}"></span>
     </div>
     <span class="ex-target">${sets} sets · ${escapeHTML(meta)}</span>
@@ -2762,7 +3029,11 @@ function adicionarSerie(btn) {
     <div class="input-box"><input type="number" inputmode="decimal" placeholder="" oninput="updateSuggests('${id}')"></div>
     <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}')"></div>
     <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}');checkRPEAlert(this)"></div>`;
+  const sugDiv = document.createElement("div");
+  sugDiv.className = "row-suggest";
+  sugDiv.id = `sug-${id}-${sNum-1}`;
   btn.before(row);
+  btn.before(sugDiv);
   // Copiar último ghost se houver
   const prevRow = existingRows[existingRows.length-1];
   if (prevRow) {
@@ -3551,6 +3822,15 @@ function toggleRestric(el) {
   if (!any) document.querySelector('.config-chip-restric[data-val="nenhuma"]')?.classList.add("active");
 }
 
+function selectNivel(el) {
+  document.querySelectorAll("#nivelChips .config-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  // Salvar no localStorage
+  const cfg = safeJSON("titanpro_config", {});
+  cfg.nivel = el.getAttribute("data-val");
+  localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+}
+
 function selectFase(el) {
   document.querySelectorAll("#faseChips .config-chip").forEach(c => c.classList.remove("active"));
   el.classList.add("active");
@@ -3571,85 +3851,169 @@ function getProgramaConfig() {
   return { freq, obj, fase, equip, muscs, restric };
 }
 
-async function gerarTreinoDoPrograma() {
+function gerarTreinoDoPrograma() {
   const cfg = getProgramaConfig();
   closeConfig();
-
-  const faseLabel = cfg.fase === "1" ? "Semana 1-4 (MEV)" : cfg.fase === "2" ? "Semana 5-8 (MAV)" : "Semana 9-12 (MRV)";
-  const equipLabel = cfg.equip === "academia" ? "academia completa" : cfg.equip === "halteres" ? "apenas halteres" : "casa sem equipamento";
-  const muscLabel = cfg.muscs.length > 0 ? "Músculos com ênfase: " + cfg.muscs.join(", ") + ". " : "";
-  const restricLabel = cfg.restric.length > 0 ? "Restrições/lesões: " + cfg.restric.join(", ") + ". " : "";
-
-  const prompt = `Crie um treino ${cfg.freq}x por semana com objetivo de ${cfg.obj}. ${muscLabel}${restricLabel}Fase atual: ${faseLabel}. Equipamento: ${equipLabel}. Use periodização MEV→MAV→MRV com 3 fases por exercício.`;
-
-  // Mostrar loading na tela de treino
   navTo("treino");
-  const loadDiv = document.createElement("div");
-  loadDiv.id = "gerandoLoad";
-  loadDiv.style.cssText = "position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(12px)";
-  loadDiv.innerHTML = `
-    <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
-    <div style="font-family:var(--display);font-size:1.4rem;color:var(--text);letter-spacing:.04em">GERANDO TREINO</div>
-    <div style="font-size:0.8rem;color:var(--muted)">Aguarde um momento...</div>`;
-  document.body.appendChild(loadDiv);
 
-  try {
-    const resp = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system: buildTrainingContext(),
-        messages: [{ role: "user", content: prompt }],
-        isGerarTreino: true
-      })
-    });
-    const data = await resp.json();
-    document.body.removeChild(loadDiv);
+  // Ler perfil da pessoa
+  const perfil = safeJSON("titanpro_config", {});
+  const idade = parseInt(perfil.idade) || 30;
+  const nivel = cfg.nivel || perfil.nivel || "iniciante";
+  const ehIdoso = idade >= 55;
+  const ehIniciante = nivel === "iniciante";
+  const ehAvancado = nivel === "avancado";
 
-    const block = data.content?.[0];
+  // Tabelas por objetivo + nível
+  // Iniciante: menos volume, mais reps (aprendizado motor)
+  // Idoso: menos volume, mais reps, exercícios mais seguros
+  // Avançado: mais volume, menos reps (mais intensidade)
+  const CONFIG_OBJ = {
+    forca: {
+      mev: ehIniciante||ehIdoso ? [3,"5-8"]   : [3,"3-5"],
+      mav: ehIniciante||ehIdoso ? [4,"5-8"]   : [4,"4-6"],
+      mrv: ehIniciante||ehIdoso ? [4,"5-8"]   : [5,"3-5"],
+    },
+    hipertrofia: {
+      mev: ehIniciante||ehIdoso ? [3,"12-15"] : ehAvancado ? [4,"8-10"] : [3,"10-12"],
+      mav: ehIniciante||ehIdoso ? [3,"12-15"] : ehAvancado ? [5,"8-12"] : [4,"8-12"],
+      mrv: ehIniciante||ehIdoso ? [4,"10-15"] : ehAvancado ? [5,"6-10"] : [5,"6-10"],
+    },
+    definicao: {
+      mev: [3,"15-20"],
+      mav: [3,"15-20"],
+      mrv: [4,"12-20"],
+    },
+    resistencia: {
+      mev: [3,"15-20"],
+      mav: [3,"20-25"],
+      mrv: [4,"15-20"],
+    },
+  };
 
-    // Formato direto: workout_json
-    if (block?.type === "workout_json") {
-      const treino = block.data;
-      let grupos = (treino.treinos || []).map(t => ({
-        nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
-        exercicios: (t.exercicios || []).map(ex => ({
-          nome: ex.nome,
-          series: ex.fases ? ex.fases[0].series : (ex.series || 3),
-          reps: ex.fases ? ex.fases[0].reps : (ex.reps || "8-12"),
-          fases: ex.fases || null
-        }))
-      }));
-      applyAIWorkout({ treino: { grupos } });
+  // Exercícios científicos por grupo muscular (EMG + Schoenfeld)
+  const EX_CIENTIFICOS = {
+    peito:    ["Supino Reto com Barra","Supino Inclinado 30°","Crucifixo com Halteres","Crossover Cabo","Supino com Halteres"],
+    costas:   ["Barra Fixa Pronada","Remada Curvada com Barra","Puxada Alta","Remada Unilateral","Remada Baixa Cabo"],
+    pernas:   ["Agachamento Livre","Leg Press 45°","Cadeira Extensora","Mesa Flexora","Stiff","Agachamento Búlgaro"],
+    ombros:   ["Desenvolvimento com Halteres","Elevação Lateral Cabo","Elevação Frontal","Crucifixo Inverso","Encolhimento"],
+    biceps:   ["Rosca Direta Barra","Rosca Inclinada Haltere","Rosca Concentrada","Rosca Martelo","Rosca Spider"],
+    triceps:  ["Tríceps Testa","Tríceps Pulley Corda","Mergulho em Paralelas","Extensão Overhead","Tríceps Coice"],
+    gluteos:  ["Hip Thrust com Barra","Agachamento Profundo","Elevação Pélvica","Passada","Abdução com Cabo"],
+    panturrilha: ["Panturrilha em Pé","Panturrilha Sentado","Leg Press Panturrilha"],
+    abdomen:  ["Prancha","Abdominal Roda","Elevação de Pernas","Russian Twist","Dead Bug"],
+  };
 
-    // Formato texto: tentar parsear JSON embutido
-    } else if (block?.type === "text" && block?.text) {
-      try {
-        const txt = block.text;
-        const s = txt.indexOf("{"), e = txt.lastIndexOf("}");
-        if (s === -1 || e === -1) throw new Error("no json");
-        const parsed = JSON.parse(txt.slice(s, e+1));
-        if (!parsed.treinos) throw new Error("invalid");
-        let grupos = parsed.treinos.map(t => ({
-          nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
-          exercicios: (t.exercicios || []).map(ex => ({
-            nome: ex.nome,
-            series: ex.fases ? ex.fases[0].series : (ex.series || 3),
-            reps: ex.fases ? ex.fases[0].reps : (ex.reps || "8-12"),
-            fases: ex.fases || null
-          }))
-        }));
-        applyAIWorkout({ treino: { grupos } });
-      } catch(parseErr) {
-        alert("Resposta da IA inválida: " + block.text.substring(0, 200));
-      }
-    } else {
-      alert("Erro: " + JSON.stringify(data).substring(0, 200));
-    }
-  } catch(e) {
-    if (document.getElementById("gerandoLoad")) document.body.removeChild(loadDiv);
-    alert("Erro de conexão: " + e.message);
+  // Mapa de divisão → grupos musculares
+  const DIVISOES = {
+    "2": [
+      { nome: "A - Full Body Força",    grupos: ["peito","costas","pernas","ombros"] },
+      { nome: "B - Full Body Volume",   grupos: ["pernas","biceps","triceps","gluteos","abdomen"] },
+    ],
+    "3": [
+      { nome: "A - Push (Peito/Ombro/Tríceps)", grupos: ["peito","ombros","triceps"] },
+      { nome: "B - Pull (Costas/Bíceps)",        grupos: ["costas","biceps"] },
+      { nome: "C - Legs (Pernas/Glúteos)",       grupos: ["pernas","gluteos","panturrilha"] },
+    ],
+    "4": [
+      { nome: "A - Upper Força",       grupos: ["peito","costas"] },
+      { nome: "B - Lower Força",       grupos: ["pernas","gluteos","panturrilha"] },
+      { nome: "C - Upper Volume",      grupos: ["ombros","biceps","triceps"] },
+      { nome: "D - Lower Posterior",   grupos: ["pernas","gluteos","abdomen"] },
+    ],
+    "5": [
+      { nome: "A - Peito",    grupos: ["peito","triceps"] },
+      { nome: "B - Costas",   grupos: ["costas","biceps"] },
+      { nome: "C - Pernas",   grupos: ["pernas","gluteos","panturrilha"] },
+      { nome: "D - Ombros",   grupos: ["ombros","abdomen"] },
+      { nome: "E - Braços",   grupos: ["biceps","triceps","panturrilha"] },
+    ],
+    "6": [
+      { nome: "A - Push 1",  grupos: ["peito","ombros","triceps"] },
+      { nome: "B - Pull 1",  grupos: ["costas","biceps"] },
+      { nome: "C - Legs 1",  grupos: ["pernas","panturrilha"] },
+      { nome: "D - Push 2",  grupos: ["peito","ombros"] },
+      { nome: "E - Pull 2",  grupos: ["costas","biceps","abdomen"] },
+      { nome: "F - Legs 2",  grupos: ["pernas","gluteos","panturrilha"] },
+    ],
+  };
+
+  const objKey = cfg.obj.includes("força") ? "forca"
+               : cfg.obj.includes("defin") ? "definicao"
+               : cfg.obj.includes("resist") ? "resistencia"
+               : "hipertrofia";
+  const objCfg = CONFIG_OBJ[objKey];
+  const faseIdx = parseInt(cfg.fase || "1") - 1; // 0=MEV,1=MAV,2=MRV
+  const faseCfgs = [objCfg.mev, objCfg.mav, objCfg.mrv];
+  const [seriesAtual, repsAtual] = faseCfgs[faseIdx] || faseCfgs[1];
+  const faseNome = ["Semana 1-4 · MEV","Semana 5-8 · MAV","Semana 9-12 · MRV"][faseIdx];
+
+  const divisao = DIVISOES[String(cfg.freq)] || DIVISOES["3"];
+
+  // Filtrar por equipamento
+  const semEquip = cfg.equip === "casa";
+  const soHalteres = cfg.equip === "halteres";
+  let exBloqueados = [];
+  if (semEquip) exBloqueados.push("Barra Fixa Pronada","Leg Press 45°","Cadeira Extensora","Mesa Flexora","Remada Baixa Cabo","Puxada Alta","Crossover Cabo","Elevação Lateral Cabo","Hip Thrust com Barra","Remada Curvada com Barra","Tríceps Pulley Corda","Agachamento Livre","Stiff");
+  if (soHalteres) exBloqueados.push("Leg Press 45°","Cadeira Extensora","Mesa Flexora","Remada Baixa Cabo","Puxada Alta","Crossover Cabo","Elevação Lateral Cabo","Hip Thrust com Barra","Tríceps Pulley Corda");
+
+  // Idoso (55+): bloquear exercícios de alto impacto articular
+  if (ehIdoso) {
+    exBloqueados.push("Agachamento Livre","Stiff","Remada Curvada com Barra","Mergulho em Paralelas","Barra Fixa Pronada","Extensão Overhead","Rosca Spider");
   }
+
+  // Iniciante: sem exercícios muito técnicos
+  if (ehIniciante) {
+    exBloqueados.push("Agachamento Búlgaro","Extensão Overhead","Rosca Spider","Dead Bug","Russian Twist");
+  }
+
+  // Filtrar por restrições/lesões
+  const restric = (cfg.restric || []).map(r => r.toLowerCase());
+  const temJoelho   = restric.some(r => r.includes("joelho") || r.includes("patelá") || r.includes("menisco"));
+  const temColuna   = restric.some(r => r.includes("coluna") || r.includes("lombar") || r.includes("hérnia") || r.includes("disco"));
+  const temCervical = restric.some(r => r.includes("cervical") || r.includes("pescoço") || r.includes("ombro"));
+  const temCotovelo = restric.some(r => r.includes("cotovelo") || r.includes("epicôndilo"));
+  const temQuadril  = restric.some(r => r.includes("quadril") || r.includes("coxofemoral"));
+
+  if (temJoelho)   exBloqueados.push("Agachamento Livre","Agachamento Profundo","Agachamento Búlgaro","Leg Press 45°","Cadeira Extensora","Passada");
+  if (temColuna)   exBloqueados.push("Stiff","Remada Curvada com Barra","Agachamento Livre","Hip Thrust com Barra");
+  if (temCervical) exBloqueados.push("Desenvolvimento com Halteres","Encolhimento","Elevação Frontal");
+  if (temCotovelo) exBloqueados.push("Tríceps Testa","Rosca Direta Barra","Rosca Spider");
+  if (temQuadril)  exBloqueados.push("Passada","Agachamento Búlgaro","Hip Thrust com Barra","Agachamento Livre");
+
+  exBloqueados = [...new Set(exBloqueados)];
+
+  const grupos = divisao.map(dia => {
+    // Pegar 2 exercícios por grupo muscular do dia
+    const exsDia = [];
+    dia.grupos.forEach(grupo => {
+      const lista = (EX_CIENTIFICOS[grupo] || []).filter(e => !exBloqueados.includes(e));
+      exsDia.push(...lista.slice(0, 2));
+    });
+    // Limitar a 5-6 exercícios por dia
+    const exsFinal = exsDia.slice(0, 6);
+
+    return {
+      nome: dia.nome,
+      exercicios: exsFinal.map(nomeEx => ({
+        nome: nomeEx,
+        series: seriesAtual,
+        reps: repsAtual,
+        fases: [
+          { fase: "Sem 1-4", label: "MEV", series: objCfg.mev[0], reps: objCfg.mev[1] },
+          { fase: "Sem 5-8", label: "MAV", series: objCfg.mav[0], reps: objCfg.mav[1] },
+          { fase: "Sem 9-12", label: "MRV", series: objCfg.mrv[0], reps: objCfg.mrv[1] },
+        ]
+      }))
+    };
+  });
+
+  applyAIWorkout({ treino: { grupos } });
+  const nivelLabel = {"iniciante":"🌱 Iniciante","intermediario":"💪 Intermediário","avancado":"🔥 Avançado"}[nivel] || nivel;
+  const msg = ehIdoso
+    ? `✅ Treino adaptado para 55+!\nExercícios seguros para suas articulações.`
+    : `✅ Treino gerado!\nNível: ${nivelLabel} · ${faseNome}`;
+  dlgAlert(msg);
 }
 
 function openConfig() {
@@ -3806,6 +4170,8 @@ ENCAMINHAMENTO PROFISSIONAL:
 }
 
 function navTo(tab) {
+  const th = document.getElementById("treinoHeader");
+  if (th) th.style.display = tab === "treino" ? "flex" : "none";
   document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('nav-' + tab);
   if (el) el.classList.add('active');
@@ -4162,6 +4528,9 @@ function checkRPEAlert(input) {
     const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
     msg = `💡 Próxima série: ${suggest}kg`;
     type = "info";
+  } else if (rpe >= 7 && rpe <= 8) {
+    msg = `✅ RPE ideal — Mantenha ${kg}kg`;
+    type = "ideal";
   }
   if (msg) {
     const alert = document.createElement("div");
@@ -4181,6 +4550,20 @@ if ("serviceWorker" in navigator) {
    INICIALIZAÇÃO — CORRIGIDA
    (removido openConfig() automático no load)
 ═══════════════════════════════════════════════════ */
+window.onerror = function(msg, src, line, col, err) {
+  // Mostrar erro real no console e num toast
+  console.error("ERRO JS:", msg, "linha:", line, "col:", col);
+  if (typeof showToast === "function") showToast("Erro: " + msg + " (L" + line + ")", "error", 6000);
+  return false;
+};
+
+window.onerror = function(msg, src, line, col, err) {
+  if (msg === "Script error." || !line) return true; // erro de script externo — ignorar
+  console.error("TITAN ERR:", msg, "L"+line);
+  if (typeof showToast === "function") showToast("Erro: " + msg + " L" + line, "error", 8000);
+  return false;
+};
+
 window.onload = () => {
   // Data
   try { document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR"); } catch {}
@@ -4235,6 +4618,9 @@ window.onload = () => {
 // TELA DE INÍCIO
 // ══════════════════════════════════════════
 function openHome() {
+  const perfil = safeJSON("titanpro_config", {});
+  const banner = document.getElementById("homeBannerSetup");
+  if (banner) banner.style.display = (!perfil.nome && !perfil.peso) ? "block" : "none";
   updateHomeScreen();
   document.getElementById("homeScreen").classList.add("show");
 }
@@ -4576,7 +4962,608 @@ function calcularBasal() {
 
 
 
+
+// ══════════════════════════════════════════
+// GUIA DE EXERCÍCIO — bonequinho animado
+// ══════════════════════════════════════════
+const GUIA_DB = {
+  // tipo → { muscles, steps, type }
+  "Supino Reto com Barra":        { m:"Peito · Tríceps · Ombros",    t:"bench",   steps:["Deite no banco, pés firmes no chão","Segure a barra na largura dos ombros","Desça até tocar levemente o peito","Empurre até os braços estendidos"] },
+  "Supino Inclinado 30°":         { m:"Peito Superior · Tríceps",    t:"bench",   steps:["Banco inclinado a 30°, pés no chão","Barra acima do peito superior","Desça controlado até o peito","Empurre e esprema o peito no topo"] },
+  "Supino com Halteres":          { m:"Peito · Tríceps · Estabilizadores", t:"bench", steps:["Halteres à altura do peito","Cotovelos levemente dobrados","Desça abrindo os braços","Junte e aperte o peito no topo"] },
+  "Crucifixo com Halteres":       { m:"Peito · Ombros Anteriores",   t:"fly",     steps:["Deite, halteres sobre o peito","Braços levemente dobrados","Abra em arco até sentir o peito","Feche contraindo o peito"] },
+  "Crossover Cabo":               { m:"Peito · Ombros",              t:"fly",     steps:["Fique entre os cabos altos","Pegue os cabos, passo à frente","Puxe cruzando pela frente","Junte as mãos na frente do corpo"] },
+  "Barra Fixa Pronada":           { m:"Costas · Bíceps",             t:"pulldown",steps:["Pegada pronada, mãos afastadas","Braços esticados, corpo pendurado","Puxe o queixo acima da barra","Desça de forma controlada"] },
+  "Remada Curvada com Barra":     { m:"Costas · Bíceps · Core",      t:"row",     steps:["Incline o tronco ~45°","Costas retas, joelhos leves","Puxe a barra até o umbigo","Junte as escápulas no topo"] },
+  "Puxada Alta":                  { m:"Costas · Bíceps",             t:"pulldown",steps:["Segure a barra larga e pronada","Incline levemente o tronco","Puxe até a clavícula","Controle a subida devagar"] },
+  "Remada Unilateral":            { m:"Costas · Bíceps",             t:"row",     steps:["Joelho e mão no banco","Costas paralelas ao chão","Puxe o halter até o quadril","Desça com controle total"] },
+  "Remada Baixa Cabo":            { m:"Costas Média · Bíceps",       t:"row",     steps:["Sente, pés na plataforma","Segure o triângulo de cabo","Puxe até o umbigo","Deite as escápulas no topo"] },
+  "Agachamento Livre":            { m:"Quadríceps · Glúteos · Core", t:"squat",   steps:["Pés na largura dos ombros","Peito ereto, olhar à frente","Sente até 90° ou abaixo","Empurre o chão e suba"] },
+  "Leg Press 45°":                { m:"Quadríceps · Glúteos",        t:"squat",   steps:["Costas apoiadas no encosto","Pés na plataforma, largura média","Desça controlado até 90°","Empurre sem travar os joelhos"] },
+  "Cadeira Extensora":            { m:"Quadríceps",                  t:"extension",steps:["Sentado, ajuste o apoio no tornozelo","Mãos nas alças laterais","Estenda as pernas completamente","Desça controlado sem bater"] },
+  "Mesa Flexora":                 { m:"Posterior da Coxa",           t:"curl_leg",steps:["Deite de barriga para baixo","Apoio no tornozelo","Puxe o calcanhar até o glúteo","Desça com controle total"] },
+  "Stiff":                        { m:"Posterior · Glúteos · Lombar",t:"hinge",   steps:["Pés na largura do quadril","Empurre o quadril para trás","Halteres descem retos pelo corpo","Contraia glúteos ao subir"] },
+  "Agachamento Búlgaro":          { m:"Glúteos · Quadríceps",        t:"squat",   steps:["Pé traseiro elevado no banco","Pé da frente à frente","Desça o joelho traseiro ao chão","Empurre com a perna da frente"] },
+  "Desenvolvimento com Halteres": { m:"Ombros · Tríceps",            t:"overhead",steps:["Sentado, halteres nos ombros","Palmas para frente","Empurre para cima até quase tocar","Desça controlado até o início"] },
+  "Elevação Lateral Cabo":        { m:"Deltóide Lateral",            t:"lateral", steps:["Fique ao lado do cabo baixo","Pegue com a mão oposta","Eleve o braço até a altura do ombro","Desça controlado sem balançar"] },
+  "Elevação Frontal":             { m:"Deltóide Anterior",           t:"lateral", steps:["Fique em pé, halteres na frente","Braços levemente dobrados","Eleve até a altura do ombro","Desça com controle total"] },
+  "Crucifixo Inverso":            { m:"Deltóide Posterior · Trapézio",t:"row",    steps:["Incline o tronco para frente","Halteres pendurados","Eleve os cotovelos para os lados","Esprema as escápulas no topo"] },
+  "Encolhimento":                 { m:"Trapézio",                    t:"shrug",   steps:["Fique em pé com halteres","Braços ao longo do corpo","Eleve os ombros ao máximo","Segure 1s e desça devagar"] },
+  "Rosca Direta Barra":           { m:"Bíceps · Antebraço",          t:"curl",    steps:["Em pé, cotovelos fixos ao corpo","Palmas para cima, barra na frente","Suba contraindo o bíceps","Desça lentamente sem soltar"] },
+  "Rosca Inclinada Haltere":      { m:"Bíceps Cabeça Longa",         t:"curl",    steps:["Banco inclinado ~45°","Halteres pendurados atrás","Suba girando o pulso (supinação)","Desça lentamente o braço"] },
+  "Rosca Concentrada":            { m:"Pico do Bíceps",              t:"curl",    steps:["Sentado, cotovelo no joelho","Halter na mão livre","Suba até a contração máxima","Desça com total controle"] },
+  "Rosca Martelo":                { m:"Bíceps · Braquial · Antebraço",t:"curl",   steps:["Em pé, palmas uma para a outra","Cotovelos fixos ao corpo","Suba sem girar o pulso","Desça controlado"] },
+  "Rosca Spider":                 { m:"Bíceps",                      t:"curl",    steps:["Banco inclinado, peito apoiado","Braços pendurados para baixo","Suba até contração máxima","Desça devagar sem balançar"] },
+  "Tríceps Testa":                { m:"Tríceps Cabeças Longa e Lateral",t:"tricep",steps:["Deite, barra acima do peito","Cotovelos apontando para cima","Desça a barra até a testa","Estenda sem mover os cotovelos"] },
+  "Tríceps Pulley Corda":         { m:"Tríceps",                     t:"tricep",  steps:["Fique de frente ao cabo alto","Cotovelos fixos ao lado do corpo","Empurre a corda para baixo","Abra as mãos no final e aperte"] },
+  "Mergulho em Paralelas":        { m:"Tríceps · Peito · Ombros",    t:"dip",     steps:["Apoie nas paralelas, braços estendidos","Incline levemente o tronco","Desça até o ângulo de 90°","Empurre até estender os braços"] },
+  "Extensão Overhead":            { m:"Tríceps Cabeça Longa",        t:"tricep",  steps:["Em pé, halter atrás da cabeça","Cotovelos apontando para cima","Desça o halter atrás da cabeça","Estenda os braços completamente"] },
+  "Tríceps Coice":                { m:"Tríceps",                     t:"tricep",  steps:["Incline o tronco ~45°","Cotovelo dobrado, junto ao corpo","Estenda o braço para trás","Contraia o tríceps no final"] },
+  "Hip Thrust com Barra":         { m:"Glúteos · Posterior",         t:"hip",     steps:["Costas no banco, barra no quadril","Pés no chão, joelhos dobrados","Empurre o quadril para cima","Contraia no topo e desça"] },
+  "Agachamento Profundo":         { m:"Glúteos · Quadríceps",        t:"squat",   steps:["Pés mais afastados que o ombro","Pontas dos pés levemente abertas","Desça o máximo possível","Empurre subindo com os glúteos"] },
+  "Elevação Pélvica":             { m:"Glúteos",                     t:"hip",     steps:["Deite, pés no chão","Braços ao lado do corpo","Eleve o quadril contraindo glúteos","Segure 1s no topo e desça"] },
+  "Passada":                      { m:"Glúteos · Quadríceps",        t:"lunge",   steps:["Em pé, passo à frente","Costas retas, mãos no quadril","Desça até o joelho quase tocar o chão","Suba e troque a perna"] },
+  "Abdução com Cabo":             { m:"Glúteos Médio · TFL",         t:"abduct",  steps:["Fique de lado ao cabo baixo","Perna de fora presa ao cabo","Eleve a perna lateralmente","Desça controlado sem compensar"] },
+  "Panturrilha em Pé":            { m:"Gastrocnêmio",                t:"calf",    steps:["Em pé na borda do step","Calcanhares para baixo","Suba na ponta dos pés","Desça sentindo o alongamento"] },
+  "Panturrilha Sentado":          { m:"Sóleo · Panturrilha",         t:"calf",    steps:["Sentado, pés no step","Joelhos dobrados 90°","Suba na ponta dos pés","Desça controlado até o fim"] },
+  "Leg Press Panturrilha":        { m:"Gastrocnêmio · Sóleo",        t:"calf",    steps:["No leg press, pés na borda","Pernas quase estendidas","Empurre com a ponta dos pés","Retorne sem travar os joelhos"] },
+  "Prancha":                      { m:"Core · Abdômen · Lombar",     t:"plank",   steps:["Antebraços no chão","Corpo reto da cabeça ao calcanhar","Contraia o abdômen e glúteos","Respire e segure o tempo"] },
+  "Abdominal Roda":               { m:"Abdômen Completo · Core",     t:"rollout", steps:["De joelhos, mãos na roda","Role para frente com as costas retas","Vá até onde conseguir sem arquear","Contraia o core para voltar"] },
+  "Elevação de Pernas":           { m:"Abdômen Inferior",            t:"legrise", steps:["Deite, mãos embaixo do quadril","Pernas juntas e estendidas","Suba até 90° com controle","Desça sem tocar o chão"] },
+  "Russian Twist":                { m:"Oblíquos · Core",             t:"twist",   steps:["Sentado, tronco inclinado 45°","Pés levantados do chão","Gire o tronco para cada lado","Mantenha o core contraído sempre"] },
+  "Dead Bug":                     { m:"Core · Estabilização",        t:"plank",   steps:["Deite de costas","Braços para cima, joelhos dobrados 90°","Estenda braço e perna opostos","Volte e repita para o outro lado"] },
+};
+
+// Mapa de tipo → configuração SVG
+const GUIA_TYPES = {
+  bench:     { label:"Empurrar Deitado",   color:"#f97316" },
+  fly:       { label:"Abrir/Fechar Peito", color:"#f97316" },
+  pulldown:  { label:"Puxar p/ Baixo",     color:"#22c55e" },
+  row:       { label:"Puxar Horizontal",   color:"#22c55e" },
+  squat:     { label:"Agachamento",        color:"#3b82f6" },
+  hinge:     { label:"Dobradiça",          color:"#3b82f6" },
+  curl:      { label:"Rosca de Braço",     color:"#a855f7" },
+  curl_leg:  { label:"Flexão de Perna",    color:"#a855f7" },
+  tricep:    { label:"Extensão de Tríceps",color:"#f97316" },
+  overhead:  { label:"Empurrar p/ Cima",   color:"#f97316" },
+  lateral:   { label:"Elevação Lateral",   color:"#f97316" },
+  hip:       { label:"Empurrar Quadril",   color:"#3b82f6" },
+  lunge:     { label:"Passada",            color:"#3b82f6" },
+  dip:       { label:"Mergulho",           color:"#f97316" },
+  shrug:     { label:"Encolhimento",       color:"#f97316" },
+  calf:      { label:"Panturrilha",        color:"#3b82f6" },
+  plank:     { label:"Isometria Core",     color:"#22c55e" },
+  rollout:   { label:"Extensão Core",      color:"#22c55e" },
+  legrise:   { label:"Elevação de Pernas", color:"#22c55e" },
+  twist:     { label:"Rotação",            color:"#22c55e" },
+  extension: { label:"Extensão",           color:"#a855f7" },
+  abduct:    { label:"Abdução",            color:"#3b82f6" },
+};
+
+// Busca curada por exercício → query específica pro YouTube
+const GUIA_YT_QUERY = {
+  "Supino Reto com Barra":        "como fazer supino reto execução correta musculação",
+  "Supino Inclinado 30°":         "supino inclinado 30 graus execução correta musculação",
+  "Supino com Halteres":          "supino halteres execução correta musculação",
+  "Crucifixo com Halteres":       "crucifixo halteres execução correta peito",
+  "Crossover Cabo":               "crossover cabo voador execução correta peito",
+  "Barra Fixa Pronada":           "barra fixa pronada execução correta costas",
+  "Remada Curvada com Barra":     "remada curvada barra execução correta costas",
+  "Puxada Alta":                  "puxada alta execução correta costas latissimo",
+  "Remada Unilateral":            "remada unilateral halter execução correta costas",
+  "Remada Baixa Cabo":            "remada baixa cabo execução correta costas",
+  "Agachamento Livre":            "agachamento livre execução correta joelhos quadriceps",
+  "Leg Press 45°":                "leg press 45 graus execução correta quadriceps",
+  "Cadeira Extensora":            "cadeira extensora execução correta quadriceps",
+  "Mesa Flexora":                 "mesa flexora execução correta posterior coxa",
+  "Stiff":                        "stiff halter execução correta posterior glúteo",
+  "Agachamento Búlgaro":          "agachamento bulgaro execução correta glúteo quadriceps",
+  "Desenvolvimento com Halteres": "desenvolvimento halteres ombro execução correta",
+  "Elevação Lateral Cabo":        "elevação lateral cabo ombro execução correta",
+  "Elevação Frontal":             "elevação frontal halter ombro execução correta",
+  "Crucifixo Inverso":            "crucifixo inverso deltóide posterior execução",
+  "Encolhimento":                 "encolhimento trapézio execução correta musculação",
+  "Rosca Direta Barra":           "rosca direta barra execução correta bíceps",
+  "Rosca Inclinada Haltere":      "rosca inclinada halter bíceps execução correta",
+  "Rosca Concentrada":            "rosca concentrada bíceps execução correta",
+  "Rosca Martelo":                "rosca martelo halter execução correta bíceps",
+  "Rosca Spider":                 "rosca spider bíceps execução correta musculação",
+  "Tríceps Testa":                "tríceps testa barra execução correta musculação",
+  "Tríceps Pulley Corda":         "tríceps pulley corda execução correta musculação",
+  "Mergulho em Paralelas":        "mergulho paralelas tríceps execução correta",
+  "Extensão Overhead":            "extensão tríceps overhead halter execução",
+  "Tríceps Coice":                "tríceps coice halter execução correta musculação",
+  "Hip Thrust com Barra":         "hip thrust barra execução correta glúteo",
+  "Agachamento Profundo":         "agachamento profundo glúteo execução correta",
+  "Elevação Pélvica":             "elevação pélvica glúteo exercício execução",
+  "Passada":                      "passada lunge glúteo quadriceps execução correta",
+  "Abdução com Cabo":             "abdução cabo glúteo médio execução correta",
+  "Panturrilha em Pé":            "panturrilha em pé execução correta musculação",
+  "Panturrilha Sentado":          "panturrilha sentado sóleo execução correta",
+  "Leg Press Panturrilha":        "leg press panturrilha execução correta",
+  "Prancha":                      "prancha abdominal execução correta core",
+  "Abdominal Roda":               "abdominal roda execução correta core",
+  "Elevação de Pernas":           "elevação pernas abdominal inferior execução",
+  "Russian Twist":                "russian twist oblíquos execução correta",
+  "Dead Bug":                     "dead bug core estabilização execução correta",
+};
+
+let _guiaExNome = "";
+
+function switchGuiaTab(tab) {
+  document.querySelectorAll(".guia-tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".guia-panel").forEach(p => p.classList.remove("active"));
+  if (tab === "movimento") {
+    document.getElementById("guiaTabMovimento").classList.add("active");
+    document.getElementById("guiaPanelMovimento").classList.add("active");
+    if (_guiaPlaying) _startGuiaAnim();
+  } else {
+    document.getElementById("guiaTabVideo").classList.add("active");
+    document.getElementById("guiaPanelVideo").classList.add("active");
+    _stopGuiaAnim();
+  }
+}
+
+function abrirYouTube() {
+  const query = GUIA_YT_QUERY[_guiaExNome] || ("como fazer " + _guiaExNome + " execução correta musculação");
+  const url = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
+  window.open(url, "_blank");
+}
+
+// Busca curada por exercício → query específica pro YouTube
+let _guiaAnim = null;
+let _guiaPhase = 0;
+let _guiaDir = 1;
+let _guiaPlaying = true;
+let _guiaCurType = "bench";
+let _guiaStepIdx = 0;
+let _guiaStepTimer = null;
+
+function abrirGuia(nome) {
+  const db = GUIA_DB[nome];
+  const tipo = db ? db.t : "bench";
+  const muscles = db ? db.m : "Músculos principais";
+  const steps = db ? db.steps : ["Execute o movimento com controle"];
+
+  _guiaCurType = tipo;
+  _guiaPhase = 0;
+  _guiaDir = 1;
+  _guiaPlaying = true;
+  _guiaStepIdx = 0;
+  _guiaExNome = nome;
+
+  // Resetar para aba Movimento
+  switchGuiaTab("movimento");
+
+  document.getElementById("guiaNome").textContent = nome;
+  document.getElementById("guiaMusculos").textContent = muscles;
+
+  _renderGuiaStep(steps);
+  _startGuiaAnim();
+  _startGuiaSteps(steps);
+  _updatePlayBtn();
+
+  document.getElementById("guiaModal").classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+
+function fecharGuia() {
+  document.getElementById("guiaModal").classList.remove("show");
+  document.body.style.overflow = "";
+  _stopGuiaAnim();
+  _stopGuiaSteps();
+}
+
+function toggleGuiaAnim() {
+  _guiaPlaying = !_guiaPlaying;
+  if (_guiaPlaying) _startGuiaAnim(); else _stopGuiaAnim();
+  _updatePlayBtn();
+}
+
+function _updatePlayBtn() {
+  const icon = document.getElementById("guiaPlayIcon");
+  const txt  = document.getElementById("guiaPlayTxt");
+  if (_guiaPlaying) {
+    icon.innerHTML = '<rect x="1" y="1" width="3" height="8" rx="1"/><rect x="6" y="1" width="3" height="8" rx="1"/>';
+    txt.textContent = "Pausar";
+  } else {
+    icon.innerHTML = '<polygon points="1 1 9 5 1 9"/>';
+    txt.textContent = "Animar";
+  }
+}
+
+function _startGuiaAnim() {
+  _stopGuiaAnim();
+  _guiaAnim = setInterval(() => {
+    _guiaPhase += 0.022 * _guiaDir;
+    if (_guiaPhase >= 1) { _guiaPhase = 1; _guiaDir = -1; }
+    if (_guiaPhase <= 0) { _guiaPhase = 0; _guiaDir = 1; }
+    _drawGuia(_guiaCurType, _guiaPhase);
+  }, 16);
+}
+
+function _stopGuiaAnim() {
+  if (_guiaAnim) { clearInterval(_guiaAnim); _guiaAnim = null; }
+}
+
+function _startGuiaSteps(steps) {
+  _stopGuiaSteps();
+  function next() {
+    _guiaStepIdx = (_guiaStepIdx + 1) % steps.length;
+    _renderGuiaStep(steps);
+    _guiaStepTimer = setTimeout(next, 2200);
+  }
+  _guiaStepTimer = setTimeout(next, 2200);
+}
+
+function _stopGuiaSteps() {
+  if (_guiaStepTimer) { clearTimeout(_guiaStepTimer); _guiaStepTimer = null; }
+}
+
+function _renderGuiaStep(steps) {
+  const container = document.getElementById("guiaSteps");
+  container.innerHTML = steps.map((s, i) => `
+    <div class="guia-step ${i===_guiaStepIdx?'active':''}" onclick="_guiaStepIdx=${i};_renderGuiaStep(${JSON.stringify(steps).replace(/"/g,"'")})">
+      <div class="guia-step-num">${i+1}</div>
+      <div class="guia-step-txt">${s}</div>
+    </div>`).join("");
+}
+
+// ── DESENHO SVG ──────────────────────────────────────────────────────
+function _drawGuia(tipo, t) {
+  const svg = document.getElementById("guiaSVG");
+  if (!svg) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const acc = "#f97316";
+  const dim = "rgba(255,255,255,0.08)";
+  const L = (a, b) => a + (b-a)*t;
+
+  function el(tag, attrs) {
+    const e = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k, v));
+    return e;
+  }
+  function line(x1,y1,x2,y2,c=acc,w=2.5) {
+    return el("line",{x1,y1,x2,y2,stroke:c,"stroke-width":w,"stroke-linecap":"round"});
+  }
+  function circle(cx,cy,r,fill=`rgba(249,115,22,0.2)`,stroke=acc) {
+    return el("ellipse",{cx,cy,rx:r,ry:r,fill,stroke,"stroke-width":1.8});
+  }
+  function head(cx,cy) {
+    const h = el("ellipse",{cx,cy,rx:9,ry:9,fill:"rgba(249,115,22,0.12)",stroke:acc,"stroke-width":2.5});
+    return h;
+  }
+  function rect(x,y,w,h,rx=3,stroke=dim) {
+    return el("rect",{x,y,width:w,height:h,rx,fill:"none",stroke,"stroke-width":2});
+  }
+  function ground(y=94) { return line(15,y,85,y,dim,2); }
+
+  svg.innerHTML = "";
+
+  const draws = {
+    bench: () => {
+      const armY = L(52,36,t);
+      svg.append(
+        rect(8,62,84,6,3), // banco
+        head(50,44),
+        line(50,53,50,68), line(50,68,35,80), line(50,68,65,80),
+        line(20,armY,80,armY,acc,3),
+        line(50,armY+5,20,armY), line(50,armY+5,80,armY),
+        circle(20,armY,4), circle(80,armY,4)
+      );
+    },
+    fly: () => {
+      const spread = L(18,38,t);
+      svg.append(
+        rect(8,62,84,6,3),
+        head(50,44),
+        line(50,53,50,68), line(50,68,35,80), line(50,68,65,80),
+        line(50,52,50-spread,62), line(50,52,50+spread,62),
+        circle(50-spread,62,4), circle(50+spread,62,4)
+      );
+    },
+    pulldown: () => {
+      const armY = L(28,45,t);
+      const sp = L(32,18,t);
+      svg.append(
+        line(5,8,95,8,"rgba(249,115,22,0.35)",2),
+        head(50,42),
+        line(50,51,50,70), line(50,70,37,94), line(50,70,63,94),
+        line(50,50,50-sp,armY+5), line(50-sp,armY+5,50-sp+5,armY-6),
+        line(50,50,50+sp,armY+5), line(50+sp,armY+5,50+sp-5,armY-6),
+        circle(50-sp+5,armY-6,3), circle(50+sp-5,armY-6,3),
+        ground()
+      );
+    },
+    row: () => {
+      const armX = L(34,48,t);
+      svg.append(
+        head(28,36),
+        line(28,45,28,70), line(28,52,armX,60), line(armX,60,armX+10,55),
+        line(28,70,14,94), line(28,70,42,94),
+        line(10,94,55,94,dim,2),
+        circle(armX+10,55,4),
+        el("line",{x1:78,y1:57,x2:armX+12,y2:57,stroke:acc,"stroke-width":1.5,"stroke-dasharray":"4,3"}),
+        circle(78,57,5,"rgba(249,115,22,0.15)")
+      );
+    },
+    squat: () => {
+      const hipY = L(52,70,t);
+      const kX   = L(6,16,t);
+      const kY   = L(68,80,t);
+      svg.append(
+        head(50,16),
+        line(50,25,50,hipY),
+        line(50,36,32,54), line(50,36,68,54),
+        line(50,hipY,50-kX,kY), line(50,hipY,50+kX,kY),
+        line(50-kX,kY,50-kX-2,95), line(50+kX,kY,50+kX+2,95),
+        ground()
+      );
+    },
+    hinge: () => {
+      const ang = L(-15,-55,t) * Math.PI/180;
+      const tx  = 50 + Math.sin(ang)*28;
+      const ty  = 54 + Math.cos(ang)*28;
+      svg.append(
+        head(tx,ty-10),
+        line(tx,ty,50,54),
+        line(50,54,38,94), line(50,54,62,94),
+        line(tx-8,ty-5,50-2,58), line(tx+8,ty-5,50+2,58),
+        circle(50-2,60,4), circle(50+2,60,4),
+        ground()
+      );
+    },
+    curl: () => {
+      const ang = L(0,-55,t) * Math.PI/180;
+      const fx1 = 30 + Math.sin(ang)*22, fy1 = 72 - Math.cos(ang)*22;
+      const fx2 = 70 - Math.sin(ang)*22, fy2 = 72 - Math.cos(ang)*22;
+      svg.append(
+        head(50,16),
+        line(50,25,50,65), line(50,65,35,92), line(50,65,65,92),
+        line(50,38,30,50), line(30,50,fx1,fy1),
+        line(50,38,70,50), line(70,50,fx2,fy2),
+        circle(fx1,fy1,4), circle(fx2,fy2,4),
+        ground()
+      );
+    },
+    tricep: () => {
+      const handY = L(50,76,t);
+      svg.append(
+        head(50,16),
+        line(50,25,50,65), line(50,65,35,92), line(50,65,65,92),
+        line(50,36,38,50), line(38,50,38,handY),
+        line(50,36,62,50), line(62,50,62,handY),
+        circle(38,handY+2,4), circle(62,handY+2,4),
+        line(30,10,70,10,"rgba(249,115,22,0.3)",1.5),
+        ground()
+      );
+    },
+    overhead: () => {
+      const armY = L(44,16,t);
+      svg.append(
+        head(50,26),
+        line(50,35,50,72), line(50,72,36,94), line(50,72,64,94),
+        line(50,46,30,armY+10), line(50,46,70,armY+10),
+        line(18,armY,82,armY,acc,3),
+        circle(18,armY,4), circle(82,armY,4),
+        ground()
+      );
+    },
+    lateral: () => {
+      const armH = L(58,40,t);
+      svg.append(
+        head(50,18),
+        line(50,27,50,66), line(50,66,36,92), line(50,66,64,92),
+        line(50,40,30,50), line(30,50,20,armH),
+        line(50,40,70,50),
+        circle(20,armH,4), circle(70,50,4),
+        ground()
+      );
+    },
+    hip: () => {
+      const hipY = L(72,54,t);
+      svg.append(
+        rect(5,66,24,8,3),
+        head(25,48),
+        line(25,57,42,hipY), line(42,hipY,62,hipY),
+        line(62,hipY,70,92), line(62,hipY,76,80), line(76,80,80,92),
+        line(25,60,18,66),
+        line(42,hipY-2,20,hipY-2,acc,3),
+        ground()
+      );
+    },
+    lunge: () => {
+      const fwd  = L(0,18,t);
+      const kneY = L(65,85,t);
+      svg.append(
+        head(50,16),
+        line(50,25,50,60),
+        line(50,36,35,52), line(50,36,65,52),
+        line(50,60,50-fwd,kneY), line(50-fwd,kneY,50-fwd-2,95),
+        line(50,60,50+fwd,kneY+5), line(50+fwd,kneY+5,50+fwd+5,95),
+        ground()
+      );
+    },
+    dip: () => {
+      const armY = L(44,58,t);
+      svg.append(
+        line(20,30,20,92,dim,3), line(80,30,80,92,dim,3),
+        head(50,16),
+        line(50,25,50,62), line(50,62,36,92), line(50,62,64,92),
+        line(50,38,20,armY), line(50,38,80,armY),
+        circle(20,armY,4), circle(80,armY,4),
+        ground()
+      );
+    },
+    shrug: () => {
+      const shY = L(36,28,t);
+      svg.append(
+        head(50,shY-10),
+        line(50,shY,50,68), line(50,68,36,92), line(50,68,64,92),
+        line(50,44,30,50), line(50,44,70,50),
+        circle(30,50,4), circle(70,50,4),
+        ground()
+      );
+    },
+    calf: () => {
+      const heelY = L(88,76,t);
+      svg.append(
+        rect(25,84,50,5,2),
+        head(50,20),
+        line(50,29,50,62), line(50,40,36,55), line(50,40,64,55),
+        line(50,62,38,80), line(50,62,62,80),
+        line(38,80,35,heelY), line(62,80,65,heelY),
+        ground(90)
+      );
+    },
+    plank: () => {
+      const cY = L(60,57,t);
+      svg.append(
+        head(22,cY-4),
+        line(22,cY+4,80,cY+4),
+        line(22,cY+4,14,82), line(22,cY+4,30,82),
+        line(80,cY+4,72,82), line(80,cY+4,88,82),
+        circle(22,82,3),
+        ground(84)
+      );
+    },
+    rollout: () => {
+      const extX = L(50,72,t);
+      const extY = L(50,72,t);
+      svg.append(
+        head(28,42),
+        line(28,51,28,70), line(28,51,extX,extY-10),
+        line(28,70,20,88), line(28,70,36,88),
+        circle(extX,extY,5,"rgba(249,115,22,0.15)"),
+        ground(90)
+      );
+    },
+    legrise: () => {
+      const legY = L(80,50,t);
+      const legX = L(80,50,t);
+      svg.append(
+        head(50,15),
+        line(50,24,50,52), line(50,36,36,50), line(50,36,64,50),
+        line(50,52,38,legY), line(50,52,62,legY),
+        circle(38,legY,3), circle(62,legY,3),
+        ground(88)
+      );
+    },
+    twist: () => {
+      const rotX = L(0,20,t) * (t > 0.5 ? -1 : 1);
+      svg.append(
+        head(50,18),
+        line(50,27,50,60), line(50,60,37,90), line(50,60,63,90),
+        line(50,38,30+rotX,50), line(50,38,70+rotX,50),
+        circle(30+rotX,50,4), circle(70+rotX,50,4),
+        ground()
+      );
+    },
+    extension: () => {
+      const legY = L(70,50,t);
+      svg.append(
+        rect(10,55,80,10,4),
+        head(50,30),
+        line(50,39,50,56),
+        line(50,56,36,60), line(50,56,64,60),
+        line(36,60,32,legY), line(64,60,68,legY),
+        circle(32,legY,3), circle(68,legY,3)
+      );
+    },
+    abduct: () => {
+      const legX = L(0,20,t);
+      svg.append(
+        head(50,18),
+        line(50,27,50,62), line(50,40,36,55), line(50,40,64,55),
+        line(50,62,38,90), line(50,62,62+legX,85),
+        circle(62+legX,85,3),
+        ground()
+      );
+    },
+    curl_leg: () => {
+      const legY = L(90,60,t);
+      svg.append(
+        rect(8,54,84,6,3),
+        head(50,28),
+        line(50,37,50,55),
+        line(50,45,35,55), line(50,45,65,55),
+        line(38,60,38,legY-5), line(62,60,62,legY-5),
+        circle(38,legY-5,4,"rgba(249,115,22,0.2)"),
+        circle(62,legY-5,4,"rgba(249,115,22,0.2)")
+      );
+    },
+  };
+
+  (draws[tipo] || draws.curl)();
+}
+
+
 </script>
+
+<!-- ══════════════════════════════════════════
+     GUIA DE EXERCÍCIO — bonequinho animado
+══════════════════════════════════════════ -->
+
+<div id="guiaModal" onclick="if(event.target===this)fecharGuia()">
+  <div class="guia-sheet">
+    <div class="guia-handle"></div>
+    <div class="guia-header">
+      <button class="guia-back" onclick="fecharGuia()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Fechar
+      </button>
+      <div style="flex:1"></div>
+      <div style="font-size:0.68rem;color:#525252;font-weight:600">GUIA DE MOVIMENTO</div>
+    </div>
+    <div class="guia-name" id="guiaNome">Supino Reto</div>
+    <div class="guia-muscles" id="guiaMusculos">Peito · Tríceps</div>
+    <!-- Abas -->
+    <div class="guia-tabs">
+      <button class="guia-tab-btn active" id="guiaTabMovimento" onclick="switchGuiaTab('movimento')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+        Movimento
+      </button>
+      <button class="guia-tab-btn" id="guiaTabVideo" onclick="switchGuiaTab('video')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        Vídeo Tutorial
+      </button>
+    </div>
+
+```
+<!-- Painel Movimento -->
+<div class="guia-panel active" id="guiaPanelMovimento">
+  <div class="guia-figure-wrap">
+    <svg class="guia-svg" id="guiaSVG" viewBox="0 0 100 110"></svg>
+    <button class="guia-play-btn" id="guiaPlayBtn" onclick="toggleGuiaAnim()">
+      <svg id="guiaPlayIcon" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="3" height="8" rx="1"/><rect x="6" y="1" width="3" height="8" rx="1"/></svg>
+      <span id="guiaPlayTxt">Pausar</span>
+    </button>
+  </div>
+  <div class="guia-steps">
+    <div class="guia-steps-title">Passo a passo</div>
+    <div id="guiaSteps"></div>
+  </div>
+</div>
+
+<!-- Painel Vídeo -->
+<div class="guia-panel" id="guiaPanelVideo">
+  <div class="guia-video-wrap">
+    <div class="guia-video-placeholder">
+      <svg width="56" height="40" viewBox="0 0 576 512" fill="#FF0000" opacity="0.9">
+        <path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/>
+      </svg>
+      <button class="guia-yt-btn" id="guiaYtBtn" onclick="abrirYouTube()">
+        <svg width="20" height="14" viewBox="0 0 576 512" fill="white"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/></svg>
+        Ver Tutorial no YouTube
+      </button>
+      <div class="guia-yt-tip">Abre o YouTube com o vídeo do exercício.<br>Funciona mesmo sem sair do celular.</div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</div>
 
 </body>
 </html>
