@@ -131,7 +131,7 @@ function callNvidia(system, messages, maxTokens, temp, callback) {
   var m = [];
   if (system) m.push({ role: `system`, content: system });
   messages.forEach(function(x) { m.push(x); });
-  var body = JSON.stringify({ model: `meta/llama-3.1-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: temp, stream: false });
+  var body = JSON.stringify({ model: `meta/llama-3.3-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: temp, stream: false });
   var o = { hostname: `integrate.api.nvidia.com`, path: `/v1/chat/completions`, method: `POST`, headers: { [`Content-Type`]: `application/json`, [`Authorization`]: `Bearer ` + KEY, [`Content-Length`]: Buffer.byteLength(body) } };
   var r = https.request(o, function(s) {
     var d = ``;
@@ -144,16 +144,28 @@ function callNvidia(system, messages, maxTokens, temp, callback) {
     });
   });
   r.on(`error`, function(e) { callback(e.message, null); });
+  r.setTimeout(25000, function() { r.destroy(new Error('timeout')); });
   r.write(body);
   r.end();
 }
 
 function parseWorkout(text) {
-  var clean = text.replace(/```json|```/g,``).trim();
-  var s = clean.indexOf(`{`), e = clean.lastIndexOf(`}`);
-  if (s===-1||e===-1) throw new Error(`no json`);
+  var clean = text.replace(/```json|```/g,'').trim();
+  var s = clean.indexOf('{'), e = clean.lastIndexOf('}');
+  if (s===-1||e===-1) throw new Error('no json');
   var p = JSON.parse(clean.slice(s,e+1));
-  if (!p.treinos||!p.treinos.length) throw new Error(`invalid`);
+  if (!p.treinos||!p.treinos.length) throw new Error('invalid');
+  // Normalizar exercicios — garantir series/reps mesmo com fases
+  p.treinos.forEach(function(t) {
+    (t.exercicios||[]).forEach(function(ex) {
+      if (ex.fases && ex.fases.length > 0) {
+        ex.series = ex.fases[0].series || 3;
+        ex.reps   = ex.fases[0].reps   || '8-12';
+      }
+      ex.series = ex.series || 3;
+      ex.reps   = ex.reps   || '8-12';
+    });
+  });
   return p;
 }
 
@@ -178,14 +190,14 @@ function extrairDoTexto(text) {
 }
 
 function gerarTreino(userMsg, callback) {
-  callNvidia(TREINO_SYSTEM, [userMsg], 1200, 0.1, function(err, text) {
+  callNvidia(TREINO_SYSTEM, [userMsg], 1500, 0.1, function(err, text) {
     try { return callback(null, parseWorkout(text||``)); } catch(e) {}
     try { return callback(null, extrairDoTexto(text||``)); } catch(e2) {}
     // segunda tentativa
-    callNvidia(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1200, 0.0, function(err2, text2) {
+    callNvidia(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, function(err2, text2) {
       try { return callback(null, parseWorkout(text2||``)); } catch(e3) {}
       try { return callback(null, extrairDoTexto(text2||``)); } catch(e4) {}
-      callback(`Não consegui gerar o treino. Tente novamente.`, null);
+      callback(`Erro ao gerar treino: ` + (err2||'resposta inválida da IA') + `. Tente novamente.`, null);
     });
   });
 }
