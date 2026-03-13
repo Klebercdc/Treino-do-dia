@@ -5194,27 +5194,12 @@ let _guiaStepTimer = null;
 
 function abrirGuia(nome) {
   const db = GUIA_DB[nome];
-  const tipo = db ? db.t : "bench";
   const muscles = db ? db.m : "Músculos principais";
-  const steps = db ? db.steps : ["Execute o movimento com controle"];
 
-  _guiaCurType = tipo;
-  _guiaPhase = 0;
-  _guiaDir = 1;
-  _guiaPlaying = true;
-  _guiaStepIdx = 0;
   _guiaExNome = nome;
-
-  // Resetar para aba Movimento
-  switchGuiaTab("movimento");
 
   document.getElementById("guiaNome").textContent = nome;
   document.getElementById("guiaMusculos").textContent = muscles;
-
-  _renderGuiaStep(steps);
-  _startGuiaAnim();
-  _startGuiaSteps(steps);
-  _updatePlayBtn();
 
   document.getElementById("guiaModal").classList.add("show");
   document.body.style.overflow = "hidden";
@@ -5590,36 +5575,8 @@ function _drawGuia(tipo, t) {
     </div>
     <div class="guia-name" id="guiaNome">Supino Reto</div>
     <div class="guia-muscles" id="guiaMusculos">Peito · Tríceps</div>
-    <!-- Abas -->
-    <div class="guia-tabs">
-      <button class="guia-tab-btn active" id="guiaTabMovimento" onclick="switchGuiaTab('movimento')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
-        Movimento
-      </button>
-      <button class="guia-tab-btn" id="guiaTabVideo" onclick="switchGuiaTab('video')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        Vídeo Tutorial
-      </button>
-    </div>
-
-```
-<!-- Painel Movimento -->
-<div class="guia-panel active" id="guiaPanelMovimento">
-  <div class="guia-figure-wrap">
-    <svg class="guia-svg" id="guiaSVG" viewBox="0 0 100 110"></svg>
-    <button class="guia-play-btn" id="guiaPlayBtn" onclick="toggleGuiaAnim()">
-      <svg id="guiaPlayIcon" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1" y="1" width="3" height="8" rx="1"/><rect x="6" y="1" width="3" height="8" rx="1"/></svg>
-      <span id="guiaPlayTxt">Pausar</span>
-    </button>
-  </div>
-  <div class="guia-steps">
-    <div class="guia-steps-title">Passo a passo</div>
-    <div id="guiaSteps"></div>
-  </div>
-</div>
-
 <!-- Painel Vídeo -->
-<div class="guia-panel" id="guiaPanelVideo">
+<div class="guia-panel active" id="guiaPanelVideo">
   <div class="guia-video-wrap">
     <div class="guia-video-placeholder">
       <svg width="56" height="40" viewBox="0 0 576 512" fill="#FF0000" opacity="0.9">
@@ -5633,7 +5590,6 @@ function _drawGuia(tipo, t) {
     </div>
   </div>
 </div>
-```
 
   </div>
 </div>
