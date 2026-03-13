@@ -4136,13 +4136,18 @@ function checkRPEAlert(input) {
   const rpe  = parseFloat(inputs[2]?.value);
   const kg   = parseFloat(inputs[0]?.value);
   const reps = parseFloat(inputs[1]?.value);
-  if (rpe >= 9 && kg > 0) {
-    const suggest = Math.round((kg * 0.95) * 2) / 2; // -5%, arredondado para 0.5
-    showToast(`🎯 RPE ${rpe} — Próxima série: tente ${suggest}kg`, "warning", 4000);
-  }
-  if (rpe <= 6 && kg > 0 && reps > 0) {
-    const suggest = Math.round((kg * 1.05) * 2) / 2; // +5%
-    showToast(`💡 RPE ${rpe} — Você tem espaço! Tente ${suggest}kg`, "info", 4000);
+  if (!kg || !rpe) return;
+  // Base científica: RPE alvo = 8 (2 RIR) para hipertrofia
+  // Ajuste: 2,5% por ponto de RPE (Zourdos et al. 2016; Helms et al. 2016; Tuchscherer RTS)
+  const TARGET_RPE = 8;
+  const ADJUST_PER_POINT = 0.025;
+  const diff = rpe - TARGET_RPE;
+  if (rpe >= 9) {
+    const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
+    showToast(`⚠️ RPE alto — Na próxima série use ${suggest}kg`, "warning", 4000);
+  } else if (rpe <= 6 && reps > 0) {
+    const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
+    showToast(`💡 RPE baixo — Você tem espaço! Tente ${suggest}kg`, "info", 4000);
   }
 }
 
