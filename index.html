@@ -537,7 +537,16 @@
       align-items: center; gap: 2px; user-select: none;
     }
     .setcell .slabel { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.85); }
-    .setcell .rmmini { font-family: var(--mono); font-size: 0.92rem; color: rgba(255,255,255,0.65); font-weight: 500; line-height: 1.2; }
+    .setcell .rmmini { display: none; }
+    .rpe-inline-alert {
+      grid-column: 1 / -1; margin: -2px 0 4px;
+      padding: 6px 10px; border-radius: 8px;
+      font-size: 0.72rem; font-weight: 600; font-family: var(--font);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .rpe-inline-alert.warning { background: rgba(249,115,22,0.15); color: var(--accent); border: 1px solid rgba(249,115,22,0.25); }
+    .rpe-inline-alert.info    { background: rgba(34,197,94,0.12);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
+    .rpe-inline-alert.ideal   { background: rgba(34,197,94,0.08);  color: var(--green);  border: 1px solid rgba(34,197,94,0.15); }
     .ghost::placeholder { color: rgba(249,115,22,0.3) !important; }
     .btn-confirm {
       width: 36px; height: 36px; border-radius: 10px;
@@ -4497,44 +4506,37 @@ function applyAIWorkout(data) {
 function checkRPEAlert(input) {
   const row  = input.closest(".series-grid");
   if (!row) return;
+  // Remove alerta anterior desta linha
+  const prev = row.nextElementSibling;
+  if (prev && prev.classList.contains("rpe-inline-alert")) prev.remove();
   const inputs = row.querySelectorAll("input");
   const rpe  = parseFloat(inputs[2]?.value);
   const kg   = parseFloat(inputs[0]?.value);
   const reps = parseFloat(inputs[1]?.value);
-
-  // Encontrar o div de sugestão inline desta série
-  const card = row.closest(".exercise-card");
-  const exId = card?.getAttribute("data-ex-id") || "";
-  const allRows = card ? Array.from(card.querySelectorAll(".series-grid")).filter(r=>r.querySelectorAll("input").length===3) : [];
-  const rowIdx = allRows.indexOf(row);
-  const sugEl = document.getElementById(`sug-${exId}-${rowIdx}`);
-
-  // Limpar sugestão anterior
-  if (sugEl) { sugEl.style.display = "none"; sugEl.className = "row-suggest"; }
-
-  if (rpe >= 9 && kg > 0) {
-    const suggest = Math.round((kg * 0.95) * 2) / 2;
-    showToast(`🎯 RPE ${rpe} — Próxima série: tente ${suggest}kg`, "warning", 4000);
-    if (sugEl) {
-      sugEl.textContent = `⚠️ RPE alto — Na próxima série use ${suggest}kg`;
-      sugEl.classList.add("down");
-      sugEl.style.display = "block";
-    }
-  } else if (rpe <= 6 && kg > 0 && reps > 0) {
-    const suggest = Math.round((kg * 1.05) * 2) / 2;
-    showToast(`💡 RPE ${rpe} — Você tem espaço! Tente ${suggest}kg`, "info", 4000);
-    if (sugEl) {
-      sugEl.textContent = `💡 Fácil demais — Próxima: tente ${suggest}kg`;
-      sugEl.classList.add("up");
-      sugEl.style.display = "block";
-    }
-  } else if (rpe >= 7 && rpe <= 8 && kg > 0) {
-    // RPE ideal — mostrar mensagem positiva discreta
-    if (sugEl) {
-      sugEl.textContent = `✅ RPE ideal — Mantenha ${kg}kg`;
-      sugEl.classList.add("up");
-      sugEl.style.cssText += ";background:rgba(34,197,94,0.08);border-left:3px solid #22c55e;color:#22c55e;display:block";
-    }
+  if (!kg || !rpe) return;
+  // Base científica: RPE alvo = 8 (2 RIR) para hipertrofia
+  // Ajuste: 2,5% por ponto de RPE (Zourdos et al. 2016; Helms et al. 2016; Tuchscherer RTS)
+  const TARGET_RPE = 8;
+  const ADJUST_PER_POINT = 0.025;
+  const diff = rpe - TARGET_RPE;
+  let msg = null, type = null;
+  if (rpe >= 9) {
+    const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
+    msg = `⚠️ Próxima série: ${suggest}kg`;
+    type = "warning";
+  } else if (rpe <= 6 && reps > 0) {
+    const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
+    msg = `💡 Próxima série: ${suggest}kg`;
+    type = "info";
+  } else if (rpe >= 7 && rpe <= 8) {
+    msg = `✅ RPE ideal — Mantenha ${kg}kg`;
+    type = "ideal";
+  }
+  if (msg) {
+    const alert = document.createElement("div");
+    alert.className = `rpe-inline-alert ${type}`;
+    alert.textContent = msg;
+    row.after(alert);
   }
 }
 
