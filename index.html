@@ -3598,8 +3598,11 @@ async function gerarTreinoDoPrograma() {
     const data = await resp.json();
     document.body.removeChild(loadDiv);
 
-    if (data.content?.[0]?.type === "workout_json") {
-      const treino = data.content[0].data;
+    const block = data.content?.[0];
+
+    // Formato direto: workout_json
+    if (block?.type === "workout_json") {
+      const treino = block.data;
       let grupos = (treino.treinos || []).map(t => ({
         nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
         exercicios: (t.exercicios || []).map(ex => ({
@@ -3610,12 +3613,34 @@ async function gerarTreinoDoPrograma() {
         }))
       }));
       applyAIWorkout({ treino: { grupos } });
+
+    // Formato texto: tentar parsear JSON embutido
+    } else if (block?.type === "text" && block?.text) {
+      try {
+        const txt = block.text;
+        const s = txt.indexOf("{"), e = txt.lastIndexOf("}");
+        if (s === -1 || e === -1) throw new Error("no json");
+        const parsed = JSON.parse(txt.slice(s, e+1));
+        if (!parsed.treinos) throw new Error("invalid");
+        let grupos = parsed.treinos.map(t => ({
+          nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
+          exercicios: (t.exercicios || []).map(ex => ({
+            nome: ex.nome,
+            series: ex.fases ? ex.fases[0].series : (ex.series || 3),
+            reps: ex.fases ? ex.fases[0].reps : (ex.reps || "8-12"),
+            fases: ex.fases || null
+          }))
+        }));
+        applyAIWorkout({ treino: { grupos } });
+      } catch(parseErr) {
+        alert("Resposta da IA inválida: " + block.text.substring(0, 200));
+      }
     } else {
-      alert("Não foi possível gerar o treino. Tente novamente.");
+      alert("Erro: " + JSON.stringify(data).substring(0, 200));
     }
   } catch(e) {
     if (document.getElementById("gerandoLoad")) document.body.removeChild(loadDiv);
-    alert("Erro de conexão. Verifique sua internet.");
+    alert("Erro de conexão: " + e.message);
   }
 }
 
