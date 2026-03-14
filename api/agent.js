@@ -1,4 +1,5 @@
 var https = require('https');
+var nvidia = require('./_nvidia');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -271,7 +272,7 @@ function callNvidiaAgent(messages, tools, callback) {
   var KEY = process.env.NVIDIA_API_KEY;
   if (!KEY) return callback('NVIDIA_API_KEY missing', null);
 
-  var body = JSON.stringify({
+  var payload = {
     model: 'meta/llama-3.3-70b-instruct',
     messages: messages,
     tools: tools,
@@ -279,34 +280,9 @@ function callNvidiaAgent(messages, tools, callback) {
     max_tokens: 1500,
     temperature: 0.7,
     stream: false
-  });
-
-  var o = {
-    hostname: 'integrate.api.nvidia.com',
-    path: '/v1/chat/completions',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + KEY,
-      'Content-Length': Buffer.byteLength(body)
-    }
   };
 
-  var r = https.request(o, function(s) {
-    var d = '';
-    s.on('data', function(c) { d += c; });
-    s.on('end', function() {
-      try {
-        var j = JSON.parse(d);
-        var msg = j.choices && j.choices[0] && j.choices[0].message;
-        callback(null, msg || { content: '' });
-      } catch (e) { callback(e.message, null); }
-    });
-  });
-  r.on('error', function(e) { callback(e.message, null); });
-  r.setTimeout(30000, function() { r.destroy(new Error('timeout')); });
-  r.write(body);
-  r.end();
+  nvidia.callNvidiaAgent(KEY, payload, 30000, 3, callback);
 }
 
 // ══════════════════════════════════════════
