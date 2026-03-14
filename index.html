@@ -1239,6 +1239,51 @@
       background: var(--bg); flex-direction: column;
     }
     #orientacaoScreen.show { display: flex; }
+    #dietaScreen {
+      display: none; position: fixed; inset: 0; z-index: 3500;
+      background: var(--bg); flex-direction: column; overflow-y: auto;
+    }
+    #dietaScreen.show { display: flex; }
+    .dav-header {
+      padding: 56px 16px 16px; background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .dav-title {
+      font-family: var(--display); font-size: 1.8rem;
+      letter-spacing: .04em; color: var(--text); flex: 1; text-align: center;
+    }
+    .dav-body { padding: 16px; padding-bottom: 100px; }
+    .dav-result-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 16px;
+    }
+    .dav-stat {
+      background: var(--accent-dim); border: 1px solid var(--accent);
+      border-radius: 12px; padding: 14px; text-align: center;
+    }
+    .dav-stat-val {
+      font-family: var(--display); font-size: 1.6rem;
+      color: var(--accent); letter-spacing: .04em;
+    }
+    .dav-stat-lbl {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: rgba(255,255,255,0.6); margin-top: 4px;
+    }
+    .dav-table-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+    }
+    .dav-table-head {
+      display: grid; grid-template-columns: 1.2fr 0.7fr 0.7fr 0.7fr 0.7fr;
+      gap: 4px; padding: 8px 12px; background: var(--bg2);
+    }
+    .dav-th {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted);
+    }
+    .dav-th:not(:first-child) { text-align: right; color: var(--muted); }
+    .dav-th:nth-child(2) { color: var(--accent); }
     .orient-header {
       padding: 56px 20px 16px;
       background: var(--bg2); border-bottom: 1px solid var(--border);
@@ -1893,6 +1938,15 @@
         <div class="home-quick-sub">Sessões anteriores</div>
       </div>
     </div>
+    <div class="home-quick-card" onclick="closeHome();openDieta()">
+      <div class="home-quick-icon" style="background:rgba(249,115,22,0.15)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <div>
+        <div class="home-quick-name">Calculadora</div>
+        <div class="home-quick-sub">TMB, macros e ciclo</div>
+      </div>
+    </div>
   </div>
   <div style="height:100px"></div>
 </div>
@@ -2086,9 +2140,9 @@
       <span class="orient-chip-name">Ajuste de Carga</span>
     </div>
     <div class="orient-category-label">Nutrição</div>
-    <div class="orient-chip" onclick="orientExpertQuick('basal')">
+    <div class="orient-chip" onclick="openDieta()">
       <span class="orient-chip-icon">🔥</span>
-      <span class="orient-chip-name">Calculadora Basal (TMB/TDEE)</span>
+      <span class="orient-chip-name">Calculadora Avançada (TMB + Macros)</span>
     </div>
     <div class="orient-chip" onclick="orientExpertQuick('dieta')">
       <span class="orient-chip-icon">🥗</span>
@@ -2132,6 +2186,136 @@
 
 ```
 
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA CALCULADORA AVANÇADA
+══════════════════════════════════════════ -->
+<div id="dietaScreen">
+  <div class="dav-header">
+    <button class="btn-voltar" style="padding:0" onclick="closeDieta()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar
+    </button>
+    <div class="dav-title">CALCULADORA</div>
+    <div style="width:60px"></div>
+  </div>
+
+  <div class="dav-body">
+
+    <!-- Sexo -->
+    <div class="config-section">
+      <div class="config-section-lbl">Sexo</div>
+      <div class="config-chips">
+        <div class="config-chip active" id="davSexoM" onclick="selectDavSexo('M')">Masculino</div>
+        <div class="config-chip" id="davSexoF" onclick="selectDavSexo('F')">Feminino</div>
+      </div>
+    </div>
+
+    <!-- Biotipo -->
+    <div class="config-section">
+      <div class="config-section-lbl">Biotipo</div>
+      <div class="config-chips" id="davBioChips">
+        <div class="config-chip" data-val="ecto" onclick="selectDavBio(this)">Ectomorfo</div>
+        <div class="config-chip active" data-val="meso" onclick="selectDavBio(this)">Mesomorfo</div>
+        <div class="config-chip" data-val="endo" onclick="selectDavBio(this)">Endomorfo</div>
+      </div>
+    </div>
+
+    <!-- Objetivo -->
+    <div class="config-section">
+      <div class="config-section-lbl">Objetivo</div>
+      <div class="config-chips" id="davObjChips">
+        <div class="config-chip active" data-val="emagrecer" onclick="selectDavObj(this)">Emagrecer</div>
+        <div class="config-chip" data-val="manter" onclick="selectDavObj(this)">Manter</div>
+        <div class="config-chip" data-val="ganhar" onclick="selectDavObj(this)">Ganhar Massa</div>
+      </div>
+    </div>
+
+    <!-- Medidas -->
+    <div class="config-section">
+      <div class="config-section-lbl">Medidas corporais</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Peso (kg)</div>
+          <input type="number" id="davPeso" class="perfil-input" placeholder="75" inputmode="decimal">
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Altura (cm)</div>
+          <input type="number" id="davAltura" class="perfil-input" placeholder="175" inputmode="decimal">
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Pescoço (cm)</div>
+          <input type="number" id="davPescoco" class="perfil-input" placeholder="37" inputmode="decimal">
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Cintura (cm)</div>
+          <input type="number" id="davCintura" class="perfil-input" placeholder="80" inputmode="decimal">
+        </div>
+        <div class="perfil-input-wrap" id="davQuadrilWrap" style="display:none">
+          <div class="perfil-input-lbl">Quadril (cm)</div>
+          <input type="number" id="davQuadril" class="perfil-input" placeholder="95" inputmode="decimal">
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);line-height:1.5">
+        💡 Meça cintura e pescoço na parte mais estreita. O % de gordura é calculado pela Fórmula Naval da US Navy.
+      </div>
+    </div>
+
+    <button class="config-apply" style="width:100%;margin:4px 0 24px" onclick="calcularDietaAvancada()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Calcular
+    </button>
+
+    <!-- Resultados -->
+    <div id="davResult" style="display:none">
+
+      <!-- Stats: BF, TMB, Massa Magra, Massa Gorda -->
+      <div class="config-section-lbl" style="margin-bottom:10px">Composição Corporal</div>
+      <div class="dav-result-grid">
+        <div class="dav-stat">
+          <div class="dav-stat-val" id="davBF">-</div>
+          <div class="dav-stat-lbl">% Gordura</div>
+        </div>
+        <div class="dav-stat">
+          <div class="dav-stat-val" id="davTMB">-</div>
+          <div class="dav-stat-lbl">TMB (kcal)</div>
+        </div>
+        <div class="dav-stat">
+          <div class="dav-stat-val" id="davMassaMagra">-</div>
+          <div class="dav-stat-lbl">Massa Magra</div>
+        </div>
+        <div class="dav-stat">
+          <div class="dav-stat-val" id="davMassaGorda">-</div>
+          <div class="dav-stat-lbl">Massa Gorda</div>
+        </div>
+      </div>
+
+      <!-- Macros por tipo de dia -->
+      <div class="config-section-lbl" style="margin-bottom:8px">Macros por Tipo de Dia</div>
+      <div class="dav-table-wrap">
+        <div class="dav-table-head">
+          <div class="dav-th">Dia</div>
+          <div class="dav-th" style="color:var(--accent)">kcal</div>
+          <div class="dav-th">prot</div>
+          <div class="dav-th">gord</div>
+          <div class="dav-th">carbs</div>
+        </div>
+        <div id="davMacroRows" style="padding:0 12px 8px"></div>
+      </div>
+
+      <!-- Ciclo de carboidratos -->
+      <div class="config-section-lbl" style="margin-bottom:8px">Ciclo de Carboidratos (dias ALTO : BAIXO)</div>
+      <div class="config-chips" id="davCicloChips" style="margin-bottom:12px">
+        <div class="config-chip" data-val="1" onclick="selectDavCiclo(this)">1:1</div>
+        <div class="config-chip active" data-val="2" onclick="selectDavCiclo(this)">2:1</div>
+        <div class="config-chip" data-val="3" onclick="selectDavCiclo(this)">3:1</div>
+        <div class="config-chip" data-val="4" onclick="selectDavCiclo(this)">4:1</div>
+      </div>
+      <div id="davCicloResult" style="margin-bottom:20px"></div>
+
+    </div>
   </div>
 </div>
 
@@ -5005,6 +5189,19 @@ function openOrientacao() {
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
+  navTo("treino");
+}
+function openDieta() {
+  // Pre-fill peso/altura from perfil if available
+  const cfg = safeJSON("titanpro_config", {});
+  if (cfg.peso && !document.getElementById("davPeso").value)
+    document.getElementById("davPeso").value = cfg.peso;
+  if (cfg.altura && !document.getElementById("davAltura").value)
+    document.getElementById("davAltura").value = cfg.altura;
+  document.getElementById("dietaScreen").classList.add("show");
+}
+function closeDieta() {
+  document.getElementById("dietaScreen").classList.remove("show");
   navTo("treino");
 }
 function toggleOrientSuggestions() {
