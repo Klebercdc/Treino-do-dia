@@ -1234,7 +1234,7 @@
     .orient-shortcuts-row {
       display: flex; gap: 6px; padding: 12px 16px;
       overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none;
-      max-height: 52vh; border-bottom: 1px solid var(--border);
+      max-height: 32vh; border-bottom: 1px solid var(--border);
     }
     .orient-shortcuts-row::-webkit-scrollbar { display: none; }
     .orient-category-label {
@@ -2049,6 +2049,10 @@
       <span class="orient-chip-name">Ajuste de Carga</span>
     </div>
     <div class="orient-category-label">Nutrição</div>
+    <div class="orient-chip" onclick="orientExpertQuick('basal')">
+      <span class="orient-chip-icon">🔥</span>
+      <span class="orient-chip-name">Calculadora Basal (TMB/TDEE)</span>
+    </div>
     <div class="orient-chip" onclick="orientExpertQuick('dieta')">
       <span class="orient-chip-icon">🥗</span>
       <span class="orient-chip-name">Gerar Dieta</span>
@@ -4986,6 +4990,24 @@ async function sendOrientExpert() {
 }
 
 function orientExpertQuick(tipo) {
+  if (tipo === 'basal') {
+    const cfg = safeJSON("titanpro_config", {});
+    const peso   = parseFloat(cfg.peso)   || null;
+    const altura = parseFloat(cfg.altura) || null;
+    const idade  = parseInt(cfg.idade)    || null;
+    const sexo   = cfg.sexo === "F" ? "feminino" : "masculino";
+    const ativ   = cfg.atividade || "moderadamente ativo";
+    let msg = "Calcule minha Taxa Metabólica Basal (TMB) e meu TDEE (gasto calórico total diário). Use a fórmula de Mifflin-St Jeor.";
+    if (peso && altura && idade) {
+      msg += ` Meus dados: ${peso} kg, ${altura} cm, ${idade} anos, sexo ${sexo}, nível de atividade: ${ativ}.`;
+      msg += " Mostre passo a passo: TMB → TDEE para cada nível de atividade. E explique o que cada valor significa.";
+    } else {
+      msg += " (Não encontrei todos os dados do seu perfil — por favor informe: peso, altura, idade, sexo e nível de atividade.)";
+    }
+    document.getElementById("orientExpertInput").value = msg;
+    sendOrientExpert();
+    return;
+  }
   const msgs = {
     analise:     "Analise meu treino atual e me dê feedback técnico.",
     plato:       "Detecte se há sinais de platô no meu histórico de treinos.",
