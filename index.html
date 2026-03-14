@@ -1239,9 +1239,38 @@
       background: var(--accent-dim); color: var(--accent);
       border-color: var(--accent);
     }
-    .orient-content { flex: 1; overflow-y: auto; }
-    .orient-panel { display: none; padding: 16px; }
-    .orient-panel.active { display: block; }
+    .orient-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    .orient-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .orient-panel.active { display: flex; }
+    .orient-shortcuts-row {
+      display: flex; gap: 8px; padding: 12px 16px;
+      overflow-x: auto; scrollbar-width: none; flex: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .orient-shortcuts-row::-webkit-scrollbar { display: none; }
+    .orient-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 100px; padding: 8px 14px; cursor: pointer;
+      white-space: nowrap; -webkit-tap-highlight-color: transparent;
+      transition: background .15s, border-color .15s;
+    }
+    .orient-chip:active { background: var(--accent-dim); border-color: var(--accent); }
+    .orient-chip-icon { font-size: 1rem; line-height: 1; }
+    .orient-chip-name { font-size: 0.75rem; font-weight: 700; color: var(--text); letter-spacing: .02em; }
+    .orient-chat-wrap {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      margin: 12px 16px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 16px;
+    }
+    .orient-chat-messages {
+      flex: 1; overflow-y: auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .orient-chat-bar {
+      padding: 10px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; flex: none;
+    }
     .orient-card {
       background: var(--card); border: 1px solid var(--border);
       border-radius: 16px; padding: 16px; margin-bottom: 12px;
@@ -2019,34 +2048,27 @@
 ```
 <!-- Painel Coach -->
 <div class="orient-panel active" id="orient-coach">
-  <div class="orient-card">
-    <div class="orient-card-title">Atalhos rápidos</div>
-    <div class="orient-nutri-atalhos">
-      <div class="orient-atalho" onclick="orientAiQuick('analise')">
-        <div class="orient-atalho-icon">📊</div>
-        <div class="orient-atalho-name">Analisar Treino</div>
-        <div class="orient-atalho-sub">Feedback da sessão</div>
-      </div>
-      <div class="orient-atalho" onclick="orientAiQuick('plato')">
-        <div class="orient-atalho-icon">📉</div>
-        <div class="orient-atalho-name">Detectar Platô</div>
-        <div class="orient-atalho-sub">Estagnação de carga</div>
-      </div>
-      <div class="orient-atalho" onclick="orientAiQuick('dica')">
-        <div class="orient-atalho-icon">💡</div>
-        <div class="orient-atalho-name">Dica do Dia</div>
-        <div class="orient-atalho-sub">Conselho personalizado</div>
-      </div>
-      <div class="orient-atalho" onclick="orientAiQuick('rpe')">
-        <div class="orient-atalho-icon">⚡</div>
-        <div class="orient-atalho-name">Ajuste de Carga</div>
-        <div class="orient-atalho-sub">Baseado no RPE</div>
-      </div>
+  <div class="orient-shortcuts-row">
+    <div class="orient-chip" onclick="orientAiQuick('analise')">
+      <span class="orient-chip-icon">📊</span>
+      <span class="orient-chip-name">Analisar Treino</span>
+    </div>
+    <div class="orient-chip" onclick="orientAiQuick('plato')">
+      <span class="orient-chip-icon">📉</span>
+      <span class="orient-chip-name">Detectar Platô</span>
+    </div>
+    <div class="orient-chip" onclick="orientAiQuick('dica')">
+      <span class="orient-chip-icon">💡</span>
+      <span class="orient-chip-name">Dica do Dia</span>
+    </div>
+    <div class="orient-chip" onclick="orientAiQuick('rpe')">
+      <span class="orient-chip-icon">⚡</span>
+      <span class="orient-chip-name">Ajuste de Carga</span>
     </div>
   </div>
-  <div class="orient-card" style="padding:0;overflow:hidden">
-    <div id="orientCoachMessages" style="height:280px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px"></div>
-    <div style="padding:10px;border-top:1px solid var(--border);display:flex;gap:8px">
+  <div class="orient-chat-wrap">
+    <div id="orientCoachMessages" class="orient-chat-messages"></div>
+    <div class="orient-chat-bar">
       <input id="orientCoachInput" placeholder="Pergunte ao Coach..." style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font);font-size:0.85rem;color:var(--text);-webkit-appearance:none" onkeydown="if(event.key==='Enter')sendOrientCoach()"/>
       <button onclick="sendOrientCoach()" style="background:var(--accent);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700;cursor:pointer;font-family:var(--font)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -2057,34 +2079,27 @@
 
 <!-- Painel Nutrição -->
 <div class="orient-panel" id="orient-nutricao">
-  <div class="orient-card">
-    <div class="orient-card-title">Perguntas rápidas</div>
-    <div class="orient-nutri-atalhos">
-      <div class="orient-atalho" onclick="orientNutriQuick('proteina')">
-        <div class="orient-atalho-icon">🥩</div>
-        <div class="orient-atalho-name">Proteína</div>
-        <div class="orient-atalho-sub">Quanto preciso?</div>
-      </div>
-      <div class="orient-atalho" onclick="orientNutriQuick('carboidrato')">
-        <div class="orient-atalho-icon">🍚</div>
-        <div class="orient-atalho-name">Carboidrato</div>
-        <div class="orient-atalho-sub">Quantidade ideal</div>
-      </div>
-      <div class="orient-atalho" onclick="orientNutriQuick('suplementos')">
-        <div class="orient-atalho-icon">💊</div>
-        <div class="orient-atalho-name">Suplementos</div>
-        <div class="orient-atalho-sub">O que vale a pena</div>
-      </div>
-      <div class="orient-atalho" onclick="orientNutriQuick('postreino')">
-        <div class="orient-atalho-icon">🥤</div>
-        <div class="orient-atalho-name">Pós-treino</div>
-        <div class="orient-atalho-sub">Janela anabólica</div>
-      </div>
+  <div class="orient-shortcuts-row">
+    <div class="orient-chip" onclick="orientNutriQuick('proteina')">
+      <span class="orient-chip-icon">🥩</span>
+      <span class="orient-chip-name">Proteína</span>
+    </div>
+    <div class="orient-chip" onclick="orientNutriQuick('carboidrato')">
+      <span class="orient-chip-icon">🍚</span>
+      <span class="orient-chip-name">Carboidrato</span>
+    </div>
+    <div class="orient-chip" onclick="orientNutriQuick('suplementos')">
+      <span class="orient-chip-icon">💊</span>
+      <span class="orient-chip-name">Suplementos</span>
+    </div>
+    <div class="orient-chip" onclick="orientNutriQuick('postreino')">
+      <span class="orient-chip-icon">🥤</span>
+      <span class="orient-chip-name">Pós-treino</span>
     </div>
   </div>
-  <div class="orient-card" style="padding:0;overflow:hidden">
-    <div id="orientNutriMessages" style="height:280px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px"></div>
-    <div style="padding:10px;border-top:1px solid var(--border);display:flex;gap:8px">
+  <div class="orient-chat-wrap">
+    <div id="orientNutriMessages" class="orient-chat-messages"></div>
+    <div class="orient-chat-bar">
       <input id="orientNutriInput" placeholder="Dúvida sobre nutrição..." style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font);font-size:0.85rem;color:var(--text);-webkit-appearance:none" onkeydown="if(event.key==='Enter')sendOrientNutri()"/>
       <button onclick="sendOrientNutri()" style="background:var(--accent);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700;cursor:pointer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
