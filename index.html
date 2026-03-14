@@ -1230,27 +1230,7 @@
       font-family: var(--display); font-size: 1.8rem;
       color: var(--text); letter-spacing: .04em;
     }
-    .orient-tabs {
-      display: flex; gap: 6px; padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      overflow-x: auto; scrollbar-width: none;
-    }
-    .orient-tabs::-webkit-scrollbar { display: none; }
-    .orient-tab {
-      flex: none; padding: 8px 16px; border-radius: 100px;
-      font-size: 0.72rem; font-weight: 700; letter-spacing: .06em;
-      text-transform: uppercase; cursor: pointer;
-      background: var(--bg2); color: var(--muted);
-      border: 1px solid var(--border); transition: all .15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .orient-tab.active {
-      background: var(--accent-dim); color: var(--accent);
-      border-color: var(--accent);
-    }
     .orient-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-    .orient-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
-    .orient-panel.active { display: flex; }
     .orient-shortcuts-row {
       display: flex; gap: 8px; padding: 12px 16px;
       overflow-x: auto; scrollbar-width: none; flex: none;
@@ -2042,16 +2022,11 @@
     </button>
     <div class="orient-title" style="flex:1;text-align:center;padding-right:60px">ORIENTAÇÃO</div>
   </div>
-  <div class="orient-tabs">
-    <div class="orient-tab active" onclick="switchOrientTab('expert',this)">Expert</div>
-    <div class="orient-tab" onclick="switchOrientTab('dieta',this)">Gerar Dieta</div>
-    <div class="orient-tab" onclick="switchOrientTab('basal',this)">Dieta Avançada</div>
-  </div>
   <div class="orient-content">
 
 ```
 <!-- Painel Expert -->
-<div class="orient-panel active" id="orient-expert">
+<div id="orient-expert" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
   <div class="orient-shortcuts-row">
     <div class="orient-chip" onclick="orientExpertQuick('analise')">
       <span class="orient-chip-icon">📊</span>
@@ -2061,17 +2036,13 @@
       <span class="orient-chip-icon">📉</span>
       <span class="orient-chip-name">Detectar Platô</span>
     </div>
-    <div class="orient-chip" onclick="orientExpertQuick('proteina')">
-      <span class="orient-chip-icon">🥩</span>
-      <span class="orient-chip-name">Proteína</span>
+    <div class="orient-chip" onclick="orientExpertQuick('dieta')">
+      <span class="orient-chip-icon">🥗</span>
+      <span class="orient-chip-name">Gerar Dieta</span>
     </div>
     <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
       <span class="orient-chip-icon">💊</span>
       <span class="orient-chip-name">Suplementos</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('postreino')">
-      <span class="orient-chip-icon">🥤</span>
-      <span class="orient-chip-name">Pós-treino</span>
     </div>
     <div class="orient-chip" onclick="orientExpertQuick('rpe')">
       <span class="orient-chip-icon">⚡</span>
@@ -2093,217 +2064,6 @@
   </div>
 </div>
 
-<!-- Painel Gerar Dieta -->
-<div class="orient-panel" id="orient-dieta">
-  <div class="orient-form-scroll">
-  <div class="orient-card">
-    <div class="orient-card-title">Dieta Personalizada com IA</div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Objetivo</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap" id="dietaObjChips">
-          <div class="config-chip active" data-val="emagrecimento" onclick="selectDietaObj(this)">Emagrecimento</div>
-          <div class="config-chip" data-val="ganho de massa muscular" onclick="selectDietaObj(this)">Ganho de massa</div>
-          <div class="config-chip" data-val="manutenção do peso" onclick="selectDietaObj(this)">Manutenção</div>
-          <div class="config-chip" data-val="recomposição corporal" onclick="selectDietaObj(this)">Recomposição</div>
-        </div>
-      </div>
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Sexo</div>
-        <div style="display:flex;gap:6px">
-          <div class="config-chip active" id="dietaSexoM" data-val="M" onclick="selectDietaSexo('M')">Masculino</div>
-          <div class="config-chip" id="dietaSexoF" data-val="F" onclick="selectDietaSexo('F')">Feminino</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Peso (kg)</div>
-          <input class="perfil-input" id="dietaPeso" type="number" placeholder="75"/>
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Altura (cm)</div>
-          <input class="perfil-input" id="dietaAltura" type="number" placeholder="175"/>
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Idade</div>
-          <input class="perfil-input" id="dietaIdade" type="number" placeholder="25"/>
-        </div>
-      </div>
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Nível de atividade física</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap" id="dietaAtivChips">
-          <div class="config-chip" data-val="sedentário (pouco ou nenhum exercício)" onclick="selectDietaAtiv(this)">Sedentário</div>
-          <div class="config-chip active" data-val="levemente ativo (treino 3-4x/semana)" onclick="selectDietaAtiv(this)">Ativo (3-4x)</div>
-          <div class="config-chip" data-val="moderadamente ativo (treino 5-6x/semana)" onclick="selectDietaAtiv(this)">Muito ativo (5-6x)</div>
-          <div class="config-chip" data-val="extremamente ativo (atleta, treino 2x/dia)" onclick="selectDietaAtiv(this)">Atleta</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Refeições/dia</div>
-          <input class="perfil-input" id="dietaRefeicoes" type="number" placeholder="4" min="2" max="7"/>
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Orçamento (opcional)</div>
-          <select class="perfil-input" id="dietaOrcamento" style="height:42px">
-            <option value="">Não informar</option>
-            <option value="econômico (alimentos mais baratos)">Econômico</option>
-            <option value="intermediário">Intermediário</option>
-            <option value="sem restrição">Sem restrição</option>
-          </select>
-        </div>
-      </div>
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Alimentos que não gosta / restrições / alergias</div>
-        <input class="perfil-input" id="dietaRestric" type="text" placeholder="Ex: glúten, lactose, fígado, brócolis"/>
-      </div>
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Preferências alimentares (opcional)</div>
-        <input class="perfil-input" id="dietaPrefs" type="text" placeholder="Ex: vegetariano, low carb, mais frango"/>
-      </div>
-      <button onclick="gerarDieta()" id="btnGerarDieta" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-weight:700;font-size:0.9rem;cursor:pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:6px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Gerar Dieta Personalizada
-      </button>
-    </div>
-  </div>
-  <div id="dietaResultado" style="display:none" class="orient-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="orient-card-title" style="margin-bottom:0">Sua Dieta Personalizada</div>
-      <button onclick="copiarDieta()" style="background:var(--card-2,#2a2a2a);border:none;border-radius:8px;padding:6px 12px;color:var(--text-2);font-size:0.75rem;cursor:pointer;font-family:var(--font)" id="btnCopiarDieta">Copiar</button>
-    </div>
-    <div id="dietaTexto" style="font-size:0.85rem;color:var(--text-2);line-height:1.8;white-space:pre-wrap"></div>
-  </div>
-  </div><!-- /orient-form-scroll -->
-</div>
-
-<!-- Painel Dieta Avançada -->
-<div class="orient-panel" id="orient-basal">
-  <div class="orient-form-scroll">
-    <div class="orient-card">
-      <div class="orient-card-title">Dieta Avançada</div>
-      <!-- Sexo -->
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Sexo</div>
-        <div style="display:flex;gap:6px">
-          <div class="config-chip active" id="davSexoM" onclick="selectDavSexo('M')">Masculino</div>
-          <div class="config-chip" id="davSexoF" onclick="selectDavSexo('F')">Feminino</div>
-        </div>
-      </div>
-      <!-- Biotipo -->
-      <div class="perfil-input-wrap" style="margin-top:12px">
-        <div class="perfil-input-lbl">Biotipo</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap" id="davBioChips">
-          <div class="config-chip active" data-val="ecto" onclick="selectDavBio(this)">
-            <div style="font-size:0.78rem;font-weight:700">Ectomorfo</div>
-            <div style="font-size:0.62rem;opacity:.7">Tende a emagrecer</div>
-          </div>
-          <div class="config-chip" data-val="meso" onclick="selectDavBio(this)">
-            <div style="font-size:0.78rem;font-weight:700">Mesomorfo</div>
-            <div style="font-size:0.62rem;opacity:.7">Tende a ser atlético</div>
-          </div>
-          <div class="config-chip" data-val="endo" onclick="selectDavBio(this)">
-            <div style="font-size:0.78rem;font-weight:700">Endomorfo</div>
-            <div style="font-size:0.62rem;opacity:.7">Tende a engordar</div>
-          </div>
-        </div>
-      </div>
-      <!-- Objetivo -->
-      <div class="perfil-input-wrap" style="margin-top:12px">
-        <div class="perfil-input-lbl">Objetivo</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap" id="davObjChips">
-          <div class="config-chip active" data-val="emagrecer" onclick="selectDavObj(this)">Emagrecer</div>
-          <div class="config-chip" data-val="manter" onclick="selectDavObj(this)">Manter</div>
-          <div class="config-chip" data-val="ganhar" onclick="selectDavObj(this)">Ganhar massa</div>
-        </div>
-      </div>
-      <!-- Peso / Altura / Idade -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px">
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Peso (kg)</div>
-          <input class="perfil-input" id="davPeso" type="number" placeholder="75"/>
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Altura (cm)</div>
-          <input class="perfil-input" id="davAltura" type="number" placeholder="175"/>
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Idade</div>
-          <input class="perfil-input" id="davIdade" type="number" placeholder="25"/>
-        </div>
-      </div>
-      <!-- Medidas p/ BF% Navy -->
-      <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);margin-bottom:6px">Medidas para calcular % de gordura (fita métrica)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Pescoço (cm)</div>
-          <input class="perfil-input" id="davPescoco" type="number" placeholder="38"/>
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Cintura (cm)</div>
-          <input class="perfil-input" id="davCintura" type="number" placeholder="85"/>
-        </div>
-        <div class="perfil-input-wrap" id="davQuadrilWrap" style="display:none">
-          <div class="perfil-input-lbl">Quadril (cm)</div>
-          <input class="perfil-input" id="davQuadril" type="number" placeholder="95"/>
-        </div>
-      </div>
-      <button onclick="calcularDietaAvancada()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-weight:700;font-size:0.9rem;cursor:pointer;margin-top:16px">
-        Calcular Dieta Avançada
-      </button>
-    </div>
-
-    <!-- Resultados -->
-    <div id="davResult" style="display:none">
-      <!-- Composição Corporal -->
-      <div class="orient-card">
-        <div class="orient-card-title">Composição Corporal</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;margin-bottom:12px">
-          <div>
-            <div id="davBF" style="font-family:var(--display);font-size:1.6rem;color:var(--accent)"></div>
-            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">% Gordura</div>
-          </div>
-          <div>
-            <div id="davMassaMagra" style="font-family:var(--display);font-size:1.6rem;color:var(--text)"></div>
-            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Massa Magra</div>
-          </div>
-          <div>
-            <div id="davMassaGorda" style="font-family:var(--display);font-size:1.6rem;color:var(--text)"></div>
-            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Massa Gorda</div>
-          </div>
-        </div>
-        <div class="basal-row">
-          <span style="color:var(--muted)">TMB (Katch-McArdle)</span>
-          <span id="davTMB" style="color:var(--text);font-weight:600"></span>
-        </div>
-      </div>
-
-      <!-- Calorias e Macros por Tipo de Dia -->
-      <div class="orient-card">
-        <div class="orient-card-title">Calorias e Macros por Dia</div>
-        <div style="display:grid;grid-template-columns:1fr 0.7fr 0.7fr 0.7fr 0.7fr;gap:4px;margin-bottom:8px">
-          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Dia</div>
-          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Kcal</div>
-          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Prot</div>
-          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Gord</div>
-          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Carbs</div>
-        </div>
-        <div id="davMacroRows"></div>
-      </div>
-
-      <!-- Ciclo de Carboidratos -->
-      <div class="orient-card">
-        <div class="orient-card-title">Ciclo de Carboidratos</div>
-        <div style="display:flex;gap:6px;margin-bottom:12px" id="davCicloChips">
-          <div class="config-chip active" data-val="2" onclick="selectDavCiclo(this)">2/1</div>
-          <div class="config-chip" data-val="3" onclick="selectDavCiclo(this)">3/1</div>
-          <div class="config-chip" data-val="4" onclick="selectDavCiclo(this)">4/1</div>
-        </div>
-        <div id="davCicloResult"></div>
-      </div>
-    </div>
-  </div>
-</div>
 ```
 
   </div>
@@ -5170,13 +4930,6 @@ function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
   navTo("treino");
 }
-function switchOrientTab(id, el) {
-  document.querySelectorAll(".orient-tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".orient-panel").forEach(p => p.classList.remove("active"));
-  el.classList.add("active");
-  document.getElementById("orient-" + id).classList.add("active");
-  if (id === "dieta") preencherDietaDosPerfil();
-}
 
 function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
@@ -5223,7 +4976,7 @@ function orientExpertQuick(tipo) {
     analise:     "Analise meu treino atual e me dê feedback técnico.",
     plato:       "Detecte se há sinais de platô no meu histórico de treinos.",
     rpe:         "Baseado no meu RPE recente, devo ajustar minha carga?",
-    proteina:    "Quanto de proteína devo consumir por dia para meu objetivo?",
+    dieta:       "Monte uma dieta personalizada para mim com base no meu perfil e objetivo.",
     suplementos: "Quais suplementos têm evidência científica real e valem a pena?",
     postreino:   "O que comer no pós-treino para maximizar recuperação?"
   };
