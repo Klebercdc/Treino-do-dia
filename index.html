@@ -2096,39 +2096,82 @@
 <!-- Painel Gerar Dieta -->
 <div class="orient-panel" id="orient-dieta">
   <div class="orient-card">
-    <div class="orient-card-title">Configurar dieta</div>
+    <div class="orient-card-title">Dieta Personalizada com IA</div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Objetivo da dieta</div>
+        <div class="perfil-input-lbl">Objetivo</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap" id="dietaObjChips">
           <div class="config-chip active" data-val="emagrecimento" onclick="selectDietaObj(this)">Emagrecimento</div>
-          <div class="config-chip" data-val="ganho" onclick="selectDietaObj(this)">Ganho de massa</div>
-          <div class="config-chip" data-val="manutencao" onclick="selectDietaObj(this)">Manutenção</div>
+          <div class="config-chip" data-val="ganho de massa muscular" onclick="selectDietaObj(this)">Ganho de massa</div>
+          <div class="config-chip" data-val="manutenção do peso" onclick="selectDietaObj(this)">Manutenção</div>
+          <div class="config-chip" data-val="recomposição corporal" onclick="selectDietaObj(this)">Recomposição</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="perfil-input-wrap">
+        <div class="perfil-input-lbl">Sexo</div>
+        <div style="display:flex;gap:6px">
+          <div class="config-chip active" id="dietaSexoM" data-val="M" onclick="selectDietaSexo('M')">Masculino</div>
+          <div class="config-chip" id="dietaSexoF" data-val="F" onclick="selectDietaSexo('F')">Feminino</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div class="perfil-input-wrap">
           <div class="perfil-input-lbl">Peso (kg)</div>
           <input class="perfil-input" id="dietaPeso" type="number" placeholder="75"/>
         </div>
         <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Refeições/dia</div>
-          <input class="perfil-input" id="dietaRefeicoes" type="number" placeholder="4" min="2" max="6"/>
+          <div class="perfil-input-lbl">Altura (cm)</div>
+          <input class="perfil-input" id="dietaAltura" type="number" placeholder="175"/>
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Idade</div>
+          <input class="perfil-input" id="dietaIdade" type="number" placeholder="25"/>
         </div>
       </div>
       <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Alimentos que não gosta / restrições</div>
-        <input class="perfil-input" id="dietaRestric" type="text" placeholder="Ex: fígado, brócolis, lactose"/>
+        <div class="perfil-input-lbl">Nível de atividade física</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="dietaAtivChips">
+          <div class="config-chip" data-val="sedentário (pouco ou nenhum exercício)" onclick="selectDietaAtiv(this)">Sedentário</div>
+          <div class="config-chip active" data-val="levemente ativo (treino 3-4x/semana)" onclick="selectDietaAtiv(this)">Ativo (3-4x)</div>
+          <div class="config-chip" data-val="moderadamente ativo (treino 5-6x/semana)" onclick="selectDietaAtiv(this)">Muito ativo (5-6x)</div>
+          <div class="config-chip" data-val="extremamente ativo (atleta, treino 2x/dia)" onclick="selectDietaAtiv(this)">Atleta</div>
+        </div>
       </div>
-      <button onclick="gerarDieta()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-weight:700;font-size:0.9rem;cursor:pointer">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Refeições/dia</div>
+          <input class="perfil-input" id="dietaRefeicoes" type="number" placeholder="4" min="2" max="7"/>
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Orçamento (opcional)</div>
+          <select class="perfil-input" id="dietaOrcamento" style="height:42px">
+            <option value="">Não informar</option>
+            <option value="econômico (alimentos mais baratos)">Econômico</option>
+            <option value="intermediário">Intermediário</option>
+            <option value="sem restrição">Sem restrição</option>
+          </select>
+        </div>
+      </div>
+      <div class="perfil-input-wrap">
+        <div class="perfil-input-lbl">Alimentos que não gosta / restrições / alergias</div>
+        <input class="perfil-input" id="dietaRestric" type="text" placeholder="Ex: glúten, lactose, fígado, brócolis"/>
+      </div>
+      <div class="perfil-input-wrap">
+        <div class="perfil-input-lbl">Preferências alimentares (opcional)</div>
+        <input class="perfil-input" id="dietaPrefs" type="text" placeholder="Ex: vegetariano, low carb, mais frango"/>
+      </div>
+      <button onclick="gerarDieta()" id="btnGerarDieta" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-weight:700;font-size:0.9rem;cursor:pointer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:6px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Gerar Dieta Completa com IA
+        Gerar Dieta Personalizada
       </button>
     </div>
   </div>
   <div id="dietaResultado" style="display:none" class="orient-card">
-    <div class="orient-card-title">Sua Dieta</div>
-    <div id="dietaTexto" style="font-size:0.85rem;color:var(--text-2);line-height:1.7;white-space:pre-wrap"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="orient-card-title" style="margin-bottom:0">Sua Dieta Personalizada</div>
+      <button onclick="copiarDieta()" style="background:var(--card-2,#2a2a2a);border:none;border-radius:8px;padding:6px 12px;color:var(--text-2);font-size:0.75rem;cursor:pointer;font-family:var(--font)" id="btnCopiarDieta">Copiar</button>
+    </div>
+    <div id="dietaTexto" style="font-size:0.85rem;color:var(--text-2);line-height:1.8;white-space:pre-wrap"></div>
   </div>
 </div>
 
@@ -4955,6 +4998,7 @@ function switchOrientTab(id, el) {
   document.querySelectorAll(".orient-panel").forEach(p => p.classList.remove("active"));
   el.classList.add("active");
   document.getElementById("orient-" + id).classList.add("active");
+  if (id === "dieta") preencherDietaDosPerfil();
 }
 
 function addOrientMsg(containerId, role, text) {
@@ -5038,18 +5082,74 @@ function selectDietaObj(el) {
   document.querySelectorAll("#dietaObjChips .config-chip").forEach(c => c.classList.remove("active"));
   el.classList.add("active");
 }
+function selectDietaSexo(s) {
+  document.getElementById("dietaSexoM").classList.toggle("active", s === "M");
+  document.getElementById("dietaSexoF").classList.toggle("active", s === "F");
+}
+function selectDietaAtiv(el) {
+  document.querySelectorAll("#dietaAtivChips .config-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+}
+function preencherDietaDosPerfil() {
+  const cfg = safeJSON("titanpro_config", {});
+  if (cfg.peso && !document.getElementById("dietaPeso").value) document.getElementById("dietaPeso").value = cfg.peso;
+  if (cfg.altura && !document.getElementById("dietaAltura").value) document.getElementById("dietaAltura").value = cfg.altura;
+  if (cfg.idade && !document.getElementById("dietaIdade").value) document.getElementById("dietaIdade").value = cfg.idade;
+}
+function copiarDieta() {
+  const txt = document.getElementById("dietaTexto").textContent;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById("btnCopiarDieta");
+    btn.textContent = "Copiado!";
+    setTimeout(() => { btn.textContent = "Copiar"; }, 2000);
+  }).catch(() => {});
+}
 
 async function gerarDieta() {
   const obj    = document.querySelector("#dietaObjChips .config-chip.active")?.dataset.val || "emagrecimento";
-  const peso   = document.getElementById("dietaPeso").value || "75";
-  const refs   = document.getElementById("dietaRefeicoes").value || "4";
-  const restric = document.getElementById("dietaRestric").value || "nenhuma";
+  const sexo   = document.getElementById("dietaSexoF").classList.contains("active") ? "feminino" : "masculino";
+  const peso   = parseFloat(document.getElementById("dietaPeso").value) || 75;
+  const altura = parseFloat(document.getElementById("dietaAltura").value) || 175;
+  const idade  = parseInt(document.getElementById("dietaIdade").value) || 25;
+  const refs   = parseInt(document.getElementById("dietaRefeicoes").value) || 4;
+  const ativ   = document.querySelector("#dietaAtivChips .config-chip.active")?.dataset.val || "levemente ativo";
+  const restric = document.getElementById("dietaRestric").value.trim() || "nenhuma";
+  const prefs  = document.getElementById("dietaPrefs").value.trim();
+  const orcamento = document.getElementById("dietaOrcamento").value;
   const res    = document.getElementById("dietaResultado");
   const txt    = document.getElementById("dietaTexto");
-  res.style.display = "block";
-  txt.textContent = "Gerando sua dieta...";
+  const btn    = document.getElementById("btnGerarDieta");
 
-  const prompt = `Crie uma dieta completa para ${obj} com ${refs} refeições por dia para uma pessoa de ${peso}kg. Restrições: ${restric}. Inclua: calorias totais, macros (proteína/carboidrato/gordura) e exemplos de alimentos para cada refeição. Base: ISSN e RBNE.`;
+  res.style.display = "block";
+  txt.textContent = "Calculando TMB, TDEE e montando sua dieta personalizada...";
+  btn.disabled = true;
+
+  // Calcula TMB pela fórmula de Mifflin-St Jeor para exibir ao modelo
+  const tmb = sexo === "feminino"
+    ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
+    : Math.round(10*peso + 6.25*altura - 5*idade + 5);
+
+  let prompt = `Crie uma dieta 100% personalizada para ${obj}.
+
+DADOS DO USUÁRIO:
+- Sexo: ${sexo}
+- Peso: ${peso}kg | Altura: ${altura}cm | Idade: ${idade} anos
+- TMB estimada (Mifflin-St Jeor): ~${tmb} kcal
+- Nível de atividade: ${ativ}
+- Número de refeições por dia: ${refs}
+- Restrições/alergias/não gosta: ${restric}
+${prefs ? `- Preferências: ${prefs}` : ""}
+${orcamento ? `- Orçamento: ${orcamento}` : ""}
+
+ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
+1. RESUMO CALÓRICO — calcule o TDEE com base nos dados acima e defina as calorias-alvo para o objetivo informado. Mostre: TMB → TDEE → meta calórica.
+2. MACROS DIÁRIOS — proteína (g e % das calorias), carboidrato (g e %), gordura (g e %). Use as diretrizes da ISSN: ≥1.6g/kg de proteína para hipertrofia, déficit de 300-500kcal para emagrecimento, superávit de 200-300kcal para ganho.
+3. PLANO DE REFEIÇÕES (${refs} refeições) — para cada refeição: nome/horário sugerido, lista de alimentos com quantidades em gramas, calorias e macros da refeição.
+4. DICAS PRÁTICAS — 3 dicas rápidas de preparação/timing.
+
+Seja preciso nos números. Use formato organizado com emojis para facilitar a leitura.`;
+
   try {
     const resp = await fetch("/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -5058,6 +5158,7 @@ async function gerarDieta() {
     const data = await resp.json();
     txt.textContent = data.content?.[0]?.text || "Erro ao gerar dieta.";
   } catch { txt.textContent = "Erro de conexão."; }
+  finally { btn.disabled = false; }
 }
 
 // ══════════════════════════════════════════
