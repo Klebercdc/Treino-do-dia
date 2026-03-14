@@ -2043,77 +2043,49 @@
     <div class="orient-title" style="flex:1;text-align:center;padding-right:60px">ORIENTAÇÃO</div>
   </div>
   <div class="orient-tabs">
-    <div class="orient-tab active" onclick="switchOrientTab('coach',this)">Coach</div>
-    <div class="orient-tab" onclick="switchOrientTab('nutricao',this)">Nutrição</div>
+    <div class="orient-tab active" onclick="switchOrientTab('expert',this)">Expert</div>
     <div class="orient-tab" onclick="switchOrientTab('dieta',this)">Gerar Dieta</div>
     <div class="orient-tab" onclick="switchOrientTab('basal',this)">Dieta Avançada</div>
   </div>
   <div class="orient-content">
 
 ```
-<!-- Painel Coach -->
-<div class="orient-panel active" id="orient-coach">
+<!-- Painel Expert -->
+<div class="orient-panel active" id="orient-expert">
   <div class="orient-shortcuts-row">
-    <div class="orient-chip" onclick="orientAiQuick('analise')">
+    <div class="orient-chip" onclick="orientExpertQuick('analise')">
       <span class="orient-chip-icon">📊</span>
       <span class="orient-chip-name">Analisar Treino</span>
     </div>
-    <div class="orient-chip" onclick="orientAiQuick('plato')">
+    <div class="orient-chip" onclick="orientExpertQuick('plato')">
       <span class="orient-chip-icon">📉</span>
       <span class="orient-chip-name">Detectar Platô</span>
     </div>
-    <div class="orient-chip" onclick="orientAiQuick('dica')">
-      <span class="orient-chip-icon">💡</span>
-      <span class="orient-chip-name">Dica do Dia</span>
+    <div class="orient-chip" onclick="orientExpertQuick('proteina')">
+      <span class="orient-chip-icon">🥩</span>
+      <span class="orient-chip-name">Proteína</span>
     </div>
-    <div class="orient-chip" onclick="orientAiQuick('rpe')">
+    <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
+      <span class="orient-chip-icon">💊</span>
+      <span class="orient-chip-name">Suplementos</span>
+    </div>
+    <div class="orient-chip" onclick="orientExpertQuick('postreino')">
+      <span class="orient-chip-icon">🥤</span>
+      <span class="orient-chip-name">Pós-treino</span>
+    </div>
+    <div class="orient-chip" onclick="orientExpertQuick('rpe')">
       <span class="orient-chip-icon">⚡</span>
       <span class="orient-chip-name">Ajuste de Carga</span>
     </div>
   </div>
   <div class="orient-chat-wrap">
-    <div id="orientCoachMessages" class="orient-chat-messages"></div>
+    <div id="orientExpertMessages" class="orient-chat-messages"></div>
     <div class="orient-chat-bar">
       <div class="orient-input-wrap">
-        <input id="orientCoachInput" placeholder="Pergunte ao Coach..."
+        <input id="orientExpertInput" placeholder="Treino, nutrição, suplementação..."
           style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.9rem;outline:none;-webkit-appearance:none"
-          onkeydown="if(event.key==='Enter')sendOrientCoach()"/>
-        <button onclick="sendOrientCoach()" style="width:36px;height:36px;border-radius:10px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Painel Nutrição -->
-<div class="orient-panel" id="orient-nutricao">
-  <div class="orient-shortcuts-row">
-    <div class="orient-chip" onclick="orientNutriQuick('proteina')">
-      <span class="orient-chip-icon">🥩</span>
-      <span class="orient-chip-name">Proteína</span>
-    </div>
-    <div class="orient-chip" onclick="orientNutriQuick('carboidrato')">
-      <span class="orient-chip-icon">🍚</span>
-      <span class="orient-chip-name">Carboidrato</span>
-    </div>
-    <div class="orient-chip" onclick="orientNutriQuick('suplementos')">
-      <span class="orient-chip-icon">💊</span>
-      <span class="orient-chip-name">Suplementos</span>
-    </div>
-    <div class="orient-chip" onclick="orientNutriQuick('postreino')">
-      <span class="orient-chip-icon">🥤</span>
-      <span class="orient-chip-name">Pós-treino</span>
-    </div>
-  </div>
-  <div class="orient-chat-wrap">
-    <div id="orientNutriMessages" class="orient-chat-messages"></div>
-    <div class="orient-chat-bar">
-      <div class="orient-input-wrap">
-        <input id="orientNutriInput" placeholder="Dúvida sobre nutrição..."
-          style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.9rem;outline:none;-webkit-appearance:none"
-          onkeydown="if(event.key==='Enter')sendOrientNutri()"/>
-        <button onclick="sendOrientNutri()" style="width:36px;height:36px;border-radius:10px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          onkeydown="if(event.key==='Enter')sendOrientExpert()"/>
+        <button onclick="sendOrientExpert()" style="width:36px;height:36px;border-radius:10px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
         </button>
       </div>
@@ -4288,8 +4260,7 @@ function obFinish() {
 ═══════════════════════════════════════════════════ */
 let _aiHistory = [];
 let _aiTyping  = false;
-let _orientCoachHistory = [];
-let _orientNutriHistory = [];
+let _orientExpertHistory = [];
 
 function buildTrainingContext() {
   const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 20);
@@ -5218,48 +5189,27 @@ function addOrientMsg(containerId, role, text) {
   return wrap.querySelector(".ai-bubble");
 }
 
-async function sendOrientCoach() {
-  const input = document.getElementById("orientCoachInput");
+async function sendOrientExpert() {
+  const input = document.getElementById("orientExpertInput");
   const txt = input.value.trim(); if (!txt) return;
   input.value = "";
-  _orientCoachHistory.push({ role: "user", content: txt });
-  addOrientMsg("orientCoachMessages", "user", txt);
-  const typing = addOrientMsg("orientCoachMessages", "assistant", "...");
-  try {
-    const system = buildTrainingContext();
-    const messages = _orientCoachHistory.slice(-16);
-    const resp = await fetch("/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, messages, isGerarTreino: false })
-    });
-    const data = await resp.json();
-    const text = data.content?.[0]?.text || "Sem resposta.";
-    typing.innerHTML = renderMarkdown(text);
-    _orientCoachHistory.push({ role: "assistant", content: text });
-  } catch { typing.innerHTML = "Erro de conexão."; }
-}
-
-async function sendOrientNutri() {
-  const input = document.getElementById("orientNutriInput");
-  const txt = input.value.trim(); if (!txt) return;
-  input.value = "";
-  _orientNutriHistory.push({ role: "user", content: txt });
-  addOrientMsg("orientNutriMessages", "user", txt);
-  const typing = addOrientMsg("orientNutriMessages", "assistant", "...");
+  _orientExpertHistory.push({ role: "user", content: txt });
+  addOrientMsg("orientExpertMessages", "user", txt);
+  const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
   try {
     const system = buildTrainingContext() + `
 
 ═══════════════════════════════════════
-MODO NUTRIÇÃO E SUPLEMENTAÇÃO
+MODO EXPERT: TREINO + NUTRIÇÃO + SUPLEMENTAÇÃO
 ═══════════════════════════════════════
-Você está no painel de Nutrição. Priorize:
-- Nutrição esportiva baseada em ISSN, JISSN e meta-análises recentes
-- Macros, timing de refeições, estratégias de bulk/cutting/recomp
-- Suplementação com base em evidências: seja honesto sobre o que funciona (Tier 1: creatina, whey, cafeína, beta-alanina, vitamina D3) e o que é marketing (BCAAs em dieta adequada, glutamina para hipertrofia, CLA, termogênicos sem cafeína)
-- Quando indicar suplemento, sempre diga: dose, timing, para quem faz sentido e se há limitações
-- Não prescreva dieta clínica para patologias — recomende nutricionista nesses casos`;
+Você é um especialista completo em musculação, nutrição esportiva e suplementação. Responda com base em evidências científicas (ISSN, JISSN, meta-análises).
 
-    const messages = _orientNutriHistory.slice(-16);
+Treino: periodização, volume, intensidade, progressão de carga, técnica, recuperação, detecção de platô.
+Nutrição: macros, timing de refeições, estratégias de bulk/cutting/recomposição corporal.
+Suplementação: seja honesto — Tier 1 (creatina, whey, cafeína, beta-alanina, vitamina D3); evite hype de produtos sem evidência (BCAAs em dieta adequada, glutamina para hipertrofia, CLA, termogênicos sem cafeína). Sempre informe dose, timing e para quem faz sentido.
+Não prescreva dieta clínica para patologias — recomende profissional quando necessário.`;
+
+    const messages = _orientExpertHistory.slice(-20);
     const resp = await fetch("/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ system, messages, isGerarTreino: false })
@@ -5267,30 +5217,21 @@ Você está no painel de Nutrição. Priorize:
     const data = await resp.json();
     const text = data.content?.[0]?.text || "Sem resposta.";
     typing.innerHTML = renderMarkdown(text);
-    _orientNutriHistory.push({ role: "assistant", content: text });
+    _orientExpertHistory.push({ role: "assistant", content: text });
   } catch { typing.innerHTML = "Erro de conexão."; }
 }
 
-function orientAiQuick(tipo) {
+function orientExpertQuick(tipo) {
   const msgs = {
-    analise: "Analise meu treino atual e me dê feedback técnico.",
-    plato: "Detecte se há sinais de platô no meu histórico de treinos.",
-    dica: "Me dê uma dica de treino personalizada para hoje.",
-    rpe: "Baseado no meu RPE recente, devo ajustar minha carga?"
-  };
-  document.getElementById("orientCoachInput").value = msgs[tipo] || "";
-  sendOrientCoach();
-}
-
-function orientNutriQuick(tipo) {
-  const msgs = {
-    proteina: "Quanto de proteína devo consumir por dia para meu objetivo?",
-    carboidrato: "Qual a quantidade ideal de carboidrato para treino intenso?",
+    analise:     "Analise meu treino atual e me dê feedback técnico.",
+    plato:       "Detecte se há sinais de platô no meu histórico de treinos.",
+    rpe:         "Baseado no meu RPE recente, devo ajustar minha carga?",
+    proteina:    "Quanto de proteína devo consumir por dia para meu objetivo?",
     suplementos: "Quais suplementos têm evidência científica real e valem a pena?",
-    postreino: "O que comer no pós-treino para maximizar recuperação?"
+    postreino:   "O que comer no pós-treino para maximizar recuperação?"
   };
-  document.getElementById("orientNutriInput").value = msgs[tipo] || "";
-  sendOrientNutri();
+  document.getElementById("orientExpertInput").value = msgs[tipo] || "";
+  sendOrientExpert();
 }
 
 function selectDietaObj(el) {
