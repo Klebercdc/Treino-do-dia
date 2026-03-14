@@ -5273,8 +5273,25 @@ function closeHome() {
   document.getElementById("homeScreen").classList.remove("show");
   navTo("treino");
 }
+function getNextTreinoIdx() {
+  const draft    = safeJSON(STORAGE.draftKey, null);
+  const sections = draft?.sections || [];
+  if (!sections.length) return 0;
+  const hist = safeJSON(STORAGE.historyKey, []);
+  if (!hist.length) return 0;
+  // hist[0] é o mais recente (unshift)
+  const lastKey = (hist[0].state?.sections || [])[0]?.treinoKey || null;
+  if (!lastKey) return 0;
+  const lastIdx = sections.findIndex(s => s.treinoKey === lastKey);
+  if (lastIdx < 0) return 0;
+  return (lastIdx + 1) % sections.length;
+}
+
 function iniciarTreino() {
+  const idx = getNextTreinoIdx();
   closeHome();
+  // Navega para a aba correta do próximo treino
+  setTimeout(() => { const p = document.getElementById("p" + idx); if (p) p.click(); }, 50);
 }
 
 function updateHomeScreen() {
@@ -5299,11 +5316,14 @@ function updateHomeScreen() {
   document.getElementById("homeVolSemana").textContent = volSem > 999
     ? (volSem / 1000).toFixed(1) + "t" : Math.round(volSem);
 
-  // Treino do dia sugerido
-  const sections = safeJSON(STORAGE.sectionsKey, []);
-  const tabAtiva = sections[0]?.treinoKey || "A";
-  document.getElementById("homeTodayTreino").textContent = "Treino " + tabAtiva;
-  const exCount = sections.reduce((a, s) => a + (s.cards || []).length, 0);
+  // Treino do dia sugerido — próximo na rotação baseado no histórico
+  const draft    = safeJSON(STORAGE.draftKey, null);
+  const sections = draft?.sections || [];
+  const nextIdx  = getNextTreinoIdx();
+  const nextSec  = sections[nextIdx];
+  const nextKey  = nextSec?.treinoKey || "A";
+  const exCount  = (nextSec?.cards || []).length;
+  document.getElementById("homeTodayTreino").textContent = "Treino " + nextKey;
   document.getElementById("homeTodaySub").textContent =
     exCount > 0 ? exCount + " exercícios" : "Configure seu programa";
 
