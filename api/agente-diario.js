@@ -1,4 +1,5 @@
 var https = require('https');
+var nvidia = require('./_nvidia');
 
 var SYSTEM = `Você é o Assistente Pedagógico do DIÁRIO PRO. Sua função é ajudar professores a redigir registros de diário pedagógico claros, ricos e reflexivos.
 
@@ -16,38 +17,8 @@ function callNvidia(system, messages, callback) {
   var KEY = process.env.NVIDIA_API_KEY;
   if (!KEY) return callback('NVIDIA_API_KEY missing', null);
   var m = [{ role: 'system', content: system }].concat(messages);
-  var body = JSON.stringify({
-    model: 'meta/llama-3.3-70b-instruct',
-    messages: m,
-    max_tokens: 800,
-    temperature: 0.7,
-    stream: false
-  });
-  var options = {
-    hostname: 'integrate.api.nvidia.com',
-    path: '/v1/chat/completions',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + KEY,
-      'Content-Length': Buffer.byteLength(body)
-    }
-  };
-  var req = https.request(options, function(res) {
-    var data = '';
-    res.on('data', function(c) { data += c; });
-    res.on('end', function() {
-      try {
-        var j = JSON.parse(data);
-        var text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
-        callback(null, text);
-      } catch(e) { callback(e.message, null); }
-    });
-  });
-  req.on('error', function(e) { callback(e.message, null); });
-  req.setTimeout(25000, function() { req.destroy(new Error('timeout')); });
-  req.write(body);
-  req.end();
+  var payload = { model: 'meta/llama-3.3-70b-instruct', messages: m, max_tokens: 800, temperature: 0.7, stream: false };
+  nvidia.callNvidia(KEY, payload, 25000, 3, callback);
 }
 
 function parseJSON(text) {
