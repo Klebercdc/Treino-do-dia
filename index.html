@@ -1269,17 +1269,22 @@
     .orient-chip-name { font-size: 0.75rem; font-weight: 700; color: var(--text); letter-spacing: .02em; }
     .orient-chat-wrap {
       flex: 1; display: flex; flex-direction: column; overflow: hidden;
-      margin: 12px 16px; background: var(--card);
-      border: 1px solid var(--border); border-radius: 16px;
     }
     .orient-chat-messages {
-      flex: 1; overflow-y: auto; padding: 14px;
-      display: flex; flex-direction: column; gap: 10px;
+      flex: 1; overflow-y: auto; padding: 20px 16px 12px;
+      display: flex; flex-direction: column; gap: 18px;
     }
     .orient-chat-bar {
-      padding: 10px; border-top: 1px solid var(--border);
-      display: flex; gap: 8px; flex: none;
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border); flex: none;
     }
+    .orient-input-wrap {
+      display: flex; align-items: flex-end;
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 10px 10px 10px 16px; gap: 8px;
+      transition: border-color .2s;
+    }
+    .orient-input-wrap:focus-within { border-color: var(--accent); }
     .orient-form-scroll { flex: 1; overflow-y: auto; padding: 16px; }
     .orient-card {
       background: var(--card); border: 1px solid var(--border);
@@ -2038,72 +2043,52 @@
     <div class="orient-title" style="flex:1;text-align:center;padding-right:60px">ORIENTAÇÃO</div>
   </div>
   <div class="orient-tabs">
-    <div class="orient-tab active" onclick="switchOrientTab('coach',this)">Coach</div>
-    <div class="orient-tab" onclick="switchOrientTab('nutricao',this)">Nutrição</div>
+    <div class="orient-tab active" onclick="switchOrientTab('expert',this)">Expert</div>
     <div class="orient-tab" onclick="switchOrientTab('dieta',this)">Gerar Dieta</div>
     <div class="orient-tab" onclick="switchOrientTab('basal',this)">Dieta Avançada</div>
   </div>
   <div class="orient-content">
 
 ```
-<!-- Painel Coach -->
-<div class="orient-panel active" id="orient-coach">
+<!-- Painel Expert -->
+<div class="orient-panel active" id="orient-expert">
   <div class="orient-shortcuts-row">
-    <div class="orient-chip" onclick="orientAiQuick('analise')">
+    <div class="orient-chip" onclick="orientExpertQuick('analise')">
       <span class="orient-chip-icon">📊</span>
       <span class="orient-chip-name">Analisar Treino</span>
     </div>
-    <div class="orient-chip" onclick="orientAiQuick('plato')">
+    <div class="orient-chip" onclick="orientExpertQuick('plato')">
       <span class="orient-chip-icon">📉</span>
       <span class="orient-chip-name">Detectar Platô</span>
     </div>
-    <div class="orient-chip" onclick="orientAiQuick('dica')">
-      <span class="orient-chip-icon">💡</span>
-      <span class="orient-chip-name">Dica do Dia</span>
+    <div class="orient-chip" onclick="orientExpertQuick('proteina')">
+      <span class="orient-chip-icon">🥩</span>
+      <span class="orient-chip-name">Proteína</span>
     </div>
-    <div class="orient-chip" onclick="orientAiQuick('rpe')">
+    <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
+      <span class="orient-chip-icon">💊</span>
+      <span class="orient-chip-name">Suplementos</span>
+    </div>
+    <div class="orient-chip" onclick="orientExpertQuick('postreino')">
+      <span class="orient-chip-icon">🥤</span>
+      <span class="orient-chip-name">Pós-treino</span>
+    </div>
+    <div class="orient-chip" onclick="orientExpertQuick('rpe')">
       <span class="orient-chip-icon">⚡</span>
       <span class="orient-chip-name">Ajuste de Carga</span>
     </div>
   </div>
   <div class="orient-chat-wrap">
-    <div id="orientCoachMessages" class="orient-chat-messages"></div>
+    <div id="orientExpertMessages" class="orient-chat-messages"></div>
     <div class="orient-chat-bar">
-      <input id="orientCoachInput" placeholder="Pergunte ao Coach..." style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font);font-size:0.85rem;color:var(--text);-webkit-appearance:none" onkeydown="if(event.key==='Enter')sendOrientCoach()"/>
-      <button onclick="sendOrientCoach()" style="background:var(--accent);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700;cursor:pointer;font-family:var(--font)">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Painel Nutrição -->
-<div class="orient-panel" id="orient-nutricao">
-  <div class="orient-shortcuts-row">
-    <div class="orient-chip" onclick="orientNutriQuick('proteina')">
-      <span class="orient-chip-icon">🥩</span>
-      <span class="orient-chip-name">Proteína</span>
-    </div>
-    <div class="orient-chip" onclick="orientNutriQuick('carboidrato')">
-      <span class="orient-chip-icon">🍚</span>
-      <span class="orient-chip-name">Carboidrato</span>
-    </div>
-    <div class="orient-chip" onclick="orientNutriQuick('suplementos')">
-      <span class="orient-chip-icon">💊</span>
-      <span class="orient-chip-name">Suplementos</span>
-    </div>
-    <div class="orient-chip" onclick="orientNutriQuick('postreino')">
-      <span class="orient-chip-icon">🥤</span>
-      <span class="orient-chip-name">Pós-treino</span>
-    </div>
-  </div>
-  <div class="orient-chat-wrap">
-    <div id="orientNutriMessages" class="orient-chat-messages"></div>
-    <div class="orient-chat-bar">
-      <input id="orientNutriInput" placeholder="Dúvida sobre nutrição..." style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font);font-size:0.85rem;color:var(--text);-webkit-appearance:none" onkeydown="if(event.key==='Enter')sendOrientNutri()"/>
-      <button onclick="sendOrientNutri()" style="background:var(--accent);border:none;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700;cursor:pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
+      <div class="orient-input-wrap">
+        <input id="orientExpertInput" placeholder="Treino, nutrição, suplementação..."
+          style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.9rem;outline:none;-webkit-appearance:none"
+          onkeydown="if(event.key==='Enter')sendOrientExpert()"/>
+        <button onclick="sendOrientExpert()" style="width:36px;height:36px;border-radius:10px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -4275,8 +4260,14 @@ function obFinish() {
 ═══════════════════════════════════════════════════ */
 let _aiHistory = [];
 let _aiTyping  = false;
-let _orientCoachHistory = [];
-let _orientNutriHistory = [];
+let _orientExpertHistory = [];
+
+function buildUserData() {
+  return {
+    history: safeJSON(STORAGE.historyKey, []).slice(0, 25),
+    profile: safeJSON("titanpro_config", {})
+  };
+}
 
 function buildTrainingContext() {
   const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 20);
@@ -4605,19 +4596,20 @@ async function sendAI(overrideText, isGerarTreino = false) {
   addAIMessage("assistant", "", true); // dots animados
 
   try {
-    const systemPrompt = buildTrainingContext();
     const messages = _aiHistory.slice(-12);
+    const userData = buildUserData();
 
-    const response = await fetch("/api/chat", {
+    // Gerar treino → /api/chat (especializado em JSON estruturado)
+    // Chat normal → /api/agent (tem acesso a ferramentas e dados reais)
+    const endpoint = isGerarTreino ? "/api/chat" : "/api/agent";
+    const body = isGerarTreino
+      ? { system: buildTrainingContext(), messages, isGerarTreino, model: "meta/llama-3.1-70b-instruct", max_tokens: 1000 }
+      : { messages, history: userData.history, profile: userData.profile };
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "meta/llama-3.1-70b-instruct",
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages,
-        isGerarTreino
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) throw new Error("Erro " + response.status);
@@ -5188,90 +5180,55 @@ function switchOrientTab(id, el) {
 
 function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
-  const d = document.createElement("div");
-  d.style.cssText = "padding:10px 12px;border-radius:12px;font-size:0.82rem;line-height:1.6;max-width:85%;" +
-    (role === "user"
-      ? "background:var(--accent-dim);color:var(--text);align-self:flex-end;border:1px solid rgba(249,115,22,0.2)"
-      : "background:var(--card);color:var(--text-2);align-self:flex-start;border:1px solid var(--border)");
-  d.textContent = text;
-  c.appendChild(d);
+  const wrap = document.createElement("div");
+  wrap.className = `ai-msg ${role}`;
+
+  const avatarSVG = `<div class="ai-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg></div>`;
+
+  if (role === "assistant") {
+    wrap.innerHTML = `${avatarSVG}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
+  } else {
+    wrap.innerHTML = `<div class="ai-bubble">${renderMarkdown(text)}</div>`;
+  }
+
+  c.appendChild(wrap);
   c.scrollTop = c.scrollHeight;
-  return d;
+  // retorna referência ao bubble para poder atualizar o typing
+  return wrap.querySelector(".ai-bubble");
 }
 
-async function sendOrientCoach() {
-  const input = document.getElementById("orientCoachInput");
+async function sendOrientExpert() {
+  const input = document.getElementById("orientExpertInput");
   const txt = input.value.trim(); if (!txt) return;
   input.value = "";
-  _orientCoachHistory.push({ role: "user", content: txt });
-  addOrientMsg("orientCoachMessages", "user", txt);
-  const typing = addOrientMsg("orientCoachMessages", "assistant", "...");
+  _orientExpertHistory.push({ role: "user", content: txt });
+  addOrientMsg("orientExpertMessages", "user", txt);
+  const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
   try {
-    const system = buildTrainingContext();
-    const messages = _orientCoachHistory.slice(-16);
-    const resp = await fetch("/api/chat", {
+    const userData = buildUserData();
+    const messages = _orientExpertHistory.slice(-20);
+    const resp = await fetch("/api/agent", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, messages, isGerarTreino: false })
+      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || "Sem resposta.";
-    typing.textContent = text;
-    _orientCoachHistory.push({ role: "assistant", content: text });
-  } catch { typing.textContent = "Erro de conexão."; }
+    const text = data.content?.[0]?.text || data.error || "Sem resposta.";
+    typing.innerHTML = renderMarkdown(text);
+    _orientExpertHistory.push({ role: "assistant", content: text });
+  } catch { typing.innerHTML = "Erro de conexão."; }
 }
 
-async function sendOrientNutri() {
-  const input = document.getElementById("orientNutriInput");
-  const txt = input.value.trim(); if (!txt) return;
-  input.value = "";
-  _orientNutriHistory.push({ role: "user", content: txt });
-  addOrientMsg("orientNutriMessages", "user", txt);
-  const typing = addOrientMsg("orientNutriMessages", "assistant", "...");
-  try {
-    const system = buildTrainingContext() + `
-
-═══════════════════════════════════════
-MODO NUTRIÇÃO E SUPLEMENTAÇÃO
-═══════════════════════════════════════
-Você está no painel de Nutrição. Priorize:
-- Nutrição esportiva baseada em ISSN, JISSN e meta-análises recentes
-- Macros, timing de refeições, estratégias de bulk/cutting/recomp
-- Suplementação com base em evidências: seja honesto sobre o que funciona (Tier 1: creatina, whey, cafeína, beta-alanina, vitamina D3) e o que é marketing (BCAAs em dieta adequada, glutamina para hipertrofia, CLA, termogênicos sem cafeína)
-- Quando indicar suplemento, sempre diga: dose, timing, para quem faz sentido e se há limitações
-- Não prescreva dieta clínica para patologias — recomende nutricionista nesses casos`;
-
-    const messages = _orientNutriHistory.slice(-16);
-    const resp = await fetch("/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, messages, isGerarTreino: false })
-    });
-    const data = await resp.json();
-    const text = data.content?.[0]?.text || "Sem resposta.";
-    typing.textContent = text;
-    _orientNutriHistory.push({ role: "assistant", content: text });
-  } catch { typing.textContent = "Erro de conexão."; }
-}
-
-function orientAiQuick(tipo) {
+function orientExpertQuick(tipo) {
   const msgs = {
-    analise: "Analise meu treino atual e me dê feedback técnico.",
-    plato: "Detecte se há sinais de platô no meu histórico de treinos.",
-    dica: "Me dê uma dica de treino personalizada para hoje.",
-    rpe: "Baseado no meu RPE recente, devo ajustar minha carga?"
-  };
-  document.getElementById("orientCoachInput").value = msgs[tipo] || "";
-  sendOrientCoach();
-}
-
-function orientNutriQuick(tipo) {
-  const msgs = {
-    proteina: "Quanto de proteína devo consumir por dia para meu objetivo?",
-    carboidrato: "Qual a quantidade ideal de carboidrato para treino intenso?",
+    analise:     "Analise meu treino atual e me dê feedback técnico.",
+    plato:       "Detecte se há sinais de platô no meu histórico de treinos.",
+    rpe:         "Baseado no meu RPE recente, devo ajustar minha carga?",
+    proteina:    "Quanto de proteína devo consumir por dia para meu objetivo?",
     suplementos: "Quais suplementos têm evidência científica real e valem a pena?",
-    postreino: "O que comer no pós-treino para maximizar recuperação?"
+    postreino:   "O que comer no pós-treino para maximizar recuperação?"
   };
-  document.getElementById("orientNutriInput").value = msgs[tipo] || "";
-  sendOrientNutri();
+  document.getElementById("orientExpertInput").value = msgs[tipo] || "";
+  sendOrientExpert();
 }
 
 function selectDietaObj(el) {
