@@ -4136,6 +4136,8 @@ function obFinish() {
 ═══════════════════════════════════════════════════ */
 let _aiHistory = [];
 let _aiTyping  = false;
+let _orientCoachHistory = [];
+let _orientNutriHistory = [];
 
 function buildTrainingContext() {
   const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 10);
@@ -4173,12 +4175,17 @@ function buildTrainingContext() {
 ═══════════════════════════════════════
 PERSONALIDADE E FORMA DE FALAR
 ═══════════════════════════════════════
-- Direto, motivador e humano — coach experiente que conhece o aluno há anos
-- Português brasileiro natural, como numa conversa de academia
-- NUNCA comece com "Claro!", "Certamente!", "Como posso ajudar?" — vá direto ao ponto
-- Resposta simples = 2-3 linhas. Detalhe só quando necessário
-- Nunca repita o que o usuário disse antes de responder
-- Encorajador sem exagero. "Bom progresso" vale mais que "INCRÍVEL!!"
+- Você é um coach de verdade, não um chatbot — fale como gente fala
+- Português brasileiro coloquial, como numa conversa de WhatsApp ou academia
+- NUNCA comece com "Claro!", "Certamente!", "Olá!", "Como posso ajudar?" — vá direto ao ponto
+- Saudação simples ("Oi", "Ola", "E aí") = responda de forma curta e casual, sem monólogo
+- Resposta simples = 1-3 linhas. Detalhe só quando a pergunta pede
+- Nunca repita o que o usuário disse. Nunca faça introduções desnecessárias
+- Varie o jeito de responder — não repita padrões de frase
+- Faça perguntas só quando realmente precisar de info — uma por vez, no fim
+- Use gírias do meio quando fizer sentido: "tá voando", "bora", "massa"
+- Encorajador sem exagero — "bom progresso" é melhor que "INCRÍVEL!!"
+- Quando não souber algo sobre o usuário, pergunte — não invente
 
 ═══════════════════════════════════════
 PERFIL DO USUÁRIO
@@ -4921,17 +4928,20 @@ async function sendOrientCoach() {
   const input = document.getElementById("orientCoachInput");
   const txt = input.value.trim(); if (!txt) return;
   input.value = "";
+  _orientCoachHistory.push({ role: "user", content: txt });
   addOrientMsg("orientCoachMessages", "user", txt);
   const typing = addOrientMsg("orientCoachMessages", "assistant", "...");
   try {
     const system = buildTrainingContext();
+    const messages = _orientCoachHistory.slice(-16);
     const resp = await fetch("/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, messages: [{ role: "user", content: txt }], isGerarTreino: false })
+      body: JSON.stringify({ system, messages, isGerarTreino: false })
     });
     const data = await resp.json();
     const text = data.content?.[0]?.text || "Sem resposta.";
     typing.textContent = text;
+    _orientCoachHistory.push({ role: "assistant", content: text });
   } catch { typing.textContent = "Erro de conexão."; }
 }
 
@@ -4939,17 +4949,20 @@ async function sendOrientNutri() {
   const input = document.getElementById("orientNutriInput");
   const txt = input.value.trim(); if (!txt) return;
   input.value = "";
+  _orientNutriHistory.push({ role: "user", content: txt });
   addOrientMsg("orientNutriMessages", "user", txt);
   const typing = addOrientMsg("orientNutriMessages", "assistant", "...");
   try {
-    const cfg = safeJSON("titanpro_config", {});
     const system = buildTrainingContext() + " Foque em nutrição esportiva baseada em ISSN e JISSN.";
+    const messages = _orientNutriHistory.slice(-16);
     const resp = await fetch("/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, messages: [{ role: "user", content: txt }], isGerarTreino: false })
+      body: JSON.stringify({ system, messages, isGerarTreino: false })
     });
     const data = await resp.json();
-    typing.textContent = data.content?.[0]?.text || "Sem resposta.";
+    const text = data.content?.[0]?.text || "Sem resposta.";
+    typing.textContent = text;
+    _orientNutriHistory.push({ role: "assistant", content: text });
   } catch { typing.textContent = "Erro de conexão."; }
 }
 
