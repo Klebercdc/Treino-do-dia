@@ -4262,6 +4262,13 @@ let _aiHistory = [];
 let _aiTyping  = false;
 let _orientExpertHistory = [];
 
+function buildUserData() {
+  return {
+    history: safeJSON(STORAGE.historyKey, []).slice(0, 25),
+    profile: safeJSON("titanpro_config", {})
+  };
+}
+
 function buildTrainingContext() {
   const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 20);
   const current = serializeCurrentState();
@@ -4589,19 +4596,20 @@ async function sendAI(overrideText, isGerarTreino = false) {
   addAIMessage("assistant", "", true); // dots animados
 
   try {
-    const systemPrompt = buildTrainingContext();
     const messages = _aiHistory.slice(-12);
+    const userData = buildUserData();
 
-    const response = await fetch("/api/chat", {
+    // Gerar treino → /api/chat (especializado em JSON estruturado)
+    // Chat normal → /api/agent (tem acesso a ferramentas e dados reais)
+    const endpoint = isGerarTreino ? "/api/chat" : "/api/agent";
+    const body = isGerarTreino
+      ? { system: buildTrainingContext(), messages, isGerarTreino, model: "meta/llama-3.1-70b-instruct", max_tokens: 1000 }
+      : { messages, history: userData.history, profile: userData.profile };
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "meta/llama-3.1-70b-instruct",
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages,
-        isGerarTreino
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) throw new Error("Erro " + response.status);
@@ -5197,25 +5205,14 @@ async function sendOrientExpert() {
   addOrientMsg("orientExpertMessages", "user", txt);
   const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
   try {
-    const system = buildTrainingContext() + `
-
-═══════════════════════════════════════
-MODO EXPERT: TREINO + NUTRIÇÃO + SUPLEMENTAÇÃO
-═══════════════════════════════════════
-Você é um especialista completo em musculação, nutrição esportiva e suplementação. Responda com base em evidências científicas (ISSN, JISSN, meta-análises).
-
-Treino: periodização, volume, intensidade, progressão de carga, técnica, recuperação, detecção de platô.
-Nutrição: macros, timing de refeições, estratégias de bulk/cutting/recomposição corporal.
-Suplementação: seja honesto — Tier 1 (creatina, whey, cafeína, beta-alanina, vitamina D3); evite hype de produtos sem evidência (BCAAs em dieta adequada, glutamina para hipertrofia, CLA, termogênicos sem cafeína). Sempre informe dose, timing e para quem faz sentido.
-Não prescreva dieta clínica para patologias — recomende profissional quando necessário.`;
-
+    const userData = buildUserData();
     const messages = _orientExpertHistory.slice(-20);
-    const resp = await fetch("/api/chat", {
+    const resp = await fetch("/api/agent", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, messages, isGerarTreino: false })
+      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile })
     });
     const data = await resp.json();
-    const text = data.content?.[0]?.text || "Sem resposta.";
+    const text = data.content?.[0]?.text || data.error || "Sem resposta.";
     typing.innerHTML = renderMarkdown(text);
     _orientExpertHistory.push({ role: "assistant", content: text });
   } catch { typing.innerHTML = "Erro de conexão."; }
