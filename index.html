@@ -5212,7 +5212,18 @@ async function sendOrientNutri() {
   addOrientMsg("orientNutriMessages", "user", txt);
   const typing = addOrientMsg("orientNutriMessages", "assistant", "...");
   try {
-    const system = buildTrainingContext() + " Foque em nutrição esportiva baseada em ISSN e JISSN.";
+    const system = buildTrainingContext() + `
+
+═══════════════════════════════════════
+MODO NUTRIÇÃO E SUPLEMENTAÇÃO
+═══════════════════════════════════════
+Você está no painel de Nutrição. Priorize:
+- Nutrição esportiva baseada em ISSN, JISSN e meta-análises recentes
+- Macros, timing de refeições, estratégias de bulk/cutting/recomp
+- Suplementação com base em evidências: seja honesto sobre o que funciona (Tier 1: creatina, whey, cafeína, beta-alanina, vitamina D3) e o que é marketing (BCAAs em dieta adequada, glutamina para hipertrofia, CLA, termogênicos sem cafeína)
+- Quando indicar suplemento, sempre diga: dose, timing, para quem faz sentido e se há limitações
+- Não prescreva dieta clínica para patologias — recomende nutricionista nesses casos`;
+
     const messages = _orientNutriHistory.slice(-16);
     const resp = await fetch("/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" },
