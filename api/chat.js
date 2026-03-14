@@ -1,4 +1,5 @@
 var https = require(`https`);
+var nvidia = require('./_nvidia');
 
 var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
 
@@ -135,22 +136,8 @@ function callNvidia(system, messages, maxTokens, temp, callback) {
   var m = [];
   if (system) m.push({ role: `system`, content: system });
   messages.forEach(function(x) { m.push(x); });
-  var body = JSON.stringify({ model: `meta/llama-3.3-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: temp, stream: false });
-  var o = { hostname: `integrate.api.nvidia.com`, path: `/v1/chat/completions`, method: `POST`, headers: { [`Content-Type`]: `application/json`, [`Authorization`]: `Bearer ` + KEY, [`Content-Length`]: Buffer.byteLength(body) } };
-  var r = https.request(o, function(s) {
-    var d = ``;
-    s.on(`data`, function(c) { d += c; });
-    s.on(`end`, function() {
-      try {
-        var j = JSON.parse(d);
-        callback(null, (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||``);
-      } catch(e) { callback(e.message, null); }
-    });
-  });
-  r.on(`error`, function(e) { callback(e.message, null); });
-  r.setTimeout(25000, function() { r.destroy(new Error('timeout')); });
-  r.write(body);
-  r.end();
+  var payload = { model: `meta/llama-3.3-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: temp, stream: false };
+  nvidia.callNvidia(KEY, payload, 25000, 3, callback);
 }
 
 function parseWorkout(text) {
