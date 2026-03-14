@@ -4140,35 +4140,63 @@ let _orientCoachHistory = [];
 let _orientNutriHistory = [];
 
 function buildTrainingContext() {
-  const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 10);
+  const hist    = safeJSON(STORAGE.historyKey, []).slice(0, 20);
   const current = serializeCurrentState();
   const streak  = calcStreak();
   const freq    = document.getElementById("freq")?.value || "3";
   const obj     = document.getElementById("obj")?.value  || "hipertrofia";
+  const cfg     = safeJSON("titanpro_config", {});
 
-  // Resumo das últimas sessões
-  const histSummary = hist.slice(0, 5).map((h, i) => {
-    const vol   = Math.round(calcVolumeTotal(h.state));
-    const date  = new Date(h.createdAt).toLocaleDateString("pt-BR");
-    const exs   = (h.state?.sections||[]).flatMap(s => (s.cards||[]).map(c => c.name)).slice(0, 6).join(", ");
-    return `Sessão ${i+1} (${date}): volume ${vol}kg — ${exs}`;
+  // PRs por exercício
+  const prMap = buildPRMap();
+  const prLines = Object.entries(prMap).map(([k, rm]) => `  ${k.split("_").slice(1).join(" ")}: 1RM ~${Math.round(rm)}kg`).slice(0, 20).join("\n");
+
+  // Histórico detalhado das últimas 10 sessões
+  const histSummary = hist.slice(0, 10).map((h, i) => {
+    const vol  = Math.round(calcVolumeTotal(h.state));
+    const date = new Date(h.createdAt).toLocaleDateString("pt-BR");
+    const dur  = h.durationMin ? `${h.durationMin}min` : "duração n/d";
+    const bw   = h.bodyWeight  ? `${h.bodyWeight}kg corporal` : "";
+    const allEx = (h.state?.sections||[]).flatMap(s => (s.cards||[]).map(c => {
+      const sets = (c.values||[]).filter(v=>v.kg&&v.reps).map(v=>{
+        const rpeStr = v.rpe ? ` RPE${v.rpe}` : "";
+        return `${v.kg}kg×${v.reps}${rpeStr}`;
+      }).join(", ");
+      return sets ? `${c.name}(${sets})` : c.name;
+    }));
+    const avgRpe = (() => {
+      const rpes = (h.state?.sections||[]).flatMap(s=>(s.cards||[]).flatMap(c=>(c.values||[]).map(v=>parseFloat(v.rpe)).filter(r=>r>0)));
+      return rpes.length ? (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1) : null;
+    })();
+    const grupos = [...new Set((h.state?.sections||[]).map(s=>s.treinoKey||s.key).filter(Boolean))].join("/");
+    return `Sessão ${i+1} [${date}] ${grupos} | vol:${vol}kg | ${dur}${bw?" | "+bw:""} | RPE médio:${avgRpe||"n/d"}\n  Exercícios: ${allEx.join(", ")}`;
   }).join("\n");
 
-  // Treino atual
+  // Treino atual com RPE e meta
   const currentSummary = (current.sections||[]).map(sec => {
     const exs = (sec.cards||[]).map(c => {
-      const sets = (c.values||[]).filter(v=>v.kg&&v.reps).map(v=>`${v.kg}kg×${v.reps}reps`).join(", ");
-      return `${c.name}: ${sets || "sem dados"}`;
+      const sets = (c.values||[]).filter(v=>v.kg&&v.reps).map(v=>{
+        const rpeStr = v.rpe ? ` RPE${v.rpe}` : "";
+        return `${v.kg}kg×${v.reps}${rpeStr}`;
+      }).join(", ");
+      const meta = c.meta ? ` [meta:${c.meta}]` : "";
+      return `${c.name}${meta}: ${sets || "sem dados"}`;
     }).join(" | ");
-    return `${sec.treinoKey}: ${exs}`;
+    return `Treino ${sec.treinoKey}: ${exs}`;
   }).join("\n");
 
-    const nivel = hist.length < 3 ? "iniciante" : hist.length < 10 ? "intermediário" : "avançado";
-  const agora = new Date();
-  const hora = agora.getHours();
+  // Volume tendência (últimas 4 vs 4 anteriores)
+  const vols = hist.slice(0,8).map(h=>calcVolumeTotal(h.state));
+  const tendencia = vols.length >= 4
+    ? (() => { const r=Math.round(vols.slice(0,4).reduce((a,b)=>a+b,0)/4); const a=Math.round(vols.slice(4).reduce((a,b)=>a+b,0)/Math.max(vols.slice(4).length,1)); return a>0?`${r}kg/sessão (${r>=a?"+"+(r-a):r-a}kg vs período anterior)`:`${r}kg/sessão`; })()
+    : "dados insuficientes";
+
+  const nivel  = hist.length < 3 ? "iniciante" : hist.length < 10 ? "intermediário" : "avançado";
+  const agora  = new Date();
+  const hora   = agora.getHours();
   const saudacao = hora < 12 ? "manhã" : hora < 18 ? "tarde" : "noite";
-  const horaStr = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
-  const peso  = safeJSON("titanpro_config", {}).peso || "não informado";
+  const horaStr  = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+  const totalSessoes = safeJSON(STORAGE.historyKey, []).length;
 
   return `Você é o TITAN COACH, o coach pessoal de musculação e nutrição do app TITAN PRO.
 
@@ -4193,16 +4221,31 @@ PERSONALIDADE E FORMA DE FALAR
 ═══════════════════════════════════════
 PERFIL DO USUÁRIO
 ═══════════════════════════════════════
+- Nome: ${cfg.nome || "não informado"}
 - Objetivo: ${obj}
-- Frequência: ${freq}x por semana
-- Nível: ${nivel}
-- Peso corporal: ${peso} kg
+- Frequência planejada: ${freq}x por semana
+- Nível: ${nivel} (${totalSessoes} sessões registradas)
+- Peso corporal: ${cfg.peso || "não informado"} kg
+- Altura: ${cfg.altura || "não informada"} cm
+- Idade: ${cfg.idade || "não informada"} anos
 - Streak: ${streak} dias consecutivos
-- Horário atual: ${horaStr} (período da ${saudacao}) — NÃO cumprimente com horário errado
-- Histórico recente:
-${histSummary || "Primeira sessão — sem histórico ainda"}
-- Treino atual:
-${currentSummary || "Nenhum dado ainda"}
+- Horário atual: ${horaStr} (${saudacao}) — NÃO cumprimente com horário errado
+- Volume médio recente: ${tendencia}
+
+═══════════════════════════════════════
+RECORDES PESSOAIS (1RM estimado por exercício)
+═══════════════════════════════════════
+${prLines || "Nenhum PR registrado ainda"}
+
+═══════════════════════════════════════
+HISTÓRICO DE SESSÕES (últimas 10)
+═══════════════════════════════════════
+${histSummary || "Nenhuma sessão registrada ainda"}
+
+═══════════════════════════════════════
+TREINO EM ANDAMENTO AGORA
+═══════════════════════════════════════
+${currentSummary || "Nenhum dado no treino atual"}
 
 ═══════════════════════════════════════
 BASE CIENTÍFICA
