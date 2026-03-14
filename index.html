@@ -1719,7 +1719,13 @@
     <div id="aiMessages" style="flex:1;overflow-y:auto;padding:24px 16px 16px;display:flex;flex-direction:column;gap:20px;"></div>
     <!-- Input estilo ChatGPT -->
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);">
+      <input type="file" id="aiImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleAIImageSelect(this)">
+      <div id="aiImagePreviewWrap"></div>
       <div class="ai-input-wrap" style="display:flex;align-items:flex-end;background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:10px 10px 10px 16px;gap:8px;transition:border-color .2s;">
+        <button onclick="document.getElementById('aiImageInput').click()" id="aiAttachBtn" title="Anexar imagem"
+          style="width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;padding:0;">
+          📎
+        </button>
         <textarea id="aiInput" placeholder="Mensagem para o TITAN COACH..." rows="1"
           style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.9rem;resize:none;outline:none;line-height:1.5;max-height:120px;"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"
@@ -4087,6 +4093,32 @@ function obFinish() {
 let _aiHistory = [];
 let _aiTyping  = false;
 let _orientExpertHistory = [];
+let _aiAttachedImage = null; // { base64, mediaType, previewUrl }
+
+function handleAIImageSelect(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const mediaType = validTypes.includes(file.type) ? file.type : 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    const base64 = dataUrl.split(',')[1];
+    _aiAttachedImage = { base64, mediaType, previewUrl: dataUrl };
+    const wrap = document.getElementById('aiImagePreviewWrap');
+    wrap.innerHTML = `<div style="padding:6px 16px 0;display:flex;align-items:center;gap:8px;">
+      <img src="${dataUrl}" style="max-height:72px;max-width:100px;border-radius:8px;object-fit:cover;border:1px solid var(--border);">
+      <button onclick="removeAIImage()" style="width:24px;height:24px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>
+    </div>`;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function removeAIImage() {
+  _aiAttachedImage = null;
+  document.getElementById('aiImagePreviewWrap').innerHTML = '';
+}
 
 function buildUserData() {
   return {
@@ -4406,15 +4438,27 @@ async function sendAI(overrideText, isGerarTreino = false) {
   if (_aiTyping) return;
   const input = document.getElementById("aiInput");
   const text  = overrideText || input?.value?.trim();
-  if (!text) return;
+  const imageToSend = _aiAttachedImage;
+  if (!text && !imageToSend) return;
 
   if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
   document.getElementById("aiSuggestions")?.remove();
 
-  // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
-  const displayText = isGerarTreino ? "⚡ Gerar treino para hoje" : text;
-  addAIMessage("user", displayText);
-  _aiHistory.push({ role: "user", content: text });
+  // Se tiver imagem anexada, mostrar thumbnail + texto na conversa
+  if (imageToSend) {
+    removeAIImage();
+    const container = document.getElementById("aiMessages");
+    const div = document.createElement("div");
+    div.className = "ai-msg user";
+    const now = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
+    div.innerHTML = `<div class="ai-bubble"><img src="${imageToSend.previewUrl}" style="max-height:100px;max-width:140px;border-radius:8px;display:block;margin-bottom:${text?4:0}px;">${text ? renderMarkdown(text) : ""}</div><div class="ai-msg-time">${now}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  } else {
+    const displayText = isGerarTreino ? "⚡ Gerar treino para hoje" : text;
+    addAIMessage("user", displayText);
+  }
+  _aiHistory.push({ role: "user", content: text || "Analise esta imagem" });
 
   _aiTyping = true;
   const sendBtn = document.getElementById("aiSendBtn");
@@ -4422,6 +4466,27 @@ async function sendAI(overrideText, isGerarTreino = false) {
   addAIMessage("assistant", "", true); // dots animados
 
   try {
+    // Imagem anexada → /api/vision (Claude API com media_type obrigatório)
+    if (imageToSend) {
+      const response = await fetch("/api/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: imageToSend.base64,
+          imageMediaType: imageToSend.mediaType, // sempre inclui media_type — evita o erro 400
+          text: text || "Analise esta imagem"
+        })
+      });
+      if (!response.ok) throw new Error("Erro " + response.status);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      const reply = data?.content?.[0]?.text || "Não consegui analisar a imagem.";
+      removeThinking();
+      addAIMessage("assistant", reply);
+      _aiHistory.push({ role: "assistant", content: reply });
+      return;
+    }
+
     const messages = _aiHistory.slice(-12);
     const userData = buildUserData();
 
