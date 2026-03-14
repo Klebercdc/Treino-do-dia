@@ -1271,6 +1271,7 @@
       padding: 10px; border-top: 1px solid var(--border);
       display: flex; gap: 8px; flex: none;
     }
+    .orient-form-scroll { flex: 1; overflow-y: auto; padding: 16px; }
     .orient-card {
       background: var(--card); border: 1px solid var(--border);
       border-radius: 16px; padding: 16px; margin-bottom: 12px;
@@ -2041,7 +2042,7 @@
     <div class="orient-tab active" onclick="switchOrientTab('coach',this)">Coach</div>
     <div class="orient-tab" onclick="switchOrientTab('nutricao',this)">Nutrição</div>
     <div class="orient-tab" onclick="switchOrientTab('dieta',this)">Gerar Dieta</div>
-    <div class="orient-tab" onclick="switchOrientTab('basal',this)">Calcular Basal</div>
+    <div class="orient-tab" onclick="switchOrientTab('basal',this)">Dieta Avançada</div>
   </div>
   <div class="orient-content">
 
@@ -2110,6 +2111,7 @@
 
 <!-- Painel Gerar Dieta -->
 <div class="orient-panel" id="orient-dieta">
+  <div class="orient-form-scroll">
   <div class="orient-card">
     <div class="orient-card-title">Dieta Personalizada com IA</div>
     <div style="display:flex;flex-direction:column;gap:12px">
@@ -2188,52 +2190,132 @@
     </div>
     <div id="dietaTexto" style="font-size:0.85rem;color:var(--text-2);line-height:1.8;white-space:pre-wrap"></div>
   </div>
+  </div><!-- /orient-form-scroll -->
 </div>
 
-<!-- Painel Calcular Basal -->
+<!-- Painel Dieta Avançada -->
 <div class="orient-panel" id="orient-basal">
-  <div class="orient-card">
-    <div class="orient-card-title">Calcular TMB e TDEE</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Peso (kg)</div>
-        <input class="perfil-input" id="basalPeso" type="number" placeholder="75"/>
-      </div>
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Altura (cm)</div>
-        <input class="perfil-input" id="basalAltura" type="number" placeholder="175"/>
-      </div>
-      <div class="perfil-input-wrap">
-        <div class="perfil-input-lbl">Idade</div>
-        <input class="perfil-input" id="basalIdade" type="number" placeholder="30"/>
-      </div>
+  <div class="orient-form-scroll">
+    <div class="orient-card">
+      <div class="orient-card-title">Dieta Avançada</div>
+      <!-- Sexo -->
       <div class="perfil-input-wrap">
         <div class="perfil-input-lbl">Sexo</div>
-        <div style="display:flex;gap:6px;margin-top:4px">
-          <div class="config-chip active" style="flex:1;text-align:center" data-val="M" id="basalSexoM" onclick="selectBasalSexo('M')">M</div>
-          <div class="config-chip" style="flex:1;text-align:center" data-val="F" id="basalSexoF" onclick="selectBasalSexo('F')">F</div>
+        <div style="display:flex;gap:6px">
+          <div class="config-chip active" id="davSexoM" onclick="selectDavSexo('M')">Masculino</div>
+          <div class="config-chip" id="davSexoF" onclick="selectDavSexo('F')">Feminino</div>
         </div>
       </div>
-    </div>
-    <div class="perfil-input-wrap" style="margin-bottom:12px">
-      <div class="perfil-input-lbl">Nível de atividade</div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px" id="basalAtivChips">
-        <div class="config-chip active" data-val="1.2" onclick="selectBasalAtiv(this)">Sedentário — quase sem exercício</div>
-        <div class="config-chip" data-val="1.375" onclick="selectBasalAtiv(this)">Leve — 1-3x por semana</div>
-        <div class="config-chip" data-val="1.55" onclick="selectBasalAtiv(this)">Moderado — 3-5x por semana</div>
-        <div class="config-chip" data-val="1.725" onclick="selectBasalAtiv(this)">Intenso — 6-7x por semana</div>
-        <div class="config-chip" data-val="1.9" onclick="selectBasalAtiv(this)">Atleta — 2x/dia</div>
+      <!-- Biotipo -->
+      <div class="perfil-input-wrap" style="margin-top:12px">
+        <div class="perfil-input-lbl">Biotipo</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="davBioChips">
+          <div class="config-chip active" data-val="ecto" onclick="selectDavBio(this)">
+            <div style="font-size:0.78rem;font-weight:700">Ectomorfo</div>
+            <div style="font-size:0.62rem;opacity:.7">Tende a emagrecer</div>
+          </div>
+          <div class="config-chip" data-val="meso" onclick="selectDavBio(this)">
+            <div style="font-size:0.78rem;font-weight:700">Mesomorfo</div>
+            <div style="font-size:0.62rem;opacity:.7">Tende a ser atlético</div>
+          </div>
+          <div class="config-chip" data-val="endo" onclick="selectDavBio(this)">
+            <div style="font-size:0.78rem;font-weight:700">Endomorfo</div>
+            <div style="font-size:0.62rem;opacity:.7">Tende a engordar</div>
+          </div>
+        </div>
       </div>
+      <!-- Objetivo -->
+      <div class="perfil-input-wrap" style="margin-top:12px">
+        <div class="perfil-input-lbl">Objetivo</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="davObjChips">
+          <div class="config-chip active" data-val="emagrecer" onclick="selectDavObj(this)">Emagrecer</div>
+          <div class="config-chip" data-val="manter" onclick="selectDavObj(this)">Manter</div>
+          <div class="config-chip" data-val="ganhar" onclick="selectDavObj(this)">Ganhar massa</div>
+        </div>
+      </div>
+      <!-- Peso / Altura / Idade -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px">
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Peso (kg)</div>
+          <input class="perfil-input" id="davPeso" type="number" placeholder="75"/>
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Altura (cm)</div>
+          <input class="perfil-input" id="davAltura" type="number" placeholder="175"/>
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Idade</div>
+          <input class="perfil-input" id="davIdade" type="number" placeholder="25"/>
+        </div>
+      </div>
+      <!-- Medidas p/ BF% Navy -->
+      <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);margin-bottom:6px">Medidas para calcular % de gordura (fita métrica)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Pescoço (cm)</div>
+          <input class="perfil-input" id="davPescoco" type="number" placeholder="38"/>
+        </div>
+        <div class="perfil-input-wrap">
+          <div class="perfil-input-lbl">Cintura (cm)</div>
+          <input class="perfil-input" id="davCintura" type="number" placeholder="85"/>
+        </div>
+        <div class="perfil-input-wrap" id="davQuadrilWrap" style="display:none">
+          <div class="perfil-input-lbl">Quadril (cm)</div>
+          <input class="perfil-input" id="davQuadril" type="number" placeholder="95"/>
+        </div>
+      </div>
+      <button onclick="calcularDietaAvancada()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-weight:700;font-size:0.9rem;cursor:pointer;margin-top:16px">
+        Calcular Dieta Avançada
+      </button>
     </div>
-    <button onclick="calcularBasal()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:var(--font);font-weight:700;font-size:0.9rem;cursor:pointer">Calcular</button>
-    <div class="basal-result" id="basalResult">
-      <div class="basal-result-val" id="basalTDEE">0</div>
-      <div class="basal-result-lbl">TDEE — Calorias diárias totais</div>
-      <div style="margin-top:16px;text-align:left">
-        <div class="basal-row"><span style="color:var(--muted)">TMB (Mifflin-St Jeor)</span><span id="basalTMB" style="color:var(--text);font-weight:600"></span></div>
-        <div class="basal-row"><span style="color:var(--muted)">Para emagrecer (−400kcal)</span><span id="basalEmag" style="color:var(--red);font-weight:600"></span></div>
-        <div class="basal-row"><span style="color:var(--muted)">Para ganhar massa (+300kcal)</span><span id="basalGanho" style="color:var(--green);font-weight:600"></span></div>
-        <div class="basal-row"><span style="color:var(--muted)">Proteína ideal</span><span id="basalProt" style="color:var(--accent);font-weight:600"></span></div>
+
+    <!-- Resultados -->
+    <div id="davResult" style="display:none">
+      <!-- Composição Corporal -->
+      <div class="orient-card">
+        <div class="orient-card-title">Composição Corporal</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;margin-bottom:12px">
+          <div>
+            <div id="davBF" style="font-family:var(--display);font-size:1.6rem;color:var(--accent)"></div>
+            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">% Gordura</div>
+          </div>
+          <div>
+            <div id="davMassaMagra" style="font-family:var(--display);font-size:1.6rem;color:var(--text)"></div>
+            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Massa Magra</div>
+          </div>
+          <div>
+            <div id="davMassaGorda" style="font-family:var(--display);font-size:1.6rem;color:var(--text)"></div>
+            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Massa Gorda</div>
+          </div>
+        </div>
+        <div class="basal-row">
+          <span style="color:var(--muted)">TMB (Katch-McArdle)</span>
+          <span id="davTMB" style="color:var(--text);font-weight:600"></span>
+        </div>
+      </div>
+
+      <!-- Calorias e Macros por Tipo de Dia -->
+      <div class="orient-card">
+        <div class="orient-card-title">Calorias e Macros por Dia</div>
+        <div style="display:grid;grid-template-columns:1fr 0.7fr 0.7fr 0.7fr 0.7fr;gap:4px;margin-bottom:8px">
+          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Dia</div>
+          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Kcal</div>
+          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Prot</div>
+          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Gord</div>
+          <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;text-align:right">Carbs</div>
+        </div>
+        <div id="davMacroRows"></div>
+      </div>
+
+      <!-- Ciclo de Carboidratos -->
+      <div class="orient-card">
+        <div class="orient-card-title">Ciclo de Carboidratos</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px" id="davCicloChips">
+          <div class="config-chip active" data-val="2" onclick="selectDavCiclo(this)">2/1</div>
+          <div class="config-chip" data-val="3" onclick="selectDavCiclo(this)">3/1</div>
+          <div class="config-chip" data-val="4" onclick="selectDavCiclo(this)">4/1</div>
+        </div>
+        <div id="davCicloResult"></div>
       </div>
     </div>
   </div>
@@ -4306,13 +4388,93 @@ TREINO EM ANDAMENTO AGORA
 ${currentSummary || "Nenhum dado no treino atual"}
 
 ═══════════════════════════════════════
-BASE CIENTÍFICA
+EXPERTISE — MUSCULAÇÃO E TREINO
 ═══════════════════════════════════════
-- Hipertrofia: 10–20 séries/músculo/semana, 6–15 reps, 60–80% 1RM
-- Força: 3–6 reps, >80% 1RM, 3–5 min descanso
-- RPE > 9 → reduzir carga | RPE < 6 → aumentar carga
-- Proteína: 1,6–2,2g/kg/dia | Creatina: 3–5g/dia
-- Deload a cada 4–8 semanas, reduzir volume 40–50%
+HIPERTROFIA (Brad Schoenfeld, Mike Israetel):
+- Volume: 10–20 séries/músculo/semana (MEV ~10, MAV 15–20, MRV 20+)
+- Intensidade: 6–15 reps, 60–80% 1RM, últimas reps próximas à falha (RIR 0–3)
+- Frequência: 2x/semana por músculo otimiza síntese proteica
+- Tensão mecânica > dano muscular > estresse metabólico (hierarquia de estímulo)
+- Deload a cada 4–8 semanas: reduzir volume 40–60%, manter intensidade
+- Progressão: adicionar carga quando completar todas as reps com boa técnica
+- Periodização: linear (iniciante), ondulatória diária (intermediário/avançado)
+
+FORÇA (Eric Helms, NSCA):
+- Reps: 1–6, >80–90% 1RM, 3–5 min descanso
+- Exercícios base: agachamento, terra, supino, levantamento terra, desenvolvimento
+- Bloco de força: 3–6 semanas, depois volta hipertrofia
+
+CARDIO E CONDICIONAMENTO:
+- HIIT: 2–3x/semana máx. 20–30 min. Aumenta VO2max sem canibalismo muscular excessivo
+- LISS: caminhada inclinada 30–45 min → preserva músculo, aumenta déficit calórico
+- Separar cardio do treino de força por 6h+ quando possível (interferência metabólica)
+
+RPE / ESFORÇO:
+- RPE 10 = falha muscular | RPE 8 = 2 reps na reserva | RPE 6 = fácil
+- RPE > 9 frequente → reduzir carga ou dar deload
+- RPE < 6 em todos os exercícios → aumentar carga progressivamente
+
+═══════════════════════════════════════
+EXPERTISE — NUTRIÇÃO ESPORTIVA (ISSN, JISSN)
+═══════════════════════════════════════
+PROTEÍNA:
+- Hipertrofia/força: 1,6–2,2 g/kg/dia (avançados até 2,4–3,1 g/kg em déficit)
+- Distribuição: 0,4 g/kg/refeição mínimo, 4–5 refeições/dia ideal
+- Leucina: 2,5–3 g/refeição para ativar mTOR (whey, ovos, frango têm alto teor)
+- Timing pós-treino: janela de 2h (não "30 min" — mito). O total diário importa mais
+- Proteínas de alto valor biológico: whey, caseína, ovos, frango, carne, peixe
+
+CARBOIDRATOS:
+- Combustível principal do treino de alta intensidade (glicogênio muscular)
+- Carga de carbs pré-treino: 1–4 g/kg, 1–4h antes
+- Endomorfo: reduzir carbs em dias de descanso, manter no treino
+- Ciclagem: dias alto (treino), dia baixo (descanso) — otimiza sensibilidade à insulina
+- Fontes: arroz, batata-doce, aveia, banana, macarrão
+
+GORDURAS:
+- Mínimo 20% das calorias totais (saúde hormonal — testosterona, estrógeno)
+- Omega-3: 2–3 g EPA+DHA/dia (reduz inflamação, melhora recuperação)
+- Fontes: azeite, ovos, abacate, castanhas, salmão
+
+TIMING DE REFEIÇÕES:
+- Pré-treino: carb + proteína 1–2h antes. Exemplos: frango+arroz, aveia+whey
+- Pós-treino: proteína + carb rapidamente absorvíveis. Exemplo: whey+banana, frango+arroz
+- Antes de dormir: caseína ou proteína de digestão lenta (cottage, leite) → reduz catabolismo noturno
+
+ESTRATÉGIAS AVANÇADAS:
+- Bulk limpo: surplus de 200–400 kcal/dia → +0,25–0,5 kg/semana
+- Cutting: déficit de 300–500 kcal/dia → -0,5–1% peso corporal/semana (preserva músculo)
+- Recomposição: déficit moderado (~10–15%) + proteína alta. Funciona bem para iniciantes e retornantes
+- Realimentação (refeed): 1 dia/semana com calorias de manutenção e carbos altos → repõe leptina, melhora humor e performance
+
+═══════════════════════════════════════
+EXPERTISE — SUPLEMENTAÇÃO (evidência científica)
+═══════════════════════════════════════
+TIER 1 — Evidência FORTE, valem a pena:
+- Creatina monoidratada: 3–5 g/dia. Sem fase de carga necessária. Aumenta força, volume e recuperação. Segura a longo prazo. Melhor suplemento de musculação.
+- Whey protein: fonte proteica conveniente. Não é "anabolizante", é só proteína. Concentrado funciona bem. Isolado se intolerância à lactose.
+- Cafeína: 3–6 mg/kg, 30–60 min pré-treino. Aumenta força, resistência e foco. Cuidado com tolerância — usar 1x/dia, ciclar.
+- Beta-alanina: 3,2–6,4 g/dia. Aumenta resistência muscular (>60 seg de esforço). Formigamento (parestesia) é normal. Útil para séries longas, treino funcional, crossfit.
+- Vitamina D3: 2.000–4.000 UI/dia. Deficiência muito comum no Brasil. Impacta testosterona, recuperação e imunidade.
+
+TIER 2 — Evidência MODERADA, podem ajudar:
+- Citrulina malato: 6–8 g, 30–60 min pré-treino. Melhora bomba, reduz fadiga, aumenta volume de treino.
+- Omega-3 (EPA+DHA): 2–3 g/dia. Anti-inflamatório, melhora recuperação, saúde cardiovascular.
+- Magnésio: 200–400 mg à noite. Melhora qualidade do sono e recuperação. Deficiência comum.
+- Caseína: antes de dormir. Proteína de liberação lenta. Reduz catabolismo noturno.
+- Ashwagandha (KSM-66): 300–600 mg/dia. Reduz cortisol, melhora recuperação, leve aumento de testosterona.
+- ZMA (Zinco + Magnésio + B6): útil se houver deficiência de zinco. Não é "booster de testosterona" para quem já tem nível adequado.
+
+TIER 3 — Evidência FRACA ou situacional:
+- BCAAs: inútil se a ingestão proteica diária estiver adequada. Só faz sentido em jejum prolongado ou dieta muito restrita.
+- Glutamina: inútil para hipertrofia. Pode ter uso clínico (intestino). Não vale para treino.
+- Pré-treinos complexos: geralmente é a cafeína que funciona. O resto é marketing.
+- CLA: evidência muito fraca para perda de gordura.
+- Thermogênicos sem cafeína: a maioria não tem evidência relevante.
+
+HORMONAIS (uso com cuidado médico):
+- Testosterona/EAAs → não orientar uso. Recomendar endocrinologista.
+- DHEA, Androstenediona → idem.
 
 ═══════════════════════════════════════
 REGRAS
@@ -4321,36 +4483,28 @@ REGRAS
 2. NUNCA dê diagnóstico médico
 3. Máximo 400 palavras, salvo treino completo
 4. Mantenha contexto da conversa
-5. Se perguntarem sobre suas fontes científicas, explique naturalmente: Brad Schoenfeld (hipertrofia), Eric Helms (periodização), Mike Israetel (MEV/MAV/MRV), ISSN (nutrição), NSCA/ACSM (diretrizes gerais)
-6. Se perguntarem quem você é ou como funciona, explique que é um coach de IA integrado ao TITAN PRO, treinado com base científica de musculação e nutrição
+5. Fontes: Brad Schoenfeld (hipertrofia), Eric Helms (periodização), Mike Israetel (MEV/MAV/MRV), ISSN/JISSN (nutrição/suplementação), NSCA/ACSM (diretrizes gerais)
+6. Se perguntarem quem você é, explique: coach de IA do TITAN PRO com base científica em musculação, nutrição esportiva e suplementação
 
 ═══════════════════════════════════════
 BOAS PRÁTICAS CLÍNICAS
 ═══════════════════════════════════════
 SEGURANÇA E CONTRAINDICAÇÕES:
-- Sempre perguntar sobre lesões ou dores antes de prescrever exercícios para a região afetada
-- Nunca indicar exercício de alta carga para quem relatou dor aguda — sugerir avaliação médica
-- Para iniciantes: priorizar técnica antes de carga. Nunca progredir carga com técnica errada
-- Hipertensão, diabetes, problemas cardíacos → recomendar liberação médica antes de iniciar treino intenso
-- Gestantes ou pós-operatório → sempre encaminhar para fisioterapeuta ou médico
-
-SINAIS DE ALERTA — oriente a buscar profissional se houver:
-- Dor no peito durante exercício
-- Tontura, desmaio ou falta de ar desproporcional
-- Dor articular aguda (diferente de dor muscular)
-- Perda de força súbita em algum lado do corpo
+- Sempre perguntar sobre lesões antes de prescrever exercícios para a região afetada
+- Nunca indicar carga alta para quem relatou dor aguda — sugerir avaliação médica
+- Iniciantes: técnica antes de carga. Nunca progredir carga com técnica errada
+- Hipertensão, diabetes, cardiopatias → recomendar liberação médica
 
 NUTRIÇÃO CLÍNICA:
-- Não prescrever dieta restritiva sem saber histórico de saúde
-- Déficit calórico acima de 1000 kcal/dia → alertar riscos (perda muscular, fadiga, hormônios)
-- Sinais de transtorno alimentar → não reforçar restrição, sugerir nutricionista com sensibilidade
-- Suplementos: recomendar apenas com evidência científica. Evitar pilhas sem base
+- Déficit >1000 kcal/dia → alertar riscos (perda muscular, queda hormonal, fadiga)
+- Sinais de transtorno alimentar → não reforçar restrição, sugerir nutricionista
+- Suplementação: só recomendar com evidência. Ser honesto sobre o que não funciona
 
 ENCAMINHAMENTO PROFISSIONAL:
-- Médico: dores persistentes, sintomas cardíacos, uso de medicamentos
-- Nutricionista: dúvidas calóricas complexas, patologias, transtornos alimentares
-- Fisioterapeuta: lesões, reabilitação, disfunções posturais
-- Psicólogo esportivo: ansiedade de performance, compulsão alimentar, desmotivação crônica`;
+- Médico: dores persistentes, sintomas cardíacos, hormonais
+- Nutricionista: patologias, transtornos alimentares, complexidade clínica
+- Fisioterapeuta: lesões, reabilitação, postura
+- Endocrinologista: dúvidas hormonais, uso de EAAs`;
 }
 
 function navTo(tab) {
@@ -5179,33 +5333,133 @@ Seja preciso nos números. Use formato organizado com emojis para facilitar a le
 // ══════════════════════════════════════════
 // CALCULAR BASAL
 // ══════════════════════════════════════════
-function selectBasalSexo(s) {
-  document.getElementById("basalSexoM").classList.toggle("active", s === "M");
-  document.getElementById("basalSexoF").classList.toggle("active", s === "F");
-}
-function selectBasalAtiv(el) {
-  document.querySelectorAll("#basalAtivChips .config-chip").forEach(c => c.classList.remove("active"));
-  el.classList.add("active");
-}
-function calcularBasal() {
-  const peso   = parseFloat(document.getElementById("basalPeso").value) || 75;
-  const altura = parseFloat(document.getElementById("basalAltura").value) || 175;
-  const idade  = parseFloat(document.getElementById("basalIdade").value) || 30;
-  const sexo   = document.getElementById("basalSexoM").classList.contains("active") ? "M" : "F";
-  const fator  = parseFloat(document.querySelector("#basalAtivChips .config-chip.active")?.dataset.val || "1.55");
+// ── Dieta Avançada ─────────────────────────────────────────────
+let _davSexo = 'M', _davBio = 'ecto', _davObj = 'emagrecer', _davCicloProto = 2, _davCalcResult = null;
 
-  // Mifflin-St Jeor
-  const tmb = sexo === "M"
-    ? 10 * peso + 6.25 * altura - 5 * idade + 5
-    : 10 * peso + 6.25 * altura - 5 * idade - 161;
-  const tdee = Math.round(tmb * fator);
+function selectDavSexo(s) {
+  _davSexo = s;
+  document.getElementById('davSexoM').classList.toggle('active', s === 'M');
+  document.getElementById('davSexoF').classList.toggle('active', s === 'F');
+  document.getElementById('davQuadrilWrap').style.display = s === 'F' ? '' : 'none';
+}
+function selectDavBio(el) {
+  document.querySelectorAll('#davBioChips .config-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active'); _davBio = el.dataset.val;
+}
+function selectDavObj(el) {
+  document.querySelectorAll('#davObjChips .config-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active'); _davObj = el.dataset.val;
+}
+function selectDavCiclo(el) {
+  document.querySelectorAll('#davCicloChips .config-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active'); _davCicloProto = parseInt(el.dataset.val);
+  if (_davCalcResult) renderDavCiclo(_davCalcResult);
+}
 
-  document.getElementById("basalResult").style.display = "block";
-  document.getElementById("basalTDEE").textContent = tdee + " kcal";
-  document.getElementById("basalTMB").textContent  = Math.round(tmb) + " kcal";
-  document.getElementById("basalEmag").textContent = (tdee - 400) + " kcal";
-  document.getElementById("basalGanho").textContent = (tdee + 300) + " kcal";
-  document.getElementById("basalProt").textContent  = Math.round(peso * 1.8) + "–" + Math.round(peso * 2.2) + "g/dia";
+function calcularDietaAvancada() {
+  const peso    = parseFloat(document.getElementById('davPeso').value);
+  const altura  = parseFloat(document.getElementById('davAltura').value);
+  const pescoco = parseFloat(document.getElementById('davPescoco').value);
+  const cintura = parseFloat(document.getElementById('davCintura').value);
+  const quadril = parseFloat(document.getElementById('davQuadril').value);
+  if (!peso || !altura || !pescoco || !cintura) { alert('Preencha peso, altura, pescoço e cintura.'); return; }
+  if (_davSexo === 'F' && !quadril) { alert('Preencha o quadril.'); return; }
+
+  // BF% — Fórmula Naval (US Navy)
+  let bf;
+  if (_davSexo === 'M') {
+    bf = 495 / (1.0324 - 0.19077 * Math.log10(cintura - pescoco) + 0.15456 * Math.log10(altura)) - 450;
+  } else {
+    bf = 495 / (1.29579 - 0.35004 * Math.log10(cintura + quadril - pescoco) + 0.22100 * Math.log10(altura)) - 450;
+  }
+  bf = Math.max(3, Math.min(50, bf));
+  const massaMagra = peso * (1 - bf / 100);
+  const massaGorda = peso * (bf / 100);
+
+  // TMB — Katch-McArdle (usa massa magra → mais preciso)
+  const tmb = 370 + 21.6 * massaMagra;
+
+  // Ajuste de objetivo
+  const goalMult = { emagrecer: 0.80, manter: 1.0, ganhar: 1.10 }[_davObj];
+
+  // Proteína por biotipo (g/kg massa magra)
+  const protM = {
+    ecto: { descanso: 2.0, treino: 2.2, cardio: 2.0, tec: 2.4 },
+    meso: { descanso: 2.2, treino: 2.4, cardio: 2.2, tec: 2.6 },
+    endo: { descanso: 2.4, treino: 2.6, cardio: 2.4, tec: 2.8 }
+  };
+  // Gordura por biotipo (g/kg peso total)
+  const fatM = {
+    ecto: { descanso: 1.0, treino: 1.2, cardio: 0.9, tec: 1.1 },
+    meso: { descanso: 0.8, treino: 0.9, cardio: 0.7, tec: 0.8 },
+    endo: { descanso: 0.6, treino: 0.7, cardio: 0.5, tec: 0.6 }
+  };
+  // Multiplicadores TDEE por tipo de dia
+  const tdeeMult = { descanso: 1.2, treino: 1.55, cardio: 1.35, tec: 1.7 };
+  const dayKeys = ['descanso', 'treino', 'cardio', 'tec'];
+  const days = {};
+  for (const d of dayKeys) {
+    const kcal = Math.round(tmb * tdeeMult[d] * goalMult);
+    const prot = Math.round(massaMagra * protM[_davBio][d]);
+    const fat  = Math.round(peso * fatM[_davBio][d]);
+    const carbs = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+    days[d] = { kcal, prot, fat, carbs };
+  }
+  _davCalcResult = { bf, massaMagra, massaGorda, tmb, days };
+  renderDavResult(_davCalcResult);
+}
+
+function renderDavResult(r) {
+  document.getElementById('davBF').textContent = r.bf.toFixed(1) + '%';
+  document.getElementById('davMassaMagra').textContent = r.massaMagra.toFixed(1) + ' kg';
+  document.getElementById('davMassaGorda').textContent = r.massaGorda.toFixed(1) + ' kg';
+  document.getElementById('davTMB').textContent = Math.round(r.tmb) + ' kcal';
+  const labels = { descanso: '😴 Descanso', treino: '💪 Treino', cardio: '🏃 Cardio', tec: '🔥 Treino + Cardio' };
+  document.getElementById('davMacroRows').innerHTML = Object.entries(labels).map(([k, lbl]) => {
+    const d = r.days[k];
+    return `<div style="display:grid;grid-template-columns:1fr 0.7fr 0.7fr 0.7fr 0.7fr;gap:4px;padding:8px 0;border-top:1px solid var(--border)">
+      <div style="font-size:0.78rem;font-weight:600;color:var(--text)">${lbl}</div>
+      <div style="font-size:0.78rem;color:var(--accent);text-align:right;font-weight:700">${d.kcal}</div>
+      <div style="font-size:0.78rem;color:var(--text);text-align:right">${d.prot}g</div>
+      <div style="font-size:0.78rem;color:var(--text);text-align:right">${d.fat}g</div>
+      <div style="font-size:0.78rem;color:${d.carbs===0?'var(--red)':'var(--text)'};text-align:right">${d.carbs}g</div>
+    </div>`;
+  }).join('');
+  renderDavCiclo(r);
+  document.getElementById('davResult').style.display = '';
+  document.getElementById('davResult').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderDavCiclo(r) {
+  const high = r.days['treino'], low = r.days['descanso'];
+  const proto = _davCicloProto;
+  const avgKcal  = Math.round((proto * high.kcal  + low.kcal)  / (proto + 1));
+  const avgProt  = Math.round((proto * high.prot  + low.prot)  / (proto + 1));
+  const avgFat   = Math.round((proto * high.fat   + low.fat)   / (proto + 1));
+  const avgCarbs = Math.round((proto * high.carbs + low.carbs) / (proto + 1));
+  const cycle = proto + 1;
+  const pattern = Array.from({length: 7}, (_, i) => {
+    const isHigh = (i % cycle) < proto;
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;font-size:0.6rem;font-weight:700;background:${isHigh?'var(--accent-dim)':'var(--bg2)'};color:${isHigh?'var(--accent)':'var(--muted)'};">${isHigh?'ALTO':'BAIXO'}</span>`;
+  }).join('');
+  document.getElementById('davCicloResult').innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${pattern}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="background:var(--accent-dim);border:1px solid var(--accent);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:0.62rem;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Dia ALTO (${proto}×/ciclo)</div>
+        <div style="font-size:0.9rem;font-weight:700;color:var(--accent)">${high.kcal} kcal</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">${high.prot}g prot · ${high.fat}g gord · ${high.carbs}g carbs</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Dia BAIXO (1×/ciclo)</div>
+        <div style="font-size:0.9rem;font-weight:700;color:var(--text)">${low.kcal} kcal</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">${low.prot}g prot · ${low.fat}g gord · ${low.carbs}g carbs</div>
+      </div>
+    </div>
+    <div style="padding:10px;background:var(--bg2);border-radius:10px">
+      <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Média Semanal</div>
+      <div style="font-size:0.8rem;color:var(--text);font-weight:600">${avgKcal} kcal · ${avgProt}g prot · ${avgFat}g gord · ${avgCarbs}g carbs</div>
+    </div>`;
 }
 
 
