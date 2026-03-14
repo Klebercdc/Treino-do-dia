@@ -1722,10 +1722,167 @@
       to   { opacity:1; transform: translateY(0); }
     }
 
+
+    /* ═══════════════════════════════════════════════════
+       SPLASH SCREEN
+    ═══════════════════════════════════════════════════ */
+    #splashScreen {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #0f0f0f;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    #splashLogo {
+      width: 200px;
+      opacity: 0;
+      transform: scale(0.75);
+      transition: opacity 0.9s ease, transform 0.9s ease;
+    }
+    #splashLogo.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       LOGIN SCREEN
+    ═══════════════════════════════════════════════════ */
+    #loginScreen {
+      position: fixed; inset: 0; z-index: 99998;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: calc(48px + env(safe-area-inset-bottom));
+    }
+    #loginBg {
+      position: absolute; inset: 0;
+      background-image: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80');
+      background-size: cover;
+      background-position: center top;
+    }
+    #loginBg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.95) 100%);
+    }
+    #loginContent {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 420px;
+      padding: 0 28px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 0;
+    }
+    #loginLogoImg {
+      width: 110px;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 4px 24px rgba(249,115,22,0.4));
+    }
+    #loginTitle {
+      font-family: var(--display);
+      font-size: 2.4rem;
+      letter-spacing: 0.06em;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    #loginTitle span { color: var(--accent); }
+    #loginSub {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 40px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    #btnGoogle {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      background: #fff;
+      color: #1a1a1a;
+      border: none; border-radius: 14px;
+      padding: 16px 24px;
+      font-family: var(--font);
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #btnGoogle:active { transform: scale(0.97); }
+    .login-divider {
+      width: 100%; display: flex; align-items: center; gap: 12px;
+      margin: 18px 0;
+    }
+    .login-divider::before, .login-divider::after {
+      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.2);
+    }
+    .login-divider span { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+    .login-input {
+      width: 100%; padding: 14px 16px;
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      color: #fff; font-family: var(--font); font-size: 0.95rem;
+      outline: none; box-sizing: border-box; margin-bottom: 10px;
+      transition: border-color .2s;
+    }
+    .login-input::placeholder { color: rgba(255,255,255,0.4); }
+    .login-input:focus { border-color: var(--accent); }
+    #btnEmail {
+      width: 100%; padding: 15px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 14px;
+      font-family: var(--font); font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: transform .15s;
+    }
+    #btnEmail:active { transform: scale(0.97); }
+    #loginToggle {
+      margin-top: 14px; font-size: 0.82rem;
+      color: rgba(255,255,255,0.6); text-align: center; cursor: pointer;
+    }
+    #loginToggle span { color: var(--accent); font-weight: 700; }
+    #loginError {
+      color: #f87171; font-size: 0.8rem; text-align: center;
+      margin-bottom: 8px; min-height: 18px;
+    }
+    #loginFooter {
+      margin-top: 16px;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+      line-height: 1.6;
+    }
     </style>
 
 </head>
 <body>
+
+<!-- ═══ SPLASH SCREEN ═══ -->
+<div id="splashScreen">
+  <img src="Logo.png" id="splashLogo" alt="TITAN PRO" />
+</div>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen">
+  <div id="loginBg"></div>
+  <div id="loginContent">
+    <img src="Logo.png" id="loginLogoImg" alt="TITAN PRO" />
+    <div id="loginTitle"><span>TITAN</span> PRO</div>
+    <div id="loginSub">Seu diário de treino inteligente.<br>Registre, evolua e supere seus limites.</div>
+    <button id="btnGoogle" onclick="authSignInGoogle()">
+      <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continuar com Google
+    </button>
+
+    <div class="login-divider"><span>ou</span></div>
+
+    <div id="loginError"></div>
+    <input id="loginEmail" class="login-input" type="email" placeholder="Seu e-mail" autocomplete="email" />
+    <input id="loginPassword" class="login-input" type="password" placeholder="Senha" autocomplete="current-password" />
+    <button id="btnEmail" onclick="authSignInEmail()">Entrar</button>
+    <div id="loginToggle" onclick="toggleLoginMode()">Não tem conta? <span id="loginToggleLabel">Criar conta</span></div>
+
+    <div id="loginFooter">Ao entrar, você concorda com os Termos de Uso.<br>Seus dados ficam seguros e sincronizados na nuvem.</div>
+  </div>
+</div>
 
 <!-- Onboarding -->
 
@@ -6481,6 +6638,20 @@ const _sb = supabase.createClient(
 );
 
 let _authMenuOpen = false;
+let _appUnlocked = false;
+
+function showApp() {
+  if (_appUnlocked) return;
+  _appUnlocked = true;
+  document.getElementById('splashScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+}
+
+function showLogin() {
+  document.getElementById('splashScreen').style.display = 'none';
+  const login = document.getElementById('loginScreen');
+  login.style.display = 'flex';
+}
 
 function updateAuthUI(user) {
   const btn    = document.getElementById('authBtn');
@@ -6492,7 +6663,6 @@ function updateAuthUI(user) {
     label.textContent = user.user_metadata?.name?.split(' ')[0] || 'Conta';
     if (pic) { avatar.src = pic; avatar.style.display = 'block'; }
     btn.style.borderColor = 'var(--accent)';
-    // menu
     const menuAvatar = document.getElementById('authMenuAvatar');
     if (menuAvatar && pic) menuAvatar.src = pic;
     const menuName = document.getElementById('authMenuName');
@@ -6509,15 +6679,68 @@ function updateAuthUI(user) {
 
 function handleAuthClick() {
   _sb.auth.getSession().then(({ data: { session } }) => {
-    if (session?.user) {
-      toggleAuthMenu();
-    } else {
-      _sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin + window.location.pathname }
-      });
-    }
+    if (session?.user) toggleAuthMenu();
   });
+}
+
+function authSignInGoogle() {
+  _sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+}
+
+let _loginIsRegister = false;
+
+function toggleLoginMode() {
+  _loginIsRegister = !_loginIsRegister;
+  document.getElementById('btnEmail').textContent = _loginIsRegister ? 'Criar conta' : 'Entrar';
+  document.getElementById('loginToggleLabel').textContent = _loginIsRegister ? 'Já tenho conta' : 'Criar conta';
+  document.getElementById('loginError').textContent = '';
+  if (_loginIsRegister) {
+    document.getElementById('loginPassword').placeholder = 'Criar senha (mín. 6 caracteres)';
+    document.getElementById('loginPassword').autocomplete = 'new-password';
+  } else {
+    document.getElementById('loginPassword').placeholder = 'Senha';
+    document.getElementById('loginPassword').autocomplete = 'current-password';
+  }
+}
+
+async function authSignInEmail() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+
+  if (!email || !password) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Senha deve ter pelo menos 6 caracteres.'; return; }
+
+  const btn = document.getElementById('btnEmail');
+  btn.textContent = '...'; btn.disabled = true;
+
+  try {
+    let result;
+    if (_loginIsRegister) {
+      result = await _sb.auth.signUp({ email, password });
+      if (result.error) throw result.error;
+      if (result.data?.user && !result.data.session) {
+        errEl.style.color = '#4ade80';
+        errEl.textContent = 'Confirme seu e-mail para ativar a conta!';
+        return;
+      }
+    } else {
+      result = await _sb.auth.signInWithPassword({ email, password });
+      if (result.error) throw result.error;
+    }
+  } catch (e) {
+    errEl.style.color = '#f87171';
+    errEl.textContent = e.message === 'Invalid login credentials'
+      ? 'E-mail ou senha incorretos.'
+      : e.message;
+  } finally {
+    btn.textContent = _loginIsRegister ? 'Criar conta' : 'Entrar';
+    btn.disabled = false;
+  }
 }
 
 function toggleAuthMenu() {
@@ -6536,24 +6759,41 @@ function closeAuthMenu() {
 async function authSignOut() {
   await _sb.auth.signOut();
   closeAuthMenu();
+  _appUnlocked = false;
+  document.getElementById('loginScreen').style.display = 'flex';
   showToast('Saiu da conta.', 'success', 3000);
 }
 
-// Fechar menu ao clicar fora
 document.addEventListener('click', function(e) {
   if (_authMenuOpen && !e.target.closest('#authMenu') && !e.target.closest('#authBtn')) {
     closeAuthMenu();
   }
 });
 
+// Splash: anima logo após 100ms
+setTimeout(() => {
+  const logo = document.getElementById('splashLogo');
+  if (logo) logo.classList.add('show');
+}, 100);
+
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
   updateAuthUI(session?.user || null);
+  if (session?.user) showApp();
+  else if (_appUnlocked) {
+    _appUnlocked = false;
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
 });
 
-// Checar sessão ao carregar
-_sb.auth.getSession().then(({ data: { session } }) => {
+// Checar sessão ao carregar — após splash (mín 2.5s)
+Promise.all([
+  _sb.auth.getSession(),
+  new Promise(r => setTimeout(r, 2500))
+]).then(([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
+  if (session?.user) showApp();
+  else showLogin();
 });
 </script>
 
