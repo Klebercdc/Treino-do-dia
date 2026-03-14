@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" crossorigin="anonymous" onerror="window._pdfjsFailed=true"></script>
   <script>if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
   <link rel="icon" href="Logo.png" type="image/png"/>
@@ -1905,13 +1906,27 @@
       </div>
     </div>
     <div class="header-right">
-
-```
-  <div class="date-badge" id="displayDate">--/--/--</div>
-</div>
-```
-
+      <div class="date-badge" id="displayDate">--/--/--</div>
+      <!-- Auth button -->
+      <button id="authBtn" onclick="handleAuthClick()"
+        style="background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;color:var(--text-2);font-family:var(--font);font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;height:30px;transition:border-color .2s">
+        <img id="userAvatar" style="display:none;width:20px;height:20px;border-radius:50%;object-fit:cover" />
+        <span id="authLabel">Entrar</span>
+      </button>
+    </div>
   </div>
+</div>
+
+<!-- Auth menu dropdown -->
+<div id="authMenu" style="display:none;position:fixed;top:52px;right:12px;z-index:9000;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+    <img id="authMenuAvatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--bg2)" />
+    <div>
+      <div id="authMenuName" style="font-size:0.85rem;font-weight:700;color:var(--text)"></div>
+      <div id="authMenuEmail" style="font-size:0.72rem;color:var(--text-2)"></div>
+    </div>
+  </div>
+  <button onclick="authSignOut()" style="width:100%;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:9px;color:#ef4444;font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer">Sair da conta</button>
 </div>
 
 <!-- Timer — NOVO DESIGN -->
@@ -6454,6 +6469,93 @@ function _drawGuia(tipo, t) {
 
   </div>
 </div>
+
+
+<script>
+/* ═══════════════════════════════════════════════════
+   SUPABASE AUTH — Google OAuth
+═══════════════════════════════════════════════════ */
+const _sb = supabase.createClient(
+  'https://twxoddzogbmaysebhour.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E'
+);
+
+let _authMenuOpen = false;
+
+function updateAuthUI(user) {
+  const btn    = document.getElementById('authBtn');
+  const label  = document.getElementById('authLabel');
+  const avatar = document.getElementById('userAvatar');
+  if (!btn) return;
+  if (user) {
+    const pic = user.user_metadata?.avatar_url || '';
+    label.textContent = user.user_metadata?.name?.split(' ')[0] || 'Conta';
+    if (pic) { avatar.src = pic; avatar.style.display = 'block'; }
+    btn.style.borderColor = 'var(--accent)';
+    // menu
+    const menuAvatar = document.getElementById('authMenuAvatar');
+    if (menuAvatar && pic) menuAvatar.src = pic;
+    const menuName = document.getElementById('authMenuName');
+    if (menuName) menuName.textContent = user.user_metadata?.full_name || user.email;
+    const menuEmail = document.getElementById('authMenuEmail');
+    if (menuEmail) menuEmail.textContent = user.email;
+  } else {
+    label.textContent = 'Entrar';
+    avatar.style.display = 'none';
+    btn.style.borderColor = '';
+    closeAuthMenu();
+  }
+}
+
+function handleAuthClick() {
+  _sb.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      toggleAuthMenu();
+    } else {
+      _sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + window.location.pathname }
+      });
+    }
+  });
+}
+
+function toggleAuthMenu() {
+  const menu = document.getElementById('authMenu');
+  if (!menu) return;
+  _authMenuOpen = !_authMenuOpen;
+  menu.style.display = _authMenuOpen ? 'block' : 'none';
+}
+
+function closeAuthMenu() {
+  _authMenuOpen = false;
+  const menu = document.getElementById('authMenu');
+  if (menu) menu.style.display = 'none';
+}
+
+async function authSignOut() {
+  await _sb.auth.signOut();
+  closeAuthMenu();
+  showToast('Saiu da conta.', 'success', 3000);
+}
+
+// Fechar menu ao clicar fora
+document.addEventListener('click', function(e) {
+  if (_authMenuOpen && !e.target.closest('#authMenu') && !e.target.closest('#authBtn')) {
+    closeAuthMenu();
+  }
+});
+
+// Ouvir mudanças de sessão
+_sb.auth.onAuthStateChange((_event, session) => {
+  updateAuthUI(session?.user || null);
+});
+
+// Checar sessão ao carregar
+_sb.auth.getSession().then(({ data: { session } }) => {
+  updateAuthUI(session?.user || null);
+});
+</script>
 
 </body>
 </html>
