@@ -3800,7 +3800,7 @@ function mostrarDicaTimer(msg) {
 
 
 function fecharTimer() {
-  document.getElementById("timerSheet").classList.remove("show");
+  document.getElementById("timerSheet")?.classList.remove("show");
   clearInterval(timerInt); isRunning = false;
   timeLeft = baseTime; updateT();
 }
@@ -3819,7 +3819,7 @@ function setT(s, btn) {
   updateT();
   document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
-  document.getElementById("tbPresets").classList.remove("open");
+  document.getElementById("tbPresets")?.classList.remove("open");
   // Auto-iniciar ao trocar preset
   isRunning = true; updateT();
   timerInt = setInterval(tickT, 1000);
@@ -6140,16 +6140,8 @@ if ("serviceWorker" in navigator) {
    (removido openConfig() automático no load)
 ═══════════════════════════════════════════════════ */
 window.onerror = function(msg, src, line, col, err) {
-  // Mostrar erro real no console e num toast
-  console.error("ERRO JS:", msg, "linha:", line, "col:", col);
-  if (typeof showToast === "function") showToast("Erro: " + msg + " (L" + line + ")", "error", 6000);
-  return false;
-};
-
-window.onerror = function(msg, src, line, col, err) {
-  if (msg === "Script error." || !line) return true; // erro de script externo — ignorar
+  if (msg === "Script error." || !line) return true;
   console.error("TITAN ERR:", msg, "L"+line);
-  if (typeof showToast === "function") showToast("Erro: " + msg + " L" + line, "error", 8000);
   return false;
 };
 
@@ -6289,7 +6281,7 @@ function updateHomeScreen() {
 // TELA DE PERFIL
 // ══════════════════════════════════════════
 function openPerfil() {
-  updatePerfilScreen();
+  try { updatePerfilScreen(); } catch(e) { console.error("updatePerfilScreen:", e); }
   document.getElementById("perfilScreen").classList.add("show");
 }
 function closePerfil() {
@@ -6298,10 +6290,10 @@ function closePerfil() {
 
 function salvarMedidas() {
   const data = {
-    nome:   document.getElementById("perfilNomeInput").value,
-    peso:   document.getElementById("perfilPeso").value,
-    altura: document.getElementById("perfilAltura").value,
-    idade:  document.getElementById("perfilIdade").value,
+    nome:   document.getElementById("perfilNomeInput")?.value || "",
+    peso:   document.getElementById("perfilPeso")?.value || "",
+    altura: document.getElementById("perfilAltura")?.value || "",
+    idade:  document.getElementById("perfilIdade")?.value || "",
   };
   localStorage.setItem("titanpro_config", JSON.stringify(data));
   const nome = data.nome || "ATLETA";
