@@ -3659,37 +3659,16 @@
     Iniciar Treino Vazio
   </button>
 
-  <!-- Como treinar -->
-  <div class="tdash-section">Como Treinar</div>
-  <div class="tdash-mode-grid">
-
-    <!-- Manual -->
-    <div class="tdash-mode-card" onclick="iniciarModoManual()">
-      <div class="tdash-mode-icon" style="background:rgba(59,130,246,0.15)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
-      </div>
-      <div class="tdash-mode-name">Manual</div>
-      <div class="tdash-mode-desc">Você escolhe os exercícios um a um com controle total</div>
-      <button class="tdash-mode-btn" style="background:rgba(59,130,246,0.15);color:var(--blue)" onclick="iniciarModoManual();event.stopPropagation()">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Iniciar
-      </button>
+  <!-- Configurar Programa -->
+  <div class="home-quick-card" style="margin:0 0 4px;flex-direction:row;align-items:center;gap:14px" onclick="navTo('programa');openConfig()">
+    <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c);flex-shrink:0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5" y="9" width="2" height="6" rx="0.5"/><rect x="17" y="9" width="2" height="6" rx="0.5"/></svg>
     </div>
-
-    <!-- IA -->
-    <div class="tdash-mode-card ia-card" onclick="iniciarModoIA()">
-      <div class="tdash-badge" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(249,115,22,0.3)">IA</div>
-      <div class="tdash-mode-icon" style="background:var(--accent-dim)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      </div>
-      <div class="tdash-mode-name">Com IA</div>
-      <div class="tdash-mode-desc">IA monta o treino ideal baseado no seu perfil</div>
-      <button class="tdash-mode-btn" style="background:var(--accent-dim);color:var(--accent)" onclick="iniciarModoIA();event.stopPropagation()">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Gerar
-      </button>
+    <div style="flex:1">
+      <div class="home-quick-name">Programa</div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">Configurar treino</div>
     </div>
-
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
 
   <!-- Label acima das tabs de programa -->
