@@ -538,7 +538,7 @@
       display: flex; flex-direction: column;
       align-items: center; gap: 2px; user-select: none;
     }
-    .setcell .slabel { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.85); }
+    .setcell .slabel { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.85); }
     .setcell .rmmini { display: none; }
     .rpe-inline-alert {
       grid-column: 1 / -1; margin: -2px 0 4px;
@@ -684,7 +684,7 @@
       -webkit-appearance: none; appearance: none;
       margin-bottom: 14px; cursor: pointer;
     }
-    .evo-stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .evo-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
     .evo-stat {
       background: var(--bg2); border: 1px solid var(--border);
       border-radius: 10px; padding: 10px 8px; text-align: center;
@@ -864,13 +864,7 @@
     }
     body.light-mode .top-header { background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); }
     body.light-mode .footer-actions { background: rgba(255,255,255,0.97) !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
-    body.light-mode .nav-item { color: #888; }
-    body.light-mode .nav-item.active { color: var(--accent); }
-    body.light-mode .nav-label { color: inherit; }
     body.light-mode .nav-pills { background: #fff; }
-    body.light-mode .tab-bar { background: #f0f0f0; }
-    body.light-mode .tab-pill { color: #666; }
-    body.light-mode .tab-pill.active { background: #fff; color: #0f0f0f; }
     body.light-mode .exercise-card {
       background: #fff;
       border: 1px solid rgba(0,0,0,0.08);
@@ -1116,15 +1110,6 @@
        TELA DE PERFIL
     ══════════════════════════════════════════ */
     .btn-voltar {
-      display: flex; align-items: center; gap: 8px;
-      background: none; border: none;
-      color: var(--accent); font-family: var(--font);
-      font-size: 0.9rem; font-weight: 700;
-      padding: 16px 20px 0;
-      cursor: pointer; -webkit-tap-highlight-color: transparent;
-    }
-    .btn-voltar svg { flex-shrink: 0; }
-    .btn-voltar {
       display: inline-flex; align-items: center; gap: 8px;
       background: none; border: none;
       color: var(--accent); font-family: var(--font);
@@ -1132,6 +1117,7 @@
       padding: 16px 20px 0;
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
+    .btn-voltar svg { flex-shrink: 0; }
         #perfilScreen {
       display: none; position: fixed; inset: 0; z-index: 3500;
       background: var(--bg); flex-direction: column; overflow-y: auto;
@@ -1170,7 +1156,7 @@
       color: rgba(255,255,255,0.7); margin-bottom: 12px;
     }
     .perfil-grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px; margin-bottom: 16px;
     }
     .perfil-stat {
@@ -1216,8 +1202,8 @@
     }
     .perfil-input:focus { outline: none; border-color: var(--accent); }
     .perfil-cal-grid {
-      display: grid; grid-template-columns: repeat(7, 1fr);
-      gap: 3px; margin-bottom: 16px;
+      display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: clamp(2px, 0.8vw, 5px); margin-bottom: 16px;
     }
     .perfil-cal-day {
       aspect-ratio: 1; border-radius: 6px;
@@ -1300,6 +1286,7 @@
       display: flex; gap: 6px; padding: 12px 16px;
       overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none;
       max-height: 32vh; border-bottom: 1px solid var(--border);
+      transition: max-height .3s ease, opacity .3s ease, padding .3s ease;
     }
     .orient-shortcuts-row::-webkit-scrollbar { display: none; }
     .orient-category-label {
@@ -1349,12 +1336,8 @@
     .orient-suggestions-toggle svg { transition: transform .2s; }
     .orient-suggestions-toggle.open svg { transform: rotate(180deg); }
     /* atalhos colapsáveis */
-    .orient-shortcuts-row {
-      transition: max-height .3s ease, opacity .3s ease, padding .3s ease;
-      overflow: hidden;
-    }
     .orient-shortcuts-row.collapsed {
-      max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none;
+      max-height: 0 !important; overflow: hidden; opacity: 0; padding-top: 0; padding-bottom: 0; border: none;
     }
     .orient-form-scroll { flex: 1; overflow-y: auto; padding: 16px; }
     .orient-card {
@@ -1527,8 +1510,6 @@
       width: 10px; height: 10px; border-radius: 50%;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-  
     /* ── GUIA DE EXERCÍCIO ── */
     #guiaModal {
       position: fixed; inset: 0; z-index: 1100;
@@ -1804,7 +1785,7 @@
     }
     #loginTitle {
       font-family: var(--display);
-      font-size: 3rem;
+      font-size: clamp(2rem, 8vw, 3rem);
       letter-spacing: 0.08em;
       color: #fff;
       line-height: 1;
@@ -1869,7 +1850,7 @@
        EMAIL LOGIN SCREEN — TELA 2
     ═══════════════════════════════════════════════════ */
     #emailLoginScreen {
-      position: fixed; inset: 0; z-index: 99999;
+      position: fixed; inset: 0; z-index: 100000;
       display: none;
       flex-direction: column;
       background: var(--bg);
@@ -2125,7 +2106,7 @@
     body.light-mode .instr-hero-sub { color: rgba(0,0,0,0.45); }
     .instr-section { margin-bottom: 24px; }
     .instr-section-title {
-      font-size: 0.6rem; font-weight: 800; letter-spacing: .14em;
+      font-size: 0.72rem; font-weight: 800; letter-spacing: .14em;
       text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
     }
     .instr-step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
@@ -2135,8 +2116,8 @@
       color: var(--accent); font-size: 0.75rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .instr-step-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .instr-step-desc { font-size: 0.72rem; color: rgba(255,255,255,0.55); line-height: 1.5; }
+    .instr-step-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .instr-step-desc { font-size: 0.85rem; color: rgba(255,255,255,0.55); line-height: 1.5; }
     body.light-mode .instr-step-desc { color: rgba(0,0,0,0.45); }
     .instr-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .instr-feat-card {
@@ -2144,8 +2125,8 @@
       border-radius: 12px; padding: 14px 12px;
     }
     .instr-feat-icon { font-size: 1.4rem; margin-bottom: 8px; }
-    .instr-feat-title { font-size: 0.78rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .instr-feat-desc { font-size: 0.62rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
+    .instr-feat-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .instr-feat-desc { font-size: 0.75rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
     body.light-mode .instr-feat-desc { color: rgba(0,0,0,0.45); }
     .instr-tip {
       display: flex; gap: 10px; align-items: flex-start;
@@ -2153,7 +2134,7 @@
       border-radius: 12px; padding: 12px; margin-bottom: 8px;
     }
     .instr-tip-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
-    .instr-tip-text { font-size: 0.72rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+    .instr-tip-text { font-size: 0.85rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
     body.light-mode .instr-tip-text { color: rgba(0,0,0,0.5); }
     .instr-tip-text strong { color: var(--text); }
     </style>
@@ -2327,7 +2308,7 @@
         <button onclick="closeAI()" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </button>
-        <div style="font-family:var(--display);font-size:1rem;letter-spacing:.05em;color:var(--text)">TITAN COACH</div>
+        <div style="font-family:var(--display);font-size:1rem;letter-spacing:.05em;color:var(--text)">KRONOS</div>
       </div>
       <button onclick="clearAIChat()" title="Limpar chat" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
@@ -2338,7 +2319,7 @@
     <!-- Input estilo ChatGPT -->
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);">
       <div class="ai-input-wrap" style="display:flex;align-items:flex-end;background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:10px 10px 10px 16px;gap:8px;transition:border-color .2s;">
-        <textarea id="aiInput" placeholder="Mensagem para o TITAN COACH..." rows="1"
+        <textarea id="aiInput" placeholder="Mensagem para o KRONOS..." rows="1"
           style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.9rem;resize:none;outline:none;line-height:1.5;max-height:120px;"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
@@ -2411,8 +2392,8 @@
   <!-- Linha 1: label + tempo + play -->
   <div class="timer-row-main">
     <span class="timer-label">Descanso</span>
-    <span id="timerDisplay">1:00</span>
-    <button id="ctrlBtn" onclick="toggleT()">
+    <span id="timerDisplayInline">1:00</span>
+    <button id="ctrlBtnInline" onclick="toggleT()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     </button>
   </div>
@@ -2425,7 +2406,7 @@
   </div>
   <!-- Linha 3: barra de progresso -->
   <div class="timer-progress-bar-wrap">
-    <div id="timerProgressBar"></div>
+    <div id="timerProgressBarInline"></div>
   </div>
 </div>
 
@@ -2443,6 +2424,20 @@
       <div>
         <div id="homeCardNome" style="font-family:var(--display);font-size:1.3rem;color:var(--text);letter-spacing:.04em">ATLETA</div>
         <div id="homeCardNivel" style="display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:100px;padding:2px 8px;font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Iniciante</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:24px;padding-top:4px">
+      <div>
+        <div id="homeCardTreinos" style="font-family:var(--display);font-size:1.15rem;color:var(--text)">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Treinos</div>
+      </div>
+      <div>
+        <div id="homeCardStreak" style="font-family:var(--display);font-size:1.15rem;color:var(--text)">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Sequência</div>
+      </div>
+      <div>
+        <div id="homeCardVol" style="font-family:var(--display);font-size:1.15rem;color:var(--text)">0kg</div>
+        <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Volume Total</div>
       </div>
     </div>
   </div>
@@ -2527,8 +2522,8 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div>
-        <div class="home-quick-name">Expert IA</div>
-        <div class="home-quick-sub">Coach para conversas e dúvidas</div>
+        <div class="home-quick-name">KRONOS</div>
+        <div class="home-quick-sub">Análise e estratégia de treino</div>
       </div>
     </div>
     <div class="home-quick-card" onclick="closeHome();showEvoChart()">
@@ -2729,72 +2724,78 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       Voltar
     </button>
-    <div class="orient-title" style="flex:1;text-align:center;padding-right:60px">EXPERT IA</div>
+    <div style="flex:1;text-align:center;padding-right:60px">
+      <div class="orient-title" style="font-size:1.4rem;letter-spacing:.08em">KRONOS</div>
+      <div style="font-size:0.6rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;opacity:.8">Coach Inteligente · Online</div>
+    </div>
   </div>
   <div class="orient-content">
 
-```
-<!-- Painel Expert -->
-<div id="orient-expert" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-  <div class="orient-shortcuts-row">
-    <div class="orient-category-label">Musculação</div>
-    <div class="orient-chip" onclick="orientExpertQuick('analise')">
-      <span class="orient-chip-icon">📊</span>
-      <span class="orient-chip-name">Analisar Treino</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('plato')">
-      <span class="orient-chip-icon">📉</span>
-      <span class="orient-chip-name">Detectar Platô</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('rpe')">
-      <span class="orient-chip-icon">⚡</span>
-      <span class="orient-chip-name">Ajuste de Carga</span>
-    </div>
-    <div class="orient-category-label">Nutrição</div>
-    <div class="orient-chip" onclick="orientExpertQuick('postreino')">
-      <span class="orient-chip-icon">🍗</span>
-      <span class="orient-chip-name">Pós-Treino</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
-      <span class="orient-chip-icon">💊</span>
-      <span class="orient-chip-name">Suplementos</span>
-    </div>
-    <div class="orient-chip" onclick="closeOrientacao();openBasalSheet()">
-      <span class="orient-chip-icon">🔥</span>
-      <span class="orient-chip-name">Calculadora Basal</span>
-    </div>
-    <div class="orient-chip" onclick="closeOrientacao();openDietaSheet()">
-      <span class="orient-chip-icon">🥗</span>
-      <span class="orient-chip-name">Gerar Dieta</span>
-    </div>
-  </div>
-  <div class="orient-chat-wrap">
-    <div id="orientExpertMessages" class="orient-chat-messages"></div>
-    <div class="orient-chat-bar">
-      <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        Sugestões rápidas
-      </button>
-      <div class="orient-input-wrap">
-        <textarea id="orientExpertInput"
-          placeholder="Pergunte sobre treino, nutrição, suplementação..."
-          rows="1"
-          style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
-          oninput="autoResizeOrientInput(this)"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
-        <button id="orientSendBtn" onclick="sendOrientExpert()"
-          style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-        </button>
-      </div>
-      <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
-        Enter para enviar · Shift+Enter para nova linha
-      </div>
-    </div>
-  </div>
-</div>
+    <!-- Painel Expert -->
+    <div id="orient-expert" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="orient-shortcuts-row">
 
-```
+        <!-- Chips dinâmicos (renderizados por renderAriaChips()) -->
+        <div id="ariaChipsDynamic" style="display:contents"></div>
+
+        <!-- Separador -->
+        <div class="orient-category-label">Análise</div>
+        <div class="orient-chip" onclick="orientExpertQuick('analise')">
+          <span class="orient-chip-icon">📊</span>
+          <span class="orient-chip-name">Analisar Treino</span>
+        </div>
+        <div class="orient-chip" onclick="orientExpertQuick('plato')">
+          <span class="orient-chip-icon">📉</span>
+          <span class="orient-chip-name">Detectar Platô</span>
+        </div>
+        <div class="orient-chip" onclick="orientExpertQuick('rpe')">
+          <span class="orient-chip-icon">⚡</span>
+          <span class="orient-chip-name">Ajuste de Carga</span>
+        </div>
+        <div class="orient-category-label">Nutrição</div>
+        <div class="orient-chip" onclick="orientExpertQuick('postreino')">
+          <span class="orient-chip-icon">🍗</span>
+          <span class="orient-chip-name">Pós-Treino</span>
+        </div>
+        <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
+          <span class="orient-chip-icon">💊</span>
+          <span class="orient-chip-name">Suplementos</span>
+        </div>
+        <div class="orient-chip" onclick="closeOrientacao();openBasalSheet()">
+          <span class="orient-chip-icon">🔥</span>
+          <span class="orient-chip-name">Calculadora Basal</span>
+        </div>
+        <div class="orient-chip" onclick="closeOrientacao();openDietaSheet()">
+          <span class="orient-chip-icon">🥗</span>
+          <span class="orient-chip-name">Gerar Dieta</span>
+        </div>
+      </div>
+
+      <div class="orient-chat-wrap">
+        <div id="orientExpertMessages" class="orient-chat-messages"></div>
+        <div class="orient-chat-bar">
+          <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            Sugestões rápidas
+          </button>
+          <div class="orient-input-wrap">
+            <textarea id="orientExpertInput"
+              placeholder="Fale com o KRONOS..."
+              rows="1"
+              style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
+              oninput="autoResizeOrientInput(this)"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
+            <button id="orientSendBtn" onclick="sendOrientExpert()"
+              style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+            </button>
+          </div>
+          <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
+            Enter para enviar · Shift+Enter para nova linha
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -3244,7 +3245,7 @@
         <div class="instr-step-num">2</div>
         <div>
           <div class="instr-step-title">Monte seu Programa</div>
-          <div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Clique em <em>Gerar Meu Treino</em> para a IA criar uma divisão completa.</div>
+          <div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Use o <em>seletor de divisão</em> para escolher um template pronto (Manual) ou clique em <em>Gerar com IA</em> para criar uma divisão personalizada automaticamente.</div>
         </div>
       </div>
 
@@ -3338,7 +3339,7 @@
       </div>
       <div class="instr-tip">
         <div class="instr-tip-icon">💡</div>
-        <div class="instr-tip-text"><strong>TITAN COACH</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div>
+        <div class="instr-tip-text"><strong>KRONOS</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div>
       </div>
     </div>
 
@@ -3786,7 +3787,7 @@ function mostrarDicaTimer(msg) {
 
 
 function fecharTimer() {
-  document.getElementById("timerSheet").classList.remove("show");
+  document.getElementById("timerSheet")?.classList.remove("show");
   clearInterval(timerInt); isRunning = false;
   timeLeft = baseTime; updateT();
 }
@@ -3805,7 +3806,7 @@ function setT(s, btn) {
   updateT();
   document.querySelectorAll(".btn-t").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
-  document.getElementById("tbPresets").classList.remove("open");
+  document.getElementById("tbPresets")?.classList.remove("open");
   // Auto-iniciar ao trocar preset
   isRunning = true; updateT();
   timerInt = setInterval(tickT, 1000);
@@ -3836,38 +3837,40 @@ function updateT() {
   const pct  = baseTime > 0 ? (timeLeft / baseTime) : 1;
   const done = timeLeft === 0;
 
-  // Display principal
+  const playIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+  const pauseIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  const doneIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polyline points="20 6 9 17 4 12"/></svg>';
+  const btnIcon = isRunning ? pauseIcon : done ? doneIcon : playIcon;
+  const btnCls = "tb-ctrl" + (isRunning ? " pausing" : done ? " done" : "");
+
+  // Display principal (timerSheet)
   const el = document.getElementById("timerDisplay");
   if (el) { el.textContent = txt; el.className = done ? "done" : ""; }
 
+  // Display inline (timerArea)
+  const elI = document.getElementById("timerDisplayInline");
+  if (elI) { elI.textContent = txt; elI.className = done ? "done" : ""; }
 
-
-  // Barra de progresso
+  // Barra de progresso (timerSheet)
   const bar = document.getElementById("tbProgressBar");
-  if (bar) {
-    bar.style.width = (pct * 100) + "%";
-    bar.className = done ? "done" : "";
-  }
+  if (bar) { bar.style.width = (pct * 100) + "%"; bar.className = done ? "done" : ""; }
 
-  // Timer bar cor
+  // Barra de progresso inline (timerArea)
+  const barI = document.getElementById("timerProgressBarInline");
+  if (barI) { barI.style.width = (pct * 100) + "%"; barI.className = done ? "done" : ""; }
+
+  // Timer bar cor (timerSheet)
   const bar2 = document.getElementById("timerSheet");
   if (bar2 && bar2.classList.contains("show"))
     bar2.className = "show" + (done ? " done" : "");
 
-  // Botão play/pause
+  // Botão play/pause (timerSheet)
   const btn = document.getElementById("ctrlBtn");
-  if (btn) {
-    btn.className = "tb-ctrl" + (isRunning ? " pausing" : done ? " done" : "");
-    if (isRunning) {
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-    } else if (done) {
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polyline points="20 6 9 17 4 12"/></svg>';
-    } else {
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-    }
-  }
+  if (btn) { btn.className = btnCls; btn.innerHTML = btnIcon; }
 
-
+  // Botão play/pause inline (timerArea)
+  const btnI = document.getElementById("ctrlBtnInline");
+  if (btnI) { btnI.className = btnCls; btnI.innerHTML = btnIcon; }
 }
 
 function toggleT() {
@@ -4404,6 +4407,7 @@ function abrirLibParaTrocar(id) {
 }
 function mostrarLib() {
   const lib = document.getElementById("libContent");
+  if (!lib) return;
   lib.innerHTML = "";
   for (let cat in biblioteca) {
     lib.innerHTML += `<div class="lib-cat">${cat}</div>`;
@@ -4675,20 +4679,22 @@ function showEvoChart() {
   const hist = safeJSON(STORAGE.historyKey,[]);
   if (!hist.length) { alert("Sem histórico ainda. Salve uma sessão primeiro!"); return; }
   populateEvoExSelect(hist); renderEvoChart();
-  document.getElementById("evoModal").classList.add("show");
+  document.getElementById("evoModal")?.classList.add("show");
 }
-function closeEvo() { document.getElementById("evoModal").classList.remove("show"); }
+function closeEvo() { document.getElementById("evoModal")?.classList.remove("show"); }
 function setEvoTab(tab, el) {
   _evoTab = tab;
   document.querySelectorAll(".evo-tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  document.getElementById("evoExSelect").style.display = (tab==="rm") ? "block" : "none";
+  const evoSel = document.getElementById("evoExSelect");
+  if (evoSel) evoSel.style.display = (tab==="rm") ? "block" : "none";
   renderEvoChart();
 }
 function populateEvoExSelect(hist) {
   const names = new Set();
   hist.forEach(h => (h.state?.sections||[]).forEach(sec => (sec.cards||[]).forEach(c => { if(c.name) names.add(c.name); })));
   const sel = document.getElementById("evoExSelect");
+  if (!sel) return;
   sel.innerHTML = Array.from(names).map(n => `<option value="${escapeAttr(n)}">${escapeHTML(n)}</option>`).join("");
 }
 function renderEvoChart() {
@@ -4700,7 +4706,7 @@ function renderEvoChart() {
     values = hist.map(h => Math.round(calcVolumeTotal(h.state)));
     label  = "Volume (kg)";
   } else if (_evoTab==="rm") {
-    const exName = document.getElementById("evoExSelect").value;
+    const exName = document.getElementById("evoExSelect")?.value || "";
     hist.forEach(h => {
       let found = null;
       (h.state?.sections||[]).forEach(sec => (sec.cards||[]).forEach(c => {
@@ -4730,7 +4736,8 @@ function renderEvoChart() {
   const prev2=values.length>=2?values[values.length-2]:last;
   const delta=prev2>0?Math.round((last-prev2)/prev2*100):0;
   const pr=values.length?(_evoTab==="peso"?Math.min(...values):Math.max(...values)):0;
-  document.getElementById("evoStats").innerHTML = `
+  const evoStats = document.getElementById("evoStats");
+  if (evoStats) evoStats.innerHTML = `
     <div class="evo-stat"><div class="evo-stat-val">${pr>0?pr+(_evoTab!=="freq"?"kg":""):"-"}</div><div class="evo-stat-lbl">${_evoTab==="freq"?"Total":_evoTab==="peso"?"Mínimo":"Recorde"}</div></div>
     <div class="evo-stat"><div class="evo-stat-val">${last>0?last+(_evoTab==="freq"?"":"kg"):"-"}</div><div class="evo-stat-lbl">Última Sessão</div></div>
     <div class="evo-stat"><div class="evo-stat-val" style="color:${delta>=0?"#16a34a":"#dc2626"}">${delta>=0?"+":""}${delta}%</div><div class="evo-stat-lbl">vs Anterior</div></div>`;
@@ -5006,31 +5013,35 @@ function showSummary(state, prs, durationMin) {
     ? `🏆 ${prs.length} NOVO${prs.length>1?"S":""} RECORDE${prs.length>1?"S":""}!`
     : motivos[Math.floor(Math.random()*motivos.length)];
 
-  document.getElementById("sumTitle").textContent = "TREINO CONCLUÍDO";
-  document.getElementById("sumSub").innerHTML = `<span style="color:var(--accent);font-weight:700">${mot}</span><br><small style="color:var(--muted)">${dateStr.charAt(0).toUpperCase()+dateStr.slice(1)}</small>`;
-  document.getElementById("sumGrid").innerHTML = `
+  const elSumTitle = document.getElementById("sumTitle");
+  const elSumSub   = document.getElementById("sumSub");
+  const elSumGrid  = document.getElementById("sumGrid");
+  const prSection  = document.getElementById("sumPRs");
+  const prList     = document.getElementById("sumPRList");
+  const elSumModal = document.getElementById("summaryModal");
+  if (elSumTitle) elSumTitle.textContent = "TREINO CONCLUÍDO";
+  if (elSumSub) elSumSub.innerHTML = `<span style="color:var(--accent);font-weight:700">${mot}</span><br><small style="color:var(--muted)">${dateStr.charAt(0).toUpperCase()+dateStr.slice(1)}</small>`;
+  if (elSumGrid) elSumGrid.innerHTML = `
     <div class="summary-stat"><div class="summary-stat-val">${vol>0?vol.toLocaleString("pt-BR"):"—"}</div><div class="summary-stat-lbl">Volume kg</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${totalSets}</div><div class="summary-stat-lbl">Séries</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${totalEx}</div><div class="summary-stat-lbl">Exercícios</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${durationMin!==null?durationMin+"min":"—"}</div><div class="summary-stat-lbl">Duração</div></div>`;
-  const prSection = document.getElementById("sumPRs");
-  const prList    = document.getElementById("sumPRList");
   if (prs.length>0) {
-    prSection.style.display="block";
-    prList.innerHTML=prs.map(p=>`
+    if (prSection) prSection.style.display="block";
+    if (prList) prList.innerHTML=prs.map(p=>`
       <div class="summary-pr-item">
         <span>${escapeHTML(p.name)}</span>
         <span class="summary-pr-val">${p.rm}kg<small style="font-size:.65rem;color:var(--muted);margin-left:4px">1RM</small></span>
       </div>`).join("");
-  } else { prSection.style.display="none"; }
-  document.getElementById("summaryModal").classList.add("show");
+  } else if (prSection) { prSection.style.display="none"; }
+  if (elSumModal) elSumModal.classList.add("show");
   if (navigator.vibrate) navigator.vibrate([50,30,80,30,120]);
   // Limpar análise anterior e rodar nova
   const aiSection = document.getElementById("aiCoachSummary");
   if (aiSection) aiSection.style.display = "none";
   runAICoachPostWorkout(state, prs, durationMin);
 }
-function closeSummary() { document.getElementById("summaryModal").classList.remove("show"); }
+function closeSummary() { document.getElementById("summaryModal")?.classList.remove("show"); }
 
 /* ═══════════════════════════════════════════════════
    CONFIG SHEET
@@ -5298,6 +5309,7 @@ function obNext(step) {
 function obFinish() {
   localStorage.setItem("titan_onboarded","1");
   document.getElementById("onboarding").classList.remove("show");
+  setTimeout(() => openInstrucoes(), 500);
 }
 
 /* IntersectionObserver timer removido */
@@ -5379,25 +5391,26 @@ function buildTrainingContext() {
   const horaStr  = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
   const totalSessoes = safeJSON(STORAGE.historyKey, []).length;
 
-  return `Você é o TITAN COACH, o coach pessoal de musculação e nutrição do app TITAN PRO.
+  return `Você é KRONOS — o coach pessoal de musculação e nutrição do app TITAN PRO. Seu nome vem do Titã do tempo e da progressão: você domina ciclos de treino, evolução e periodização. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Seja o capitão: direto, experiente, sem enrolação.
 
 ═══════════════════════════════════════
-PERSONALIDADE E FORMA DE FALAR
+IDENTIDADE E PERSONALIDADE
 ═══════════════════════════════════════
-- Você é um coach de verdade, não um chatbot — fale como gente fala
-- Português brasileiro coloquial, como numa conversa de WhatsApp ou academia
+- Você é coach, não assistente — fala direto, com personalidade forte e autoridade
+- Você CONHECE o usuário pelos dados: histórico, PRs, objetivos, rotina. Use isso.
+- Use o nome dele naturalmente quando fizer sentido — sem exagerar
+- Português brasileiro coloquial, como conversa presencial na academia
 - NUNCA comece com "Claro!", "Certamente!", "Olá!", "Como posso ajudar?" — vá direto ao ponto
-- Saudação simples ("Oi", "Ola", "E aí") = responda de forma curta e casual, sem monólogo
+- Saudação simples ("Oi", "E aí") = resposta curta e casual
 - Resposta simples = 1-3 linhas. Detalhe só quando a pergunta pede
 - Nunca repita o que o usuário disse. Nunca faça introduções desnecessárias
+- Observações proativas: perceba inconsistências nos dados, elogie conquistas reais, dê alertas reais
 - Varie o jeito de responder — não repita padrões de frase
-- Faça perguntas só quando realmente precisar de info — uma por vez, no fim
-- Use gírias do meio quando fizer sentido: "tá voando", "bora", "massa"
+- Faça perguntas só quando precisar de info — uma por vez, no fim
+- Use gírias do meio quando fizer sentido: "tá voando", "bora", "massa", "na veia"
 - Encorajador sem exagero — "bom progresso" é melhor que "INCRÍVEL!!"
-- Quando não souber algo sobre o usuário, pergunte — não invente
-- NUNCA assuma que o usuário está falando de treino se ele não mencionou treino
-- Comentário casual ("cansei", "tô bem", "kkkk") = responda como amigo, não como coach analisando treino
-- Só use dados do perfil/histórico se o usuário perguntar algo relacionado
+- Comentário casual ("cansei", "kkkk") = responda como amigo, não como coach analisando treino
+- Quando der uma recomendação baseada nos dados do app, mencione o dado que embasou — seja específico
 
 ═══════════════════════════════════════
 PERFIL DO USUÁRIO
@@ -5696,7 +5709,8 @@ function carregarTemplateManual() {
   const cont = document.getElementById("container");
   nav.innerHTML = ""; cont.innerHTML = "";
   days.forEach((d, idx) => {
-    nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(d.nome)}</div>`;
+    const labelCurto = d.nome.split(" ")[0];
+    nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(labelCurto)}</div>`;
     const sec = document.createElement("div");
     sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`;
     sec.setAttribute("data-treino-key", d.nome);
@@ -5737,7 +5751,7 @@ function openAI() {
   document.getElementById("aiModal").classList.add("show");
   document.getElementById("aiModal").style.display = "flex";
   if (_aiHistory.length === 0) {
-    addAIMessage("assistant", `Olá! Sou o **TITAN COACH**, seu personal trainer com IA. 💪\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
+    addAIMessage("assistant", `Olá! Sou o **KRONOS**, seu personal trainer com IA. 💪\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
     const container = document.getElementById("aiMessages");
     const sug = document.createElement("div");
     sug.id = "aiSuggestions";
@@ -6124,16 +6138,8 @@ if ("serviceWorker" in navigator) {
    (removido openConfig() automático no load)
 ═══════════════════════════════════════════════════ */
 window.onerror = function(msg, src, line, col, err) {
-  // Mostrar erro real no console e num toast
-  console.error("ERRO JS:", msg, "linha:", line, "col:", col);
-  if (typeof showToast === "function") showToast("Erro: " + msg + " (L" + line + ")", "error", 6000);
-  return false;
-};
-
-window.onerror = function(msg, src, line, col, err) {
-  if (msg === "Script error." || !line) return true; // erro de script externo — ignorar
+  if (msg === "Script error." || !line) return true;
   console.error("TITAN ERR:", msg, "L"+line);
-  if (typeof showToast === "function") showToast("Erro: " + msg + " L" + line, "error", 8000);
   return false;
 };
 
@@ -6169,9 +6175,6 @@ window.onload = () => {
   updateStreakUI();
   updateWorkoutProgress();
   applyPrevGhostsToAll();
-
-  // Session strip — 1 único intervalo (corrigido bug duplicado)
-  setInterval(() => { if (_sessionStart) updateSessionStrip(); }, 30000);
 
   // Toast de boas-vindas para quem já treinou
   if (localStorage.getItem("titan_onboarded")) {
@@ -6273,7 +6276,7 @@ function updateHomeScreen() {
 // TELA DE PERFIL
 // ══════════════════════════════════════════
 function openPerfil() {
-  updatePerfilScreen();
+  try { updatePerfilScreen(); } catch(e) { console.error("updatePerfilScreen:", e); }
   document.getElementById("perfilScreen").classList.add("show");
 }
 function closePerfil() {
@@ -6282,10 +6285,10 @@ function closePerfil() {
 
 function salvarMedidas() {
   const data = {
-    nome:   document.getElementById("perfilNomeInput").value,
-    peso:   document.getElementById("perfilPeso").value,
-    altura: document.getElementById("perfilAltura").value,
-    idade:  document.getElementById("perfilIdade").value,
+    nome:   document.getElementById("perfilNomeInput")?.value || "",
+    peso:   document.getElementById("perfilPeso")?.value || "",
+    altura: document.getElementById("perfilAltura")?.value || "",
+    idade:  document.getElementById("perfilIdade")?.value || "",
   };
   localStorage.setItem("titanpro_config", JSON.stringify(data));
   const nome = data.nome || "ATLETA";
@@ -6425,7 +6428,6 @@ function updateHeatmap(hist) {
 // ══════════════════════════════════════════
 function openOrientacao() {
   document.getElementById("orientacaoScreen").classList.add("show");
-  // atalhos visíveis ao abrir pela primeira vez (colapsa se já tem mensagens)
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -6435,7 +6437,111 @@ function openOrientacao() {
   } else {
     row.classList.remove("collapsed");
     btn && btn.classList.add("open");
+    // Saudação proativa ARIA — só na primeira abertura da sessão
+    ariaGreeting();
   }
+  // Atualizar chips dinâmicos sempre que abre
+  renderAriaChips();
+}
+
+function ariaGreeting() {
+  const cfg    = safeJSON("titanpro_config", {});
+  const hist   = safeJSON(STORAGE.historyKey, []);
+  const streak = calcStreak();
+  const draft  = safeJSON(STORAGE.draftKey, null);
+  const nome   = cfg.nome || "";
+
+  // Monta contexto compacto para o greeting
+  const totalSessoes = hist.length;
+  const ultima = hist.length ? hist[hist.length - 1] : null;
+  const ultimaData = ultima ? new Date(ultima.createdAt).toLocaleDateString("pt-BR") : null;
+  const volUltima = ultima ? Math.round(calcVolumeTotal(ultima.state)) : 0;
+
+  // Próximo treino pendente no programa
+  const sections = draft?.sections || [];
+  const nextIdx  = getNextTreinoIdx();
+  const nextSec  = sections[nextIdx];
+  const nextKey  = nextSec?.treinoKey || null;
+  const nextExs  = (nextSec?.cards || []).map(c => c.name).slice(0, 3).join(", ");
+
+  const prompt = `[SAUDAÇÃO PROATIVA — análise silenciosa dos dados do usuário]
+
+Abra a conversa como ARIA analisando o status atual:
+- Nome: ${nome || "usuário"}
+- Streak: ${streak} dias consecutivos
+- Total de sessões: ${totalSessoes}
+- Último treino: ${ultimaData ? `${ultimaData}, volume ${volUltima}kg` : "nenhum ainda"}
+- Próximo treino no programa: ${nextKey ? `Treino ${nextKey} (${nextExs || "exercícios pendentes"})` : "não configurado"}
+- Peso: ${cfg.peso || "não informado"} kg
+
+Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real ou conquista. Finalize com uma pergunta curta ou call to action.`;
+
+  const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
+  fetch("/api/agent", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: prompt }],
+      history: safeJSON(STORAGE.historyKey, []).slice(0, 10),
+      profile: cfg
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const text = data.content?.[0]?.text || data.error || "Sistemas online.";
+    typing.innerHTML = renderMarkdown(text);
+    _orientExpertHistory.push({ role: "assistant", content: text });
+    // Colapsa chips após saudação
+    const row = document.querySelector(".orient-shortcuts-row");
+    const btn = document.getElementById("orientSuggestBtn");
+    if (row) { row.classList.add("collapsed"); btn && btn.classList.remove("open"); }
+  })
+  .catch(() => { typing.innerHTML = "KRONOS online. O que vamos atacar hoje?"; });
+}
+
+function renderAriaChips() {
+  const container = document.getElementById("ariaChipsDynamic");
+  if (!container) return;
+  const cfg    = safeJSON("titanpro_config", {});
+  const hist   = safeJSON(STORAGE.historyKey, []);
+  const streak = calcStreak();
+  const draft  = safeJSON(STORAGE.draftKey, null);
+  const sections = draft?.sections || [];
+  const nextIdx  = getNextTreinoIdx();
+  const nextSec  = sections[nextIdx];
+  const nextKey  = nextSec?.treinoKey || null;
+
+  const chips = [];
+
+  // Chip dinâmico: próximo treino
+  if (nextKey) {
+    const grupo = (nextSec?.cards || []).slice(0,2).map(c=>c.name).join(" + ") || `Treino ${nextKey}`;
+    chips.push({ icon: "▸", label: `Me prepara pro ${grupo.length > 22 ? `Treino ${nextKey}` : grupo}`, msg: `Me prepara para o próximo treino: Treino ${nextKey}. Quais são os pontos de atenção?` });
+  }
+
+  // Chip dinâmico: streak
+  if (streak >= 3) {
+    chips.push({ icon: "🔥", label: `${streak} dias — e agora?`, msg: `Estou com ${streak} dias de streak. Como mantenho a intensidade sem entrar em overtraining?` });
+  }
+
+  // Chip dinâmico: histórico
+  if (hist.length >= 3) {
+    chips.push({ icon: "📈", label: "Minha evolução recente", msg: "Analise minha evolução nas últimas sessões. Estou progredindo bem?" });
+  }
+
+  // Chips fixos sempre úteis
+  chips.push({ icon: "💊", label: "Suplementos que valem", msg: "Quais suplementos têm evidência científica real e valem a pena para meu objetivo?" });
+  chips.push({ icon: "🍗", label: "Pós-treino ideal", msg: "O que comer no pós-treino para maximizar recuperação e hipertrofia?" });
+
+  container.innerHTML = chips.slice(0, 5).map(c =>
+    `<div class="orient-chip" onclick="ariaQuickSend(${JSON.stringify(c.msg).replace(/'/g,"\\'")})">`+
+    `<span class="orient-chip-icon">${c.icon}</span>`+
+    `<span class="orient-chip-name">${c.label}</span></div>`
+  ).join("");
+}
+
+function ariaQuickSend(msg) {
+  document.getElementById("orientExpertInput").value = msg;
+  sendOrientExpert();
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
