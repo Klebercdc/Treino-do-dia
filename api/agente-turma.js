@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var auth = require('./_auth');
 
 var SYSTEM = `Você é o Assistente de Análise de Turma do DIÁRIO PRO. Analisa o desempenho coletivo de turmas escolares e gera insights acionáveis para o professor.
 
@@ -31,31 +32,33 @@ function parseJSON(text) {
 module.exports = function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
 
-  var b = req.body || {};
-  var turma = b.turma || 'Turma';
-  var totalAlunos = b.totalAlunos || 0;
-  var mediaGeral = b.mediaGeral || 0;
-  var presencaMedia = b.presencaMedia || 0;
-  var alunosEmRisco = b.alunosEmRisco || 0;
-  var totalAtividades = b.totalAtividades || 0;
+  auth.requireAuth(req, res, function() {
+    var b = req.body || {};
+    var turma = b.turma || 'Turma';
+    var totalAlunos = b.totalAlunos || 0;
+    var mediaGeral = b.mediaGeral || 0;
+    var presencaMedia = b.presencaMedia || 0;
+    var alunosEmRisco = b.alunosEmRisco || 0;
+    var totalAtividades = b.totalAtividades || 0;
 
-  var prompt = 'Analise a turma "' + turma + '" com ' + totalAlunos + ' alunos.' +
-    ' Média geral: ' + mediaGeral + '.' +
-    ' Presença média: ' + presencaMedia + '%.' +
-    ' Alunos em risco (média < 6): ' + alunosEmRisco + '.' +
-    ' Total de atividades realizadas: ' + totalAtividades + '.' +
-    ' Retorne JSON com resumo, alertas, destaques e acoes.';
+    var prompt = 'Analise a turma "' + turma + '" com ' + totalAlunos + ' alunos.' +
+      ' Média geral: ' + mediaGeral + '.' +
+      ' Presença média: ' + presencaMedia + '%.' +
+      ' Alunos em risco (média < 6): ' + alunosEmRisco + '.' +
+      ' Total de atividades realizadas: ' + totalAtividades + '.' +
+      ' Retorne JSON com resumo, alertas, destaques e acoes.';
 
-  callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
-    if (err) return res.status(500).json({ error: err });
-    try {
-      res.status(200).json(parseJSON(text));
-    } catch(e) {
-      res.status(200).json({ resumo: text, alertas: [], destaques: [], acoes: [] });
-    }
+    callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
+      if (err) return res.status(500).json({ error: err });
+      try {
+        res.status(200).json(parseJSON(text));
+      } catch(e) {
+        res.status(200).json({ resumo: text, alertas: [], destaques: [], acoes: [] });
+      }
+    });
   });
 };

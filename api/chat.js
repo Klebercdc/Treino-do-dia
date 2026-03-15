@@ -1,5 +1,6 @@
 var https = require(`https`);
 var nvidia = require('./_nvidia');
+var auth = require('./_auth');
 
 var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
 
@@ -196,27 +197,28 @@ function gerarTreino(userMsg, callback) {
 module.exports = function(req, res) {
   res.setHeader(`Access-Control-Allow-Origin`,`*`);
   res.setHeader(`Access-Control-Allow-Methods`,`POST, OPTIONS`);
-  res.setHeader(`Access-Control-Allow-Headers`,`Content-Type`);
+  res.setHeader(`Access-Control-Allow-Headers`,`Content-Type, Authorization`);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
   if (req.method!==`POST`){res.status(405).end();return;}
   if (!process.env.NVIDIA_API_KEY){res.status(500).json({error:`NVIDIA_API_KEY missing`});return;}
 
-  var b = req.body||{};
-  var messages = b.messages||[];
-  var isGerarTreino = b.isGerarTreino===true || isPedidoDeTreino(messages);
-  var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
-
-  if (isGerarTreino) {
-    // Sempre usar só a ultima mensagem — ignorar histórico para treino
+  auth.requireAuth(req, res, function() {
+    var b = req.body||{};
+    var messages = b.messages||[];
+    var isGerarTreino = b.isGerarTreino===true || isPedidoDeTreino(messages);
     var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
-    gerarTreino(userMsg, function(err, data) {
-      if (err) return res.status(200).json({content:[{type:`text`,text:`⚠️ `+err}]});
-      res.status(200).json({content:[{type:`workout_json`,data:data}]});
-    });
-  } else {
-    callNvidia(buildCoachSystem(b.system), messages, 1200, 0.75, function(err, text) {
-      if (err) return res.status(500).json({error:err});
-      res.status(200).json({content:[{type:`text`,text:text}]});
-    });
-  }
+
+    if (isGerarTreino) {
+      var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
+      gerarTreino(userMsg, function(err, data) {
+        if (err) return res.status(200).json({content:[{type:`text`,text:`⚠️ `+err}]});
+        res.status(200).json({content:[{type:`workout_json`,data:data}]});
+      });
+    } else {
+      callNvidia(buildCoachSystem(b.system), messages, 1200, 0.75, function(err, text) {
+        if (err) return res.status(500).json({error:err});
+        res.status(200).json({content:[{type:`text`,text:text}]});
+      });
+    }
+  });
 };

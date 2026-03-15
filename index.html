@@ -4993,6 +4993,7 @@ async function salvarTreino() {
     hist.unshift(item);
     if (hist.length > STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
     localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist));
+    _dbSync.pushHistory(); // backup silencioso na nuvem
     savePrevSnapshotFromState(st);
     prevMap = getPrevMap();
     clearAllInputsToGhost(); applyPrevGhostsToAll(); checkDeload();
@@ -6638,7 +6639,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(body)
     });
 
@@ -7124,6 +7125,7 @@ function salvarMedidas() {
     sono:   document.getElementById("perfilSono")?.value   || "",
   };
   localStorage.setItem("titanpro_config", JSON.stringify(data));
+  _dbSync.pushConfig(); // backup silencioso na nuvem
   const nome = data.nome || "ATLETA";
   document.getElementById("perfilNome").textContent = nome.toUpperCase();
   const savedPhoto = localStorage.getItem('userAvatarPhoto');
@@ -7341,8 +7343,8 @@ Abra a conversa como ARIA analisando o status atual:
 Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real ou conquista. Finalize com uma pergunta curta ou call to action.`;
 
   const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
-  fetch("/api/agent", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+  getAuthHeaders().then(authHeaders => fetch("/api/agent", {
+    method: "POST", headers: authHeaders,
     body: JSON.stringify({
       messages: [{ role: "user", content: prompt }],
       history: safeJSON(STORAGE.historyKey, []).slice(0, 10),
@@ -7473,7 +7475,7 @@ async function sendOrientExpert() {
     const userData = buildUserData();
     const messages = _orientExpertHistory.slice(-20);
     const resp = await fetch("/api/agent", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: await getAuthHeaders(),
       body: JSON.stringify({ messages, history: userData.history, profile: userData.profile })
     });
     const data = await resp.json();
@@ -7664,7 +7666,7 @@ Seja preciso nos números. Use formato organizado com emojis para facilitar a le
 
   try {
     const resp = await fetch("/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: await getAuthHeaders(),
       body: JSON.stringify({ system: buildTrainingContext(), messages: [{ role: "user", content: prompt }], isGerarTreino: false })
     });
     const data = await resp.json();
@@ -8721,6 +8723,99 @@ const _sb = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E'
 );
 
+// ══════════════════════════════════════════════════════
+// TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
+// ══════════════════════════════════════════════════════
+async function getAuthHeaders() {
+  const { data: { session } } = await _sb.auth.getSession();
+  const token = session?.access_token;
+  return token
+    ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+    : { 'Content-Type': 'application/json' };
+}
+
+// ══════════════════════════════════════════════════════
+// SINCRONIZAÇÃO COM SUPABASE (backup em nuvem)
+// ══════════════════════════════════════════════════════
+const _dbSync = {
+  // Envia histórico de treinos para o banco em background
+  async pushHistory() {
+    try {
+      const { data: { session } } = await _sb.auth.getSession();
+      if (!session?.user) return;
+      const userId = session.user.id;
+      const hist = safeJSON(STORAGE.historyKey, []);
+      if (!hist.length) return;
+      // Upsert: envia cada sessão nova (usa id como chave única)
+      const rows = hist.map(s => ({
+        id: s.id,
+        user_id: userId,
+        session_data: s,
+        trained_at: s.createdAt || new Date().toISOString(),
+        synced_at: new Date().toISOString()
+      }));
+      await _sb.from('workout_history').upsert(rows, { onConflict: 'id' });
+    } catch (e) { /* sync é silencioso — não interrompe o usuário */ }
+  },
+
+  // Envia perfil/config do usuário para o banco em background
+  async pushConfig() {
+    try {
+      const { data: { session } } = await _sb.auth.getSession();
+      if (!session?.user) return;
+      const userId = session.user.id;
+      const config = safeJSON('titanpro_config', {});
+      await _sb.from('profiles').upsert({
+        id: userId,
+        config: config,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    } catch (e) { /* silencioso */ }
+  },
+
+  // Ao fazer login: puxa dados do banco e mescla com localStorage
+  async pullAll(userId) {
+    try {
+      // Puxa histórico
+      const { data: histRows } = await _sb
+        .from('workout_history')
+        .select('session_data, trained_at')
+        .eq('user_id', userId)
+        .order('trained_at', { ascending: false })
+        .limit(STORAGE.maxHistory);
+
+      if (histRows && histRows.length > 0) {
+        const localHist = safeJSON(STORAGE.historyKey, []);
+        const localIds = new Set(localHist.map(s => s.id));
+        const novas = histRows
+          .map(r => r.session_data)
+          .filter(s => s && !localIds.has(s.id));
+        if (novas.length > 0) {
+          const merged = [...localHist, ...novas]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, STORAGE.maxHistory);
+          localStorage.setItem(STORAGE.historyKey, JSON.stringify(merged));
+        }
+      }
+
+      // Puxa config/perfil
+      const { data: profile } = await _sb
+        .from('profiles')
+        .select('config')
+        .eq('id', userId)
+        .single();
+
+      if (profile?.config && Object.keys(profile.config).length > 0) {
+        const localCfg = safeJSON('titanpro_config', {});
+        // Nuvem tem prioridade apenas se local estiver vazio
+        if (!Object.keys(localCfg).length) {
+          localStorage.setItem('titanpro_config', JSON.stringify(profile.config));
+        }
+      }
+    } catch (e) { /* silencioso */ }
+  }
+};
+
 let _authMenuOpen = false;
 let _appUnlocked = false;
 
@@ -8903,8 +8998,11 @@ document.addEventListener('click', function(e) {
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
   updateAuthUI(session?.user || null);
-  if (session?.user) showApp();
-  else if (_appUnlocked) {
+  if (session?.user) {
+    showApp();
+    // Puxa dados da nuvem ao logar (fire & forget)
+    _dbSync.pullAll(session.user.id);
+  } else if (_appUnlocked) {
     _appUnlocked = false;
     document.getElementById('loginScreen').style.display = 'flex';
   }

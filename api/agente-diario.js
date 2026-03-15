@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var auth = require('./_auth');
 
 var SYSTEM = `Você é o Assistente Pedagógico do DIÁRIO PRO. Sua função é ajudar professores a redigir registros de diário pedagógico claros, ricos e reflexivos.
 
@@ -31,29 +32,30 @@ function parseJSON(text) {
 module.exports = function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
 
-  var b = req.body || {};
-  var turma = b.turma || 'Turma';
-  var data = b.data || new Date().toLocaleDateString('pt-BR');
-  var atividades = b.atividades || [];
-  var observacoes = b.observacoes || '';
+  auth.requireAuth(req, res, function() {
+    var b = req.body || {};
+    var turma = b.turma || 'Turma';
+    var data = b.data || new Date().toLocaleDateString('pt-BR');
+    var atividades = b.atividades || [];
+    var observacoes = b.observacoes || '';
 
-  var prompt = 'Gere um registro de diário pedagógico para o dia ' + data + ', turma "' + turma + '".' +
-    (atividades.length ? ' Atividades realizadas: ' + atividades.join(', ') + '.' : '') +
-    (observacoes ? ' Observações do professor: ' + observacoes + '.' : '') +
-    ' Retorne apenas JSON com titulo e conteudo.';
+    var prompt = 'Gere um registro de diário pedagógico para o dia ' + data + ', turma "' + turma + '".' +
+      (atividades.length ? ' Atividades realizadas: ' + atividades.join(', ') + '.' : '') +
+      (observacoes ? ' Observações do professor: ' + observacoes + '.' : '') +
+      ' Retorne apenas JSON com titulo e conteudo.';
 
-  callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
-    if (err) return res.status(500).json({ error: err });
-    try {
-      var result = parseJSON(text);
-      res.status(200).json(result);
-    } catch(e) {
-      // Fallback: return text as conteudo
-      res.status(200).json({ titulo: 'Registro do dia ' + data, conteudo: text });
-    }
+    callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
+      if (err) return res.status(500).json({ error: err });
+      try {
+        var result = parseJSON(text);
+        res.status(200).json(result);
+      } catch(e) {
+        res.status(200).json({ titulo: 'Registro do dia ' + data, conteudo: text });
+      }
+    });
   });
 };

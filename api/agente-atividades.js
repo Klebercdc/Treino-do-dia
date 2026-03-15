@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var auth = require('./_auth');
 
 var SYSTEM = `Você é o Assistente de Planejamento de Atividades do DIÁRIO PRO. Sugere atividades pedagógicas criativas e adequadas à faixa etária e ao conteúdo curricular.
 
@@ -31,28 +32,30 @@ function parseJSON(text) {
 module.exports = function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
 
-  var b = req.body || {};
-  var turma = b.turma || 'turma';
-  var serie = b.serie || 'Ensino Fundamental';
-  var bimestre = b.bimestre || '1º Bimestre';
-  var disciplina = b.disciplina || 'geral';
-  var temaAtual = b.temaAtual || '';
+  auth.requireAuth(req, res, function() {
+    var b = req.body || {};
+    var turma = b.turma || 'turma';
+    var serie = b.serie || 'Ensino Fundamental';
+    var bimestre = b.bimestre || '1º Bimestre';
+    var disciplina = b.disciplina || 'geral';
+    var temaAtual = b.temaAtual || '';
 
-  var prompt = 'Sugira 3 atividades pedagógicas para ' + serie + ' (' + turma + '), ' + bimestre + '.' +
-    (disciplina !== 'geral' ? ' Disciplina: ' + disciplina + '.' : '') +
-    (temaAtual ? ' Tema atual: ' + temaAtual + '.' : '') +
-    ' Retorne JSON com array "sugestoes".';
+    var prompt = 'Sugira 3 atividades pedagógicas para ' + serie + ' (' + turma + '), ' + bimestre + '.' +
+      (disciplina !== 'geral' ? ' Disciplina: ' + disciplina + '.' : '') +
+      (temaAtual ? ' Tema atual: ' + temaAtual + '.' : '') +
+      ' Retorne JSON com array "sugestoes".';
 
-  callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
-    if (err) return res.status(500).json({ error: err });
-    try {
-      res.status(200).json(parseJSON(text));
-    } catch(e) {
-      res.status(200).json({ sugestoes: [] });
-    }
+    callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
+      if (err) return res.status(500).json({ error: err });
+      try {
+        res.status(200).json(parseJSON(text));
+      } catch(e) {
+        res.status(200).json({ sugestoes: [] });
+      }
+    });
   });
 };

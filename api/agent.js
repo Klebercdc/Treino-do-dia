@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var auth = require('./_auth');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -352,20 +353,22 @@ function agentLoop(userMessages, userData, callback) {
 module.exports = function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
   if (!process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'NVIDIA_API_KEY missing' }); return; }
 
-  var b = req.body || {};
-  var messages = b.messages || [];
-  var userData = {
-    history: (b.history || []).slice(-25),
-    profile: b.profile || {}
-  };
+  auth.requireAuth(req, res, function() {
+    var b = req.body || {};
+    var messages = b.messages || [];
+    var userData = {
+      history: (b.history || []).slice(-25),
+      profile: b.profile || {}
+    };
 
-  agentLoop(messages, userData, function(err, text) {
-    if (err) return res.status(500).json({ error: err });
-    res.status(200).json({ content: [{ type: 'text', text: text }] });
+    agentLoop(messages, userData, function(err, text) {
+      if (err) return res.status(500).json({ error: err });
+      res.status(200).json({ content: [{ type: 'text', text: text }] });
+    });
   });
 };
