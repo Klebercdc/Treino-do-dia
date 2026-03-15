@@ -2337,7 +2337,29 @@
   </div>
 </div>
 
-<!-- AI COACH MODAL -->
+<!-- Modal: Check-in de disposição -->
+
+<dialog id="modalDisposicao" style="background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px 24px 24px;max-width:340px;width:90%;margin:auto;">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:1.05rem;font-weight:800;letter-spacing:.04em;color:var(--text);margin-bottom:6px">Como você está hoje?</div>
+    <div style="font-size:0.78rem;color:var(--muted)">KRONOS vai ajustar o treino com base nisso</div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:center">
+    <button onclick="selecionarDisposicao('cansado')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s">
+      <span style="font-size:1.6rem">😴</span>
+      <span style="font-size:0.72rem;font-weight:700;color:var(--text-2)">Cansado</span>
+    </button>
+    <button onclick="selecionarDisposicao('normal')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s">
+      <span style="font-size:1.6rem">😐</span>
+      <span style="font-size:0.72rem;font-weight:700;color:var(--text-2)">Normal</span>
+    </button>
+    <button onclick="selecionarDisposicao('pique')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s">
+      <span style="font-size:1.6rem">🔥</span>
+      <span style="font-size:0.72rem;font-weight:700;color:var(--accent)">No pique!</span>
+    </button>
+  </div>
+  <button onclick="selecionarDisposicao(null)" style="width:100%;margin-top:14px;padding:10px;background:none;border:none;font-size:0.75rem;color:var(--muted);cursor:pointer;font-family:var(--font)">Pular</button>
+</dialog>
 
 <div id="aiModal" style="display:none;position:fixed;inset:0;z-index:7000;background:var(--bg);flex-direction:column;">
   <div id="aiBox" style="display:flex;flex-direction:column;height:100%;max-width:680px;margin:0 auto;width:100%;">
@@ -2682,6 +2704,15 @@
     <div class="perfil-section-title">Records pessoais (PRs)</div>
     <div class="perfil-pr-list" id="perfilPRList">
       <div style="color:var(--muted);font-size:0.8rem;text-align:center;padding:16px">Nenhum PR ainda — comece a treinar!</div>
+    </div>
+  </div>
+
+  <!-- Conquistas -->
+
+  <div class="perfil-section">
+    <div class="perfil-section-title">Conquistas</div>
+    <div id="perfilConquistas" style="display:flex;flex-wrap:wrap;gap:8px;min-height:36px">
+      <div style="color:var(--muted);font-size:0.8rem;padding:8px 0">Ainda sem conquistas — comece a treinar!</div>
     </div>
   </div>
 
@@ -4663,7 +4694,7 @@ async function salvarTreino() {
     const prMap = buildPRMap();
     const prs  = detectPRs(st, prMap);
     const dur  = getSessionDuration();
-    const item = { id:"sess_"+Date.now(), createdAt: new Date().toISOString(), state: st, bodyWeight: peso ? parseFloat(peso) : null, durationMin: dur };
+    const item = { id:"sess_"+Date.now(), createdAt: new Date().toISOString(), state: st, bodyWeight: peso ? parseFloat(peso) : null, durationMin: dur, disposicao: _disposicaoAtual || null };
     const hist = safeJSON(STORAGE.historyKey, []);
     hist.unshift(item);
     if (hist.length > STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
@@ -4672,7 +4703,9 @@ async function salvarTreino() {
     prevMap = getPrevMap();
     clearAllInputsToGhost(); applyPrevGhostsToAll(); checkDeload();
     checkPersonaEvolucao(hist);
+    checkNutricaoPosTreino(st);
     _sessionStart = null;
+    _disposicaoAtual = null;
     updateStreakUI(); updateWorkoutProgress();
     showSummary(st, prs, dur);
     if (prs.length > 0) setTimeout(() => showToast(`🏆 ${prs.length} PR${prs.length>1?"s":""} batido${prs.length>1?"s":""}!`, "success", 4000), 800);
@@ -4861,6 +4894,49 @@ function checkPersonaEvolucao(hist) {
       if (chip) { document.querySelectorAll("#personaChips .config-chip").forEach(c=>c.classList.remove("active")); chip.classList.add("active"); }
     }
   }, 3500);
+}
+
+/**
+ * Após salvar sessão intensa (RPE médio ≥ 7.5 ou volume > 3000 kg),
+ * injeta dica de proteína/nutrição no summary modal.
+ */
+function checkNutricaoPosTreino(state) {
+  // Calcular RPE médio da sessão salva
+  let rpes = [], volTotal = 0;
+  (state.sections||[]).forEach(sec =>
+    (sec.cards||[]).forEach(card =>
+      (card.values||[]).forEach(v => {
+        if (v.rpe) rpes.push(Number(v.rpe));
+        if (v.kg && v.reps) volTotal += Number(v.kg) * Number(v.reps);
+      })
+    )
+  );
+  const rpeMedia = rpes.length ? rpes.reduce((a,b)=>a+b,0)/rpes.length : 0;
+  const ehIntensa = rpeMedia >= 7.5 || volTotal >= 3000;
+  if (!ehIntensa) return;
+
+  const cfg = safeJSON("titanpro_config", {});
+  const peso = parseFloat(cfg.peso) || 75;
+  const protMin = Math.round(peso * 1.8);
+  const protMax = Math.round(peso * 2.2);
+
+  const dicas = [
+    `🥩 Treino intenso! Mire em <b>${protMin}–${protMax}g de proteína</b> hoje para recuperação muscular ótima.`,
+    `🍗 Sessão pesada — consuma proteína na <b>janela de 1–2h pós-treino</b> (frango, ovo, whey). Alvo: ${protMin}g+.`,
+    `💧 Hidratação + proteína: reponha eletrólitos e atinja <b>${protMin}–${protMax}g de proteína</b> hoje.`,
+  ];
+  const dica = dicas[Math.floor(Math.random() * dicas.length)];
+
+  // Injetar card no summary modal (após o grid de stats)
+  setTimeout(() => {
+    const sumGrid = document.getElementById("sumGrid");
+    if (!sumGrid || document.getElementById("sumNutricao")) return; // evitar duplicar
+    const card = document.createElement("div");
+    card.id = "sumNutricao";
+    card.style.cssText = "margin-top:12px;background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(16,185,129,.06));border:1px solid rgba(34,197,94,.3);border-radius:14px;padding:12px 14px;font-size:.8rem;line-height:1.6;color:var(--text-2)";
+    card.innerHTML = `<div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#22c55e;margin-bottom:6px">NUTRIÇÃO PÓS-TREINO</div>${dica}`;
+    sumGrid.insertAdjacentElement("afterend", card);
+  }, 300);
 }
 
 function checkDeload() {
@@ -5820,6 +5896,7 @@ PERFIL DO USUÁRIO
 - Perfil declarado: ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[persona] || persona}
 - Perfil efetivo (calculado pelos dados): ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[personaEfetiva] || personaEfetiva}${personaEfetiva !== persona ? ` ← ATENÇÃO: dados indicam evolução acima do perfil declarado` : ""}
 - Sessões nos últimos 30 dias: ${_evData.d30} | RPE médio: ${_evData.rpeMedia ? _evData.rpeMedia.toFixed(1) : "sem dados"}
+- Disposição hoje: ${{cansado:"😴 Cansado (reduza intensidade se possível)", normal:"😐 Normal", pique:"🔥 No pique (pode puxar mais)"}[_disposicaoAtual] || "não informado"}
 ${proximoMarcoStr ? `- Próximo marco: ${proximoMarcoStr}` : ""}
 - Objetivo: ${obj}
 - Frequência planejada: ${freq}x por semana
@@ -6619,10 +6696,37 @@ function getNextTreinoIdx() {
   return (lastIdx + 1) % sections.length;
 }
 
+let _disposicaoAtual = null;
+
 function iniciarTreino() {
+  // Mostrar check-in de disposição antes de iniciar
+  const dlg = document.getElementById("modalDisposicao");
+  if (dlg) {
+    // Resetar estilos dos botões
+    dlg.querySelectorAll("button[onclick^='selecionarDisposicao(']").forEach(b => {
+      b.style.borderColor = "var(--border)";
+      b.style.background = "var(--bg2)";
+    });
+    dlg.showModal();
+    dlg.addEventListener("close", _onDisposicaoClose, { once: true });
+  } else {
+    _lancarTreino();
+  }
+}
+
+function selecionarDisposicao(val) {
+  _disposicaoAtual = val;
+  const dlg = document.getElementById("modalDisposicao");
+  if (dlg) dlg.close();
+}
+
+function _onDisposicaoClose() {
+  _lancarTreino();
+}
+
+function _lancarTreino() {
   const idx = getNextTreinoIdx();
   closeHome();
-  // Navega para a aba correta do próximo treino
   setTimeout(() => { const p = document.getElementById("p" + idx); if (p) p.click(); }, 50);
 }
 
@@ -6737,9 +6841,28 @@ function updatePerfilScreen() {
     volTotal > 999999 ? (volTotal / 1000000).toFixed(1) + "M" :
     volTotal > 999 ? (volTotal / 1000).toFixed(1) + "t" : Math.round(volTotal) + "kg";
 
-  // Nível
-  const nivel = hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
-  document.getElementById("perfilNivel").textContent = nivel;
+  // Nível (usa persona efetiva)
+  const _evPerfil = calcPersonaEfetiva(hist, cfg);
+  const nivelLabels = { turista:"✈️ Turista", iniciante:"🌱 Iniciante", dedicado:"💪 Dedicado", atleta:"🔥 Atleta" };
+  document.getElementById("perfilNivel").textContent = nivelLabels[_evPerfil.efetiva] || _evPerfil.efetiva;
+
+  // Conquistas
+  const conquistasEl = document.getElementById("perfilConquistas");
+  if (conquistasEl) {
+    if (_evPerfil.marcos.length > 0) {
+      conquistasEl.innerHTML = _evPerfil.marcos.map(m =>
+        `<div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:.75rem;font-weight:700;color:var(--text-2)">
+          <span>${m.icon}</span><span>${m.label}</span>
+        </div>`
+      ).join("");
+      // Próximo marco
+      if (_evPerfil.proximoMarco) {
+        conquistasEl.innerHTML += `<div style="width:100%;margin-top:6px;font-size:.72rem;color:var(--muted);padding:4px 2px">Próximo: ${_evPerfil.proximoMarco.label}</div>`;
+      }
+    } else {
+      conquistasEl.innerHTML = `<div style="color:var(--muted);font-size:0.8rem;padding:8px 0">Ainda sem conquistas — comece a treinar!</div>`;
+    }
+  }
 
   // PRs
   const prMap = {};
