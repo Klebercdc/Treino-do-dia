@@ -1227,6 +1227,64 @@
     }
 
     /* ══════════════════════════════════════════
+       TELA EDITAR PERFIL
+    ══════════════════════════════════════════ */
+    #editarPerfilScreen {
+      display: none; position: fixed; inset: 0; z-index: 3600;
+      background: var(--bg); flex-direction: column; overflow-y: auto;
+    }
+    #editarPerfilScreen.show { display: flex; }
+    .ep-avatar-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 56px 20px 24px; background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+    .ep-avatar {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--display); font-size: 2.4rem; color: #fff;
+      position: relative; cursor: pointer; overflow: hidden;
+      border: 3px solid var(--accent);
+    }
+    .ep-avatar-cam {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 34px; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ep-name-display {
+      margin-top: 12px; font-family: var(--display);
+      font-size: 1.3rem; color: var(--text); letter-spacing: .04em;
+    }
+    .ep-level {
+      margin-top: 4px; background: var(--accent-dim); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 100px;
+      padding: 2px 10px; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+    }
+    .ep-body { padding: 24px 20px; flex: 1; }
+    .ep-field { margin-bottom: 18px; }
+    .ep-field-lbl {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--muted); margin-bottom: 6px; display: block;
+    }
+    .ep-input {
+      width: 100%; background: var(--card); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 13px 16px;
+      font-family: var(--font); font-size: 1rem; color: var(--text);
+      box-sizing: border-box; -webkit-appearance: none; transition: border-color .15s;
+    }
+    .ep-input:focus { outline: none; border-color: var(--accent); }
+    .ep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .ep-save {
+      width: 100%; padding: 16px; background: var(--accent); border: none;
+      border-radius: 14px; color: #fff; font-family: var(--font);
+      font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 8px;
+      -webkit-tap-highlight-color: transparent; letter-spacing: .03em;
+    }
+    .ep-save:active { opacity: .85; }
+
+    /* ══════════════════════════════════════════
        TELA ORIENTAÇÃO
     ══════════════════════════════════════════ */
     #orientacaoScreen {
@@ -2728,11 +2786,14 @@
 <div id="homeScreen">
   <!-- Card de perfil -->
   <div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:56px 16px 20px">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="openEditarPerfil()">
       <div id="homeCardAvatar" class="perfil-avatar" style="width:56px;height:56px;font-size:1.5rem;margin:0;flex-shrink:0">T</div>
       <div>
         <div id="homeCardNome" style="font-family:var(--display);font-size:1.3rem;color:var(--text);letter-spacing:.04em">ATLETA</div>
         <div id="homeCardNivel" style="display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:100px;padding:2px 8px;font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Iniciante</div>
+      </div>
+      <div style="margin-left:auto;color:var(--muted);opacity:.6">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </div>
     </div>
     <div style="display:flex;gap:24px;padding-top:4px">
@@ -2927,14 +2988,13 @@
     Início
   </button>
   <div class="perfil-header">
-    <div style="position:relative;display:inline-block;margin-bottom:12px" onclick="document.getElementById('avatarInput').click()" style="cursor:pointer">
+    <div style="position:relative;display:inline-block;margin-bottom:12px;cursor:pointer" onclick="openEditarPerfil()">
       <div class="perfil-avatar" id="perfilAvatar" style="margin-bottom:0;cursor:pointer;overflow:hidden"></div>
       <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </div>
     </div>
-    <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)" />
-    <div class="perfil-name" id="perfilNome">ATLETA</div>
+    <div class="perfil-name" id="perfilNome" style="cursor:pointer" onclick="openEditarPerfil()">ATLETA</div>
     <div class="perfil-badge" id="perfilNivel">Intermediário</div>
   </div>
 
@@ -3113,6 +3173,77 @@
     </div>
   </div>
   <div style="height:100px"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TELA EDITAR PERFIL
+══════════════════════════════════════════ -->
+
+<div id="editarPerfilScreen">
+  <button class="btn-voltar" onclick="closeEditarPerfil()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Voltar
+  </button>
+
+  <!-- Avatar + nome -->
+  <div class="ep-avatar-wrap">
+    <div class="ep-avatar" id="epAvatar" onclick="document.getElementById('epAvatarInput').click()">
+      <span id="epAvatarInicial">T</span>
+      <div class="ep-avatar-cam">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+    </div>
+    <input type="file" id="epAvatarInput" accept="image/*" style="display:none" onchange="epHandleAvatarUpload(event)"/>
+    <div class="ep-name-display" id="epNomeDisplay">ATLETA</div>
+    <div class="ep-level" id="epNivelDisplay">Iniciante</div>
+  </div>
+
+  <!-- Formulário -->
+  <div class="ep-body">
+    <div class="ep-field">
+      <span class="ep-field-lbl">Nome</span>
+      <input class="ep-input" id="epNome" type="text" placeholder="Seu nome completo" oninput="epAtualizarNome(this.value)"/>
+    </div>
+
+    <div class="ep-grid">
+      <div class="ep-field">
+        <span class="ep-field-lbl">Peso (kg)</span>
+        <input class="ep-input" id="epPeso" type="number" placeholder="75" inputmode="decimal"/>
+      </div>
+      <div class="ep-field">
+        <span class="ep-field-lbl">Altura (cm)</span>
+        <input class="ep-input" id="epAltura" type="number" placeholder="175" inputmode="decimal"/>
+      </div>
+    </div>
+
+    <div class="ep-grid">
+      <div class="ep-field">
+        <span class="ep-field-lbl">Idade</span>
+        <input class="ep-input" id="epIdade" type="number" placeholder="25" inputmode="numeric"/>
+      </div>
+      <div class="ep-field">
+        <span class="ep-field-lbl">Sono (h/noite)</span>
+        <input class="ep-input" id="epSono" type="number" placeholder="7" min="3" max="12" step="0.5" inputmode="decimal"/>
+      </div>
+    </div>
+
+    <button class="ep-save" onclick="salvarPerfilEdit()">Salvar Perfil</button>
+
+    <!-- CTA pós-save: ir para configurar treino -->
+    <div id="epCtaTreino" style="display:none;flex-direction:column;gap:10px;margin-top:16px;padding:16px;background:var(--card);border:1px solid var(--accent);border-radius:14px">
+      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Perfil salvo! O que deseja fazer agora?</div>
+      <div style="font-size:0.78rem;color:var(--text-2)">Configure seu programa de treino com base nos seus dados.</div>
+      <div style="display:flex;gap:10px">
+        <button onclick="epIrParaTreino()" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle;margin-right:5px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
+          Configurar Treino
+        </button>
+        <button onclick="closeEditarPerfil()" style="flex:1;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text-2);font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">Continuar</button>
+      </div>
+    </div>
+
+    <div style="height:80px"></div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -4012,10 +4143,16 @@
     <div id="dietaResultado" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Resultado</div>
-        <button id="btnCopiarDieta" onclick="copiarDieta()" style="padding:7px 16px;background:var(--card);border:1.5px solid var(--accent);border-radius:20px;color:var(--accent);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar
-        </button>
+        <div style="display:flex;gap:8px">
+          <button id="btnCopiarDieta" onclick="copiarDieta()" style="padding:7px 14px;background:var(--card);border:1.5px solid var(--accent);border-radius:20px;color:var(--accent);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copiar
+          </button>
+          <button onclick="gerarDietaPDF()" style="padding:7px 14px;background:var(--accent);border:none;border-radius:20px;color:#fff;font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            PDF
+          </button>
+        </div>
       </div>
       <div id="dietaTexto" style="font-size:0.87rem;line-height:1.75;color:var(--text-2);background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;white-space:pre-wrap;"></div>
     </div>
@@ -7185,6 +7322,112 @@ function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
 }
 
+// ══════════════════════════════════════════
+// TELA EDITAR PERFIL
+// ══════════════════════════════════════════
+function openEditarPerfil() {
+  const cfg = safeJSON("titanpro_config", {});
+  document.getElementById("epNome").value   = cfg.nome   || "";
+  document.getElementById("epPeso").value   = cfg.peso   || "";
+  document.getElementById("epAltura").value = cfg.altura || "";
+  document.getElementById("epIdade").value  = cfg.idade  || "";
+  document.getElementById("epSono").value   = cfg.sono   || "";
+  const nome = cfg.nome || "ATLETA";
+  document.getElementById("epNomeDisplay").textContent = nome.toUpperCase();
+  const hist = safeJSON(STORAGE?.historyKey || "titanpro_history", []);
+  const nivel = hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
+  document.getElementById("epNivelDisplay").textContent = nivel;
+  // Aplica foto salva ao avatar da tela de edição
+  const savedPhoto = localStorage.getItem("userAvatarPhoto");
+  const av = document.getElementById("epAvatar");
+  const epIni = document.getElementById("epAvatarInicial");
+  if (savedPhoto) {
+    av.style.backgroundImage = `url(${savedPhoto})`;
+    av.style.backgroundSize = "cover";
+    av.style.backgroundPosition = "center";
+    if (epIni) epIni.textContent = "";
+  } else {
+    av.style.backgroundImage = "";
+    if (epIni) epIni.textContent = nome[0]?.toUpperCase() || "T";
+  }
+  const cta = document.getElementById("epCtaTreino");
+  if (cta) cta.style.display = "none";
+  document.getElementById("editarPerfilScreen").classList.add("show");
+}
+function closeEditarPerfil() {
+  document.getElementById("editarPerfilScreen").classList.remove("show");
+}
+function epAtualizarNome(val) {
+  const display = document.getElementById("epNomeDisplay");
+  if (display) display.textContent = (val || "ATLETA").toUpperCase();
+  const savedPhoto = localStorage.getItem("userAvatarPhoto");
+  if (!savedPhoto) {
+    const ini = document.getElementById("epAvatarInicial");
+    if (ini) ini.textContent = (val[0] || "T").toUpperCase();
+  }
+}
+function epHandleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    localStorage.setItem("userAvatarPhoto", dataUrl);
+    applyAvatarPhoto(dataUrl);
+    const av = document.getElementById("epAvatar");
+    av.style.backgroundImage = `url(${dataUrl})`;
+    av.style.backgroundSize = "cover";
+    av.style.backgroundPosition = "center";
+    const ini = document.getElementById("epAvatarInicial");
+    if (ini) ini.textContent = "";
+  };
+  reader.readAsDataURL(file);
+}
+function salvarPerfilEdit() {
+  const data = {
+    nome:   document.getElementById("epNome").value.trim(),
+    peso:   document.getElementById("epPeso").value,
+    altura: document.getElementById("epAltura").value,
+    idade:  document.getElementById("epIdade").value,
+    sono:   document.getElementById("epSono").value,
+  };
+  localStorage.setItem("titanpro_config", JSON.stringify(data));
+  if (typeof _dbSync !== "undefined") _dbSync.pushConfig();
+  // Sincroniza todos os elementos visuais
+  const nome = data.nome || "ATLETA";
+  const syncEls = [
+    ["perfilNome",     el => el.textContent = nome.toUpperCase()],
+    ["perfilNomeInput",el => el.value = data.nome],
+    ["perfilPeso",     el => el.value = data.peso],
+    ["perfilAltura",   el => el.value = data.altura],
+    ["perfilIdade",    el => el.value = data.idade],
+    ["perfilSono",     el => el.value = data.sono],
+    ["perfilSonoStat", el => el.textContent = data.sono ? data.sono+"h" : "—"],
+    ["homeCardNome",   el => el.textContent = nome.toUpperCase()],
+    ["epNomeDisplay",  el => el.textContent = nome.toUpperCase()],
+  ];
+  syncEls.forEach(([id, fn]) => { const el = document.getElementById(id); if (el) fn(el); });
+  const savedPhoto = localStorage.getItem("userAvatarPhoto");
+  if (!savedPhoto) {
+    const inicial = nome[0]?.toUpperCase() || "T";
+    ["perfilAvatar","homeCardAvatar"].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = inicial;
+    });
+    const ini = document.getElementById("epAvatarInicial");
+    if (ini) ini.textContent = inicial;
+  }
+  const btn = document.querySelector("#editarPerfilScreen .ep-save");
+  if (btn) { btn.textContent = "✓ Salvo!"; setTimeout(() => { btn.textContent = "Salvar Perfil"; }, 2000); }
+  // CTA para configurar treino após salvar perfil
+  const cta = document.getElementById("epCtaTreino");
+  if (cta) cta.style.display = "flex";
+  showToast("Perfil atualizado!", "success", 2000);
+}
+function epIrParaTreino() {
+  closeEditarPerfil();
+  setTimeout(() => { try { navTo("programa"); openConfig(); } catch(e) {} }, 200);
+}
+
 function salvarMedidas() {
   const data = {
     nome:   document.getElementById("perfilNomeInput")?.value || "",
@@ -7687,6 +7930,199 @@ function copiarDieta() {
     btn.textContent = "✓ Copiado!";
     setTimeout(() => { btn.innerHTML = orig; }, 2200);
   }).catch(() => {});
+}
+
+function gerarDietaPDF() {
+  const conteudo = document.getElementById("dietaTexto").textContent;
+  if (!conteudo || conteudo.includes("Calculando")) return;
+
+  const cfg    = safeJSON("titanpro_config", {});
+  const nome   = cfg.nome || "Atleta";
+  const peso   = document.getElementById("dietaPeso")?.value || cfg.peso || "";
+  const altura = document.getElementById("dietaAltura")?.value || cfg.altura || "";
+  const idade  = document.getElementById("dietaIdade")?.value || cfg.idade || "";
+  const obj    = document.querySelector("#dietaObjChips .bs-chip.active")?.textContent || "";
+  const ativ   = document.querySelector("#dietaAtivChips .bs-chip.active")?.textContent || "";
+  const data   = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
+
+  // ── Parseia o texto gerado pela IA ─────────────────────────────────
+  let secNum = 0;
+  const linhas = conteudo.split("\n").map(l => {
+    const t = l.trimEnd();
+    if (!t) return `<div class="gap"></div>`;
+
+    // Cabeçalho numerado: "1. RESUMO" ou "1. Resumo"
+    if (/^[1-9]\.\s/.test(t)) {
+      secNum++;
+      const titulo = t.replace(/^[1-9]\.\s*/, "");
+      return `<div class="sec-header"><span class="sec-num">${secNum}</span><span>${titulo}</span></div>`;
+    }
+    // Linha toda maiúscula (>= 5 chars sem emoji) → sub-título de seção
+    if (/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s\-–:]{5,}$/.test(t)) {
+      return `<div class="sec-sub">${t}</div>`;
+    }
+    // Refeição / horário com emoji alimentar
+    if (/^[\u{1F300}-\u{1F9FF}🥗🥙🍳🥚🍗🥩🥦🥑🍌🍚🥛☕🥤]/u.test(t) || /^(Refeição|Café|Almoço|Jantar|Lanche|Pré|Pós|Ceia)/i.test(t)) {
+      return `<div class="meal-header">${t}</div>`;
+    }
+    // Linha com destaque calórico / macro
+    if (/\d+\s*(kcal|g\b|cal\b)/i.test(t) && t.length < 120) {
+      const hl = t.replace(/(\d+\s*(kcal|kcal\/dia|calorias|cal\b))/gi, '<span class="kcal">$1</span>')
+                  .replace(/(\d+g\b)/gi, '<span class="macro">$1</span>');
+      return `<p class="macro-line">${hl}</p>`;
+    }
+    // Traço / separador
+    if (/^[-─—]{3,}$/.test(t)) return `<hr>`;
+    // Linha de bullet
+    if (/^[-•·▸»]/.test(t)) return `<p class="bullet">${t}</p>`;
+    // Parágrafo normal
+    return `<p>${t}</p>`;
+  }).join("\n");
+
+  // ── SVG logo (raio — mesmo ícone do app) ──────────────────────────
+  const logoSVG = `<svg width="32" height="32" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+
+  // ── Monta info chips ───────────────────────────────────────────────
+  const chips = [obj, ativ, peso ? `${peso} kg` : "", altura ? `${altura} cm` : "", idade ? `${idade} anos` : ""]
+    .filter(Boolean).map(c => `<span class="chip">${c}</span>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plano Alimentar – ${nome}</title>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    color: #1a1a1a; background: #fff;
+    padding: 0; max-width: 860px; margin: auto;
+  }
+
+  /* ── CAPA / HEADER ── */
+  .cover {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d1a0e 60%, #f97316 100%);
+    padding: 36px 40px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px;
+  }
+  .cover-left { display:flex; align-items:center; gap:14px; }
+  .logo-icon {
+    width: 52px; height: 52px; background: #f97316;
+    border-radius: 14px; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .logo-text { color:#fff; }
+  .logo-name { font-size:1.7rem; font-weight:900; letter-spacing:.08em; line-height:1; }
+  .logo-tagline { font-size:0.72rem; color:rgba(255,255,255,0.6); margin-top:4px; letter-spacing:.08em; text-transform:uppercase; }
+  .cover-right { text-align:right; color:#fff; }
+  .cover-atleta { font-size:1.1rem; font-weight:800; letter-spacing:.05em; }
+  .cover-data { font-size:0.75rem; color:rgba(255,255,255,0.55); margin-top:4px; }
+
+  /* ── FAIXA LARANJA ── */
+  .orange-bar { background:#f97316; height:4px; }
+
+  /* ── CHIPS META ── */
+  .chips-wrap { padding: 16px 40px 0; display:flex; gap:8px; flex-wrap:wrap; }
+  .chip {
+    background:#fff3e0; color:#c2410c; border:1.5px solid #fed7aa;
+    border-radius:100px; padding:5px 14px;
+    font-size:0.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  }
+
+  /* ── CORPO ── */
+  .body { padding: 24px 40px 40px; }
+
+  /* Cabeçalhos de seção numerados */
+  .sec-header {
+    display:flex; align-items:center; gap:12px;
+    background: linear-gradient(90deg, #fff3e0, #fff);
+    border-left: 4px solid #f97316;
+    padding: 10px 14px; border-radius: 0 8px 8px 0;
+    margin: 24px 0 10px;
+  }
+  .sec-num {
+    width:26px; height:26px; background:#f97316; color:#fff;
+    border-radius:50%; font-size:0.8rem; font-weight:900;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .sec-header span:last-child { font-size:1rem; font-weight:800; color:#c2410c; text-transform:uppercase; letter-spacing:.04em; }
+
+  /* Sub-título de seção */
+  .sec-sub { font-size:0.78rem; font-weight:800; color:#f97316; text-transform:uppercase; letter-spacing:.08em; margin:16px 0 6px; }
+
+  /* Cabeçalho de refeição */
+  .meal-header {
+    background:#1a1a1a; color:#fff;
+    padding:8px 14px; border-radius:8px;
+    font-size:0.88rem; font-weight:700; margin:14px 0 6px;
+  }
+
+  /* Parágrafos */
+  p { font-size:0.88rem; line-height:1.75; color:#333; margin-bottom:3px; }
+  p.bullet { padding-left:14px; }
+  p.macro-line { color:#555; }
+
+  /* Destaque calórico */
+  .kcal { color:#c2410c; font-weight:800; }
+  .macro { color:#1d4ed8; font-weight:700; }
+
+  /* Gap e separador */
+  .gap { height:8px; }
+  hr { border:none; border-top:1px solid #eee; margin:16px 0; }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 2px solid #f3f4f6; padding: 16px 40px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:0.7rem; color:#9ca3af;
+  }
+  .footer-logo { font-weight:900; color:#f97316; letter-spacing:.06em; }
+
+  /* ── PRINT ── */
+  @media print {
+    body { max-width:100%; }
+    .cover { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .meal-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .sec-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .orange-bar { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .logo-icon { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-left">
+      <div class="logo-icon">${logoSVG}</div>
+      <div class="logo-text">
+        <div class="logo-name">TITAN PRO</div>
+        <div class="logo-tagline">Plano Alimentar Personalizado</div>
+      </div>
+    </div>
+    <div class="cover-right">
+      <div class="cover-atleta">${nome.toUpperCase()}</div>
+      <div class="cover-data">Gerado em ${data}</div>
+    </div>
+  </div>
+  <div class="orange-bar"></div>
+
+  <div class="chips-wrap">${chips}</div>
+
+  <div class="body">${linhas}</div>
+
+  <div class="footer">
+    <span><span class="footer-logo">TITAN PRO</span> &nbsp;·&nbsp; Plano gerado com IA</span>
+    <span>Consulte um nutricionista para ajustes individuais</span>
+  </div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) { showToast("Permita pop-ups para gerar o PDF.", "warning", 3000); return; }
+  win.document.write(html);
+  win.document.close();
 }
 
 async function gerarDieta() {
