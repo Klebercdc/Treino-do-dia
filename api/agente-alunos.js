@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var auth = require('./_auth');
 
 var SYSTEM = `Você é o Assistente de Análise de Alunos do DIÁRIO PRO. Analisa o progresso individual de alunos com base em dados de notas, frequência e observações pedagógicas.
 
@@ -31,33 +32,35 @@ function parseJSON(text) {
 module.exports = function(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
 
-  var b = req.body || {};
-  var nome = b.nome || 'Aluno';
-  var notas = b.notas || [];
-  var faltas = b.faltas || 0;
-  var totalAulas = b.totalAulas || 100;
-  var observacoes = b.observacoes || '';
+  auth.requireAuth(req, res, function() {
+    var b = req.body || {};
+    var nome = b.nome || 'Aluno';
+    var notas = b.notas || [];
+    var faltas = b.faltas || 0;
+    var totalAulas = b.totalAulas || 100;
+    var observacoes = b.observacoes || '';
 
-  var media = notas.length ? (notas.reduce(function(a, n) { return a + n; }, 0) / notas.length).toFixed(1) : 'sem notas';
-  var presenca = totalAulas > 0 ? (((totalAulas - faltas) / totalAulas) * 100).toFixed(0) : 0;
+    var media = notas.length ? (notas.reduce(function(a, n) { return a + n; }, 0) / notas.length).toFixed(1) : 'sem notas';
+    var presenca = totalAulas > 0 ? (((totalAulas - faltas) / totalAulas) * 100).toFixed(0) : 0;
 
-  var prompt = 'Analise o progresso do aluno "' + nome + '".' +
-    ' Notas por bimestre: ' + (notas.length ? notas.join(', ') : 'não informadas') +
-    '. Média atual: ' + media + '.' +
-    ' Faltas: ' + faltas + ' (' + presenca + '% de presença).' +
-    (observacoes ? ' Observações do professor: ' + observacoes + '.' : '') +
-    ' Retorne JSON com analise, pontosFort, atencao e sugestoes.';
+    var prompt = 'Analise o progresso do aluno "' + nome + '".' +
+      ' Notas por bimestre: ' + (notas.length ? notas.join(', ') : 'não informadas') +
+      '. Média atual: ' + media + '.' +
+      ' Faltas: ' + faltas + ' (' + presenca + '% de presença).' +
+      (observacoes ? ' Observações do professor: ' + observacoes + '.' : '') +
+      ' Retorne JSON com analise, pontosFort, atencao e sugestoes.';
 
-  callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
-    if (err) return res.status(500).json({ error: err });
-    try {
-      res.status(200).json(parseJSON(text));
-    } catch(e) {
-      res.status(200).json({ analise: text, pontosFort: [], atencao: [], sugestoes: [] });
-    }
+    callNvidia(SYSTEM, [{ role: 'user', content: prompt }], function(err, text) {
+      if (err) return res.status(500).json({ error: err });
+      try {
+        res.status(200).json(parseJSON(text));
+      } catch(e) {
+        res.status(200).json({ analise: text, pontosFort: [], atencao: [], sugestoes: [] });
+      }
+    });
   });
 };

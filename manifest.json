@@ -1,0 +1,40 @@
+{
+  "name": "TITAN PRO",
+  "short_name": "TITAN PRO",
+  "description": "Seu app de musculação com IA — treino, nutrição e progressão.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0f0f",
+  "theme_color": "#f97316",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "titanpro.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "titanpro.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Iniciar Treino",
+      "short_name": "Treino",
+      "url": "/?acao=treino",
+      "icons": [{ "src": "titanpro.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Falar com KRONOS",
+      "short_name": "KRONOS",
+      "url": "/?acao=kronos",
+      "icons": [{ "src": "titanpro.png", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["fitness", "health", "sports"]
+}
