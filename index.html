@@ -8998,7 +8998,9 @@ document.addEventListener('click', function(e) {
 _sb.auth.onAuthStateChange((_event, session) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
+    const firstLoad = !_appUnlocked;
     showApp();
+    if (firstLoad) { navTo('inicio'); openHome(); }
     // Puxa dados da nuvem ao logar (fire & forget)
     _dbSync.pullAll(session.user.id);
   } else if (_appUnlocked) {
@@ -9013,7 +9015,7 @@ Promise.all([
   new Promise(r => setTimeout(r, 2500))
 ]).then(([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
-  if (session?.user) showApp();
+  if (session?.user) { showApp(); navTo('inicio'); openHome(); }
   else showLogin();
 });
 </script>
