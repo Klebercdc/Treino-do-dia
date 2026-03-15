@@ -7699,69 +7699,185 @@ function gerarDietaPDF() {
   const conteudo = document.getElementById("dietaTexto").textContent;
   if (!conteudo || conteudo.includes("Calculando")) return;
 
-  const cfg   = safeJSON("titanpro_config", {});
-  const nome  = cfg.nome || "Atleta";
-  const peso  = document.getElementById("dietaPeso")?.value || cfg.peso || "";
+  const cfg    = safeJSON("titanpro_config", {});
+  const nome   = cfg.nome || "Atleta";
+  const peso   = document.getElementById("dietaPeso")?.value || cfg.peso || "";
   const altura = document.getElementById("dietaAltura")?.value || cfg.altura || "";
-  const obj   = document.querySelector("#dietaObjChips .bs-chip.active")?.textContent || "";
-  const data  = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
+  const idade  = document.getElementById("dietaIdade")?.value || cfg.idade || "";
+  const obj    = document.querySelector("#dietaObjChips .bs-chip.active")?.textContent || "";
+  const ativ   = document.querySelector("#dietaAtivChips .bs-chip.active")?.textContent || "";
+  const data   = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
 
-  // Converte emojis e quebras de linha para HTML legível
+  // ── Parseia o texto gerado pela IA ─────────────────────────────────
+  let secNum = 0;
   const linhas = conteudo.split("\n").map(l => {
-    const trim = l.trimEnd();
-    if (!trim) return "<br>";
-    // Linha de seção (toda maiúscula ou começa com número+ponto)
-    if (/^[1-9]\.\s/.test(trim) || /^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s\-–]{6,}$/.test(trim)) {
-      return `<h3>${trim}</h3>`;
+    const t = l.trimEnd();
+    if (!t) return `<div class="gap"></div>`;
+
+    // Cabeçalho numerado: "1. RESUMO" ou "1. Resumo"
+    if (/^[1-9]\.\s/.test(t)) {
+      secNum++;
+      const titulo = t.replace(/^[1-9]\.\s*/, "");
+      return `<div class="sec-header"><span class="sec-num">${secNum}</span><span>${titulo}</span></div>`;
     }
-    return `<p>${trim}</p>`;
-  }).join("");
+    // Linha toda maiúscula (>= 5 chars sem emoji) → sub-título de seção
+    if (/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s\-–:]{5,}$/.test(t)) {
+      return `<div class="sec-sub">${t}</div>`;
+    }
+    // Refeição / horário com emoji alimentar
+    if (/^[\u{1F300}-\u{1F9FF}🥗🥙🍳🥚🍗🥩🥦🥑🍌🍚🥛☕🥤]/u.test(t) || /^(Refeição|Café|Almoço|Jantar|Lanche|Pré|Pós|Ceia)/i.test(t)) {
+      return `<div class="meal-header">${t}</div>`;
+    }
+    // Linha com destaque calórico / macro
+    if (/\d+\s*(kcal|g\b|cal\b)/i.test(t) && t.length < 120) {
+      const hl = t.replace(/(\d+\s*(kcal|kcal\/dia|calorias|cal\b))/gi, '<span class="kcal">$1</span>')
+                  .replace(/(\d+g\b)/gi, '<span class="macro">$1</span>');
+      return `<p class="macro-line">${hl}</p>`;
+    }
+    // Traço / separador
+    if (/^[-─—]{3,}$/.test(t)) return `<hr>`;
+    // Linha de bullet
+    if (/^[-•·▸»]/.test(t)) return `<p class="bullet">${t}</p>`;
+    // Parágrafo normal
+    return `<p>${t}</p>`;
+  }).join("\n");
+
+  // ── SVG logo (raio — mesmo ícone do app) ──────────────────────────
+  const logoSVG = `<svg width="32" height="32" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+
+  // ── Monta info chips ───────────────────────────────────────────────
+  const chips = [obj, ativ, peso ? `${peso} kg` : "", altura ? `${altura} cm` : "", idade ? `${idade} anos` : ""]
+    .filter(Boolean).map(c => `<span class="chip">${c}</span>`).join("");
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dieta – ${nome}</title>
+<title>Plano Alimentar – ${nome}</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; padding: 32px 40px; max-width: 820px; margin: auto; }
-  .header { border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:flex-end; }
-  .logo { font-size: 1.6rem; font-weight: 900; letter-spacing: .06em; color: #f97316; }
-  .sub { font-size: 0.8rem; color: #666; margin-top: 2px; }
-  .meta { text-align: right; font-size: 0.8rem; color: #555; line-height: 1.6; }
-  .meta strong { color: #111; }
-  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
-  .chip { background:#fff3e0; color:#f97316; border:1px solid #f97316; border-radius:100px; padding:4px 14px; font-size:0.75rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-  h3 { font-size: 1rem; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; border-left: 4px solid #f97316; padding-left: 10px; }
-  p { font-size: 0.88rem; line-height: 1.7; color: #333; margin-bottom: 2px; }
-  br { display: block; margin: 4px 0; }
-  .footer { margin-top: 32px; border-top: 1px solid #eee; padding-top: 12px; font-size: 0.72rem; color: #aaa; text-align: center; }
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    color: #1a1a1a; background: #fff;
+    padding: 0; max-width: 860px; margin: auto;
+  }
+
+  /* ── CAPA / HEADER ── */
+  .cover {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d1a0e 60%, #f97316 100%);
+    padding: 36px 40px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px;
+  }
+  .cover-left { display:flex; align-items:center; gap:14px; }
+  .logo-icon {
+    width: 52px; height: 52px; background: #f97316;
+    border-radius: 14px; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .logo-text { color:#fff; }
+  .logo-name { font-size:1.7rem; font-weight:900; letter-spacing:.08em; line-height:1; }
+  .logo-tagline { font-size:0.72rem; color:rgba(255,255,255,0.6); margin-top:4px; letter-spacing:.08em; text-transform:uppercase; }
+  .cover-right { text-align:right; color:#fff; }
+  .cover-atleta { font-size:1.1rem; font-weight:800; letter-spacing:.05em; }
+  .cover-data { font-size:0.75rem; color:rgba(255,255,255,0.55); margin-top:4px; }
+
+  /* ── FAIXA LARANJA ── */
+  .orange-bar { background:#f97316; height:4px; }
+
+  /* ── CHIPS META ── */
+  .chips-wrap { padding: 16px 40px 0; display:flex; gap:8px; flex-wrap:wrap; }
+  .chip {
+    background:#fff3e0; color:#c2410c; border:1.5px solid #fed7aa;
+    border-radius:100px; padding:5px 14px;
+    font-size:0.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  }
+
+  /* ── CORPO ── */
+  .body { padding: 24px 40px 40px; }
+
+  /* Cabeçalhos de seção numerados */
+  .sec-header {
+    display:flex; align-items:center; gap:12px;
+    background: linear-gradient(90deg, #fff3e0, #fff);
+    border-left: 4px solid #f97316;
+    padding: 10px 14px; border-radius: 0 8px 8px 0;
+    margin: 24px 0 10px;
+  }
+  .sec-num {
+    width:26px; height:26px; background:#f97316; color:#fff;
+    border-radius:50%; font-size:0.8rem; font-weight:900;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .sec-header span:last-child { font-size:1rem; font-weight:800; color:#c2410c; text-transform:uppercase; letter-spacing:.04em; }
+
+  /* Sub-título de seção */
+  .sec-sub { font-size:0.78rem; font-weight:800; color:#f97316; text-transform:uppercase; letter-spacing:.08em; margin:16px 0 6px; }
+
+  /* Cabeçalho de refeição */
+  .meal-header {
+    background:#1a1a1a; color:#fff;
+    padding:8px 14px; border-radius:8px;
+    font-size:0.88rem; font-weight:700; margin:14px 0 6px;
+  }
+
+  /* Parágrafos */
+  p { font-size:0.88rem; line-height:1.75; color:#333; margin-bottom:3px; }
+  p.bullet { padding-left:14px; }
+  p.macro-line { color:#555; }
+
+  /* Destaque calórico */
+  .kcal { color:#c2410c; font-weight:800; }
+  .macro { color:#1d4ed8; font-weight:700; }
+
+  /* Gap e separador */
+  .gap { height:8px; }
+  hr { border:none; border-top:1px solid #eee; margin:16px 0; }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 2px solid #f3f4f6; padding: 16px 40px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:0.7rem; color:#9ca3af;
+  }
+  .footer-logo { font-weight:900; color:#f97316; letter-spacing:.06em; }
+
+  /* ── PRINT ── */
   @media print {
-    body { padding: 16px 20px; }
-    .no-print { display: none; }
-    h3 { color: #e05a00; border-color: #e05a00; }
-    .chip { border-color: #e05a00; color: #e05a00; background: #fff; }
+    body { max-width:100%; }
+    .cover { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .meal-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .sec-header { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .orange-bar { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .logo-icon { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
 </style>
 </head>
 <body>
-  <div class="header">
-    <div>
-      <div class="logo">TITAN PRO</div>
-      <div class="sub">Plano Alimentar Personalizado</div>
+  <div class="cover">
+    <div class="cover-left">
+      <div class="logo-icon">${logoSVG}</div>
+      <div class="logo-text">
+        <div class="logo-name">TITAN PRO</div>
+        <div class="logo-tagline">Plano Alimentar Personalizado</div>
+      </div>
     </div>
-    <div class="meta">
-      <strong>${nome.toUpperCase()}</strong><br>
-      ${peso ? `Peso: ${peso} kg` : ""}${peso && altura ? " · " : ""}${altura ? `Altura: ${altura} cm` : ""}<br>
-      Gerado em ${data}
+    <div class="cover-right">
+      <div class="cover-atleta">${nome.toUpperCase()}</div>
+      <div class="cover-data">Gerado em ${data}</div>
     </div>
   </div>
-  <div class="chips">
-    ${obj ? `<span class="chip">${obj}</span>` : ""}
+  <div class="orange-bar"></div>
+
+  <div class="chips-wrap">${chips}</div>
+
+  <div class="body">${linhas}</div>
+
+  <div class="footer">
+    <span><span class="footer-logo">TITAN PRO</span> &nbsp;·&nbsp; Plano gerado com IA</span>
+    <span>Consulte um nutricionista para ajustes individuais</span>
   </div>
-  <div class="conteudo">${linhas}</div>
-  <div class="footer">Gerado pelo TITAN PRO · Consulte um nutricionista para ajustes individuais</div>
   <script>window.onload = () => { window.print(); }<\/script>
 </body>
 </html>`;
