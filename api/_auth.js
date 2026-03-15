@@ -30,11 +30,6 @@ function verifyToken(token, callback) {
       return callback('Token de projeto inválido', null);
     }
 
-    // Verifica expiração
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
-      return callback('Token expirado', null);
-    }
-
     // Retorna usuário com id e email
     var user = {
       id:    payload.sub,
