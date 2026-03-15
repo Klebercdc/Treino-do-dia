@@ -2308,7 +2308,7 @@
         <button onclick="closeAI()" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </button>
-        <div style="font-family:var(--display);font-size:1rem;letter-spacing:.05em;color:var(--text)">TITAN COACH</div>
+        <div style="font-family:var(--display);font-size:1rem;letter-spacing:.05em;color:var(--text)">KRONOS</div>
       </div>
       <button onclick="clearAIChat()" title="Limpar chat" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
@@ -2319,7 +2319,7 @@
     <!-- Input estilo ChatGPT -->
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);">
       <div class="ai-input-wrap" style="display:flex;align-items:flex-end;background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:10px 10px 10px 16px;gap:8px;transition:border-color .2s;">
-        <textarea id="aiInput" placeholder="Mensagem para o TITAN COACH..." rows="1"
+        <textarea id="aiInput" placeholder="Mensagem para o KRONOS..." rows="1"
           style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.9rem;resize:none;outline:none;line-height:1.5;max-height:120px;"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
@@ -2522,7 +2522,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div>
-        <div class="home-quick-name">TITAN COACH</div>
+        <div class="home-quick-name">KRONOS</div>
         <div class="home-quick-sub">Análise e estratégia de treino</div>
       </div>
     </div>
@@ -2725,7 +2725,7 @@
       Voltar
     </button>
     <div style="flex:1;text-align:center;padding-right:60px">
-      <div class="orient-title" style="font-size:1.4rem;letter-spacing:.08em">TITAN COACH</div>
+      <div class="orient-title" style="font-size:1.4rem;letter-spacing:.08em">KRONOS</div>
       <div style="font-size:0.6rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;opacity:.8">Coach Inteligente · Online</div>
     </div>
   </div>
@@ -2780,7 +2780,7 @@
           </button>
           <div class="orient-input-wrap">
             <textarea id="orientExpertInput"
-              placeholder="Fale com o TITAN COACH..."
+              placeholder="Fale com o KRONOS..."
               rows="1"
               style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
               oninput="autoResizeOrientInput(this)"
@@ -3339,7 +3339,7 @@
       </div>
       <div class="instr-tip">
         <div class="instr-tip-icon">💡</div>
-        <div class="instr-tip-text"><strong>TITAN COACH</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div>
+        <div class="instr-tip-text"><strong>KRONOS</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div>
       </div>
     </div>
 
@@ -5391,7 +5391,7 @@ function buildTrainingContext() {
   const horaStr  = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
   const totalSessoes = safeJSON(STORAGE.historyKey, []).length;
 
-  return `Você é o TITAN COACH — o coach pessoal de musculação e nutrição do app TITAN PRO. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Pense em si mesmo como o capitão: direto, experiente, sem enrolação.
+  return `Você é KRONOS — o coach pessoal de musculação e nutrição do app TITAN PRO. Seu nome vem do Titã do tempo e da progressão: você domina ciclos de treino, evolução e periodização. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Seja o capitão: direto, experiente, sem enrolação.
 
 ═══════════════════════════════════════
 IDENTIDADE E PERSONALIDADE
@@ -5751,7 +5751,7 @@ function openAI() {
   document.getElementById("aiModal").classList.add("show");
   document.getElementById("aiModal").style.display = "flex";
   if (_aiHistory.length === 0) {
-    addAIMessage("assistant", `Olá! Sou o **TITAN COACH**, seu personal trainer com IA. 💪\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
+    addAIMessage("assistant", `Olá! Sou o **KRONOS**, seu personal trainer com IA. 💪\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
     const container = document.getElementById("aiMessages");
     const sug = document.createElement("div");
     sug.id = "aiSuggestions";
@@ -6495,7 +6495,7 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
     const btn = document.getElementById("orientSuggestBtn");
     if (row) { row.classList.add("collapsed"); btn && btn.classList.remove("open"); }
   })
-  .catch(() => { typing.innerHTML = "TITAN COACH online. O que vamos atacar hoje?"; });
+  .catch(() => { typing.innerHTML = "KRONOS online. O que vamos atacar hoje?"; });
 }
 
 function renderAriaChips() {
