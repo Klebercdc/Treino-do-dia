@@ -2014,7 +2014,7 @@
     /* ── DIVISÃO PICKER ──────────────────────── */
     .div-freq-row {
       display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto;
-      scrollbar-width: none; padding-bottom: 2px;
+      scrollbar-width: none; padding-bottom: 2px; padding-top: 14px;
     }
     .div-freq-row::-webkit-scrollbar { display: none; }
     .div-freq-btn {
@@ -2065,8 +2065,12 @@
     .div-day-row {
       display: flex; align-items: flex-start; gap: 12px;
       background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px; cursor: default;
+      border-radius: 12px; padding: 14px; cursor: pointer;
+      transition: border-color .15s, background .15s;
+      -webkit-tap-highlight-color: transparent;
     }
+    .div-day-row:active { background: var(--card); border-color: var(--accent); }
+    .div-day-row.selected { border-color: var(--accent); background: var(--accent-dim); }
     .div-day-badge {
       width: 36px; height: 36px; border-radius: 10px; background: var(--accent-dim);
       border: 1px solid rgba(249,115,22,0.25); color: var(--accent);
@@ -2918,7 +2922,7 @@
 ══════════════════════════════════════════ -->
 
 <div id="perfilScreen">
-  <button class="btn-voltar" onclick="closePerfil();navTo('inicio');openHome()">
+  <button class="btn-voltar" onclick="try{closePerfil();}catch(e){}try{navTo('inicio');}catch(e){}try{openHome();}catch(e){document.getElementById('homeScreen').classList.add('show');}">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
     Início
   </button>
@@ -6501,7 +6505,7 @@ function renderDivisaoPreview(freq) {
 
   // Day list
   document.getElementById("divDayList").innerHTML = days.map((d, i) => `
-    <div class="div-day-row">
+    <div class="div-day-row" onclick="selecionarDivDia(${i})" data-day-idx="${i}">
       <div class="div-day-badge">${ltrs[i]}</div>
       <div style="flex:1;min-width:0">
         <div class="div-day-name">${escapeHTML(d.nome)}</div>
@@ -6510,7 +6514,34 @@ function renderDivisaoPreview(freq) {
           ${d.exs.length > 5 ? `<span class="div-day-ex-chip" style="color:var(--accent)">+${d.exs.length-5}</span>` : ''}
         </div>
       </div>
+      <div style="color:var(--accent);font-size:0.75rem;font-weight:700;flex-shrink:0;align-self:center;opacity:0.7">Usar</div>
     </div>`).join('');
+}
+
+function selecionarDivDia(idx) {
+  // Highlight selected row
+  document.querySelectorAll('.div-day-row').forEach((r, i) => {
+    r.classList.toggle('selected', i === idx);
+  });
+  // Load just this day's exercises
+  const days = TREINOS_PRONTOS[String(_divFreqSel)] || [];
+  const d = days[idx];
+  if (!d) return;
+  const nav  = document.getElementById("nav");
+  const cont = document.getElementById("container");
+  nav.innerHTML = "";
+  cont.innerHTML = "";
+  const ltrs = ['A','B','C','D','E','F'];
+  nav.innerHTML = `<div class="pill active" id="p0" onclick="tab(0)">${escapeHTML(d.nome.split(" ")[0])}</div>`;
+  const sec = document.createElement("div");
+  sec.id = "sec0"; sec.className = "section active";
+  sec.setAttribute("data-treino-key", d.nome);
+  cont.appendChild(sec);
+  d.exs.forEach(exNome => criarCard(exNome, sec.id, null, null, null, null));
+  addPillControls();
+  scheduleDraftSave();
+  closeDivisaoSheet();
+  showToast(`✅ ${ltrs[idx]} – ${d.nome} carregado!`, "success", 3000);
 }
 
 function carregarTemplateManual() {
@@ -7002,7 +7033,7 @@ window.onload = () => {
 // TELA DE INÍCIO
 // ══════════════════════════════════════════
 function openHome() {
-  updateHomeScreen();
+  try { updateHomeScreen(); } catch(e) {}
   document.getElementById("homeScreen").classList.add("show");
 }
 function closeHome() {
