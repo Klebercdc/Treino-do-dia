@@ -2125,7 +2125,7 @@
     body.light-mode .instr-hero-sub { color: rgba(0,0,0,0.45); }
     .instr-section { margin-bottom: 24px; }
     .instr-section-title {
-      font-size: 0.6rem; font-weight: 800; letter-spacing: .14em;
+      font-size: 0.72rem; font-weight: 800; letter-spacing: .14em;
       text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
     }
     .instr-step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
@@ -2135,8 +2135,8 @@
       color: var(--accent); font-size: 0.75rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .instr-step-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .instr-step-desc { font-size: 0.72rem; color: rgba(255,255,255,0.55); line-height: 1.5; }
+    .instr-step-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .instr-step-desc { font-size: 0.85rem; color: rgba(255,255,255,0.55); line-height: 1.5; }
     body.light-mode .instr-step-desc { color: rgba(0,0,0,0.45); }
     .instr-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .instr-feat-card {
@@ -2144,8 +2144,8 @@
       border-radius: 12px; padding: 14px 12px;
     }
     .instr-feat-icon { font-size: 1.4rem; margin-bottom: 8px; }
-    .instr-feat-title { font-size: 0.78rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .instr-feat-desc { font-size: 0.62rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
+    .instr-feat-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .instr-feat-desc { font-size: 0.75rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
     body.light-mode .instr-feat-desc { color: rgba(0,0,0,0.45); }
     .instr-tip {
       display: flex; gap: 10px; align-items: flex-start;
@@ -2153,7 +2153,7 @@
       border-radius: 12px; padding: 12px; margin-bottom: 8px;
     }
     .instr-tip-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
-    .instr-tip-text { font-size: 0.72rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+    .instr-tip-text { font-size: 0.85rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
     body.light-mode .instr-tip-text { color: rgba(0,0,0,0.5); }
     .instr-tip-text strong { color: var(--text); }
     </style>
@@ -5312,6 +5312,7 @@ function obNext(step) {
 function obFinish() {
   localStorage.setItem("titan_onboarded","1");
   document.getElementById("onboarding").classList.remove("show");
+  setTimeout(() => openInstrucoes(), 500);
 }
 
 /* IntersectionObserver timer removido */
