@@ -7715,7 +7715,8 @@ function gerarDietaPDF() {
     return s
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.+?)\*/g,     "<em>$1</em>")
-      .replace(/`(.+?)`/g,       "<code>$1</code>");
+      .replace(/`(.+?)`/g,       "<code>$1</code>")
+      .replace(/\*/g,            "×");  // asteriscos soltos viram ×
   }
 
   // ── Parseia o texto gerado pela IA ─────────────────────────────────
@@ -7743,9 +7744,9 @@ function gerarDietaPDF() {
       return `<div class="meal-header">${mdInline(t)}</div>`;
     }
 
-    // Linha de bullet (- ou •)
-    if (/^[-•·▸»]\s/.test(t)) {
-      const content = mdInline(t.replace(/^[-•·▸»]\s*/, ""));
+    // Linha de bullet (- ou • ou *)
+    if (/^[-•·▸»*]\s/.test(t)) {
+      const content = mdInline(t.replace(/^[-•·▸»*]\s*/, ""));
       // Detecta padrão "Label: valor" — deixa o rótulo em negrito se não estiver
       return `<p class="bullet">• ${content}</p>`;
     }
