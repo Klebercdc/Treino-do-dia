@@ -7714,8 +7714,9 @@ function gerarDietaPDF() {
   function mdInline(s) {
     return s
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g,     "<em>$1</em>")
-      .replace(/`(.+?)`/g,       "<code>$1</code>");
+      .replace(/\*(.+?)\*/g,     "<strong>$1</strong>")
+      .replace(/`(.+?)`/g,       "$1")
+      .replace(/\*/g,            "");
   }
 
   // ── Parseia o texto gerado pela IA ─────────────────────────────────
@@ -7743,11 +7744,10 @@ function gerarDietaPDF() {
       return `<div class="meal-header">${mdInline(t)}</div>`;
     }
 
-    // Linha de bullet (- ou •)
-    if (/^[-•·▸»]\s/.test(t)) {
-      const content = mdInline(t.replace(/^[-•·▸»]\s*/, ""));
-      // Detecta padrão "Label: valor" — deixa o rótulo em negrito se não estiver
-      return `<p class="bullet">• ${content}</p>`;
+    // Linha de bullet (- ou • ou *)
+    if (/^[-•·▸»*]\s/.test(t)) {
+      const content = mdInline(t.replace(/^[-•·▸»*]\s*/, ""));
+      return `<p class="bullet">${content}</p>`;
     }
 
     // Linha toda MAIÚSCULA >= 4 chars → sub-seção
@@ -7834,7 +7834,7 @@ function gerarDietaPDF() {
   /* Parágrafos */
   p { font-size:0.88rem; line-height:1.8; color:#333; margin-bottom:2px; text-align:left; }
   p strong { color:#111; }
-  p.bullet { padding-left:16px; position:relative; }
+  p.bullet { padding-left:14px; border-left:3px solid #fed7aa; margin-bottom:4px; }
   p.bullet strong { color:#c2410c; }
 
   /* Destaques numéricos */
