@@ -15,14 +15,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" crossorigin="anonymous" onerror="window._pdfjsFailed=true"></script>
   <script>if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";</script>
   <link rel="icon" href="titanpro.png" type="image/png"/>
-  <link rel="manifest" href="data:application/json,{%22name%22:%22TITAN%20PRO%22,%22short_name%22:%22TITAN%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%220f0f0f%22,%22theme_color%22:%22f97316%22,%22icons%22:[{%22src%22:%22titanpro.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]}"/>
+  <link rel="manifest" href="/manifest.json"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="TITAN PRO"/>
   <link rel="apple-touch-icon" href="titanpro.png"/>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="apple-touch-startup-image" href="splash.png"/>
 
   <style>
     /* ══════════════════════════════════════════
@@ -6129,9 +6127,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  const swCode = `self.addEventListener("fetch",e=>{});`;
-  const blob = new Blob([swCode], { type:"application/javascript" });
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════
