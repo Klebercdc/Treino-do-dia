@@ -2022,6 +2022,96 @@
     }
     body.light-mode .tdash-prog-label { color: rgba(0,0,0,0.4); }
 
+    /* ── DIVISÃO PICKER ──────────────────────── */
+    .div-freq-row {
+      display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto;
+      scrollbar-width: none; padding-bottom: 2px;
+    }
+    .div-freq-row::-webkit-scrollbar { display: none; }
+    .div-freq-btn {
+      flex: 1; min-width: 48px; background: var(--bg2);
+      border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 10px 6px; text-align: center; cursor: pointer;
+      transition: all .15s; -webkit-tap-highlight-color: transparent; position: relative;
+    }
+    .div-freq-btn.active {
+      background: var(--accent-dim); border-color: rgba(249,115,22,0.5);
+    }
+    .div-freq-btn .dfb-num {
+      font-family: var(--display); font-size: 1.35rem; font-weight: 700;
+      color: var(--text); line-height: 1; display: block;
+    }
+    .div-freq-btn.active .dfb-num { color: var(--accent); }
+    .div-freq-btn .dfb-lbl {
+      font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: rgba(255,255,255,0.4); display: block; margin-top: 3px;
+    }
+    .div-freq-btn.active .dfb-lbl { color: rgba(249,115,22,0.7); }
+    .div-freq-btn .dfb-rec {
+      position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+      background: var(--green); color: #fff; font-size: 0.48rem; font-weight: 800;
+      letter-spacing: .06em; padding: 2px 6px; border-radius: 100px; white-space: nowrap;
+    }
+    .div-meta-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .div-meta-icon {
+      width: 46px; height: 46px; border-radius: 12px; background: var(--accent-dim);
+      border: 1px solid rgba(249,115,22,0.25); display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+    .div-meta-split { font-family: var(--display); font-size: 1rem; font-weight: 700; color: var(--text); }
+    .div-meta-sub { font-size: 0.68rem; color: rgba(255,255,255,0.5); margin-top: 3px; line-height: 1.4; }
+    body.light-mode .div-meta-sub { color: rgba(0,0,0,0.45); }
+    .div-meta-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .div-meta-tag {
+      font-size: 0.58rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 100px; border: 1px solid;
+    }
+    .div-day-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .div-day-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px; cursor: default;
+    }
+    .div-day-badge {
+      width: 34px; height: 34px; border-radius: 9px; background: var(--accent-dim);
+      border: 1px solid rgba(249,115,22,0.25); color: var(--accent);
+      font-size: 0.75rem; font-weight: 800; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; font-family: var(--display);
+    }
+    .div-day-name { font-size: 0.82rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .div-day-exs {
+      font-size: 0.62rem; color: rgba(255,255,255,0.45); margin-top: 4px;
+      line-height: 1.5; display: flex; flex-wrap: wrap; gap: 3px;
+    }
+    body.light-mode .div-day-exs { color: rgba(0,0,0,0.4); }
+    .div-day-ex-chip {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 6px; font-size: 0.58rem;
+    }
+    .div-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .div-cta-manual {
+      padding: 14px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 12px; font-size: 0.78rem; font-weight: 800; color: var(--blue);
+      cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: var(--font);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .div-cta-ia {
+      padding: 14px; background: var(--accent); border: none;
+      border-radius: 12px; font-size: 0.78rem; font-weight: 800; color: #fff;
+      cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: var(--font);
+      letter-spacing: .04em; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .div-cta-empty {
+      grid-column: 1/-1; padding: 12px; background: transparent;
+      border: 1px dashed var(--border); border-radius: 12px; font-size: 0.75rem;
+      font-weight: 600; color: var(--muted); cursor: pointer;
+      -webkit-tap-highlight-color: transparent; font-family: var(--font); margin-top: 2px;
+    }
+
     /* ── INSTRUÇÕES ───────────────────────────── */
     .instr-hero { text-align: center; padding: 8px 0 20px; }
     .instr-hero-icon {
@@ -3052,6 +3142,73 @@
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   Adicionar Exercício
 </button>
+
+<!-- ══════════════════════════════════════════
+     DIVISÃO PICKER — BOTTOM SHEET
+══════════════════════════════════════════ -->
+<div id="divisaoSheet" class="bottom-sheet" onclick="if(event.target===this)closeDivisaoSheet()" style="display:none">
+  <div class="bs-box" style="max-height:88vh;overflow-y:auto">
+    <div class="bs-handle"></div>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div id="divSheetTitle" style="font-family:var(--display);font-size:1.15rem;color:var(--text);letter-spacing:.03em">Escolha sua Divisão</div>
+        <div style="font-size:0.72rem;color:rgba(255,255,255,0.45);margin-top:3px">Quantos dias por semana você treina?</div>
+      </div>
+      <button onclick="closeDivisaoSheet()" style="width:34px;height:34px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Frequency selector -->
+    <div class="div-freq-row">
+      <div class="div-freq-btn" data-freq="2" onclick="selectDivisaoFreq(2)">
+        <span class="dfb-num">2</span>
+        <span class="dfb-lbl">dias</span>
+      </div>
+      <div class="div-freq-btn active" data-freq="3" onclick="selectDivisaoFreq(3)">
+        <span class="dfb-rec">Popular</span>
+        <span class="dfb-num">3</span>
+        <span class="dfb-lbl">dias</span>
+      </div>
+      <div class="div-freq-btn" data-freq="4" onclick="selectDivisaoFreq(4)">
+        <span class="dfb-num">4</span>
+        <span class="dfb-lbl">dias</span>
+      </div>
+      <div class="div-freq-btn" data-freq="5" onclick="selectDivisaoFreq(5)">
+        <span class="dfb-num">5</span>
+        <span class="dfb-lbl">dias</span>
+      </div>
+      <div class="div-freq-btn" data-freq="6" onclick="selectDivisaoFreq(6)">
+        <span class="dfb-num">6</span>
+        <span class="dfb-lbl">dias</span>
+      </div>
+    </div>
+
+    <!-- Meta box (split name + info) -->
+    <div id="divMetaBox" class="div-meta-box"></div>
+
+    <!-- Day preview list -->
+    <div id="divDayList" class="div-day-list"></div>
+
+    <!-- CTA buttons -->
+    <div class="div-cta">
+      <button class="div-cta-manual" onclick="carregarTemplateManual()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+        Usar Manual
+      </button>
+      <button class="div-cta-ia" onclick="carregarTemplateComIA()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Gerar com IA
+      </button>
+    </div>
+    <button class="div-cta-empty" onclick="closeDivisaoSheet();abrirLibParaNovo()">
+      + Começar do zero (treino vazio)
+    </button>
+    <div style="height:6px"></div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════
      INSTRUÇÕES DE USO — BOTTOM SHEET
@@ -5401,12 +5558,166 @@ function navTo(tab) {
   if (el) el.classList.add('active');
 }
 
+/* ═══════════════════════════════════════════════════
+   DIVISÃO PICKER
+═══════════════════════════════════════════════════ */
+const DIVISAO_META = {
+  "2": {
+    nome: "Full Body",
+    split: "Full Body A · Full Body B",
+    nivel: "Iniciante",
+    nivelColor: "var(--green)",
+    tempo: "60–75 min/sessão",
+    desc: "Trabalha o corpo inteiro em cada sessão. Ideal para quem está começando ou tem agenda apertada.",
+    muscs: ["Peito","Costas","Pernas","Ombros","Braços"],
+    muscColor: "rgba(34,197,94,0.12)", muscBorder: "rgba(34,197,94,0.25)", muscText: "var(--green)"
+  },
+  "3": {
+    nome: "PPL",
+    split: "Push · Pull · Legs",
+    nivel: "Intermediário",
+    nivelColor: "var(--accent)",
+    tempo: "50–65 min/sessão",
+    desc: "A divisão mais popular do mundo. Empurrar, puxar e pernas — cobertura completa com 3 dias.",
+    muscs: ["Peito","Ombros","Tríceps","Costas","Bíceps","Pernas"],
+    muscColor: "rgba(249,115,22,0.1)", muscBorder: "rgba(249,115,22,0.25)", muscText: "var(--accent)"
+  },
+  "4": {
+    nome: "Upper / Lower",
+    split: "Upper A · Lower A · Upper B · Lower B",
+    nivel: "Intermediário+",
+    nivelColor: "var(--blue)",
+    tempo: "50–60 min/sessão",
+    desc: "Divide o corpo em superior e inferior, alternando força e hipertrofia. Frequência alta por grupo muscular.",
+    muscs: ["Peito","Costas","Ombros","Pernas","Glúteos","Braços"],
+    muscColor: "rgba(59,130,246,0.1)", muscBorder: "rgba(59,130,246,0.25)", muscText: "var(--blue)"
+  },
+  "5": {
+    nome: "Bro Split",
+    split: "Peito · Costas · Pernas · Ombros · Braços",
+    nivel: "Avançado",
+    nivelColor: "#a855f7",
+    tempo: "45–55 min/sessão",
+    desc: "Um músculo por dia, volume máximo por sessão. Permite foco total e recuperação completa.",
+    muscs: ["Peito","Costas","Pernas","Ombros","Braços"],
+    muscColor: "rgba(168,85,247,0.1)", muscBorder: "rgba(168,85,247,0.25)", muscText: "#a855f7"
+  },
+  "6": {
+    nome: "PPL ×2",
+    split: "Push · Pull · Legs (repetido)",
+    nivel: "Avançado+",
+    nivelColor: "#e11d48",
+    tempo: "45–55 min/sessão",
+    desc: "Alta frequência: cada músculo 2× por semana. Para atletas com boa base e capacidade de recuperação.",
+    muscs: ["Peito","Ombros","Tríceps","Costas","Bíceps","Pernas","Glúteos"],
+    muscColor: "rgba(225,29,72,0.1)", muscBorder: "rgba(225,29,72,0.25)", muscText: "#e11d48"
+  }
+};
+
+let _divFreqSel = 3;
+
 function iniciarModoManual() {
-  abrirLibParaNovo();
+  openDivisaoSheet();
 }
 
 function iniciarModoIA() {
-  gerarTreinoDoPrograma();
+  openDivisaoSheet();
+}
+
+function openDivisaoSheet() {
+  _divFreqSel = 3;
+  renderDivisaoPreview(3);
+  document.querySelectorAll('.div-freq-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.freq) === 3);
+  });
+  const s = document.getElementById("divisaoSheet");
+  s.style.display = "flex";
+  requestAnimationFrame(() => s.classList.add("show"));
+}
+
+function closeDivisaoSheet() {
+  const s = document.getElementById("divisaoSheet");
+  s.classList.remove("show");
+  setTimeout(() => { s.style.display = "none"; }, 300);
+}
+
+function selectDivisaoFreq(freq) {
+  _divFreqSel = freq;
+  document.querySelectorAll('.div-freq-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.freq) === freq);
+  });
+  renderDivisaoPreview(freq);
+}
+
+function renderDivisaoPreview(freq) {
+  const meta  = DIVISAO_META[String(freq)];
+  const days  = TREINOS_PRONTOS[String(freq)] || [];
+  const ltrs  = ['A','B','C','D','E','F'];
+
+  // Meta box
+  document.getElementById("divMetaBox").innerHTML = `
+    <div class="div-meta-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/>
+        <line x1="6" y1="12" x2="18" y2="12"/><rect x="4.5" y="8.5" width="3" height="7" rx="1"/>
+        <rect x="16.5" y="8.5" width="3" height="7" rx="1"/>
+      </svg>
+    </div>
+    <div style="flex:1">
+      <div class="div-meta-split">${escapeHTML(meta.nome)} — ${escapeHTML(meta.split)}</div>
+      <div class="div-meta-sub">${escapeHTML(meta.desc)}</div>
+      <div class="div-meta-tags" style="margin-top:8px">
+        <span class="div-meta-tag" style="background:${meta.muscColor};border-color:${meta.muscBorder};color:${meta.muscText}">${escapeHTML(meta.nivel)}</span>
+        <span class="div-meta-tag" style="background:var(--bg2);border-color:var(--border);color:rgba(255,255,255,0.55)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 14 14"/></svg>
+          ${escapeHTML(meta.tempo)}
+        </span>
+        ${meta.muscs.map(m => `<span class="div-meta-tag" style="background:${meta.muscColor};border-color:${meta.muscBorder};color:${meta.muscText}">${escapeHTML(m)}</span>`).join('')}
+      </div>
+    </div>`;
+
+  // Day list
+  document.getElementById("divDayList").innerHTML = days.map((d, i) => `
+    <div class="div-day-row">
+      <div class="div-day-badge">${ltrs[i]}</div>
+      <div style="flex:1;min-width:0">
+        <div class="div-day-name">${escapeHTML(d.nome)}</div>
+        <div class="div-day-exs">
+          ${d.exs.slice(0,5).map(e => `<span class="div-day-ex-chip">${escapeHTML(e)}</span>`).join('')}
+          ${d.exs.length > 5 ? `<span class="div-day-ex-chip" style="color:var(--accent)">+${d.exs.length-5}</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function carregarTemplateManual() {
+  const days = TREINOS_PRONTOS[String(_divFreqSel)] || [];
+  const nav  = document.getElementById("nav");
+  const cont = document.getElementById("container");
+  nav.innerHTML = ""; cont.innerHTML = "";
+  days.forEach((d, idx) => {
+    nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(d.nome)}</div>`;
+    const sec = document.createElement("div");
+    sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`;
+    sec.setAttribute("data-treino-key", d.nome);
+    cont.appendChild(sec);
+    d.exs.forEach(exNome => criarCard(exNome, sec.id, null, null, null, null));
+  });
+  addPillControls();
+  scheduleDraftSave();
+  closeDivisaoSheet();
+  showToast(`✅ Template ${_divFreqSel}× carregado! Personalize como quiser.`, "success", 3500);
+}
+
+function carregarTemplateComIA() {
+  // Sync the freq chip so gerarTreinoDoPrograma picks it up
+  const freqEl = document.getElementById("freq");
+  if (freqEl) freqEl.value = String(_divFreqSel);
+  document.querySelectorAll("#freqChips .config-chip").forEach(c => {
+    c.classList.toggle("active", c.dataset.val === String(_divFreqSel));
+  });
+  closeDivisaoSheet();
+  setTimeout(() => gerarTreinoDoPrograma(), 300);
 }
 
 function openInstrucoes() {
