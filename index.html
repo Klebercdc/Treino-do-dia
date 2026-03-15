@@ -538,7 +538,7 @@
       display: flex; flex-direction: column;
       align-items: center; gap: 2px; user-select: none;
     }
-    .setcell .slabel { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.85); }
+    .setcell .slabel { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.85); }
     .setcell .rmmini { display: none; }
     .rpe-inline-alert {
       grid-column: 1 / -1; margin: -2px 0 4px;
@@ -2445,6 +2445,20 @@
         <div id="homeCardNivel" style="display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:100px;padding:2px 8px;font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Iniciante</div>
       </div>
     </div>
+    <div style="display:flex;gap:24px;padding-top:4px">
+      <div>
+        <div id="homeCardTreinos" style="font-family:var(--display);font-size:1.15rem;color:var(--text)">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Treinos</div>
+      </div>
+      <div>
+        <div id="homeCardStreak" style="font-family:var(--display);font-size:1.15rem;color:var(--text)">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Sequência</div>
+      </div>
+      <div>
+        <div id="homeCardVol" style="font-family:var(--display);font-size:1.15rem;color:var(--text)">0kg</div>
+        <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Volume Total</div>
+      </div>
+    </div>
   </div>
   <div class="home-header">
     <div class="home-greeting" id="homeGreeting">Bom treino</div>
@@ -3244,7 +3258,7 @@
         <div class="instr-step-num">2</div>
         <div>
           <div class="instr-step-title">Monte seu Programa</div>
-          <div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Clique em <em>Gerar Meu Treino</em> para a IA criar uma divisão completa.</div>
+          <div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Use o <em>seletor de divisão</em> para escolher um template pronto (Manual) ou clique em <em>Gerar com IA</em> para criar uma divisão personalizada automaticamente.</div>
         </div>
       </div>
 
@@ -5696,7 +5710,8 @@ function carregarTemplateManual() {
   const cont = document.getElementById("container");
   nav.innerHTML = ""; cont.innerHTML = "";
   days.forEach((d, idx) => {
-    nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(d.nome)}</div>`;
+    const labelCurto = d.nome.split(" ")[0];
+    nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(labelCurto)}</div>`;
     const sec = document.createElement("div");
     sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`;
     sec.setAttribute("data-treino-key", d.nome);
