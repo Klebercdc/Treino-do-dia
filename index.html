@@ -1733,15 +1733,49 @@
       align-items: center; justify-content: center;
       overflow: hidden;
     }
-    #splashLogo {
-      width: 100%; height: 100%;
-      object-fit: cover;
+    #splashLogoWrap {
+      position: relative;
+      width: 60%;
+      max-width: 260px;
+      border-radius: 24px;
+      overflow: hidden;
       opacity: 0;
-      transition: opacity 0.6s ease;
+      transform: scale(0.72);
       pointer-events: none;
     }
-    #splashLogo.show {
-      opacity: 1;
+    #splashLogoWrap.show {
+      animation: splashZoomIn 0.55s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    #splashLogo {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 24px;
+    }
+    #splashShimmer {
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      background: linear-gradient(
+        115deg,
+        transparent 25%,
+        rgba(249,115,22,0.55) 50%,
+        transparent 75%
+      );
+      background-size: 250% 100%;
+      background-position: 200% center;
+      opacity: 0;
+    }
+    #splashLogoWrap.show #splashShimmer {
+      animation: splashGlow 0.7s ease 0.5s forwards;
+    }
+    @keyframes splashZoomIn {
+      0%   { opacity: 0; transform: scale(0.72); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes splashGlow {
+      0%   { opacity: 1; background-position: 200% center; }
+      100% { opacity: 0; background-position: -50% center; }
     }
     #splashTap {
       position: absolute; inset: 0;
@@ -1971,12 +2005,9 @@
 
 <!-- ═══ SPLASH SCREEN ═══ -->
 <div id="splashScreen">
-  <img id="splashLogo" src="splash.webp">
-  <div id="splashTap" style="display:none" onclick="splashTapPlay()">
-    <div class="tap-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-    </div>
-    <div class="tap-label">Toque para começar</div>
+  <div id="splashLogoWrap">
+    <img id="splashLogo" src="splash.png">
+    <div id="splashShimmer"></div>
   </div>
 </div>
 
@@ -6915,44 +6946,15 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Splash: força autoplay do vídeo com fallback tap para iOS
+// Splash: zoom + brilho laranja
 (function() {
+  const wrap = document.getElementById('splashLogoWrap');
   const logo = document.getElementById('splashLogo');
-  const tapBtn = document.getElementById('splashTap');
-  if (!logo) return;
-
-  logo.muted = true;
-
-  function tryPlay() {
-    logo.muted = true;
-    const p = logo.play();
-    if (p !== undefined) {
-      p.then(() => {
-        logo.classList.add('show');
-        if (tapBtn) tapBtn.style.display = 'none';
-      }).catch(() => {
-        logo.classList.add('show');
-        if (tapBtn) tapBtn.style.display = 'flex';
-      });
-    } else {
-      logo.classList.add('show');
-    }
-  }
-
-  logo.addEventListener('loadeddata', tryPlay, { once: true });
-  logo.addEventListener('canplay', tryPlay, { once: true });
-  setTimeout(tryPlay, 500);
+  if (!wrap || !logo) return;
+  function showSplash() { wrap.classList.add('show'); }
+  if (logo.complete) showSplash();
+  else logo.addEventListener('load', showSplash, { once: true });
 })();
-
-function splashTapPlay() {
-  const logo = document.getElementById('splashLogo');
-  const tapBtn = document.getElementById('splashTap');
-  if (!logo) return;
-  logo.muted = true;
-  logo.play().then(() => {
-    if (tapBtn) tapBtn.style.display = 'none';
-  }).catch(() => {});
-}
 
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
