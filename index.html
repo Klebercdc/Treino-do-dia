@@ -1089,8 +1089,9 @@
     }
     .home-quick-card:active { transform: scale(.97); background: var(--card-hover); }
     .home-quick-icon {
-      width: 40px; height: 40px; border-radius: 12px;
+      width: 48px; height: 48px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 8px rgba(0,0,0,.35);
     }
     .home-quick-name {
       font-size: 0.85rem; font-weight: 700; color: var(--text);
@@ -1392,9 +1393,10 @@
     }
     .home-tool-card:active { background: var(--card-hover); transform: scale(.98); }
     .home-tool-icon {
-      width: 40px; height: 40px; border-radius: 12px;
+      width: 48px; height: 48px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; margin-bottom: 10px;
+      margin-bottom: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,.35);
     }
     .home-tool-name { font-size: 0.88rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
     .home-tool-sub  { font-size: 0.72rem; color: var(--text-2); line-height: 1.4; }
@@ -2559,22 +2561,30 @@
   <div class="home-section-title">Nutrição & Ferramentas</div>
   <div class="home-tools-grid">
     <div class="home-tool-card" onclick="openBasalSheet()">
-      <div class="home-tool-icon" style="background:rgba(249,115,22,0.15)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgb(249,115,22)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><rect x="8" y="5" width="8" height="3" rx="1"/><circle cx="9" cy="12" r="1" fill="rgb(249,115,22)" stroke="none"/><circle cx="12" cy="12" r="1" fill="rgb(249,115,22)" stroke="none"/><circle cx="15" cy="12" r="1" fill="rgb(249,115,22)" stroke="none"/><circle cx="9" cy="16" r="1" fill="rgb(249,115,22)" stroke="none"/><circle cx="12" cy="16" r="1" fill="rgb(249,115,22)" stroke="none"/><circle cx="15" cy="16" r="1" fill="rgb(249,115,22)" stroke="none"/></svg></div>
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><rect x="8" y="5" width="8" height="3" rx="1"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="9" cy="16" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="16" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="16" r="1" fill="#fff" stroke="none"/></svg>
+      </div>
       <div class="home-tool-name">Calculadora Basal</div>
       <div class="home-tool-sub">TMB e TDEE personalizados</div>
     </div>
     <div class="home-tool-card" onclick="openDietaSheet()">
-      <div class="home-tool-icon" style="background:rgba(34,197,94,0.15)">🥗</div>
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2c2.5 2.5 4 6 4 10"/><path d="M12 2C9.5 4.5 8 8 8 12"/><path d="M2 12h20"/><path d="M12 2v10"/></svg>
+      </div>
       <div class="home-tool-name">Gerar Dieta</div>
       <div class="home-tool-sub">Plano alimentar com IA + copiar</div>
     </div>
     <div class="home-tool-card" onclick="navTo('orientacao');openOrientacao();setTimeout(()=>orientExpertQuick('analise'),400)">
-      <div class="home-tool-icon" style="background:rgba(59,130,246,0.15)">📊</div>
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+      </div>
       <div class="home-tool-name">Análise de Treino</div>
       <div class="home-tool-sub">Feedback baseado no seu histórico</div>
     </div>
     <div class="home-tool-card" onclick="navTo('orientacao');openOrientacao();setTimeout(()=>orientExpertQuick('suplementos'),400)">
-      <div class="home-tool-icon" style="background:rgba(168,85,247,0.15)">💊</div>
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#a855f7,#7c3aed)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v3"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.5-1.5"/></svg>
+      </div>
       <div class="home-tool-name">Suplementação</div>
       <div class="home-tool-sub">O que tem evidência real</div>
     </div>
@@ -2600,8 +2610,8 @@
   <div class="home-section-title">Acesso rápido</div>
   <div class="home-quick-grid">
     <div class="home-quick-card" onclick="navTo('programa');openConfig()">
-      <div class="home-quick-icon" style="background:var(--accent-dim)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5" y="9" width="2" height="6" rx="0.5"/><rect x="17" y="9" width="2" height="6" rx="0.5"/></svg>
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5" y="9" width="2" height="6" rx="0.5"/><rect x="17" y="9" width="2" height="6" rx="0.5"/></svg>
       </div>
       <div>
         <div class="home-quick-name">Programa</div>
@@ -2609,8 +2619,8 @@
       </div>
     </div>
     <div class="home-quick-card" onclick="navTo('orientacao');openOrientacao()">
-      <div class="home-quick-icon" style="background:rgba(168,85,247,0.15)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#a855f7,#7c3aed)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div>
         <div class="home-quick-name">KRONOS</div>
@@ -2618,8 +2628,8 @@
       </div>
     </div>
     <div class="home-quick-card" onclick="closeHome();showEvoChart()">
-      <div class="home-quick-icon" style="background:rgba(34,197,94,0.15)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="3 17 8 11 13 14 21 6"/><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="6" x2="3" y2="21"/></svg>
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><polyline points="3 17 8 11 13 14 21 6"/><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="6" x2="3" y2="21"/></svg>
       </div>
       <div>
         <div class="home-quick-name">Evolução</div>
@@ -2627,8 +2637,8 @@
       </div>
     </div>
     <div class="home-quick-card" onclick="closeHome();verHistorico()">
-      <div class="home-quick-icon" style="background:rgba(59,130,246,0.15)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14.5"/></svg>
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14.5"/></svg>
       </div>
       <div>
         <div class="home-quick-name">Histórico</div>
@@ -2636,8 +2646,8 @@
       </div>
     </div>
     <div class="home-quick-card" onclick="openInstrucoes()" style="grid-column:1/-1">
-      <div class="home-quick-icon" style="background:rgba(249,115,22,0.15)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2.5"/></svg>
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2.5"/></svg>
       </div>
       <div>
         <div class="home-quick-name">Como Usar</div>
