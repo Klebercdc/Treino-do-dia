@@ -2006,34 +2006,6 @@
       text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 10px;
     }
     body.light-mode .tdash-section { color: rgba(0,0,0,0.4); }
-    .tdash-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .tdash-mode-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 18px 14px 14px; cursor: pointer;
-      position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent;
-      transition: transform .12s;
-    }
-    .tdash-mode-card:active { transform: scale(.96); }
-    .tdash-mode-card.ia-card {
-      border-color: rgba(249,115,22,0.35);
-      background: linear-gradient(145deg, var(--card) 55%, rgba(249,115,22,0.07));
-    }
-    .tdash-mode-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
-    }
-    .tdash-mode-name {
-      font-family: var(--display); font-size: 0.95rem; font-weight: 700;
-      color: var(--text); margin-bottom: 4px; letter-spacing: .03em;
-    }
-    .tdash-mode-desc { font-size: 0.63rem; color: rgba(255,255,255,0.5); line-height: 1.4; margin-bottom: 12px; }
-    body.light-mode .tdash-mode-desc { color: rgba(0,0,0,0.45); }
-    .tdash-mode-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 0.7rem; font-weight: 800; padding: 7px 12px;
-      border-radius: 9px; border: none; cursor: pointer;
-      -webkit-tap-highlight-color: transparent; letter-spacing: .04em;
-    }
     .tdash-badge {
       position: absolute; top: 10px; right: 10px; font-size: 0.52rem;
       font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -6407,13 +6379,6 @@ const DIVISAO_META = {
 
 let _divFreqSel = 3;
 
-function iniciarModoManual() {
-  openDivisaoSheet();
-}
-
-function iniciarModoIA() {
-  openDivisaoSheet();
-}
 
 function openDivisaoSheet() {
   _divFreqSel = 3;
