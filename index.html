@@ -5389,63 +5389,6 @@ function addPillControls() {
 }
 
 /* ═══════════════════════════════════════════════════
-   TEMPLATES CSV
-═══════════════════════════════════════════════════ */
-function getCSVTemplates() { try { return JSON.parse(localStorage.getItem(STORAGE.csvTplKey))||[]; } catch { return []; } }
-function exportarTreinoAtualComoCSV() {
-  const state = serializeCurrentState();
-  if (!state.sections||!state.sections.length) return "";
-  let csv = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
-  state.sections.forEach(sec => {
-    (sec.cards||[]).forEach(card => {
-      const metaTxt = String(card.meta||"");
-      const reps = metaTxt.includes("Sets x") ? metaTxt.split("Sets x")[1]?.trim() : "10-12";
-      csv += `${sec.treinoKey},${card.name},${card.sets||4},${reps}\n`;
-    });
-  });
-  return csv;
-}
-async function salvarTreinoAtualComoModelo() {
-  const csv = exportarTreinoAtualComoCSV();
-  if (!csv) { showToast("Nenhum exercício para salvar.", "error"); return; }
-  const n = await dlgPrompt("Nome do Modelo:", "text");
-  if (!n) return;
-  const arr = getCSVTemplates();
-  arr.unshift({ id:Date.now(), name:n, date:new Date().toISOString(), csv });
-  localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0,STORAGE.maxTemplates)));
-  showToast(`✅ Modelo "${n}" salvo!`, "success");
-  mostrarModelosCSV();
-}
-async function trySaveTemplate(csv) {
-  const n = await dlgPrompt("Nome do Modelo:", "text");
-  if (!n) return;
-  const arr = getCSVTemplates();
-  arr.unshift({ id:Date.now(), name:n, date:new Date().toISOString(), csv });
-  localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0,STORAGE.maxTemplates)));
-  alert("Salvo!");
-}
-function mostrarModelosCSV() {
-  document.getElementById("tplArea").style.display = "block";
-  const l = document.getElementById("tplList");
-  const arr = getCSVTemplates();
-  l.innerHTML = arr.length ? "" : "<div class='tpl-item'>Vazio.</div>";
-  arr.forEach(t => {
-    const d = document.createElement("div");
-    d.className = "tpl-item";
-    d.innerHTML = `<strong>${escapeHTML(t.name)}</strong><br><small>${new Date(t.date).toLocaleDateString()}</small>`;
-    d.onclick = () => dlgConfirm("Carregar este modelo?").then(ok => { if(ok) { importarCSVFromText(t.csv,false); document.getElementById("modalCSV").close(); } });
-    d.oncontextmenu = (e) => { e.preventDefault(); dlgConfirm("Deletar modelo?").then(ok => { if(ok) { localStorage.setItem(STORAGE.csvTplKey,JSON.stringify(arr.filter(x=>x.id!==t.id))); mostrarModelosCSV(); } }); };
-    l.appendChild(d);
-  });
-}
-async function limparModelosCSV() {
-  if (await dlgConfirm("Apagar todos os modelos?")) localStorage.removeItem(STORAGE.csvTplKey);
-  mostrarModelosCSV();
-}
-function hideModelosCSV() { document.getElementById("tplArea").style.display="none"; }
-function salvarModeloCSV() { const v=document.getElementById("csvTextarea").value; if(v) trySaveTemplate(v); else alert("Cole o CSV."); }
-
-/* ═══════════════════════════════════════════════════
    DARK MODE
 ═══════════════════════════════════════════════════ */
 function toggleDark() {}
@@ -7520,12 +7463,17 @@ function closeOrientacao() {
   navTo("treino");
 }
 function openDieta() {
-  // Pre-fill peso/altura from perfil if available
   const cfg = safeJSON("titanpro_config", {});
-  if (cfg.peso && !document.getElementById("davPeso").value)
-    document.getElementById("davPeso").value = cfg.peso;
-  if (cfg.altura && !document.getElementById("davAltura").value)
-    document.getElementById("davAltura").value = cfg.altura;
+  const prefs = safeJSON("titanpro_calc_prefs", {});
+  document.getElementById("davPeso").value    = prefs.davPeso    || cfg.peso    || "";
+  document.getElementById("davAltura").value  = prefs.davAltura  || cfg.altura  || "";
+  document.getElementById("davPescoco").value = prefs.davPescoco || "";
+  document.getElementById("davCintura").value = prefs.davCintura || "";
+  document.getElementById("davQuadril").value = prefs.davQuadril || "";
+  selectDavSexo(prefs.davSexo || cfg.sexo || "M");
+  if (prefs.davBio) { const el = document.querySelector(`#davBioChips [data-val="${prefs.davBio}"]`); if (el) selectDavBio(el); }
+  if (prefs.davObj) { const el = document.querySelector(`#davObjChips [data-val="${prefs.davObj}"]`); if (el) selectDavObj(el); }
+  if (prefs.davCiclo) { const el = document.querySelector(`#davCicloChips [data-val="${prefs.davCiclo}"]`); if (el) selectDavCiclo(el); }
   document.getElementById("dietaScreen").classList.add("show");
 }
 function closeDieta() {
@@ -7651,10 +7599,15 @@ let _bsSexo = 'M', _bsAtiv = 1.375;
 
 function openBasalSheet() {
   const cfg = safeJSON("titanpro_config", {});
-  if (cfg.peso   && !document.getElementById("bsPeso").value)   document.getElementById("bsPeso").value   = cfg.peso;
-  if (cfg.altura && !document.getElementById("bsAltura").value) document.getElementById("bsAltura").value = cfg.altura;
-  if (cfg.idade  && !document.getElementById("bsIdade").value)  document.getElementById("bsIdade").value  = cfg.idade;
-  if (cfg.sexo) selBsSexo(cfg.sexo);
+  const prefs = safeJSON("titanpro_calc_prefs", {});
+  document.getElementById("bsPeso").value   = prefs.bsPeso   || cfg.peso   || "";
+  document.getElementById("bsAltura").value = prefs.bsAltura || cfg.altura || "";
+  document.getElementById("bsIdade").value  = prefs.bsIdade  || cfg.idade  || "";
+  selBsSexo(prefs.bsSexo || cfg.sexo || "M");
+  if (prefs.bsAtiv) {
+    const el = document.querySelector(`#bsAtivChips [data-val="${prefs.bsAtiv}"]`);
+    if (el) selBsAtiv(el);
+  }
   document.getElementById("basalSheet").classList.add("show");
 }
 function closeBasalSheet() {
@@ -7675,6 +7628,15 @@ function calcBasal() {
   const altura = parseFloat(document.getElementById("bsAltura").value);
   const idade  = parseInt(document.getElementById("bsIdade").value);
   if (!peso || !altura || !idade) { alert("Preencha peso, altura e idade."); return; }
+  const _bsAtivEl = document.querySelector("#bsAtivChips .bs-chip.active");
+  localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
+    ...safeJSON("titanpro_calc_prefs", {}),
+    bsPeso: document.getElementById("bsPeso").value,
+    bsAltura: document.getElementById("bsAltura").value,
+    bsIdade: document.getElementById("bsIdade").value,
+    bsSexo: _bsSexo,
+    bsAtiv: _bsAtivEl ? _bsAtivEl.dataset.val : String(_bsAtiv)
+  }));
 
   const tmb = _bsSexo === "F"
     ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
@@ -7711,9 +7673,17 @@ function irGerarDieta() {
 }
 function preencherDietaDosPerfil() {
   const cfg = safeJSON("titanpro_config", {});
-  if (cfg.peso && !document.getElementById("dietaPeso").value) document.getElementById("dietaPeso").value = cfg.peso;
-  if (cfg.altura && !document.getElementById("dietaAltura").value) document.getElementById("dietaAltura").value = cfg.altura;
-  if (cfg.idade && !document.getElementById("dietaIdade").value) document.getElementById("dietaIdade").value = cfg.idade;
+  const prefs = safeJSON("titanpro_calc_prefs", {});
+  document.getElementById("dietaPeso").value    = prefs.dietaPeso    || cfg.peso    || "";
+  document.getElementById("dietaAltura").value  = prefs.dietaAltura  || cfg.altura  || "";
+  document.getElementById("dietaIdade").value   = prefs.dietaIdade   || cfg.idade   || "";
+  if (prefs.dietaRefeicoes) document.getElementById("dietaRefeicoes").value = prefs.dietaRefeicoes;
+  if (prefs.dietaRestric)   document.getElementById("dietaRestric").value   = prefs.dietaRestric;
+  if (prefs.dietaPrefs)     document.getElementById("dietaPrefs").value     = prefs.dietaPrefs;
+  if (prefs.dietaOrcamento) document.getElementById("dietaOrcamento").value = prefs.dietaOrcamento;
+  if (prefs.dietaObj) { const el = document.querySelector(`#dietaObjChips [data-val="${prefs.dietaObj}"]`); if (el) selDietaObj(el); }
+  if (prefs.dietaSexo) selectDietaSexo(prefs.dietaSexo);
+  if (prefs.dietaAtiv) { const el = document.querySelector(`#dietaAtivChips [data-val="${prefs.dietaAtiv}"]`); if (el) selDietaAtiv(el); }
 }
 function copiarDieta() {
   const txt = document.getElementById("dietaTexto").textContent;
@@ -7931,6 +7901,19 @@ async function gerarDieta() {
   const restric = document.getElementById("dietaRestric").value.trim() || "nenhuma";
   const prefs  = document.getElementById("dietaPrefs").value.trim();
   const orcamento = document.getElementById("dietaOrcamento").value;
+  localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
+    ...safeJSON("titanpro_calc_prefs", {}),
+    dietaObj: obj,
+    dietaSexo: document.getElementById("dietaSexoF").classList.contains("active") ? "F" : "M",
+    dietaPeso: document.getElementById("dietaPeso").value,
+    dietaAltura: document.getElementById("dietaAltura").value,
+    dietaIdade: document.getElementById("dietaIdade").value,
+    dietaRefeicoes: document.getElementById("dietaRefeicoes").value,
+    dietaAtiv: ativ,
+    dietaRestric: document.getElementById("dietaRestric").value.trim(),
+    dietaPrefs: document.getElementById("dietaPrefs").value.trim(),
+    dietaOrcamento: orcamento
+  }));
   const res    = document.getElementById("dietaResultado");
   const txt    = document.getElementById("dietaTexto");
   const btn    = document.getElementById("btnGerarDieta");
@@ -8010,6 +7993,17 @@ function calcularDietaAvancada() {
   const quadril = parseFloat(document.getElementById('davQuadril').value);
   if (!peso || !altura || !pescoco || !cintura) { alert('Preencha peso, altura, pescoço e cintura.'); return; }
   if (_davSexo === 'F' && !quadril) { alert('Preencha o quadril.'); return; }
+  const _davCicloEl = document.querySelector('#davCicloChips .config-chip.active');
+  localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
+    ...safeJSON("titanpro_calc_prefs", {}),
+    davPeso: document.getElementById('davPeso').value,
+    davAltura: document.getElementById('davAltura').value,
+    davPescoco: document.getElementById('davPescoco').value,
+    davCintura: document.getElementById('davCintura').value,
+    davQuadril: document.getElementById('davQuadril').value,
+    davSexo: _davSexo, davBio: _davBio, davObj: _davObj,
+    davCiclo: _davCicloEl ? _davCicloEl.dataset.val : String(_davCicloProto)
+  }));
 
   // BF% — Fórmula Naval (US Navy)
   let bf;
