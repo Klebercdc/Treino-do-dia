@@ -5389,63 +5389,6 @@ function addPillControls() {
 }
 
 /* ═══════════════════════════════════════════════════
-   TEMPLATES CSV
-═══════════════════════════════════════════════════ */
-function getCSVTemplates() { try { return JSON.parse(localStorage.getItem(STORAGE.csvTplKey))||[]; } catch { return []; } }
-function exportarTreinoAtualComoCSV() {
-  const state = serializeCurrentState();
-  if (!state.sections||!state.sections.length) return "";
-  let csv = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
-  state.sections.forEach(sec => {
-    (sec.cards||[]).forEach(card => {
-      const metaTxt = String(card.meta||"");
-      const reps = metaTxt.includes("Sets x") ? metaTxt.split("Sets x")[1]?.trim() : "10-12";
-      csv += `${sec.treinoKey},${card.name},${card.sets||4},${reps}\n`;
-    });
-  });
-  return csv;
-}
-async function salvarTreinoAtualComoModelo() {
-  const csv = exportarTreinoAtualComoCSV();
-  if (!csv) { showToast("Nenhum exercício para salvar.", "error"); return; }
-  const n = await dlgPrompt("Nome do Modelo:", "text");
-  if (!n) return;
-  const arr = getCSVTemplates();
-  arr.unshift({ id:Date.now(), name:n, date:new Date().toISOString(), csv });
-  localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0,STORAGE.maxTemplates)));
-  showToast(`✅ Modelo "${n}" salvo!`, "success");
-  mostrarModelosCSV();
-}
-async function trySaveTemplate(csv) {
-  const n = await dlgPrompt("Nome do Modelo:", "text");
-  if (!n) return;
-  const arr = getCSVTemplates();
-  arr.unshift({ id:Date.now(), name:n, date:new Date().toISOString(), csv });
-  localStorage.setItem(STORAGE.csvTplKey, JSON.stringify(arr.slice(0,STORAGE.maxTemplates)));
-  alert("Salvo!");
-}
-function mostrarModelosCSV() {
-  document.getElementById("tplArea").style.display = "block";
-  const l = document.getElementById("tplList");
-  const arr = getCSVTemplates();
-  l.innerHTML = arr.length ? "" : "<div class='tpl-item'>Vazio.</div>";
-  arr.forEach(t => {
-    const d = document.createElement("div");
-    d.className = "tpl-item";
-    d.innerHTML = `<strong>${escapeHTML(t.name)}</strong><br><small>${new Date(t.date).toLocaleDateString()}</small>`;
-    d.onclick = () => dlgConfirm("Carregar este modelo?").then(ok => { if(ok) { importarCSVFromText(t.csv,false); document.getElementById("modalCSV").close(); } });
-    d.oncontextmenu = (e) => { e.preventDefault(); dlgConfirm("Deletar modelo?").then(ok => { if(ok) { localStorage.setItem(STORAGE.csvTplKey,JSON.stringify(arr.filter(x=>x.id!==t.id))); mostrarModelosCSV(); } }); };
-    l.appendChild(d);
-  });
-}
-async function limparModelosCSV() {
-  if (await dlgConfirm("Apagar todos os modelos?")) localStorage.removeItem(STORAGE.csvTplKey);
-  mostrarModelosCSV();
-}
-function hideModelosCSV() { document.getElementById("tplArea").style.display="none"; }
-function salvarModeloCSV() { const v=document.getElementById("csvTextarea").value; if(v) trySaveTemplate(v); else alert("Cole o CSV."); }
-
-/* ═══════════════════════════════════════════════════
    DARK MODE
 ═══════════════════════════════════════════════════ */
 function toggleDark() {}
