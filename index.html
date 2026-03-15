@@ -1734,48 +1734,15 @@
       overflow: hidden;
     }
     #splashLogoWrap {
-      position: relative;
-      width: 60%;
-      max-width: 260px;
-      border-radius: 24px;
-      overflow: hidden;
-      opacity: 0;
-      transform: scale(0.72);
+      position: absolute;
+      inset: 0;
       pointer-events: none;
-    }
-    #splashLogoWrap.show {
-      animation: splashZoomIn 0.55s cubic-bezier(0.22,1,0.36,1) forwards;
     }
     #splashLogo {
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: cover;
       display: block;
-      border-radius: 24px;
-    }
-    #splashShimmer {
-      position: absolute;
-      inset: 0;
-      border-radius: 24px;
-      background: linear-gradient(
-        115deg,
-        transparent 25%,
-        rgba(249,115,22,0.55) 50%,
-        transparent 75%
-      );
-      background-size: 250% 100%;
-      background-position: 200% center;
-      opacity: 0;
-    }
-    #splashLogoWrap.show #splashShimmer {
-      animation: splashGlow 0.7s ease 0.5s forwards;
-    }
-    @keyframes splashZoomIn {
-      0%   { opacity: 0; transform: scale(0.72); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-    @keyframes splashGlow {
-      0%   { opacity: 1; background-position: 200% center; }
-      100% { opacity: 0; background-position: -50% center; }
     }
     #splashTap {
       position: absolute; inset: 0;
@@ -2007,7 +1974,6 @@
 <div id="splashScreen">
   <div id="splashLogoWrap">
     <img id="splashLogo" src="splash.png">
-    <div id="splashShimmer"></div>
   </div>
 </div>
 
@@ -6946,15 +6912,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Splash: zoom + brilho laranja
-(function() {
-  const wrap = document.getElementById('splashLogoWrap');
-  const logo = document.getElementById('splashLogo');
-  if (!wrap || !logo) return;
-  function showSplash() { wrap.classList.add('show'); }
-  if (logo.complete) showSplash();
-  else logo.addEventListener('load', showSplash, { once: true });
-})();
+// Splash: imagem estática tela cheia
 
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
