@@ -684,7 +684,7 @@
       -webkit-appearance: none; appearance: none;
       margin-bottom: 14px; cursor: pointer;
     }
-    .evo-stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .evo-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
     .evo-stat {
       background: var(--bg2); border: 1px solid var(--border);
       border-radius: 10px; padding: 10px 8px; text-align: center;
@@ -1116,15 +1116,6 @@
        TELA DE PERFIL
     ══════════════════════════════════════════ */
     .btn-voltar {
-      display: flex; align-items: center; gap: 8px;
-      background: none; border: none;
-      color: var(--accent); font-family: var(--font);
-      font-size: 0.9rem; font-weight: 700;
-      padding: 16px 20px 0;
-      cursor: pointer; -webkit-tap-highlight-color: transparent;
-    }
-    .btn-voltar svg { flex-shrink: 0; }
-    .btn-voltar {
       display: inline-flex; align-items: center; gap: 8px;
       background: none; border: none;
       color: var(--accent); font-family: var(--font);
@@ -1132,6 +1123,7 @@
       padding: 16px 20px 0;
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
+    .btn-voltar svg { flex-shrink: 0; }
         #perfilScreen {
       display: none; position: fixed; inset: 0; z-index: 3500;
       background: var(--bg); flex-direction: column; overflow-y: auto;
@@ -1170,7 +1162,7 @@
       color: rgba(255,255,255,0.7); margin-bottom: 12px;
     }
     .perfil-grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px; margin-bottom: 16px;
     }
     .perfil-stat {
@@ -1216,8 +1208,8 @@
     }
     .perfil-input:focus { outline: none; border-color: var(--accent); }
     .perfil-cal-grid {
-      display: grid; grid-template-columns: repeat(7, 1fr);
-      gap: 3px; margin-bottom: 16px;
+      display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: clamp(2px, 0.8vw, 5px); margin-bottom: 16px;
     }
     .perfil-cal-day {
       aspect-ratio: 1; border-radius: 6px;
@@ -1300,6 +1292,7 @@
       display: flex; gap: 6px; padding: 12px 16px;
       overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none;
       max-height: 32vh; border-bottom: 1px solid var(--border);
+      transition: max-height .3s ease, opacity .3s ease, padding .3s ease;
     }
     .orient-shortcuts-row::-webkit-scrollbar { display: none; }
     .orient-category-label {
@@ -1349,12 +1342,8 @@
     .orient-suggestions-toggle svg { transition: transform .2s; }
     .orient-suggestions-toggle.open svg { transform: rotate(180deg); }
     /* atalhos colapsáveis */
-    .orient-shortcuts-row {
-      transition: max-height .3s ease, opacity .3s ease, padding .3s ease;
-      overflow: hidden;
-    }
     .orient-shortcuts-row.collapsed {
-      max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none;
+      max-height: 0 !important; overflow: hidden; opacity: 0; padding-top: 0; padding-bottom: 0; border: none;
     }
     .orient-form-scroll { flex: 1; overflow-y: auto; padding: 16px; }
     .orient-card {
@@ -1527,8 +1516,6 @@
       width: 10px; height: 10px; border-radius: 50%;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-  
     /* ── GUIA DE EXERCÍCIO ── */
     #guiaModal {
       position: fixed; inset: 0; z-index: 1100;
@@ -1804,7 +1791,7 @@
     }
     #loginTitle {
       font-family: var(--display);
-      font-size: 3rem;
+      font-size: clamp(2rem, 8vw, 3rem);
       letter-spacing: 0.08em;
       color: #fff;
       line-height: 1;
@@ -2411,8 +2398,8 @@
   <!-- Linha 1: label + tempo + play -->
   <div class="timer-row-main">
     <span class="timer-label">Descanso</span>
-    <span id="timerDisplay">1:00</span>
-    <button id="ctrlBtn" onclick="toggleT()">
+    <span id="timerDisplayInline">1:00</span>
+    <button id="ctrlBtnInline" onclick="toggleT()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     </button>
   </div>
@@ -2425,7 +2412,7 @@
   </div>
   <!-- Linha 3: barra de progresso -->
   <div class="timer-progress-bar-wrap">
-    <div id="timerProgressBar"></div>
+    <div id="timerProgressBarInline"></div>
   </div>
 </div>
 
@@ -3850,38 +3837,40 @@ function updateT() {
   const pct  = baseTime > 0 ? (timeLeft / baseTime) : 1;
   const done = timeLeft === 0;
 
-  // Display principal
+  const playIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+  const pauseIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  const doneIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polyline points="20 6 9 17 4 12"/></svg>';
+  const btnIcon = isRunning ? pauseIcon : done ? doneIcon : playIcon;
+  const btnCls = "tb-ctrl" + (isRunning ? " pausing" : done ? " done" : "");
+
+  // Display principal (timerSheet)
   const el = document.getElementById("timerDisplay");
   if (el) { el.textContent = txt; el.className = done ? "done" : ""; }
 
+  // Display inline (timerArea)
+  const elI = document.getElementById("timerDisplayInline");
+  if (elI) { elI.textContent = txt; elI.className = done ? "done" : ""; }
 
-
-  // Barra de progresso
+  // Barra de progresso (timerSheet)
   const bar = document.getElementById("tbProgressBar");
-  if (bar) {
-    bar.style.width = (pct * 100) + "%";
-    bar.className = done ? "done" : "";
-  }
+  if (bar) { bar.style.width = (pct * 100) + "%"; bar.className = done ? "done" : ""; }
 
-  // Timer bar cor
+  // Barra de progresso inline (timerArea)
+  const barI = document.getElementById("timerProgressBarInline");
+  if (barI) { barI.style.width = (pct * 100) + "%"; barI.className = done ? "done" : ""; }
+
+  // Timer bar cor (timerSheet)
   const bar2 = document.getElementById("timerSheet");
   if (bar2 && bar2.classList.contains("show"))
     bar2.className = "show" + (done ? " done" : "");
 
-  // Botão play/pause
+  // Botão play/pause (timerSheet)
   const btn = document.getElementById("ctrlBtn");
-  if (btn) {
-    btn.className = "tb-ctrl" + (isRunning ? " pausing" : done ? " done" : "");
-    if (isRunning) {
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-    } else if (done) {
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polyline points="20 6 9 17 4 12"/></svg>';
-    } else {
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-    }
-  }
+  if (btn) { btn.className = btnCls; btn.innerHTML = btnIcon; }
 
-
+  // Botão play/pause inline (timerArea)
+  const btnI = document.getElementById("ctrlBtnInline");
+  if (btnI) { btnI.className = btnCls; btnI.innerHTML = btnIcon; }
 }
 
 function toggleT() {
@@ -4418,6 +4407,7 @@ function abrirLibParaTrocar(id) {
 }
 function mostrarLib() {
   const lib = document.getElementById("libContent");
+  if (!lib) return;
   lib.innerHTML = "";
   for (let cat in biblioteca) {
     lib.innerHTML += `<div class="lib-cat">${cat}</div>`;
@@ -4689,20 +4679,22 @@ function showEvoChart() {
   const hist = safeJSON(STORAGE.historyKey,[]);
   if (!hist.length) { alert("Sem histórico ainda. Salve uma sessão primeiro!"); return; }
   populateEvoExSelect(hist); renderEvoChart();
-  document.getElementById("evoModal").classList.add("show");
+  document.getElementById("evoModal")?.classList.add("show");
 }
-function closeEvo() { document.getElementById("evoModal").classList.remove("show"); }
+function closeEvo() { document.getElementById("evoModal")?.classList.remove("show"); }
 function setEvoTab(tab, el) {
   _evoTab = tab;
   document.querySelectorAll(".evo-tab").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  document.getElementById("evoExSelect").style.display = (tab==="rm") ? "block" : "none";
+  const evoSel = document.getElementById("evoExSelect");
+  if (evoSel) evoSel.style.display = (tab==="rm") ? "block" : "none";
   renderEvoChart();
 }
 function populateEvoExSelect(hist) {
   const names = new Set();
   hist.forEach(h => (h.state?.sections||[]).forEach(sec => (sec.cards||[]).forEach(c => { if(c.name) names.add(c.name); })));
   const sel = document.getElementById("evoExSelect");
+  if (!sel) return;
   sel.innerHTML = Array.from(names).map(n => `<option value="${escapeAttr(n)}">${escapeHTML(n)}</option>`).join("");
 }
 function renderEvoChart() {
@@ -4714,7 +4706,7 @@ function renderEvoChart() {
     values = hist.map(h => Math.round(calcVolumeTotal(h.state)));
     label  = "Volume (kg)";
   } else if (_evoTab==="rm") {
-    const exName = document.getElementById("evoExSelect").value;
+    const exName = document.getElementById("evoExSelect")?.value || "";
     hist.forEach(h => {
       let found = null;
       (h.state?.sections||[]).forEach(sec => (sec.cards||[]).forEach(c => {
@@ -4744,7 +4736,8 @@ function renderEvoChart() {
   const prev2=values.length>=2?values[values.length-2]:last;
   const delta=prev2>0?Math.round((last-prev2)/prev2*100):0;
   const pr=values.length?(_evoTab==="peso"?Math.min(...values):Math.max(...values)):0;
-  document.getElementById("evoStats").innerHTML = `
+  const evoStats = document.getElementById("evoStats");
+  if (evoStats) evoStats.innerHTML = `
     <div class="evo-stat"><div class="evo-stat-val">${pr>0?pr+(_evoTab!=="freq"?"kg":""):"-"}</div><div class="evo-stat-lbl">${_evoTab==="freq"?"Total":_evoTab==="peso"?"Mínimo":"Recorde"}</div></div>
     <div class="evo-stat"><div class="evo-stat-val">${last>0?last+(_evoTab==="freq"?"":"kg"):"-"}</div><div class="evo-stat-lbl">Última Sessão</div></div>
     <div class="evo-stat"><div class="evo-stat-val" style="color:${delta>=0?"#16a34a":"#dc2626"}">${delta>=0?"+":""}${delta}%</div><div class="evo-stat-lbl">vs Anterior</div></div>`;
@@ -5020,31 +5013,35 @@ function showSummary(state, prs, durationMin) {
     ? `🏆 ${prs.length} NOVO${prs.length>1?"S":""} RECORDE${prs.length>1?"S":""}!`
     : motivos[Math.floor(Math.random()*motivos.length)];
 
-  document.getElementById("sumTitle").textContent = "TREINO CONCLUÍDO";
-  document.getElementById("sumSub").innerHTML = `<span style="color:var(--accent);font-weight:700">${mot}</span><br><small style="color:var(--muted)">${dateStr.charAt(0).toUpperCase()+dateStr.slice(1)}</small>`;
-  document.getElementById("sumGrid").innerHTML = `
+  const elSumTitle = document.getElementById("sumTitle");
+  const elSumSub   = document.getElementById("sumSub");
+  const elSumGrid  = document.getElementById("sumGrid");
+  const prSection  = document.getElementById("sumPRs");
+  const prList     = document.getElementById("sumPRList");
+  const elSumModal = document.getElementById("summaryModal");
+  if (elSumTitle) elSumTitle.textContent = "TREINO CONCLUÍDO";
+  if (elSumSub) elSumSub.innerHTML = `<span style="color:var(--accent);font-weight:700">${mot}</span><br><small style="color:var(--muted)">${dateStr.charAt(0).toUpperCase()+dateStr.slice(1)}</small>`;
+  if (elSumGrid) elSumGrid.innerHTML = `
     <div class="summary-stat"><div class="summary-stat-val">${vol>0?vol.toLocaleString("pt-BR"):"—"}</div><div class="summary-stat-lbl">Volume kg</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${totalSets}</div><div class="summary-stat-lbl">Séries</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${totalEx}</div><div class="summary-stat-lbl">Exercícios</div></div>
     <div class="summary-stat"><div class="summary-stat-val">${durationMin!==null?durationMin+"min":"—"}</div><div class="summary-stat-lbl">Duração</div></div>`;
-  const prSection = document.getElementById("sumPRs");
-  const prList    = document.getElementById("sumPRList");
   if (prs.length>0) {
-    prSection.style.display="block";
-    prList.innerHTML=prs.map(p=>`
+    if (prSection) prSection.style.display="block";
+    if (prList) prList.innerHTML=prs.map(p=>`
       <div class="summary-pr-item">
         <span>${escapeHTML(p.name)}</span>
         <span class="summary-pr-val">${p.rm}kg<small style="font-size:.65rem;color:var(--muted);margin-left:4px">1RM</small></span>
       </div>`).join("");
-  } else { prSection.style.display="none"; }
-  document.getElementById("summaryModal").classList.add("show");
+  } else if (prSection) { prSection.style.display="none"; }
+  if (elSumModal) elSumModal.classList.add("show");
   if (navigator.vibrate) navigator.vibrate([50,30,80,30,120]);
   // Limpar análise anterior e rodar nova
   const aiSection = document.getElementById("aiCoachSummary");
   if (aiSection) aiSection.style.display = "none";
   runAICoachPostWorkout(state, prs, durationMin);
 }
-function closeSummary() { document.getElementById("summaryModal").classList.remove("show"); }
+function closeSummary() { document.getElementById("summaryModal")?.classList.remove("show"); }
 
 /* ═══════════════════════════════════════════════════
    CONFIG SHEET
@@ -6177,9 +6174,6 @@ window.onload = () => {
   updateStreakUI();
   updateWorkoutProgress();
   applyPrevGhostsToAll();
-
-  // Session strip — 1 único intervalo (corrigido bug duplicado)
-  setInterval(() => { if (_sessionStart) updateSessionStrip(); }, 30000);
 
   // Toast de boas-vindas para quem já treinou
   if (localStorage.getItem("titan_onboarded")) {
