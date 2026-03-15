@@ -3470,7 +3470,6 @@
   <div id="configBox">
     <div class="config-handle"></div>
 
-```
 <!-- Header -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
   <div class="config-title" style="margin:0">Programa de Treino</div>
@@ -3622,11 +3621,16 @@
 </div>
 
 <!-- Botões -->
-<button class="config-apply" style="width:100%;margin-top:4px;font-size:1rem;padding:16px" onclick="gerarTreinoDoPrograma()">
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-  Gerar Meu Treino
-</button>
-```
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+  <button onclick="usarTemplateManualConfig()" style="padding:15px 10px;background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.3);border-radius:12px;color:#60a5fa;font-family:var(--font);font-size:0.88rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+    Usar Template
+  </button>
+  <button class="config-apply" style="margin:0;font-size:0.88rem;padding:15px 10px" onclick="gerarTreinoDoPrograma()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:6px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Gerar com IA
+  </button>
+</div>
 
   </div>
 </div>
@@ -3754,11 +3758,11 @@
 
     <!-- CTA buttons -->
     <div class="div-cta">
-      <button class="div-cta-manual" onclick="carregarTemplateManual()">
+      <button class="div-cta-manual" onclick="abrirConfigComFreq('manual')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-        Usar Manual
+        Usar Template
       </button>
-      <button class="div-cta-ia" onclick="carregarTemplateComIA()">
+      <button class="div-cta-ia" onclick="abrirConfigComFreq('ia')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         Gerar com IA
       </button>
@@ -6656,29 +6660,31 @@ function renderDivisaoPreview(freq) {
 }
 
 function selecionarDivDia(idx) {
-  // Highlight selected row
+  // Highlight row briefly then navigate to config
   document.querySelectorAll('.div-day-row').forEach((r, i) => {
     r.classList.toggle('selected', i === idx);
   });
-  // Load just this day's exercises
-  const days = TREINOS_PRONTOS[String(_divFreqSel)] || [];
-  const d = days[idx];
-  if (!d) return;
-  const nav  = document.getElementById("nav");
-  const cont = document.getElementById("container");
-  nav.innerHTML = "";
-  cont.innerHTML = "";
-  const ltrs = ['A','B','C','D','E','F'];
-  nav.innerHTML = `<div class="pill active" id="p0" onclick="tab(0)">${escapeHTML(d.nome.split(" ")[0])}</div>`;
-  const sec = document.createElement("div");
-  sec.id = "sec0"; sec.className = "section active";
-  sec.setAttribute("data-treino-key", d.nome);
-  cont.appendChild(sec);
-  d.exs.forEach(exNome => criarCard(exNome, sec.id, null, null, null, null));
-  addPillControls();
-  scheduleDraftSave();
+  // Navigate to config screen with current frequency pre-selected
+  setTimeout(() => abrirConfigComFreq('manual'), 150);
+}
+
+function abrirConfigComFreq(modo) {
+  // Sync selected frequency into config chips
+  const freqStr = String(_divFreqSel);
+  const freqEl  = document.getElementById("freq");
+  if (freqEl) freqEl.value = freqStr;
+  document.querySelectorAll("#freqChips .config-chip").forEach(c => {
+    c.classList.toggle("active", c.dataset.val === freqStr);
+  });
   closeDivisaoSheet();
-  showToast(`✅ ${ltrs[idx]} – ${d.nome} carregado!`, "success", 3000);
+  // Store chosen mode so config buttons know what was intended
+  window._divModo = modo;
+  setTimeout(() => { navTo("programa"); openConfig(); }, 220);
+}
+
+function usarTemplateManualConfig() {
+  carregarTemplateManual();
+  closeConfig();
 }
 
 function carregarTemplateManual() {
