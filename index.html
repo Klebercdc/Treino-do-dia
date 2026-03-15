@@ -637,6 +637,18 @@
     .ob-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 28px; }
     .ob-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all .2s; }
     .ob-dot.active { background: var(--accent); width: 18px; border-radius: 3px; }
+    .ob-persona-chip {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 14px; padding: 14px 16px; cursor: pointer;
+      transition: all .15s; -webkit-tap-highlight-color: transparent;
+      text-align: left;
+    }
+    .ob-persona-chip:active { transform: scale(.97); }
+    .ob-persona-chip.active {
+      border-color: var(--accent); background: rgba(249,115,22,0.12);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
 
     /* ══════════════════════════════════════════
        EVOLUÇÃO MODAL
@@ -2186,21 +2198,55 @@
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="21" width="40" height="6" rx="3" fill="white" opacity="0.3"/><rect x="20" y="18" width="8" height="12" rx="2" fill="white"/><rect x="2" y="17" width="6" height="14" rx="3" fill="white"/><rect x="40" y="17" width="6" height="14" rx="3" fill="white"/><rect x="8" y="19" width="4" height="10" rx="2" fill="white" opacity="0.7"/><rect x="36" y="19" width="4" height="10" rx="2" fill="white" opacity="0.7"/></svg>
       </div></div>
       <div class="ob-title">Bem-vindo ao<br>TITAN PRO</div>
-      <div class="ob-sub">Seu diário de treino inteligente. Registre séries, acompanhe sua evolução e supere seus limites.</div>
+      <div class="ob-sub">Coach com IA que aprende quem você é — e entrega exatamente o que você precisa, do básico ao alto nível.</div>
     </div>
+
+    <!-- STEP 1: Persona selector -->
     <div class="ob-step" id="ob-step-1">
-      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M24 8C16.268 8 10 14.268 10 22V40L14 36L18 40L22 36L26 40L30 36L34 40L38 36V22C38 14.268 31.732 8 24 8Z" fill="white" opacity="0.9"/><circle cx="19" cy="22" r="3" fill="#6366f1"/><circle cx="29" cy="22" r="3" fill="#6366f1"/><rect x="17" y="29" width="14" height="2" rx="1" fill="#6366f1" opacity="0.5"/></svg>
+      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="8" fill="white" opacity="0.9"/><path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
       </div></div>
-      <div class="ob-title">Valores Fantasma</div>
-      <div class="ob-sub">Após salvar, seus valores anteriores aparecem como guia nos campos. Use como referência para superar a sessão passada.</div>
+      <div class="ob-title">Como você<br>se encaixa?</div>
+      <div class="ob-sub" style="margin-bottom:20px">A IA vai se adaptar ao seu perfil.<br>Escolha o que melhor te representa:</div>
+      <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;padding:0 4px">
+        <div class="ob-persona-chip" data-val="turista" onclick="selectPersonaOb(this)">
+          <div style="font-size:1.4rem;flex-shrink:0">✈️</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Físico Turista</div>
+            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino quando dá — hotel, casa, onde estiver</div>
+          </div>
+        </div>
+        <div class="ob-persona-chip" data-val="iniciante" onclick="selectPersonaOb(this)">
+          <div style="font-size:1.4rem;flex-shrink:0">🌱</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Estou começando agora</div>
+            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Iniciante — quero aprender com segurança</div>
+          </div>
+        </div>
+        <div class="ob-persona-chip" data-val="dedicado" onclick="selectPersonaOb(this)">
+          <div style="font-size:1.4rem;flex-shrink:0">💪</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Treino com consistência</div>
+            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">3–5x por semana, quero crescer e evoluir</div>
+          </div>
+        </div>
+        <div class="ob-persona-chip" data-val="atleta" onclick="selectPersonaOb(this)">
+          <div style="font-size:1.4rem;flex-shrink:0">🔥</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem">Nível avançado / atleta</div>
+            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino sério — periodização, RPE, performance</div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- STEP 2: Personalized ready screen -->
     <div class="ob-step" id="ob-step-2">
-      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="16" fill="white" opacity="0.15"/><circle cx="24" cy="26" r="13" stroke="white" stroke-width="2.5" fill="none"/><path d="M24 14V10M21 10H27" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M24 26L24 19" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M24 26L30 22" stroke="white" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="26" r="2" fill="white"/></svg>
+      <div class="ob-icon" id="ob2Icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#059669,#10b981)">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><polyline points="8 26 18 36 40 14" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div></div>
-      <div class="ob-title">Timer de Descanso</div>
-      <div class="ob-sub">Cronômetro de descanso integrado. Ao rolar a tela, um indicador flutuante mantém o tempo sempre visível.</div>
+      <div class="ob-title" id="ob2Title">Tudo pronto!</div>
+      <div class="ob-sub" id="ob2Sub" style="max-width:300px">KRONOS vai analisar seu perfil e entregar treinos e orientações feitas para você.</div>
     </div>
   </div>
   <div class="ob-footer">
@@ -2494,6 +2540,21 @@
       <div class="home-tool-icon" style="background:rgba(168,85,247,0.15)">💊</div>
       <div class="home-tool-name">Suplementação</div>
       <div class="home-tool-sub">O que tem evidência real</div>
+    </div>
+  </div>
+
+  <!-- Banner turista (visível só se persona=turista) -->
+  <div id="turistaBanner" style="display:none;margin:0 16px 4px;background:linear-gradient(135deg,rgba(14,165,233,0.15),rgba(56,189,248,0.08));border:1px solid rgba(14,165,233,0.3);border-radius:16px;padding:16px 18px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-size:1.4rem">✈️</span>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;color:#38bdf8">Modo Físico Turista</div>
+        <div style="font-size:0.75rem;color:var(--text-2)">Treino rápido, onde você estiver</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="gerarTreinoExpress('hotel')" style="flex:1;background:rgba(14,165,233,0.2);border:1px solid rgba(14,165,233,0.4);color:#38bdf8;padding:10px;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer">🏨 Academia de hotel</button>
+      <button onclick="gerarTreinoExpress('casa')" style="flex:1;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25);color:#7dd3fc;padding:10px;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer">🏠 Sem equipamento</button>
     </div>
   </div>
 
@@ -2950,6 +3011,7 @@
 <div class="config-section">
   <div class="config-section-lbl">Frequência semanal</div>
   <div class="config-chips" id="freqChips">
+    <div class="config-chip" data-val="1" onclick="selectFreq(this)">1 dia</div>
     <div class="config-chip" data-val="2" onclick="selectFreq(this)">2 dias</div>
     <div class="config-chip active" data-val="3" onclick="selectFreq(this)">3 dias</div>
     <div class="config-chip" data-val="4" onclick="selectFreq(this)">4 dias</div>
@@ -2965,6 +3027,8 @@
     <div class="config-chip active" data-val="hipertrofia" onclick="selectObj(this)">Hipertrofia</div>
     <div class="config-chip" data-val="forca" onclick="selectObj(this)">Força</div>
     <div class="config-chip" data-val="definicao" onclick="selectObj(this)">Definição</div>
+    <div class="config-chip" data-val="saude" onclick="selectObj(this)">Saúde & Disposição</div>
+    <div class="config-chip" data-val="resistencia" onclick="selectObj(this)">Resistência</div>
   </div>
 </div>
 
@@ -2983,6 +3047,25 @@
     <div class="config-chip" data-val="avancado" onclick="selectNivel(this)">
       <div style="font-size:0.8rem;font-weight:700">🔥 Avançado</div>
       <div style="font-size:0.62rem;opacity:.7;margin-top:2px">Mais de 3 anos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Persona -->
+<div class="config-section">
+  <div class="config-section-lbl">Meu perfil de atleta</div>
+  <div class="config-chips" id="personaChips">
+    <div class="config-chip" data-val="turista" onclick="selectPersonaConfig(this)">
+      <div style="font-size:0.8rem;font-weight:700">✈️ Físico Turista</div>
+      <div style="font-size:0.62rem;opacity:.7;margin-top:2px">Treino quando dá, onde estiver</div>
+    </div>
+    <div class="config-chip active" data-val="dedicado" onclick="selectPersonaConfig(this)">
+      <div style="font-size:0.8rem;font-weight:700">💪 Dedicado</div>
+      <div style="font-size:0.62rem;opacity:.7;margin-top:2px">Treino regular e consistente</div>
+    </div>
+    <div class="config-chip" data-val="atleta" onclick="selectPersonaConfig(this)">
+      <div style="font-size:0.8rem;font-weight:700">🔥 Atleta</div>
+      <div style="font-size:0.62rem;opacity:.7;margin-top:2px">Performance e periodização</div>
     </div>
   </div>
 </div>
@@ -3042,8 +3125,9 @@
   <div class="config-section-lbl">Equipamento disponível</div>
   <div class="config-chips" id="equipChips">
     <div class="config-chip active" data-val="academia" onclick="selectEquip(this)">Academia completa</div>
+    <div class="config-chip" data-val="hotel" onclick="selectEquip(this)">Academia de hotel</div>
     <div class="config-chip" data-val="halteres" onclick="selectEquip(this)">Halteres</div>
-    <div class="config-chip" data-val="casa" onclick="selectEquip(this)">Casa / Sem equipamento</div>
+    <div class="config-chip" data-val="casa" onclick="selectEquip(this)">Sem equipamento</div>
   </div>
 </div>
 
@@ -5099,14 +5183,65 @@ function selectEquip(el) {
   el.classList.add("active");
 }
 
+function selectPersonaConfig(el) {
+  document.querySelectorAll("#personaChips .config-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  const val = el.dataset.val;
+  const cfg = safeJSON("titanpro_config", {});
+  cfg.persona = val;
+  localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+  // Sugestão automática de frequência para turista
+  if (val === "turista") {
+    const chip1 = document.querySelector("#freqChips [data-val='1']");
+    if (chip1 && !document.querySelector("#freqChips .config-chip.active[data-val='1']")) {
+      document.querySelectorAll("#freqChips .config-chip").forEach(c=>c.classList.remove("active"));
+      chip1.classList.add("active");
+    }
+    const chipHotel = document.querySelector("#equipChips [data-val='hotel']");
+    if (chipHotel) { document.querySelectorAll("#equipChips .config-chip").forEach(c=>c.classList.remove("active")); chipHotel.classList.add("active"); }
+    const chipSaude = document.querySelector("#objChips [data-val='saude']");
+    if (chipSaude) { document.querySelectorAll("#objChips .config-chip").forEach(c=>c.classList.remove("active")); chipSaude.classList.add("active"); }
+  }
+}
+
 function getProgramaConfig() {
   const freq  = document.querySelector("#freqChips .config-chip.active")?.dataset.val || "3";
   const obj   = document.querySelector("#objChips .config-chip.active")?.dataset.val || "hipertrofia";
   const fase  = document.querySelector("#faseChips .config-chip.active")?.dataset.val || "1";
   const equip = document.querySelector("#equipChips .config-chip.active")?.dataset.val || "academia";
+  const persona = document.querySelector("#personaChips .config-chip.active")?.dataset.val || safeJSON("titanpro_config",{}).persona || "dedicado";
   const muscs = [...document.querySelectorAll(".config-chip-musc.active")].map(c => c.dataset.val);
   const restric = [...document.querySelectorAll(".config-chip-restric.active")].map(c => c.dataset.val).filter(v => v !== "nenhuma");
-  return { freq, obj, fase, equip, muscs, restric };
+  return { freq, obj, fase, equip, persona, muscs, restric };
+}
+
+// Gera treino rápido (20-30 min) para físico turista
+function gerarTreinoExpress(equip) {
+  // Override temporário da config para gerar treino express
+  const cfgOrig = safeJSON("titanpro_config", {});
+  const tmpChips = {
+    "#freqChips": "1",
+    "#equipChips": equip,
+    "#objChips": "saude",
+    "#personaChips": "turista"
+  };
+  // Salvar seleção atual e aplicar temporária
+  const prevActive = {};
+  Object.entries(tmpChips).forEach(([sel, val]) => {
+    const prev = document.querySelector(sel + " .config-chip.active");
+    if (prev) prevActive[sel] = prev.dataset.val;
+    document.querySelectorAll(sel + " .config-chip").forEach(c => c.classList.remove("active"));
+    const target = document.querySelector(sel + " [data-val='" + val + "']");
+    if (target) target.classList.add("active");
+  });
+  navTo("treino");
+  gerarTreinoDoPrograma();
+  // Restaurar seleções anteriores
+  Object.entries(prevActive).forEach(([sel, val]) => {
+    document.querySelectorAll(sel + " .config-chip").forEach(c => c.classList.remove("active"));
+    const target = document.querySelector(sel + " [data-val='" + val + "']");
+    if (target) target.classList.add("active");
+  });
 }
 
 function gerarTreinoDoPrograma() {
@@ -5147,6 +5282,11 @@ function gerarTreinoDoPrograma() {
       mav: [3,"20-25"],
       mrv: [4,"15-20"],
     },
+    saude: {
+      mev: [3,"12-15"],
+      mav: [3,"12-15"],
+      mrv: [3,"12-15"],
+    },
   };
 
   // Exercícios científicos por grupo muscular (EMG + Schoenfeld)
@@ -5162,8 +5302,42 @@ function gerarTreinoDoPrograma() {
     abdomen:  ["Prancha","Abdominal Roda","Elevação de Pernas","Russian Twist","Dead Bug"],
   };
 
+  // Exercícios para academia de hotel (halteres leves + esteiras + pouca máquina)
+  const EX_HOTEL = {
+    peito:    ["Flexão de Peito","Flexão Inclinada (pés elevados)","Supino com Halteres","Crucifixo com Halteres"],
+    costas:   ["Remada Unilateral","Puxada com Elástico","Remada com Haltere Apoiado","Superman"],
+    pernas:   ["Agachamento com Peso Corporal","Agachamento com Halteres","Passada","Agachamento Búlgaro","Elevação de Quadril"],
+    ombros:   ["Desenvolvimento com Halteres","Elevação Lateral com Halteres","Elevação Frontal com Halteres"],
+    biceps:   ["Rosca com Halteres","Rosca Martelo","Rosca Concentrada"],
+    triceps:  ["Mergulho em Cadeira (Tríceps Banco)","Extensão de Tríceps com Haltere","Flexão Diamante"],
+    gluteos:  ["Elevação Pélvica","Passada","Agachamento Sumô","Step Up (degrau)"],
+    panturrilha: ["Panturrilha em Pé (sem peso)","Panturrilha em Degrau"],
+    abdomen:  ["Prancha","Abdominal Bicicleta","Elevação de Pernas","Mountain Climber"],
+  };
+
+  // Exercícios para treino sem equipamento (bodyweight)
+  const EX_CASA = {
+    peito:    ["Flexão de Peito","Flexão Inclinada (pés elevados)","Flexão com Palmas Juntas","Flexão Diamante"],
+    costas:   ["Superman","Remada Invertida (mesa)","Puxada em Barra de Porta"],
+    pernas:   ["Agachamento com Peso Corporal","Agachamento Sumô","Passada","Agachamento Búlgaro","Wall Sit"],
+    ombros:   ["Flexão Pike","Elevação Lateral Isométrica"],
+    biceps:   ["Rosca Isométrica com Parede","Puxada em Barra de Porta"],
+    triceps:  ["Mergulho em Cadeira (Tríceps Banco)","Flexão Diamante","Extensão de Tríceps no Chão"],
+    gluteos:  ["Elevação Pélvica","Hip Thrust no Chão","Passada","Agachamento Sumô","Donkey Kick"],
+    panturrilha: ["Panturrilha em Pé (unilateral)","Salto em Corda (ou simulado)"],
+    abdomen:  ["Prancha","Abdominal Bicicleta","Elevação de Pernas","Mountain Climber","Hollow Body"],
+  };
+
+  // Selecionar mapa de exercícios conforme equipamento
+  const ehHotel = cfg.equip === "hotel";
+  const ehCasa  = cfg.equip === "casa";
+  const exMap   = ehCasa ? EX_CASA : ehHotel ? EX_HOTEL : EX_CIENTIFICOS;
+
   // Mapa de divisão → grupos musculares
   const DIVISOES = {
+    "1": [
+      { nome: "Full Body", grupos: ["peito","costas","pernas","ombros","abdomen"] },
+    ],
     "2": [
       { nome: "A - Full Body Força",    grupos: ["peito","costas","pernas","ombros"] },
       { nome: "B - Full Body Volume",   grupos: ["pernas","biceps","triceps","gluteos","abdomen"] },
@@ -5196,9 +5370,10 @@ function gerarTreinoDoPrograma() {
     ],
   };
 
-  const objKey = cfg.obj.includes("força") ? "forca"
-               : cfg.obj.includes("defin") ? "definicao"
-               : cfg.obj.includes("resist") ? "resistencia"
+  const objKey = cfg.obj === "forca" || cfg.obj.includes("força") ? "forca"
+               : cfg.obj === "definicao" || cfg.obj.includes("defin") ? "definicao"
+               : cfg.obj === "resistencia" || cfg.obj.includes("resist") ? "resistencia"
+               : cfg.obj === "saude" ? "saude"
                : "hipertrofia";
   const objCfg = CONFIG_OBJ[objKey];
   const faseIdx = parseInt(cfg.fase || "1") - 1; // 0=MEV,1=MAV,2=MRV
@@ -5208,11 +5383,9 @@ function gerarTreinoDoPrograma() {
 
   const divisao = DIVISOES[String(cfg.freq)] || DIVISOES["3"];
 
-  // Filtrar por equipamento
-  const semEquip = cfg.equip === "casa";
+  // Para hotel/casa já usamos exMap dedicado; bloqueios são na filtragem normal
   const soHalteres = cfg.equip === "halteres";
   let exBloqueados = [];
-  if (semEquip) exBloqueados.push("Barra Fixa Pronada","Leg Press 45°","Cadeira Extensora","Mesa Flexora","Remada Baixa Cabo","Puxada Alta","Crossover Cabo","Elevação Lateral Cabo","Hip Thrust com Barra","Remada Curvada com Barra","Tríceps Pulley Corda","Agachamento Livre","Stiff");
   if (soHalteres) exBloqueados.push("Leg Press 45°","Cadeira Extensora","Mesa Flexora","Remada Baixa Cabo","Puxada Alta","Crossover Cabo","Elevação Lateral Cabo","Hip Thrust com Barra","Tríceps Pulley Corda");
 
   // Idoso (55+): bloquear exercícios de alto impacto articular
@@ -5241,15 +5414,20 @@ function gerarTreinoDoPrograma() {
 
   exBloqueados = [...new Set(exBloqueados)];
 
+  // Turista ou 1-dia → treino mais compacto (4-5 exercícios full-body)
+  const ehTurista = (cfg.persona === "turista") || cfg.freq === "1" || ehHotel || ehCasa;
+  const exPorGrupo = ehTurista ? 1 : 2;
+  const limiteExDia = ehTurista ? 5 : 6;
+
   const grupos = divisao.map(dia => {
-    // Pegar 2 exercícios por grupo muscular do dia
+    // Pegar exercícios por grupo muscular do dia
     const exsDia = [];
     dia.grupos.forEach(grupo => {
-      const lista = (EX_CIENTIFICOS[grupo] || []).filter(e => !exBloqueados.includes(e));
-      exsDia.push(...lista.slice(0, 2));
+      const lista = (exMap[grupo] || EX_CIENTIFICOS[grupo] || []).filter(e => !exBloqueados.includes(e));
+      exsDia.push(...lista.slice(0, exPorGrupo));
     });
-    // Limitar a 5-6 exercícios por dia
-    const exsFinal = exsDia.slice(0, 6);
+    // Limitar exercícios por dia
+    const exsFinal = exsDia.slice(0, limiteExDia);
 
     return {
       nome: dia.nome,
@@ -5268,14 +5446,30 @@ function gerarTreinoDoPrograma() {
 
   applyAIWorkout({ treino: { grupos } });
   const nivelLabel = {"iniciante":"🌱 Iniciante","intermediario":"💪 Intermediário","avancado":"🔥 Avançado"}[nivel] || nivel;
-  const msg = ehIdoso
-    ? `✅ Treino adaptado para 55+!\nExercícios seguros para suas articulações.`
-    : `✅ Treino gerado!\nNível: ${nivelLabel} · ${faseNome}`;
+  let msg;
+  if (ehIdoso)        msg = `✅ Treino adaptado para 55+!\nExercícios seguros para suas articulações.`;
+  else if (ehHotel)   msg = `✅ Treino de hotel gerado!\nExercícios adaptados para academia de viagem.`;
+  else if (ehCasa)    msg = `✅ Treino sem equipamento!\nBodyweight inteligente baseado em ciência.`;
+  else if (cfg.freq==="1") msg = `✅ Treino Full Body gerado!\nCompacto e eficiente para a sua semana.`;
+  else                msg = `✅ Treino gerado!\nNível: ${nivelLabel} · ${faseNome}`;
   dlgAlert(msg);
 }
 
 function openConfig() {
   document.getElementById("configWarning").style.display="none";
+  // Sync persona chip from saved config
+  const savedPersona = safeJSON("titanpro_config", {}).persona;
+  if (savedPersona) {
+    const chip = document.querySelector("#personaChips [data-val='" + savedPersona + "']");
+    if (chip) { document.querySelectorAll("#personaChips .config-chip").forEach(c=>c.classList.remove("active")); chip.classList.add("active"); }
+  }
+  // Sync nivel from session count
+  const hist = safeJSON(STORAGE.historyKey, []);
+  const autoNivel = hist.length < 3 ? "iniciante" : hist.length < 10 ? "intermediario" : "avancado";
+  const savedNivel = safeJSON("titanpro_config", {}).nivel;
+  const nivelToSet = savedNivel || autoNivel;
+  const nivelChip = document.querySelector("#nivelChips [data-val='" + nivelToSet + "']");
+  if (nivelChip) { document.querySelectorAll("#nivelChips .config-chip").forEach(c=>c.classList.remove("active")); nivelChip.classList.add("active"); }
   document.getElementById("configSheet").classList.add("show");
 }
 function closeConfig() { document.getElementById("configSheet").classList.remove("show"); }
@@ -5291,6 +5485,46 @@ document.getElementById("configSheet")?.addEventListener("click", function(e) { 
 /* ═══════════════════════════════════════════════════
    ONBOARDING
 ═══════════════════════════════════════════════════ */
+const _OB_PERSONA_DATA = {
+  turista: {
+    grad: "linear-gradient(135deg,#0ea5e9,#38bdf8)",
+    icon: `<svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M24 8l4 8h8l-6.5 5.5 2.5 8.5L24 25l-8 5 2.5-8.5L12 16h8z" fill="white" opacity=".9"/><path d="M10 38h28M24 38v4" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    title: "Você é um Físico Turista",
+    sub: "Treino em qualquer lugar, sem complicação. KRONOS gera treinos rápidos para hotel, casa ou ao ar livre — e adapta quando você estiver na academia de verdade."
+  },
+  iniciante: {
+    grad: "linear-gradient(135deg,#059669,#10b981)",
+    icon: `<svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M24 10C17.37 10 12 15.37 12 22V36l4-3 4 3 4-3 4 3 4-3V22c0-6.63-5.37-12-12-12z" fill="white" opacity=".9"/><circle cx="24" cy="22" r="4" fill="#059669"/></svg>`,
+    title: "Começo do caminho",
+    sub: "Perfeito. KRONOS vai te guiar do zero — explica cada exercício, ajusta a carga com segurança e garante que você evolua sem pressa e sem lesão."
+  },
+  dedicado: {
+    grad: "linear-gradient(135deg,#f97316,#fb923c)",
+    icon: `<svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="21" width="40" height="6" rx="3" fill="white" opacity="0.3"/><rect x="20" y="18" width="8" height="12" rx="2" fill="white"/><rect x="2" y="17" width="6" height="14" rx="3" fill="white"/><rect x="40" y="17" width="6" height="14" rx="3" fill="white"/></svg>`,
+    title: "Dedicação que vira resultado",
+    sub: "Tracking completo de volume, carga e PRs. KRONOS analisa seu histórico, aplica Dupla Progressão e mantém sua evolução sempre em alta — semana após semana."
+  },
+  atleta: {
+    grad: "linear-gradient(135deg,#dc2626,#ef4444)",
+    icon: `<svg width="48" height="48" viewBox="0 0 48 48" fill="none"><polygon points="24 4 29 18 44 18 32 27 37 42 24 33 11 42 16 27 4 18 19 18" fill="white" opacity=".95"/></svg>`,
+    title: "Nível de atleta",
+    sub: "Periodização por blocos, RPE avançado, análise de platô, pico de performance. KRONOS fala sua língua e não poupa nos detalhes técnicos."
+  }
+};
+function selectPersonaOb(el) {
+  document.querySelectorAll(".ob-persona-chip").forEach(c=>c.classList.remove("active"));
+  el.classList.add("active");
+  const val = el.dataset.val;
+  const cfg = safeJSON("titanpro_config", {});
+  cfg.persona = val;
+  localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+  const d = _OB_PERSONA_DATA[val] || _OB_PERSONA_DATA.dedicado;
+  const iconWrap = document.querySelector("#ob-step-2 .ob-icon-wrap");
+  if (iconWrap) { iconWrap.style.background = d.grad; iconWrap.innerHTML = d.icon; }
+  const t = document.getElementById("ob2Title"); if (t) t.textContent = d.title;
+  const s = document.getElementById("ob2Sub"); if (s) s.textContent = d.sub;
+  setTimeout(() => obNext(2), 350);
+}
 function obNext(step) {
   document.querySelectorAll(".ob-step").forEach(s=>s.classList.remove("active"));
   document.querySelectorAll(".ob-dot").forEach(d=>d.classList.remove("active"));
@@ -5300,10 +5534,16 @@ function obNext(step) {
   if (step===2) {
     btn.textContent="Começar Treino"; btn.style.background="var(--green)";
     btn.onclick=obFinish;
+  } else if (step===1) {
+    // Step 1 is persona selector — hide button, chips auto-advance
+    btn.style.opacity="0"; btn.style.pointerEvents="none";
+    return;
   } else {
     btn.textContent="Continuar"; btn.style.background="var(--accent)";
+    btn.style.opacity="1"; btn.style.pointerEvents="";
     btn.onclick=()=>obNext(step+1);
   }
+  btn.style.opacity="1"; btn.style.pointerEvents="";
 }
 function obFinish() {
   localStorage.setItem("titan_onboarded","1");
@@ -5390,6 +5630,41 @@ function buildTrainingContext() {
   const horaStr  = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
   const totalSessoes = safeJSON(STORAGE.historyKey, []).length;
 
+  const persona = cfg.persona || safeJSON("titanpro_config",{}).persona || "dedicado";
+  const personaInstructions = {
+    turista: `
+PERFIL DE ATLETA: FÍSICO TURISTA
+- Este usuário treina quando pode — viagens, hotéis, academia de rua, casa. Não tem rotina fixa.
+- Priorize praticidade: treinos curtos (20-30 min), exercícios que funcionam em qualquer lugar
+- Quando recomendar exercícios, sempre ofereça versões para diferentes cenários: "se tiver academia: X; se tiver só o quarto: Y"
+- Não force progressão rigorosa — ele pode ficar sem treinar por semanas e voltar. Trate isso como normal.
+- Motivação principal: se sentir bem, disposição, aparência — não máximo desempenho
+- Linguagem: descontraída, prática, sem jargão técnico. Nada de periodização complexa.
+- Quando perguntar sobre treino, first response deve ser: "onde você tá agora?" (academia/hotel/casa)`,
+    iniciante: `
+PERFIL DE ATLETA: INICIANTE
+- Este usuário está começando. Pode ter medo de errar, de se machucar, de parecer amador.
+- Explique o "porquê" de cada exercício/recomendação — não assuma que ele sabe o básico
+- Linguagem: acolhedora, sem julgamento, com paciência. Sem intimidar com volume técnico.
+- Celebre conquistas pequenas (primeira semana consistente, primeiro PR, etc.)
+- Alerte sobre riscos de sobrecarga de iniciante — o entusiasmo pode virar lesão
+- Progressão: simples e linear. Não complique com periodização avançada ainda.`,
+    atleta: `
+PERFIL DE ATLETA: ATLETA AVANÇADO
+- Este usuário entende periodização, RPE, deload, blocos de treino, frequência por músculo.
+- Fale como par: troca de conhecimento, não aula. Ele sabe do que está falando.
+- Use terminologia técnica sem explicar (MEV, MAV, MRV, RIR, 1RM, peaking, SRA...)
+- Análise deve ser densa: compare sémanana a semana, detecte fadiga acumulada, sugira ajustes de mesociclo
+- Não suavize o feedback — se o volume tá alto demais ou a técnica provavelmente tá caindo, diz direto
+- Foque em otimização marginal: onde estão os 5% de melhoria restantes?`,
+    dedicado: `
+PERFIL DE ATLETA: DEDICADO / CONSISTENTE
+- Treina regularmente, quer evoluir de verdade — massa, força ou estética
+- Acompanhe a progressão de carga, PRs e volume com atenção
+- Pode receber orientações técnicas moderadas: RPE, dupla progressão, deload
+- Linguagem: direta, motivada, profissional mas sem ser fria`
+  };
+
   return `Você é KRONOS — o coach pessoal de musculação e nutrição do app TITAN PRO. Seu nome vem do Titã do tempo e da progressão: você domina ciclos de treino, evolução e periodização. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Seja o capitão: direto, experiente, sem enrolação.
 
 ═══════════════════════════════════════
@@ -5410,11 +5685,13 @@ IDENTIDADE E PERSONALIDADE
 - Encorajador sem exagero — "bom progresso" é melhor que "INCRÍVEL!!"
 - Comentário casual ("cansei", "kkkk") = responda como amigo, não como coach analisando treino
 - Quando der uma recomendação baseada nos dados do app, mencione o dado que embasou — seja específico
+${personaInstructions[persona] || personaInstructions.dedicado}
 
 ═══════════════════════════════════════
 PERFIL DO USUÁRIO
 ═══════════════════════════════════════
 - Nome: ${cfg.nome || "não informado"}
+- Perfil de atleta: ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[persona] || persona}
 - Objetivo: ${obj}
 - Frequência planejada: ${freq}x por semana
 - Nível: ${nivel} (${totalSessoes} sessões registradas)
@@ -6232,6 +6509,9 @@ function updateHomeScreen() {
   // Card de perfil no topo da home
   const cfg = safeJSON("titanpro_config", {});
   const nome = cfg.nome || "ATLETA";
+  // Banner turista
+  const banner = document.getElementById("turistaBanner");
+  if (banner) banner.style.display = cfg.persona === "turista" ? "block" : "none";
   document.getElementById("homeCardAvatar").textContent = nome[0]?.toUpperCase() || "T";
   document.getElementById("homeCardNome").textContent   = nome.toUpperCase();
   document.getElementById("homeCardTreinos").textContent = hist.length;
