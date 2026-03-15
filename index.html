@@ -3786,7 +3786,7 @@ function getPrevMap() {
    GERAR PROTOCOLO
 ═══════════════════════════════════════════════════ */
 function gerarProtocolo() {
-  const f = document.getElementById("freq").value;
+  const f = document.getElementById("freq")?.value || "3";
   const nav = document.getElementById("nav");
   const cont = document.getElementById("container");
   nav.innerHTML = ""; cont.innerHTML = "";
@@ -3818,7 +3818,7 @@ function gerarProtocolo() {
    CARDS DE EXERCÍCIO
 ═══════════════════════════════════════════════════ */
 function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=null) {
-  const o = document.getElementById("obj").value;
+  const o = document.getElementById("obj")?.value || "hipertrofia";
   const meta = reps || (o==="forca" ? "3-5 Reps" : o==="hipertrofia" ? "8-12 Reps" : "15-20 Reps");
   const sets = series || (o==="forca" ? 5 : o==="definicao" ? 3 : 4);
   const id   = "ex-" + Math.random().toString(36).slice(2,9);
@@ -4350,8 +4350,8 @@ function getActiveIdx() {
   return p.indexOf(a) >= 0 ? p.indexOf(a) : 0;
 }
 function serializeCurrentState() {
-  const freq = document.getElementById("freq").value;
-  const obj  = document.getElementById("obj").value;
+  const freq = document.getElementById("freq")?.value || "3";
+  const obj  = document.getElementById("obj")?.value  || "hipertrofia";
   const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")).map((p,i) => ({ idx:i, label: p.textContent.replace("×","").trim() }));
   const sections = Array.from(document.querySelectorAll("#container .section")).map((sec, secIdx) => {
     const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx+1}`;
