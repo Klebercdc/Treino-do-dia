@@ -2175,11 +2175,6 @@
     <input id="loginPassword" class="login-input" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password" />
     <div id="forgotPassLink" onclick="authForgotPassword()">Esqueceu a Senha?</div>
     <button id="btnEmail" onclick="authSignInEmail()">Entrar</button>
-    <div class="login-divider"><span>ou</span></div>
-    <button class="login-social-btn" onclick="authSignInGoogle()">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Iniciar sessão com o Google
-    </button>
     <div id="loginToggle" onclick="toggleLoginMode()">Não tem conta? <span id="loginToggleLabel">Criar conta</span></div>
   </div>
 </div>
@@ -2567,7 +2562,13 @@
     Início
   </button>
   <div class="perfil-header">
-    <div class="perfil-avatar" id="perfilAvatar">K</div>
+    <div style="position:relative;display:inline-block;margin-bottom:12px" onclick="document.getElementById('avatarInput').click()" style="cursor:pointer">
+      <div class="perfil-avatar" id="perfilAvatar" style="margin-bottom:0;cursor:pointer;overflow:hidden"></div>
+      <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+    </div>
+    <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)" />
     <div class="perfil-name" id="perfilNome">ATLETA</div>
     <div class="perfil-badge" id="perfilNivel">Intermediário</div>
   </div>
@@ -6293,9 +6294,13 @@ function salvarMedidas() {
   localStorage.setItem("titanpro_config", JSON.stringify(data));
   const nome = data.nome || "ATLETA";
   document.getElementById("perfilNome").textContent = nome.toUpperCase();
-  document.getElementById("perfilAvatar").textContent = nome[0]?.toUpperCase() || "T";
+  const savedPhoto = localStorage.getItem('userAvatarPhoto');
+  if (!savedPhoto) document.getElementById("perfilAvatar").textContent = nome[0]?.toUpperCase() || "T";
   const hc = document.getElementById("homeCardNome");
-  if (hc) { hc.textContent = nome.toUpperCase(); document.getElementById("homeCardAvatar").textContent = nome[0]?.toUpperCase() || "T"; }
+  if (hc) {
+    hc.textContent = nome.toUpperCase();
+    if (!savedPhoto) document.getElementById("homeCardAvatar").textContent = nome[0]?.toUpperCase() || "T";
+  }
 }
 
 function updatePerfilScreen() {
@@ -6306,8 +6311,13 @@ function updatePerfilScreen() {
   // Dados básicos
   if (cfg.nome) {
     document.getElementById("perfilNome").textContent = cfg.nome.toUpperCase();
-    document.getElementById("perfilAvatar").textContent = cfg.nome[0]?.toUpperCase() || "T";
     document.getElementById("perfilNomeInput").value = cfg.nome;
+  }
+  const savedPhoto = localStorage.getItem('userAvatarPhoto');
+  if (savedPhoto) {
+    applyAvatarPhoto(savedPhoto);
+  } else if (cfg.nome) {
+    document.getElementById("perfilAvatar").textContent = cfg.nome[0]?.toUpperCase() || "T";
   }
   if (cfg.peso)   document.getElementById("perfilPeso").value   = cfg.peso;
   if (cfg.altura) document.getElementById("perfilAltura").value = cfg.altura;
@@ -7558,11 +7568,35 @@ function handleAuthClick() {
   });
 }
 
-function authSignInGoogle() {
-  _sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin + window.location.pathname }
-  });
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    localStorage.setItem('userAvatarPhoto', dataUrl);
+    applyAvatarPhoto(dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyAvatarPhoto(dataUrl) {
+  const perfilEl = document.getElementById('perfilAvatar');
+  const homeEl   = document.getElementById('homeCardAvatar');
+  const navEl    = document.getElementById('userAvatar');
+  if (perfilEl) {
+    perfilEl.style.backgroundImage = `url(${dataUrl})`;
+    perfilEl.style.backgroundSize  = 'cover';
+    perfilEl.style.backgroundPosition = 'center';
+    perfilEl.textContent = '';
+  }
+  if (homeEl) {
+    homeEl.style.backgroundImage = `url(${dataUrl})`;
+    homeEl.style.backgroundSize  = 'cover';
+    homeEl.style.backgroundPosition = 'center';
+    homeEl.textContent = '';
+  }
+  if (navEl) { navEl.src = dataUrl; navEl.style.display = 'block'; }
 }
 
 let _loginIsRegister = false;
