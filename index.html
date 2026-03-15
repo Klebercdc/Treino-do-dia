@@ -4671,6 +4671,7 @@ async function salvarTreino() {
     savePrevSnapshotFromState(st);
     prevMap = getPrevMap();
     clearAllInputsToGhost(); applyPrevGhostsToAll(); checkDeload();
+    checkPersonaEvolucao(hist);
     _sessionStart = null;
     updateStreakUI(); updateWorkoutProgress();
     showSummary(st, prs, dur);
@@ -4742,6 +4743,124 @@ function showToast(msg, type="info", duration=3500) {
     toast.style.opacity = "0";
     toast.style.transform = "translateX(-50%) translateY(10px)";
   }, duration);
+}
+
+/* ═══════════════════════════════════════════════════
+   EVOLUÇÃO AUTOMÁTICA DE PERSONA
+═══════════════════════════════════════════════════ */
+/**
+ * Analisa o histórico de treinos e calcula a persona "efetiva" real do usuário —
+ * separada da persona declarada no onboarding. Retorna um objeto com:
+ * - declarada:  o que o usuário disse que era
+ * - efetiva:    o que os dados mostram que ele é agora
+ * - evoluiu:    true se efetiva > declarada (upgrade de persona)
+ * - marcos:     lista de marcos já atingidos
+ * - proximoMarco: próximo objetivo para atingir
+ */
+function calcPersonaEfetiva(hist, cfg) {
+  const declarada = cfg.persona || "dedicado";
+  const n = hist.length;
+
+  // Consistência: sessões nos últimos 30 e 60 dias
+  const agora = Date.now();
+  const d30 = hist.filter(h => agora - new Date(h.createdAt).getTime() < 30*86400000).length;
+  const d60 = hist.filter(h => agora - new Date(h.createdAt).getTime() < 60*86400000).length;
+
+  // RPE médio geral (indica intensidade)
+  let rpeValues = [];
+  hist.slice(0, 20).forEach(h => {
+    (h.state?.sections||[]).forEach(s =>
+      (s.cards||[]).forEach(c =>
+        (c.values||[]).forEach(v => { if (v.rpe) rpeValues.push(Number(v.rpe)); })
+      )
+    );
+  });
+  const rpeMedia = rpeValues.length ? rpeValues.reduce((a,b)=>a+b,0)/rpeValues.length : 0;
+
+  // PRs detectados nas últimas sessões
+  const prMap = buildPRMap();
+  const totalExercicios = Object.keys(prMap).length;
+
+  // Calcular nível efetivo por pontuação
+  let pontos = 0;
+  pontos += Math.min(n, 60);                     // até 60 pts por sessões
+  pontos += d30 * 3;                             // consistência recente
+  pontos += d60 * 1.5;                           // consistência de médio prazo
+  pontos += totalExercicios * 2;                 // variedade de exercícios
+  pontos += (rpeMedia >= 7.5 ? 10 : 0);          // treina com intensidade
+
+  let efetiva;
+  if (declarada === "turista") {
+    // Turista evolui se começar a treinar regularmente
+    if (d30 >= 8 && n >= 16) efetiva = "dedicado";
+    else efetiva = "turista";
+  } else if (declarada === "iniciante") {
+    if (n >= 40 && d30 >= 6 && rpeMedia >= 7)     efetiva = "atleta";
+    else if (n >= 12 && d30 >= 4)                  efetiva = "dedicado";
+    else                                           efetiva = "iniciante";
+  } else if (declarada === "dedicado") {
+    if (n >= 60 && d30 >= 10 && rpeMedia >= 7.5 && totalExercicios >= 10) efetiva = "atleta";
+    else efetiva = "dedicado";
+  } else {
+    efetiva = declarada; // atleta já é topo
+  }
+
+  // Marcos atingidos
+  const marcos = [];
+  if (n >= 1)  marcos.push({ icon:"🏃", label:"Primeira sessão" });
+  if (n >= 5)  marcos.push({ icon:"🔥", label:"5 treinos" });
+  if (n >= 10) marcos.push({ icon:"💪", label:"10 treinos" });
+  if (n >= 20) marcos.push({ icon:"⚡", label:"20 treinos" });
+  if (n >= 50) marcos.push({ icon:"🏆", label:"50 treinos" });
+  if (calcStreak() >= 7)  marcos.push({ icon:"🗓️", label:"7 dias seguidos" });
+  if (calcStreak() >= 14) marcos.push({ icon:"🔆", label:"14 dias seguidos" });
+  if (totalExercicios >= 5) marcos.push({ icon:"📊", label:"5 exercícios trackeados" });
+
+  // Próximo marco
+  let proximoMarco = null;
+  const nivelOrder = ["iniciante","dedicado","atleta"];
+  const idxDeclarada = nivelOrder.indexOf(declarada);
+  const idxEfetiva   = nivelOrder.indexOf(efetiva);
+
+  if (declarada === "iniciante" && n < 12)
+    proximoMarco = { label:"Chegar a 12 sessões para virar Dedicado", falta: 12 - n };
+  else if (declarada === "dedicado" && n < 60)
+    proximoMarco = { label:"Chegar a 60 sessões para atingir nível Atleta", falta: 60 - n };
+  else if (declarada === "turista" && d30 < 8)
+    proximoMarco = { label:`Mais ${8-d30} treinos esse mês para destravar "Dedicado"`, falta: 8 - d30 };
+
+  return { declarada, efetiva, evoluiu: efetiva !== declarada && idxEfetiva > idxDeclarada, marcos, proximoMarco, n, d30, rpeMedia };
+}
+
+/**
+ * Checa evolução de persona após salvar sessão.
+ * Se o usuário subiu de persona, mostra toast especial e persiste a nova persona.
+ */
+function checkPersonaEvolucao(hist) {
+  const cfg = safeJSON("titanpro_config", {});
+  if (!cfg.persona || cfg.persona === "atleta") return; // atleta já é o topo
+  const ev = calcPersonaEfetiva(hist, cfg);
+  if (!ev.evoluiu) return;
+  // Só notificar uma vez por upgrade (guardar last notified)
+  const lastKey = "titanpro_persona_upgrade_" + ev.declarada;
+  if (localStorage.getItem(lastKey)) return;
+  localStorage.setItem(lastKey, "1");
+  const labels = { dedicado: "💪 Dedicado", atleta: "🔥 Atleta" };
+  const novaLabel = labels[ev.efetiva] || ev.efetiva;
+  // Toast de evolução com destaque especial
+  const toastMsg = `🎉 Você evoluiu para ${novaLabel}!\nKRONOS vai elevar o nível das recomendações.`;
+  setTimeout(() => showToast(toastMsg, "success", 6000), 2000);
+  // Pergunta se quer atualizar o perfil
+  setTimeout(async () => {
+    const ok = await dlgConfirm(`Seus dados mostram que você já passou do nível "${ev.declarada}" — quer atualizar seu perfil para ${novaLabel}?`);
+    if (ok) {
+      cfg.persona = ev.efetiva;
+      localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+      // Atualizar chip na config sheet
+      const chip = document.querySelector("#personaChips [data-val='" + ev.efetiva + "']");
+      if (chip) { document.querySelectorAll("#personaChips .config-chip").forEach(c=>c.classList.remove("active")); chip.classList.add("active"); }
+    }
+  }, 3500);
 }
 
 function checkDeload() {
@@ -5630,7 +5749,12 @@ function buildTrainingContext() {
   const horaStr  = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
   const totalSessoes = safeJSON(STORAGE.historyKey, []).length;
 
-  const persona = cfg.persona || safeJSON("titanpro_config",{}).persona || "dedicado";
+  const persona = cfg.persona || "dedicado";
+  // Calcular persona efetiva baseada nos dados reais
+  const _evData = calcPersonaEfetiva(hist, cfg);
+  const personaEfetiva = _evData.efetiva;
+  const evoluiuSilencioso = _evData.evoluiu && !localStorage.getItem("titanpro_persona_upgrade_" + _evData.declarada);
+  const proximoMarcoStr = _evData.proximoMarco ? _evData.proximoMarco.label : null;
   const personaInstructions = {
     turista: `
 PERFIL DE ATLETA: FÍSICO TURISTA
@@ -5685,13 +5809,18 @@ IDENTIDADE E PERSONALIDADE
 - Encorajador sem exagero — "bom progresso" é melhor que "INCRÍVEL!!"
 - Comentário casual ("cansei", "kkkk") = responda como amigo, não como coach analisando treino
 - Quando der uma recomendação baseada nos dados do app, mencione o dado que embasou — seja específico
-${personaInstructions[persona] || personaInstructions.dedicado}
+- EVOLUÇÃO DE PERSONA: se "Perfil efetivo" diferir do "Perfil declarado", mencione naturalmente — ex: "pelos seus dados você já tá além de iniciante", sem fazer alarmismo
+- Se o usuário perguntar sobre seu nível, use o perfil efetivo calculado, não o declarado
+${personaInstructions[personaEfetiva] || personaInstructions[persona] || personaInstructions.dedicado}
 
 ═══════════════════════════════════════
 PERFIL DO USUÁRIO
 ═══════════════════════════════════════
 - Nome: ${cfg.nome || "não informado"}
-- Perfil de atleta: ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[persona] || persona}
+- Perfil declarado: ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[persona] || persona}
+- Perfil efetivo (calculado pelos dados): ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[personaEfetiva] || personaEfetiva}${personaEfetiva !== persona ? ` ← ATENÇÃO: dados indicam evolução acima do perfil declarado` : ""}
+- Sessões nos últimos 30 dias: ${_evData.d30} | RPE médio: ${_evData.rpeMedia ? _evData.rpeMedia.toFixed(1) : "sem dados"}
+${proximoMarcoStr ? `- Próximo marco: ${proximoMarcoStr}` : ""}
 - Objetivo: ${obj}
 - Frequência planejada: ${freq}x por semana
 - Nível: ${nivel} (${totalSessoes} sessões registradas)
@@ -5701,6 +5830,7 @@ PERFIL DO USUÁRIO
 - Streak: ${streak} dias consecutivos
 - Horário atual: ${horaStr} (${saudacao}) — NÃO cumprimente com horário errado
 - Volume médio recente: ${tendencia}
+- Marcos conquistados: ${_evData.marcos.map(m=>m.icon+m.label).join(" | ") || "nenhum ainda"}
 
 ═══════════════════════════════════════
 RECORDES PESSOAIS (1RM estimado por exercício)
