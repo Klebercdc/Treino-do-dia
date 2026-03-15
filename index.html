@@ -1743,6 +1743,31 @@
     #splashLogo.show {
       opacity: 1;
     }
+    #splashTap {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 1;
+      cursor: pointer;
+    }
+    #splashTap .tap-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(249,115,22,0.18);
+      border: 2px solid rgba(249,115,22,0.5);
+      display: flex; align-items: center; justify-content: center;
+      animation: tapPulse 1.5s ease-in-out infinite;
+    }
+    #splashTap .tap-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 0.05em;
+    }
+    @keyframes tapPulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
 
     /* ═══════════════════════════════════════════════════
        LOGIN SCREEN — TELA 1 (LANDING)
@@ -1946,23 +1971,26 @@
 
 <!-- ═══ SPLASH SCREEN ═══ -->
 <div id="splashScreen">
-  <video id="splashLogo" src="splash.mp4" autoplay muted playsinline webkit-playsinline loop preload="auto" disablepictureinpicture></video>
+  <video id="splashLogo" src="splash.mp4" autoplay muted playsinline webkit-playsinline preload="auto" disablepictureinpicture x-webkit-airplay="deny"></video>
+  <div id="splashTap" style="display:none" onclick="splashTapPlay()">
+    <div class="tap-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+    </div>
+    <div class="tap-label">Toque para começar</div>
+  </div>
 </div>
 
 <!-- ═══ LOGIN SCREEN (TELA 1 — LANDING) ═══ -->
 <div id="loginScreen">
   <div id="loginBg"></div>
-  <div id="loginTop">
-    <div id="loginTitle"><span>TITAN</span> PRO</div>
-    <div id="loginSub">Seu diário de treino inteligente.<br>Registre, evolua e supere seus limites.</div>
-  </div>
+  <div id="loginTop"></div>
   <div id="loginBottom">
+    <div id="loginRegisterLink" onclick="showEmailLoginRegister()">Não tem conta? <span>Criar conta</span></div>
     <button id="btnGoogle" onclick="authSignInGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continuar com Google
     </button>
     <button id="btnShowEmail" onclick="showEmailLogin()">Entrar com e-mail</button>
-    <div id="loginRegisterLink" onclick="showEmailLoginRegister()">Não tem conta? <span>Criar conta</span></div>
   </div>
 </div>
 
@@ -6896,23 +6924,46 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Splash: exibe vídeo e força autoplay
+// Splash: exibe vídeo e força autoplay; fallback "toque" para iOS
 (function() {
   const logo = document.getElementById('splashLogo');
+  const tapBtn = document.getElementById('splashTap');
   if (!logo) return;
+
   function tryPlay() {
+    logo.muted = true;
     const p = logo.play();
-    if (p !== undefined) p.catch(() => {});
+    if (p !== undefined) {
+      p.then(() => {
+        logo.classList.add('show');
+        if (tapBtn) tapBtn.style.display = 'none';
+      }).catch(() => {
+        // autoplay bloqueado pelo browser — mostrar botão tap
+        logo.classList.add('show');
+        if (tapBtn) tapBtn.style.display = 'flex';
+      });
+    } else {
+      logo.classList.add('show');
+    }
   }
-  logo.addEventListener('canplay', function() {
-    logo.classList.add('show');
+
+  if (logo.readyState >= 2) {
     tryPlay();
-  });
-  setTimeout(() => {
-    logo.classList.add('show');
-    tryPlay();
-  }, 100);
+  } else {
+    logo.addEventListener('canplay', tryPlay, { once: true });
+    setTimeout(tryPlay, 300);
+  }
 })();
+
+function splashTapPlay() {
+  const logo = document.getElementById('splashLogo');
+  const tapBtn = document.getElementById('splashTap');
+  if (!logo) return;
+  logo.muted = true;
+  logo.play().then(() => {
+    if (tapBtn) tapBtn.style.display = 'none';
+  }).catch(() => {});
+}
 
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
