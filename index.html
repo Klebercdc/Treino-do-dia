@@ -1971,7 +1971,7 @@
 
 <!-- ═══ SPLASH SCREEN ═══ -->
 <div id="splashScreen">
-  <img id="splashLogo" src="splash.gif">
+  <video id="splashLogo" src="splash.mp4" autoplay muted playsinline webkit-playsinline preload="auto" loop></video>
   <div id="splashTap" style="display:none" onclick="splashTapPlay()">
     <div class="tap-icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
@@ -6914,14 +6914,44 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Splash: GIF autoplays nativamente em todos os browsers/iOS
+// Splash: força autoplay do vídeo com fallback tap para iOS
 (function() {
   const logo = document.getElementById('splashLogo');
+  const tapBtn = document.getElementById('splashTap');
   if (!logo) return;
-  logo.classList.add('show');
+
+  logo.muted = true;
+
+  function tryPlay() {
+    logo.muted = true;
+    const p = logo.play();
+    if (p !== undefined) {
+      p.then(() => {
+        logo.classList.add('show');
+        if (tapBtn) tapBtn.style.display = 'none';
+      }).catch(() => {
+        logo.classList.add('show');
+        if (tapBtn) tapBtn.style.display = 'flex';
+      });
+    } else {
+      logo.classList.add('show');
+    }
+  }
+
+  logo.addEventListener('loadeddata', tryPlay, { once: true });
+  logo.addEventListener('canplay', tryPlay, { once: true });
+  setTimeout(tryPlay, 500);
 })();
 
-function splashTapPlay() {}
+function splashTapPlay() {
+  const logo = document.getElementById('splashLogo');
+  const tapBtn = document.getElementById('splashTap');
+  if (!logo) return;
+  logo.muted = true;
+  logo.play().then(() => {
+    if (tapBtn) tapBtn.style.display = 'none';
+  }).catch(() => {});
+}
 
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
