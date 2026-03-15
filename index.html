@@ -1965,6 +1965,107 @@
       color: #f87171; font-size: 0.82rem; text-align: center;
       min-height: 18px;
     }
+
+    /* ── TREINO DASHBOARD ─────────────────────── */
+    #treinoDash { padding: 0 16px 8px; }
+    .tdash-quick {
+      width: 100%; background: var(--bg2);
+      border: 1.5px dashed var(--border); border-radius: 14px;
+      padding: 15px 18px; display: flex; align-items: center; gap: 12px;
+      cursor: pointer; font-size: 0.9rem; font-weight: 700; color: var(--text);
+      margin-bottom: 20px; -webkit-tap-highlight-color: transparent;
+      transition: background .15s, border-color .15s; text-align: left;
+    }
+    .tdash-quick:active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .tdash-section {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: .14em;
+      text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 10px;
+    }
+    body.light-mode .tdash-section { color: rgba(0,0,0,0.4); }
+    .tdash-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .tdash-mode-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 14px 14px; cursor: pointer;
+      position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent;
+      transition: transform .12s;
+    }
+    .tdash-mode-card:active { transform: scale(.96); }
+    .tdash-mode-card.ia-card {
+      border-color: rgba(249,115,22,0.35);
+      background: linear-gradient(145deg, var(--card) 55%, rgba(249,115,22,0.07));
+    }
+    .tdash-mode-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    }
+    .tdash-mode-name {
+      font-family: var(--display); font-size: 0.95rem; font-weight: 700;
+      color: var(--text); margin-bottom: 4px; letter-spacing: .03em;
+    }
+    .tdash-mode-desc { font-size: 0.63rem; color: rgba(255,255,255,0.5); line-height: 1.4; margin-bottom: 12px; }
+    body.light-mode .tdash-mode-desc { color: rgba(0,0,0,0.45); }
+    .tdash-mode-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.7rem; font-weight: 800; padding: 7px 12px;
+      border-radius: 9px; border: none; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; letter-spacing: .04em;
+    }
+    .tdash-badge {
+      position: absolute; top: 10px; right: 10px; font-size: 0.52rem;
+      font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+      padding: 3px 7px; border-radius: 100px;
+    }
+    .tdash-prog-label {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: .14em;
+      text-transform: uppercase; color: rgba(255,255,255,0.4);
+      padding: 0 0 10px;
+    }
+    body.light-mode .tdash-prog-label { color: rgba(0,0,0,0.4); }
+
+    /* ── INSTRUÇÕES ───────────────────────────── */
+    .instr-hero { text-align: center; padding: 8px 0 20px; }
+    .instr-hero-icon {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: var(--accent-dim); border: 1px solid rgba(249,115,22,0.3);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+    }
+    .instr-hero-title { font-family: var(--display); font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .instr-hero-sub { font-size: 0.78rem; color: rgba(255,255,255,0.55); line-height: 1.5; }
+    body.light-mode .instr-hero-sub { color: rgba(0,0,0,0.45); }
+    .instr-section { margin-bottom: 24px; }
+    .instr-section-title {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+    }
+    .instr-step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+    .instr-step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent-dim); border: 1px solid rgba(249,115,22,0.3);
+      color: var(--accent); font-size: 0.75rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .instr-step-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .instr-step-desc { font-size: 0.72rem; color: rgba(255,255,255,0.55); line-height: 1.5; }
+    body.light-mode .instr-step-desc { color: rgba(0,0,0,0.45); }
+    .instr-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .instr-feat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 12px;
+    }
+    .instr-feat-icon { font-size: 1.4rem; margin-bottom: 8px; }
+    .instr-feat-title { font-size: 0.78rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .instr-feat-desc { font-size: 0.62rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
+    body.light-mode .instr-feat-desc { color: rgba(0,0,0,0.45); }
+    .instr-tip {
+      display: flex; gap: 10px; align-items: flex-start;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; margin-bottom: 8px;
+    }
+    .instr-tip-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .instr-tip-text { font-size: 0.72rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+    body.light-mode .instr-tip-text { color: rgba(0,0,0,0.5); }
+    .instr-tip-text strong { color: var(--text); }
     </style>
 
 </head>
@@ -2356,6 +2457,15 @@
       <div>
         <div class="home-quick-name">Histórico</div>
         <div class="home-quick-sub">Sessões anteriores</div>
+      </div>
+    </div>
+    <div class="home-quick-card" onclick="openInstrucoes()" style="grid-column:1/-1">
+      <div class="home-quick-icon" style="background:rgba(249,115,22,0.15)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2.5"/></svg>
+      </div>
+      <div>
+        <div class="home-quick-name">Como Usar</div>
+        <div class="home-quick-sub">Guia completo e vantagens do app</div>
       </div>
     </div>
   </div>
@@ -2873,18 +2983,65 @@
 
 <!-- Tabs -->
 
-<div id="treinoHeader" style="display:none;padding:12px 16px 0;align-items:center;gap:12px">
+<!-- Treino Header -->
+<div id="treinoHeader" style="display:none;padding:12px 16px 0;align-items:center;justify-content:space-between">
   <button class="btn-voltar" style="padding:0" onclick="navTo('inicio');openHome()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
     Início
   </button>
-</div>
-<div id="treinoHeader" style="display:none;padding:12px 16px 0;align-items:center">
-  <button class="btn-voltar" style="padding:0" onclick="navTo('inicio');openHome()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Início
+  <button onclick="openInstrucoes()" style="width:34px;height:34px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;color:var(--text-2)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2.5"/></svg>
   </button>
 </div>
+
+<!-- Treino Dashboard -->
+<div id="treinoDash" style="display:none;padding:14px 16px 8px">
+
+  <!-- Quick start vazio -->
+  <button class="tdash-quick" onclick="abrirLibParaNovo()">
+    <div style="width:36px;height:36px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    Iniciar Treino Vazio
+  </button>
+
+  <!-- Como treinar -->
+  <div class="tdash-section">Como Treinar</div>
+  <div class="tdash-mode-grid">
+
+    <!-- Manual -->
+    <div class="tdash-mode-card" onclick="iniciarModoManual()">
+      <div class="tdash-mode-icon" style="background:rgba(59,130,246,0.15)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
+      </div>
+      <div class="tdash-mode-name">Manual</div>
+      <div class="tdash-mode-desc">Você escolhe os exercícios um a um com controle total</div>
+      <button class="tdash-mode-btn" style="background:rgba(59,130,246,0.15);color:var(--blue)" onclick="iniciarModoManual();event.stopPropagation()">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Iniciar
+      </button>
+    </div>
+
+    <!-- IA -->
+    <div class="tdash-mode-card ia-card" onclick="iniciarModoIA()">
+      <div class="tdash-badge" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(249,115,22,0.3)">IA</div>
+      <div class="tdash-mode-icon" style="background:var(--accent-dim)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div class="tdash-mode-name">Com IA</div>
+      <div class="tdash-mode-desc">IA monta o treino ideal baseado no seu perfil</div>
+      <button class="tdash-mode-btn" style="background:var(--accent-dim);color:var(--accent)" onclick="iniciarModoIA();event.stopPropagation()">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Gerar
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Label acima das tabs de programa -->
+  <div class="tdash-section">Meus Programas</div>
+</div>
+
 <div class="nav-pills" id="nav"></div>
 
 <!-- Exercises -->
@@ -2895,6 +3052,146 @@
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   Adicionar Exercício
 </button>
+
+<!-- ══════════════════════════════════════════
+     INSTRUÇÕES DE USO — BOTTOM SHEET
+══════════════════════════════════════════ -->
+<div id="instrucSheet" class="bottom-sheet" onclick="if(event.target===this)closeInstrucoes()" style="display:none">
+  <div class="bs-box" style="max-height:88vh;overflow-y:auto">
+    <div class="bs-handle"></div>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-family:var(--display);font-size:1.2rem;color:var(--text);letter-spacing:.03em">Como Usar o App</div>
+        <div style="font-size:0.72rem;color:rgba(255,255,255,0.5);margin-top:2px">Guia completo para resultados reais</div>
+      </div>
+      <button onclick="closeInstrucoes()" style="width:34px;height:34px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Passos de configuração inicial -->
+    <div class="instr-section">
+      <div class="instr-section-title">Configuração Inicial</div>
+
+      <div class="instr-step">
+        <div class="instr-step-num">1</div>
+        <div>
+          <div class="instr-step-title">Configure seu Perfil</div>
+          <div class="instr-step-desc">Vá em <strong>Perfil</strong> e informe seu peso, altura, idade e nível de treino. Isso personaliza cálculos de volume e sugestões da IA.</div>
+        </div>
+      </div>
+
+      <div class="instr-step">
+        <div class="instr-step-num">2</div>
+        <div>
+          <div class="instr-step-title">Monte seu Programa</div>
+          <div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Clique em <em>Gerar Meu Treino</em> para a IA criar uma divisão completa.</div>
+        </div>
+      </div>
+
+      <div class="instr-step">
+        <div class="instr-step-num">3</div>
+        <div>
+          <div class="instr-step-title">Escolha o Modo de Treino</div>
+          <div class="instr-step-desc">Na aba <strong>Treino</strong>, use o modo <em>Manual</em> para adicionar exercícios livremente, ou <em>Com IA</em> para gerar o treino do dia automaticamente.</div>
+        </div>
+      </div>
+
+      <div class="instr-step">
+        <div class="instr-step-num">4</div>
+        <div>
+          <div class="instr-step-title">Registre Séries e Reps</div>
+          <div class="instr-step-desc">Toque na célula de cada série para marcar como feita. O app salva o histórico e mostra <strong>fantasmas</strong> com os valores da última sessão como referência.</div>
+        </div>
+      </div>
+
+      <div class="instr-step">
+        <div class="instr-step-num">5</div>
+        <div>
+          <div class="instr-step-title">Salve o Treino</div>
+          <div class="instr-step-desc">Ao terminar, clique no botão <strong>✓ Salvar</strong> no rodapé. O app detecta PRs, calcula volume total e atualiza sua sequência.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vantagens / Features -->
+    <div class="instr-section">
+      <div class="instr-section-title">O que o App Oferece</div>
+      <div class="instr-feat-grid">
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">⚡</div>
+          <div class="instr-feat-title">Treino com IA</div>
+          <div class="instr-feat-desc">Geração automática de treinos personalizados por objetivo e nível</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">🏆</div>
+          <div class="instr-feat-title">Detecção de PRs</div>
+          <div class="instr-feat-desc">Identifica novos recordes pessoais automaticamente a cada treino</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">👻</div>
+          <div class="instr-feat-title">Histórico Fantasma</div>
+          <div class="instr-feat-desc">Exibe os valores da última sessão como guia durante o treino</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">📊</div>
+          <div class="instr-feat-title">Estatísticas</div>
+          <div class="instr-feat-desc">Gráficos de evolução por exercício e volume semanal acumulado</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">🥗</div>
+          <div class="instr-feat-title">Plano Alimentar</div>
+          <div class="instr-feat-desc">IA gera dieta personalizada com base no seu TMB e objetivo</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">📅</div>
+          <div class="instr-feat-title">Calendário</div>
+          <div class="instr-feat-desc">Histórico completo de sessões com volume e duração por dia</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">⏱️</div>
+          <div class="instr-feat-title">Timer de Descanso</div>
+          <div class="instr-feat-desc">Cronômetro automático entre séries com alerta de retorno</div>
+        </div>
+        <div class="instr-feat-card">
+          <div class="instr-feat-icon">📏</div>
+          <div class="instr-feat-title">Medições Corporais</div>
+          <div class="instr-feat-desc">Registro de peso, gordura e medidas com evolução em gráfico</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dicas rápidas -->
+    <div class="instr-section">
+      <div class="instr-section-title">Dicas Rápidas</div>
+
+      <div class="instr-tip">
+        <div class="instr-tip-icon">💡</div>
+        <div class="instr-tip-text"><strong>Segure uma aba de treino</strong> para deletá-la ou reordenar o programa.</div>
+      </div>
+      <div class="instr-tip">
+        <div class="instr-tip-icon">💡</div>
+        <div class="instr-tip-text"><strong>RPE</strong> é o indicador de esforço percebido (1–10). Use para regular a intensidade sem depender só do peso.</div>
+      </div>
+      <div class="instr-tip">
+        <div class="instr-tip-icon">💡</div>
+        <div class="instr-tip-text"><strong>Deload</strong>: o app avisa quando você treinou semanas seguidas sem descanso. Respeite o aviso para evitar overtraining.</div>
+      </div>
+      <div class="instr-tip">
+        <div class="instr-tip-icon">💡</div>
+        <div class="instr-tip-text"><strong>TITAN COACH</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div>
+      </div>
+    </div>
+
+    <!-- CTA fechar -->
+    <button onclick="closeInstrucoes()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:.04em;-webkit-tap-highlight-color:transparent">
+      Entendido, vamos treinar!
+    </button>
+    <div style="height:8px"></div>
+  </div>
+</div>
 
 <!-- Footer -->
 
@@ -5096,10 +5393,32 @@ ENCAMINHAMENTO PROFISSIONAL:
 
 function navTo(tab) {
   const th = document.getElementById("treinoHeader");
+  const td = document.getElementById("treinoDash");
   if (th) th.style.display = tab === "treino" ? "flex" : "none";
+  if (td) td.style.display = tab === "treino" ? "block" : "none";
   document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('nav-' + tab);
   if (el) el.classList.add('active');
+}
+
+function iniciarModoManual() {
+  abrirLibParaNovo();
+}
+
+function iniciarModoIA() {
+  gerarTreinoDoPrograma();
+}
+
+function openInstrucoes() {
+  const s = document.getElementById("instrucSheet");
+  s.style.display = "flex";
+  requestAnimationFrame(() => s.classList.add("show"));
+}
+
+function closeInstrucoes() {
+  const s = document.getElementById("instrucSheet");
+  s.classList.remove("show");
+  setTimeout(() => { s.style.display = "none"; }, 300);
 }
 
 
