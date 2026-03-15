@@ -804,23 +804,6 @@
     .d-btn-blue { background: var(--blue); color: #fff; }
     .d-btn-purple { background: rgba(168,85,247,0.1); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
 
-    #csvTextarea {
-      width: 100%; height: 160px; padding: 12px;
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: var(--r-sm); color: var(--text);
-      font-family: var(--mono); font-size: 0.88rem;
-      resize: none; margin-bottom: 12px;
-      outline: none; box-sizing: border-box;
-      transition: border-color .2s;
-    }
-    #csvTextarea:focus { border-color: var(--accent); }
-    .csv-info {
-      font-size: 0.88rem; color: var(--text-2); margin-bottom: 12px;
-      padding: 10px 12px; background: var(--blue-bg);
-      border-left: 3px solid var(--blue);
-      border-radius: 0 var(--r-sm) var(--r-sm) 0; line-height: 1.5;
-    }
-
     #histList { max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm); }
     .hist-item { border-bottom: 1px solid var(--border); }
     .hist-header {
@@ -835,11 +818,6 @@
     .hist-ex-name { display: block; color: var(--accent); font-weight: 700; font-size: 0.94rem; margin-bottom: 2px; }
     .hist-actions { display: flex; gap: 8px; margin-top: 14px; }
     .hist-actions button { flex: 1; }
-
-    #tplList { max-height: 190px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm); margin-top: 10px; }
-    .tpl-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; font-weight: 600; color: var(--text); }
-    .tpl-item:active { background: var(--accent-dim); }
-    .tpl-item small { display: block; margin-top: 2px; color: rgba(255,255,255,0.7); font-size: 0.85rem; }
 
     /* ══════════════════════════════════════════
        ANIMAÇÕES
@@ -920,7 +898,6 @@
     body.light-mode .cm-box { background: #fff; }
     body.light-mode .d-btn-secondary { background: #ebebeb; color: #333; }
     body.light-mode .modal-input { background: #f0f0f0; color: #111; }
-    body.light-mode #csvTextarea { background: #f0f0f0; color: #111; }
     body.light-mode .hist-header { color: #111; }
     body.light-mode .hist-header:active { background: #f0f0f0; }
     body.light-mode .hist-details { background: #f5f5f5; }
@@ -2029,34 +2006,6 @@
       text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 10px;
     }
     body.light-mode .tdash-section { color: rgba(0,0,0,0.4); }
-    .tdash-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .tdash-mode-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 18px 14px 14px; cursor: pointer;
-      position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent;
-      transition: transform .12s;
-    }
-    .tdash-mode-card:active { transform: scale(.96); }
-    .tdash-mode-card.ia-card {
-      border-color: rgba(249,115,22,0.35);
-      background: linear-gradient(145deg, var(--card) 55%, rgba(249,115,22,0.07));
-    }
-    .tdash-mode-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
-    }
-    .tdash-mode-name {
-      font-family: var(--display); font-size: 0.95rem; font-weight: 700;
-      color: var(--text); margin-bottom: 4px; letter-spacing: .03em;
-    }
-    .tdash-mode-desc { font-size: 0.63rem; color: rgba(255,255,255,0.5); line-height: 1.4; margin-bottom: 12px; }
-    body.light-mode .tdash-mode-desc { color: rgba(0,0,0,0.45); }
-    .tdash-mode-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 0.7rem; font-weight: 800; padding: 7px 12px;
-      border-radius: 9px; border: none; cursor: pointer;
-      -webkit-tap-highlight-color: transparent; letter-spacing: .04em;
-    }
     .tdash-badge {
       position: absolute; top: 10px; right: 10px; font-size: 0.52rem;
       font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -4154,37 +4103,6 @@
   <button class="d-btn d-btn-secondary" onclick="document.getElementById('modalLib').close()" style="width:100%;margin-top:14px">Fechar</button>
 </dialog>
 
-<!-- Modal: Arquivos -->
-
-<dialog id="modalCSV">
-  <div class="dialog-handle"></div>
-  <div class="dialog-title">Importar Treino</div>
-  <div class="csv-info">
-    <strong>PDF:</strong> Extraia exercícios da ficha com "Ler PDF".<br/>
-    <strong>CSV:</strong> Cole no formato <code>TREINO,EXERCÍCIO,SÉRIES,REPS</code>
-  </div>
-  <textarea id="csvTextarea" placeholder="Texto da ficha aparecerá aqui..."></textarea>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
-    <label style="display:flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;border-radius:8px;padding:11px;cursor:pointer;font-family:var(--font);font-weight:700;font-size:0.82rem;text-align:center;box-shadow:0 2px 6px rgba(37,99,235,0.3);user-select:none">
-      Ler PDF
-      <input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)"/>
-    </label>
-    <div onclick="importarCSV()" style="display:flex;align-items:center;justify-content:center;background:#16a34a;color:#fff;border-radius:8px;padding:11px;cursor:pointer;font-family:var(--font);font-weight:700;font-size:0.82rem;text-align:center;user-select:none">Importar</div>
-    <div onclick="salvarModeloCSV()" style="display:flex;align-items:center;justify-content:center;background:#fff;color:#374151;border:1.5px solid #c8d3e6;border-radius:8px;padding:11px;cursor:pointer;font-family:var(--font);font-weight:600;font-size:0.82rem;text-align:center;user-select:none">Salvar CSV</div>
-    <div onclick="salvarTreinoAtualComoModelo()" style="display:flex;align-items:center;justify-content:center;background:#f3f0ff;color:#6d28d9;border:1.5px solid #ddd6fe;border-radius:8px;padding:11px;cursor:pointer;font-family:var(--font);font-weight:600;font-size:0.82rem;text-align:center;user-select:none">Treino Atual</div>
-    <div onclick="mostrarModelosCSV()" style="display:flex;align-items:center;justify-content:center;background:#fff;color:#374151;border:1.5px solid #c8d3e6;border-radius:8px;padding:11px;cursor:pointer;font-family:var(--font);font-weight:600;font-size:0.82rem;text-align:center;user-select:none">Ver Modelos</div>
-    <div onclick="document.getElementById('modalCSV').close()" style="display:flex;align-items:center;justify-content:center;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:11px;cursor:pointer;font-family:var(--font);font-weight:600;font-size:0.82rem;text-align:center;user-select:none">Fechar</div>
-  </div>
-  <div id="tplArea" style="display:none;margin-top:14px">
-    <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Modelos Salvos</div>
-    <div id="tplList"></div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <div onclick="limparModelosCSV()" style="flex:1;padding:11px;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;text-align:center;cursor:pointer;font-family:var(--font);font-weight:600;font-size:0.82rem">Limpar</div>
-      <div onclick="hideModelosCSV()" style="flex:1;padding:11px;background:#16a34a;color:#fff;border-radius:8px;text-align:center;cursor:pointer;font-family:var(--font);font-weight:700;font-size:0.82rem">OK</div>
-    </div>
-  </div>
-</dialog>
-
 <!-- Modal: Histórico -->
 
 <dialog id="modalHIST">
@@ -4274,7 +4192,6 @@ const TREINOS_PRONTOS = {
 const STORAGE = Object.freeze({
   draftKey:   "titanpro_draft_v2",
   historyKey: "titanpro_history_v2",
-  csvTplKey:  "titanpro_csv_templates_v1",
   prevKey:    "titanpro_prev_v1",
   maxHistory: 80, maxTemplates: 20,
 });
@@ -4852,83 +4769,6 @@ function adicionarSerie(btn) {
 }
 
 /* ═══════════════════════════════════════════════════
-   ALIASES E UTILITÁRIOS DE IMPORTAÇÃO
-═══════════════════════════════════════════════════ */
-async function extrairTextoPDF(input) {
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const btnLabel = input.parentElement;
-  btnLabel.innerText = "Lendo...";
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-    let fullText = "TREINO,EXERCÍCIO,SÉRIES,REPS\n";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(" ");
-      const linhas = pageText.split(/ {2,}|\n/).filter(l => l.trim().length > 3);
-      linhas.forEach(linha => {
-        if (/[a-zA-Z]/.test(linha)) fullText += `Treino A,${linha.trim().replace(/,/g,"")},4,10-12\n`;
-      });
-    }
-    document.getElementById("csvTextarea").value = fullText;
-    alert("Texto extraído. Ajuste se necessário e clique em Importar.");
-  } catch (err) {
-    console.error(err);
-    alert("Erro ao ler PDF (pode ser imagem escaneada).");
-  } finally {
-    btnLabel.innerHTML = `Ler PDF<input type="file" id="pdfUpload" accept=".pdf" style="display:none" onchange="extrairTextoPDF(this)">`;
-    input.value = "";
-  }
-}
-
-/* ═══════════════════════════════════════════════════
-   IMPORTAR CSV
-═══════════════════════════════════════════════════ */
-function importarCSVFromText(csvText, alsoSaveAsTemplate=false) {
-  const csv = String(csvText||"").trim();
-  if (!csv) { alert("Cole o CSV primeiro."); return false; }
-  const linhas = csv.split(/\r?\n/).filter(l => l.trim());
-  if (linhas.length < 2) { alert("CSV inválido ou muito curto."); return false; }
-  const delim = detectDelimiter(linhas[0]);
-  const header = splitCSVLine(linhas[0], delim).map(h => h.trim().toUpperCase());
-  const idxTreino = header.indexOf("TREINO");
-  const idxEx     = header.indexOf("EXERCÍCIO") >= 0 ? header.indexOf("EXERCÍCIO") : header.indexOf("EXERCICIO");
-  const idxSeries = header.indexOf("SÉRIES") >= 0 ? header.indexOf("SÉRIES") : header.indexOf("SERIES");
-  const idxReps   = header.indexOf("REPS");
-  if (idxTreino < 0 || idxEx < 0) { alert("Header precisa ter: TREINO e EXERCÍCIO."); return false; }
-  const grouped = {}, orderOfAppearance = [];
-  for (let i = 1; i < linhas.length; i++) {
-    const cols = splitCSVLine(linhas[i], delim);
-    const treinoKey = normalizeTreinoKey(cols[idxTreino]);
-    if (!treinoKey) continue;
-    const exercicio = (cols[idxEx]||"").trim();
-    if (!exercicio) continue;
-    const seriesRaw = idxSeries>=0 ? (cols[idxSeries]||"").trim() : "";
-    const seriesNum = parseInt(String(seriesRaw).replace(/\D/g,""), 10);
-    const series = Number.isFinite(seriesNum) && seriesNum > 0 ? seriesNum : 4;
-    const reps   = idxReps>=0 ? (cols[idxReps]||"").trim() : "";
-    if (!grouped[treinoKey]) { grouped[treinoKey]=[]; orderOfAppearance.push(treinoKey); }
-    grouped[treinoKey].push({ exercicio, series, reps });
-  }
-  const treinoCount = Object.keys(grouped).length;
-  if (treinoCount < 1) { alert("Nenhuma linha válida."); return false; }
-  buildTabsFromGrouped(grouped, orderOfAppearance);
-  scheduleDraftSave();
-  if (alsoSaveAsTemplate) trySaveTemplate(csv);
-  applyPrevGhostsToAll();
-  return true;
-}
-
-function importarCSV() {
-  if (importarCSVFromText(document.getElementById("csvTextarea").value, false)) {
-    document.getElementById("modalCSV").close();
-    showToast("✅ Treino importado com sucesso!", "success");
-  }
-}
-
-/* ═══════════════════════════════════════════════════
    AUTOSAVE & GHOST
 ═══════════════════════════════════════════════════ */
 function attachAutosaveToCard(card) {
@@ -5004,32 +4844,10 @@ function tab(idx) {
   scheduleDraftSave(); applyPrevGhostsToAll();
 }
 
-/* ═══════════════════════════════════════════════════
-   MODAL CSV
-═══════════════════════════════════════════════════ */
-function abrirCSVModal() {
-  document.getElementById("csvTextarea").value = "";
-  hideModelosCSV();
-  document.getElementById("modalCSV").showModal();
-}
 function normalizeTreinoKey(raw) { return String(raw||"").trim().replace(/\s+/g," ") || null; }
 function treinoLabel(key) {
   const k = String(key||"").trim(), up = k.toUpperCase();
   return /^[A-F]$/.test(up) || up.startsWith("TREINO") ? (up.startsWith("TREINO") ? k : `Treino ${k}`) : `Treino ${k}`;
-}
-function splitCSVLine(line, delim) {
-  const out=[]; let cur="", inQuotes=false;
-  for (let i=0; i<line.length; i++) {
-    const ch=line[i];
-    if (ch==='"') { if (inQuotes&&line[i+1]==='"') {cur+='"';i++;} else {inQuotes=!inQuotes;} }
-    else if (!inQuotes&&ch===delim) { out.push(cur.trim()); cur=""; }
-    else { cur+=ch; }
-  }
-  out.push(cur.trim()); return out;
-}
-function detectDelimiter(headerLine) {
-  const cComma=(headerLine.match(/,/g)||[]).length, cSemi=(headerLine.match(/;/g)||[]).length, cTab=(headerLine.match(/\t/g)||[]).length;
-  return cTab>=cSemi&&cTab>=cComma ? "\t" : cSemi>=cComma ? ";" : ",";
 }
 function buildTabsFromGrouped(grouped, order) {
   const nav=document.getElementById("nav"), cont=document.getElementById("container");
@@ -6561,13 +6379,6 @@ const DIVISAO_META = {
 
 let _divFreqSel = 3;
 
-function iniciarModoManual() {
-  openDivisaoSheet();
-}
-
-function iniciarModoIA() {
-  openDivisaoSheet();
-}
 
 function openDivisaoSheet() {
   _divFreqSel = 3;
