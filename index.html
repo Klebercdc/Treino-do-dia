@@ -2254,58 +2254,6 @@
         <div id="homeCardNivel" style="display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);border-radius:100px;padding:2px 8px;font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Iniciante</div>
       </div>
     </div>
-    <div class="perfil-grid" style="margin-bottom:16px">
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="homeCardTreinos">0</div>
-        <div class="perfil-stat-lbl">Treinos</div>
-      </div>
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="homeCardStreak">0</div>
-        <div class="perfil-stat-lbl">Sequência</div>
-      </div>
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="homeCardVol">0kg</div>
-        <div class="perfil-stat-lbl">Volume</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div onclick="closeHome();showEvoChart()" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-        <div style="width:38px;height:38px;border-radius:10px;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="3 17 8 11 13 14 21 6"/><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="6" x2="3" y2="21"/></svg>
-        </div>
-        <div>
-          <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Estatísticas</div>
-          <div style="font-size:0.65rem;color:rgba(255,255,255,0.5)">Evolução e PRs</div>
-        </div>
-      </div>
-      <div onclick="navTo('treino')" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-        <div style="width:38px;height:38px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5" y="9" width="2" height="6" rx="0.5"/><rect x="17" y="9" width="2" height="6" rx="0.5"/></svg>
-        </div>
-        <div>
-          <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Exercícios</div>
-          <div style="font-size:0.65rem;color:rgba(255,255,255,0.5)">Programa atual</div>
-        </div>
-      </div>
-      <div onclick="openDAVSheet()" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-        <div style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-        </div>
-        <div>
-          <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Medições</div>
-          <div style="font-size:0.65rem;color:rgba(255,255,255,0.5)">Corpo e composição</div>
-        </div>
-      </div>
-      <div onclick="closeHome();verHistorico()" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-        <div style="width:38px;height:38px;border-radius:10px;background:rgba(168,85,247,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14.5"/></svg>
-        </div>
-        <div>
-          <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Calendário</div>
-          <div style="font-size:0.65rem;color:rgba(255,255,255,0.5)">Histórico de treinos</div>
-        </div>
-      </div>
-    </div>
   </div>
   <div class="home-header">
     <div class="home-greeting" id="homeGreeting">Bom treino</div>
