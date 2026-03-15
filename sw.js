@@ -1,4 +1,4 @@
-const CACHE = 'titanpro-v2';
+const CACHE = 'titanpro-v3';
 const STATIC = [
   '/',
   '/index.html',
