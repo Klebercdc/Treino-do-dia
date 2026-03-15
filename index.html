@@ -4012,10 +4012,16 @@
     <div id="dietaResultado" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Resultado</div>
-        <button id="btnCopiarDieta" onclick="copiarDieta()" style="padding:7px 16px;background:var(--card);border:1.5px solid var(--accent);border-radius:20px;color:var(--accent);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar
-        </button>
+        <div style="display:flex;gap:8px">
+          <button id="btnCopiarDieta" onclick="copiarDieta()" style="padding:7px 14px;background:var(--card);border:1.5px solid var(--accent);border-radius:20px;color:var(--accent);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copiar
+          </button>
+          <button onclick="gerarDietaPDF()" style="padding:7px 14px;background:var(--accent);border:none;border-radius:20px;color:#fff;font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            PDF
+          </button>
+        </div>
       </div>
       <div id="dietaTexto" style="font-size:0.87rem;line-height:1.75;color:var(--text-2);background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;white-space:pre-wrap;"></div>
     </div>
@@ -7687,6 +7693,83 @@ function copiarDieta() {
     btn.textContent = "✓ Copiado!";
     setTimeout(() => { btn.innerHTML = orig; }, 2200);
   }).catch(() => {});
+}
+
+function gerarDietaPDF() {
+  const conteudo = document.getElementById("dietaTexto").textContent;
+  if (!conteudo || conteudo.includes("Calculando")) return;
+
+  const cfg   = safeJSON("titanpro_config", {});
+  const nome  = cfg.nome || "Atleta";
+  const peso  = document.getElementById("dietaPeso")?.value || cfg.peso || "";
+  const altura = document.getElementById("dietaAltura")?.value || cfg.altura || "";
+  const obj   = document.querySelector("#dietaObjChips .bs-chip.active")?.textContent || "";
+  const data  = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
+
+  // Converte emojis e quebras de linha para HTML legível
+  const linhas = conteudo.split("\n").map(l => {
+    const trim = l.trimEnd();
+    if (!trim) return "<br>";
+    // Linha de seção (toda maiúscula ou começa com número+ponto)
+    if (/^[1-9]\.\s/.test(trim) || /^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s\-–]{6,}$/.test(trim)) {
+      return `<h3>${trim}</h3>`;
+    }
+    return `<p>${trim}</p>`;
+  }).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dieta – ${nome}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; padding: 32px 40px; max-width: 820px; margin: auto; }
+  .header { border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:flex-end; }
+  .logo { font-size: 1.6rem; font-weight: 900; letter-spacing: .06em; color: #f97316; }
+  .sub { font-size: 0.8rem; color: #666; margin-top: 2px; }
+  .meta { text-align: right; font-size: 0.8rem; color: #555; line-height: 1.6; }
+  .meta strong { color: #111; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
+  .chip { background:#fff3e0; color:#f97316; border:1px solid #f97316; border-radius:100px; padding:4px 14px; font-size:0.75rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+  h3 { font-size: 1rem; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; border-left: 4px solid #f97316; padding-left: 10px; }
+  p { font-size: 0.88rem; line-height: 1.7; color: #333; margin-bottom: 2px; }
+  br { display: block; margin: 4px 0; }
+  .footer { margin-top: 32px; border-top: 1px solid #eee; padding-top: 12px; font-size: 0.72rem; color: #aaa; text-align: center; }
+  @media print {
+    body { padding: 16px 20px; }
+    .no-print { display: none; }
+    h3 { color: #e05a00; border-color: #e05a00; }
+    .chip { border-color: #e05a00; color: #e05a00; background: #fff; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">TITAN PRO</div>
+      <div class="sub">Plano Alimentar Personalizado</div>
+    </div>
+    <div class="meta">
+      <strong>${nome.toUpperCase()}</strong><br>
+      ${peso ? `Peso: ${peso} kg` : ""}${peso && altura ? " · " : ""}${altura ? `Altura: ${altura} cm` : ""}<br>
+      Gerado em ${data}
+    </div>
+  </div>
+  <div class="chips">
+    ${obj ? `<span class="chip">${obj}</span>` : ""}
+  </div>
+  <div class="conteudo">${linhas}</div>
+  <div class="footer">Gerado pelo TITAN PRO · Consulte um nutricionista para ajustes individuais</div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) { showToast("Permita pop-ups para gerar o PDF.", "warning", 3000); return; }
+  win.document.write(html);
+  win.document.close();
 }
 
 async function gerarDieta() {
