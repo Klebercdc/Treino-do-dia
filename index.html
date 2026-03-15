@@ -7670,8 +7670,9 @@ Seja preciso nos números. Use formato organizado com emojis para facilitar a le
       body: JSON.stringify({ system: buildTrainingContext(), messages: [{ role: "user", content: prompt }], isGerarTreino: false })
     });
     const data = await resp.json();
+    if (data.error) { txt.textContent = "Erro: " + data.error; return; }
     txt.textContent = data.content?.[0]?.text || "Erro ao gerar dieta.";
-  } catch { txt.textContent = "Erro de conexão."; }
+  } catch(e) { txt.textContent = "Erro de conexão: " + e.message; }
   finally { btn.disabled = false; }
 }
 
