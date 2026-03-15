@@ -1733,14 +1733,12 @@
       align-items: center; justify-content: center;
     }
     #splashLogo {
-      width: 200px;
+      width: 280px;
       opacity: 0;
-      transform: scale(0.75);
-      transition: opacity 0.9s ease, transform 0.9s ease;
+      transition: opacity 0.9s ease;
     }
     #splashLogo.show {
       opacity: 1;
-      transform: scale(1);
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1857,7 +1855,7 @@
 
 <!-- ═══ SPLASH SCREEN ═══ -->
 <div id="splashScreen">
-  <img src="titanpro.png" id="splashLogo" alt="TITAN PRO" />
+  <video id="splashLogo" src="splash.mp4" autoplay muted playsinline loop></video>
 </div>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
@@ -6770,7 +6768,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Splash: anima logo após 100ms
+// Splash: exibe vídeo após 100ms
 setTimeout(() => {
   const logo = document.getElementById('splashLogo');
   if (logo) logo.classList.add('show');
