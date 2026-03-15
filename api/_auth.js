@@ -49,7 +49,7 @@ function verifyToken(token, callback) {
     });
   });
 
-  req.setTimeout(5000, function() {
+  req.setTimeout(10000, function() {
     req.destroy();
     callback('Timeout na verificação de token', null);
   });
