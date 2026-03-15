@@ -8956,6 +8956,7 @@ async function authSignInEmail() {
     }
     if (result.data?.session) {
       updateAuthUI(result.data.session.user);
+      hideEmailLogin();
       showApp();
       navTo('inicio');
       openHome();
