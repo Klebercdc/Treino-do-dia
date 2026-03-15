@@ -8946,10 +8946,9 @@ async function authSignInEmail() {
     if (_loginIsRegister) {
       result = await _sb.auth.signUp({ email, password });
       if (result.error) throw result.error;
-      if (result.data?.user && !result.data.session) {
-        errEl.style.color = '#4ade80';
-        errEl.textContent = 'Confirme seu e-mail para ativar a conta!';
-        return;
+      if (!result.data.session) {
+        result = await _sb.auth.signInWithPassword({ email, password });
+        if (result.error) throw result.error;
       }
     } else {
       result = await _sb.auth.signInWithPassword({ email, password });
