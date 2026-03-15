@@ -1070,11 +1070,7 @@
       align-items: center; gap: 8px;
     }
     .home-btn-start:active { transform: scale(.97); }
-    .home-section-title {
-      font-size: 0.92rem; font-weight: 700; letter-spacing: .12em;
-      text-transform: uppercase; color: rgba(255,255,255,0.75);
-      padding: 16px 20px 10px;
-    }
+    /* .home-section-title moved to bottom CSS block */
     .home-quick-grid {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 10px; padding: 0 16px 16px;
@@ -2149,6 +2145,175 @@
     .instr-tip-text { font-size: 0.85rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
     body.light-mode .instr-tip-text { color: rgba(0,0,0,0.5); }
     .instr-tip-text strong { color: var(--text); }
+
+    /* ══ SECTION TITLE UPGRADE ══ */
+    .home-section-title {
+      font-size: 0.68rem; font-weight: 800; letter-spacing: .14em;
+      text-transform: uppercase; color: rgba(255,255,255,0.45);
+      padding: 20px 20px 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .home-section-title::before {
+      content: ''; display: inline-block;
+      width: 3px; height: 12px;
+      background: var(--accent); border-radius: 2px; flex-shrink: 0;
+    }
+    body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
+
+    /* ══ HOME BANNER ══ */
+    #homeBanner {
+      margin: 0 16px 14px;
+      background: linear-gradient(135deg,rgba(249,115,22,.14),rgba(251,191,36,.06));
+      border: 1px solid rgba(249,115,22,.22);
+      border-radius: 16px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .home-banner-icon {
+      width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px;
+      background: linear-gradient(145deg,var(--accent),#ea580c);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(249,115,22,.35);
+    }
+    #homeBannerTitle { font-size: .88rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+    #homeBannerSub   { font-size: .72rem; color: var(--text-2); }
+
+    /* ══ SUPERSET ══ */
+    .superset-group {
+      position: relative; margin-bottom: 12px;
+      border-left: 3px solid #a855f7; border-radius: 0 var(--r) var(--r) 0;
+      padding-left: 8px;
+    }
+    .superset-label {
+      font-size: .62rem; font-weight: 800; letter-spacing: .12em;
+      text-transform: uppercase; color: #a855f7;
+      padding: 4px 10px 4px 0; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .superset-label::before {
+      content: ''; display: inline-block;
+      width: 8px; height: 8px; border-radius: 50%; background: #a855f7; flex-shrink:0;
+    }
+    .btn-superset {
+      font-size: .66rem; font-weight: 700; padding: 4px 8px; border-radius: 6px;
+      border: 1px solid rgba(168,85,247,.3); background: rgba(168,85,247,.1);
+      color: #a855f7; cursor: pointer; font-family: var(--font); flex-shrink:0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-superset.active { background: rgba(168,85,247,.22); border-color: #a855f7; }
+
+    /* ══ VOICE LOG ══ */
+    .btn-voz {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.25);
+      color: #3b82f6; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s; -webkit-tap-highlight-color: transparent;
+    }
+    .btn-voz.listening {
+      background: rgba(239,68,68,.15); border-color: #ef4444; color: #ef4444;
+      animation: vozPulse .9s ease-in-out infinite;
+    }
+    @keyframes vozPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.35); }
+      50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    }
+    #vozIndicator {
+      display: none; position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+      background: var(--card); border: 1.5px solid #ef4444; border-radius: 24px;
+      padding: 8px 18px; font-size: .8rem; font-weight: 700; color: #ef4444;
+      z-index: 9990; box-shadow: 0 4px 20px rgba(0,0,0,.4);
+      align-items: center; gap: 8px; white-space: nowrap;
+    }
+    #vozIndicator.show { display: flex; }
+
+    /* ══ BREATHING ══ */
+    #breathingModal {
+      display: none; position: fixed; inset: 0; z-index: 9500;
+      background: rgba(0,0,0,.93); flex-direction: column;
+      align-items: center; justify-content: center; padding: 32px 24px;
+    }
+    #breathingModal.show { display: flex; }
+    .breath-title {
+      font-family: var(--display); font-size: 1.5rem; letter-spacing: .08em;
+      color: var(--text); margin-bottom: 4px; text-align: center;
+    }
+    .breath-sub { font-size: .72rem; color: var(--muted); margin-bottom: 28px; text-align: center; letter-spacing: .06em; }
+    .breath-phase-label {
+      font-size: .75rem; font-weight: 800; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--accent); min-height: 22px; text-align: center; margin-bottom: 16px;
+    }
+    .breath-circle-wrap {
+      width: 200px; height: 200px; display: flex;
+      align-items: center; justify-content: center; margin-bottom: 24px;
+    }
+    #breathCircle {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(249,115,22,.35), rgba(249,115,22,.08));
+      border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 4s cubic-bezier(.4,0,.2,1);
+    }
+    #breathCircle.expand   { transform: scale(1.55); }
+    #breathCircle.contract { transform: scale(1);    }
+    .breath-count { font-family: var(--mono); font-size: 2.4rem; font-weight: 700; color: #fff; }
+    .breath-cycles-label { font-size: .75rem; color: var(--text-2); margin-bottom: 28px; }
+    .breath-btn-close {
+      padding: 13px 36px; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r); color: var(--text-2); font-family: var(--font);
+      font-size: .88rem; font-weight: 700; cursor: pointer;
+    }
+
+    /* ══ DESAFIOS ══ */
+    .desafio-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 14px 16px; margin-bottom: 8px;
+    }
+    .desafio-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .desafio-ico {
+      width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .desafio-name { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .desafio-desc { font-size: .7rem; color: var(--text-2); margin-top: 2px; }
+    .desafio-bar  { height: 5px; background: var(--bg2); border-radius: 3px; overflow: hidden; }
+    .desafio-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,var(--accent),#fbbf24); transition: width .6s ease; }
+    .desafio-pct  { font-size: .62rem; font-weight: 700; color: var(--muted); text-align: right; margin-top: 3px; font-family: var(--mono); }
+
+    /* ══ MESOCICLO ══ */
+    .meso-week-row { display: flex; gap: 5px; margin-bottom: 6px; align-items: center; }
+    .meso-week-lbl { font-size: .62rem; font-weight: 700; color: var(--muted); width: 26px; flex-shrink: 0; font-family: var(--mono); }
+    .meso-day {
+      flex: 1; height: 30px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .5rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .meso-day.treino { background: rgba(249,115,22,.18); border: 1px solid rgba(249,115,22,.35); color: var(--accent); }
+    .meso-day.deload { background: rgba(34,197,94,.12);  border: 1px solid rgba(34,197,94,.3);   color: #22c55e; }
+    .meso-day.rest   { background: var(--bg2);            border: 1px solid var(--border);          color: var(--muted); }
+    .meso-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: .58rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .meso-badge.adapt   { background: rgba(59,130,246,.15); color: #3b82f6;  border: 1px solid rgba(59,130,246,.3); }
+    .meso-badge.sob     { background: rgba(249,115,22,.15); color: var(--accent); border: 1px solid rgba(249,115,22,.3); }
+    .meso-badge.pico    { background: rgba(168,85,247,.15); color: #a855f7;  border: 1px solid rgba(168,85,247,.3); }
+    .meso-badge.deload  { background: rgba(34,197,94,.12);  color: #22c55e;  border: 1px solid rgba(34,197,94,.25); }
+
+    /* ══ SHARE BTN ══ */
+    .btn-share-rel {
+      width: 100%; padding: 12px; margin-top: 8px;
+      background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3);
+      border-radius: var(--r); color: #22c55e; font-family: var(--font);
+      font-size: .85rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-respira {
+      width: 100%; padding: 12px; margin-top: 8px;
+      background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3);
+      border-radius: var(--r); color: #3b82f6; font-family: var(--font);
+      font-size: .85rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
     </style>
 
 </head>
@@ -2335,7 +2500,67 @@
       </div>
       <div id="aiCoachText" style="font-size:0.82rem;line-height:1.7;color:var(--text-2);background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:12px 14px;"></div>
     </div>
+    <button class="btn-respira" onclick="abrirRespiracao()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+      Respiração &amp; Cool-down
+    </button>
+    <button class="btn-share-rel" onclick="compartilharRelatorio()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Compartilhar Relatório
+    </button>
     <button class="sum-close" onclick="closeSummary()">Fechar</button>
+  </div>
+</div>
+
+<!-- Voice indicator -->
+<div id="vozIndicator">
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444"><circle cx="12" cy="12" r="10"/></svg>
+  Ouvindo...
+</div>
+
+<!-- Breathing Modal -->
+<div id="breathingModal">
+  <div class="breath-title">RESPIRAÇÃO</div>
+  <div class="breath-sub">BOX BREATHING · COOL-DOWN</div>
+  <div class="breath-phase-label" id="breathPhase">Prepare-se</div>
+  <div class="breath-circle-wrap">
+    <div id="breathCircle">
+      <div class="breath-count" id="breathCount">4</div>
+    </div>
+  </div>
+  <div class="breath-cycles-label" id="breathCycles">Ciclo 1 de 5</div>
+  <button class="breath-btn-close" onclick="fecharRespiracao()">Encerrar</button>
+</div>
+
+<!-- Mesociclo Sheet -->
+<div class="bottom-sheet" id="mesocicloSheet" onclick="if(event.target===this)fecharMesociclo()">
+  <div class="bs-box" style="max-height:90vh;overflow-y:auto">
+    <div class="bs-handle"></div>
+    <div class="bs-title">Gerador de Mesociclo</div>
+    <div class="bs-sub" style="font-size:.75rem;color:var(--muted);margin-bottom:16px">Planeje seu bloco de treinamento</div>
+
+    <span class="bs-label">Duração</span>
+    <div class="bs-chips" id="mesoDurChips" style="margin-bottom:12px">
+      <div class="bs-chip active" data-val="4"  onclick="selectMesoChip(this,'dur')">4 sem</div>
+      <div class="bs-chip"        data-val="6"  onclick="selectMesoChip(this,'dur')">6 sem</div>
+      <div class="bs-chip"        data-val="8"  onclick="selectMesoChip(this,'dur')">8 sem</div>
+      <div class="bs-chip"        data-val="12" onclick="selectMesoChip(this,'dur')">12 sem</div>
+    </div>
+    <span class="bs-label">Objetivo</span>
+    <div class="bs-chips" id="mesoObjChips" style="margin-bottom:20px">
+      <div class="bs-chip active" data-val="hipertrofia" onclick="selectMesoChip(this,'obj')">Hipertrofia</div>
+      <div class="bs-chip"        data-val="forca"       onclick="selectMesoChip(this,'obj')">Força</div>
+      <div class="bs-chip"        data-val="definicao"   onclick="selectMesoChip(this,'obj')">Definição</div>
+      <div class="bs-chip"        data-val="performance" onclick="selectMesoChip(this,'obj')">Performance</div>
+    </div>
+    <button onclick="gerarMesociclo()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;margin-bottom:16px">Gerar Plano</button>
+
+    <div id="mesoVisualizacao" style="display:none">
+      <div id="mesoFases" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="mesoGrid"></div>
+      <button onclick="salvarMesociclo()" style="width:100%;padding:12px;margin-top:12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:var(--r);font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer">Salvar Mesociclo</button>
+    </div>
+    <div style="height:16px"></div>
   </div>
 </div>
 
@@ -2524,6 +2749,17 @@
     <div class="home-title">BORA <span id="homeTreinoNome">TREINAR</span></div>
   </div>
 
+  <!-- Banner motivacional -->
+  <div id="homeBanner">
+    <div class="home-banner-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <div>
+      <div id="homeBannerTitle">Hoje é dia de evoluir.</div>
+      <div id="homeBannerSub">Cada série te aproxima do objetivo.</div>
+    </div>
+  </div>
+
   <!-- Card do treino do dia -->
 
   <div class="home-today" id="homeTodayCard">
@@ -2559,7 +2795,7 @@
   <!-- Ferramentas de Nutrição -->
 
   <div class="home-section-title">Nutrição & Ferramentas</div>
-  <div class="home-tools-grid">
+  <div class="home-tools-grid" style="grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
     <div class="home-tool-card" onclick="openBasalSheet()">
       <div class="home-tool-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><rect x="8" y="5" width="8" height="3" rx="1"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="9" cy="16" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="16" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="16" r="1" fill="#fff" stroke="none"/></svg>
@@ -2588,6 +2824,20 @@
       <div class="home-tool-name">Suplementação</div>
       <div class="home-tool-sub">O que tem evidência real</div>
     </div>
+    <div class="home-tool-card" onclick="abrirRespiracao()">
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#0ea5e9,#0369a1)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>
+      </div>
+      <div class="home-tool-name">Respiração</div>
+      <div class="home-tool-sub">Box breathing · cool-down · 5 ciclos</div>
+    </div>
+    <div class="home-tool-card" onclick="abrirMesociclo()">
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#a855f7,#7c3aed)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/></svg>
+      </div>
+      <div class="home-tool-name">Mesociclo</div>
+      <div class="home-tool-sub">Plano visual de 4–12 semanas</div>
+    </div>
   </div>
 
   <!-- Banner turista (visível só se persona=turista) -->
@@ -2607,8 +2857,11 @@
 
   <!-- Ações rápidas -->
 
+  <div class="home-section-title">Meus Desafios</div>
+  <div style="padding:0 16px 4px" id="desafiosSection"></div>
+
   <div class="home-section-title">Acesso rápido</div>
-  <div class="home-quick-grid">
+  <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
     <div class="home-quick-card" onclick="navTo('programa');openConfig()">
       <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5" y="9" width="2" height="6" rx="0.5"/><rect x="17" y="9" width="2" height="6" rx="0.5"/></svg>
@@ -2655,7 +2908,7 @@
       </div>
     </div>
   </div>
-  <div style="height:100px"></div>
+  <div style="height:120px"></div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -2696,6 +2949,10 @@
         <div class="perfil-stat-val" id="perfilVolTotal">0t</div>
         <div class="perfil-stat-lbl">Volume</div>
       </div>
+      <div class="perfil-stat">
+        <div class="perfil-stat-val" id="perfilSonoStat">—</div>
+        <div class="perfil-stat-lbl">Sono</div>
+      </div>
     </div>
   </div>
 
@@ -2719,6 +2976,10 @@
       <div class="perfil-input-wrap">
         <div class="perfil-input-lbl">Nome</div>
         <input class="perfil-input" id="perfilNomeInput" type="text" placeholder="Seu nome" onchange="salvarMedidas()"/>
+      </div>
+      <div class="perfil-input-wrap">
+        <div class="perfil-input-lbl">Sono (h/noite)</div>
+        <input class="perfil-input" id="perfilSono" type="number" placeholder="7" min="3" max="12" step="0.5" onchange="salvarMedidas()"/>
       </div>
     </div>
   </div>
@@ -2884,6 +3145,10 @@
         <div class="orient-chip" onclick="closeOrientacao();openDietaSheet()">
           <span class="orient-chip-icon">🥗</span>
           <span class="orient-chip-name">Gerar Dieta</span>
+        </div>
+        <div class="orient-chip" onclick="closeOrientacao();setTimeout(abrirMesociclo,300)">
+          <span class="orient-chip-icon">📆</span>
+          <span class="orient-chip-name">Mesociclo Visual</span>
         </div>
       </div>
 
@@ -4158,6 +4423,10 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
         VER
       </button>
+      <button class="btn-superset" onclick="toggleSuperset(this.closest('.exercise-card'))" title="Superset" type="button">SS</button>
+      <button class="btn-voz" onclick="iniciarLogVoz(this)" title="Log por voz" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+      </button>
       <span class="card-rm-badge" id="1rm-${id}"></span>
     </div>
     <span class="ex-target">${sets} sets · ${escapeHTML(meta)}</span>
@@ -4728,9 +4997,11 @@ async function salvarTreino() {
     prevMap = getPrevMap();
     clearAllInputsToGhost(); applyPrevGhostsToAll(); checkDeload();
     checkPersonaEvolucao(hist);
-    checkNutricaoPosTreino(st);
+    checkNutricaoPosTreino(st, dur);
+    checkHidratacaoPosTreino(st, dur);
     _sessionStart = null;
     _disposicaoAtual = null;
+    try { renderDesafios(); } catch(e) {}
     updateStreakUI(); updateWorkoutProgress();
     showSummary(st, prs, dur);
     if (prs.length > 0) setTimeout(() => showToast(`🏆 ${prs.length} PR${prs.length>1?"s":""} batido${prs.length>1?"s":""}!`, "success", 4000), 800);
@@ -4925,7 +5196,7 @@ function checkPersonaEvolucao(hist) {
  * Após salvar sessão intensa (RPE médio ≥ 7.5 ou volume > 3000 kg),
  * injeta dica de proteína/nutrição no summary modal.
  */
-function checkNutricaoPosTreino(state) {
+function checkNutricaoPosTreino(state, durationMin) {
   // Calcular RPE médio da sessão salva
   let rpes = [], volTotal = 0;
   (state.sections||[]).forEach(sec =>
@@ -5931,6 +6202,7 @@ PERFIL DO USUÁRIO
 - Perfil efetivo (calculado pelos dados): ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[personaEfetiva] || personaEfetiva}${personaEfetiva !== persona ? ` ← ATENÇÃO: dados indicam evolução acima do perfil declarado` : ""}
 - Sessões nos últimos 30 dias: ${_evData.d30} | RPE médio: ${_evData.rpeMedia ? _evData.rpeMedia.toFixed(1) : "sem dados"}
 - Disposição hoje: ${{cansado:"CANSADO (reduza intensidade, priorizando qualidade sobre volume)", normal:"NORMAL", pique:"NO PIQUE (pode puxar mais, volume e intensidade acima do usual)"}[_disposicaoAtual] || "não informado"}
+- Sono última noite: ${cfg.sono ? cfg.sono+'h'+getSonoWarning(cfg.sono) : "não informado"}
 ${proximoMarcoStr ? `- Próximo marco: ${proximoMarcoStr}` : ""}
 - Objetivo: ${obj}
 - Frequência planejada: ${freq}x por semana
@@ -6828,6 +7100,8 @@ function updateHomeScreen() {
     exCount > 0 ? exCount + " exercícios" : "Configure seu programa";
 
   // Selector removido — seção apagada da home
+  try { renderDesafios();   } catch(e) {}
+  try { updateHomeBanner(); } catch(e) {}
 }
 
 // ══════════════════════════════════════════
@@ -6847,6 +7121,7 @@ function salvarMedidas() {
     peso:   document.getElementById("perfilPeso")?.value || "",
     altura: document.getElementById("perfilAltura")?.value || "",
     idade:  document.getElementById("perfilIdade")?.value || "",
+    sono:   document.getElementById("perfilSono")?.value   || "",
   };
   localStorage.setItem("titanpro_config", JSON.stringify(data));
   const nome = data.nome || "ATLETA";
@@ -6879,6 +7154,9 @@ function updatePerfilScreen() {
   if (cfg.peso)   document.getElementById("perfilPeso").value   = cfg.peso;
   if (cfg.altura) document.getElementById("perfilAltura").value = cfg.altura;
   if (cfg.idade)  document.getElementById("perfilIdade").value  = cfg.idade;
+  if (cfg.sono)   document.getElementById("perfilSono").value   = cfg.sono;
+  const sonoStat = document.getElementById("perfilSonoStat");
+  if (sonoStat) sonoStat.textContent = cfg.sono ? cfg.sono+'h' : '—';
 
   // Stats
   document.getElementById("perfilTotalTreinos").textContent = hist.length;
@@ -8047,6 +8325,351 @@ function _drawGuia(tipo, t) {
   };
 
   (draws[tipo] || draws.curl)();
+}
+
+/* ═══════════════════════════════════════════════════
+   SUPERSET / CIRCUITO
+═══════════════════════════════════════════════════ */
+let _ssCounter = 0;
+const SS_LETTERS = 'ABCDEFGH';
+
+function toggleSuperset(cardEl) {
+  if (!cardEl) return;
+  if (cardEl.closest('.superset-group')) {
+    const group  = cardEl.closest('.superset-group');
+    const parent = group.parentNode;
+    parent.insertBefore(cardEl, group);
+    const remaining = group.querySelectorAll('.exercise-card');
+    if (remaining.length === 0) { group.remove(); }
+    else if (remaining.length === 1) {
+      parent.insertBefore(remaining[0], group);
+      group.remove();
+    }
+    scheduleDraftSave();
+    showToast('Removido do superset.', 'info', 2000);
+    return;
+  }
+  const next = cardEl.nextElementSibling;
+  if (!next || !next.classList.contains('exercise-card')) {
+    showToast('Posicione dois exercícios seguidos para criar superset.', 'info', 3500);
+    return;
+  }
+  const letter = SS_LETTERS[_ssCounter++ % SS_LETTERS.length];
+  const group  = document.createElement('div');
+  group.className = 'superset-group';
+  const label = document.createElement('div');
+  label.className = 'superset-label';
+  label.textContent = `Superset ${letter} — descanse após os dois`;
+  group.appendChild(label);
+  cardEl.parentNode.insertBefore(group, cardEl);
+  group.appendChild(cardEl);
+  group.appendChild(next);
+  scheduleDraftSave();
+  showToast(`Superset ${letter} criado!`, 'success', 3000);
+}
+
+/* ═══════════════════════════════════════════════════
+   LOG POR VOZ
+═══════════════════════════════════════════════════ */
+let _vozRec = null, _vozCard = null;
+
+function iniciarLogVoz(btn) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('Voz não suportada neste navegador.', 'error'); return; }
+  if (_vozRec) { _vozRec.stop(); return; }
+  _vozCard = btn.closest('.exercise-card');
+  const r = new SR();
+  r.lang = 'pt-BR'; r.interimResults = false; r.maxAlternatives = 1;
+  r.onstart = () => {
+    btn.classList.add('listening');
+    document.getElementById('vozIndicator').classList.add('show');
+  };
+  r.onend = () => {
+    btn.classList.remove('listening');
+    document.getElementById('vozIndicator').classList.remove('show');
+    _vozRec = null;
+  };
+  r.onresult = e => parseVozLog(e.results[0][0].transcript.toLowerCase(), _vozCard);
+  r.onerror  = () => showToast('Não entendeu. Tente: "100 quilos 8 reps"', 'warning', 3500);
+  _vozRec = r;
+  r.start();
+}
+
+function parseVozLog(text, card) {
+  if (!card) return;
+  const kgM  = text.match(/(\d+(?:[.,]\d+)?)\s*(?:quilos?|kg|kilo(?:grama)?s?)/);
+  const repM = text.match(/(\d+)\s*(?:reps?|repeti[cç][oõ]es?)/);
+  const rpeM = text.match(/(?:rpe|esfor[cç]o)\s*(\d+)/);
+  const kg   = kgM  ? kgM[1].replace(',','.')  : null;
+  const reps = repM ? repM[1] : null;
+  const rpe  = rpeM ? rpeM[1] : null;
+  const rows = Array.from(card.querySelectorAll('.series-grid[data-row]'));
+  const target = rows.find(r => {
+    const ins = r.querySelectorAll('input');
+    return ins.length >= 2 && !ins[0].value && !ins[1].value;
+  }) || rows[rows.length - 1];
+  if (!target) return;
+  const ins = target.querySelectorAll('input');
+  if (kg   && ins[0]) { ins[0].value = kg;   ins[0].dispatchEvent(new Event('input')); }
+  if (reps && ins[1]) { ins[1].value = reps; ins[1].dispatchEvent(new Event('input')); }
+  if (rpe  && ins[2]) { ins[2].value = rpe;  ins[2].dispatchEvent(new Event('input')); }
+  showToast(`Voz: ${kg||'?'}kg × ${reps||'?'} reps${rpe?' · RPE '+rpe:''}`, 'success', 3000);
+}
+
+/* ═══════════════════════════════════════════════════
+   ALERTA DE HIDRATAÇÃO
+═══════════════════════════════════════════════════ */
+function checkHidratacaoPosTreino(state, durationMin) {
+  const vol = calcVolumeTotal(state);
+  const dur = parseFloat(durationMin) || 0;
+  if (dur < 40 && vol < 2000) return;
+  const cfg   = safeJSON('titanpro_config', {});
+  const peso  = parseFloat(cfg.peso) || 75;
+  const litros = Math.max(2, (peso * 0.035 + Math.ceil(dur / 30) * 0.35 + (vol >= 3000 ? 0.5 : 0))).toFixed(1);
+  setTimeout(() => {
+    const ref = document.getElementById('sumNutricao') || document.getElementById('sumGrid');
+    if (!ref || document.getElementById('sumHidrat')) return;
+    const card = document.createElement('div');
+    card.id = 'sumHidrat';
+    card.style.cssText = 'margin-top:10px;background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(14,165,233,.06));border:1px solid rgba(59,130,246,.28);border-radius:14px;padding:12px 14px;font-size:.8rem;line-height:1.6;color:var(--text-2)';
+    card.innerHTML = `<div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#3b82f6;margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>HIDRATA\u00c7\u00c3O</div>Beba ao menos <b>${litros} litros hoje</b>. Inclua água com eletrólitos se o treino foi intenso.`;
+    ref.insertAdjacentElement('afterend', card);
+  }, 500);
+}
+
+/* ═══════════════════════════════════════════════════
+   RESPIRAÇÃO / BOX BREATHING
+═══════════════════════════════════════════════════ */
+let _breathRunning = false, _breathTick = null;
+const BREATH_SEQ = [
+  { label:'INSPIRE',   dur:4, expand:true  },
+  { label:'SEGURE',    dur:4, expand:true  },
+  { label:'EXPIRE',    dur:4, expand:false },
+  { label:'SEGURE',    dur:4, expand:false },
+];
+
+function abrirRespiracao() {
+  closeSummary();
+  setTimeout(() => {
+    document.getElementById('breathingModal').classList.add('show');
+    _breathRunning = true;
+    runBreathPhase(0, 1);
+  }, 200);
+}
+
+function fecharRespiracao() {
+  _breathRunning = false;
+  clearInterval(_breathTick);
+  document.getElementById('breathingModal').classList.remove('show');
+  const c = document.getElementById('breathCircle');
+  c.classList.remove('expand','contract');
+}
+
+function runBreathPhase(phaseIdx, cycle) {
+  if (!_breathRunning) return;
+  if (cycle > 5) {
+    document.getElementById('breathPhase').textContent  = 'Concluído. Ótimo trabalho!';
+    document.getElementById('breathCycles').textContent = '';
+    setTimeout(() => { if (_breathRunning) fecharRespiracao(); }, 2800);
+    return;
+  }
+  const phase  = BREATH_SEQ[phaseIdx];
+  const circle = document.getElementById('breathCircle');
+  document.getElementById('breathPhase').textContent  = phase.label;
+  document.getElementById('breathCycles').textContent = `Ciclo ${cycle} de 5`;
+  circle.classList.remove('expand','contract');
+  void circle.offsetWidth;
+  circle.classList.add(phase.expand ? 'expand' : 'contract');
+  let t = phase.dur;
+  document.getElementById('breathCount').textContent = t;
+  clearInterval(_breathTick);
+  _breathTick = setInterval(() => {
+    if (!_breathRunning) { clearInterval(_breathTick); return; }
+    t--;
+    document.getElementById('breathCount').textContent = t;
+    if (t <= 0) {
+      clearInterval(_breathTick);
+      const nextPhase = (phaseIdx + 1) % BREATH_SEQ.length;
+      const nextCycle = nextPhase === 0 ? cycle + 1 : cycle;
+      setTimeout(() => runBreathPhase(nextPhase, nextCycle), 150);
+    }
+  }, 1000);
+}
+
+/* ═══════════════════════════════════════════════════
+   TRACKING DE SONO
+═══════════════════════════════════════════════════ */
+function getSonoWarning(h) {
+  const n = parseFloat(h);
+  if (!n) return '';
+  if (n < 6)   return ' ⚠️ CRÍTICO — abaixo de 6h compromete ganhos e recuperação';
+  if (n < 7)   return ' ⚠️ ABAIXO DO IDEAL — tente chegar a 7-9h';
+  if (n >= 9)  return ' ✅ Excelente recuperação';
+  return ' ✅ Dentro do ideal';
+}
+
+/* ═══════════════════════════════════════════════════
+   COMPARTILHAR RELATÓRIO
+═══════════════════════════════════════════════════ */
+function gerarTextoRelatorio(state, prs, durationMin, dateStr) {
+  const vol  = Math.round(calcVolumeTotal(state));
+  const sets = (state.sections||[]).reduce((a,s)=>a+(s.cards||[]).reduce((b,c)=>b+(c.values||[]).filter(v=>v.kg&&v.reps).length,0),0);
+  let txt = `🏋️ TITAN PRO — Relatório de Treino\n📅 ${dateStr || new Date().toLocaleDateString('pt-BR')}\n`;
+  txt += `⏱ Duração: ${durationMin ? durationMin+'min' : '—'} | 📊 Volume: ${vol.toLocaleString('pt-BR')}kg | Séries: ${sets}\n\n`;
+  if (prs && prs.length > 0) {
+    txt += `🏆 Novos Recordes:\n`;
+    prs.forEach(p => { txt += `  • ${p.name}: ${p.rm}kg 1RM\n`; });
+    txt += '\n';
+  }
+  txt += `📋 Exercícios:\n`;
+  (state.sections||[]).forEach(sec => {
+    (sec.cards||[]).forEach(c => {
+      const setsStr = (c.values||[]).filter(v=>v.kg&&v.reps).map(v=>`${v.kg}kg×${v.reps}`).join(', ');
+      if (setsStr) txt += `  • ${c.name}: ${setsStr}\n`;
+    });
+  });
+  txt += `\n— Registrado no TITAN PRO`;
+  return txt;
+}
+
+async function compartilharRelatorio() {
+  const hist = safeJSON(STORAGE.historyKey, []);
+  if (!hist.length) { showToast('Salve um treino primeiro.', 'error'); return; }
+  const last = hist[0];
+  const txt  = gerarTextoRelatorio(last.state, [], last.durationMin, new Date(last.createdAt).toLocaleDateString('pt-BR'));
+  try {
+    if (navigator.share) { await navigator.share({ title: 'TITAN PRO — Treino', text: txt }); return; }
+  } catch {}
+  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+}
+
+/* ═══════════════════════════════════════════════════
+   DESAFIOS PESSOAIS
+═══════════════════════════════════════════════════ */
+const DESAFIOS = [
+  {
+    id: 'c30_60', name: '30 treinos em 60 dias',
+    desc: 'Consistência é o único segredo.', iconBg: 'linear-gradient(145deg,#f97316,#c2410c)',
+    svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    calc: h => {
+      const cut = Date.now() - 60*86400000;
+      return { v: Math.min(h.filter(s => new Date(s.createdAt).getTime()>cut).length, 30), t:30 };
+    }
+  },
+  {
+    id: 'cvol', name: '50 000 kg de volume total',
+    desc: 'Volume acumulado de todos os treinos.', iconBg: 'linear-gradient(145deg,#3b82f6,#1d4ed8)',
+    svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>',
+    calc: h => {
+      const v = Math.round(h.reduce((a,s)=>a+calcVolumeTotal(s.state),0));
+      return { v: Math.min(v,50000), t:50000 };
+    }
+  },
+  {
+    id: 'cstreak', name: '7 dias consecutivos',
+    desc: 'Treine 7 dias sem parar.', iconBg: 'linear-gradient(145deg,#a855f7,#7c3aed)',
+    svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    calc: () => { const s=calcStreak(); return { v:Math.min(s,7), t:7 }; }
+  },
+];
+
+function renderDesafios() {
+  const el = document.getElementById('desafiosSection');
+  if (!el) return;
+  const hist = safeJSON(STORAGE.historyKey, []);
+  el.innerHTML = DESAFIOS.map(d => {
+    const {v,t} = d.calc(hist);
+    const pct   = Math.min(100, Math.round((v/t)*100));
+    const done  = pct >= 100;
+    return `<div class="desafio-card">
+      <div class="desafio-head">
+        <div class="desafio-ico" style="background:${d.iconBg}">${d.svg}</div>
+        <div>
+          <div class="desafio-name">${d.name}${done?' ✅':''}</div>
+          <div class="desafio-desc">${d.desc}</div>
+        </div>
+      </div>
+      <div class="desafio-bar"><div class="desafio-fill" style="width:${pct}%"></div></div>
+      <div class="desafio-pct">${v.toLocaleString('pt-BR')} / ${t.toLocaleString('pt-BR')} &nbsp;·&nbsp; ${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   GERADOR DE MESOCICLOS
+═══════════════════════════════════════════════════ */
+let _mesoConf = { dur:4, obj:'hipertrofia' }, _mesoAtual = null;
+
+function abrirMesociclo() {
+  document.getElementById('mesocicloSheet').classList.add('show');
+}
+function fecharMesociclo() {
+  document.getElementById('mesocicloSheet').classList.remove('show');
+}
+function selectMesoChip(el, type) {
+  const id = type==='dur' ? 'mesoDurChips' : 'mesoObjChips';
+  document.querySelectorAll(`#${id} .bs-chip`).forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  _mesoConf[type] = el.dataset.val;
+}
+const MESO_FASES = {
+  hipertrofia: [{n:'Adaptação',c:'adapt',w:.25},{n:'Sobrecarga',c:'sob',w:.5},{n:'Pico',c:'pico',w:.12},{n:'Deload',c:'deload',w:.13}],
+  forca:       [{n:'Adaptação',c:'adapt',w:.2}, {n:'Sobrecarga',c:'sob',w:.4},{n:'Pico',c:'pico',w:.25},{n:'Deload',c:'deload',w:.15}],
+  definicao:   [{n:'Adaptação',c:'adapt',w:.2}, {n:'Sobrecarga',c:'sob',w:.6},{n:'Deload',c:'deload',w:.2}],
+  performance: [{n:'Adaptação',c:'adapt',w:.15},{n:'Sobrecarga',c:'sob',w:.45},{n:'Pico',c:'pico',w:.25},{n:'Deload',c:'deload',w:.15}],
+};
+function gerarMesociclo() {
+  const total = parseInt(_mesoConf.dur);
+  const fases = MESO_FASES[_mesoConf.obj] || MESO_FASES.hipertrofia;
+  const cfg   = safeJSON('titanpro_config', {});
+  const freq  = parseInt(cfg.freq || '3');
+  const weeks = [];
+  fases.forEach(f => {
+    const n = Math.max(1, Math.round(f.w * total));
+    for (let i=0; i<n && weeks.length<total; i++) weeks.push({n:f.n, c:f.c});
+  });
+  while (weeks.length < total) weeks.push({n:'Deload',c:'deload'});
+  const trainDays = ({2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]})[freq]||[1,3,5];
+  const dayLbls = ['D','S','T','Q','Q','S','S'];
+  document.getElementById('mesoFases').innerHTML =
+    [...new Set(weeks.map(w=>JSON.stringify({n:w.n,c:w.c})))].map(s=>{const p=JSON.parse(s);return `<span class="meso-badge ${p.c}">${p.n}</span>`;}).join('');
+  document.getElementById('mesoGrid').innerHTML = weeks.map((w,i) =>
+    `<div class="meso-week-row"><span class="meso-week-lbl">S${i+1}</span>` +
+    dayLbls.map((d,di)=>{
+      const isTrain = trainDays.includes(di);
+      const cls = w.c==='deload' ? 'deload' : (isTrain?'treino':'rest');
+      const lbl = w.c==='deload' ? (isTrain?'DLD':'') : (isTrain?'TRN':'');
+      return `<div class="meso-day ${cls}">${lbl}</div>`;
+    }).join('') +
+    `<span class="meso-badge ${w.c}" style="font-size:.48rem;padding:2px 5px;margin-left:4px">${w.n.slice(0,3)}</span></div>`
+  ).join('');
+  _mesoAtual = {weeks, freq, obj:_mesoConf.obj, total, createdAt:new Date().toISOString()};
+  document.getElementById('mesoVisualizacao').style.display = 'block';
+}
+function salvarMesociclo() {
+  if (!_mesoAtual) return;
+  localStorage.setItem('titanpro_mesociclo', JSON.stringify(_mesoAtual));
+  showToast('Mesociclo salvo!', 'success', 3000);
+  fecharMesociclo();
+}
+
+/* ═══════════════════════════════════════════════════
+   HOME BANNER
+═══════════════════════════════════════════════════ */
+function updateHomeBanner() {
+  const streak = calcStreak();
+  const hist   = safeJSON(STORAGE.historyKey, []);
+  const msgs   = [
+    { t:`${streak} dia${streak!==1?'s':''} seguidos. Não para agora.`, s:'Sequência ativa — cada treino conta.' },
+    { t:'Hoje é dia de evoluir.',                                         s:'Cada série te aproxima do objetivo.' },
+    { t:`${hist.length} treinos registrados.`,                           s:'Você é o que você repete. Continue.' },
+    { t:'Disciplina supera motivação.',                                   s:'Apareça. Os resultados vêm depois.' },
+  ];
+  const m = streak > 0 ? msgs[0] : msgs[Math.floor(Date.now()/86400000) % (msgs.length-1) + 1];
+  const t = document.getElementById('homeBannerTitle');
+  const s = document.getElementById('homeBannerSub');
+  if (t) t.textContent = m.t;
+  if (s) s.textContent = m.s;
 }
 
 
