@@ -1971,7 +1971,7 @@
 
 <!-- ═══ SPLASH SCREEN ═══ -->
 <div id="splashScreen">
-  <video id="splashLogo" src="splash.mp4" autoplay muted playsinline webkit-playsinline preload="auto" disablepictureinpicture x-webkit-airplay="deny"></video>
+  <img id="splashLogo" src="splash.gif">
   <div id="splashTap" style="display:none" onclick="splashTapPlay()">
     <div class="tap-icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
@@ -2253,16 +2253,9 @@
 
 <div id="homeScreen">
   <!-- Banner de setup se perfil vazio -->
-  <div id="homeBannerSetup" style="display:none;background:linear-gradient(135deg,var(--accent-dim),rgba(251,191,36,0.1));border:1px solid var(--accent);border-radius:16px;padding:16px;margin-bottom:16px">
-    <div style="font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">👋 Bem-vindo ao TITAN PRO!</div>
-    <div style="font-size:0.88rem;color:var(--text);margin-bottom:12px;line-height:1.5">Configure seu perfil para gerar um treino personalizado para você.</div>
-    <button onclick="navTo('programa');openConfig()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer">⚡ Configurar agora</button>
-  </div>
-  <!-- Banner setup -->
-  <div id="homeBannerSetup" style="display:none;background:linear-gradient(135deg,var(--accent-dim),rgba(251,191,36,0.08));border:1px solid var(--accent);border-radius:16px;padding:16px;margin-bottom:16px">
-    <div style="font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">👋 Bem-vindo ao TITAN PRO!</div>
-    <div style="font-size:0.88rem;color:var(--text);margin-bottom:12px;line-height:1.5">Configure seu perfil para gerar um treino totalmente personalizado para você.</div>
-    <button onclick="navTo('programa');openConfig()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer">⚡ Configurar agora</button>
+  <div id="homeBannerSetup" style="display:none;background:linear-gradient(135deg,var(--accent-dim),rgba(251,191,36,0.08));border:1px solid rgba(249,115,22,0.4);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div style="font-size:0.82rem;color:var(--text);line-height:1.3">Configure seu <strong style="color:var(--accent)">perfil</strong> para gerar seu treino.</div>
+    <button onclick="navTo('programa');openConfig()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">⚡ Configurar</button>
   </div>
   <div class="home-header">
     <div class="home-greeting" id="homeGreeting">Bom treino</div>
@@ -6925,46 +6918,14 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Splash: exibe vídeo e força autoplay; fallback "toque" para iOS
+// Splash: GIF autoplays nativamente em todos os browsers/iOS
 (function() {
   const logo = document.getElementById('splashLogo');
-  const tapBtn = document.getElementById('splashTap');
   if (!logo) return;
-
-  function tryPlay() {
-    logo.muted = true;
-    const p = logo.play();
-    if (p !== undefined) {
-      p.then(() => {
-        logo.classList.add('show');
-        if (tapBtn) tapBtn.style.display = 'none';
-      }).catch(() => {
-        // autoplay bloqueado pelo browser — mostrar botão tap
-        logo.classList.add('show');
-        if (tapBtn) tapBtn.style.display = 'flex';
-      });
-    } else {
-      logo.classList.add('show');
-    }
-  }
-
-  if (logo.readyState >= 2) {
-    tryPlay();
-  } else {
-    logo.addEventListener('canplay', tryPlay, { once: true });
-    setTimeout(tryPlay, 300);
-  }
+  logo.classList.add('show');
 })();
 
-function splashTapPlay() {
-  const logo = document.getElementById('splashLogo');
-  const tapBtn = document.getElementById('splashTap');
-  if (!logo) return;
-  logo.muted = true;
-  logo.play().then(() => {
-    if (tapBtn) tapBtn.style.display = 'none';
-  }).catch(() => {});
-}
+function splashTapPlay() {}
 
 // Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
