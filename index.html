@@ -8954,13 +8954,6 @@ async function authSignInEmail() {
       result = await _sb.auth.signInWithPassword({ email, password });
       if (result.error) throw result.error;
     }
-    if (result.data?.session) {
-      updateAuthUI(result.data.session.user);
-      showApp();
-      navTo('inicio');
-      openHome();
-      _dbSync.pullAll(result.data.session.user.id);
-    }
   } catch (e) {
     errEl.style.color = '#f87171';
     errEl.textContent = e.message === 'Invalid login credentials'
