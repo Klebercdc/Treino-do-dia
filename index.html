@@ -2345,16 +2345,28 @@
     <div style="font-size:0.78rem;color:var(--muted)">KRONOS vai ajustar o treino com base nisso</div>
   </div>
   <div style="display:flex;gap:10px;justify-content:center">
-    <button onclick="selecionarDisposicao('cansado')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s">
-      <span style="font-size:1.6rem">😴</span>
+    <button onclick="selecionarDisposicao('cansado')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s" data-disp="cansado">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        <line x1="8" y1="15" x2="16" y2="15"/>
+        <line x1="9" y1="9" x2="9.01" y2="9"/>
+        <line x1="15" y1="9" x2="15.01" y2="9"/>
+      </svg>
       <span style="font-size:0.72rem;font-weight:700;color:var(--text-2)">Cansado</span>
     </button>
-    <button onclick="selecionarDisposicao('normal')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s">
-      <span style="font-size:1.6rem">😐</span>
+    <button onclick="selecionarDisposicao('normal')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s" data-disp="normal">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="8" y1="15" x2="16" y2="15"/>
+        <line x1="9" y1="9" x2="9.01" y2="9"/>
+        <line x1="15" y1="9" x2="15.01" y2="9"/>
+      </svg>
       <span style="font-size:0.72rem;font-weight:700;color:var(--text-2)">Normal</span>
     </button>
-    <button onclick="selecionarDisposicao('pique')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s">
-      <span style="font-size:1.6rem">🔥</span>
+    <button onclick="selecionarDisposicao('pique')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:16px;cursor:pointer;font-family:var(--font);transition:all .15s" data-disp="pique">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
       <span style="font-size:0.72rem;font-weight:700;color:var(--accent)">No pique!</span>
     </button>
   </div>
@@ -4920,10 +4932,13 @@ function checkNutricaoPosTreino(state) {
   const protMin = Math.round(peso * 1.8);
   const protMax = Math.round(peso * 2.2);
 
+  const iconProt = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+  const iconDrop = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`;
+  const iconZap  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
   const dicas = [
-    `🥩 Treino intenso! Mire em <b>${protMin}–${protMax}g de proteína</b> hoje para recuperação muscular ótima.`,
-    `🍗 Sessão pesada — consuma proteína na <b>janela de 1–2h pós-treino</b> (frango, ovo, whey). Alvo: ${protMin}g+.`,
-    `💧 Hidratação + proteína: reponha eletrólitos e atinja <b>${protMin}–${protMax}g de proteína</b> hoje.`,
+    `${iconZap}Treino intenso! Mire em <b>${protMin}–${protMax}g de proteína</b> hoje para recuperação muscular ótima.`,
+    `${iconProt}Sessão pesada — consuma proteína na <b>janela de 1–2h pós-treino</b> (frango, ovo, whey). Alvo: ${protMin}g+.`,
+    `${iconDrop}Hidratação + proteína: reponha eletrólitos e atinja <b>${protMin}–${protMax}g de proteína</b> hoje.`,
   ];
   const dica = dicas[Math.floor(Math.random() * dicas.length)];
 
@@ -4934,7 +4949,8 @@ function checkNutricaoPosTreino(state) {
     const card = document.createElement("div");
     card.id = "sumNutricao";
     card.style.cssText = "margin-top:12px;background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(16,185,129,.06));border:1px solid rgba(34,197,94,.3);border-radius:14px;padding:12px 14px;font-size:.8rem;line-height:1.6;color:var(--text-2)";
-    card.innerHTML = `<div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#22c55e;margin-bottom:6px">NUTRIÇÃO PÓS-TREINO</div>${dica}`;
+    const header = `<div style="font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#22c55e;margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="#22c55e"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>NUTRI\u00c7\u00c3O P\u00d3S-TREINO</div>`;
+    card.innerHTML = header + dica;
     sumGrid.insertAdjacentElement("afterend", card);
   }, 300);
 }
@@ -5887,6 +5903,11 @@ IDENTIDADE E PERSONALIDADE
 - Quando der uma recomendação baseada nos dados do app, mencione o dado que embasou — seja específico
 - EVOLUÇÃO DE PERSONA: se "Perfil efetivo" diferir do "Perfil declarado", mencione naturalmente — ex: "pelos seus dados você já tá além de iniciante", sem fazer alarmismo
 - Se o usuário perguntar sobre seu nível, use o perfil efetivo calculado, não o declarado
+- DISPOSIÇÃO: se o campo "Disposição hoje" estiver preenchido, use isso para calibrar o tom e as sugestões:
+  • CANSADO → seja encorajador mas realista, sugira adaptar volume/intensidade, priorize recuperação ativa
+  • NORMAL → postura padrão do coach
+  • NO PIQUE → pode sugerir pequenas progressões, indicar que hoje é bom dia para testar limites
+  Se não preenchido, não mencione o campo — observe outros sinais dos dados
 ${personaInstructions[personaEfetiva] || personaInstructions[persona] || personaInstructions.dedicado}
 
 ═══════════════════════════════════════
@@ -5896,7 +5917,7 @@ PERFIL DO USUÁRIO
 - Perfil declarado: ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[persona] || persona}
 - Perfil efetivo (calculado pelos dados): ${{"turista":"✈️ Físico Turista","iniciante":"🌱 Iniciante","dedicado":"💪 Dedicado","atleta":"🔥 Atleta"}[personaEfetiva] || personaEfetiva}${personaEfetiva !== persona ? ` ← ATENÇÃO: dados indicam evolução acima do perfil declarado` : ""}
 - Sessões nos últimos 30 dias: ${_evData.d30} | RPE médio: ${_evData.rpeMedia ? _evData.rpeMedia.toFixed(1) : "sem dados"}
-- Disposição hoje: ${{cansado:"😴 Cansado (reduza intensidade se possível)", normal:"😐 Normal", pique:"🔥 No pique (pode puxar mais)"}[_disposicaoAtual] || "não informado"}
+- Disposição hoje: ${{cansado:"CANSADO (reduza intensidade, priorizando qualidade sobre volume)", normal:"NORMAL", pique:"NO PIQUE (pode puxar mais, volume e intensidade acima do usual)"}[_disposicaoAtual] || "não informado"}
 ${proximoMarcoStr ? `- Próximo marco: ${proximoMarcoStr}` : ""}
 - Objetivo: ${obj}
 - Frequência planejada: ${freq}x por semana
@@ -6717,7 +6738,20 @@ function iniciarTreino() {
 function selecionarDisposicao(val) {
   _disposicaoAtual = val;
   const dlg = document.getElementById("modalDisposicao");
-  if (dlg) dlg.close();
+  if (!dlg) return;
+  // Feedback visual rápido antes de fechar
+  if (val) {
+    const btn = dlg.querySelector(`[data-disp="${val}"]`);
+    if (btn) {
+      btn.style.background = "var(--accent)";
+      btn.style.borderColor = "var(--accent)";
+      btn.querySelectorAll("svg").forEach(s => { s.style.stroke = "#fff"; });
+      btn.querySelectorAll("span").forEach(s => { s.style.color = "#fff"; });
+    }
+    setTimeout(() => dlg.close(), 200);
+  } else {
+    dlg.close();
+  }
 }
 
 function _onDisposicaoClose() {
