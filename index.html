@@ -2522,8 +2522,8 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div>
-        <div class="home-quick-name">Expert IA</div>
-        <div class="home-quick-sub">Coach para conversas e dúvidas</div>
+        <div class="home-quick-name">TITAN COACH</div>
+        <div class="home-quick-sub">Análise e estratégia de treino</div>
       </div>
     </div>
     <div class="home-quick-card" onclick="closeHome();showEvoChart()">
@@ -2724,72 +2724,78 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       Voltar
     </button>
-    <div class="orient-title" style="flex:1;text-align:center;padding-right:60px">EXPERT IA</div>
+    <div style="flex:1;text-align:center;padding-right:60px">
+      <div class="orient-title" style="font-size:1.4rem;letter-spacing:.08em">TITAN COACH</div>
+      <div style="font-size:0.6rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;opacity:.8">Coach Inteligente · Online</div>
+    </div>
   </div>
   <div class="orient-content">
 
-```
-<!-- Painel Expert -->
-<div id="orient-expert" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-  <div class="orient-shortcuts-row">
-    <div class="orient-category-label">Musculação</div>
-    <div class="orient-chip" onclick="orientExpertQuick('analise')">
-      <span class="orient-chip-icon">📊</span>
-      <span class="orient-chip-name">Analisar Treino</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('plato')">
-      <span class="orient-chip-icon">📉</span>
-      <span class="orient-chip-name">Detectar Platô</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('rpe')">
-      <span class="orient-chip-icon">⚡</span>
-      <span class="orient-chip-name">Ajuste de Carga</span>
-    </div>
-    <div class="orient-category-label">Nutrição</div>
-    <div class="orient-chip" onclick="orientExpertQuick('postreino')">
-      <span class="orient-chip-icon">🍗</span>
-      <span class="orient-chip-name">Pós-Treino</span>
-    </div>
-    <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
-      <span class="orient-chip-icon">💊</span>
-      <span class="orient-chip-name">Suplementos</span>
-    </div>
-    <div class="orient-chip" onclick="closeOrientacao();openBasalSheet()">
-      <span class="orient-chip-icon">🔥</span>
-      <span class="orient-chip-name">Calculadora Basal</span>
-    </div>
-    <div class="orient-chip" onclick="closeOrientacao();openDietaSheet()">
-      <span class="orient-chip-icon">🥗</span>
-      <span class="orient-chip-name">Gerar Dieta</span>
-    </div>
-  </div>
-  <div class="orient-chat-wrap">
-    <div id="orientExpertMessages" class="orient-chat-messages"></div>
-    <div class="orient-chat-bar">
-      <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-        Sugestões rápidas
-      </button>
-      <div class="orient-input-wrap">
-        <textarea id="orientExpertInput"
-          placeholder="Pergunte sobre treino, nutrição, suplementação..."
-          rows="1"
-          style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
-          oninput="autoResizeOrientInput(this)"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
-        <button id="orientSendBtn" onclick="sendOrientExpert()"
-          style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-        </button>
-      </div>
-      <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
-        Enter para enviar · Shift+Enter para nova linha
-      </div>
-    </div>
-  </div>
-</div>
+    <!-- Painel Expert -->
+    <div id="orient-expert" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="orient-shortcuts-row">
 
-```
+        <!-- Chips dinâmicos (renderizados por renderAriaChips()) -->
+        <div id="ariaChipsDynamic" style="display:contents"></div>
+
+        <!-- Separador -->
+        <div class="orient-category-label">Análise</div>
+        <div class="orient-chip" onclick="orientExpertQuick('analise')">
+          <span class="orient-chip-icon">📊</span>
+          <span class="orient-chip-name">Analisar Treino</span>
+        </div>
+        <div class="orient-chip" onclick="orientExpertQuick('plato')">
+          <span class="orient-chip-icon">📉</span>
+          <span class="orient-chip-name">Detectar Platô</span>
+        </div>
+        <div class="orient-chip" onclick="orientExpertQuick('rpe')">
+          <span class="orient-chip-icon">⚡</span>
+          <span class="orient-chip-name">Ajuste de Carga</span>
+        </div>
+        <div class="orient-category-label">Nutrição</div>
+        <div class="orient-chip" onclick="orientExpertQuick('postreino')">
+          <span class="orient-chip-icon">🍗</span>
+          <span class="orient-chip-name">Pós-Treino</span>
+        </div>
+        <div class="orient-chip" onclick="orientExpertQuick('suplementos')">
+          <span class="orient-chip-icon">💊</span>
+          <span class="orient-chip-name">Suplementos</span>
+        </div>
+        <div class="orient-chip" onclick="closeOrientacao();openBasalSheet()">
+          <span class="orient-chip-icon">🔥</span>
+          <span class="orient-chip-name">Calculadora Basal</span>
+        </div>
+        <div class="orient-chip" onclick="closeOrientacao();openDietaSheet()">
+          <span class="orient-chip-icon">🥗</span>
+          <span class="orient-chip-name">Gerar Dieta</span>
+        </div>
+      </div>
+
+      <div class="orient-chat-wrap">
+        <div id="orientExpertMessages" class="orient-chat-messages"></div>
+        <div class="orient-chat-bar">
+          <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            Sugestões rápidas
+          </button>
+          <div class="orient-input-wrap">
+            <textarea id="orientExpertInput"
+              placeholder="Fale com o TITAN COACH..."
+              rows="1"
+              style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
+              oninput="autoResizeOrientInput(this)"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
+            <button id="orientSendBtn" onclick="sendOrientExpert()"
+              style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+            </button>
+          </div>
+          <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
+            Enter para enviar · Shift+Enter para nova linha
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -5385,25 +5391,26 @@ function buildTrainingContext() {
   const horaStr  = agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
   const totalSessoes = safeJSON(STORAGE.historyKey, []).length;
 
-  return `Você é o TITAN COACH, o coach pessoal de musculação e nutrição do app TITAN PRO.
+  return `Você é o TITAN COACH — o coach pessoal de musculação e nutrição do app TITAN PRO. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Pense em si mesmo como o capitão: direto, experiente, sem enrolação.
 
 ═══════════════════════════════════════
-PERSONALIDADE E FORMA DE FALAR
+IDENTIDADE E PERSONALIDADE
 ═══════════════════════════════════════
-- Você é um coach de verdade, não um chatbot — fale como gente fala
-- Português brasileiro coloquial, como numa conversa de WhatsApp ou academia
+- Você é coach, não assistente — fala direto, com personalidade forte e autoridade
+- Você CONHECE o usuário pelos dados: histórico, PRs, objetivos, rotina. Use isso.
+- Use o nome dele naturalmente quando fizer sentido — sem exagerar
+- Português brasileiro coloquial, como conversa presencial na academia
 - NUNCA comece com "Claro!", "Certamente!", "Olá!", "Como posso ajudar?" — vá direto ao ponto
-- Saudação simples ("Oi", "Ola", "E aí") = responda de forma curta e casual, sem monólogo
+- Saudação simples ("Oi", "E aí") = resposta curta e casual
 - Resposta simples = 1-3 linhas. Detalhe só quando a pergunta pede
 - Nunca repita o que o usuário disse. Nunca faça introduções desnecessárias
+- Observações proativas: perceba inconsistências nos dados, elogie conquistas reais, dê alertas reais
 - Varie o jeito de responder — não repita padrões de frase
-- Faça perguntas só quando realmente precisar de info — uma por vez, no fim
-- Use gírias do meio quando fizer sentido: "tá voando", "bora", "massa"
+- Faça perguntas só quando precisar de info — uma por vez, no fim
+- Use gírias do meio quando fizer sentido: "tá voando", "bora", "massa", "na veia"
 - Encorajador sem exagero — "bom progresso" é melhor que "INCRÍVEL!!"
-- Quando não souber algo sobre o usuário, pergunte — não invente
-- NUNCA assuma que o usuário está falando de treino se ele não mencionou treino
-- Comentário casual ("cansei", "tô bem", "kkkk") = responda como amigo, não como coach analisando treino
-- Só use dados do perfil/histórico se o usuário perguntar algo relacionado
+- Comentário casual ("cansei", "kkkk") = responda como amigo, não como coach analisando treino
+- Quando der uma recomendação baseada nos dados do app, mencione o dado que embasou — seja específico
 
 ═══════════════════════════════════════
 PERFIL DO USUÁRIO
@@ -6421,7 +6428,6 @@ function updateHeatmap(hist) {
 // ══════════════════════════════════════════
 function openOrientacao() {
   document.getElementById("orientacaoScreen").classList.add("show");
-  // atalhos visíveis ao abrir pela primeira vez (colapsa se já tem mensagens)
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -6431,7 +6437,111 @@ function openOrientacao() {
   } else {
     row.classList.remove("collapsed");
     btn && btn.classList.add("open");
+    // Saudação proativa ARIA — só na primeira abertura da sessão
+    ariaGreeting();
   }
+  // Atualizar chips dinâmicos sempre que abre
+  renderAriaChips();
+}
+
+function ariaGreeting() {
+  const cfg    = safeJSON("titanpro_config", {});
+  const hist   = safeJSON(STORAGE.historyKey, []);
+  const streak = calcStreak();
+  const draft  = safeJSON(STORAGE.draftKey, null);
+  const nome   = cfg.nome || "";
+
+  // Monta contexto compacto para o greeting
+  const totalSessoes = hist.length;
+  const ultima = hist.length ? hist[hist.length - 1] : null;
+  const ultimaData = ultima ? new Date(ultima.createdAt).toLocaleDateString("pt-BR") : null;
+  const volUltima = ultima ? Math.round(calcVolumeTotal(ultima.state)) : 0;
+
+  // Próximo treino pendente no programa
+  const sections = draft?.sections || [];
+  const nextIdx  = getNextTreinoIdx();
+  const nextSec  = sections[nextIdx];
+  const nextKey  = nextSec?.treinoKey || null;
+  const nextExs  = (nextSec?.cards || []).map(c => c.name).slice(0, 3).join(", ");
+
+  const prompt = `[SAUDAÇÃO PROATIVA — análise silenciosa dos dados do usuário]
+
+Abra a conversa como ARIA analisando o status atual:
+- Nome: ${nome || "usuário"}
+- Streak: ${streak} dias consecutivos
+- Total de sessões: ${totalSessoes}
+- Último treino: ${ultimaData ? `${ultimaData}, volume ${volUltima}kg` : "nenhum ainda"}
+- Próximo treino no programa: ${nextKey ? `Treino ${nextKey} (${nextExs || "exercícios pendentes"})` : "não configurado"}
+- Peso: ${cfg.peso || "não informado"} kg
+
+Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real ou conquista. Finalize com uma pergunta curta ou call to action.`;
+
+  const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
+  fetch("/api/agent", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: prompt }],
+      history: safeJSON(STORAGE.historyKey, []).slice(0, 10),
+      profile: cfg
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const text = data.content?.[0]?.text || data.error || "Sistemas online.";
+    typing.innerHTML = renderMarkdown(text);
+    _orientExpertHistory.push({ role: "assistant", content: text });
+    // Colapsa chips após saudação
+    const row = document.querySelector(".orient-shortcuts-row");
+    const btn = document.getElementById("orientSuggestBtn");
+    if (row) { row.classList.add("collapsed"); btn && btn.classList.remove("open"); }
+  })
+  .catch(() => { typing.innerHTML = "TITAN COACH online. O que vamos atacar hoje?"; });
+}
+
+function renderAriaChips() {
+  const container = document.getElementById("ariaChipsDynamic");
+  if (!container) return;
+  const cfg    = safeJSON("titanpro_config", {});
+  const hist   = safeJSON(STORAGE.historyKey, []);
+  const streak = calcStreak();
+  const draft  = safeJSON(STORAGE.draftKey, null);
+  const sections = draft?.sections || [];
+  const nextIdx  = getNextTreinoIdx();
+  const nextSec  = sections[nextIdx];
+  const nextKey  = nextSec?.treinoKey || null;
+
+  const chips = [];
+
+  // Chip dinâmico: próximo treino
+  if (nextKey) {
+    const grupo = (nextSec?.cards || []).slice(0,2).map(c=>c.name).join(" + ") || `Treino ${nextKey}`;
+    chips.push({ icon: "▸", label: `Me prepara pro ${grupo.length > 22 ? `Treino ${nextKey}` : grupo}`, msg: `Me prepara para o próximo treino: Treino ${nextKey}. Quais são os pontos de atenção?` });
+  }
+
+  // Chip dinâmico: streak
+  if (streak >= 3) {
+    chips.push({ icon: "🔥", label: `${streak} dias — e agora?`, msg: `Estou com ${streak} dias de streak. Como mantenho a intensidade sem entrar em overtraining?` });
+  }
+
+  // Chip dinâmico: histórico
+  if (hist.length >= 3) {
+    chips.push({ icon: "📈", label: "Minha evolução recente", msg: "Analise minha evolução nas últimas sessões. Estou progredindo bem?" });
+  }
+
+  // Chips fixos sempre úteis
+  chips.push({ icon: "💊", label: "Suplementos que valem", msg: "Quais suplementos têm evidência científica real e valem a pena para meu objetivo?" });
+  chips.push({ icon: "🍗", label: "Pós-treino ideal", msg: "O que comer no pós-treino para maximizar recuperação e hipertrofia?" });
+
+  container.innerHTML = chips.slice(0, 5).map(c =>
+    `<div class="orient-chip" onclick="ariaQuickSend(${JSON.stringify(c.msg).replace(/'/g,"\\'")})">`+
+    `<span class="orient-chip-icon">${c.icon}</span>`+
+    `<span class="orient-chip-name">${c.label}</span></div>`
+  ).join("");
+}
+
+function ariaQuickSend(msg) {
+  document.getElementById("orientExpertInput").value = msg;
+  sendOrientExpert();
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
