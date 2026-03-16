@@ -258,11 +258,11 @@ function toolTendenciaVolume(args, userData) {
 function executeTool(name, args, userData) {
   try {
     switch (name) {
-      case 'analisar_progresso':  return toolAnalisarProgresso(args, userData);
-      case 'detectar_plato':      return toolDetectarPlato(args, userData);
-      case 'calcular_nutricao':   return toolCalcularNutricao(args, userData);
+      case 'analisar_progresso':   return toolAnalisarProgresso(args, userData);
+      case 'detectar_plato':       return toolDetectarPlato(args, userData);
+      case 'calcular_nutricao':    return toolCalcularNutricao(args, userData);
       case 'analisar_recuperacao': return toolAnalisarRecuperacao(userData);
-      case 'tendencia_volume':    return toolTendenciaVolume(args, userData);
+      case 'tendencia_volume':     return toolTendenciaVolume(args, userData);
       default: return { error: 'Ferramenta desconhecida: ' + name };
     }
   } catch (e) {
@@ -271,12 +271,12 @@ function executeTool(name, args, userData) {
 }
 
 // ══════════════════════════════════════════
-// CHAMADA NVIDIA COM SUPORTE A TOOLS
+// CHAMADA GROQ COM SUPORTE A TOOLS
 // ══════════════════════════════════════════
 
 function callAgent(messages, tools, callback) {
-  var GEMINI_KEY = process.env.GEMINI_API_KEY;
-  var NVIDIA_KEY  = process.env.NVIDIA_API_KEY;
+  var GROQ_KEY   = process.env.GROQ_API_KEY;
+  var NVIDIA_KEY = process.env.NVIDIA_API_KEY;
 
   var payload = {
     messages: messages,
@@ -287,13 +287,13 @@ function callAgent(messages, tools, callback) {
     stream: false
   };
 
-  if (GEMINI_KEY) {
-    gemini.callGeminiAgent(GEMINI_KEY, payload, 30000, 3, callback);
+  if (GROQ_KEY) {
+    gemini.callGeminiAgent(GROQ_KEY, payload, 30000, 3, callback);
   } else if (NVIDIA_KEY) {
     payload.model = 'meta/llama-3.3-70b-instruct';
     nvidia.callNvidiaAgent(NVIDIA_KEY, payload, 30000, 3, callback);
   } else {
-    callback('Nenhuma chave de API configurada (GEMINI_API_KEY ou NVIDIA_API_KEY)', null);
+    callback('Nenhuma chave de API configurada (GROQ_API_KEY ou NVIDIA_API_KEY)', null);
   }
 }
 
@@ -355,15 +355,12 @@ function agentLoop(userMessages, userData, callback) {
     callAgent(msgs, TOOLS, function(err, msg) {
       if (err) return callback(err, null);
 
-      // Sem tool calls → resposta final
       if (!msg.tool_calls || !msg.tool_calls.length) {
         return callback(null, msg.content || 'Sem resposta.');
       }
 
-      // Adiciona mensagem do assistant com tool calls
       msgs.push({ role: 'assistant', content: msg.content || '', tool_calls: msg.tool_calls });
 
-      // Executa cada tool call e adiciona resultado
       msg.tool_calls.forEach(function(tc) {
         var args = {};
         try { args = JSON.parse(tc.function.arguments || '{}'); } catch (e) {}
@@ -391,14 +388,13 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
-  if (!process.env.GEMINI_API_KEY && !process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'Nenhuma chave de API configurada' }); return; }
+  if (!process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'Nenhuma chave de API configurada' }); return; }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
     plans.checkAndIncrementQuota(user.id, res, function() {
       var b = req.body || {};
 
-      // Validação de input
       var messages = b.messages || [];
       if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
       if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
@@ -417,10 +413,9 @@ module.exports = function(req, res) {
 
       agentLoop(messages, userData, function(err, text) {
         if (err) return res.status(500).json({ error: err });
-        // Log estimado (agentLoop faz múltiplas chamadas; estimamos pelos dados de entrada)
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
-        var modelUsed = process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'meta/llama-3.3-70b-instruct';
+        var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
         logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed });
         res.status(200).json({ content: [{ type: 'text', text: text }] });
       });
