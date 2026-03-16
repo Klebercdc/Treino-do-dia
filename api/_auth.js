@@ -1,14 +1,18 @@
 /**
  * Helper de autenticação — verifica o JWT do Supabase via endpoint /auth/v1/user.
  *
- * Variáveis de ambiente necessárias (Vercel):
+ * Variáveis de ambiente (Vercel) — ao menos uma deve estar configurada:
+ *   SUPABASE_SERVICE_KEY = chave service_role do projeto Supabase (preferencial)
+ *   SUPABASE_ANON_KEY    = chave anon/public (suficiente para validar tokens)
  *   SUPABASE_URL         = https://twxoddzogbmaysebhour.supabase.co
- *   SUPABASE_SERVICE_KEY = chave service_role do projeto Supabase
  */
 
 var https = require('https');
 
 var SUPABASE_URL = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.supabase.co';
+
+// Anon key é pública (já está no frontend) — usada como fallback seguro
+var SUPABASE_ANON_KEY_FALLBACK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E';
 
 /**
  * Verifica o JWT do Supabase delegando ao endpoint /auth/v1/user.
@@ -18,8 +22,9 @@ var SUPABASE_URL = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.sup
 function verifyToken(token, callback) {
   if (!token) return callback('Token ausente', null);
 
-  var serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!serviceKey) return callback('SUPABASE_SERVICE_KEY não configurado', null);
+  var apiKey = process.env.SUPABASE_SERVICE_KEY
+             || process.env.SUPABASE_ANON_KEY
+             || SUPABASE_ANON_KEY_FALLBACK;
 
   var baseUrl = SUPABASE_URL.replace(/\/$/, '');
   var urlObj = new URL(baseUrl + '/auth/v1/user');
@@ -31,7 +36,7 @@ function verifyToken(token, callback) {
     method: 'GET',
     headers: {
       'Authorization': 'Bearer ' + token,
-      'apikey': serviceKey
+      'apikey': apiKey
     }
   };
 
