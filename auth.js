@@ -28,6 +28,44 @@ async function getAuthHeaders() {
     : { 'Content-Type': 'application/json' };
 }
 
+/**
+ * Wrapper de fetch com tratamento automático de falha de token (401).
+ * Em caso de 401: força refresh da sessão e tenta uma vez mais.
+ * Se ainda 401 após retry (sessão expirada), faz logout e exibe aviso.
+ */
+async function apiFetch(url, opts = {}) {
+  opts.headers = opts.headers || await getAuthHeaders();
+  let resp = await fetch(url, opts);
+
+  if (resp.status === 401) {
+    // Força refresh e tenta novamente
+    try {
+      const { data } = await _sb.auth.refreshSession();
+      if (data?.session?.access_token) {
+        opts.headers = {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + data.session.access_token
+        };
+        resp = await fetch(url, opts);
+      }
+    } catch {}
+
+    // Se ainda 401, sessão inválida — logout automático
+    if (resp.status === 401) {
+      await _sb.auth.signOut();
+      _appUnlocked = false;
+      const loginScreen = document.getElementById('loginScreen');
+      if (loginScreen) loginScreen.style.display = 'flex';
+      if (typeof showToast === 'function') {
+        showToast('Sessão expirada. Faça login novamente.', 'error', 4000);
+      }
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+  }
+
+  return resp;
+}
+
 // ══════════════════════════════════════════════════════
 // SINCRONIZAÇÃO COM SUPABASE (backup em nuvem)
 // ══════════════════════════════════════════════════════

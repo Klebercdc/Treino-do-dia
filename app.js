@@ -2444,9 +2444,8 @@ async function sendAI(overrideText, isGerarTreino = false) {
       ? { system: buildTrainingContext(), messages, isGerarTreino, model: "meta/llama-3.1-70b-instruct", max_tokens: 1000 }
       : { messages, history: userData.history, profile: userData.profile };
 
-    const response = await fetch(endpoint, {
+    const response = await apiFetch(endpoint, {
       method: "POST",
-      headers: await getAuthHeaders(),
       body: JSON.stringify(body)
     });
 
@@ -3274,8 +3273,8 @@ Abra a conversa como ARIA analisando o status atual:
 Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real ou conquista. Finalize com uma pergunta curta ou call to action.`;
 
   const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
-  getAuthHeaders().then(authHeaders => fetch("/api/agent", {
-    method: "POST", headers: authHeaders,
+  apiFetch("/api/agent", {
+    method: "POST",
     body: JSON.stringify({
       messages: [{ role: "user", content: prompt }],
       history: safeJSON(STORAGE.historyKey, []).slice(0, 10),
@@ -3292,7 +3291,7 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
     const btn = document.getElementById("orientSuggestBtn");
     if (row) { row.classList.add("collapsed"); btn && btn.classList.remove("open"); }
   })
-  .catch(() => { typing.innerHTML = "KRONOS online. O que vamos atacar hoje?"; }));
+  .catch(() => { typing.innerHTML = "KRONOS online. O que vamos atacar hoje?"; });
 }
 
 function renderAriaChips() {
@@ -3410,8 +3409,8 @@ async function sendOrientExpert() {
   try {
     const userData = buildUserData();
     const messages = _orientExpertHistory.slice(-20);
-    const resp = await fetch("/api/agent", {
-      method: "POST", headers: await getAuthHeaders(),
+    const resp = await apiFetch("/api/agent", {
+      method: "POST",
       body: JSON.stringify({ messages, history: userData.history, profile: userData.profile })
     });
     const data = await resp.json();
@@ -3929,8 +3928,8 @@ Refeições|Mastigar devagar. Comer sem telas. Parar ao sentir saciedade.
 IMPORTANTE: Use as diretrizes ISSN — ≥1.6g/kg proteína para hipertrofia, déficit 300-500kcal para emagrecimento, superávit 200-300kcal para ganho de massa. Seja preciso nos números.`;
 
   try {
-    const resp = await fetch("/api/chat", {
-      method: "POST", headers: await getAuthHeaders(),
+    const resp = await apiFetch("/api/chat", {
+      method: "POST",
       body: JSON.stringify({ system: buildTrainingContext(), messages: [{ role: "user", content: prompt }], isGerarTreino: false })
     });
     const data = await resp.json();

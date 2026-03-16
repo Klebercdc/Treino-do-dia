@@ -129,11 +129,7 @@ window.fetch = async function(url, opts) {
 async function exportUserData() {
   showToast('Preparando seus dados para exportação...', 'info', 3000);
   try {
-    const { data: { session } } = await _sb.auth.getSession();
-    if (!session) return;
-    const resp = await fetch('/api/lgpd-export', {
-      headers: { 'Authorization': 'Bearer ' + session.access_token }
-    });
+    const resp = await apiFetch('/api/lgpd-export');
     if (!resp.ok) throw new Error('Falha na exportação');
     const blob = await resp.blob();
     const url = URL.createObjectURL(blob);
@@ -165,12 +161,7 @@ function confirmDeleteAccount() {
 async function deleteAccount() {
   showToast('Excluindo sua conta...', 'info', 5000);
   try {
-    const { data: { session } } = await _sb.auth.getSession();
-    if (!session) return;
-    const resp = await fetch('/api/lgpd-delete', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + session.access_token }
-    });
+    const resp = await apiFetch('/api/lgpd-delete', { method: 'POST' });
     const json = await resp.json();
     if (json.ok) {
       showToast('Conta excluída. Obrigado por usar o TITAN PRO.', 'success', 5000);
