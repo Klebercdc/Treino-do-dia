@@ -1,45 +1,66 @@
 /**
- * Helper de autenticação — verifica o JWT do Supabase com assinatura HMAC.
+ * Helper de autenticação — verifica o JWT do Supabase via endpoint /auth/v1/user.
  *
  * Variáveis de ambiente necessárias (Vercel):
- *   SUPABASE_URL       = https://twxoddzogbmaysebhour.supabase.co
- *   SUPABASE_JWT_SECRET = <JWT secret do projeto Supabase>
+ *   SUPABASE_URL         = https://twxoddzogbmaysebhour.supabase.co
+ *   SUPABASE_SERVICE_KEY = chave service_role do projeto Supabase
  */
 
-var jwt = require('jsonwebtoken');
+var https = require('https');
 
 var SUPABASE_URL = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.supabase.co';
-var EXPECTED_ISSUER = SUPABASE_URL.replace(/\/$/, '') + '/auth/v1';
 
 /**
- * Verifica o JWT do Supabase com validação de assinatura HMAC-SHA256.
- * Checa: assinatura, issuer, audience, expiração.
+ * Verifica o JWT do Supabase delegando ao endpoint /auth/v1/user.
+ * Funciona com qualquer algoritmo (HS256, RS256, etc.) sem depender
+ * do SUPABASE_JWT_SECRET nem de bibliotecas externas de JWT.
  */
 function verifyToken(token, callback) {
   if (!token) return callback('Token ausente', null);
 
-  var secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) return callback('SUPABASE_JWT_SECRET não configurado', null);
+  var serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!serviceKey) return callback('SUPABASE_SERVICE_KEY não configurado', null);
+
+  var baseUrl = SUPABASE_URL.replace(/\/$/, '');
+  var urlObj = new URL(baseUrl + '/auth/v1/user');
 
   var options = {
-    algorithms: ['HS256'],
-    issuer: EXPECTED_ISSUER,
-    audience: 'authenticated'
+    hostname: urlObj.hostname,
+    port: 443,
+    path: urlObj.pathname,
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'apikey': serviceKey
+    }
   };
 
-  jwt.verify(token, secret, options, function(err, payload) {
-    if (err) {
-      return callback('Token inválido: ' + err.message, null);
-    }
-
-    var user = {
-      id:    payload.sub,
-      email: payload.email,
-      role:  payload.role
-    };
-
-    callback(null, user);
+  var req = https.request(options, function(res) {
+    var data = '';
+    res.on('data', function(chunk) { data += chunk; });
+    res.on('end', function() {
+      if (res.statusCode === 200) {
+        try {
+          var userObj = JSON.parse(data);
+          callback(null, {
+            id:    userObj.id,
+            email: userObj.email,
+            role:  userObj.role
+          });
+        } catch (e) {
+          callback('Erro ao processar resposta do Supabase', null);
+        }
+      } else {
+        callback('Token inválido', null);
+      }
+    });
   });
+
+  req.on('error', function(e) {
+    callback('Erro de conexão com Supabase: ' + e.message, null);
+  });
+
+  req.end();
 }
 
 /**
