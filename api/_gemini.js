@@ -8,8 +8,8 @@
 
 var https = require('https');
 
-// Modelos em ordem de preferência (fallback automático por cota)
-var GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+// Modelos em ordem de preferência (fallback automático por cota/indisponibilidade)
+var GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-preview-04-17'];
 var GEMINI_MODEL  = GEMINI_MODELS[0];
 
 function makeOptions(KEY, body) {
@@ -88,8 +88,8 @@ function tryModels(KEY, payload, timeoutMs, onData, callback) {
       res.on('data', function(c) { data += c; });
       res.on('end', function() {
         var status = res.statusCode;
-        // 429 ou 503 → tenta próximo modelo
-        if (status === 429 || status === 503) return attempt();
+        // 429, 404 ou 503 → tenta próximo modelo
+        if (status === 429 || status === 404 || status === 503) return attempt();
         if (status >= 400) return callback('HTTP ' + status + ': ' + data.substring(0, 300), null);
         try {
           callback(null, onData(JSON.parse(data)));
