@@ -9583,9 +9583,20 @@ Promise.all([
 // ══════════════════════════════
 // CONFIGURAÇÃO DO PLANO
 // ══════════════════════════════
-// URL do produto Hotmart/Kiwify — altere para o seu link de checkout
-var HOTMART_CHECKOUT_URL = 'https://pay.hotmart.com/SEU_PRODUTO_ID';
-var FREE_AI_LIMIT = 15; // deve corresponder ao FREE_AI_LIMIT do backend
+// URL de checkout carregada via /api/config (env var CHECKOUT_URL no Vercel)
+var HOTMART_CHECKOUT_URL = '';
+var FREE_AI_LIMIT = 15; // valor padrão; sobrescrito após fetch do /api/config
+
+// Carrega configurações públicas do backend
+(function loadAppConfig() {
+  fetch('/api/config')
+    .then(function(r) { return r.json(); })
+    .then(function(cfg) {
+      if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
+      if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
+    })
+    .catch(function() { /* falha silenciosa — continua com defaults */ });
+})();
 
 var _userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT };
 
@@ -9647,6 +9658,10 @@ function closePlanModal() {
 }
 
 async function assinarPro() {
+  if (!HOTMART_CHECKOUT_URL) {
+    alert('Link de pagamento não configurado. Entre em contato com o suporte.');
+    return;
+  }
   try {
     const { data: { session } } = await _sb.auth.getSession();
     var email = session && session.user && session.user.email ? '?email=' + encodeURIComponent(session.user.email) : '';
