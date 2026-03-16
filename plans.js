@@ -35,17 +35,63 @@ async function fetchUserPlan() {
 }
 
 function updatePlanBadge() {
-  const badge = document.getElementById('authMenuPlanBadge');
-  if (!badge) return;
-  if (_userPlan.plan === 'pro') {
-    badge.textContent = 'PRO';
-    badge.style.background = 'rgba(249,115,22,0.3)';
-    badge.style.color = 'var(--accent)';
-  } else {
-    var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
-    badge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
-    badge.style.background = rem <= 3 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
-    badge.style.color = rem <= 3 ? '#ef4444' : 'var(--text-2)';
+  var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
+  var isPro = _userPlan.plan === 'pro';
+
+  // ── Badge no menu de conta ──
+  var badge = document.getElementById('authMenuPlanBadge');
+  if (badge) {
+    if (isPro) {
+      badge.textContent = 'PRO';
+      badge.style.background = 'rgba(249,115,22,0.3)';
+      badge.style.color = 'var(--accent)';
+    } else {
+      badge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
+      badge.style.background = rem <= 3 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
+      badge.style.color = rem <= 3 ? '#ef4444' : 'var(--text-2)';
+    }
+  }
+
+  // ── Banner de upgrade na home ──
+  var homeBanner = document.getElementById('homeUpgradeBanner');
+  var homeSubtext = document.getElementById('homeUpgradeSubtext');
+  if (homeBanner) {
+    if (isPro) {
+      homeBanner.style.display = 'none';
+    } else {
+      homeBanner.style.display = 'flex';
+      if (homeSubtext) {
+        if (rem === 0) {
+          homeSubtext.textContent = 'Limite esgotado — faça upgrade para continuar usando a IA';
+        } else if (rem <= 5) {
+          homeSubtext.textContent = 'Apenas ' + rem + ' consulta' + (rem === 1 ? '' : 's') + ' restante' + (rem === 1 ? '' : 's') + ' este mês';
+        } else {
+          homeSubtext.textContent = 'Coach ilimitado · Dieta sem limite · R$29,90/mês';
+        }
+      }
+      homeBanner.style.borderColor = rem === 0
+        ? 'rgba(239,68,68,0.4)'
+        : rem <= 5 ? 'rgba(249,115,22,0.5)' : 'rgba(249,115,22,0.2)';
+    }
+  }
+
+  // ── Chip de quota no KRONOS ──
+  var orientChip = document.getElementById('orientQuotaChip');
+  var orientText = document.getElementById('orientQuotaText');
+  if (orientChip) {
+    if (isPro) {
+      orientChip.style.display = 'none';
+    } else {
+      orientChip.style.display = 'block';
+      if (orientText) {
+        orientText.textContent = rem === 0 ? 'Limite atingido' : rem + ' restante' + (rem === 1 ? '' : 's');
+        orientText.style.color = rem === 0 ? '#ef4444' : rem <= 3 ? 'var(--accent)' : 'var(--text-2)';
+      }
+      var chipEl = orientChip.querySelector('span');
+      if (chipEl) {
+        chipEl.style.borderColor = rem === 0 ? 'rgba(239,68,68,0.4)' : rem <= 3 ? 'rgba(249,115,22,0.4)' : 'var(--border)';
+      }
+    }
   }
 }
 
