@@ -119,8 +119,6 @@ REGRAS GERAIS
 5. Mantenha contexto da conversa`;
 
 function buildCoachSystem(systemFromClient) {
-  // Se o cliente já mandou o system com os dados preenchidos, usar ele
-  // Senão usar o template base
   if (systemFromClient && systemFromClient.length > 100) return systemFromClient;
   return COACH_SYSTEM_TEMPLATE
     .replace(`{objetivo}`, `não informado`)
@@ -132,13 +130,12 @@ function buildCoachSystem(systemFromClient) {
 
 function isPedidoDeTreino(messages) {
   var ultima = (messages.slice(-1)[0] || {}).content || ``;
-  // Só detecta se pede EXPLICITAMENTE para criar/gerar um treino novo
   return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e))\b.{0,20}\b(treino|programa|plano)\b.{0,20}\b(\d+\s*[xX×]\s*|\d+\s*dias?|semana)/i.test(ultima);
 }
 
 function callChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
-  var GEMINI_KEY = process.env.GEMINI_API_KEY;
-  var NVIDIA_KEY  = process.env.NVIDIA_API_KEY;
+  var GROQ_KEY   = process.env.GROQ_API_KEY;
+  var NVIDIA_KEY = process.env.NVIDIA_API_KEY;
   var m = [];
   if (system) m.push({ role: `system`, content: system });
   messages.forEach(function(x) { m.push(x); });
@@ -152,13 +149,13 @@ function callChat(system, messages, maxTokens, temp, userId, endpoint, callback)
     callback(null, result.text);
   }
 
-  if (GEMINI_KEY) {
-    gemini.callGeminiFull(GEMINI_KEY, payload, 25000, 3, onResult);
+  if (GROQ_KEY) {
+    gemini.callGeminiFull(GROQ_KEY, payload, 25000, 3, onResult);
   } else if (NVIDIA_KEY) {
     payload.model = `meta/llama-3.3-70b-instruct`;
     nvidia.callNvidiaFull(NVIDIA_KEY, payload, 25000, 3, onResult);
   } else {
-    callback('Nenhuma chave de API configurada (GEMINI_API_KEY ou NVIDIA_API_KEY)', null);
+    callback('Nenhuma chave de API configurada (GROQ_API_KEY ou NVIDIA_API_KEY)', null);
   }
 }
 
@@ -168,7 +165,6 @@ function parseWorkout(text) {
   if (s===-1||e===-1) throw new Error('no json');
   var p = JSON.parse(clean.slice(s,e+1));
   if (!p.treinos||!p.treinos.length) throw new Error('invalid');
-  // Normalizar exercicios — garantir series/reps mesmo com fases
   p.treinos.forEach(function(t) {
     (t.exercicios||[]).forEach(function(ex) {
       if (ex.fases && ex.fases.length > 0) {
@@ -206,7 +202,6 @@ function gerarTreino(userMsg, userId, callback) {
   callChat(TREINO_SYSTEM, [userMsg], 1500, 0.1, userId, 'chat-treino', function(err, text) {
     try { return callback(null, parseWorkout(text||``)); } catch(e) {}
     try { return callback(null, extrairDoTexto(text||``)); } catch(e2) {}
-    // segunda tentativa
     callChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
       try { return callback(null, parseWorkout(text2||``)); } catch(e3) {}
       try { return callback(null, extrairDoTexto(text2||``)); } catch(e4) {}
@@ -219,14 +214,13 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
   if (req.method!==`POST`){res.status(405).end();return;}
-  if (!process.env.GEMINI_API_KEY && !process.env.NVIDIA_API_KEY){res.status(500).json({error:'Nenhuma chave de API configurada'});return;}
+  if (!process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY){res.status(500).json({error:'Nenhuma chave de API configurada'});return;}
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
     plans.checkAndIncrementQuota(user.id, res, function() {
       var b = req.body||{};
 
-      // Validação de input
       var messages = b.messages||[];
       if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
       if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
