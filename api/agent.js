@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var gemini = require('./_gemini');
 var auth = require('./_auth');
 var cors = require('./_cors');
 var rl = require('./_ratelimit');
@@ -273,12 +274,11 @@ function executeTool(name, args, userData) {
 // CHAMADA NVIDIA COM SUPORTE A TOOLS
 // ══════════════════════════════════════════
 
-function callNvidiaAgent(messages, tools, callback) {
-  var KEY = process.env.NVIDIA_API_KEY;
-  if (!KEY) return callback('NVIDIA_API_KEY missing', null);
+function callAgent(messages, tools, callback) {
+  var GEMINI_KEY = process.env.GEMINI_API_KEY;
+  var NVIDIA_KEY  = process.env.NVIDIA_API_KEY;
 
   var payload = {
-    model: 'meta/llama-3.3-70b-instruct',
     messages: messages,
     tools: tools,
     tool_choice: 'auto',
@@ -287,7 +287,14 @@ function callNvidiaAgent(messages, tools, callback) {
     stream: false
   };
 
-  nvidia.callNvidiaAgent(KEY, payload, 30000, 3, callback);
+  if (GEMINI_KEY) {
+    gemini.callGeminiAgent(GEMINI_KEY, payload, 30000, 3, callback);
+  } else if (NVIDIA_KEY) {
+    payload.model = 'meta/llama-3.3-70b-instruct';
+    nvidia.callNvidiaAgent(NVIDIA_KEY, payload, 30000, 3, callback);
+  } else {
+    callback('Nenhuma chave de API configurada (GEMINI_API_KEY ou NVIDIA_API_KEY)', null);
+  }
 }
 
 // ══════════════════════════════════════════
@@ -345,7 +352,7 @@ function agentLoop(userMessages, userData, callback) {
   function iterate() {
     if (iter++ >= MAX_ITER) return callback(null, 'Limite de iterações atingido.');
 
-    callNvidiaAgent(msgs, TOOLS, function(err, msg) {
+    callAgent(msgs, TOOLS, function(err, msg) {
       if (err) return callback(err, null);
 
       // Sem tool calls → resposta final
@@ -384,7 +391,7 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
-  if (!process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'NVIDIA_API_KEY missing' }); return; }
+  if (!process.env.GEMINI_API_KEY && !process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'Nenhuma chave de API configurada' }); return; }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -413,7 +420,8 @@ module.exports = function(req, res) {
         // Log estimado (agentLoop faz múltiplas chamadas; estimamos pelos dados de entrada)
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
-        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: 'meta/llama-3.3-70b-instruct' });
+        var modelUsed = process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'meta/llama-3.3-70b-instruct';
+        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed });
         res.status(200).json({ content: [{ type: 'text', text: text }] });
       });
     });

@@ -1,5 +1,6 @@
 var https = require(`https`);
 var nvidia = require('./_nvidia');
+var gemini = require('./_gemini');
 var auth = require('./_auth');
 var cors = require('./_cors');
 var rl = require('./_ratelimit');
@@ -135,20 +136,30 @@ function isPedidoDeTreino(messages) {
   return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e))\b.{0,20}\b(treino|programa|plano)\b.{0,20}\b(\d+\s*[xX×]\s*|\d+\s*dias?|semana)/i.test(ultima);
 }
 
-function callNvidiaChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
-  var KEY = process.env.NVIDIA_API_KEY;
-  if (!KEY) return callback(`NVIDIA_API_KEY missing`, null);
+function callChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
+  var GEMINI_KEY = process.env.GEMINI_API_KEY;
+  var NVIDIA_KEY  = process.env.NVIDIA_API_KEY;
   var m = [];
   if (system) m.push({ role: `system`, content: system });
   messages.forEach(function(x) { m.push(x); });
-  var payload = { model: `meta/llama-3.3-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: temp, stream: false };
-  nvidia.callNvidiaFull(KEY, payload, 25000, 3, function(err, result) {
+  var payload = { messages: m, max_tokens: maxTokens, temperature: temp, stream: false };
+
+  function onResult(err, result) {
     if (err) return callback(err, null);
     if (userId) {
       logger.logUsage({ userId: userId, endpoint: endpoint || 'chat', promptTokens: result.usage.prompt_tokens, completionTokens: result.usage.completion_tokens, model: result.model });
     }
     callback(null, result.text);
-  });
+  }
+
+  if (GEMINI_KEY) {
+    gemini.callGeminiFull(GEMINI_KEY, payload, 25000, 3, onResult);
+  } else if (NVIDIA_KEY) {
+    payload.model = `meta/llama-3.3-70b-instruct`;
+    nvidia.callNvidiaFull(NVIDIA_KEY, payload, 25000, 3, onResult);
+  } else {
+    callback('Nenhuma chave de API configurada (GEMINI_API_KEY ou NVIDIA_API_KEY)', null);
+  }
 }
 
 function parseWorkout(text) {
@@ -192,11 +203,11 @@ function extrairDoTexto(text) {
 }
 
 function gerarTreino(userMsg, userId, callback) {
-  callNvidiaChat(TREINO_SYSTEM, [userMsg], 1500, 0.1, userId, 'chat-treino', function(err, text) {
+  callChat(TREINO_SYSTEM, [userMsg], 1500, 0.1, userId, 'chat-treino', function(err, text) {
     try { return callback(null, parseWorkout(text||``)); } catch(e) {}
     try { return callback(null, extrairDoTexto(text||``)); } catch(e2) {}
     // segunda tentativa
-    callNvidiaChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
+    callChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
       try { return callback(null, parseWorkout(text2||``)); } catch(e3) {}
       try { return callback(null, extrairDoTexto(text2||``)); } catch(e4) {}
       callback(`Erro ao gerar treino: ` + (err2||'resposta inválida da IA') + `. Tente novamente.`, null);
@@ -208,7 +219,7 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
   if (req.method!==`POST`){res.status(405).end();return;}
-  if (!process.env.NVIDIA_API_KEY){res.status(500).json({error:`NVIDIA_API_KEY missing`});return;}
+  if (!process.env.GEMINI_API_KEY && !process.env.NVIDIA_API_KEY){res.status(500).json({error:'Nenhuma chave de API configurada'});return;}
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -236,7 +247,7 @@ module.exports = function(req, res) {
           res.status(200).json({content:[{type:`workout_json`,data:data}]});
         });
       } else {
-        callNvidiaChat(buildCoachSystem(b.system), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+        callChat(buildCoachSystem(b.system), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
           if (err) return res.status(500).json({error:err});
           res.status(200).json({content:[{type:`text`,text:text}]});
         });
