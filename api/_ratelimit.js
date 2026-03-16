@@ -7,6 +7,7 @@
  */
 
 var store = Object.create(null);
+var MAX_STORE_SIZE = 10000; // evita crescimento ilimitado de memória
 
 // Limpa entradas expiradas a cada 5 minutos
 setInterval(function() {
@@ -40,6 +41,13 @@ function rateLimit(req, res, next, opts, userId) {
   var now = Date.now();
 
   if (!store[key] || store[key].resetAt < now) {
+    // Evicta a entrada mais antiga se o store atingiu o limite
+    if (!store[key] && Object.keys(store).length >= MAX_STORE_SIZE) {
+      var oldest = Object.keys(store).reduce(function(a, b) {
+        return store[a].resetAt < store[b].resetAt ? a : b;
+      });
+      delete store[oldest];
+    }
     store[key] = { count: 0, resetAt: now + windowMs };
   }
 

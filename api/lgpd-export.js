@@ -16,7 +16,7 @@ module.exports = function(req, res) {
   auth.requireAuth(req, res, function(user) {
     var uid = user.id;
     var collected = { user_id: uid, exported_at: new Date().toISOString() };
-    var pending = 3;
+    var pending = 4;
     var errors = [];
 
     function done() {
@@ -47,6 +47,13 @@ module.exports = function(req, res) {
     plans.supabaseRequest('GET', 'workout_templates?user_id=eq.' + uid + '&select=*', null, function(err, rows) {
       collected.workout_templates = err ? null : (rows || []);
       if (err) errors.push('workout_templates: ' + err);
+      done();
+    });
+
+    // Plano e uso de IA (Art. 18, II - dados de consumo)
+    plans.supabaseRequest('GET', 'user_plans?user_id=eq.' + uid + '&select=plan,ai_requests_used,period_start,expires_at,updated_at', null, function(err, rows) {
+      collected.user_plan = err ? null : (rows && rows[0]) || null;
+      if (err) errors.push('user_plans: ' + err);
       done();
     });
   });

@@ -364,7 +364,19 @@ module.exports = function(req, res) {
     rl.rateLimit(req, res, function() {
     plans.checkAndIncrementQuota(user.id, res, function() {
       var b = req.body || {};
+
+      // Validação de input
       var messages = b.messages || [];
+      if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
+      if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
+      var ALLOWED_ROLES = ['user', 'assistant', 'system', 'tool'];
+      messages = messages.map(function(m) {
+        if (!m || typeof m !== 'object') return { role: 'user', content: '' };
+        var role = ALLOWED_ROLES.includes(String(m.role)) ? String(m.role) : 'user';
+        var content = String(m.content || '').slice(0, 4000);
+        return { role: role, content: content };
+      });
+
       var userData = {
         history: (b.history || []).slice(-25),
         profile: b.profile || {}
