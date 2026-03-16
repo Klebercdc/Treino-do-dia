@@ -8414,25 +8414,11 @@ function abrirGuia(nome) {
   const muscles = db ? db.m : "Músculos principais";
 
   _guiaExNome = nome;
-  _guiaCurType = db ? db.t : "bench";
-  _guiaPhase = 0;
-  _guiaDir = 1;
-  _guiaPlaying = true;
-  _guiaStepIdx = 0;
 
   document.getElementById("guiaNome").textContent = nome;
   document.getElementById("guiaMusculos").textContent = muscles;
   document.getElementById("guiaModal").classList.add("show");
   document.body.style.overflow = "hidden";
-
-  switchGuiaTab("movimento");
-
-  if (db && db.steps && db.steps.length) {
-    _renderGuiaStep(db.steps);
-    _startGuiaSteps(db.steps);
-  } else {
-    document.getElementById("guiaSteps").innerHTML = "";
-  }
 }
 
 function fecharGuia() {
@@ -9134,7 +9120,7 @@ function updateHomeBanner() {
 </script>
 
 <!-- ══════════════════════════════════════════
-     GUIA DE EXERCÍCIO — bonequinho animado
+     GUIA DE EXERCÍCIO — link YouTube
 ══════════════════════════════════════════ -->
 
 <div id="guiaModal" onclick="if(event.target===this)fecharGuia()">
@@ -9146,53 +9132,23 @@ function updateHomeBanner() {
         Fechar
       </button>
       <div style="flex:1"></div>
-      <div style="font-size:0.68rem;color:#525252;font-weight:600">GUIA DE MOVIMENTO</div>
+      <div style="font-size:0.68rem;color:#525252;font-weight:600">GUIA DO EXERCÍCIO</div>
     </div>
     <div class="guia-name" id="guiaNome">Supino Reto</div>
     <div class="guia-muscles" id="guiaMusculos">Peito · Tríceps</div>
 
-    <!-- Tabs: Movimento | YouTube -->
-    <div class="guia-tabs">
-      <button class="guia-tab-btn active" id="guiaTabMovimento" onclick="switchGuiaTab('movimento')">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="7" r="4"/><path d="M12 11v10M9 21h6"/></svg>
-        Movimento
-      </button>
-      <button class="guia-tab-btn" id="guiaTabVideo" onclick="switchGuiaTab('video')">
-        <svg width="13" height="10" viewBox="0 0 576 512" fill="currentColor"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/></svg>
-        YouTube
-      </button>
-    </div>
-
-    <!-- Painel Movimento (animação SVG + passos) -->
-    <div class="guia-panel active" id="guiaPanelMovimento">
-      <div class="guia-figure-wrap">
-        <svg class="guia-svg" id="guiaSVG" viewBox="0 0 100 100"></svg>
-        <button class="guia-play-btn" onclick="toggleGuiaAnim()">
-          <svg width="11" height="11" viewBox="0 0 10 10" id="guiaPlayIcon">
-            <rect x="1" y="1" width="3" height="8" rx="1"/>
-            <rect x="6" y="1" width="3" height="8" rx="1"/>
-          </svg>
-          <span id="guiaPlayTxt">Pausar</span>
+    <div class="guia-video-wrap">
+      <div class="guia-video-placeholder">
+        <svg width="56" height="40" viewBox="0 0 576 512" fill="#FF0000" opacity="0.9">
+          <path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/>
+        </svg>
+        <button class="guia-yt-btn" id="guiaYtBtn" onclick="abrirYouTube()">
+          <svg width="20" height="14" viewBox="0 0 576 512" fill="white"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/></svg>
+          Ver Tutorial no YouTube
         </button>
+        <div class="guia-yt-tip">Abre o YouTube com o vídeo do exercício.<br>Funciona mesmo sem sair do celular.</div>
       </div>
-      <div class="guia-steps" id="guiaSteps"></div>
     </div>
-
-<!-- Painel Vídeo -->
-<div class="guia-panel" id="guiaPanelVideo">
-  <div class="guia-video-wrap">
-    <div class="guia-video-placeholder">
-      <svg width="56" height="40" viewBox="0 0 576 512" fill="#FF0000" opacity="0.9">
-        <path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/>
-      </svg>
-      <button class="guia-yt-btn" id="guiaYtBtn" onclick="abrirYouTube()">
-        <svg width="20" height="14" viewBox="0 0 576 512" fill="white"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/></svg>
-        Ver Tutorial no YouTube
-      </button>
-      <div class="guia-yt-tip">Abre o YouTube com o vídeo do exercício.<br>Funciona mesmo sem sair do celular.</div>
-    </div>
-  </div>
-</div>
 
   </div>
 </div>
