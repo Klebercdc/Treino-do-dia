@@ -3,6 +3,8 @@ var nvidia = require('./_nvidia');
 var auth = require('./_auth');
 var cors = require('./_cors');
 var rl = require('./_ratelimit');
+var plans = require('./_plans');
+var logger = require('./_logger');
 
 var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
 
@@ -133,14 +135,20 @@ function isPedidoDeTreino(messages) {
   return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e))\b.{0,20}\b(treino|programa|plano)\b.{0,20}\b(\d+\s*[xX×]\s*|\d+\s*dias?|semana)/i.test(ultima);
 }
 
-function callNvidia(system, messages, maxTokens, temp, callback) {
+function callNvidiaChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
   var KEY = process.env.NVIDIA_API_KEY;
   if (!KEY) return callback(`NVIDIA_API_KEY missing`, null);
   var m = [];
   if (system) m.push({ role: `system`, content: system });
   messages.forEach(function(x) { m.push(x); });
   var payload = { model: `meta/llama-3.3-70b-instruct`, messages: m, max_tokens: maxTokens, temperature: temp, stream: false };
-  nvidia.callNvidia(KEY, payload, 25000, 3, callback);
+  nvidia.callNvidiaFull(KEY, payload, 25000, 3, function(err, result) {
+    if (err) return callback(err, null);
+    if (userId) {
+      logger.logUsage({ userId: userId, endpoint: endpoint || 'chat', promptTokens: result.usage.prompt_tokens, completionTokens: result.usage.completion_tokens, model: result.model });
+    }
+    callback(null, result.text);
+  });
 }
 
 function parseWorkout(text) {
@@ -183,12 +191,12 @@ function extrairDoTexto(text) {
   return {treinos:validos};
 }
 
-function gerarTreino(userMsg, callback) {
-  callNvidia(TREINO_SYSTEM, [userMsg], 1500, 0.1, function(err, text) {
+function gerarTreino(userMsg, userId, callback) {
+  callNvidiaChat(TREINO_SYSTEM, [userMsg], 1500, 0.1, userId, 'chat-treino', function(err, text) {
     try { return callback(null, parseWorkout(text||``)); } catch(e) {}
     try { return callback(null, extrairDoTexto(text||``)); } catch(e2) {}
     // segunda tentativa
-    callNvidia(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, function(err2, text2) {
+    callNvidiaChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
       try { return callback(null, parseWorkout(text2||``)); } catch(e3) {}
       try { return callback(null, extrairDoTexto(text2||``)); } catch(e4) {}
       callback(`Erro ao gerar treino: ` + (err2||'resposta inválida da IA') + `. Tente novamente.`, null);
@@ -202,25 +210,26 @@ module.exports = function(req, res) {
   if (req.method!==`POST`){res.status(405).end();return;}
   if (!process.env.NVIDIA_API_KEY){res.status(500).json({error:`NVIDIA_API_KEY missing`});return;}
 
-  rl.rateLimit(req, res, function() {
-  auth.requireAuth(req, res, function() {
-    var b = req.body||{};
-    var messages = b.messages||[];
-    var isGerarTreino = b.isGerarTreino===true || isPedidoDeTreino(messages);
-    var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
-
-    if (isGerarTreino) {
+  auth.requireAuth(req, res, function(user) {
+    rl.rateLimit(req, res, function() {
+    plans.checkAndIncrementQuota(user.id, res, function() {
+      var b = req.body||{};
+      var messages = b.messages||[];
+      var isGerarTreino = b.isGerarTreino===true || isPedidoDeTreino(messages);
       var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
-      gerarTreino(userMsg, function(err, data) {
-        if (err) return res.status(200).json({content:[{type:`text`,text:`⚠️ `+err}]});
-        res.status(200).json({content:[{type:`workout_json`,data:data}]});
-      });
-    } else {
-      callNvidia(buildCoachSystem(b.system), messages, 1200, 0.75, function(err, text) {
-        if (err) return res.status(500).json({error:err});
-        res.status(200).json({content:[{type:`text`,text:text}]});
-      });
-    }
+
+      if (isGerarTreino) {
+        gerarTreino(userMsg, user.id, function(err, data) {
+          if (err) return res.status(200).json({content:[{type:`text`,text:`⚠️ `+err}]});
+          res.status(200).json({content:[{type:`workout_json`,data:data}]});
+        });
+      } else {
+        callNvidiaChat(buildCoachSystem(b.system), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+          if (err) return res.status(500).json({error:err});
+          res.status(200).json({content:[{type:`text`,text:text}]});
+        });
+      }
+    });
+    }, { max: 40, windowMs: 60000 }, user.id);
   });
-  }, { max: 40, windowMs: 60000 });
 };

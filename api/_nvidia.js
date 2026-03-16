@@ -151,4 +151,57 @@ function callNvidiaAgent(KEY, payload, timeoutMs, maxRetries, callback) {
   attempt();
 }
 
-module.exports = { callNvidia: callNvidia, callNvidiaAgent: callNvidiaAgent };
+/**
+ * Chama a API NVIDIA e retorna { text, usage } com dados de tokens.
+ * usage = { prompt_tokens, completion_tokens, total_tokens }
+ */
+function callNvidiaFull(KEY, payload, timeoutMs, maxRetries, callback) {
+  var body = JSON.stringify(payload);
+  var options = {
+    hostname: 'integrate.api.nvidia.com',
+    path: '/v1/chat/completions',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + KEY,
+      'Content-Length': Buffer.byteLength(body)
+    }
+  };
+  var attempts = 0;
+  var delays = [1000, 2000, 4000];
+
+  function attempt() {
+    attempts++;
+    var req = https.request(options, function(res) {
+      var data = '';
+      res.on('data', function(c) { data += c; });
+      res.on('end', function() {
+        var status = res.statusCode;
+        if ((status === 429 || status >= 500) && attempts <= maxRetries) {
+          return setTimeout(attempt, delays[attempts - 1] || 4000);
+        }
+        if (status >= 400) return callback('HTTP ' + status + ': ' + data.substring(0, 200), null);
+        try {
+          var j = JSON.parse(data);
+          var text  = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+          var usage = j.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+          callback(null, { text: text, usage: usage, model: payload.model });
+        } catch(e) { callback('JSON parse error: ' + e.message, null); }
+      });
+    });
+    req.on('error', function(e) {
+      if (attempts <= maxRetries) return setTimeout(attempt, delays[attempts - 1] || 4000);
+      callback(e.message, null);
+    });
+    req.setTimeout(timeoutMs, function() {
+      req.destroy(new Error('timeout'));
+      if (attempts <= maxRetries) return setTimeout(attempt, delays[attempts - 1] || 4000);
+      callback('timeout após ' + timeoutMs + 'ms', null);
+    });
+    req.write(body);
+    req.end();
+  }
+  attempt();
+}
+
+module.exports = { callNvidia: callNvidia, callNvidiaAgent: callNvidiaAgent, callNvidiaFull: callNvidiaFull };

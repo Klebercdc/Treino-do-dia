@@ -1,8 +1,9 @@
 /**
- * Rate limiter em memória por IP.
+ * Rate limiter em memória por usuário (userId) ou IP como fallback.
  * Limita requisições por janela de tempo para proteger APIs de IA (custo).
  *
  * Uso: rateLimit(req, res, next, { max: 30, windowMs: 60000 })
+ *      rateLimit(req, res, next, { max: 30, windowMs: 60000 }, 'user-uuid')
  */
 
 var store = Object.create(null);
@@ -18,24 +19,25 @@ setInterval(function() {
 function getIp(req) {
   return (
     req.headers['x-forwarded-for'] ||
-    req.connection.remoteAddress ||
+    (req.connection && req.connection.remoteAddress) ||
     'unknown'
   ).toString().split(',')[0].trim();
 }
 
 /**
- * @param {object} req
- * @param {object} res
+ * @param {object}   req
+ * @param {object}   res
  * @param {function} next
- * @param {object} opts  { max: number, windowMs: number }
+ * @param {object}   opts    { max: number, windowMs: number }
+ * @param {string}   [userId] - quando fornecido, usa userId como chave ao invés do IP
  */
-function rateLimit(req, res, next, opts) {
+function rateLimit(req, res, next, opts, userId) {
   var max      = (opts && opts.max)      || 60;
   var windowMs = (opts && opts.windowMs) || 60 * 1000;
 
-  var ip  = getIp(req);
+  // Chave por usuário autenticado tem precedência sobre IP
+  var key = userId ? 'u:' + userId : 'ip:' + getIp(req);
   var now = Date.now();
-  var key = ip;
 
   if (!store[key] || store[key].resetAt < now) {
     store[key] = { count: 0, resetAt: now + windowMs };
