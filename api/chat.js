@@ -1,6 +1,8 @@
 var https = require(`https`);
 var nvidia = require('./_nvidia');
 var auth = require('./_auth');
+var cors = require('./_cors');
+var rl = require('./_ratelimit');
 
 var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
 
@@ -195,13 +197,12 @@ function gerarTreino(userMsg, callback) {
 }
 
 module.exports = function(req, res) {
-  res.setHeader(`Access-Control-Allow-Origin`,`*`);
-  res.setHeader(`Access-Control-Allow-Methods`,`POST, OPTIONS`);
-  res.setHeader(`Access-Control-Allow-Headers`,`Content-Type, Authorization`);
+  cors.setCors(req, res);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
   if (req.method!==`POST`){res.status(405).end();return;}
   if (!process.env.NVIDIA_API_KEY){res.status(500).json({error:`NVIDIA_API_KEY missing`});return;}
 
+  rl.rateLimit(req, res, function() {
   auth.requireAuth(req, res, function() {
     var b = req.body||{};
     var messages = b.messages||[];
@@ -221,4 +222,5 @@ module.exports = function(req, res) {
       });
     }
   });
+  }, { max: 40, windowMs: 60000 });
 };

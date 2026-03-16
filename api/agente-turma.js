@@ -1,6 +1,8 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
 var auth = require('./_auth');
+var cors = require('./_cors');
+var rl = require('./_ratelimit');
 
 var SYSTEM = `Você é o Assistente de Análise de Turma do DIÁRIO PRO. Analisa o desempenho coletivo de turmas escolares e gera insights acionáveis para o professor.
 
@@ -30,12 +32,11 @@ function parseJSON(text) {
 }
 
 module.exports = function(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
 
+  rl.rateLimit(req, res, function() {
   auth.requireAuth(req, res, function() {
     var b = req.body || {};
     var turma = b.turma || 'Turma';
@@ -61,4 +62,5 @@ module.exports = function(req, res) {
       }
     });
   });
+  }, { max: 20, windowMs: 60000 });
 };

@@ -1,36 +1,37 @@
 /**
- * Helper de autenticação — verifica o JWT do Supabase localmente.
- * Decodifica o JWT e valida projeto + expiração sem chamada externa.
+ * Helper de autenticação — verifica o JWT do Supabase com assinatura HMAC.
  *
  * Variáveis de ambiente necessárias (Vercel):
- *   SUPABASE_URL      = https://twxoddzogbmaysebhour.supabase.co
- *   SUPABASE_ANON_KEY = eyJ... (chave pública anon)
+ *   SUPABASE_URL       = https://twxoddzogbmaysebhour.supabase.co
+ *   SUPABASE_JWT_SECRET = <JWT secret do projeto Supabase>
  */
 
-var SUPABASE_PROJECT_REF = 'twxoddzogbmaysebhour';
+var jwt = require('jsonwebtoken');
+
+var SUPABASE_URL = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.supabase.co';
+var EXPECTED_ISSUER = SUPABASE_URL.replace(/\/$/, '') + '/auth/v1';
 
 /**
- * Decodifica e valida o JWT do Supabase localmente (sem chamada HTTP).
- * Verifica: formato, projeto correto, não expirado.
+ * Verifica o JWT do Supabase com validação de assinatura HMAC-SHA256.
+ * Checa: assinatura, issuer, audience, expiração.
  */
 function verifyToken(token, callback) {
   if (!token) return callback('Token ausente', null);
 
-  try {
-    var parts = token.split('.');
-    if (parts.length !== 3) return callback('JWT inválido', null);
+  var secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) return callback('SUPABASE_JWT_SECRET não configurado', null);
 
-    // Decodifica payload (base64url → JSON)
-    var payload = JSON.parse(
-      Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-    );
+  var options = {
+    algorithms: ['HS256'],
+    issuer: EXPECTED_ISSUER,
+    audience: 'authenticated'
+  };
 
-    // Verifica se é do projeto correto
-    if (payload.ref && payload.ref !== SUPABASE_PROJECT_REF) {
-      return callback('Token de projeto inválido', null);
+  jwt.verify(token, secret, options, function(err, payload) {
+    if (err) {
+      return callback('Token inválido: ' + err.message, null);
     }
 
-    // Retorna usuário com id e email
     var user = {
       id:    payload.sub,
       email: payload.email,
@@ -38,9 +39,7 @@ function verifyToken(token, callback) {
     };
 
     callback(null, user);
-  } catch (e) {
-    callback('Erro ao decodificar token: ' + e.message, null);
-  }
+  });
 }
 
 /**
