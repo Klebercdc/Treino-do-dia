@@ -3,6 +3,8 @@ var nvidia = require('./_nvidia');
 var auth = require('./_auth');
 var cors = require('./_cors');
 var rl = require('./_ratelimit');
+var plans = require('./_plans');
+var logger = require('./_logger');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -358,19 +360,25 @@ module.exports = function(req, res) {
   if (req.method !== 'POST') { res.status(405).end(); return; }
   if (!process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'NVIDIA_API_KEY missing' }); return; }
 
-  rl.rateLimit(req, res, function() {
-  auth.requireAuth(req, res, function() {
-    var b = req.body || {};
-    var messages = b.messages || [];
-    var userData = {
-      history: (b.history || []).slice(-25),
-      profile: b.profile || {}
-    };
+  auth.requireAuth(req, res, function(user) {
+    rl.rateLimit(req, res, function() {
+    plans.checkAndIncrementQuota(user.id, res, function() {
+      var b = req.body || {};
+      var messages = b.messages || [];
+      var userData = {
+        history: (b.history || []).slice(-25),
+        profile: b.profile || {}
+      };
 
-    agentLoop(messages, userData, function(err, text) {
-      if (err) return res.status(500).json({ error: err });
-      res.status(200).json({ content: [{ type: 'text', text: text }] });
+      agentLoop(messages, userData, function(err, text) {
+        if (err) return res.status(500).json({ error: err });
+        // Log estimado (agentLoop faz múltiplas chamadas; estimamos pelos dados de entrada)
+        var estimatedPrompt = JSON.stringify(messages).length / 4;
+        var estimatedCompletion = (text || '').length / 4;
+        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: 'meta/llama-3.3-70b-instruct' });
+        res.status(200).json({ content: [{ type: 'text', text: text }] });
+      });
     });
+    }, { max: 30, windowMs: 60000 }, user.id);
   });
-  }, { max: 30, windowMs: 60000 });
 };
