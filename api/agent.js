@@ -1,5 +1,6 @@
 var https = require('https');
 var nvidia = require('./_nvidia');
+var gemini = require('./_gemini');
 var auth = require('./_auth');
 var cors = require('./_cors');
 var rl = require('./_ratelimit');
@@ -273,12 +274,11 @@ function executeTool(name, args, userData) {
 // CHAMADA NVIDIA COM SUPORTE A TOOLS
 // ══════════════════════════════════════════
 
-function callNvidiaAgent(messages, tools, callback) {
-  var KEY = process.env.NVIDIA_API_KEY;
-  if (!KEY) return callback('NVIDIA_API_KEY missing', null);
+function callAgent(messages, tools, callback) {
+  var GEMINI_KEY = process.env.GEMINI_API_KEY;
+  var NVIDIA_KEY  = process.env.NVIDIA_API_KEY;
 
   var payload = {
-    model: 'meta/llama-3.3-70b-instruct',
     messages: messages,
     tools: tools,
     tool_choice: 'auto',
@@ -287,39 +287,72 @@ function callNvidiaAgent(messages, tools, callback) {
     stream: false
   };
 
-  nvidia.callNvidiaAgent(KEY, payload, 30000, 3, callback);
+  if (GEMINI_KEY) {
+    gemini.callGeminiAgent(GEMINI_KEY, payload, 30000, 3, callback);
+  } else if (NVIDIA_KEY) {
+    payload.model = 'meta/llama-3.3-70b-instruct';
+    nvidia.callNvidiaAgent(NVIDIA_KEY, payload, 30000, 3, callback);
+  } else {
+    callback('Nenhuma chave de API configurada (GEMINI_API_KEY ou NVIDIA_API_KEY)', null);
+  }
 }
 
 // ══════════════════════════════════════════
 // AGENT LOOP — até 6 iterações
 // ══════════════════════════════════════════
 
-var AGENT_SYSTEM = `Você é o TITAN EXPERT, especialista completo em musculação, nutrição esportiva e suplementação.
+function buildAgentSystem(userData) {
+  var p = userData.profile || {};
+  var nome    = p.nome    || null;
+  var peso    = p.peso    ? p.peso + ' kg'    : null;
+  var altura  = p.altura  ? p.altura + ' cm'  : null;
+  var idade   = p.idade   ? p.idade + ' anos' : null;
+  var obj     = p.objetivo    || null;
+  var freq    = p.frequencia  ? p.frequencia + 'x/semana' : null;
+  var nivel   = p.nivel       || null;
+  var sono    = p.sono        ? p.sono + 'h de sono' : null;
 
-REGRA PRINCIPAL: Quando o usuário perguntar sobre progresso, platô, nutrição, recuperação ou volume — SEMPRE use as ferramentas disponíveis antes de responder. Não chute — use dados reais.
+  var perfil = [nome, peso, altura, idade, obj, freq, nivel, sono]
+    .filter(Boolean).join(' · ');
 
-Ferramentas disponíveis:
-- analisar_progresso: evolução de carga por exercício
-- detectar_plato: identifica estagnação
-- calcular_nutricao: TDEE, macros personalizados
-- analisar_recuperacao: RPE, overtraining, deload
-- tendencia_volume: volume total por sessão
+  return `Você é o KRONOS — coach pessoal de musculação, nutrição e suplementação do TITAN PRO.
+Português coloquial, direto, como conversa real na academia. Você conhece o usuário e os dados dele.
+${perfil ? '\nUSUÁRIO: ' + perfil : ''}
 
-Após usar ferramentas, analise os dados e responda de forma personalizada e específica.
+━━━ COMO RESPONDER ━━━
+Leia o que foi dito e responda de acordo com a INTENÇÃO real:
 
-Personalidade: Coach de verdade. Português coloquial. Direto ao ponto. Sem rodeios. Máximo 400 palavras.
-Base científica: ISSN, JISSN, sistema MEV/MAV/MRV. Suplementação apenas Tier 1 (creatina, whey, cafeína, beta-alanina, vitamina D3).`;
+• Saudação ou papo casual → 1-2 frases naturais, SEM ferramentas, SEM despejar dados
+• Dúvida sobre treino, nutrição ou suplementação → responda com conhecimento direto, sem ferramenta
+• "Como tá meu progresso?", "tô em platô?", "como tá minha recuperação?" → USE a ferramenta certa
+• "Calcula minha dieta", "analisa meu volume" → USE ferramenta e entregue resultado personalizado
+
+Resposta proporcional ao que foi pedido. Nada mais, nada menos.
+
+━━━ DOMÍNIOS ━━━
+MUSCULAÇÃO: hipertrofia, força, periodização, MEV/MAV/MRV, RPE, deload, progressão de carga
+NUTRIÇÃO: TDEE, macros (proteína 1,6–2,2g/kg, carbs, gorduras), timing, bulk/cutting/recomposição
+SUPLEMENTAÇÃO: creatina, whey, cafeína, beta-alanina, vitamina D3 (Tier 1 — evidência forte)
+
+━━━ FERRAMENTAS (use só quando o contexto pedir) ━━━
+- analisar_progresso · detectar_plato · calcular_nutricao · analisar_recuperacao · tendencia_volume
+
+━━━ PERSONALIDADE ━━━
+- Coach de verdade: direto, com autoridade, sem rodeios
+- NUNCA comece com "Claro!", "Certamente!", "Olá!" — vá ao ponto
+- Máximo 400 palavras, salvo treino completo`;
+}
 
 function agentLoop(userMessages, userData, callback) {
   var MAX_ITER = 6;
   var iter = 0;
 
-  var msgs = [{ role: 'system', content: AGENT_SYSTEM }].concat(userMessages);
+  var msgs = [{ role: 'system', content: buildAgentSystem(userData) }].concat(userMessages);
 
   function iterate() {
     if (iter++ >= MAX_ITER) return callback(null, 'Limite de iterações atingido.');
 
-    callNvidiaAgent(msgs, TOOLS, function(err, msg) {
+    callAgent(msgs, TOOLS, function(err, msg) {
       if (err) return callback(err, null);
 
       // Sem tool calls → resposta final
@@ -358,7 +391,7 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
-  if (!process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'NVIDIA_API_KEY missing' }); return; }
+  if (!process.env.GEMINI_API_KEY && !process.env.NVIDIA_API_KEY) { res.status(500).json({ error: 'Nenhuma chave de API configurada' }); return; }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -387,7 +420,8 @@ module.exports = function(req, res) {
         // Log estimado (agentLoop faz múltiplas chamadas; estimamos pelos dados de entrada)
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
-        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: 'meta/llama-3.3-70b-instruct' });
+        var modelUsed = process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'meta/llama-3.3-70b-instruct';
+        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed });
         res.status(200).json({ content: [{ type: 'text', text: text }] });
       });
     });
