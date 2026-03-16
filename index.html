@@ -22,6 +22,26 @@
   <link rel="apple-touch-icon" href="titanpro.png"/>
   <link rel="apple-touch-startup-image" href="splash.png"/>
 
+  <!-- SEO -->
+  <meta name="description" content="TITAN PRO — App de musculação com IA. Treinos personalizados com periodização científica MEV/MAV/MRV, análise de progresso e coach inteligente KRONOS."/>
+  <meta name="keywords" content="treino musculação IA, app treino personalizado, periodização MEV MRV, coach fitness inteligente"/>
+  <link rel="canonical" href="https://treino-do-dia-orpin.vercel.app/"/>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:title" content="TITAN PRO — Treino com IA"/>
+  <meta property="og:description" content="Treinos personalizados com periodização científica MEV/MAV/MRV e coach inteligente powered by NVIDIA Llama 70B."/>
+  <meta property="og:image" content="https://treino-do-dia-orpin.vercel.app/titanpro.png"/>
+  <meta property="og:url" content="https://treino-do-dia-orpin.vercel.app/"/>
+  <meta property="og:site_name" content="TITAN PRO"/>
+  <meta property="og:locale" content="pt_BR"/>
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="TITAN PRO — Treino com IA"/>
+  <meta name="twitter:description" content="App de musculação com IA. Treinos científicos, análise de progresso e coach inteligente."/>
+  <meta name="twitter:image" content="https://treino-do-dia-orpin.vercel.app/titanpro.png"/>
+
   <style>
     /* ══════════════════════════════════════════
        DESIGN SYSTEM — TITAN PRO PREMIUM
@@ -1936,6 +1956,11 @@
       color: var(--text);
       margin-bottom: 4px;
     }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
     .login-input {
       width: 100%; padding: 14px 16px;
       background: var(--surface);
@@ -2353,19 +2378,21 @@
 <!-- ═══ EMAIL LOGIN SCREEN (TELA 2) ═══ -->
 <div id="emailLoginScreen">
   <div id="emailLoginHeader">
-    <button id="emailLoginBack" onclick="hideEmailLogin()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    <button id="emailLoginBack" onclick="hideEmailLogin()" aria-label="Voltar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div id="emailLoginHeaderTitle">Login</div>
   </div>
   <div id="emailLoginBody">
     <h2 id="emailLoginBodyTitle">Entrar na conta</h2>
-    <div id="loginError"></div>
-    <input id="loginEmail" class="login-input" type="email" placeholder="E-mail ou nome de usuário" autocomplete="email" />
-    <input id="loginPassword" class="login-input" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password" />
-    <div id="forgotPassLink" onclick="authForgotPassword()">Esqueceu a Senha?</div>
+    <div id="loginError" role="alert" aria-live="polite"></div>
+    <label for="loginEmail" class="sr-only">E-mail</label>
+    <input id="loginEmail" class="login-input" type="email" placeholder="E-mail ou nome de usuário" autocomplete="email" aria-label="E-mail" aria-required="true" />
+    <label for="loginPassword" class="sr-only">Senha</label>
+    <input id="loginPassword" class="login-input" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password" aria-label="Senha" aria-required="true" />
+    <button id="forgotPassLink" onclick="authForgotPassword()" style="background:none;border:none;cursor:pointer;padding:0;color:inherit;font:inherit;text-align:left;">Esqueceu a Senha?</button>
     <button id="btnEmail" onclick="authSignInEmail()">Entrar</button>
-    <div id="loginToggle" onclick="toggleLoginMode()">Não tem conta? <span id="loginToggleLabel">Criar conta</span></div>
+    <div id="loginToggle" onclick="toggleLoginMode()" role="button" tabindex="0" aria-label="Alternar entre login e cadastro">Não tem conta? <span id="loginToggleLabel">Criar conta</span></div>
   </div>
 </div>
 
@@ -5217,7 +5244,7 @@ function checkDeload() {
 let _evoChart = null, _evoTab = "volume";
 function showEvoChart() {
   const hist = safeJSON(STORAGE.historyKey,[]);
-  if (!hist.length) { alert("Sem histórico ainda. Salve uma sessão primeiro!"); return; }
+  if (!hist.length) { showToast("Sem histórico ainda. Salve uma sessão primeiro!", "warning"); return; }
   populateEvoExSelect(hist); renderEvoChart();
   document.getElementById("evoModal")?.classList.add("show");
 }
@@ -5350,7 +5377,7 @@ async function limparHistorico() {
 ═══════════════════════════════════════════════════ */
 async function adicionarTreino() {
   const st = serializeCurrentState();
-  if (st.sections.length >= 6) { alert("Máximo de 6 treinos atingido."); return; }
+  if (st.sections.length >= 6) { showToast("Máximo de 6 treinos atingido.", "warning"); return; }
   const nome = await dlgPrompt("Nome do Treino (ex: Treino F):", "text");
   if (!nome) return;
   st.sections.push({ treinoKey: normalizeTreinoKey(nome), cards: [] });
@@ -5362,7 +5389,7 @@ async function adicionarTreino() {
 async function excluirTreinoPorIdx(idx) {
   if (!await dlgConfirm("Excluir treino?")) return;
   const st = serializeCurrentState();
-  if (st.sections.length <= 1) { alert("Mantenha pelo menos 1 treino."); return; }
+  if (st.sections.length <= 1) { showToast("Mantenha pelo menos 1 treino.", "warning"); return; }
   st.sections.splice(idx,1); st.pills.splice(idx,1); st.activeIdx=0;
   loadState(st); scheduleDraftSave();
 }
@@ -7628,7 +7655,7 @@ function calcBasal() {
   const peso   = parseFloat(document.getElementById("bsPeso").value);
   const altura = parseFloat(document.getElementById("bsAltura").value);
   const idade  = parseInt(document.getElementById("bsIdade").value);
-  if (!peso || !altura || !idade) { alert("Preencha peso, altura e idade."); return; }
+  if (!peso || peso <= 0 || !altura || altura <= 0 || !idade || idade <= 0) { showToast("Preencha peso, altura e idade com valores válidos.", "error"); return; }
   const _bsAtivEl = document.querySelector("#bsAtivChips .bs-chip.active");
   localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
     ...safeJSON("titanpro_calc_prefs", {}),
@@ -8091,8 +8118,8 @@ function calcularDietaAvancada() {
   const pescoco = parseFloat(document.getElementById('davPescoco').value);
   const cintura = parseFloat(document.getElementById('davCintura').value);
   const quadril = parseFloat(document.getElementById('davQuadril').value);
-  if (!peso || !altura || !pescoco || !cintura) { alert('Preencha peso, altura, pescoço e cintura.'); return; }
-  if (_davSexo === 'F' && !quadril) { alert('Preencha o quadril.'); return; }
+  if (!peso || peso <= 0 || !altura || altura <= 0 || !pescoco || pescoco <= 0 || !cintura || cintura <= 0) { showToast('Preencha peso, altura, pescoço e cintura com valores válidos.', 'error'); return; }
+  if (_davSexo === 'F' && (!quadril || quadril <= 0)) { showToast('Preencha o quadril com um valor válido.', 'error'); return; }
   const _davCicloEl = document.querySelector('#davCicloChips .config-chip.active');
   localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
     ...safeJSON("titanpro_calc_prefs", {}),
@@ -9432,6 +9459,24 @@ Promise.all([
   if (session?.user) { showApp(); navTo('inicio'); openHome(); }
   else showLogin();
 });
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "TITAN PRO",
+  "url": "https://treino-do-dia-orpin.vercel.app/",
+  "description": "App de musculação com IA. Treinos personalizados com periodização científica MEV/MAV/MRV e coach inteligente powered by NVIDIA Llama 70B.",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "BRL"
+  }
+}
 </script>
 
 </body>
