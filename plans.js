@@ -6,15 +6,14 @@ var HOTMART_CHECKOUT_URL = '';
 var FREE_AI_LIMIT = 15; // valor padrão; sobrescrito após fetch do /api/config
 
 // Carrega configurações públicas do backend
-(function loadAppConfig() {
-  fetch('/api/config')
-    .then(function(r) { return r.json(); })
-    .then(function(cfg) {
-      if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
-      if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
-    })
-    .catch(function() { /* falha silenciosa — continua com defaults */ });
-})();
+// Promise guardada para que assinarPro() possa aguardar se ainda não resolveu
+var _configPromise = fetch('/api/config')
+  .then(function(r) { return r.json(); })
+  .then(function(cfg) {
+    if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
+    if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
+  })
+  .catch(function() { /* falha silenciosa — continua com defaults */ });
 
 var _userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT };
 
@@ -76,8 +75,12 @@ function closePlanModal() {
 }
 
 async function assinarPro() {
+  // Aguarda config carregar caso ainda não tenha resolvido (race condition)
+  await _configPromise;
   if (!HOTMART_CHECKOUT_URL) {
-    alert('Link de pagamento não configurado. Entre em contato com o suporte.');
+    if (typeof showToast === 'function') {
+      showToast('Checkout em breve. Fale com o suporte.', 'warning');
+    }
     return;
   }
   try {
