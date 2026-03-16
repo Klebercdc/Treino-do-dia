@@ -7710,177 +7710,228 @@ function gerarDietaPDF() {
   const data   = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
   const logoUrl = window.location.origin + "/titanpro.png";
 
-  // ── Converte Markdown inline (**bold**, *italic*) ──────────────────
-  function mdInline(s) {
-    return s
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g,     "<strong>$1</strong>")
-      .replace(/`(.+?)`/g,       "$1")
-      .replace(/\*/g,            "");
+  // ── Parser do formato estruturado por blocos ## ────────────────────
+  function parseConteudo(txt) {
+    const result = { meta:{}, refeicoes:[], resumo:[], total:null, orientacoes:[] };
+    let bloco = null, ref = null;
+    txt.split("\n").forEach(raw => {
+      const l = raw.trim();
+      if (!l) return;
+      if (l === "##META")        { bloco="meta"; return; }
+      if (l === "##REFEICAO")    { if(ref) result.refeicoes.push(ref); ref={nome:"",horario:"",tag:"",alimentos:[],subtotal:null}; bloco="refeicao"; return; }
+      if (l === "##RESUMO")      { if(ref){result.refeicoes.push(ref);ref=null;} bloco="resumo"; return; }
+      if (l === "##ORIENTACOES") { bloco="orientacoes"; return; }
+      if (bloco==="meta") {
+        const m=l.match(/^([^:]+):\s*(.+)/); if(m) result.meta[m[1].trim().toUpperCase()]=m[2].trim();
+      } else if (bloco==="refeicao" && ref) {
+        if (l.startsWith("NOME:"))    { ref.nome=l.replace(/^NOME:\s*/,""); return; }
+        if (l.startsWith("HORARIO:")) { ref.horario=l.replace(/^HORARIO:\s*/,""); return; }
+        if (l.startsWith("TAG:"))     { ref.tag=l.replace(/^TAG:\s*/,""); return; }
+        const p=l.split("|");
+        if (p.length>=6) {
+          if (p[0].trim().toUpperCase().startsWith("SUBTOTAL")) {
+            ref.subtotal={kcal:p[2]||p[3],prot:p[3]||p[4],carb:p[4]||p[5],gord:p[5]||p[6]};
+          } else if (!p[0].trim().toUpperCase().startsWith("ALIMENTO")) {
+            ref.alimentos.push({nome:p[0].trim(),qtde:p[1].trim(),kcal:p[2].trim(),prot:p[3].trim(),carb:p[4].trim(),gord:p[5].trim()});
+          }
+        }
+      } else if (bloco==="resumo") {
+        const p=l.split("|");
+        if (p.length>=5) {
+          if (p[0].trim().toUpperCase().startsWith("TOTAL")) result.total={kcal:p[1].trim(),prot:p[2].trim(),carb:p[3].trim(),gord:p[4].trim()};
+          else result.resumo.push({nome:p[0].trim(),kcal:p[1].trim(),prot:p[2].trim(),carb:p[3].trim(),gord:p[4].trim()});
+        }
+      } else if (bloco==="orientacoes") {
+        const idx=l.indexOf("|");
+        if(idx>0) result.orientacoes.push({label:l.slice(0,idx).trim(),desc:l.slice(idx+1).trim()});
+      }
+    });
+    if(ref) result.refeicoes.push(ref);
+    return result;
   }
 
-  // ── Parseia o texto gerado pela IA ─────────────────────────────────
-  let secNum = 0;
-  const linhas = conteudo.split("\n").map(l => {
-    let t = l.trimEnd();
-    if (!t) return `<div class="gap"></div>`;
+  const d = parseConteudo(conteudo);
 
-    // Remove prefixos markdown de heading (### 2. TÍTULO ou ### TÍTULO)
-    t = t.replace(/^#{1,4}\s*/, "");
+  // ── HTML das refeições em tabela ───────────────────────────────────
+  const refeicoesHTML = d.refeicoes.map(r => {
+    const rows = r.alimentos.map((a,i)=>`
+        <tr class="${i%2===0?'tr-even':'tr-odd'}">
+          <td>${a.nome}</td><td class="tc">${a.qtde}</td><td class="tc">${a.kcal}</td>
+          <td class="tc">${a.prot}</td><td class="tc">${a.carb}</td><td class="tc">${a.gord}</td>
+        </tr>`).join("");
+    const sub = r.subtotal ? `
+        <tr class="sub-row">
+          <td colspan="2">SUBTOTAL DA REFEIÇÃO</td>
+          <td colspan="4" class="tr">TOTAL: ${r.subtotal.kcal} kcal | Prot ${r.subtotal.prot}g | Carb ${r.subtotal.carb}g | Gord ${r.subtotal.gord}g</td>
+        </tr>` : "";
+    return `
+    <div class="meal-block">
+      <div class="meal-bar">
+        <div class="meal-left">
+          ${r.horario?`<span class="meal-hr">${r.horario}</span>`:""}
+          <strong class="meal-nm">${r.nome}</strong>
+        </div>
+        ${r.tag?`<span class="meal-tag">${r.tag}</span>`:""}
+      </div>
+      <table>
+        <thead><tr><th>ALIMENTO</th><th class="tc">QTDE</th><th class="tc">KCAL</th><th class="tc">PROT</th><th class="tc">CARB</th><th class="tc">GORD</th></tr></thead>
+        <tbody>${rows}${sub}</tbody>
+      </table>
+    </div>`;
+  }).join("");
 
-    // Traço / separador
-    if (/^[-─—]{3,}$/.test(t)) return `<hr>`;
+  // ── HTML resumo do dia ─────────────────────────────────────────────
+  const resumoHTML = d.resumo.length ? `
+    <div class="sec-title"><span class="sec-icon">■</span><span>Resumo do Dia</span></div>
+    <table>
+      <thead><tr class="thead-dark"><th>REFEIÇÃO</th><th class="tc">KCAL</th><th class="tc">PROT (g)</th><th class="tc">CARB (g)</th><th class="tc">GORD (g)</th></tr></thead>
+      <tbody>
+        ${d.resumo.map((r,i)=>`<tr class="${i%2===0?'tr-even':'tr-odd'}"><td>${r.nome}</td><td class="tc">${r.kcal}</td><td class="tc">${r.prot}</td><td class="tc">${r.carb}</td><td class="tc">${r.gord}</td></tr>`).join("")}
+        ${d.total?`<tr class="total-row"><td>TOTAL DIÁRIO</td><td class="tc">${d.total.kcal}</td><td class="tc">${d.total.prot}</td><td class="tc">${d.total.carb}</td><td class="tc">${d.total.gord}</td></tr>`:""}
+      </tbody>
+    </table>` : "";
 
-    // Cabeçalho numerado: "1. RESUMO CALÓRICO" (após strip do ###)
-    if (/^[1-9]\.\s/.test(t)) {
-      secNum++;
-      const titulo = mdInline(t.replace(/^[1-9]+\.\s*/, ""));
-      return `<div class="sec-header"><span class="sec-num">${secNum}</span><span>${titulo}</span></div>`;
-    }
+  // ── HTML orientações ───────────────────────────────────────────────
+  const oriHTML = d.orientacoes.length ? `
+    <div class="sec-title" style="margin-top:22px"><span class="sec-icon">■</span><span>Hidratação & Orientações</span></div>
+    <table class="ori-tbl">
+      <tbody>${d.orientacoes.map((o,i)=>`
+        <tr class="${i%2===0?'tr-even':'tr-odd'}">
+          <td class="ori-lbl"><span class="ori-sq">■</span><strong>${o.label}</strong></td>
+          <td class="ori-desc">${o.desc}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>` : "";
 
-    // Refeição / horário com emoji ou palavra-chave de refeição
-    if (/^[\u{1F300}-\u{1F9FF}🥗🥙🍳🥚🍗🥩🥦🥑🍌🍚🥛☕🥤🫐🥝]/u.test(t) ||
-        /^(Refeição\s*\d|Café\s*da|Almoço|Jantar|Lanche|Pré-treino|Pós-treino|Ceia)/i.test(t)) {
-      return `<div class="meal-header">${mdInline(t)}</div>`;
-    }
+  // ── Barra de macros no topo ────────────────────────────────────────
+  const metaHTML = d.meta.CALORIAS ? `
+  <div class="meta-bar">
+    <div class="mi"><span class="mv">${d.meta.CALORIAS}</span><span class="ml">kcal / dia</span></div>
+    <div class="ms"></div>
+    <div class="mi"><span class="mv">${d.meta.PROTEINA||"–"}g</span><span class="ml">Proteína</span></div>
+    <div class="ms"></div>
+    <div class="mi"><span class="mv">${d.meta.CARB||"–"}g</span><span class="ml">Carboidrato</span></div>
+    <div class="ms"></div>
+    <div class="mi"><span class="mv">${d.meta.GORDURA||"–"}g</span><span class="ml">Gordura</span></div>
+  </div>` : "";
 
-    // Linha de bullet (- ou • ou *)
-    if (/^[-•·▸»*]\s/.test(t)) {
-      const content = mdInline(t.replace(/^[-•·▸»*]\s*/, ""));
-      return `<p class="bullet">${content}</p>`;
-    }
-
-    // Linha toda MAIÚSCULA >= 4 chars → sub-seção
-    if (/^[A-ZÁÉÍÓÚÃÕÂÊÔÇÜ\s\-–:\/]{4,}$/.test(t) && t === t.toUpperCase()) {
-      return `<div class="sec-sub">${t}</div>`;
-    }
-
-    // Parágrafo normal com negrito inline convertido
-    const html = mdInline(t);
-    // Destaque de valores calóricos/macros
-    const hl = html
-      .replace(/(\d[\d.,]*\s*kcal\b)/gi, '<span class="kcal">$1</span>')
-      .replace(/(\d[\d.,]*\s*g\b)(?=[^a-záéíóú]|$)/gi, '<span class="macro">$1</span>');
-    return `<p>${hl}</p>`;
-  }).join("\n");
-
-  // ── Chips de info ──────────────────────────────────────────────────
-  const chips = [obj, ativ, peso ? `${peso} kg` : "", altura ? `${altura} cm` : "", idade ? `${idade} anos` : ""]
-    .filter(Boolean).map(c => `<span class="chip">${c}</span>`).join("");
+  const infoChips = [obj, ativ, peso?`${peso} kg`:"", altura?`${altura} cm`:"", idade?`${idade} anos`:""]
+    .filter(Boolean).map(c=>`<span class="chip">${c}</span>`).join("");
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Plano Alimentar – ${nome}</title>
 <style>
-  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    color: #1a1a1a; background: #fff; max-width: 860px; margin: auto;
-  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;background:#fff;max-width:900px;margin:auto;font-size:13px}
 
-  /* ── HEADER ── */
-  .cover {
-    background: linear-gradient(135deg, #111 0%, #2a1200 55%, #f97316 100%);
-    padding: 28px 36px 24px;
-    display: flex; align-items: center; justify-content: space-between; gap: 20px;
-  }
-  .cover-left { display:flex; align-items:center; gap:16px; }
-  .logo-img {
-    width: 64px; height: 64px; border-radius: 14px;
-    background: #fff; display:flex; align-items:center; justify-content:center;
-    overflow:hidden; flex-shrink:0; padding: 4px;
-  }
-  .logo-img img { width:100%; height:100%; object-fit:contain; }
-  .logo-text { color:#fff; }
-  .logo-name  { font-size:1.8rem; font-weight:900; letter-spacing:.07em; line-height:1; }
-  .logo-tag   { font-size:0.7rem; color:rgba(255,255,255,0.55); margin-top:5px; letter-spacing:.1em; text-transform:uppercase; }
-  .cover-right { text-align:right; color:#fff; }
-  .cover-atleta { font-size:1rem; font-weight:800; letter-spacing:.05em; }
-  .cover-data   { font-size:0.72rem; color:rgba(255,255,255,0.5); margin-top:4px; }
+  /* HEADER */
+  .hd{background:#1a1a1a;padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
+  .hd-l{display:flex;align-items:center;gap:14px}
+  .logo{width:52px;height:52px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:3px;flex-shrink:0}
+  .logo img{width:100%;height:100%;object-fit:contain}
+  .hd-title{color:#fff;font-size:1.3rem;font-weight:900;letter-spacing:.06em}
+  .hd-sub{color:rgba(255,255,255,.4);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+  .hd-r{text-align:right}
+  .hd-nome{color:#fff;font-size:.95rem;font-weight:800;letter-spacing:.04em}
+  .hd-data{color:rgba(255,255,255,.4);font-size:.62rem;margin-top:3px}
+  .obar{height:4px;background:#f97316}
 
-  /* ── FAIXA ── */
-  .orange-bar { background:#f97316; height:5px; }
+  /* INFO CHIPS */
+  .info-row{padding:10px 32px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e5e7eb}
+  .chip{background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;border-radius:100px;padding:3px 11px;font-size:.63rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 
-  /* ── CHIPS ── */
-  .chips-wrap { padding:14px 36px 4px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid #f3f4f6; padding-bottom:14px; }
-  .chip { background:#fff7ed; color:#c2410c; border:1.5px solid #fed7aa; border-radius:100px; padding:4px 13px; font-size:0.7rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+  /* META BAR */
+  .meta-bar{margin:14px 32px;background:#1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:space-around;padding:13px 20px}
+  .mi{text-align:center}
+  .mv{display:block;color:#f97316;font-size:1.05rem;font-weight:900}
+  .ml{color:rgba(255,255,255,.5);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;display:block}
+  .ms{width:1px;height:30px;background:rgba(255,255,255,.12)}
 
-  /* ── CORPO ── */
-  .body { padding: 20px 36px 36px; }
+  /* BODY */
+  .body{padding:6px 32px 28px}
 
-  /* Seção numerada */
-  .sec-header {
-    display:flex; align-items:center; gap:12px;
-    background: linear-gradient(90deg,#fff7ed,#fff);
-    border-left:4px solid #f97316; border-radius:0 8px 8px 0;
-    padding:10px 14px; margin:28px 0 12px;
-  }
-  .sec-num {
-    width:28px; height:28px; background:#f97316; color:#fff;
-    border-radius:50%; font-size:0.82rem; font-weight:900;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .sec-header > span:last-child { font-size:1rem; font-weight:800; color:#c2410c; text-transform:uppercase; letter-spacing:.04em; }
+  /* MEAL BLOCK */
+  .meal-block{margin-bottom:18px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+  .meal-bar{background:#1a1a1a;padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
+  .meal-left{display:flex;align-items:center;gap:10px}
+  .meal-hr{color:#f97316;font-weight:900;font-size:.95rem}
+  .meal-nm{color:#fff;font-size:.88rem}
+  .meal-tag{color:#f97316;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 
-  /* Sub-seção */
-  .sec-sub { font-size:0.72rem; font-weight:800; color:#f97316; text-transform:uppercase; letter-spacing:.1em; margin:20px 0 6px; }
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead tr{background:#2d4535}
+  th{color:#fff;padding:7px 10px;font-size:.61rem;letter-spacing:.07em;font-weight:700;text-align:left}
+  .tc{text-align:center !important;width:58px}
+  td{padding:7px 10px;border-bottom:1px solid #f3f4f6;color:#333}
+  .tr-even{background:#fff}
+  .tr-odd{background:#f9fafb}
+  .sub-row td{background:#f0f0f0;font-size:.62rem;font-weight:700;color:#555;text-align:left !important}
+  .thead-dark{background:#1a1a1a !important}
+  .total-row td{background:#1a1a1a;color:#fff;font-weight:900;font-size:.82rem}
+  .total-row .tc{color:#f97316}
 
-  /* Refeição */
-  .meal-header { background:#1a1a1a; color:#fff; padding:9px 14px; border-radius:8px; font-size:0.9rem; font-weight:700; margin:18px 0 8px; }
+  /* SECTION TITLE */
+  .sec-title{display:flex;align-items:center;gap:8px;margin:22px 0 8px;padding-bottom:6px;border-bottom:2px solid #1a1a1a;font-size:.88rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+  .sec-icon{font-size:.7rem;color:#1a1a1a}
 
-  /* Parágrafos */
-  p { font-size:0.88rem; line-height:1.8; color:#333; margin-bottom:2px; text-align:left; }
-  p strong { color:#111; }
-  p.bullet { padding-left:14px; border-left:3px solid #fed7aa; margin-bottom:4px; }
-  p.bullet strong { color:#c2410c; }
+  /* ORIENTACOES */
+  .ori-tbl{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+  .ori-lbl{padding:9px 14px;white-space:nowrap;width:140px;vertical-align:middle}
+  .ori-lbl strong{font-size:.73rem;color:#1a1a1a}
+  .ori-sq{color:#2d4535;font-size:.62rem;margin-right:6px}
+  .ori-desc{padding:9px 14px;font-size:.73rem;color:#555;vertical-align:middle}
 
-  /* Destaques numéricos */
-  .kcal  { color:#c2410c; font-weight:800; }
-  .macro { color:#1d4ed8; font-weight:700; }
-  code   { background:#f3f4f6; border-radius:4px; padding:1px 5px; font-size:0.82rem; }
+  /* ASSINATURAS */
+  .sign{margin:28px 32px 14px;display:flex;justify-content:space-around}
+  .sign-item{text-align:center;width:220px}
+  .sign-line{border-top:1px solid #9ca3af;margin-bottom:6px}
+  .sign-lbl{font-size:.62rem;color:#6b7280;letter-spacing:.04em}
 
-  /* Gap / HR */
-  .gap { height:6px; }
-  hr { border:none; border-top:1px solid #e5e7eb; margin:14px 0; }
+  /* FOOTER */
+  .ft{border-top:1px solid #e5e7eb;padding:9px 32px;display:flex;justify-content:space-between;align-items:center;font-size:.61rem;color:#9ca3af}
+  .ft-brand{font-weight:900;color:#f97316;font-size:.7rem;letter-spacing:.06em}
 
-  /* ── FOOTER ── */
-  .footer { border-top:2px solid #f3f4f6; padding:14px 36px; display:flex; align-items:center; justify-content:space-between; font-size:0.68rem; color:#9ca3af; }
-  .footer-logo { font-weight:900; color:#f97316; letter-spacing:.06em; font-size:0.78rem; }
-
-  /* ── PRINT ── */
-  @media print {
-    body { max-width:100%; }
-    .cover,.meal-header,.sec-header,.orange-bar,.logo-img {
-      -webkit-print-color-adjust:exact; print-color-adjust:exact;
-    }
+  @media print{
+    body{max-width:100%}
+    .hd,.meta-bar,thead,.total-row,.meal-bar,.obar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
 </head>
 <body>
-  <div class="cover">
-    <div class="cover-left">
-      <div class="logo-img"><img src="${logoUrl}" alt="TITAN PRO"/></div>
-      <div class="logo-text">
-        <div class="logo-name">TITAN PRO</div>
-        <div class="logo-tag">Plano Alimentar Personalizado</div>
+  <div class="hd">
+    <div class="hd-l">
+      <div class="logo"><img src="${logoUrl}" alt="TITAN PRO"/></div>
+      <div>
+        <div class="hd-title">PLANO ALIMENTAR PROFISSIONAL</div>
+        <div class="hd-sub">Nutrição &nbsp;·&nbsp; Saúde &nbsp;·&nbsp; Performance</div>
       </div>
     </div>
-    <div class="cover-right">
-      <div class="cover-atleta">${nome.toUpperCase()}</div>
-      <div class="cover-data">Gerado em ${data}</div>
+    <div class="hd-r">
+      <div class="hd-nome">${nome.toUpperCase()}</div>
+      <div class="hd-data">Gerado em ${data}</div>
     </div>
   </div>
-  <div class="orange-bar"></div>
-  <div class="chips-wrap">${chips}</div>
-  <div class="body">${linhas}</div>
-  <div class="footer">
-    <span class="footer-logo">TITAN PRO</span>
-    <span>Consulte um nutricionista para ajustes individuais</span>
+  <div class="obar"></div>
+  <div class="info-row">${infoChips}</div>
+  ${metaHTML}
+  <div class="body">
+    ${refeicoesHTML}
+    ${resumoHTML}
+    ${oriHTML}
   </div>
-  <script>window.onload = () => { window.print(); }<\/script>
+  <div class="sign">
+    <div class="sign-item"><div class="sign-line"></div><div class="sign-lbl">Assinatura do Nutricionista</div></div>
+    <div class="sign-item"><div class="sign-line"></div><div class="sign-lbl">Assinatura do Paciente</div></div>
+  </div>
+  <div class="ft">
+    <span>Este modelo é meramente ilustrativo. Consulte um nutricionista.</span>
+    <span class="ft-brand">TITAN PRO</span>
+  </div>
+  <script>window.onload=()=>{window.print()}<\/script>
 </body>
 </html>`;
 
@@ -7939,13 +7990,39 @@ DADOS DO USUÁRIO:
 ${prefs ? `- Preferências: ${prefs}` : ""}
 ${orcamento ? `- Orçamento: ${orcamento}` : ""}
 
-ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
-1. RESUMO CALÓRICO — calcule o TDEE com base nos dados acima e defina as calorias-alvo para o objetivo informado. Mostre: TMB → TDEE → meta calórica.
-2. MACROS DIÁRIOS — proteína (g e % das calorias), carboidrato (g e %), gordura (g e %). Use as diretrizes da ISSN: ≥1.6g/kg de proteína para hipertrofia, déficit de 300-500kcal para emagrecimento, superávit de 200-300kcal para ganho.
-3. PLANO DE REFEIÇÕES (${refs} refeições) — para cada refeição: nome/horário sugerido, lista de alimentos com quantidades em gramas, calorias e macros da refeição.
-4. DICAS PRÁTICAS — 3 dicas rápidas de preparação/timing.
+FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS com os blocos abaixo, sem texto extra:
 
-Seja preciso nos números. Use formato organizado com emojis para facilitar a leitura.`;
+##META
+CALORIAS: [meta calórica]
+PROTEINA: [gramas proteína]
+CARB: [gramas carboidrato]
+GORDURA: [gramas gordura]
+TMB: [TMB]
+TDEE: [TDEE]
+
+##REFEICAO
+NOME: [nome da refeição]
+HORARIO: [ex: 07:00]
+TAG: [descrição curta, ex: Energia matinal]
+[Alimento]|[qtde]|[kcal]|[prot g]|[carb g]|[gord g]
+[Alimento]|[qtde]|[kcal]|[prot g]|[carb g]|[gord g]
+SUBTOTAL||[kcal]|[prot]|[carb]|[gord]
+
+(repita o bloco ##REFEICAO para cada uma das ${refs} refeições)
+
+##RESUMO
+[Nome refeição]|[kcal]|[prot]|[carb]|[gord]
+TOTAL|[kcal total]|[prot total]|[carb total]|[gord total]
+
+##ORIENTACOES
+Água|Mínimo 35 ml/kg de peso corporal ao dia (ex: ${peso}kg → ${Math.round(parseFloat(peso||70)*0.035*10)/10} L)
+Cafeína|Até 400 mg/dia. Evitar após 14h para não comprometer o sono.
+Sódio|Preferir sal rosa do Himalaia ou marinho. Limite: 2.300 mg/dia.
+Fibras|Meta de 25–35g/dia. Priorizar vegetais, leguminosas e grãos integrais.
+Janela Alimentar|Ideal: 10–12h entre primeira e última refeição.
+Refeições|Mastigar devagar. Comer sem telas. Parar ao sentir saciedade.
+
+IMPORTANTE: Use as diretrizes ISSN — ≥1.6g/kg proteína para hipertrofia, déficit 300-500kcal para emagrecimento, superávit 200-300kcal para ganho de massa. Seja preciso nos números.`;
 
   try {
     const resp = await fetch("/api/chat", {
