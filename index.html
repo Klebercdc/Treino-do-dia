@@ -4062,11 +4062,12 @@
       <input id="dietaPrefs" type="text" class="bs-input" placeholder="Ex: frango, arroz, ovos...">
     </div>
     <div class="bs-full">
-      <label class="bs-label">Orçamento (opcional)</label>
+      <label class="bs-label">Perfil de investimento alimentar</label>
       <select id="dietaOrcamento" class="bs-input">
-        <option value="">Sem restrição</option>
-        <option value="econômico">Econômico (até R$ 300/mês)</option>
-        <option value="moderado">Moderado (R$ 300–600/mês)</option>
+        <option value="">Sem restrição de orçamento</option>
+        <option value="economico">Econômico — até R$ 300/mês</option>
+        <option value="moderado">Moderado — R$ 300 a R$ 600/mês</option>
+        <option value="premium">Premium — acima de R$ 600/mês</option>
       </select>
     </div>
 
@@ -7952,6 +7953,27 @@ async function gerarDieta() {
   const restric = document.getElementById("dietaRestric").value.trim() || "nenhuma";
   const prefs  = document.getElementById("dietaPrefs").value.trim();
   const orcamento = document.getElementById("dietaOrcamento").value;
+
+  // ── Instrução de orçamento para o prompt ──────────────────────────
+  const orcamentoInstrucao = {
+    economico: `
+PERFIL ECONÔMICO — REGRAS OBRIGATÓRIAS:
+- Use APENAS alimentos de baixo custo disponíveis no Brasil: ovo, frango (coxa/sobrecoxa), atum/sardinha em lata, carne moída (patinho), fígado bovino, feijão, lentilha, grão-de-bico, arroz, batata-doce, aveia, banana, maçã, laranja, couve, cenoura, beterraba, aipim, inhame, pão integral, leite, iogurte natural, queijo cottage, amendoim/pasta de amendoim.
+- PROIBIDO usar: salmão, filé mignon, whey protein, suplementos caros, quinoa, frutas vermelhas frescas, azeite extravirgem premium ou qualquer item com custo acima de R$ 25/kg.
+- Priorize custo por grama de proteína: ovo (~R$ 0,50/unid), frango coxa (~R$ 14/kg), atum lata (~R$ 6/lata 170g), feijão (~R$ 8/kg).
+- Monte refeições simples, práticas e que possam ser preparadas em lote (meal prep).
+- Objetivo: dieta completa por aproximadamente R$ 250–300/mês.`,
+    moderado: `
+PERFIL MODERADO — DIRETRIZES:
+- Priorize alimentos com bom custo-benefício: frango peito, ovo, atum, patinho, peixe branco, batata-doce, arroz integral, aveia, frutas sazonais, iogurte grego, queijo cottage.
+- Pode incluir whey protein apenas se necessário para atingir meta de proteína.
+- Evite itens premium como salmão diário, suplementos excessivos ou cortes nobres de carne.
+- Objetivo: dieta completa por aproximadamente R$ 400–600/mês.`,
+    premium: `
+PERFIL PREMIUM — DIRETRIZES:
+- Use alimentos de alta qualidade nutricional sem restrição de custo: salmão, frango orgânico, carnes nobres, azeite extravirgem, frutas vermelhas, oleaginosas, whey isolado, ovos caipiras.
+- Priorize variedade, biodisponibilidade e praticidade.`
+  }[orcamento] || "";
   localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
     ...safeJSON("titanpro_calc_prefs", {}),
     dietaObj: obj,
@@ -7988,7 +8010,8 @@ DADOS DO USUÁRIO:
 - Número de refeições por dia: ${refs}
 - Restrições/alergias/não gosta: ${restric}
 ${prefs ? `- Preferências: ${prefs}` : ""}
-${orcamento ? `- Orçamento: ${orcamento}` : ""}
+${orcamento ? `- Perfil de orçamento: ${orcamento}` : ""}
+${orcamentoInstrucao}
 
 FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS com os blocos abaixo, sem texto extra:
 
