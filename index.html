@@ -23,32 +23,35 @@
   <link rel="apple-touch-startup-image" href="splash.png"/>
 
   <!-- SEO -->
+
   <meta name="description" content="TITAN PRO — App de musculação com IA. Treinos personalizados com periodização científica MEV/MAV/MRV, análise de progresso e coach inteligente KRONOS."/>
   <meta name="keywords" content="treino musculação IA, app treino personalizado, periodização MEV MRV, coach fitness inteligente"/>
-  <link rel="canonical" href="https://treino-do-dia-orpin.vercel.app/"/>
+  <link rel="canonical" href="https://www.titanpro.app.br/"/>
 
   <!-- Open Graph -->
+
   <meta property="og:type" content="website"/>
   <meta property="og:title" content="TITAN PRO — Treino com IA"/>
-  <meta property="og:description" content="Treinos personalizados com periodização científica MEV/MAV/MRV e coach inteligente powered by NVIDIA Llama 70B."/>
-  <meta property="og:image" content="https://treino-do-dia-orpin.vercel.app/titanpro.png"/>
-  <meta property="og:url" content="https://treino-do-dia-orpin.vercel.app/"/>
+  <meta property="og:description" content="Treinos personalizados com periodização científica MEV/MAV/MRV e coach inteligente KRONOS."/>
+  <meta property="og:image" content="https://www.titanpro.app.br/titanpro.png"/>
+  <meta property="og:url" content="https://www.titanpro.app.br/"/>
   <meta property="og:site_name" content="TITAN PRO"/>
   <meta property="og:locale" content="pt_BR"/>
 
   <!-- Twitter Card -->
+
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="TITAN PRO — Treino com IA"/>
   <meta name="twitter:description" content="App de musculação com IA. Treinos científicos, análise de progresso e coach inteligente."/>
-  <meta name="twitter:image" content="https://treino-do-dia-orpin.vercel.app/titanpro.png"/>
+  <meta name="twitter:image" content="https://www.titanpro.app.br/titanpro.png"/>
 
   <link rel="stylesheet" href="styles.css">
-
 
 </head>
 <body>
 
 <!-- ═══ SPLASH SCREEN ═══ -->
+
 <div id="splashScreen">
   <div id="splashLogoWrap">
     <img id="splashLogo" src="splash.png">
@@ -56,6 +59,7 @@
 </div>
 
 <!-- ═══ LOGIN SCREEN (TELA 1 — LANDING) ═══ -->
+
 <div id="loginScreen">
   <div id="loginBg"></div>
   <div id="loginTop"></div>
@@ -67,6 +71,7 @@
 </div>
 
 <!-- ═══ EMAIL LOGIN SCREEN (TELA 2) ═══ -->
+
 <div id="emailLoginScreen">
   <div id="emailLoginHeader">
     <button id="emailLoginBack" onclick="hideEmailLogin()" aria-label="Voltar">
@@ -105,53 +110,56 @@
       <div class="ob-sub">Coach com IA que aprende quem você é — e entrega exatamente o que você precisa, do básico ao alto nível.</div>
     </div>
 
-    <!-- STEP 1: Persona selector -->
-    <div class="ob-step" id="ob-step-1">
-      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="8" fill="white" opacity="0.9"/><path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
-      </div></div>
-      <div class="ob-title">Como você<br>se encaixa?</div>
-      <div class="ob-sub" style="margin-bottom:20px">A IA vai se adaptar ao seu perfil.<br>Escolha o que melhor te representa:</div>
-      <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;padding:0 4px">
-        <div class="ob-persona-chip" data-val="turista" onclick="selectPersonaOb(this)">
-          <div style="font-size:1.4rem;flex-shrink:0">✈️</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Físico Turista</div>
-            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino quando dá — hotel, casa, onde estiver</div>
-          </div>
-        </div>
-        <div class="ob-persona-chip" data-val="iniciante" onclick="selectPersonaOb(this)">
-          <div style="font-size:1.4rem;flex-shrink:0">🌱</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Estou começando agora</div>
-            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Iniciante — quero aprender com segurança</div>
-          </div>
-        </div>
-        <div class="ob-persona-chip" data-val="dedicado" onclick="selectPersonaOb(this)">
-          <div style="font-size:1.4rem;flex-shrink:0">💪</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Treino com consistência</div>
-            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">3–5x por semana, quero crescer e evoluir</div>
-          </div>
-        </div>
-        <div class="ob-persona-chip" data-val="atleta" onclick="selectPersonaOb(this)">
-          <div style="font-size:1.4rem;flex-shrink:0">🔥</div>
-          <div>
-            <div style="font-weight:700;font-size:0.9rem">Nível avançado / atleta</div>
-            <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino sério — periodização, RPE, performance</div>
-          </div>
-        </div>
+```
+<!-- STEP 1: Persona selector -->
+<div class="ob-step" id="ob-step-1">
+  <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="8" fill="white" opacity="0.9"/><path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+  </div></div>
+  <div class="ob-title">Como você<br>se encaixa?</div>
+  <div class="ob-sub" style="margin-bottom:20px">A IA vai se adaptar ao seu perfil.<br>Escolha o que melhor te representa:</div>
+  <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;padding:0 4px">
+    <div class="ob-persona-chip" data-val="turista" onclick="selectPersonaOb(this)">
+      <div style="font-size:1.4rem;flex-shrink:0">✈️</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem">Físico Turista</div>
+        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino quando dá — hotel, casa, onde estiver</div>
       </div>
     </div>
-
-    <!-- STEP 2: Personalized ready screen -->
-    <div class="ob-step" id="ob-step-2">
-      <div class="ob-icon" id="ob2Icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#059669,#10b981)">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><polyline points="8 26 18 36 40 14" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div></div>
-      <div class="ob-title" id="ob2Title">Tudo pronto!</div>
-      <div class="ob-sub" id="ob2Sub" style="max-width:300px">KRONOS vai analisar seu perfil e entregar treinos e orientações feitas para você.</div>
+    <div class="ob-persona-chip" data-val="iniciante" onclick="selectPersonaOb(this)">
+      <div style="font-size:1.4rem;flex-shrink:0">🌱</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem">Estou começando agora</div>
+        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Iniciante — quero aprender com segurança</div>
+      </div>
     </div>
+    <div class="ob-persona-chip" data-val="dedicado" onclick="selectPersonaOb(this)">
+      <div style="font-size:1.4rem;flex-shrink:0">💪</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem">Treino com consistência</div>
+        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">3–5x por semana, quero crescer e evoluir</div>
+      </div>
+    </div>
+    <div class="ob-persona-chip" data-val="atleta" onclick="selectPersonaOb(this)">
+      <div style="font-size:1.4rem;flex-shrink:0">🔥</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem">Nível avançado / atleta</div>
+        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino sério — periodização, RPE, performance</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2: Personalized ready screen -->
+<div class="ob-step" id="ob-step-2">
+  <div class="ob-icon" id="ob2Icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#059669,#10b981)">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><polyline points="8 26 18 36 40 14" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div></div>
+  <div class="ob-title" id="ob2Title">Tudo pronto!</div>
+  <div class="ob-sub" id="ob2Sub" style="max-width:300px">KRONOS vai analisar seu perfil e entregar treinos e orientações feitas para você.</div>
+</div>
+```
+
   </div>
   <div class="ob-footer">
     <div class="ob-dots" style="margin-bottom:28px">
@@ -163,8 +171,6 @@
     <div class="ob-skip" onclick="obFinish()">Pular introdução</div>
   </div>
 </div>
-
-<!-- Timer Popup estilo Hevy -->
 
 <!-- Timer Bottom Sheet -->
 
@@ -229,7 +235,6 @@
       <div class="sum-pr-title">🏆 Novos Recordes</div>
       <div id="sumPRList"></div>
     </div>
-    <!-- AI Coach pós-treino -->
     <div id="aiCoachSummary" style="display:none;margin-bottom:16px">
       <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2zm0 3a7 7 0 0 0 0 14 7 7 0 0 0 0-14zm0 2a5 5 0 1 1 0 10A5 5 0 0 1 12 7z" opacity=".3"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
@@ -250,12 +255,14 @@
 </div>
 
 <!-- Voice indicator -->
+
 <div id="vozIndicator">
   <svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444"><circle cx="12" cy="12" r="10"/></svg>
   Ouvindo...
 </div>
 
 <!-- Breathing Modal -->
+
 <div id="breathingModal">
   <div class="breath-title">RESPIRAÇÃO</div>
   <div class="breath-sub">BOX BREATHING · COOL-DOWN</div>
@@ -270,34 +277,38 @@
 </div>
 
 <!-- Mesociclo Sheet -->
+
 <div class="bottom-sheet" id="mesocicloSheet" onclick="if(event.target===this)fecharMesociclo()">
   <div class="bs-box" style="max-height:90vh;overflow-y:auto">
     <div class="bs-handle"></div>
     <div class="bs-title">Gerador de Mesociclo</div>
     <div class="bs-sub" style="font-size:.75rem;color:var(--muted);margin-bottom:16px">Planeje seu bloco de treinamento</div>
 
-    <span class="bs-label">Duração</span>
-    <div class="bs-chips" id="mesoDurChips" style="margin-bottom:12px">
-      <div class="bs-chip active" data-val="4"  onclick="selectMesoChip(this,'dur')">4 sem</div>
-      <div class="bs-chip"        data-val="6"  onclick="selectMesoChip(this,'dur')">6 sem</div>
-      <div class="bs-chip"        data-val="8"  onclick="selectMesoChip(this,'dur')">8 sem</div>
-      <div class="bs-chip"        data-val="12" onclick="selectMesoChip(this,'dur')">12 sem</div>
-    </div>
-    <span class="bs-label">Objetivo</span>
-    <div class="bs-chips" id="mesoObjChips" style="margin-bottom:20px">
-      <div class="bs-chip active" data-val="hipertrofia" onclick="selectMesoChip(this,'obj')">Hipertrofia</div>
-      <div class="bs-chip"        data-val="forca"       onclick="selectMesoChip(this,'obj')">Força</div>
-      <div class="bs-chip"        data-val="definicao"   onclick="selectMesoChip(this,'obj')">Definição</div>
-      <div class="bs-chip"        data-val="performance" onclick="selectMesoChip(this,'obj')">Performance</div>
-    </div>
-    <button onclick="gerarMesociclo()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;margin-bottom:16px">Gerar Plano</button>
+```
+<span class="bs-label">Duração</span>
+<div class="bs-chips" id="mesoDurChips" style="margin-bottom:12px">
+  <div class="bs-chip active" data-val="4"  onclick="selectMesoChip(this,'dur')">4 sem</div>
+  <div class="bs-chip"        data-val="6"  onclick="selectMesoChip(this,'dur')">6 sem</div>
+  <div class="bs-chip"        data-val="8"  onclick="selectMesoChip(this,'dur')">8 sem</div>
+  <div class="bs-chip"        data-val="12" onclick="selectMesoChip(this,'dur')">12 sem</div>
+</div>
+<span class="bs-label">Objetivo</span>
+<div class="bs-chips" id="mesoObjChips" style="margin-bottom:20px">
+  <div class="bs-chip active" data-val="hipertrofia" onclick="selectMesoChip(this,'obj')">Hipertrofia</div>
+  <div class="bs-chip"        data-val="forca"       onclick="selectMesoChip(this,'obj')">Força</div>
+  <div class="bs-chip"        data-val="definicao"   onclick="selectMesoChip(this,'obj')">Definição</div>
+  <div class="bs-chip"        data-val="performance" onclick="selectMesoChip(this,'obj')">Performance</div>
+</div>
+<button onclick="gerarMesociclo()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;margin-bottom:16px">Gerar Plano</button>
 
-    <div id="mesoVisualizacao" style="display:none">
-      <div id="mesoFases" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-      <div id="mesoGrid"></div>
-      <button onclick="salvarMesociclo()" style="width:100%;padding:12px;margin-top:12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:var(--r);font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer">Salvar Mesociclo</button>
-    </div>
-    <div style="height:16px"></div>
+<div id="mesoVisualizacao" style="display:none">
+  <div id="mesoFases" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <div id="mesoGrid"></div>
+  <button onclick="salvarMesociclo()" style="width:100%;padding:12px;margin-top:12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:var(--r);font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer">Salvar Mesociclo</button>
+</div>
+<div style="height:16px"></div>
+```
+
   </div>
 </div>
 
@@ -342,7 +353,6 @@
 
 <div id="aiModal" style="display:none;position:fixed;inset:0;z-index:7000;background:var(--bg);flex-direction:column;">
   <div id="aiBox" style="display:flex;flex-direction:column;height:100%;max-width:680px;margin:0 auto;width:100%;">
-    <!-- Header minimal -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:10px;">
         <button onclick="closeAI()" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
@@ -354,9 +364,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
       </button>
     </div>
-    <!-- Mensagens -->
     <div id="aiMessages" style="flex:1;overflow-y:auto;padding:24px 16px 16px;display:flex;flex-direction:column;gap:20px;"></div>
-    <!-- Input estilo ChatGPT -->
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);">
       <div class="ai-input-wrap" style="display:flex;align-items:flex-end;background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:10px 10px 10px 16px;gap:8px;transition:border-color .2s;">
         <textarea id="aiInput" placeholder="Mensagem para o KRONOS..." rows="1"
@@ -404,7 +412,6 @@
     </div>
     <div class="header-right">
       <div class="date-badge" id="displayDate">--/--/--</div>
-      <!-- Auth button -->
       <button id="authBtn" onclick="handleAuthClick()"
         style="background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;color:var(--text-2);font-family:var(--font);font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;height:30px;transition:border-color .2s">
         <img id="userAvatar" style="display:none;width:20px;height:20px;border-radius:50%;object-fit:cover" />
@@ -415,6 +422,7 @@
 </div>
 
 <!-- Auth menu dropdown -->
+
 <div id="authMenu" style="display:none;position:fixed;top:52px;right:12px;z-index:9000;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.4)">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
     <img id="authMenuAvatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--bg2)" />
@@ -444,7 +452,6 @@
 <!-- Timer — NOVO DESIGN -->
 
 <div class="timer-area" id="timerArea">
-  <!-- Linha 1: label + tempo + play -->
   <div class="timer-row-main">
     <span class="timer-label">Descanso</span>
     <span id="timerDisplayInline">1:00</span>
@@ -452,27 +459,22 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     </button>
   </div>
-  <!-- Linha 2: presets -->
   <div class="timer-row-presets">
     <button class="btn-t active" onclick="setT(60,this)">1:00</button>
     <button class="btn-t" onclick="setT(90,this)">1:30</button>
     <button class="btn-t" onclick="setT(120,this)">2:00</button>
     <button class="btn-t" onclick="setT(180,this)">3:00</button>
   </div>
-  <!-- Linha 3: barra de progresso -->
   <div class="timer-progress-bar-wrap">
     <div id="timerProgressBarInline"></div>
   </div>
 </div>
-
-<!-- Config Sheet -->
 
 <!-- ══════════════════════════════════════════
      TELA DE INÍCIO
 ══════════════════════════════════════════ -->
 
 <div id="homeScreen">
-  <!-- Card de perfil -->
   <div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:56px 16px 20px">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="openEditarPerfil()">
       <div id="homeCardAvatar" class="perfil-avatar" style="width:56px;height:56px;font-size:1.5rem;margin:0;flex-shrink:0">T</div>
@@ -504,7 +506,6 @@
     <div class="home-title">BORA <span id="homeTreinoNome">TREINAR</span></div>
   </div>
 
-  <!-- Banner motivacional -->
   <div id="homeBanner">
     <div class="home-banner-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -515,8 +516,6 @@
     </div>
   </div>
 
-  <!-- Card do treino do dia -->
-
   <div class="home-today" id="homeTodayCard">
     <div style="font-size:0.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:8px">Treino de hoje</div>
     <div id="homeTodayTreino" style="font-family:var(--display);font-size:2rem;color:#fff;letter-spacing:.04em;margin-bottom:4px">Treino A</div>
@@ -526,10 +525,6 @@
       INICIAR TREINO
     </button>
   </div>
-
-  <!-- Selecionar treino -->
-
-  <!-- Stats rápidos -->
 
   <div class="home-section-title">Esta semana</div>
   <div class="home-stats-row">
@@ -546,8 +541,6 @@
       <div class="home-stat-lbl">Volume</div>
     </div>
   </div>
-
-  <!-- Ferramentas de Nutrição -->
 
   <div class="home-section-title">Nutrição & Ferramentas</div>
   <div class="home-tools-grid" style="grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
@@ -595,7 +588,6 @@
     </div>
   </div>
 
-  <!-- Banner turista (visível só se persona=turista) -->
   <div id="turistaBanner" style="display:none;margin:0 16px 4px;background:linear-gradient(135deg,rgba(14,165,233,0.15),rgba(56,189,248,0.08));border:1px solid rgba(14,165,233,0.3);border-radius:16px;padding:16px 18px;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <span style="font-size:1.4rem">✈️</span>
@@ -609,8 +601,6 @@
       <button onclick="gerarTreinoExpress('casa')" style="flex:1;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25);color:#7dd3fc;padding:10px;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer">🏠 Sem equipamento</button>
     </div>
   </div>
-
-  <!-- Ações rápidas -->
 
   <div class="home-section-title">Meus Desafios</div>
   <div style="padding:0 16px 4px" id="desafiosSection"></div>
@@ -686,7 +676,6 @@
     <div class="perfil-badge" id="perfilNivel">Intermediário</div>
   </div>
 
-  <!-- Conta -->
   <div class="perfil-section">
     <div class="perfil-section-title">Conta</div>
     <div id="perfilContaLogado" style="display:none">
@@ -703,8 +692,6 @@
       <button onclick="closePerfil();showEmailLogin(false)" style="width:100%;background:var(--accent);border:none;border-radius:10px;padding:12px;color:#fff;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer">Entrar / Criar conta</button>
     </div>
   </div>
-
-  <!-- Stats gerais -->
 
   <div class="perfil-section">
     <div class="perfil-section-title">Resumo geral</div>
@@ -727,8 +714,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Medidas corporais -->
 
   <div class="perfil-section">
     <div class="perfil-section-title">Medidas corporais</div>
@@ -756,16 +741,12 @@
     </div>
   </div>
 
-  <!-- PRs -->
-
   <div class="perfil-section">
     <div class="perfil-section-title">Records pessoais (PRs)</div>
     <div class="perfil-pr-list" id="perfilPRList">
       <div style="color:var(--muted);font-size:0.8rem;text-align:center;padding:16px">Nenhum PR ainda — comece a treinar!</div>
     </div>
   </div>
-
-  <!-- Conquistas -->
 
   <div class="perfil-section">
     <div class="perfil-section-title">Conquistas</div>
@@ -774,14 +755,10 @@
     </div>
   </div>
 
-  <!-- Calendário de treinos -->
-
   <div class="perfil-section">
     <div class="perfil-section-title">Calendário — últimos 28 dias</div>
     <div class="perfil-cal-grid" id="perfilCal"></div>
   </div>
-
-  <!-- Heatmap muscular -->
 
   <div class="perfil-section">
     <div class="perfil-section-title">Mapa muscular — últimos 7 dias</div>
@@ -790,31 +767,18 @@
         <div class="heatmap-side-label">Anterior</div>
         <div class="muscle-map" id="heatmapFront">
           <svg viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
-            <!-- Corpo base -->
             <ellipse cx="50" cy="20" rx="18" ry="18" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <!-- Pescoço -->
             <rect x="44" y="35" width="12" height="10" rx="3" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <!-- Peito esq -->
             <ellipse class="muscle-group level-0" id="hm-peito-e" cx="38" cy="60" rx="14" ry="12" data-muscle="peito"/>
-            <!-- Peito dir -->
             <ellipse class="muscle-group level-0" id="hm-peito-d" cx="62" cy="60" rx="14" ry="12" data-muscle="peito"/>
-            <!-- Ombro esq -->
             <ellipse class="muscle-group level-0" id="hm-ombro-e" cx="22" cy="52" rx="9" ry="11" data-muscle="ombros"/>
-            <!-- Ombro dir -->
             <ellipse class="muscle-group level-0" id="hm-ombro-d" cx="78" cy="52" rx="9" ry="11" data-muscle="ombros"/>
-            <!-- Abdômen -->
             <rect class="muscle-group level-0" id="hm-abs" x="38" y="74" width="24" height="30" rx="4" data-muscle="abdomen"/>
-            <!-- Quadriceps esq -->
             <rect class="muscle-group level-0" id="hm-quad-e" x="30" y="115" width="16" height="40" rx="6" data-muscle="quadriceps"/>
-            <!-- Quadriceps dir -->
             <rect class="muscle-group level-0" id="hm-quad-d" x="54" y="115" width="16" height="40" rx="6" data-muscle="quadriceps"/>
-            <!-- Biceps esq -->
             <ellipse class="muscle-group level-0" id="hm-bic-e" cx="16" cy="78" rx="7" ry="14" data-muscle="biceps"/>
-            <!-- Biceps dir -->
             <ellipse class="muscle-group level-0" id="hm-bic-d" cx="84" cy="78" rx="7" ry="14" data-muscle="biceps"/>
-            <!-- Perna inf esq -->
             <rect x="31" y="157" width="14" height="35" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <!-- Perna inf dir -->
             <rect x="55" y="157" width="14" height="35" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
           </svg>
         </div>
@@ -825,29 +789,17 @@
           <svg viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="50" cy="20" rx="18" ry="18" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
             <rect x="44" y="35" width="12" height="10" rx="3" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <!-- Trapézio -->
             <path class="muscle-group level-0" id="hm-trap" d="M32 42 Q50 36 68 42 L65 60 Q50 55 35 60 Z" data-muscle="costas"/>
-            <!-- Costas esq (lat) -->
             <path class="muscle-group level-0" id="hm-lat-e" d="M22 55 Q30 52 38 58 L36 90 Q28 88 20 80 Z" data-muscle="costas"/>
-            <!-- Costas dir (lat) -->
             <path class="muscle-group level-0" id="hm-lat-d" d="M78 55 Q70 52 62 58 L64 90 Q72 88 80 80 Z" data-muscle="costas"/>
-            <!-- Lombar -->
             <rect class="muscle-group level-0" id="hm-lombar" x="38" y="88" width="24" height="18" rx="4" data-muscle="costas"/>
-            <!-- Glúteo esq -->
             <ellipse class="muscle-group level-0" id="hm-glut-e" cx="38" cy="115" rx="14" ry="14" data-muscle="gluteos"/>
-            <!-- Glúteo dir -->
             <ellipse class="muscle-group level-0" id="hm-glut-d" cx="62" cy="115" rx="14" ry="14" data-muscle="gluteos"/>
-            <!-- Posterior coxa esq -->
             <rect class="muscle-group level-0" id="hm-post-e" x="30" y="130" width="16" height="38" rx="6" data-muscle="posterior"/>
-            <!-- Posterior coxa dir -->
             <rect class="muscle-group level-0" id="hm-post-d" x="54" y="130" width="16" height="38" rx="6" data-muscle="posterior"/>
-            <!-- Triceps esq -->
             <ellipse class="muscle-group level-0" id="hm-tri-e" cx="16" cy="78" rx="7" ry="14" data-muscle="triceps"/>
-            <!-- Triceps dir -->
             <ellipse class="muscle-group level-0" id="hm-tri-d" cx="84" cy="78" rx="7" ry="14" data-muscle="triceps"/>
-            <!-- Panturrilha esq -->
             <rect x="31" y="170" width="14" height="24" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <!-- Panturrilha dir -->
             <rect x="55" y="170" width="14" height="24" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
           </svg>
         </div>
@@ -873,7 +825,6 @@
     Voltar
   </button>
 
-  <!-- Avatar + nome -->
   <div class="ep-avatar-wrap">
     <div class="ep-avatar" id="epAvatar" onclick="document.getElementById('epAvatarInput').click()">
       <span id="epAvatarInicial">T</span>
@@ -886,51 +837,52 @@
     <div class="ep-level" id="epNivelDisplay">Iniciante</div>
   </div>
 
-  <!-- Formulário -->
   <div class="ep-body">
     <div class="ep-field">
       <span class="ep-field-lbl">Nome</span>
       <input class="ep-input" id="epNome" type="text" placeholder="Seu nome completo" oninput="epAtualizarNome(this.value)"/>
     </div>
 
-    <div class="ep-grid">
-      <div class="ep-field">
-        <span class="ep-field-lbl">Peso (kg)</span>
-        <input class="ep-input" id="epPeso" type="number" placeholder="75" inputmode="decimal"/>
-      </div>
-      <div class="ep-field">
-        <span class="ep-field-lbl">Altura (cm)</span>
-        <input class="ep-input" id="epAltura" type="number" placeholder="175" inputmode="decimal"/>
-      </div>
-    </div>
+```
+<div class="ep-grid">
+  <div class="ep-field">
+    <span class="ep-field-lbl">Peso (kg)</span>
+    <input class="ep-input" id="epPeso" type="number" placeholder="75" inputmode="decimal"/>
+  </div>
+  <div class="ep-field">
+    <span class="ep-field-lbl">Altura (cm)</span>
+    <input class="ep-input" id="epAltura" type="number" placeholder="175" inputmode="decimal"/>
+  </div>
+</div>
 
-    <div class="ep-grid">
-      <div class="ep-field">
-        <span class="ep-field-lbl">Idade</span>
-        <input class="ep-input" id="epIdade" type="number" placeholder="25" inputmode="numeric"/>
-      </div>
-      <div class="ep-field">
-        <span class="ep-field-lbl">Sono (h/noite)</span>
-        <input class="ep-input" id="epSono" type="number" placeholder="7" min="3" max="12" step="0.5" inputmode="decimal"/>
-      </div>
-    </div>
+<div class="ep-grid">
+  <div class="ep-field">
+    <span class="ep-field-lbl">Idade</span>
+    <input class="ep-input" id="epIdade" type="number" placeholder="25" inputmode="numeric"/>
+  </div>
+  <div class="ep-field">
+    <span class="ep-field-lbl">Sono (h/noite)</span>
+    <input class="ep-input" id="epSono" type="number" placeholder="7" min="3" max="12" step="0.5" inputmode="decimal"/>
+  </div>
+</div>
 
-    <button class="ep-save" onclick="salvarPerfilEdit()">Salvar Perfil</button>
+<button class="ep-save" onclick="salvarPerfilEdit()">Salvar Perfil</button>
 
-    <!-- CTA pós-save: ir para configurar treino -->
-    <div id="epCtaTreino" style="display:none;flex-direction:column;gap:10px;margin-top:16px;padding:16px;background:var(--card);border:1px solid var(--accent);border-radius:14px">
-      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Perfil salvo! O que deseja fazer agora?</div>
-      <div style="font-size:0.78rem;color:var(--text-2)">Configure seu programa de treino com base nos seus dados.</div>
-      <div style="display:flex;gap:10px">
-        <button onclick="epIrParaTreino()" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle;margin-right:5px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
-          Configurar Treino
-        </button>
-        <button onclick="closeEditarPerfil()" style="flex:1;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text-2);font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">Continuar</button>
-      </div>
-    </div>
+<div id="epCtaTreino" style="display:none;flex-direction:column;gap:10px;margin-top:16px;padding:16px;background:var(--card);border:1px solid var(--accent);border-radius:14px">
+  <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Perfil salvo! O que deseja fazer agora?</div>
+  <div style="font-size:0.78rem;color:var(--text-2)">Configure seu programa de treino com base nos seus dados.</div>
+  <div style="display:flex;gap:10px">
+    <button onclick="epIrParaTreino()" style="flex:1;padding:12px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle;margin-right:5px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
+      Configurar Treino
+    </button>
+    <button onclick="closeEditarPerfil()" style="flex:1;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text-2);font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">Continuar</button>
+  </div>
+</div>
 
-    <div style="height:80px"></div>
+<div style="height:80px"></div>
+```
+
   </div>
 </div>
 
@@ -950,15 +902,9 @@
     </div>
   </div>
   <div class="orient-content">
-
-    <!-- Painel Expert -->
     <div id="orient-expert" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
       <div class="orient-shortcuts-row">
-
-        <!-- Chips dinâmicos (renderizados por renderAriaChips()) -->
         <div id="ariaChipsDynamic" style="display:contents"></div>
-
-        <!-- Separador -->
         <div class="orient-category-label">Análise</div>
         <div class="orient-chip" onclick="orientExpertQuick('analise')">
           <span class="orient-chip-icon">📊</span>
@@ -995,31 +941,33 @@
         </div>
       </div>
 
-      <div class="orient-chat-wrap">
-        <div id="orientExpertMessages" class="orient-chat-messages"></div>
-        <div class="orient-chat-bar">
-          <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-            Sugestões rápidas
-          </button>
-          <div class="orient-input-wrap">
-            <textarea id="orientExpertInput"
-              placeholder="Fale com o KRONOS..."
-              rows="1"
-              style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
-              oninput="autoResizeOrientInput(this)"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
-            <button id="orientSendBtn" onclick="sendOrientExpert()"
-              style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-            </button>
-          </div>
-          <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
-            Enter para enviar · Shift+Enter para nova linha
-          </div>
-        </div>
+```
+  <div class="orient-chat-wrap">
+    <div id="orientExpertMessages" class="orient-chat-messages"></div>
+    <div class="orient-chat-bar">
+      <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        Sugestões rápidas
+      </button>
+      <div class="orient-input-wrap">
+        <textarea id="orientExpertInput"
+          placeholder="Fale com o KRONOS..."
+          rows="1"
+          style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
+          oninput="autoResizeOrientInput(this)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
+        <button id="orientSendBtn" onclick="sendOrientExpert()"
+          style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+        </button>
+      </div>
+      <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
+        Enter para enviar · Shift+Enter para nova linha
       </div>
     </div>
+  </div>
+</div>
+```
 
   </div>
 </div>
@@ -1027,6 +975,7 @@
 <!-- ══════════════════════════════════════════
      TELA CALCULADORA AVANÇADA
 ══════════════════════════════════════════ -->
+
 <div id="dietaScreen">
   <div class="dav-header">
     <button class="btn-voltar" style="padding:0" onclick="closeDieta()">
@@ -1038,8 +987,6 @@
   </div>
 
   <div class="dav-body">
-
-    <!-- Sexo -->
     <div class="config-section">
       <div class="config-section-lbl">Sexo</div>
       <div class="config-chips">
@@ -1048,109 +995,103 @@
       </div>
     </div>
 
-    <!-- Biotipo -->
-    <div class="config-section">
-      <div class="config-section-lbl">Biotipo</div>
-      <div class="config-chips" id="davBioChips">
-        <div class="config-chip" data-val="ecto" onclick="selectDavBio(this)">Ectomorfo</div>
-        <div class="config-chip active" data-val="meso" onclick="selectDavBio(this)">Mesomorfo</div>
-        <div class="config-chip" data-val="endo" onclick="selectDavBio(this)">Endomorfo</div>
-      </div>
+```
+<div class="config-section">
+  <div class="config-section-lbl">Biotipo</div>
+  <div class="config-chips" id="davBioChips">
+    <div class="config-chip" data-val="ecto" onclick="selectDavBio(this)">Ectomorfo</div>
+    <div class="config-chip active" data-val="meso" onclick="selectDavBio(this)">Mesomorfo</div>
+    <div class="config-chip" data-val="endo" onclick="selectDavBio(this)">Endomorfo</div>
+  </div>
+</div>
+
+<div class="config-section">
+  <div class="config-section-lbl">Objetivo</div>
+  <div class="config-chips" id="davObjChips">
+    <div class="config-chip active" data-val="emagrecer" onclick="selectDavObj(this)">Emagrecer</div>
+    <div class="config-chip" data-val="manter" onclick="selectDavObj(this)">Manter</div>
+    <div class="config-chip" data-val="ganhar" onclick="selectDavObj(this)">Ganhar Massa</div>
+  </div>
+</div>
+
+<div class="config-section">
+  <div class="config-section-lbl">Medidas corporais</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="perfil-input-wrap">
+      <div class="perfil-input-lbl">Peso (kg)</div>
+      <input type="number" id="davPeso" class="perfil-input" placeholder="75" inputmode="decimal">
     </div>
-
-    <!-- Objetivo -->
-    <div class="config-section">
-      <div class="config-section-lbl">Objetivo</div>
-      <div class="config-chips" id="davObjChips">
-        <div class="config-chip active" data-val="emagrecer" onclick="selectDavObj(this)">Emagrecer</div>
-        <div class="config-chip" data-val="manter" onclick="selectDavObj(this)">Manter</div>
-        <div class="config-chip" data-val="ganhar" onclick="selectDavObj(this)">Ganhar Massa</div>
-      </div>
+    <div class="perfil-input-wrap">
+      <div class="perfil-input-lbl">Altura (cm)</div>
+      <input type="number" id="davAltura" class="perfil-input" placeholder="175" inputmode="decimal">
     </div>
-
-    <!-- Medidas -->
-    <div class="config-section">
-      <div class="config-section-lbl">Medidas corporais</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Peso (kg)</div>
-          <input type="number" id="davPeso" class="perfil-input" placeholder="75" inputmode="decimal">
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Altura (cm)</div>
-          <input type="number" id="davAltura" class="perfil-input" placeholder="175" inputmode="decimal">
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Pescoço (cm)</div>
-          <input type="number" id="davPescoco" class="perfil-input" placeholder="37" inputmode="decimal">
-        </div>
-        <div class="perfil-input-wrap">
-          <div class="perfil-input-lbl">Cintura (cm)</div>
-          <input type="number" id="davCintura" class="perfil-input" placeholder="80" inputmode="decimal">
-        </div>
-        <div class="perfil-input-wrap" id="davQuadrilWrap" style="display:none">
-          <div class="perfil-input-lbl">Quadril (cm)</div>
-          <input type="number" id="davQuadril" class="perfil-input" placeholder="95" inputmode="decimal">
-        </div>
-      </div>
-      <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);line-height:1.5">
-        💡 Meça cintura e pescoço na parte mais estreita. O % de gordura é calculado pela Fórmula Naval da US Navy.
-      </div>
+    <div class="perfil-input-wrap">
+      <div class="perfil-input-lbl">Pescoço (cm)</div>
+      <input type="number" id="davPescoco" class="perfil-input" placeholder="37" inputmode="decimal">
     </div>
-
-    <button class="config-apply" style="width:100%;margin:4px 0 24px" onclick="calcularDietaAvancada()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      Calcular
-    </button>
-
-    <!-- Resultados -->
-    <div id="davResult" style="display:none">
-
-      <!-- Stats: BF, TMB, Massa Magra, Massa Gorda -->
-      <div class="config-section-lbl" style="margin-bottom:10px">Composição Corporal</div>
-      <div class="dav-result-grid">
-        <div class="dav-stat">
-          <div class="dav-stat-val" id="davBF">-</div>
-          <div class="dav-stat-lbl">% Gordura</div>
-        </div>
-        <div class="dav-stat">
-          <div class="dav-stat-val" id="davTMB">-</div>
-          <div class="dav-stat-lbl">TMB (kcal)</div>
-        </div>
-        <div class="dav-stat">
-          <div class="dav-stat-val" id="davMassaMagra">-</div>
-          <div class="dav-stat-lbl">Massa Magra</div>
-        </div>
-        <div class="dav-stat">
-          <div class="dav-stat-val" id="davMassaGorda">-</div>
-          <div class="dav-stat-lbl">Massa Gorda</div>
-        </div>
-      </div>
-
-      <!-- Macros por tipo de dia -->
-      <div class="config-section-lbl" style="margin-bottom:8px">Macros por Tipo de Dia</div>
-      <div class="dav-table-wrap">
-        <div class="dav-table-head">
-          <div class="dav-th">Dia</div>
-          <div class="dav-th" style="color:var(--accent)">kcal</div>
-          <div class="dav-th">prot</div>
-          <div class="dav-th">gord</div>
-          <div class="dav-th">carbs</div>
-        </div>
-        <div id="davMacroRows" style="padding:0 12px 8px"></div>
-      </div>
-
-      <!-- Ciclo de carboidratos -->
-      <div class="config-section-lbl" style="margin-bottom:8px">Ciclo de Carboidratos (dias ALTO : BAIXO)</div>
-      <div class="config-chips" id="davCicloChips" style="margin-bottom:12px">
-        <div class="config-chip" data-val="1" onclick="selectDavCiclo(this)">1:1</div>
-        <div class="config-chip active" data-val="2" onclick="selectDavCiclo(this)">2:1</div>
-        <div class="config-chip" data-val="3" onclick="selectDavCiclo(this)">3:1</div>
-        <div class="config-chip" data-val="4" onclick="selectDavCiclo(this)">4:1</div>
-      </div>
-      <div id="davCicloResult" style="margin-bottom:20px"></div>
-
+    <div class="perfil-input-wrap">
+      <div class="perfil-input-lbl">Cintura (cm)</div>
+      <input type="number" id="davCintura" class="perfil-input" placeholder="80" inputmode="decimal">
     </div>
+    <div class="perfil-input-wrap" id="davQuadrilWrap" style="display:none">
+      <div class="perfil-input-lbl">Quadril (cm)</div>
+      <input type="number" id="davQuadril" class="perfil-input" placeholder="95" inputmode="decimal">
+    </div>
+  </div>
+  <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);line-height:1.5">
+    💡 Meça cintura e pescoço na parte mais estreita. O % de gordura é calculado pela Fórmula Naval da US Navy.
+  </div>
+</div>
+
+<button class="config-apply" style="width:100%;margin:4px 0 24px" onclick="calcularDietaAvancada()">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+  Calcular
+</button>
+
+<div id="davResult" style="display:none">
+  <div class="config-section-lbl" style="margin-bottom:10px">Composição Corporal</div>
+  <div class="dav-result-grid">
+    <div class="dav-stat">
+      <div class="dav-stat-val" id="davBF">-</div>
+      <div class="dav-stat-lbl">% Gordura</div>
+    </div>
+    <div class="dav-stat">
+      <div class="dav-stat-val" id="davTMB">-</div>
+      <div class="dav-stat-lbl">TMB (kcal)</div>
+    </div>
+    <div class="dav-stat">
+      <div class="dav-stat-val" id="davMassaMagra">-</div>
+      <div class="dav-stat-lbl">Massa Magra</div>
+    </div>
+    <div class="dav-stat">
+      <div class="dav-stat-val" id="davMassaGorda">-</div>
+      <div class="dav-stat-lbl">Massa Gorda</div>
+    </div>
+  </div>
+
+  <div class="config-section-lbl" style="margin-bottom:8px">Macros por Tipo de Dia</div>
+  <div class="dav-table-wrap">
+    <div class="dav-table-head">
+      <div class="dav-th">Dia</div>
+      <div class="dav-th" style="color:var(--accent)">kcal</div>
+      <div class="dav-th">prot</div>
+      <div class="dav-th">gord</div>
+      <div class="dav-th">carbs</div>
+    </div>
+    <div id="davMacroRows" style="padding:0 12px 8px"></div>
+  </div>
+
+  <div class="config-section-lbl" style="margin-bottom:8px">Ciclo de Carboidratos (dias ALTO : BAIXO)</div>
+  <div class="config-chips" id="davCicloChips" style="margin-bottom:12px">
+    <div class="config-chip" data-val="1" onclick="selectDavCiclo(this)">1:1</div>
+    <div class="config-chip active" data-val="2" onclick="selectDavCiclo(this)">2:1</div>
+    <div class="config-chip" data-val="3" onclick="selectDavCiclo(this)">3:1</div>
+    <div class="config-chip" data-val="4" onclick="selectDavCiclo(this)">4:1</div>
+  </div>
+  <div id="davCicloResult" style="margin-bottom:20px"></div>
+</div>
+```
+
   </div>
 </div>
 
@@ -1158,19 +1099,14 @@
   <div id="configBox">
     <div class="config-handle"></div>
 
-<!-- Header -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
   <div class="config-title" style="margin:0">Programa de Treino</div>
   <button class="btn-voltar" style="padding:0" onclick="closeConfig()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
     Voltar
   </button>
-  <button onclick="closeConfig()" style="display:none">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
 </div>
 
-<!-- Frequência -->
 <div class="config-section">
   <div class="config-section-lbl">Frequência semanal</div>
   <div class="config-chips" id="freqChips">
@@ -1183,7 +1119,6 @@
   </div>
 </div>
 
-<!-- Objetivo -->
 <div class="config-section">
   <div class="config-section-lbl">Objetivo</div>
   <div class="config-chips" id="objChips">
@@ -1195,7 +1130,6 @@
   </div>
 </div>
 
-<!-- Nível -->
 <div class="config-section">
   <div class="config-section-lbl">Seu nível de experiência</div>
   <div class="config-chips" id="nivelChips">
@@ -1214,7 +1148,6 @@
   </div>
 </div>
 
-<!-- Persona -->
 <div class="config-section">
   <div class="config-section-lbl">Meu perfil de atleta</div>
   <div class="config-chips" id="personaChips">
@@ -1233,7 +1166,6 @@
   </div>
 </div>
 
-<!-- Músculos alvo -->
 <div class="config-section">
   <div class="config-section-lbl">Quero focar em <span style="color:var(--text-2);font-weight:400;text-transform:none;letter-spacing:0">(opcional — pode escolher mais de um)</span></div>
   <div class="config-chips" id="muscChips" style="gap:6px">
@@ -1249,7 +1181,6 @@
   </div>
 </div>
 
-<!-- Restrições -->
 <div class="config-section">
   <div class="config-section-lbl">Tem alguma dor ou limitação? <span style="color:var(--text-2);font-weight:400;text-transform:none;letter-spacing:0">(o treino será adaptado)</span></div>
   <div class="config-chips" id="restricChips" style="gap:6px">
@@ -1264,7 +1195,6 @@
   </div>
 </div>
 
-<!-- Fase atual -->
 <div class="config-section">
   <div class="config-section-lbl">Onde você está agora?</div>
   <div class="config-chips" id="faseChips">
@@ -1283,7 +1213,6 @@
   </div>
 </div>
 
-<!-- Equipamento -->
 <div class="config-section">
   <div class="config-section-lbl">Equipamento disponível</div>
   <div class="config-chips" id="equipChips">
@@ -1294,7 +1223,6 @@
   </div>
 </div>
 
-<!-- Hidden selects para compatibilidade -->
 <select id="freq" style="display:none">
   <option value="2">2</option><option value="3" selected>3</option>
   <option value="4">4</option><option value="5">5</option><option value="6">6</option>
@@ -1308,7 +1236,6 @@
   Isso vai resetar o treino atual. Deseja continuar?
 </div>
 
-<!-- Botões -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
   <button onclick="usarTemplateManualConfig()" style="padding:15px 10px;background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.3);border-radius:12px;color:#60a5fa;font-family:var(--font);font-size:0.88rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
@@ -1323,9 +1250,8 @@
   </div>
 </div>
 
-<!-- Tabs -->
-
 <!-- Treino Header -->
+
 <div id="treinoHeader" style="display:none;padding:12px 16px 0;align-items:center;justify-content:space-between">
   <button class="btn-voltar" style="padding:0" onclick="navTo('inicio');openHome()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -1337,9 +1263,8 @@
 </div>
 
 <!-- Treino Dashboard -->
-<div id="treinoDash" style="display:none;padding:14px 16px 8px">
 
-  <!-- Quick start vazio -->
+<div id="treinoDash" style="display:none;padding:14px 16px 8px">
   <button class="tdash-quick" onclick="abrirLibParaNovo()">
     <div style="width:36px;height:36px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1347,7 +1272,6 @@
     Iniciar Treino Vazio
   </button>
 
-  <!-- Configurar Programa -->
   <div class="home-quick-card" style="margin:0 0 4px;flex-direction:row;align-items:center;gap:14px" onclick="navTo('programa');openConfig()">
     <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c);flex-shrink:0">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="18" y="10" width="4" height="4" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5" y="9" width="2" height="6" rx="0.5"/><rect x="17" y="9" width="2" height="6" rx="0.5"/></svg>
@@ -1359,13 +1283,10 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
 
-  <!-- Label acima das tabs de programa -->
   <div class="tdash-section">Meus Programas</div>
 </div>
 
 <div class="nav-pills" id="nav"></div>
-
-<!-- Exercises -->
 
 <main id="container"></main>
 
@@ -1374,14 +1295,11 @@
   Adicionar Exercício
 </button>
 
-<!-- ══════════════════════════════════════════
-     DIVISÃO PICKER — BOTTOM SHEET
-══════════════════════════════════════════ -->
+<!-- Divisão Picker -->
+
 <div id="divisaoSheet" class="bottom-sheet" onclick="if(event.target===this)closeDivisaoSheet()" style="display:none">
   <div class="bs-box" style="max-height:88vh;overflow-y:auto">
     <div class="bs-handle"></div>
-
-    <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div>
         <div id="divSheetTitle" style="font-family:var(--display);font-size:1.25rem;color:var(--text);letter-spacing:.03em">Escolha sua Divisão</div>
@@ -1391,39 +1309,26 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-
-    <!-- Frequency selector -->
     <div class="div-freq-row">
       <button class="div-freq-btn" data-freq="2" onclick="selectDivisaoFreq(2)">
-        <span class="dfb-num">2</span>
-        <span class="dfb-lbl">dias</span>
+        <span class="dfb-num">2</span><span class="dfb-lbl">dias</span>
       </button>
       <button class="div-freq-btn active" data-freq="3" onclick="selectDivisaoFreq(3)">
         <span class="dfb-rec">Popular</span>
-        <span class="dfb-num">3</span>
-        <span class="dfb-lbl">dias</span>
+        <span class="dfb-num">3</span><span class="dfb-lbl">dias</span>
       </button>
       <button class="div-freq-btn" data-freq="4" onclick="selectDivisaoFreq(4)">
-        <span class="dfb-num">4</span>
-        <span class="dfb-lbl">dias</span>
+        <span class="dfb-num">4</span><span class="dfb-lbl">dias</span>
       </button>
       <button class="div-freq-btn" data-freq="5" onclick="selectDivisaoFreq(5)">
-        <span class="dfb-num">5</span>
-        <span class="dfb-lbl">dias</span>
+        <span class="dfb-num">5</span><span class="dfb-lbl">dias</span>
       </button>
       <button class="div-freq-btn" data-freq="6" onclick="selectDivisaoFreq(6)">
-        <span class="dfb-num">6</span>
-        <span class="dfb-lbl">dias</span>
+        <span class="dfb-num">6</span><span class="dfb-lbl">dias</span>
       </button>
     </div>
-
-    <!-- Meta box (split name + info) -->
     <div id="divMetaBox" class="div-meta-box"></div>
-
-    <!-- Day preview list -->
     <div id="divDayList" class="div-day-list"></div>
-
-    <!-- CTA buttons -->
     <div class="div-cta">
       <button class="div-cta-manual" onclick="abrirConfigComFreq('manual')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
@@ -1441,14 +1346,11 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     INSTRUÇÕES DE USO — BOTTOM SHEET
-══════════════════════════════════════════ -->
+<!-- Instruções de Uso -->
+
 <div id="instrucSheet" class="bottom-sheet" onclick="if(event.target===this)closeInstrucoes()" style="display:none">
   <div class="bs-box" style="max-height:88vh;overflow-y:auto">
     <div class="bs-handle"></div>
-
-    <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div>
         <div style="font-family:var(--display);font-size:1.2rem;color:var(--text);letter-spacing:.03em">Como Usar o App</div>
@@ -1459,198 +1361,74 @@
       </button>
     </div>
 
-    <!-- Passos de configuração inicial -->
-    <div class="instr-section">
-      <div class="instr-section-title">Configuração Inicial</div>
+```
+<div class="instr-section">
+  <div class="instr-section-title">Configuração Inicial</div>
+  <div class="instr-step"><div class="instr-step-num">1</div><div><div class="instr-step-title">Configure seu Perfil</div><div class="instr-step-desc">Vá em <strong>Perfil</strong> e informe seu peso, altura, idade e nível de treino. Isso personaliza cálculos de volume e sugestões da IA.</div></div></div>
+  <div class="instr-step"><div class="instr-step-num">2</div><div><div class="instr-step-title">Monte seu Programa</div><div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Use o <em>seletor de divisão</em> para escolher um template pronto (Manual) ou clique em <em>Gerar com IA</em> para criar uma divisão personalizada automaticamente.</div></div></div>
+  <div class="instr-step"><div class="instr-step-num">3</div><div><div class="instr-step-title">Escolha o Modo de Treino</div><div class="instr-step-desc">Na aba <strong>Treino</strong>, use o modo <em>Manual</em> para adicionar exercícios livremente, ou <em>Com IA</em> para gerar o treino do dia automaticamente.</div></div></div>
+  <div class="instr-step"><div class="instr-step-num">4</div><div><div class="instr-step-title">Registre Séries e Reps</div><div class="instr-step-desc">Toque na célula de cada série para marcar como feita. O app salva o histórico e mostra <strong>fantasmas</strong> com os valores da última sessão como referência.</div></div></div>
+  <div class="instr-step"><div class="instr-step-num">5</div><div><div class="instr-step-title">Salve o Treino</div><div class="instr-step-desc">Ao terminar, clique no botão <strong>✓ Salvar</strong> no rodapé. O app detecta PRs, calcula volume total e atualiza sua sequência.</div></div></div>
+</div>
 
-      <div class="instr-step">
-        <div class="instr-step-num">1</div>
-        <div>
-          <div class="instr-step-title">Configure seu Perfil</div>
-          <div class="instr-step-desc">Vá em <strong>Perfil</strong> e informe seu peso, altura, idade e nível de treino. Isso personaliza cálculos de volume e sugestões da IA.</div>
-        </div>
-      </div>
+<div class="instr-section">
+  <div class="instr-section-title">O que o App Oferece</div>
+  <div class="instr-feat-grid">
+    <div class="instr-feat-card"><div class="instr-feat-icon">⚡</div><div class="instr-feat-title">Treino com IA</div><div class="instr-feat-desc">Geração automática de treinos personalizados por objetivo e nível</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">🏆</div><div class="instr-feat-title">Detecção de PRs</div><div class="instr-feat-desc">Identifica novos recordes pessoais automaticamente a cada treino</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">👻</div><div class="instr-feat-title">Histórico Fantasma</div><div class="instr-feat-desc">Exibe os valores da última sessão como guia durante o treino</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">📊</div><div class="instr-feat-title">Estatísticas</div><div class="instr-feat-desc">Gráficos de evolução por exercício e volume semanal acumulado</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">🥗</div><div class="instr-feat-title">Plano Alimentar</div><div class="instr-feat-desc">IA gera dieta personalizada com base no seu TMB e objetivo</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">📅</div><div class="instr-feat-title">Calendário</div><div class="instr-feat-desc">Histórico completo de sessões com volume e duração por dia</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">⏱️</div><div class="instr-feat-title">Timer de Descanso</div><div class="instr-feat-desc">Cronômetro automático entre séries com alerta de retorno</div></div>
+    <div class="instr-feat-card"><div class="instr-feat-icon">📏</div><div class="instr-feat-title">Medições Corporais</div><div class="instr-feat-desc">Registro de peso, gordura e medidas com evolução em gráfico</div></div>
+  </div>
+</div>
 
-      <div class="instr-step">
-        <div class="instr-step-num">2</div>
-        <div>
-          <div class="instr-step-title">Monte seu Programa</div>
-          <div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Use o <em>seletor de divisão</em> para escolher um template pronto (Manual) ou clique em <em>Gerar com IA</em> para criar uma divisão personalizada automaticamente.</div>
-        </div>
-      </div>
+<div class="instr-section">
+  <div class="instr-section-title">Dicas Rápidas</div>
+  <div class="instr-tip"><div class="instr-tip-icon">💡</div><div class="instr-tip-text"><strong>Segure uma aba de treino</strong> para deletá-la ou reordenar o programa.</div></div>
+  <div class="instr-tip"><div class="instr-tip-icon">💡</div><div class="instr-tip-text"><strong>RPE</strong> é o indicador de esforço percebido (1–10). Use para regular a intensidade sem depender só do peso.</div></div>
+  <div class="instr-tip"><div class="instr-tip-icon">💡</div><div class="instr-tip-text"><strong>Deload</strong>: o app avisa quando você treinou semanas seguidas sem descanso. Respeite o aviso para evitar overtraining.</div></div>
+  <div class="instr-tip"><div class="instr-tip-icon">💡</div><div class="instr-tip-text"><strong>KRONOS</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div></div>
+</div>
 
-      <div class="instr-step">
-        <div class="instr-step-num">3</div>
-        <div>
-          <div class="instr-step-title">Escolha o Modo de Treino</div>
-          <div class="instr-step-desc">Na aba <strong>Treino</strong>, use o modo <em>Manual</em> para adicionar exercícios livremente, ou <em>Com IA</em> para gerar o treino do dia automaticamente.</div>
-        </div>
-      </div>
+<button onclick="closeInstrucoes()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:.04em;-webkit-tap-highlight-color:transparent">
+  Entendido, vamos treinar!
+</button>
+<div style="height:8px"></div>
+```
 
-      <div class="instr-step">
-        <div class="instr-step-num">4</div>
-        <div>
-          <div class="instr-step-title">Registre Séries e Reps</div>
-          <div class="instr-step-desc">Toque na célula de cada série para marcar como feita. O app salva o histórico e mostra <strong>fantasmas</strong> com os valores da última sessão como referência.</div>
-        </div>
-      </div>
-
-      <div class="instr-step">
-        <div class="instr-step-num">5</div>
-        <div>
-          <div class="instr-step-title">Salve o Treino</div>
-          <div class="instr-step-desc">Ao terminar, clique no botão <strong>✓ Salvar</strong> no rodapé. O app detecta PRs, calcula volume total e atualiza sua sequência.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Vantagens / Features -->
-    <div class="instr-section">
-      <div class="instr-section-title">O que o App Oferece</div>
-      <div class="instr-feat-grid">
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">⚡</div>
-          <div class="instr-feat-title">Treino com IA</div>
-          <div class="instr-feat-desc">Geração automática de treinos personalizados por objetivo e nível</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">🏆</div>
-          <div class="instr-feat-title">Detecção de PRs</div>
-          <div class="instr-feat-desc">Identifica novos recordes pessoais automaticamente a cada treino</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">👻</div>
-          <div class="instr-feat-title">Histórico Fantasma</div>
-          <div class="instr-feat-desc">Exibe os valores da última sessão como guia durante o treino</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">📊</div>
-          <div class="instr-feat-title">Estatísticas</div>
-          <div class="instr-feat-desc">Gráficos de evolução por exercício e volume semanal acumulado</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">🥗</div>
-          <div class="instr-feat-title">Plano Alimentar</div>
-          <div class="instr-feat-desc">IA gera dieta personalizada com base no seu TMB e objetivo</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">📅</div>
-          <div class="instr-feat-title">Calendário</div>
-          <div class="instr-feat-desc">Histórico completo de sessões com volume e duração por dia</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">⏱️</div>
-          <div class="instr-feat-title">Timer de Descanso</div>
-          <div class="instr-feat-desc">Cronômetro automático entre séries com alerta de retorno</div>
-        </div>
-        <div class="instr-feat-card">
-          <div class="instr-feat-icon">📏</div>
-          <div class="instr-feat-title">Medições Corporais</div>
-          <div class="instr-feat-desc">Registro de peso, gordura e medidas com evolução em gráfico</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dicas rápidas -->
-    <div class="instr-section">
-      <div class="instr-section-title">Dicas Rápidas</div>
-
-      <div class="instr-tip">
-        <div class="instr-tip-icon">💡</div>
-        <div class="instr-tip-text"><strong>Segure uma aba de treino</strong> para deletá-la ou reordenar o programa.</div>
-      </div>
-      <div class="instr-tip">
-        <div class="instr-tip-icon">💡</div>
-        <div class="instr-tip-text"><strong>RPE</strong> é o indicador de esforço percebido (1–10). Use para regular a intensidade sem depender só do peso.</div>
-      </div>
-      <div class="instr-tip">
-        <div class="instr-tip-icon">💡</div>
-        <div class="instr-tip-text"><strong>Deload</strong>: o app avisa quando você treinou semanas seguidas sem descanso. Respeite o aviso para evitar overtraining.</div>
-      </div>
-      <div class="instr-tip">
-        <div class="instr-tip-icon">💡</div>
-        <div class="instr-tip-text"><strong>KRONOS</strong> (aba Orientação) responde perguntas sobre treino, nutrição e suplementação com base no seu histórico.</div>
-      </div>
-    </div>
-
-    <!-- CTA fechar -->
-    <button onclick="closeInstrucoes()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:.04em;-webkit-tap-highlight-color:transparent">
-      Entendido, vamos treinar!
-    </button>
-    <div style="height:8px"></div>
   </div>
 </div>
 
 <!-- Footer -->
 
 <div class="footer-actions">
-  <!-- INÍCIO -->
   <button class="btn btn-nav active" id="nav-inicio" onclick="navTo('inicio');openHome()">
-    <span class="btn-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-    </span>
+    <span class="btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
     <span class="btn-label">Início</span>
   </button>
-
-  <!-- TREINO -->
-
   <button class="btn btn-nav" id="nav-treino" onclick="navTo('treino');closeHome()">
-    <span class="btn-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="10" width="3" height="4" rx="1"/>
-        <rect x="19" y="10" width="3" height="4" rx="1"/>
-        <rect x="4.5" y="8.5" width="3" height="7" rx="1.2"/>
-        <rect x="16.5" y="8.5" width="3" height="7" rx="1.2"/>
-        <line x1="7.5" y1="12" x2="16.5" y2="12" stroke-width="2.5"/>
-      </svg>
-    </span>
+    <span class="btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="3" height="4" rx="1"/><rect x="19" y="10" width="3" height="4" rx="1"/><rect x="4.5" y="8.5" width="3" height="7" rx="1.2"/><rect x="16.5" y="8.5" width="3" height="7" rx="1.2"/><line x1="7.5" y1="12" x2="16.5" y2="12" stroke-width="2.5"/></svg></span>
     <span class="btn-label">Treino</span>
   </button>
-
-  <!-- SALVAR — botão central destacado -->
-
   <button class="btn btn-save" onclick="salvarTreino()">
-    <span class="btn-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round">
-        <polyline points="20 6 9 17 4 12"/>
-      </svg>
-    </span>
+    <span class="btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></span>
     <span class="btn-label" style="color:#fff;font-size:0.48rem">Salvar</span>
   </button>
-
-  <!-- PROGRAMA -->
-
   <button class="btn btn-nav" id="nav-programa" onclick="navTo('programa');openConfig()">
-    <span class="btn-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="5" y="2" width="14" height="20" rx="2"/>
-        <line x1="9" y1="7" x2="15" y2="7"/>
-        <line x1="9" y1="11" x2="15" y2="11"/>
-        <line x1="9" y1="15" x2="13" y2="15"/>
-      </svg>
-    </span>
+    <span class="btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg></span>
     <span class="btn-label">Programa</span>
   </button>
-
-  <!-- PERFIL -->
-
   <button class="btn btn-nav" id="nav-perfil" onclick="navTo('perfil');openPerfil()">
-    <span class="btn-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-      </svg>
-    </span>
+    <span class="btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
     <span class="btn-label">Perfil</span>
   </button>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SHEET: CALCULADORA BASAL
-══════════════════════════════════════════ -->
+<!-- Sheet: Calculadora Basal -->
+
 <div id="basalSheet" class="bottom-sheet" onclick="if(event.target===this)closeBasalSheet()">
   <div class="bs-box">
     <div class="bs-handle"></div>
@@ -1661,22 +1439,12 @@
       </button>
     </div>
     <div class="bs-sub">TMB + TDEE pela fórmula de Mifflin-St Jeor</div>
-
     <div class="bs-row">
-      <div>
-        <label class="bs-label">Peso (kg)</label>
-        <input id="bsPeso" type="number" class="bs-input" placeholder="75" inputmode="decimal">
-      </div>
-      <div>
-        <label class="bs-label">Altura (cm)</label>
-        <input id="bsAltura" type="number" class="bs-input" placeholder="175" inputmode="decimal">
-      </div>
+      <div><label class="bs-label">Peso (kg)</label><input id="bsPeso" type="number" class="bs-input" placeholder="75" inputmode="decimal"></div>
+      <div><label class="bs-label">Altura (cm)</label><input id="bsAltura" type="number" class="bs-input" placeholder="175" inputmode="decimal"></div>
     </div>
     <div class="bs-row">
-      <div>
-        <label class="bs-label">Idade</label>
-        <input id="bsIdade" type="number" class="bs-input" placeholder="25" inputmode="numeric">
-      </div>
+      <div><label class="bs-label">Idade</label><input id="bsIdade" type="number" class="bs-input" placeholder="25" inputmode="numeric"></div>
       <div>
         <label class="bs-label">Sexo</label>
         <div class="bs-chips" style="margin-bottom:0">
@@ -1685,59 +1453,36 @@
         </div>
       </div>
     </div>
-
     <label class="bs-label">Nível de Atividade</label>
     <div id="bsAtivChips" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
-      <div class="bs-chip" data-val="1.2" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px">
-        <span>😴 Sedentário</span><span style="font-size:0.7rem;opacity:.6">Sem exercício</span>
-      </div>
-      <div class="bs-chip active" data-val="1.375" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px">
-        <span>🚶 Leve</span><span style="font-size:0.7rem;opacity:.6">1–3 dias/semana</span>
-      </div>
-      <div class="bs-chip" data-val="1.55" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px">
-        <span>🏃 Moderado</span><span style="font-size:0.7rem;opacity:.6">3–5 dias/semana</span>
-      </div>
-      <div class="bs-chip" data-val="1.725" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px">
-        <span>💪 Intenso</span><span style="font-size:0.7rem;opacity:.6">6–7 dias/semana</span>
-      </div>
-      <div class="bs-chip" data-val="1.9" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px">
-        <span>🔥 Atleta</span><span style="font-size:0.7rem;opacity:.6">2x por dia</span>
-      </div>
+      <div class="bs-chip" data-val="1.2" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px"><span>😴 Sedentário</span><span style="font-size:0.7rem;opacity:.6">Sem exercício</span></div>
+      <div class="bs-chip active" data-val="1.375" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px"><span>🚶 Leve</span><span style="font-size:0.7rem;opacity:.6">1–3 dias/semana</span></div>
+      <div class="bs-chip" data-val="1.55" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px"><span>🏃 Moderado</span><span style="font-size:0.7rem;opacity:.6">3–5 dias/semana</span></div>
+      <div class="bs-chip" data-val="1.725" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px"><span>💪 Intenso</span><span style="font-size:0.7rem;opacity:.6">6–7 dias/semana</span></div>
+      <div class="bs-chip" data-val="1.9" onclick="selBsAtiv(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:12px"><span>🔥 Atleta</span><span style="font-size:0.7rem;opacity:.6">2x por dia</span></div>
     </div>
-
     <button onclick="calcBasal()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:4px;margin-bottom:8px">Calcular</button>
-
     <div id="basalSheetResult" style="display:none">
       <div class="basal-res-grid">
-        <div class="basal-res-card hi">
-          <div class="basal-res-val" id="bsValTMB">—</div>
-          <div class="basal-res-lbl">TMB — em repouso</div>
-        </div>
-        <div class="basal-res-card hi">
-          <div class="basal-res-val" id="bsValTDEE">—</div>
-          <div class="basal-res-lbl">TDEE — gasto total</div>
-        </div>
+        <div class="basal-res-card hi"><div class="basal-res-val" id="bsValTMB">—</div><div class="basal-res-lbl">TMB — em repouso</div></div>
+        <div class="basal-res-card hi"><div class="basal-res-val" id="bsValTDEE">—</div><div class="basal-res-lbl">TDEE — gasto total</div></div>
       </div>
-
       <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">TDEE por nível de atividade</div>
       <div id="bsTDEERows"></div>
-
       <div style="margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px">
         <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">Calorias-alvo</div>
         <div class="bs-tdee-row"><span>🔻 Emagrecimento (-400 kcal)</span><span id="bsEmagRec" style="color:var(--accent);font-weight:700">—</span></div>
         <div class="bs-tdee-row"><span>⚖️ Manutenção</span><span id="bsMant" style="color:var(--accent);font-weight:700">—</span></div>
         <div class="bs-tdee-row"><span>📈 Ganho de massa (+300 kcal)</span><span id="bsGanho" style="color:var(--accent);font-weight:700">—</span></div>
       </div>
-
       <button onclick="irGerarDieta()" style="width:100%;background:var(--card);border:1.5px solid var(--accent);color:var(--accent);border-radius:var(--r-sm);padding:12px;font-family:var(--font);font-size:0.88rem;font-weight:700;cursor:pointer;margin-top:12px">🥗 Gerar Dieta Personalizada →</button>
     </div>
     <div style="height:16px"></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SHEET: GERAR DIETA
-══════════════════════════════════════════ -->
+<!-- Sheet: Gerar Dieta -->
+
 <div id="dietaSheet" class="bottom-sheet" onclick="if(event.target===this)closeDietaSheet()">
   <div class="bs-box">
     <div class="bs-handle"></div>
@@ -1748,7 +1493,6 @@
       </button>
     </div>
     <div class="bs-sub">Dieta personalizada com base no seu perfil e objetivo</div>
-
     <label class="bs-label">Objetivo</label>
     <div class="bs-chips" id="dietaObjChips">
       <div class="bs-chip" data-val="emagrecimento" onclick="selDietaObj(this)">🔻 Emagrecer</div>
@@ -1756,34 +1500,19 @@
       <div class="bs-chip" data-val="manutencao" onclick="selDietaObj(this)">⚖️ Manutenção</div>
       <div class="bs-chip" data-val="forca" onclick="selDietaObj(this)">🏋️ Força</div>
     </div>
-
     <label class="bs-label">Sexo</label>
     <div class="bs-chips" style="margin-bottom:14px">
       <div id="dietaSexoM" class="bs-chip active" onclick="selectDietaSexo('M')">♂ Masculino</div>
       <div id="dietaSexoF" class="bs-chip" onclick="selectDietaSexo('F')">♀ Feminino</div>
     </div>
-
     <div class="bs-row">
-      <div>
-        <label class="bs-label">Peso (kg)</label>
-        <input id="dietaPeso" type="number" class="bs-input" placeholder="75" inputmode="decimal">
-      </div>
-      <div>
-        <label class="bs-label">Altura (cm)</label>
-        <input id="dietaAltura" type="number" class="bs-input" placeholder="175" inputmode="decimal">
-      </div>
+      <div><label class="bs-label">Peso (kg)</label><input id="dietaPeso" type="number" class="bs-input" placeholder="75" inputmode="decimal"></div>
+      <div><label class="bs-label">Altura (cm)</label><input id="dietaAltura" type="number" class="bs-input" placeholder="175" inputmode="decimal"></div>
     </div>
     <div class="bs-row">
-      <div>
-        <label class="bs-label">Idade</label>
-        <input id="dietaIdade" type="number" class="bs-input" placeholder="25" inputmode="numeric">
-      </div>
-      <div>
-        <label class="bs-label">Refeições / dia</label>
-        <input id="dietaRefeicoes" type="number" class="bs-input" placeholder="4" min="2" max="7" inputmode="numeric">
-      </div>
+      <div><label class="bs-label">Idade</label><input id="dietaIdade" type="number" class="bs-input" placeholder="25" inputmode="numeric"></div>
+      <div><label class="bs-label">Refeições / dia</label><input id="dietaRefeicoes" type="number" class="bs-input" placeholder="4" min="2" max="7" inputmode="numeric"></div>
     </div>
-
     <label class="bs-label">Nível de Atividade</label>
     <div class="bs-chips" id="dietaAtivChips">
       <div class="bs-chip" data-val="sedentário" onclick="selDietaAtiv(this)">😴 Sedentário</div>
@@ -1791,15 +1520,8 @@
       <div class="bs-chip" data-val="moderadamente ativo" onclick="selDietaAtiv(this)">🏃 Moderado</div>
       <div class="bs-chip" data-val="muito ativo" onclick="selDietaAtiv(this)">💪 Intenso</div>
     </div>
-
-    <div class="bs-full">
-      <label class="bs-label">Restrições / Alergias</label>
-      <input id="dietaRestric" type="text" class="bs-input" placeholder="Ex: não como carne vermelha, alergia a lactose...">
-    </div>
-    <div class="bs-full">
-      <label class="bs-label">O que você gosta de comer?</label>
-      <input id="dietaPrefs" type="text" class="bs-input" placeholder="Ex: adoro frango, ovo e frutas — odeio brócolis e peixe...">
-    </div>
+    <div class="bs-full"><label class="bs-label">Restrições / Alergias</label><input id="dietaRestric" type="text" class="bs-input" placeholder="Ex: não como carne vermelha, alergia a lactose..."></div>
+    <div class="bs-full"><label class="bs-label">O que você gosta de comer?</label><input id="dietaPrefs" type="text" class="bs-input" placeholder="Ex: adoro frango, ovo e frutas — odeio brócolis e peixe..."></div>
     <div class="bs-full">
       <label class="bs-label">Perfil de investimento alimentar</label>
       <select id="dietaOrcamento" class="bs-input">
@@ -1809,9 +1531,7 @@
         <option value="premium">Premium — acima de R$ 600/mês</option>
       </select>
     </div>
-
     <button id="btnGerarDieta" onclick="gerarDieta()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;margin-bottom:16px">🥗 Gerar Dieta com IA</button>
-
     <div id="dietaResultado" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Resultado</div>
@@ -1857,10 +1577,7 @@
 
 <script src="app.js"></script>
 
-
-<!-- ══════════════════════════════════════════
-     GUIA DE EXERCÍCIO — link YouTube
-══════════════════════════════════════════ -->
+<!-- Guia de Exercício -->
 
 <div id="guiaModal" onclick="if(event.target===this)fecharGuia()">
   <div class="guia-sheet">
@@ -1875,12 +1592,9 @@
     </div>
     <div class="guia-name" id="guiaNome">Supino Reto</div>
     <div class="guia-muscles" id="guiaMusculos">Peito · Tríceps</div>
-
     <div class="guia-video-wrap">
       <div class="guia-video-placeholder">
-        <svg width="56" height="40" viewBox="0 0 576 512" fill="#FF0000" opacity="0.9">
-          <path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/>
-        </svg>
+        <svg width="56" height="40" viewBox="0 0 576 512" fill="#FF0000" opacity="0.9"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/></svg>
         <button class="guia-yt-btn" id="guiaYtBtn" onclick="abrirYouTube()">
           <svg width="20" height="14" viewBox="0 0 576 512" fill="white"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.322 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"/></svg>
           Ver Tutorial no YouTube
@@ -1888,28 +1602,21 @@
         <div class="guia-yt-tip">Abre o YouTube com o vídeo do exercício.<br>Funciona mesmo sem sair do celular.</div>
       </div>
     </div>
-
   </div>
 </div>
 
-
 <script src="auth.js"></script>
 
+<!-- Modal de Planos -->
 
-<!-- ════════════════════════════════════════════════════
-     MODAL DE PLANOS
-════════════════════════════════════════════════════ -->
 <div id="planModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 0">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;max-width:400px;margin:0 auto;padding:0 0 24px;overflow:hidden">
-    <!-- Header -->
     <div style="background:linear-gradient(135deg,#1a1a1a,#212121);padding:28px 24px 20px;text-align:center;border-bottom:1px solid var(--border)">
       <button onclick="closePlanModal()" style="position:absolute;right:16px;top:16px;background:none;border:none;color:var(--text-2);cursor:pointer;font-size:1.3rem;line-height:1">✕</button>
       <div style="font-family:var(--font-display,'Bebas Neue'),sans-serif;font-size:2rem;color:var(--accent);letter-spacing:.06em;margin-bottom:4px">TITAN PRO</div>
       <div style="font-size:0.85rem;color:var(--text-2)">Escolha o plano ideal para você</div>
     </div>
-
     <div style="padding:20px 20px 0">
-      <!-- Plano Free -->
       <div id="planCardFree" style="border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div style="font-weight:700;font-size:0.95rem;color:var(--text)">Gratuito</div>
@@ -1924,16 +1631,11 @@
         </div>
         <div id="planFreeUsage" style="margin-top:10px;font-size:0.75rem;color:var(--accent)"></div>
       </div>
-
-      <!-- Plano Pro -->
       <div style="border:1.5px solid var(--accent);border-radius:14px;padding:16px;background:rgba(249,115,22,0.04);position:relative">
         <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:0.68rem;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:.04em">RECOMENDADO</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;margin-top:4px">
           <div style="font-weight:700;font-size:0.95rem;color:var(--accent)">Pro</div>
-          <div>
-            <span style="font-size:1.4rem;font-weight:800;color:var(--text)">R$29,90</span>
-            <span style="font-size:0.75rem;color:var(--text-2)">/mês</span>
-          </div>
+          <div><span style="font-size:1.4rem;font-weight:800;color:var(--text)">R$29,90</span><span style="font-size:0.75rem;color:var(--text-2)">/mês</span></div>
         </div>
         <div style="font-size:0.78rem;color:var(--text-2);line-height:1.8">
           ✓ Registro ilimitado de treinos<br>
@@ -1947,11 +1649,7 @@
         </button>
         <div style="text-align:center;font-size:0.7rem;color:var(--text-2);margin-top:8px">Cancele quando quiser · Sem fidelidade</div>
       </div>
-
-      <!-- Status atual -->
       <div id="planStatusMsg" style="margin-top:14px;text-align:center;font-size:0.78rem;color:var(--text-2)"></div>
-
-      <!-- LGPD links -->
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);text-align:center;font-size:0.72rem;color:rgba(255,255,255,0.35)">
         <span onclick="openLegalModal('privacy');closePlanModal()" style="cursor:pointer;text-decoration:underline;color:rgba(255,255,255,0.45)">Política de Privacidade</span>
         &nbsp;·&nbsp;
@@ -1963,26 +1661,20 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     PAYWALL — quota esgotada
-════════════════════════════════════════════════════ -->
+<!-- Paywall -->
+
 <div id="paywallModal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--surface);border:1px solid rgba(249,115,22,0.4);border-radius:20px;max-width:360px;width:100%;padding:28px 24px;text-align:center">
     <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
     <div style="font-family:var(--font-display,'Bebas Neue'),sans-serif;font-size:1.6rem;color:var(--accent);margin-bottom:8px">Limite atingido</div>
     <div id="paywallMsg" style="font-size:0.85rem;color:var(--text-2);margin-bottom:20px;line-height:1.6">Você usou todas as consultas de IA gratuitas deste mês. Faça upgrade para o Pro e tenha acesso ilimitado.</div>
-    <button onclick="closePaywall();openPlanModal()" style="width:100%;background:var(--accent);border:none;border-radius:12px;padding:14px;color:#fff;font-family:var(--font);font-size:0.92rem;font-weight:800;cursor:pointer;margin-bottom:10px">
-      Ver planos — Assinar Pro
-    </button>
-    <button onclick="closePaywall()" style="width:100%;background:none;border:1px solid var(--border);border-radius:12px;padding:11px;color:var(--text-2);font-family:var(--font);font-size:0.85rem;cursor:pointer">
-      Continuar com plano gratuito
-    </button>
+    <button onclick="closePaywall();openPlanModal()" style="width:100%;background:var(--accent);border:none;border-radius:12px;padding:14px;color:#fff;font-family:var(--font);font-size:0.92rem;font-weight:800;cursor:pointer;margin-bottom:10px">Ver planos — Assinar Pro</button>
+    <button onclick="closePaywall()" style="width:100%;background:none;border:1px solid var(--border);border-radius:12px;padding:11px;color:var(--text-2);font-family:var(--font);font-size:0.85rem;cursor:pointer">Continuar com plano gratuito</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     MODAL LEGAL — Privacidade / Termos
-════════════════════════════════════════════════════ -->
+<!-- Modal Legal -->
+
 <div id="legalModal" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 0">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;max-width:560px;margin:0 auto;overflow:hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)">
@@ -1993,19 +1685,15 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCRIPT — Planos, Paywall, LGPD, Legal
-════════════════════════════════════════════════════ -->
 <script src="plans.js"></script>
-
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "TITAN PRO",
-  "url": "https://treino-do-dia-orpin.vercel.app/",
-  "description": "App de musculação com IA. Treinos personalizados com periodização científica MEV/MAV/MRV e coach inteligente powered by NVIDIA Llama 70B.",
+  "url": "https://www.titanpro.app.br/",
+  "description": "App de musculação com IA. Treinos personalizados com periodização científica MEV/MAV/MRV e coach inteligente KRONOS.",
   "applicationCategory": "HealthApplication",
   "operatingSystem": "Any",
   "browserRequirements": "Requires JavaScript",
@@ -2017,4 +1705,17 @@
 }
 </script>
 
+<!-- ✅ PWA Service Worker -->
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('TITAN PRO PWA ativo ✅'))
+        .catch(err => console.log('SW erro:', err));
+    });
+  }
+</script>
+
 </body>
+</html>
