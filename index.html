@@ -1597,6 +1597,17 @@
 
 <script src="auth.js"></script>
 
+<script>
+/* Fallback de segurança — garante que apiFetch existe mesmo se auth.js atrasar */
+if (typeof apiFetch === 'undefined') {
+  window.apiFetch = function(url, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || { 'Content-Type': 'application/json' };
+    return fetch(url, opts);
+  };
+}
+</script>
+
 <script src="transform_kernel.js"></script>
 
 <script src="app.js"></script>
