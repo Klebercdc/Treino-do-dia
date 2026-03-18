@@ -338,9 +338,6 @@ showLogin();
 /* Fallback de segurança: se após 4s o splash ainda estiver visível, força saída */
 setTimeout(() => {
 const splash = document.getElementById(‘splashScreen’);
-if (splash && splash.style.display !== ‘none’) {
-splash.style.display = ‘none’;
-const login = document.getElementById(‘loginScreen’);
-if (login && login.style.display !== ‘flex’) login.style.display = ‘flex’;
-}
+if (splash) splash.style.display = ‘none’;
+if (!_appUnlocked) showLogin();
 }, 4000);
