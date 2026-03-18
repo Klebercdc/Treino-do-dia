@@ -1595,22 +1595,11 @@
   </div>
 </dialog>
 
-<script src="auth.js"></script>
-
-<script>
-/* Fallback de segurança — garante que apiFetch existe mesmo se auth.js atrasar */
-if (typeof apiFetch === 'undefined') {
-  window.apiFetch = function(url, opts) {
-    opts = opts || {};
-    opts.headers = opts.headers || { 'Content-Type': 'application/json' };
-    return fetch(url, opts);
-  };
-}
-</script>
-
 <script src="transform_kernel.js"></script>
 
 <script src="app.js"></script>
+
+<script src="transforms_patch.js"></script>
 
 <!-- Guia de Exercício -->
 
@@ -1715,6 +1704,8 @@ if (typeof apiFetch === 'undefined') {
     <div id="legalContent" style="padding:20px 22px;font-size:0.82rem;color:var(--text-2);line-height:1.9;max-height:70vh;overflow-y:auto"></div>
   </div>
 </div>
+
+<script src="auth.js"></script>
 
 <script src="plans.js"></script>
 
