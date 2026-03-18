@@ -213,6 +213,20 @@ function showEmailLoginRegister() { showEmailLogin(true); }
 function hideEmailLogin() { document.getElementById(‘emailLoginScreen’).classList.remove(‘show’); }
 function toggleLoginMode() { showEmailLogin(!_loginIsRegister); }
 
+async function authSignInGoogle() {
+try {
+const { error } = await _sb.auth.signInWithOAuth({
+provider: ‘google’,
+options: {
+redirectTo: window.location.origin + window.location.pathname
+}
+});
+if (error) showToast(’Erro ao entrar com Google: ’ + error.message, ‘error’, 4000);
+} catch(e) {
+showToast(‘Erro ao entrar com Google.’, ‘error’, 4000);
+}
+}
+
 async function authForgotPassword() {
 const email = document.getElementById(‘loginEmail’).value.trim();
 if (!email) { document.getElementById(‘loginError’).textContent = ‘Digite seu e-mail primeiro.’; return; }
@@ -316,4 +330,17 @@ new Promise(r => setTimeout(r, 2500))
 updateAuthUI(session?.user || null);
 if (session?.user) { showApp(); navTo(‘inicio’); openHome(); }
 else showLogin();
+}).catch(() => {
+// Fallback: se Supabase falhar, mostra login mesmo assim
+showLogin();
 });
+
+/* Fallback de segurança: se após 4s o splash ainda estiver visível, força saída */
+setTimeout(() => {
+const splash = document.getElementById(‘splashScreen’);
+if (splash && splash.style.display !== ‘none’) {
+splash.style.display = ‘none’;
+const login = document.getElementById(‘loginScreen’);
+if (login && login.style.display !== ‘flex’) login.style.display = ‘flex’;
+}
+}, 4000);
