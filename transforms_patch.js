@@ -58,3 +58,33 @@ aplicarPatch();
 window.addEventListener(‘load’, aplicarPatch);
 }
 })();
+
+/* ═══════════════════════════════════════════════════
+PATCH 2: obFinish — pede login após onboarding
+═══════════════════════════════════════════════════ */
+window.addEventListener(‘load’, function() {
+// Aguarda app.js carregar
+setTimeout(function() {
+if (typeof obFinish === ‘function’) {
+window.obFinish = function() {
+localStorage.setItem(“titan_onboarded”,“1”);
+document.getElementById(“onboarding”).classList.remove(“show”);
+// Verifica se já está logado
+_sb.auth.getSession().then(function(res) {
+const session = res.data.session;
+if (session && session.user) {
+setTimeout(function() {
+if (typeof openInstrucoes === ‘function’) openInstrucoes();
+}, 500);
+} else {
+// Não logado — mostra login
+document.getElementById(‘splashScreen’).style.display = ‘none’;
+document.getElementById(‘loginScreen’).style.display = ‘flex’;
+}
+}).catch(function() {
+document.getElementById(‘loginScreen’).style.display = ‘flex’;
+});
+};
+}
+}, 1000);
+});
