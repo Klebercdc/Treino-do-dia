@@ -6,7 +6,11 @@ const _sb = supabase.createClient(
 ‘eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E’
 );
 
+// ══════════════════════════════════════════════════════
+// TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
+// ══════════════════════════════════════════════════════
 async function getAuthHeaders() {
+// Sempre renova o token para evitar expirado
 try {
 const { data: refreshData } = await _sb.auth.refreshSession();
 if (refreshData?.session?.access_token) {
@@ -16,6 +20,7 @@ return {
 };
 }
 } catch {}
+// Fallback: usa sessão atual
 const { data: { session } } = await _sb.auth.getSession();
 const token = session?.access_token;
 return token
@@ -23,10 +28,18 @@ return token
 : { ‘Content-Type’: ‘application/json’ };
 }
 
-async function apiFetch(url, opts = {}) {
-opts.headers = opts.headers || await getAuthHeaders();
-let resp = await fetch(url, opts);
+/**
+
+- Wrapper de fetch com tratamento automático de falha de token (401).
+- Em caso de 401: força refresh da sessão e tenta uma vez mais.
+- Se ainda 401 após retry (sessão expirada), faz logout e exibe aviso.
+  */
+  async function apiFetch(url, opts = {}) {
+  opts.headers = opts.headers || await getAuthHeaders();
+  let resp = await fetch(url, opts);
+
 if (resp.status === 401) {
+// Força refresh e tenta novamente
 try {
 const { data } = await _sb.auth.refreshSession();
 if (data?.session?.access_token) {
@@ -37,21 +50,31 @@ opts.headers = {
 resp = await fetch(url, opts);
 }
 } catch {}
+
+```
+// Se ainda 401, sessão inválida — logout automático
 if (resp.status === 401) {
-await _sb.auth.signOut();
-_appUnlocked = false;
-const loginScreen = document.getElementById(‘loginScreen’);
-if (loginScreen) loginScreen.style.display = ‘flex’;
-if (typeof showToast === ‘function’) {
-showToast(‘Sessão expirada. Faça login novamente.’, ‘error’, 4000);
+  await _sb.auth.signOut();
+  _appUnlocked = false;
+  const loginScreen = document.getElementById('loginScreen');
+  if (loginScreen) loginScreen.style.display = 'flex';
+  if (typeof showToast === 'function') {
+    showToast('Sessão expirada. Faça login novamente.', 'error', 4000);
+  }
+  throw new Error('Sessão expirada. Faça login novamente.');
 }
-throw new Error(‘Sessão expirada. Faça login novamente.’);
+```
+
 }
-}
+
 return resp;
 }
 
+// ══════════════════════════════════════════════════════
+// SINCRONIZAÇÃO COM SUPABASE (backup em nuvem)
+// ══════════════════════════════════════════════════════
 const _dbSync = {
+// Envia histórico de treinos para o banco em background
 async pushHistory() {
 try {
 const { data: { session } } = await _sb.auth.getSession();
@@ -59,14 +82,19 @@ if (!session?.user) return;
 const userId = session.user.id;
 const hist = safeJSON(STORAGE.historyKey, []);
 if (!hist.length) return;
+// Upsert: envia cada sessão nova (usa id como chave única)
 const rows = hist.map(s => ({
-id: s.id, user_id: userId, session_data: s,
+id: s.id,
+user_id: userId,
+session_data: s,
 trained_at: s.createdAt || new Date().toISOString(),
 synced_at: new Date().toISOString()
 }));
 await _sb.from(‘workout_history’).upsert(rows, { onConflict: ‘id’ });
-} catch (e) {}
+} catch (e) { /* sync é silencioso — não interrompe o usuário */ }
 },
+
+// Envia perfil/config do usuário para o banco em background
 async pushConfig() {
 try {
 const { data: { session } } = await _sb.auth.getSession();
@@ -74,36 +102,56 @@ if (!session?.user) return;
 const userId = session.user.id;
 const config = safeJSON(‘titanpro_config’, {});
 await _sb.from(‘profiles’).upsert({
-id: userId, config: config,
+id: userId,
+config: config,
 updated_at: new Date().toISOString()
 }, { onConflict: ‘id’ });
-} catch (e) {}
+} catch (e) { /* silencioso */ }
 },
+
+// Ao fazer login: puxa dados do banco e mescla com localStorage
 async pullAll(userId) {
 try {
+// Puxa histórico
 const { data: histRows } = await _sb
-.from(‘workout_history’).select(‘session_data, trained_at’)
-.eq(‘user_id’, userId).order(‘trained_at’, { ascending: false })
+.from(‘workout_history’)
+.select(‘session_data, trained_at’)
+.eq(‘user_id’, userId)
+.order(‘trained_at’, { ascending: false })
 .limit(STORAGE.maxHistory);
-if (histRows && histRows.length > 0) {
-const localHist = safeJSON(STORAGE.historyKey, []);
-const localIds = new Set(localHist.map(s => s.id));
-const novas = histRows.map(r => r.session_data).filter(s => s && !localIds.has(s.id));
-if (novas.length > 0) {
-const merged = […localHist, …novas]
-.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-.slice(0, STORAGE.maxHistory);
-localStorage.setItem(STORAGE.historyKey, JSON.stringify(merged));
-}
-}
-const { data: profile } = await _sb.from(‘profiles’).select(‘config’).eq(‘id’, userId).single();
-if (profile?.config && Object.keys(profile.config).length > 0) {
-const localCfg = safeJSON(‘titanpro_config’, {});
-if (!Object.keys(localCfg).length) {
-localStorage.setItem(‘titanpro_config’, JSON.stringify(profile.config));
-}
-}
-} catch (e) {}
+
+```
+  if (histRows && histRows.length > 0) {
+    const localHist = safeJSON(STORAGE.historyKey, []);
+    const localIds = new Set(localHist.map(s => s.id));
+    const novas = histRows
+      .map(r => r.session_data)
+      .filter(s => s && !localIds.has(s.id));
+    if (novas.length > 0) {
+      const merged = [...localHist, ...novas]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, STORAGE.maxHistory);
+      localStorage.setItem(STORAGE.historyKey, JSON.stringify(merged));
+    }
+  }
+
+  // Puxa config/perfil
+  const { data: profile } = await _sb
+    .from('profiles')
+    .select('config')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.config && Object.keys(profile.config).length > 0) {
+    const localCfg = safeJSON('titanpro_config', {});
+    // Nuvem tem prioridade apenas se local estiver vazio
+    if (!Object.keys(localCfg).length) {
+      localStorage.setItem('titanpro_config', JSON.stringify(profile.config));
+    }
+  }
+} catch (e) { /* silencioso */ }
+```
+
 }
 };
 
@@ -200,19 +248,16 @@ document.getElementById(‘loginError’).textContent = ‘’;
 document.getElementById(‘forgotPassLink’).style.display = isRegister ? ‘none’ : ‘block’;
 }
 
-function showEmailLoginRegister() { showEmailLogin(true); }
-function hideEmailLogin() { document.getElementById(‘emailLoginScreen’).classList.remove(‘show’); }
-function toggleLoginMode() { showEmailLogin(!_loginIsRegister); }
+function showEmailLoginRegister() {
+showEmailLogin(true);
+}
 
-/* ADICIONADO: Login com Google */
-async function authSignInGoogle() {
-try {
-const { error } = await _sb.auth.signInWithOAuth({
-provider: ‘google’,
-options: { redirectTo: window.location.origin + window.location.pathname }
-});
-if (error) showToast(’Erro ao entrar com Google: ’ + error.message, ‘error’, 4000);
-} catch(e) { showToast(‘Erro ao entrar com Google.’, ‘error’, 4000); }
+function hideEmailLogin() {
+document.getElementById(‘emailLoginScreen’).classList.remove(‘show’);
+}
+
+function toggleLoginMode() {
+showEmailLogin(!_loginIsRegister);
 }
 
 async function authForgotPassword() {
@@ -228,10 +273,13 @@ const email = document.getElementById(‘loginEmail’).value.trim();
 const password = document.getElementById(‘loginPassword’).value;
 const errEl = document.getElementById(‘loginError’);
 errEl.textContent = ‘’;
+
 if (!email || !password) { errEl.textContent = ‘Preencha e-mail e senha.’; return; }
 if (password.length < 6) { errEl.textContent = ‘Senha deve ter pelo menos 6 caracteres.’; return; }
+
 const btn = document.getElementById(‘btnEmail’);
 btn.textContent = ‘…’; btn.disabled = true;
+
 try {
 let result;
 if (_loginIsRegister) {
@@ -247,12 +295,17 @@ if (result.error) throw result.error;
 }
 if (result.data?.session) {
 updateAuthUI(result.data.session.user);
-hideEmailLogin(); showApp(); navTo(‘inicio’); openHome();
+hideEmailLogin();
+showApp();
+navTo(‘inicio’);
+openHome();
 _dbSync.pullAll(result.data.session.user.id);
 }
 } catch (e) {
 errEl.style.color = ‘#f87171’;
-errEl.textContent = e.message === ‘Invalid login credentials’ ? ‘E-mail ou senha incorretos.’ : e.message;
+errEl.textContent = e.message === ‘Invalid login credentials’
+? ‘E-mail ou senha incorretos.’
+: e.message;
 } finally {
 btn.textContent = _loginIsRegister ? ‘Criar conta’ : ‘Entrar’;
 btn.disabled = false;
@@ -286,13 +339,16 @@ closeAuthMenu();
 }
 });
 
-/* IGUAL AO ORIGINAL — sem mudança */
+// Splash: imagem estática tela cheia
+
+// Ouvir mudanças de sessão
 _sb.auth.onAuthStateChange((_event, session) => {
 updateAuthUI(session?.user || null);
 if (session?.user) {
 const firstLoad = !_appUnlocked;
 showApp();
 if (firstLoad) { navTo(‘inicio’); openHome(); }
+// Puxa dados da nuvem ao logar (fire & forget)
 _dbSync.pullAll(session.user.id);
 } else if (_appUnlocked) {
 _appUnlocked = false;
@@ -300,10 +356,10 @@ document.getElementById(‘loginScreen’).style.display = ‘flex’;
 }
 });
 
-/* MUDANÇA: 800ms → 2500ms para sincronizar com splash */
+// Checar sessão ao carregar — após splash (mín 2.5s)
 Promise.all([
 _sb.auth.getSession(),
-new Promise(r => setTimeout(r, 2500))
+new Promise(r => setTimeout(r, 800))
 ]).then(([{ data: { session } }]) => {
 updateAuthUI(session?.user || null);
 if (session?.user) { showApp(); navTo(‘inicio’); openHome(); }
