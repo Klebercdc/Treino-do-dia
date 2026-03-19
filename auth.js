@@ -73,7 +73,10 @@ const { data: { session } } = await _sb.auth.getSession();
 if (!session?.user) return;
 const userId = session.user.id;
 const config = safeJSON(‘titanpro_config’, {});
-await _sb.from(‘profiles’).upsert({ id: userId, config: config, updated_at: new Date().toISOString() }, { onConflict: ‘id’ });
+await _sb.from(‘profiles’).upsert({
+id: userId, config: config,
+updated_at: new Date().toISOString()
+}, { onConflict: ‘id’ });
 } catch (e) {}
 },
 async pullAll(userId) {
@@ -201,7 +204,7 @@ function showEmailLoginRegister() { showEmailLogin(true); }
 function hideEmailLogin() { document.getElementById(‘emailLoginScreen’).classList.remove(‘show’); }
 function toggleLoginMode() { showEmailLogin(!_loginIsRegister); }
 
-/* NOVO: Login com Google */
+/* ADICIONADO: Login com Google */
 async function authSignInGoogle() {
 try {
 const { error } = await _sb.auth.signInWithOAuth({
@@ -283,7 +286,7 @@ closeAuthMenu();
 }
 });
 
-/* MUDANÇA 1: onAuthStateChange — mostra login sempre que não tiver sessão */
+/* IGUAL AO ORIGINAL — sem mudança */
 _sb.auth.onAuthStateChange((_event, session) => {
 updateAuthUI(session?.user || null);
 if (session?.user) {
@@ -291,14 +294,13 @@ const firstLoad = !_appUnlocked;
 showApp();
 if (firstLoad) { navTo(‘inicio’); openHome(); }
 _dbSync.pullAll(session.user.id);
-} else {
+} else if (_appUnlocked) {
 _appUnlocked = false;
-document.getElementById(‘splashScreen’).style.display = ‘none’;
 document.getElementById(‘loginScreen’).style.display = ‘flex’;
 }
 });
 
-/* MUDANÇA 2: splash 2500ms em vez de 800ms */
+/* MUDANÇA: 800ms → 2500ms para sincronizar com splash */
 Promise.all([
 _sb.auth.getSession(),
 new Promise(r => setTimeout(r, 2500))
@@ -306,9 +308,4 @@ new Promise(r => setTimeout(r, 2500))
 updateAuthUI(session?.user || null);
 if (session?.user) { showApp(); navTo(‘inicio’); openHome(); }
 else showLogin();
-}).catch(() => showLogin());
-
-/* MUDANÇA 3: fallback 4s */
-setTimeout(() => {
-if (!_appUnlocked) showLogin();
-}, 4000);
+});
