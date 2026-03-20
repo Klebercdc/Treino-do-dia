@@ -1828,8 +1828,10 @@ function obNext(step) {
 }
 function obFinish() {
   localStorage.setItem("titan_onboarded","1");
-  document.getElementById("onboarding").classList.remove("show");
-  setTimeout(() => openInstrucoes(), 500);
+  const ob = document.getElementById("onboarding");
+  if (ob) { ob.style.display = "none"; ob.classList.remove("show"); }
+  const ls = document.getElementById("loginScreen");
+  if (ls) ls.style.display = "flex";
 }
 
 /* IntersectionObserver timer removido */
@@ -3891,6 +3893,11 @@ DADOS DO USUÁRIO:
 - Restrições/alergias/não gosta: ${restric}
 ${prefs ? `- Preferências: ${prefs}` : ""}
 ${orcamento ? `- Perfil de orçamento: ${orcamento}` : ""}
+
+REGRAS PARA REFEIÇÕES:
+- A PRIMEIRA refeição do dia DEVE ser um café da manhã completo, típico brasileiro, incluindo obrigatoriamente: café com leite (ou café preto), e ao menos dois outros itens nutritivos como ovos (mexido, estrelado ou cozido), pão integral, tapioca, frutas, iogurte ou aveia. Monte o café da manhã como uma refeição real e satisfatória.
+- Distribuir as demais refeições ao longo do dia de forma prática (almoço, lanche, jantar e pré/pós-treino conforme o número de refeições solicitado).
+- Cada refeição deve ter alimentos reais, com quantidade em gramas/ml/unidades.
 ${orcamentoInstrucao}
 
 FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS com os blocos abaixo, sem texto extra:

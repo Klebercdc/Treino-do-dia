@@ -294,6 +294,27 @@ async function authSignInEmail() {
   }
 }
 
+async function authSignInGoogle() {
+  const btn = document.getElementById('btnGoogle');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
+  try {
+    const { error } = await _sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) {
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      const errEl = document.getElementById('loginError');
+      if (errEl) { errEl.style.color = '#f87171'; errEl.textContent = error.message; }
+      else alert('Erro Google: ' + error.message);
+    }
+    // Se OK, Supabase redireciona — não precisa fazer nada
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    alert('Erro ao conectar com Google: ' + e.message);
+  }
+}
+
 function toggleAuthMenu() {
   const menu = document.getElementById('authMenu');
   if (!menu) return;
