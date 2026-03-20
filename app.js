@@ -2416,11 +2416,20 @@ function removeThinking() {
   document.getElementById("aiThinking")?.remove();
 }
 
+function _isPedidoDeTreino(msg) {
+  return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e)|quero|preciso)\b.{0,30}\b(treino|programa|plano|ficha)\b/i.test(msg);
+}
+
 async function sendAI(overrideText, isGerarTreino = false) {
   if (_aiTyping) return;
   const input = document.getElementById("aiInput");
   const text  = overrideText || input?.value?.trim();
   if (!text) return;
+
+  // Detectar automaticamente pedido de treino quando o usuário digita
+  if (!isGerarTreino && !overrideText) {
+    isGerarTreino = _isPedidoDeTreino(text);
+  }
 
   if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
   document.getElementById("aiSuggestions")?.remove();
