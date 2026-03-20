@@ -5,6 +5,9 @@
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
+# Garante que googleapis.com passe pelo proxy (NO_PROXY do ambiente bloqueia por padrão)
+export NO_PROXY="" no_proxy=""
+
 REMOTE_NAME="gdrive"
 FOLDER_NAME="TITAN-PRO-Backup"
 
