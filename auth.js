@@ -343,4 +343,4 @@ splash.style.display = ‘none’;
 const login = document.getElementById(‘loginScreen’);
 if (login && login.style.display !== ‘flex’) login.style.display = ‘flex’;
 }
-}, 4000)
+}, 4000);
