@@ -1830,17 +1830,22 @@
      TITAN TRANSFORMS ENGINE SCREEN
 ══════════════════════════════════════════ -->
 <div id="transformsScreen" class="transforms-screen">
+  <!-- FitFlow grid bg -->
+  <div class="te-ff-grid"></div>
+
   <header class="transforms-header">
     <div style="display:flex;align-items:center;gap:10px">
       <button onclick="closeTransformsScreen()" class="transforms-back-btn" aria-label="Fechar">
         <i data-lucide="x" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </button>
-      <div style="display:flex;align-items:center;gap:7px">
-        <i data-lucide="network" class="lucide" width="16" height="16" stroke="#FF6B00" fill="none" stroke-width="1.75"></i>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="te-ff-logo-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
         <span class="transforms-header-title">TITAN <span style="color:#FF6B00">TRANSFORMS</span></span>
       </div>
     </div>
-    <span class="transforms-kernel-badge">MALTEGO KERNEL</span>
+    <span class="transforms-kernel-badge">MALTEGO KERNEL ⚡</span>
   </header>
 
   <div class="transforms-content">

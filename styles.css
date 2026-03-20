@@ -1779,3 +1779,50 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   font-size: 10px;
   color: rgba(255,255,255,0.12);
 }
+
+/* ══════════════════════════════════════════
+   FITFLOW — Transform Engine visual overrides
+══════════════════════════════════════════ */
+.te-ff-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,107,0,0.06) 0%, transparent 50%),
+    linear-gradient(rgba(255,107,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,107,0,0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+  z-index: 0;
+}
+#transformsScreen {
+  position: relative;
+}
+#transformsScreen .transforms-header,
+#transformsScreen .transforms-content {
+  position: relative;
+  z-index: 1;
+}
+.te-ff-logo-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.transforms-header-title {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif !important;
+  font-weight: 900 !important;
+  font-size: 1rem !important;
+  letter-spacing: 1px !important;
+}
+.transforms-kernel-badge {
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+.transforms-graph-box {
+  height: 380px;
+}
