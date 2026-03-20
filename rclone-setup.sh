@@ -26,41 +26,77 @@ if rclone listremotes | grep -q "^${REMOTE_NAME}:"; then
   exit 0
 fi
 
-echo "Método: autenticação headless via token"
-echo ""
-echo "PASSO 1 — Em outra máquina com navegador, execute:"
-echo "  rclone authorize \"drive\""
-echo ""
-echo "PASSO 2 — Cole o token JSON aqui abaixo e pressione ENTER duas vezes:"
-echo ""
-
-# Lê o token do usuário (multiline até linha em branco)
-TOKEN=""
-while IFS= read -r line; do
-  [[ -z "$line" ]] && break
-  TOKEN+="$line"
-done
-
-if [[ -z "$TOKEN" ]]; then
-  echo "[ERRO] Nenhum token fornecido."
-  echo ""
-  echo "Alternativa — use uma Service Account (JSON):"
-  echo "  export GDRIVE_SA_JSON=/path/to/service-account.json"
-  echo "  bash rclone-setup.sh --service-account"
-  exit 1
-fi
-
-# ── Cria o remote via config file ─────────────────────────────
 RCLONE_CONFIG_DIR="${HOME}/.config/rclone"
 mkdir -p "$RCLONE_CONFIG_DIR"
 
-cat >> "${RCLONE_CONFIG_DIR}/rclone.conf" <<EOF
+# ── Modo Service Account ───────────────────────────────────────
+if [[ "${1:-}" == "--service-account" ]]; then
+  if [[ -z "${GDRIVE_SA_JSON:-}" ]]; then
+    echo "[ERRO] Variável GDRIVE_SA_JSON não definida."
+    echo "  export GDRIVE_SA_JSON=/path/to/service-account.json"
+    exit 1
+  fi
+  if [[ ! -f "$GDRIVE_SA_JSON" ]]; then
+    echo "[ERRO] Arquivo não encontrado: $GDRIVE_SA_JSON"
+    exit 1
+  fi
+
+  # Copia o JSON para local permanente
+  SA_DEST="${RCLONE_CONFIG_DIR}/service-account.json"
+  cp "$GDRIVE_SA_JSON" "$SA_DEST"
+  chmod 600 "$SA_DEST"
+
+  echo "Método: Service Account"
+  echo "  Arquivo: $SA_DEST"
+  echo ""
+
+  cat >> "${RCLONE_CONFIG_DIR}/rclone.conf" <<EOF
+
+[${REMOTE_NAME}]
+type = drive
+scope = drive
+service_account_file = ${SA_DEST}
+EOF
+
+  echo ""
+  echo "[OK] Remote '${REMOTE_NAME}' criado com Service Account!"
+
+# ── Modo Token OAuth ───────────────────────────────────────────
+else
+  echo "Método: autenticação headless via token"
+  echo ""
+  echo "PASSO 1 — Em outra máquina com navegador, execute:"
+  echo "  rclone authorize \"drive\""
+  echo ""
+  echo "PASSO 2 — Cole o token JSON aqui abaixo e pressione ENTER duas vezes:"
+  echo ""
+
+  TOKEN=""
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && break
+    TOKEN+="$line"
+  done
+
+  if [[ -z "$TOKEN" ]]; then
+    echo "[ERRO] Nenhum token fornecido."
+    echo ""
+    echo "Alternativa — use uma Service Account (JSON):"
+    echo "  export GDRIVE_SA_JSON=/path/to/service-account.json"
+    echo "  bash rclone-setup.sh --service-account"
+    exit 1
+  fi
+
+  cat >> "${RCLONE_CONFIG_DIR}/rclone.conf" <<EOF
 
 [${REMOTE_NAME}]
 type = drive
 scope = drive
 token = ${TOKEN}
 EOF
+
+  echo ""
+  echo "[OK] Remote '${REMOTE_NAME}' criado!"
+fi
 
 echo ""
 echo "[OK] Remote '${REMOTE_NAME}' criado!"
