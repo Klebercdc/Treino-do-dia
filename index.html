@@ -9,7 +9,7 @@
   <meta name="vercel-toolbar" content="false"/>
   <title>TITAN PRO</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -75,122 +75,350 @@
 
 <div id="loginScreen">
   <div id="loginBg"></div>
-  <div id="loginTop"></div>
-  <div id="loginBottom">
-    <div id="loginSub">Seu diário de treino inteligente.<br>Registre, evolua e supere seus limites.</div>
-    <button id="btnGoogle" onclick="authSignInGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;color:#1a1a1a;border:none;border-radius:14px;padding:15px 24px;font-family:var(--font);font-size:1rem;font-weight:600;cursor:pointer;margin-bottom:4px;transition:opacity .15s;">
-      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-      Entrar com Google
-    </button>
-    <div style="display:flex;align-items:center;gap:10px;width:100%;margin:4px 0">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
-      <span style="font-size:0.72rem;color:rgba(255,255,255,0.3)">ou</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+  <div id="loginBgGrid"></div>
+  <div id="loginContent">
+    <!-- Logo -->
+    <div id="loginLogoWrap">
+      <div id="loginLogoIcon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div id="loginLogoText">TITAN <span>PRO</span></div>
+      <div id="loginLogoSub">Entre na sua conta</div>
     </div>
+
+    <!-- Google button — destaque principal -->
+    <button id="btnGoogle" onclick="authSignInGoogle()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continuar com Google
+    </button>
+
+    <!-- Divisor -->
+    <div class="login-divider">
+      <div class="login-divider-line"></div>
+      <span>ou entre com e-mail</span>
+      <div class="login-divider-line"></div>
+    </div>
+
     <button id="btnShowEmail" onclick="showEmailLogin()">Entrar com e-mail</button>
-    <div id="loginRegisterLink" onclick="showEmailLoginRegister()">Não tem conta? <span>Criar conta</span></div>
+    <div id="loginRegisterLink" onclick="showEmailLoginRegister()">Não tem conta? <span>Criar gratuitamente</span></div>
+
+    <!-- LGPD -->
+    <div id="loginLgpd">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Protegido conforme a LGPD · titanpro.app.br
+    </div>
   </div>
 </div>
 
 <!-- ═══ EMAIL LOGIN SCREEN (TELA 2) ═══ -->
 
 <div id="emailLoginScreen">
-  <div id="emailLoginHeader">
+  <div id="loginBgGrid" style="position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(ellipse at 50% 0%,rgba(255,107,0,0.12) 0%,transparent 55%),linear-gradient(rgba(255,107,0,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.02) 1px,transparent 1px);background-size:100% 100%,32px 32px,32px 32px;z-index:0"></div>
+  <div id="emailLoginHeader" style="position:relative;z-index:1">
     <button id="emailLoginBack" onclick="hideEmailLogin()" aria-label="Voltar">
       <i data-lucide="chevron-left" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75" aria-hidden="true"></i>
     </button>
     <div id="emailLoginHeaderTitle">Login</div>
   </div>
-  <div id="emailLoginBody">
-    <h2 id="emailLoginBodyTitle">Entrar na conta</h2>
+  <div id="emailLoginBody" style="position:relative;z-index:1">
+    <!-- Logo pequeno -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#FF6B00,#FF9A3C);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div>
+        <div style="font-weight:900;font-size:16px;letter-spacing:1px;color:#fff;font-family:'Barlow Condensed',sans-serif">TITAN <span style="color:#FF6B00">PRO</span></div>
+        <div id="emailLoginBodyTitle" style="font-size:12px;color:rgba(255,255,255,0.4);margin:0">Entrar na conta</div>
+      </div>
+    </div>
+
     <div id="loginError" role="alert" aria-live="polite"></div>
     <label for="loginEmail" class="sr-only">E-mail</label>
-    <input id="loginEmail" class="login-input" type="email" placeholder="E-mail ou nome de usuário" autocomplete="email" aria-label="E-mail" aria-required="true" />
+    <input id="loginEmail" class="login-input ff-input" type="email" placeholder="seu@email.com" autocomplete="email" aria-label="E-mail" aria-required="true" />
     <label for="loginPassword" class="sr-only">Senha</label>
-    <input id="loginPassword" class="login-input" type="password" placeholder="Senha (mínimo 8 caracteres)" autocomplete="current-password" aria-label="Senha" aria-required="true" />
-    <button id="forgotPassLink" onclick="authForgotPassword()" style="background:none;border:none;cursor:pointer;padding:0;color:inherit;font:inherit;text-align:left;">Esqueceu a Senha?</button>
+    <input id="loginPassword" class="login-input ff-input" type="password" placeholder="Senha" autocomplete="current-password" aria-label="Senha" aria-required="true" />
+    <button id="forgotPassLink" onclick="authForgotPassword()" style="background:none;border:none;cursor:pointer;padding:0;color:rgba(255,107,0,0.7);font:inherit;text-align:right;font-size:12px;width:100%;margin-bottom:4px">Esqueci minha senha</button>
     <button id="btnEmail" onclick="authSignInEmail()">Entrar</button>
-    <div id="loginToggle" onclick="toggleLoginMode()" role="button" tabindex="0" aria-label="Alternar entre login e cadastro">Não tem conta? <span id="loginToggleLabel">Criar conta</span></div>
-    <div style="margin-top:20px;text-align:center;font-size:0.72rem;color:rgba(255,255,255,0.35);line-height:1.6">
+    <div id="loginToggle" onclick="toggleLoginMode()" role="button" tabindex="0" aria-label="Alternar entre login e cadastro">Não tem conta? <span id="loginToggleLabel">Criar gratuitamente</span></div>
+    <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.2);line-height:1.6">
       Ao continuar, você concorda com nossos
-      <span onclick="openLegalModal('terms')" style="color:rgba(255,255,255,0.55);cursor:pointer;text-decoration:underline">Termos de Uso</span>
+      <span onclick="openLegalModal('terms')" style="color:rgba(255,255,255,0.4);cursor:pointer;text-decoration:underline">Termos de Uso</span>
       e
-      <span onclick="openLegalModal('privacy')" style="color:rgba(255,255,255,0.55);cursor:pointer;text-decoration:underline">Política de Privacidade</span>.
+      <span onclick="openLegalModal('privacy')" style="color:rgba(255,255,255,0.4);cursor:pointer;text-decoration:underline">Política de Privacidade</span>.
     </div>
   </div>
 </div>
 
-<!-- Onboarding -->
+<!-- ═══ ONBOARDING (FitFlow 4-slide carousel) ═══ -->
 
 <div id="onboarding">
-  <div class="ob-content">
-    <div class="ob-step active" id="ob-step-0">
-      <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#2563eb,#3b82f6)">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="21" width="40" height="6" rx="3" fill="white" opacity="0.3"/><rect x="20" y="18" width="8" height="12" rx="2" fill="white"/><rect x="2" y="17" width="6" height="14" rx="3" fill="white"/><rect x="40" y="17" width="6" height="14" rx="3" fill="white"/><rect x="8" y="19" width="4" height="10" rx="2" fill="white" opacity="0.7"/><rect x="36" y="19" width="4" height="10" rx="2" fill="white" opacity="0.7"/></svg>
-      </div></div>
-      <div class="ob-title">Bem-vindo ao<br>TITAN PRO</div>
-      <div class="ob-sub">Coach com IA que aprende quem você é — e entrega exatamente o que você precisa, do básico ao alto nível.</div>
+  <!-- Background dinâmico por slide -->
+  <div id="ff-ob-bg"></div>
+  <div id="ff-ob-grid"></div>
+
+  <!-- Header -->
+  <div id="ff-ob-header">
+    <div id="ff-ob-logo">
+      <div id="ff-ob-logo-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span>TITAN <span style="color:#FF6B00">PRO</span></span>
+    </div>
+    <button id="ff-ob-skip" onclick="ffObFinish()">Pular</button>
+  </div>
+
+  <!-- Dots -->
+  <div id="ff-ob-dots">
+    <button class="ff-dot ff-dot-active" onclick="ffObGoTo(0)"></button>
+    <button class="ff-dot" onclick="ffObGoTo(1)"></button>
+    <button class="ff-dot" onclick="ffObGoTo(2)"></button>
+    <button class="ff-dot" onclick="ffObGoTo(3)"></button>
+  </div>
+
+  <!-- Slides container -->
+  <div id="ff-ob-slides">
+
+    <!-- SLIDE 0 — Bem-vindo -->
+    <div class="ff-slide ff-slide-active" id="ff-slide-0">
+      <div class="ff-slide-tag">BEM-VINDO</div>
+      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.3);box-shadow:0 12px 40px rgba(255,107,0,0.18)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      </div>
+      <h1 class="ff-slide-title">Muito alem de<br>um bloco de notas.</h1>
+      <p class="ff-slide-sub">Abandone as planilhas genericas. O TITAN PRO e seu Sistema Especialista em Gestao Fisiologica.</p>
+      <div class="ff-visual-chart">
+        <div class="ff-bar" style="height:38%;background:rgba(255,107,0,0.15)"></div>
+        <div class="ff-bar" style="height:52%;background:rgba(255,107,0,0.22)"></div>
+        <div class="ff-bar" style="height:45%;background:rgba(255,107,0,0.3)"></div>
+        <div class="ff-bar" style="height:68%;background:rgba(255,107,0,0.38)"></div>
+        <div class="ff-bar" style="height:62%;background:rgba(255,107,0,0.46)"></div>
+        <div class="ff-bar" style="height:82%;background:rgba(255,107,0,0.55)"></div>
+        <div class="ff-bar" style="height:88%;background:rgba(255,107,0,0.65)"></div>
+        <div class="ff-bar" style="height:100%;background:linear-gradient(180deg,#FF6B00,#FF9A3C)"></div>
+        <div class="ff-chart-badge">+34%</div>
+      </div>
     </div>
 
-```
-<!-- STEP 1: Persona selector -->
-<div class="ob-step" id="ob-step-1">
-  <div class="ob-icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="8" fill="white" opacity="0.9"/><path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
-  </div></div>
-  <div class="ob-title">Como você<br>se encaixa?</div>
-  <div class="ob-sub" style="margin-bottom:20px">A IA vai se adaptar ao seu perfil.<br>Escolha o que melhor te representa:</div>
-  <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;padding:0 4px">
-    <div class="ob-persona-chip" data-val="turista" onclick="selectPersonaOb(this)">
-      <div style="flex-shrink:0"><i data-lucide="plane" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></div>
-      <div>
-        <div style="font-weight:700;font-size:0.9rem">Físico Turista</div>
-        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino quando dá — hotel, casa, onde estiver</div>
+    <!-- SLIDE 1 — Treine Livre -->
+    <div class="ff-slide" id="ff-slide-1">
+      <div class="ff-slide-tag" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.35);color:rgba(255,255,255,0.5)">PLANO FREE</div>
+      <div class="ff-slide-icon" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);box-shadow:0 12px 40px rgba(99,102,241,0.18)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M6 9h12M6 15h12"/></svg>
+      </div>
+      <h1 class="ff-slide-title">Treine com<br>liberdade.</h1>
+      <p class="ff-slide-sub">Registre cargas e repeticoes sem bloqueios. Crie constancia e prove a si mesmo que o acompanhamento real funciona.</p>
+      <div class="ff-slide-highlight" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10B981">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Gratuito para sempre
+      </div>
+      <div class="ff-visual-timer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="ff-timer-num">1:30</div>
+        <div class="ff-timer-label">DESCANSO</div>
       </div>
     </div>
-    <div class="ob-persona-chip" data-val="iniciante" onclick="selectPersonaOb(this)">
-      <div style="flex-shrink:0"><i data-lucide="sprout" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></div>
-      <div>
-        <div style="font-weight:700;font-size:0.9rem">Estou começando agora</div>
-        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Iniciante — quero aprender com segurança</div>
+
+    <!-- SLIDE 2 — Ecossistema -->
+    <div class="ff-slide" id="ff-slide-2">
+      <div class="ff-slide-tag" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:rgba(255,255,255,0.5)">ECOSSISTEMA</div>
+      <div class="ff-slide-icon" style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3);box-shadow:0 12px 40px rgba(16,185,129,0.18)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="8" width="6" height="13" rx="1"/><rect x="16" y="13" width="6" height="8" rx="1"/></svg>
+      </div>
+      <h1 class="ff-slide-title">Nutricao e<br>Recuperacao integradas.</h1>
+      <p class="ff-slide-sub">Chega de pular de app em app. Calcule seu metabolismo basal, gere dietas e saiba quando descansar estrategicamente.</p>
+      <div class="ff-visual-icons">
+        <div class="ff-eco-icon" style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M12 2a9 9 0 0 1 9 9c0 4-2.5 7.5-6.5 8.5"/><path d="M7 10c-.5-3 1-5.5 5-7"/></svg>
+          <span>Dieta</span>
+        </div>
+        <div class="ff-eco-icon" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Energia</span>
+        </div>
+        <div class="ff-eco-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.3)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2"><path d="M6 4v16M18 4v16M6 9h12M6 15h12"/></svg>
+          <span>Treino</span>
+        </div>
+        <div class="ff-eco-icon" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.3)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
+          <span>Biometria</span>
+        </div>
       </div>
     </div>
-    <div class="ob-persona-chip" data-val="dedicado" onclick="selectPersonaOb(this)">
-      <div style="flex-shrink:0"><i data-lucide="dumbbell" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></div>
-      <div>
-        <div style="font-weight:700;font-size:0.9rem">Treino com consistência</div>
-        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">3–5x por semana, quero crescer e evoluir</div>
+
+    <!-- SLIDE 3 — KRONOS PRO -->
+    <div class="ff-slide" id="ff-slide-3">
+      <div class="ff-slide-tag" style="background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.35);color:#FF6B00">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        EXCLUSIVO PRO
+      </div>
+      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.3);box-shadow:0 12px 40px rgba(255,107,0,0.25)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <h1 class="ff-slide-title">Conheca o KRONOS:<br>Seu Coach 24/7.</h1>
+      <p class="ff-slide-sub">IA baseada em evidencias que analisa seu historico de fadiga e RPE em tempo real. Nao e achismo - e ciencia esportiva.</p>
+      <div class="ff-slide-highlight" style="background:rgba(255,107,0,0.1);border-color:rgba(255,107,0,0.3);color:#FF6B00">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        Exclusivo PRO e ULTRA
+      </div>
+      <div class="ff-visual-chat">
+        <div class="ff-chat-msg ff-chat-user">RPE hoje foi 9, to exausto</div>
+        <div class="ff-chat-msg ff-chat-ai">
+          <div class="ff-chat-ai-label">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            KRONOS
+          </div>
+          Fadiga alta detectada. Recomendo treino leve amanha - recuperacao e parte do protocolo.
+        </div>
       </div>
     </div>
-    <div class="ob-persona-chip" data-val="atleta" onclick="selectPersonaOb(this)">
-      <div style="flex-shrink:0"><i data-lucide="flame" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></div>
-      <div>
-        <div style="font-weight:700;font-size:0.9rem">Nível avançado / atleta</div>
-        <div style="font-size:0.75rem;opacity:.7;margin-top:2px">Treino sério — periodização, RPE, performance</div>
-      </div>
-    </div>
+
+  </div>
+
+  <!-- CTA footer -->
+  <div id="ff-ob-footer">
+    <button id="ff-ob-cta" onclick="ffObNext()">
+      Proximo
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
   </div>
 </div>
 
-<!-- STEP 2: Personalized ready screen -->
-<div class="ob-step" id="ob-step-2">
-  <div class="ob-icon" id="ob2Icon"><div class="ob-icon-wrap" style="background:linear-gradient(135deg,#059669,#10b981)">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><polyline points="8 26 18 36 40 14" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </div></div>
-  <div class="ob-title" id="ob2Title">Tudo pronto!</div>
-  <div class="ob-sub" id="ob2Sub" style="max-width:300px">KRONOS vai analisar seu perfil e entregar treinos e orientações feitas para você.</div>
-</div>
-```
+<!-- ═══ PRICING SCREEN (FitFlow — Free / PRO / ULTRA) ═══ -->
 
-  </div>
-  <div class="ob-footer">
-    <div class="ob-dots" style="margin-bottom:28px">
-      <div class="ob-dot active" id="ob-dot-0"></div>
-      <div class="ob-dot" id="ob-dot-1"></div>
-      <div class="ob-dot" id="ob-dot-2"></div>
+<div id="pricingScreen" style="display:none">
+  <div class="ff-pricing-bg"></div>
+
+  <!-- Header -->
+  <div class="ff-pricing-header">
+    <div class="ff-ob-logo-row">
+      <div id="ff-ob-logo-icon" style="width:28px;height:28px;border-radius:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span style="font-weight:900;font-size:15px;letter-spacing:1px;color:#fff;font-family:Barlow Condensed,sans-serif">TITAN <span style="color:#FF6B00">PRO</span></span>
     </div>
-    <div id="ob-main-btn" onclick="obNext(1)" class="ob-btn">Continuar</div>
-    <div class="ob-skip" onclick="obFinish()">Pular introdução</div>
+    <button onclick="closePricingScreen()" class="ff-pricing-close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div class="ff-pricing-body">
+    <!-- Headline -->
+    <div class="ff-pricing-headline">
+      <div class="ff-pricing-tag">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        UPGRADE SEU TREINO
+      </div>
+      <h1 class="ff-pricing-title">Escolha seu<br><span style="color:#FF6B00">nivel de performance</span></h1>
+      <p class="ff-pricing-sub">Cancele quando quiser. Sem fidelidade.</p>
+    </div>
+
+    <!-- Cards -->
+    <div class="ff-plan-cards">
+
+      <!-- FREE -->
+      <div class="ff-plan-card" onclick="selectPlan('free')">
+        <div class="ff-plan-top">
+          <div>
+            <div class="ff-plan-name" style="color:rgba(255,255,255,0.45)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              FREE
+            </div>
+            <div class="ff-plan-tagline">Comece agora</div>
+          </div>
+          <div class="ff-plan-price-wrap">
+            <span class="ff-plan-price">R$0</span>
+          </div>
+        </div>
+        <div class="ff-plan-divider"></div>
+        <div class="ff-plan-features">
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Registro ilimitado de treinos</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Deteccao de PRs</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Streak e historico basico</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Calculadora nutricional</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>5 conversas com KRONOS/mes</div>
+          <div class="ff-feat ff-feat-locked"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Mesociclo IA</div>
+          <div class="ff-feat ff-feat-locked"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Heatmap muscular</div>
+        </div>
+        <button class="ff-plan-cta" style="background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6)">Continuar gratis</button>
+      </div>
+
+      <!-- PRO -->
+      <div class="ff-plan-card ff-plan-pro" onclick="selectPlan('pro')">
+        <div class="ff-plan-badge">MAIS POPULAR</div>
+        <div class="ff-plan-top">
+          <div>
+            <div class="ff-plan-name" style="color:#FF6B00;font-size:28px;letter-spacing:3px">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              PRO
+            </div>
+            <div class="ff-plan-tagline">Mais popular</div>
+          </div>
+          <div class="ff-plan-price-wrap">
+            <span class="ff-plan-price">R$29</span><span class="ff-plan-cents">,90</span>
+            <div class="ff-plan-period">/mes</div>
+          </div>
+        </div>
+        <div class="ff-plan-divider" style="background:rgba(255,107,0,0.18)"></div>
+        <div class="ff-plan-features">
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tudo do Free</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>KRONOS ilimitado</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Mesociclo com IA</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Heatmap muscular</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Analise RPE completa</div>
+          <div class="ff-feat ff-feat-locked"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Relatorios avancados</div>
+          <div class="ff-feat ff-feat-locked"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Nutrition IA</div>
+        </div>
+        <button class="ff-plan-cta" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;box-shadow:0 6px 24px rgba(255,107,0,0.3)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Assinar PRO
+        </button>
+      </div>
+
+      <!-- ULTRA -->
+      <div class="ff-plan-card ff-plan-ultra" onclick="selectPlan('ultra')">
+        <div class="ff-plan-badge" style="background:rgba(139,92,246,0.2);color:#A855F7">COMPLETO</div>
+        <div class="ff-plan-top">
+          <div>
+            <div class="ff-plan-name" style="color:#A855F7;font-size:24px;letter-spacing:2px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#A855F7"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+              ULTRA
+            </div>
+            <div class="ff-plan-tagline">Performance maxima</div>
+          </div>
+          <div class="ff-plan-price-wrap">
+            <span class="ff-plan-price">R$59</span><span class="ff-plan-cents">,90</span>
+            <div class="ff-plan-period">/mes</div>
+          </div>
+        </div>
+        <div class="ff-plan-divider" style="background:rgba(139,92,246,0.18)"></div>
+        <div class="ff-plan-features">
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tudo do PRO</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>KRONOS avancado + RPE IA</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Nutrition IA personalizada</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Relatorios PDF mensais</div>
+          <div class="ff-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Suporte prioritario</div>
+        </div>
+        <button class="ff-plan-cta" style="background:linear-gradient(135deg,#7C3AED,#A855F7);color:#fff;box-shadow:0 6px 24px rgba(139,92,246,0.3)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+          Assinar ULTRA
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Rodape -->
+    <div class="ff-pricing-footer">
+      <div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pagamento seguro</div>
+      <div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> LGPD</div>
+      <div><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Sem fidelidade</div>
+    </div>
+    <div class="ff-pricing-url">titanpro.app.br</div>
   </div>
 </div>
 
@@ -1602,17 +1830,22 @@
      TITAN TRANSFORMS ENGINE SCREEN
 ══════════════════════════════════════════ -->
 <div id="transformsScreen" class="transforms-screen">
+  <!-- FitFlow grid bg -->
+  <div class="te-ff-grid"></div>
+
   <header class="transforms-header">
     <div style="display:flex;align-items:center;gap:10px">
       <button onclick="closeTransformsScreen()" class="transforms-back-btn" aria-label="Fechar">
         <i data-lucide="x" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </button>
-      <div style="display:flex;align-items:center;gap:7px">
-        <i data-lucide="network" class="lucide" width="16" height="16" stroke="#FF6B00" fill="none" stroke-width="1.75"></i>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="te-ff-logo-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
         <span class="transforms-header-title">TITAN <span style="color:#FF6B00">TRANSFORMS</span></span>
       </div>
     </div>
-    <span class="transforms-kernel-badge">MALTEGO KERNEL</span>
+    <span class="transforms-kernel-badge">MALTEGO KERNEL ⚡</span>
   </header>
 
   <div class="transforms-content">
@@ -1830,6 +2063,7 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   });
 </script>
+<script src="fitflow-layout.js"></script>
 
 </body>
 </html>

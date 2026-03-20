@@ -1,0 +1,814 @@
+import { useState, useRef } from “react”;
+import {
+Zap, Brain, Lock, Flame, Trophy, BarChart2, Crown, Sparkles,
+ArrowRight, X, Dumbbell, TrendingUp, Leaf, Calendar, CreditCard,
+User, Timer, Dna, Layers, ShieldCheck, CheckCircle, Check,
+Activity, Eye, EyeOff, Mail, KeyRound, LogIn, ChevronRight,
+AlertCircle
+} from “lucide-react”;
+
+// ─── GOOGLE ICON SVG (marca oficial, não tem no Lucide) ──────────────────────
+function GoogleIcon({ size = 18 }) {
+return (
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+</svg>
+);
+}
+
+// ─── PLANOS ──────────────────────────────────────────────────────────────────
+const PLANS = [
+{
+id: “free”, name: “Free”, price: “R$0”, period: “”, tagline: “Comece agora”,
+badge: null, accentColor: “rgba(255,255,255,0.45)”, ctaBg: “rgba(255,255,255,0.07)”, ctaColor: “rgba(255,255,255,0.6)”,
+PlanIcon: User,
+features: [“Registro ilimitado de treinos”,“Detecção de PRs”,“Streak e histórico básico”,“Calculadora nutricional”,“5 conversas com KRONOS/mês”],
+locked: [“Mesociclo IA”,“Heatmap muscular”,“Análise RPE avançada”],
+cta: “Começar grátis”,
+},
+{
+id: “pro”, name: “PRO”, price: “R$29”, cents: “,90”, period: “/mês”, tagline: “Mais popular”,
+badge: “MAIS POPULAR”, accentColor: “#FF6B00”, ctaBg: “linear-gradient(135deg,#FF6B00,#FF9A3C)”, ctaColor: “#fff”,
+PlanIcon: Zap,
+features: [“Tudo do Free”,“KRONOS ilimitado”,“Mesociclo com IA”,“Heatmap muscular”,“Análise RPE completa”],
+locked: [“Relatórios avançados”,“Nutrition IA”],
+cta: “Assinar PRO”,
+},
+{
+id: “ultra”, name: “ULTRA”, price: “R$59”, cents: “,90”, period: “/mês”, tagline: “Performance máxima”,
+badge: “COMPLETO”, accentColor: “#A855F7”, ctaBg: “linear-gradient(135deg,#7C3AED,#A855F7)”, ctaColor: “#fff”,
+PlanIcon: Crown,
+features: [“Tudo do PRO”,“KRONOS avançado + RPE IA”,“Nutrition IA personalizada”,“Relatórios PDF mensais”,“Suporte prioritário”],
+locked: [],
+cta: “Assinar ULTRA”,
+},
+];
+
+// ─── SLIDES ONBOARDING ───────────────────────────────────────────────────────
+const SLIDES = [
+{
+id:1, tag:“BEM-VINDO”, Icon:TrendingUp, iconColor:”#FF6B00”, isPro:false,
+title:“Muito além de\num bloco de notas.”,
+subtitle:“Abandone as planilhas genéricas. O TITAN PRO é seu Sistema Especialista em Gestão Fisiológica.”,
+highlight:null,
+bg:“radial-gradient(ellipse at 30% 20%,rgba(255,107,0,0.18) 0%,transparent 60%)”,
+visual:“chart”,
+},
+{
+id:2, tag:“PLANO FREE”, Icon:Dumbbell, iconColor:”#6366F1”, isPro:false,
+title:“Treine com\nliberdade.”,
+subtitle:“Registre cargas e repetições sem bloqueios. Crie constância e prove a si mesmo que o acompanhamento real funciona.”,
+highlight:“Gratuito para sempre”,
+bg:“radial-gradient(ellipse at 70% 10%,rgba(99,102,241,0.15) 0%,transparent 60%)”,
+visual:“timer”,
+},
+{
+id:3, tag:“ECOSSISTEMA”, Icon:Layers, iconColor:”#10B981”, isPro:false,
+title:“Nutrição e\nRecuperação integradas.”,
+subtitle:“Chega de pular de app em app. Calcule seu metabolismo basal, gere dietas e saiba quando descansar estrategicamente.”,
+highlight:null,
+bg:“radial-gradient(ellipse at 20% 80%,rgba(16,185,129,0.12) 0%,transparent 60%)”,
+visual:“icons”,
+},
+{
+id:4, tag:“EXCLUSIVO PRO”, Icon:Brain, iconColor:”#FF6B00”, isPro:true,
+title:“Conheça o KRONOS:\nSeu Coach 24/7.”,
+subtitle:“IA baseada em evidências que analisa seu histórico de fadiga e RPE em tempo real. Não é achismo — é ciência esportiva.”,
+highlight:“Exclusivo PRO e ULTRA”,
+bg:“radial-gradient(ellipse at 50% 30%,rgba(255,107,0,0.25) 0%,transparent 60%)”,
+visual:“kronos”,
+},
+];
+
+// ─── VISUAIS DOS SLIDES — zero emoji ─────────────────────────────────────────
+function SlideVisual({ type }) {
+if (type === “chart”) return (
+<div style={{ position:“relative”, height:110, display:“flex”, alignItems:“flex-end”, gap:5, padding:“0 8px” }}>
+{[38,52,45,68,62,82,88,100].map((h,i) => (
+<div key={i} style={{
+flex:1, height:`${h}%`, borderRadius:“4px 4px 0 0”,
+background: i===7 ? “linear-gradient(180deg,#FF6B00,#FF9A3C)” : `rgba(255,107,0,${0.1+i*0.1})`,
+}}/>
+))}
+<div style={{
+position:“absolute”, top:0, right:8,
+background:“rgba(255,107,0,0.12)”, border:“1px solid rgba(255,107,0,0.4)”,
+borderRadius:8, padding:“4px 10px”,
+display:“flex”, alignItems:“center”, gap:5,
+fontSize:11, fontWeight:800, color:”#FF6B00”,
+}}>
+<TrendingUp size={12}/> +34%
+</div>
+</div>
+);
+
+if (type === “timer”) return (
+<div style={{ display:“flex”, justifyContent:“center” }}>
+<div style={{
+width:110, height:110, borderRadius:“50%”,
+border:“2px solid rgba(255,107,0,0.22)”,
+background:“rgba(255,107,0,0.06)”,
+display:“flex”, flexDirection:“column”, alignItems:“center”, justifyContent:“center”,
+boxShadow:“0 0 30px rgba(255,107,0,0.1)”,
+}}>
+<Timer size={22} color=”#FF6B00” style={{ marginBottom:4 }}/>
+<div style={{ fontSize:26, fontWeight:900, color:”#fff”, fontFamily:“monospace”, lineHeight:1 }}>1:30</div>
+<div style={{ fontSize:9, color:“rgba(255,255,255,0.3)”, letterSpacing:1.5, marginTop:3 }}>DESCANSO</div>
+</div>
+</div>
+);
+
+if (type === “icons”) return (
+<div style={{ display:“flex”, justifyContent:“center”, gap:14 }}>
+{[
+{ Icon:Leaf,     label:“Dieta”,     color:”#10B981” },
+{ Icon:Zap,      label:“Energia”,   color:”#F59E0B” },
+{ Icon:Dumbbell, label:“Treino”,    color:”#FF6B00” },
+{ Icon:Dna,      label:“Biometria”, color:”#8B5CF6” },
+].map(({ Icon, label, color }, i) => (
+<div key={i} style={{ display:“flex”, flexDirection:“column”, alignItems:“center”, gap:6 }}>
+<div style={{
+width:54, height:54, borderRadius:16,
+background:`${color}15`, border:`1px solid ${color}35`,
+display:“flex”, alignItems:“center”, justifyContent:“center”,
+boxShadow:`0 8px 20px ${color}18`,
+}}>
+<Icon size={22} color={color}/>
+</div>
+<span style={{ fontSize:9, color:“rgba(255,255,255,0.3)”, letterSpacing:0.5 }}>{label}</span>
+</div>
+))}
+</div>
+);
+
+if (type === “kronos”) return (
+<div style={{ display:“flex”, flexDirection:“column”, gap:8 }}>
+{[
+{ isUser:true,  text:“RPE hoje foi 9, tô exausto” },
+{ isUser:false, text:“Fadiga alta detectada. Recomendo treino leve amanhã — recuperação é parte do protocolo.” },
+].map((m,i) => (
+<div key={i} style={{
+alignSelf: m.isUser ? “flex-end” : “flex-start”,
+maxWidth:“82%”,
+background: m.isUser ? “rgba(255,255,255,0.07)” : “rgba(255,107,0,0.12)”,
+border:`1px solid ${m.isUser ? "rgba(255,255,255,0.08)" : "rgba(255,107,0,0.3)"}`,
+borderRadius: m.isUser ? “14px 14px 4px 14px” : “14px 14px 14px 4px”,
+padding:“9px 12px”, fontSize:12, color:”#fff”, lineHeight:1.6,
+}}>
+{!m.isUser && (
+<div style={{ display:“flex”, alignItems:“center”, gap:5, marginBottom:4 }}>
+<Zap size={9} color="#FF6B00" fill="#FF6B00"/>
+<span style={{ fontSize:9, color:”#FF6B00”, fontWeight:800, letterSpacing:1 }}>KRONOS</span>
+</div>
+)}
+{m.text}
+</div>
+))}
+</div>
+);
+
+return null;
+}
+
+// ─── PRO BADGE — sempre visível ───────────────────────────────────────────────
+function ProBadge({ plan=“free”, onClick }) {
+const cfg = {
+free:  { label:“FREE”,  bg:“rgba(255,255,255,0.07)”, color:“rgba(255,255,255,0.4)”, border:“rgba(255,255,255,0.1)”,  Icon:User },
+pro:   { label:“PRO”,   bg:“rgba(255,107,0,0.15)”,   color:”#FF6B00”,               border:“rgba(255,107,0,0.4)”,    Icon:Zap },
+ultra: { label:“ULTRA”, bg:“rgba(139,92,246,0.15)”,  color:”#A855F7”,               border:“rgba(139,92,246,0.4)”,   Icon:Crown },
+}[plan];
+return (
+<button onClick={onClick} style={{
+background:cfg.bg, border:`1px solid ${cfg.border}`,
+borderRadius:20, padding:“4px 12px 4px 8px”,
+fontSize:10, fontWeight:900, color:cfg.color, letterSpacing:1.5,
+cursor:“pointer”, display:“flex”, alignItems:“center”, gap:5, transition:“all 0.2s”,
+}}
+onMouseEnter={e=>e.currentTarget.style.transform=“scale(1.05)”}
+onMouseLeave={e=>e.currentTarget.style.transform=“scale(1)”}
+>
+<cfg.Icon size={11} fill={plan!==“free”?“currentColor”:“none”}/>
+{cfg.label}
+</button>
+);
+}
+
+// ─── ONBOARDING CAROUSEL ──────────────────────────────────────────────────────
+function OnboardingCarousel({ onFinish }) {
+const [current, setCurrent] = useState(0);
+const [dir, setDir] = useState(1);
+const [anim, setAnim] = useState(false);
+const touch = useRef(null);
+
+function goTo(idx) {
+if (anim || idx===current) return;
+setDir(idx>current?1:-1); setAnim(true);
+setTimeout(()=>{ setCurrent(idx); setAnim(false); }, 260);
+}
+function next() { if(current<SLIDES.length-1) goTo(current+1); else onFinish(); }
+
+const slide = SLIDES[current];
+
+return (
+<div style={{
+minHeight:“100vh”, background:”#090909”,
+display:“flex”, flexDirection:“column”,
+fontFamily:”‘Barlow Condensed’,‘Barlow’,sans-serif”,
+overflow:“hidden”, position:“relative”,
+}}>
+<div style={{ position:“absolute”, inset:0, background:slide.bg, transition:“background 0.5s”, pointerEvents:“none” }}/>
+<div style={{
+position:“absolute”, inset:0, pointerEvents:“none”,
+backgroundImage:“linear-gradient(rgba(255,107,0,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.025) 1px,transparent 1px)”,
+backgroundSize:“32px 32px”,
+}}/>
+
+```
+  {/* Header */}
+  <div style={{ position:"relative", zIndex:10, padding:"20px 24px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <div style={{ width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#FF6B00,#FF9A3C)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <Zap size={14} color="#fff" fill="#fff"/>
+      </div>
+      <span style={{ fontWeight:900, fontSize:15, letterSpacing:1, color:"#fff" }}>TITAN <span style={{ color:"#FF6B00" }}>PRO</span></span>
+    </div>
+    <button onClick={onFinish} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.25)", cursor:"pointer", fontSize:11, letterSpacing:0.5, display:"flex", alignItems:"center", gap:4 }}>
+      Pular <X size={12}/>
+    </button>
+  </div>
+
+  {/* Dots */}
+  <div style={{ position:"relative", zIndex:10, display:"flex", justifyContent:"center", gap:6, padding:"18px 0 0" }}>
+    {SLIDES.map((_,i)=>(
+      <button key={i} onClick={()=>goTo(i)} style={{
+        width:i===current?24:6, height:6, borderRadius:3, border:"none", cursor:"pointer",
+        background:i===current?"#FF6B00":"rgba(255,255,255,0.12)", transition:"all 0.3s", padding:0,
+      }}/>
+    ))}
+  </div>
+
+  {/* Slide */}
+  <div
+    style={{
+      flex:1, position:"relative", zIndex:10,
+      display:"flex", flexDirection:"column", justifyContent:"center", padding:"24px 28px",
+      opacity:anim?0:1, transform:anim?`translateX(${dir*28}px)`:"translateX(0)",
+      transition:"opacity 0.26s ease, transform 0.26s ease",
+    }}
+    onTouchStart={e=>{ touch.current=e.touches[0].clientX; }}
+    onTouchEnd={e=>{ const d=touch.current-e.changedTouches[0].clientX; if(d>40)next(); if(d<-40&&current>0)goTo(current-1); }}
+  >
+    <div style={{
+      display:"inline-flex", alignItems:"center", gap:6,
+      background:slide.isPro?"rgba(255,107,0,0.12)":"rgba(255,255,255,0.06)",
+      border:`1px solid ${slide.isPro?"rgba(255,107,0,0.35)":"rgba(255,255,255,0.1)"}`,
+      borderRadius:20, padding:"4px 12px",
+      fontSize:9, fontWeight:800,
+      color:slide.isPro?"#FF6B00":"rgba(255,255,255,0.4)",
+      letterSpacing:1.5, marginBottom:22, alignSelf:"flex-start",
+    }}>
+      {slide.isPro && <Zap size={9} fill="#FF6B00" color="#FF6B00"/>}
+      {slide.tag}
+    </div>
+
+    <div style={{
+      width:72, height:72, borderRadius:22,
+      background:`${slide.iconColor}15`, border:`1px solid ${slide.iconColor}30`,
+      display:"flex", alignItems:"center", justifyContent:"center",
+      marginBottom:20, boxShadow:`0 12px 40px ${slide.iconColor}18`,
+    }}>
+      <slide.Icon size={34} color={slide.iconColor}/>
+    </div>
+
+    <h1 style={{ fontSize:38, fontWeight:900, lineHeight:1.1, margin:"0 0 14px", letterSpacing:-0.5, whiteSpace:"pre-line", color:"#fff" }}>
+      {slide.title}
+    </h1>
+    <p style={{ fontSize:14, color:"rgba(255,255,255,0.5)", lineHeight:1.7, margin:"0 0 18px", fontFamily:"'Barlow',sans-serif" }}>
+      {slide.subtitle}
+    </p>
+
+    {slide.highlight && (
+      <div style={{
+        display:"inline-flex", alignItems:"center", gap:6,
+        background:slide.isPro?"rgba(255,107,0,0.1)":"rgba(16,185,129,0.1)",
+        border:`1px solid ${slide.isPro?"rgba(255,107,0,0.3)":"rgba(16,185,129,0.3)"}`,
+        borderRadius:8, padding:"6px 12px",
+        fontSize:12, fontWeight:700,
+        color:slide.isPro?"#FF6B00":"#10B981",
+        marginBottom:20, alignSelf:"flex-start",
+      }}>
+        <Check size={12}/> {slide.highlight}
+      </div>
+    )}
+
+    <div style={{ marginTop:8 }}><SlideVisual type={slide.visual}/></div>
+  </div>
+
+  {/* CTA */}
+  <div style={{ position:"relative", zIndex:10, padding:"0 28px 44px" }}>
+    <button onClick={next} style={{
+      width:"100%", padding:"18px",
+      background:current===SLIDES.length-1?"linear-gradient(135deg,#FF6B00,#FF9A3C)":"rgba(255,255,255,0.07)",
+      border:`1px solid ${current===SLIDES.length-1?"transparent":"rgba(255,255,255,0.1)"}`,
+      borderRadius:16, cursor:"pointer", color:"#fff",
+      fontSize:14, fontWeight:800, letterSpacing:0.5,
+      display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+      transition:"all 0.2s",
+      boxShadow:current===SLIDES.length-1?"0 8px 30px rgba(255,107,0,0.3)":"none",
+    }}>
+      {current===SLIDES.length-1
+        ? <><Zap size={17} fill="#fff"/> Começar meu primeiro treino</>
+        : <>Próximo <ArrowRight size={16}/></>
+      }
+    </button>
+  </div>
+</div>
+```
+
+);
+}
+
+// ─── TELA DE AUTH — Google + Senha, destaque no Google ───────────────────────
+function AuthScreen({ onAuth }) {
+const [mode, setMode] = useState(“login”); // login | signup
+const [showPass, setShowPass] = useState(false);
+const [email, setEmail] = useState(””);
+const [password, setPassword] = useState(””);
+const [error, setError] = useState(””);
+const [loading, setLoading] = useState(false);
+const [googleLoading, setGoogleLoading] = useState(false);
+
+async function handleGoogle() {
+setGoogleLoading(true);
+await new Promise(r=>setTimeout(r,1200));
+setGoogleLoading(false);
+onAuth();
+}
+
+async function handleEmail(e) {
+e.preventDefault();
+if (!email || !password) { setError(“Preencha e-mail e senha.”); return; }
+setLoading(true); setError(””);
+await new Promise(r=>setTimeout(r,900));
+setLoading(false);
+onAuth();
+}
+
+const inputStyle = {
+width:“100%”, background:“rgba(255,255,255,0.05)”,
+border:“1px solid rgba(255,255,255,0.1)”, borderRadius:12,
+padding:“14px 44px 14px 44px”, color:”#fff”, fontSize:14,
+outline:“none”, transition:“border 0.2s”, boxSizing:“border-box”,
+};
+
+return (
+<div style={{
+minHeight:“100vh”, background:”#090909”,
+display:“flex”, flexDirection:“column”, alignItems:“center”, justifyContent:“center”,
+fontFamily:”‘Barlow’,‘DM Sans’,sans-serif”, padding:“24px 24px 40px”,
+position:“relative”, overflow:“hidden”,
+}}>
+{/* BG */}
+<div style={{
+position:“absolute”, inset:0, pointerEvents:“none”,
+backgroundImage:“radial-gradient(ellipse at 50% 0%,rgba(255,107,0,0.12) 0%,transparent 55%), linear-gradient(rgba(255,107,0,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.02) 1px,transparent 1px)”,
+backgroundSize:“100% 100%,32px 32px,32px 32px”,
+}}/>
+
+```
+  <div style={{ position:"relative", zIndex:10, width:"100%", maxWidth:400 }}>
+    {/* Logo */}
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:32 }}>
+      <div style={{
+        width:56, height:56, borderRadius:18,
+        background:"linear-gradient(135deg,#FF6B00,#FF9A3C)",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        boxShadow:"0 12px 40px rgba(255,107,0,0.35)", marginBottom:14,
+      }}>
+        <Zap size={28} color="#fff" fill="#fff"/>
+      </div>
+      <div style={{ fontWeight:900, fontSize:22, letterSpacing:1.5, color:"#fff" }}>
+        TITAN <span style={{ color:"#FF6B00" }}>PRO</span>
+      </div>
+      <div style={{ fontSize:13, color:"rgba(255,255,255,0.35)", marginTop:4 }}>
+        {mode==="login" ? "Entre na sua conta" : "Crie sua conta grátis"}
+      </div>
+    </div>
+
+    {/* ── BOTÃO GOOGLE — destaque principal ── */}
+    <button
+      onClick={handleGoogle}
+      disabled={googleLoading}
+      style={{
+        width:"100%", padding:"16px",
+        background:googleLoading?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.96)",
+        border:"none", borderRadius:14, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center", gap:12,
+        fontSize:14, fontWeight:700, color:"#1a1a1a",
+        marginBottom:16, transition:"all 0.2s",
+        boxShadow:"0 4px 24px rgba(255,255,255,0.12)",
+        opacity:googleLoading?0.7:1,
+      }}
+      onMouseEnter={e=>!googleLoading&&(e.currentTarget.style.background="rgba(255,255,255,1)")}
+      onMouseLeave={e=>!googleLoading&&(e.currentTarget.style.background="rgba(255,255,255,0.96)")}
+    >
+      {googleLoading
+        ? <><Zap size={16} color="#FF6B00" style={{ animation:"spin 0.8s linear infinite" }}/> Conectando...</>
+        : <><GoogleIcon size={20}/> Continuar com Google</>
+      }
+    </button>
+
+    {/* Divisor */}
+    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+      <div style={{ flex:1, height:1, background:"rgba(255,255,255,0.08)" }}/>
+      <span style={{ fontSize:11, color:"rgba(255,255,255,0.25)", letterSpacing:0.5 }}>ou entre com e-mail</span>
+      <div style={{ flex:1, height:1, background:"rgba(255,255,255,0.08)" }}/>
+    </div>
+
+    {/* Formulário e-mail + senha */}
+    <form onSubmit={handleEmail} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      {/* E-mail */}
+      <div style={{ position:"relative" }}>
+        <Mail size={16} color="rgba(255,255,255,0.25)" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+        <input
+          type="email" placeholder="seu@email.com"
+          value={email} onChange={e=>setEmail(e.target.value)}
+          style={inputStyle}
+          onFocus={e=>e.target.style.borderColor="rgba(255,107,0,0.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.1)"}
+        />
+      </div>
+
+      {/* Senha */}
+      <div style={{ position:"relative" }}>
+        <KeyRound size={16} color="rgba(255,255,255,0.25)" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+        <input
+          type={showPass?"text":"password"} placeholder="Senha"
+          value={password} onChange={e=>setPassword(e.target.value)}
+          style={inputStyle}
+          onFocus={e=>e.target.style.borderColor="rgba(255,107,0,0.5)"}
+          onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.1)"}
+        />
+        <button type="button" onClick={()=>setShowPass(!showPass)} style={{
+          position:"absolute", right:14, top:"50%", transform:"translateY(-50%)",
+          background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.25)", padding:0,
+        }}>
+          {showPass ? <EyeOff size={16}/> : <Eye size={16}/>}
+        </button>
+      </div>
+
+      {/* Erro */}
+      {error && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, color:"#EF4444", fontSize:12, padding:"8px 12px", background:"rgba(239,68,68,0.08)", borderRadius:8, border:"1px solid rgba(239,68,68,0.2)" }}>
+          <AlertCircle size={13}/> {error}
+        </div>
+      )}
+
+      {/* Esqueceu senha */}
+      {mode==="login" && (
+        <div style={{ textAlign:"right" }}>
+          <button type="button" style={{ background:"none", border:"none", cursor:"pointer", fontSize:12, color:"rgba(255,107,0,0.7)" }}>
+            Esqueci minha senha
+          </button>
+        </div>
+      )}
+
+      {/* Submit */}
+      <button type="submit" disabled={loading} style={{
+        width:"100%", padding:"15px",
+        background:loading?"rgba(255,107,0,0.5)":"linear-gradient(135deg,#FF6B00,#FF9A3C)",
+        border:"none", borderRadius:14, cursor:"pointer", color:"#fff",
+        fontSize:14, fontWeight:800, letterSpacing:0.5,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+        marginTop:4, boxShadow:"0 6px 24px rgba(255,107,0,0.25)",
+        transition:"all 0.2s",
+      }}>
+        {loading
+          ? <><Zap size={16} style={{ animation:"spin 0.8s linear infinite" }}/> Entrando...</>
+          : <><LogIn size={16}/> {mode==="login" ? "Entrar" : "Criar conta"}</>
+        }
+      </button>
+    </form>
+
+    {/* Trocar modo */}
+    <div style={{ textAlign:"center", marginTop:20, fontSize:13, color:"rgba(255,255,255,0.3)" }}>
+      {mode==="login" ? "Não tem conta? " : "Já tem conta? "}
+      <button onClick={()=>{ setMode(mode==="login"?"signup":"login"); setError(""); }} style={{
+        background:"none", border:"none", cursor:"pointer",
+        color:"#FF6B00", fontWeight:700, fontSize:13,
+      }}>
+        {mode==="login" ? "Criar gratuitamente" : "Entrar"}
+      </button>
+    </div>
+
+    {/* LGPD */}
+    <div style={{ textAlign:"center", marginTop:16, fontSize:10, color:"rgba(255,255,255,0.15)", lineHeight:1.6 }}>
+      <ShieldCheck size={10} style={{ marginRight:4, verticalAlign:"middle" }}/>
+      Seus dados são protegidos conforme a LGPD · titanpro.app.br
+    </div>
+  </div>
+
+  <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+</div>
+```
+
+);
+}
+
+// ─── PÁGINA DE PREÇOS ─────────────────────────────────────────────────────────
+function PricingPage({ currentPlan, onSelect }) {
+const [hovered, setHovered] = useState(“pro”);
+
+return (
+<div style={{
+minHeight:“100vh”, background:”#090909”,
+fontFamily:”‘Barlow’,‘DM Sans’,sans-serif”, color:”#fff”,
+overflow:“hidden”, position:“relative”,
+}}>
+<div style={{
+position:“absolute”, inset:0, pointerEvents:“none”,
+backgroundImage:“radial-gradient(ellipse at 50% 0%,rgba(255,107,0,0.1) 0%,transparent 55%), linear-gradient(rgba(255,107,0,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.02) 1px,transparent 1px)”,
+backgroundSize:“100% 100%,32px 32px,32px 32px”,
+}}/>
+
+```
+  {/* Header */}
+  <div style={{
+    position:"relative", zIndex:10, padding:"18px 22px",
+    display:"flex", justifyContent:"space-between", alignItems:"center",
+    borderBottom:"1px solid rgba(255,107,0,0.1)",
+  }}>
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <div style={{ width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#FF6B00,#FF9A3C)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <Zap size={14} color="#fff" fill="#fff"/>
+      </div>
+      <span style={{ fontWeight:900, fontSize:15, letterSpacing:1 }}>TITAN <span style={{ color:"#FF6B00" }}>PRO</span></span>
+    </div>
+    <ProBadge plan={currentPlan}/>
+  </div>
+
+  <div style={{ position:"relative", zIndex:10, padding:"26px 20px" }}>
+    {/* Headline */}
+    <div style={{ textAlign:"center", marginBottom:26 }}>
+      <div style={{
+        display:"inline-flex", alignItems:"center", gap:6,
+        background:"rgba(255,107,0,0.1)", border:"1px solid rgba(255,107,0,0.25)",
+        borderRadius:20, padding:"4px 14px",
+        fontSize:9, fontWeight:800, color:"#FF6B00", letterSpacing:1.5, marginBottom:14,
+      }}>
+        <Sparkles size={9}/> UPGRADE SEU TREINO
+      </div>
+      <h1 style={{ fontSize:30, fontWeight:900, margin:"0 0 8px", lineHeight:1.1, letterSpacing:-0.5 }}>
+        Escolha seu<br/><span style={{ color:"#FF6B00" }}>nível de performance</span>
+      </h1>
+      <p style={{ fontSize:13, color:"rgba(255,255,255,0.3)", margin:0 }}>Cancele quando quiser. Sem fidelidade.</p>
+    </div>
+
+    {/* Cards */}
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      {PLANS.map((plan) => {
+        const isActive = currentPlan===plan.id;
+        const isHov = hovered===plan.id;
+        const isPro = plan.id==="pro";
+        const isUltra = plan.id==="ultra";
+
+        return (
+          <div key={plan.id}
+            onMouseEnter={()=>setHovered(plan.id)}
+            onMouseLeave={()=>setHovered(null)}
+            onClick={()=>onSelect(plan.id)}
+            style={{
+              borderRadius:20,
+              background:isPro?"rgba(255,107,0,0.05)":isUltra?"rgba(139,92,246,0.05)":"rgba(255,255,255,0.02)",
+              border:isPro
+                ? `2px solid ${isHov||isActive?"#FF6B00":"rgba(255,107,0,0.28)"}`
+                : isUltra
+                  ? `2px solid ${isHov||isActive?"#8B5CF6":"rgba(139,92,246,0.22)"}`
+                  : `1px solid ${isHov?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.06)"}`,
+              padding:"20px", cursor:"pointer", transition:"all 0.2s",
+              transform:isPro&&(isHov||isActive)?"scale(1.02)":"scale(1)",
+              boxShadow:isPro&&(isHov||isActive)?"0 12px 40px rgba(255,107,0,0.18)":isUltra&&(isHov||isActive)?"0 12px 40px rgba(139,92,246,0.18)":"none",
+              position:"relative", overflow:"hidden",
+            }}
+          >
+            {/* Badge */}
+            {plan.badge && (
+              <div style={{
+                position:"absolute", top:14, right:14,
+                fontSize:9, fontWeight:900, letterSpacing:1.5,
+                padding:"3px 10px", borderRadius:20,
+                background:plan.badgeBg||"rgba(255,107,0,0.2)", color:"#fff",
+              }}>{plan.badge}</div>
+            )}
+
+            {/* Nome + Preço */}
+            <div style={{ display:"flex", alignItems:"flex-end", marginBottom:16 }}>
+              <div style={{ flex:1 }}>
+                <div style={{
+                  fontSize:isPro?30:22, fontWeight:900,
+                  letterSpacing:isPro?3:1.5, color:plan.accentColor,
+                  fontFamily:"'Barlow Condensed','Barlow',sans-serif",
+                  display:"flex", alignItems:"center", gap:6,
+                }}>
+                  <plan.PlanIcon size={isPro?18:15} fill={isPro||isUltra?"currentColor":"none"}/>
+                  {plan.name}
+                </div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.28)", marginTop:2 }}>{plan.tagline}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ display:"flex", alignItems:"baseline" }}>
+                  <span style={{ fontSize:plan.price==="R$0"?22:30, fontWeight:900, color:"#fff" }}>{plan.price}</span>
+                  {plan.cents&&<span style={{ fontSize:15, fontWeight:700, color:"rgba(255,255,255,0.5)" }}>{plan.cents}</span>}
+                </div>
+                {plan.period&&<div style={{ fontSize:10, color:"rgba(255,255,255,0.28)" }}>{plan.period}</div>}
+              </div>
+            </div>
+
+            {/* Divisor */}
+            <div style={{ height:1, background:isPro?"rgba(255,107,0,0.18)":isUltra?"rgba(139,92,246,0.18)":"rgba(255,255,255,0.05)", marginBottom:14 }}/>
+
+            {/* Features */}
+            <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:plan.locked.length?10:0 }}>
+              {plan.features.map((f,i)=>(
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <Check size={13} color={plan.accentColor}/>
+                  <span style={{ fontSize:13, color:"rgba(255,255,255,0.7)" }}>{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Locked */}
+            {plan.locked.length>0&&(
+              <div style={{ display:"flex", flexDirection:"column", gap:7, marginTop:8 }}>
+                {plan.locked.map((f,i)=>(
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:10, opacity:0.28 }}>
+                    <Lock size={11} color="rgba(255,255,255,0.4)"/>
+                    <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", textDecoration:"line-through" }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* CTA */}
+            <button style={{
+              width:"100%", marginTop:18, padding:"14px",
+              background:plan.ctaBg, border:"none", borderRadius:12,
+              cursor:"pointer", color:plan.ctaColor, fontSize:13, fontWeight:800,
+              letterSpacing:0.5, transition:"all 0.2s", opacity:isActive?0.6:1,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+            }}>
+              {isActive
+                ? <><CheckCircle size={14}/> Plano atual</>
+                : <><plan.PlanIcon size={14} fill={plan.id!=="free"?"currentColor":"none"}/> {plan.cta}</>
+              }
+            </button>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Rodapé */}
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:18, marginTop:24, fontSize:11, color:"rgba(255,255,255,0.2)" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:5 }}><CreditCard size={11}/> Pagamento seguro</div>
+      <div style={{ display:"flex", alignItems:"center", gap:5 }}><ShieldCheck size={11}/> LGPD</div>
+      <div style={{ display:"flex", alignItems:"center", gap:5 }}><X size={11}/> Sem fidelidade</div>
+    </div>
+    <div style={{ textAlign:"center", marginTop:8, fontSize:10, color:"rgba(255,255,255,0.12)" }}>titanpro.app.br</div>
+  </div>
+</div>
+```
+
+);
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+function HomePage({ userPlan, onUpgrade }) {
+const NAV = [
+{ Icon:Dumbbell,  label:“Treino”,      plan:“free” },
+{ Icon:Brain,     label:“KRONOS”,      plan:“pro” },
+{ Icon:Leaf,      label:“Nutrição”,    plan:“free” },
+{ Icon:BarChart2, label:“Evolução”,    plan:“free” },
+{ Icon:Calendar,  label:“Mesociclo”,   plan:“pro” },
+{ Icon:Flame,     label:“Heatmap”,     plan:“pro” },
+{ Icon:Trophy,    label:“Records”,     plan:“free” },
+{ Icon:Activity,  label:“Análise RPE”, plan:“ultra” },
+];
+
+return (
+<div style={{ minHeight:“100vh”, background:”#090909”, fontFamily:”‘Barlow’,‘DM Sans’,sans-serif”, color:”#fff” }}>
+{/* Header — PRO badge SEMPRE visível */}
+<header style={{
+position:“sticky”, top:0, zIndex:100,
+background:“rgba(9,9,9,0.95)”, backdropFilter:“blur(20px)”,
+borderBottom:“1px solid rgba(255,107,0,0.1)”,
+padding:“0 20px”, height:56,
+display:“flex”, alignItems:“center”, justifyContent:“space-between”,
+}}>
+<div style={{ display:“flex”, alignItems:“center”, gap:8 }}>
+<div style={{ width:28, height:28, borderRadius:8, background:“linear-gradient(135deg,#FF6B00,#FF9A3C)”, display:“flex”, alignItems:“center”, justifyContent:“center” }}>
+<Zap size={14} color="#fff" fill="#fff"/>
+</div>
+<span style={{ fontWeight:900, fontSize:15, letterSpacing:1 }}>TITAN <span style={{ color:”#FF6B00” }}>PRO</span></span>
+</div>
+<ProBadge plan={userPlan} onClick={onUpgrade}/>
+</header>
+
+```
+  <div style={{ padding:"24px 20px" }}>
+    <div style={{ marginBottom:22 }}>
+      <div style={{ fontSize:10, color:"rgba(255,255,255,0.22)", letterSpacing:1.5, marginBottom:4 }}>BOM DIA, ATLETA</div>
+      <h2 style={{ fontSize:24, fontWeight:900, margin:0, display:"flex", alignItems:"center", gap:10 }}>
+        Pronto pro treino? <Flame size={22} color="#FF6B00"/>
+      </h2>
+    </div>
+
+    {/* Banner upgrade Free */}
+    {userPlan==="free"&&(
+      <div onClick={onUpgrade} style={{
+        background:"rgba(255,107,0,0.07)", border:"1px solid rgba(255,107,0,0.28)",
+        borderRadius:16, padding:"16px 18px", marginBottom:20,
+        cursor:"pointer", display:"flex", alignItems:"center", gap:14,
+      }}>
+        <div style={{ width:42, height:42, borderRadius:12, background:"linear-gradient(135deg,#FF6B00,#FF9A3C)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <Brain size={20} color="#fff"/>
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:13, fontWeight:800, marginBottom:2 }}>Desbloqueie o KRONOS completo</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.32)" }}>Assine o PRO por R$29,90/mês</div>
+        </div>
+        <div style={{ background:"linear-gradient(135deg,#FF6B00,#FF9A3C)", borderRadius:10, padding:"6px 14px", fontSize:11, fontWeight:800, color:"#fff", display:"flex", alignItems:"center", gap:5 }}>
+          <Zap size={11} fill="#fff"/> PRO
+        </div>
+      </div>
+    )}
+
+    {/* Grid */}
+    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+      {NAV.map(({ Icon, label, plan },i)=>{
+        const locked=(plan==="pro"&&userPlan==="free")||(plan==="ultra"&&userPlan!=="ultra");
+        const accent=plan==="ultra"?"#A855F7":"#FF6B00";
+        return (
+          <div key={i}
+            onClick={()=>locked&&onUpgrade()}
+            style={{
+              background:locked?"rgba(255,255,255,0.02)":"rgba(255,255,255,0.04)",
+              border:locked?"1px solid rgba(255,255,255,0.06)":`1px solid rgba(255,107,0,0.18)`,
+              borderRadius:16, padding:"18px 14px",
+              cursor:locked?"pointer":"default", opacity:locked?0.6:1,
+              position:"relative", transition:"all 0.2s",
+            }}
+          >
+            <Icon size={26} color={locked?"rgba(255,255,255,0.25)":accent} style={{ marginBottom:10 }}/>
+            <div style={{ fontSize:13, fontWeight:700 }}>{label}</div>
+            {locked&&(
+              <div style={{
+                position:"absolute", top:10, right:10,
+                background:plan==="ultra"?"rgba(139,92,246,0.12)":"rgba(255,107,0,0.12)",
+                border:`1px solid ${plan==="ultra"?"rgba(139,92,246,0.3)":"rgba(255,107,0,0.3)"}`,
+                borderRadius:20, padding:"2px 7px",
+                fontSize:8, fontWeight:800,
+                color:plan==="ultra"?"#A855F7":"#FF6B00",
+                display:"flex", alignItems:"center", gap:3,
+              }}>
+                <Lock size={7}/>{plan==="ultra"?"ULTRA":"PRO"}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    <button onClick={onUpgrade} style={{
+      width:"100%", marginTop:18, padding:"14px",
+      background:"rgba(255,107,0,0.07)", border:"1px solid rgba(255,107,0,0.22)",
+      borderRadius:14, cursor:"pointer", color:"#FF6B00",
+      fontSize:13, fontWeight:800, letterSpacing:0.5,
+      display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+    }}>
+      <Crown size={14}/> Ver planos PRO e ULTRA <ArrowRight size={14}/>
+    </button>
+  </div>
+</div>
+```
+
+);
+}
+
+// ─── APP PRINCIPAL ────────────────────────────────────────────────────────────
+export default function TitanProApp() {
+const [screen, setScreen] = useState(“onboarding”);
+const [userPlan, setUserPlan] = useState(“free”);
+
+function handleSelectPlan(id) {
+if (id!==“free”) setUserPlan(id);
+setScreen(“home”);
+}
+
+if (screen===“onboarding”) return <OnboardingCarousel onFinish={()=>setScreen(“auth”)}/>;
+if (screen===“auth”)       return <AuthScreen onAuth={()=>setScreen(“home”)}/>;
+if (screen===“pricing”)    return <PricingPage currentPlan={userPlan} onSelect={handleSelectPlan}/>;
+return <HomePage userPlan={userPlan} onUpgrade={()=>setScreen(“pricing”)}/>;
+}

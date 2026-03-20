@@ -1094,3 +1094,735 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* ══════════════════════════════════════════
+   FITFLOW-AI NEW LAYOUT — Login, Onboarding, Pricing
+   Design: Dark #090909 · Orange #FF6B00 · Barlow
+══════════════════════════════════════════ */
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #090909;
+  z-index: 500;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  padding: 24px 24px 40px;
+  overflow: hidden;
+}
+#loginScreen.show { display: flex; }
+#loginBg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,107,0,0.12) 0%, transparent 55%);
+}
+#loginBgGrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,107,0,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,107,0,0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+#loginContent {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 400px;
+}
+#loginLogoWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+#loginLogoIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 40px rgba(255,107,0,0.35);
+  margin-bottom: 14px;
+}
+#loginLogoText {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 1.5px;
+  color: #fff;
+}
+#loginLogoText span { color: #FF6B00; }
+#loginLogoSub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 4px;
+}
+#btnGoogle {
+  width: 100%;
+  padding: 16px;
+  background: rgba(255,255,255,0.96);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 24px rgba(255,255,255,0.12);
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+}
+#btnGoogle:hover { background: rgba(255,255,255,1); }
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.login-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+.login-divider span {
+  font-size: 11px;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+#btnShowEmail {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  transition: all 0.2s;
+  margin-bottom: 16px;
+}
+#btnShowEmail:hover { border-color: rgba(255,107,0,0.4); color: #fff; }
+#loginRegisterLink {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+#loginRegisterLink span { color: #FF6B00; font-weight: 700; }
+#loginLgpd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.15);
+  text-align: center;
+  margin-top: 24px;
+}
+
+/* ── EMAIL LOGIN SCREEN ── */
+#emailLoginScreen {
+  background: #090909;
+}
+.ff-input {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+}
+.ff-input:focus {
+  border-color: rgba(255,107,0,0.5) !important;
+}
+
+/* ── ONBOARDING — FitFlow carousel ── */
+#onboarding {
+  position: fixed;
+  inset: 0;
+  background: #090909;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  overflow: hidden;
+}
+#ff-ob-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: background 0.5s;
+}
+#ff-ob-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,107,0,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,107,0,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+#ff-ob-header {
+  position: relative;
+  z-index: 10;
+  padding: 20px 24px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#ff-ob-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: #fff;
+}
+#ff-ob-logo-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#ff-ob-skip {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.25);
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-family: 'Barlow', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#ff-ob-dots {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 0 0;
+}
+.ff-dot {
+  height: 6px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  background: rgba(255,255,255,0.12);
+  width: 6px;
+  transition: all 0.3s;
+  padding: 0;
+}
+.ff-dot-active {
+  background: #FF6B00;
+  width: 24px;
+}
+#ff-ob-slides {
+  flex: 1;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+.ff-slide {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px 28px;
+  height: 100%;
+  animation: ffSlideIn 0.26s ease;
+}
+.ff-slide-active {
+  display: flex;
+}
+@keyframes ffSlideIn {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.ff-slide-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,107,0,0.07);
+  border: 1px solid rgba(255,107,0,0.2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 1.5px;
+  margin-bottom: 22px;
+  align-self: flex-start;
+}
+.ff-slide-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.ff-slide-title {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.1;
+  margin: 0 0 14px;
+  letter-spacing: -0.5px;
+  white-space: pre-line;
+  color: #fff;
+}
+.ff-slide-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.7;
+  margin: 0 0 18px;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  font-weight: 400;
+}
+.ff-slide-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  align-self: flex-start;
+  font-family: 'Barlow', sans-serif;
+}
+/* Visuals */
+.ff-visual-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 90px;
+  padding: 0 8px;
+  position: relative;
+  margin-top: 8px;
+}
+.ff-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+}
+.ff-chart-badge {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  background: rgba(255,107,0,0.12);
+  border: 1px solid rgba(255,107,0,0.4);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #FF6B00;
+  font-family: 'Barlow', sans-serif;
+}
+.ff-visual-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,107,0,0.22);
+  background: rgba(255,107,0,0.06);
+  box-shadow: 0 0 30px rgba(255,107,0,0.1);
+  margin-top: 8px;
+}
+.ff-timer-num {
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  font-family: monospace;
+  line-height: 1;
+  margin-top: 4px;
+}
+.ff-timer-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 1.5px;
+  margin-top: 3px;
+}
+.ff-visual-icons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+.ff-eco-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  justify-content: center;
+}
+.ff-eco-icon span {
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.5px;
+  margin-top: 28px;
+  position: absolute;
+  font-family: 'Barlow', sans-serif;
+}
+.ff-visual-icons .ff-eco-icon {
+  position: relative;
+}
+.ff-visual-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ff-chat-msg {
+  max-width: 82%;
+  border-radius: 14px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #fff;
+  line-height: 1.6;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  font-weight: 400;
+}
+.ff-chat-user {
+  align-self: flex-end;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px 14px 4px 14px;
+}
+.ff-chat-ai {
+  align-self: flex-start;
+  background: rgba(255,107,0,0.12);
+  border: 1px solid rgba(255,107,0,0.3);
+  border-radius: 14px 14px 14px 4px;
+}
+.ff-chat-ai-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: #FF6B00;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-family: 'Barlow', sans-serif;
+}
+#ff-ob-footer {
+  position: relative;
+  z-index: 10;
+  padding: 0 28px 44px;
+}
+#ff-ob-cta {
+  width: 100%;
+  padding: 18px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+}
+#ff-ob-cta.ff-cta-final {
+  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
+  border-color: transparent;
+  box-shadow: 0 8px 30px rgba(255,107,0,0.3);
+}
+
+/* ── PRICING SCREEN ── */
+#pricingScreen {
+  position: fixed;
+  inset: 0;
+  background: #090909;
+  z-index: 700;
+  overflow-y: auto;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+}
+.ff-pricing-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(255,107,0,0.1) 0%, transparent 55%),
+    linear-gradient(rgba(255,107,0,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,107,0,0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  z-index: 0;
+}
+.ff-pricing-header {
+  position: relative;
+  z-index: 1;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,107,0,0.1);
+}
+.ff-ob-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ff-pricing-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+.ff-pricing-body {
+  position: relative;
+  z-index: 1;
+  padding: 26px 20px 40px;
+}
+.ff-pricing-headline {
+  text-align: center;
+  margin-bottom: 26px;
+}
+.ff-pricing-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,107,0,0.1);
+  border: 1px solid rgba(255,107,0,0.25);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #FF6B00;
+  letter-spacing: 1.5px;
+  margin-bottom: 14px;
+}
+.ff-pricing-title {
+  font-size: 28px;
+  font-weight: 900;
+  margin: 0 0 8px;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  color: #fff;
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+}
+.ff-pricing-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.3);
+  margin: 0;
+}
+.ff-plan-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ff-plan-card {
+  border-radius: 20px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+.ff-plan-card:hover { transform: scale(1.01); }
+.ff-plan-pro {
+  background: rgba(255,107,0,0.05);
+  border: 2px solid rgba(255,107,0,0.28);
+}
+.ff-plan-pro:hover { border-color: #FF6B00; box-shadow: 0 12px 40px rgba(255,107,0,0.18); transform: scale(1.02); }
+.ff-plan-ultra {
+  background: rgba(139,92,246,0.05);
+  border: 2px solid rgba(139,92,246,0.22);
+}
+.ff-plan-ultra:hover { border-color: #8B5CF6; box-shadow: 0 12px 40px rgba(139,92,246,0.18); }
+.ff-plan-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(255,107,0,0.2);
+  color: #fff;
+}
+.ff-plan-top {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+.ff-plan-name {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ff-plan-tagline {
+  font-size: 11px;
+  color: rgba(255,255,255,0.28);
+  margin-top: 2px;
+}
+.ff-plan-price-wrap {
+  margin-left: auto;
+  text-align: right;
+}
+.ff-plan-price {
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+}
+.ff-plan-cents {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+}
+.ff-plan-period {
+  font-size: 10px;
+  color: rgba(255,255,255,0.28);
+}
+.ff-plan-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+  margin-bottom: 14px;
+}
+.ff-plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+.ff-feat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+}
+.ff-feat-locked {
+  opacity: 0.28;
+  text-decoration: line-through;
+  color: rgba(255,255,255,0.4);
+}
+.ff-plan-cta {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+}
+.ff-pricing-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 24px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+}
+.ff-pricing-footer div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ff-pricing-url {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.12);
+}
+
+/* ══════════════════════════════════════════
+   FITFLOW — Transform Engine visual overrides
+══════════════════════════════════════════ */
+.te-ff-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,107,0,0.06) 0%, transparent 50%),
+    linear-gradient(rgba(255,107,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,107,0,0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+  z-index: 0;
+}
+#transformsScreen {
+  position: relative;
+}
+#transformsScreen .transforms-header,
+#transformsScreen .transforms-content {
+  position: relative;
+  z-index: 1;
+}
+.te-ff-logo-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.transforms-header-title {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif !important;
+  font-weight: 900 !important;
+  font-size: 1rem !important;
+  letter-spacing: 1px !important;
+}
+.transforms-kernel-badge {
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+.transforms-graph-box {
+  height: 380px;
+}
