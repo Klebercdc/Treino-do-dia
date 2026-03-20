@@ -1290,7 +1290,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   z-index: 10;
   padding: 20px 24px 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
 }
 #ff-ob-logo {
