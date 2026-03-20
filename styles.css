@@ -1392,11 +1392,11 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   margin-bottom: 20px;
 }
 .ff-slide-title {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 900;
-  line-height: 1.1;
-  margin: 0 0 14px;
-  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  letter-spacing: -0.3px;
   white-space: pre-line;
   color: #fff;
 }

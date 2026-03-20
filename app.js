@@ -1828,8 +1828,10 @@ function obNext(step) {
 }
 function obFinish() {
   localStorage.setItem("titan_onboarded","1");
-  document.getElementById("onboarding").classList.remove("show");
-  setTimeout(() => openInstrucoes(), 500);
+  const ob = document.getElementById("onboarding");
+  if (ob) { ob.style.display = "none"; ob.classList.remove("show"); }
+  const ls = document.getElementById("loginScreen");
+  if (ls) ls.style.display = "flex";
 }
 
 /* IntersectionObserver timer removido */
