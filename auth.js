@@ -10,17 +10,6 @@ const _sb = supabase.createClient(
 // TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
 // ══════════════════════════════════════════════════════
 async function getAuthHeaders() {
-  // Sempre renova o token para evitar expirado
-  try {
-    const { data: refreshData } = await _sb.auth.refreshSession();
-    if (refreshData?.session?.access_token) {
-      return {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + refreshData.session.access_token
-      };
-    }
-  } catch {}
-  // Fallback: usa sessão atual
   const { data: { session } } = await _sb.auth.getSession();
   const token = session?.access_token;
   return token
