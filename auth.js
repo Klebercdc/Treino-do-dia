@@ -140,15 +140,22 @@ const _dbSync = {
 let _authMenuOpen = false;
 let _appUnlocked = false;
 
+function hideSplash() {
+  const el = document.getElementById('splashScreen');
+  if (!el || el.style.display === 'none') return;
+  el.style.animation = 'splashAutoHide 0.4s ease forwards';
+  setTimeout(() => { el.style.display = 'none'; }, 400);
+}
+
 function showApp() {
   if (_appUnlocked) return;
   _appUnlocked = true;
-  document.getElementById('splashScreen').style.display = 'none';
+  hideSplash();
   document.getElementById('loginScreen').style.display = 'none';
 }
 
 function showLogin() {
-  document.getElementById('splashScreen').style.display = 'none';
+  hideSplash();
   const login = document.getElementById('loginScreen');
   login.style.display = 'flex';
 }
