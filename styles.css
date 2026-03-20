@@ -901,7 +901,8 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255,107,0,0.12);
   padding: 0 16px;
-  height: 56px;
+  padding-top: env(safe-area-inset-top);
+  height: calc(56px + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -922,6 +923,12 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+.transforms-back-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.85);
 }
 .transforms-kernel-badge {
   font-size: 0.55rem;
@@ -947,8 +954,8 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 .transforms-tab {
   display: flex;
   align-items: center;
-  padding: 7px 14px;
-  border-radius: 8px;
+  padding: 7px 16px;
+  border-radius: 100px;
   border: none;
   cursor: pointer;
   font-size: 0.72rem;
@@ -1002,17 +1009,18 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .te-legend-chip:active { opacity: 0.7; }
 .te-catalog-item {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 12px;
   padding: 12px 14px;
   display: flex;
   align-items: center;
   gap: 10px;
   justify-content: space-between;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
-.te-catalog-item:active { border-color: rgba(255,107,0,0.3); }
+.te-catalog-item:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,107,0,0.2); }
+.te-catalog-item:active { border-color: rgba(255,107,0,0.4); }
 .transforms-scan-btn {
   display: flex;
   align-items: center;
@@ -1031,8 +1039,8 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .transforms-scan-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 .te-defensive-item {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 12px;
   padding: 12px 14px;
   display: flex;
@@ -1040,6 +1048,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   gap: 12px;
   transition: all 0.2s;
 }
+.te-defensive-item:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.13); }
 .te-defensive-item.hit { animation: tePulse 0.4s ease; }
 @keyframes tePulse {
   0%   { transform: scale(1); }
