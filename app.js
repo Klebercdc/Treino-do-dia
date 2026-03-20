@@ -2424,7 +2424,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
   document.getElementById("aiSuggestions")?.remove();
 
   // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
-  const displayText = isGerarTreino ? "⚡ Gerar treino para hoje" : text;
+  const displayText = isGerarTreino ? `${_ico('zap', 16)} Gerar treino para hoje` : text;
   addAIMessage("user", displayText);
   _aiHistory.push({ role: "user", content: text });
 
@@ -2532,7 +2532,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
   } catch (err) {
     removeThinking();
-    addAIMessage("assistant", "⚠️ Erro: " + err.message);
+    addAIMessage("assistant", `${_ico('alert-triangle', 16)} Erro: ` + err.message);
   } finally {
     _aiTyping = false;
     if (sendBtn) sendBtn.style.opacity = "1";

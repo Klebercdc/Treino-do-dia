@@ -405,7 +405,7 @@ async function runDefensiveScan() {
   const btn = document.getElementById('btnDefensiveScan');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Analisando...`;
+    btn.innerHTML = `${_ico('rotate-cw', 13)} Analisando...`;
   }
 
   const logBox   = document.getElementById('defensiveLog');
@@ -451,7 +451,7 @@ async function runDefensiveScan() {
   _teScanning = false;
   if (btn) {
     btn.disabled = false;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Executar Scan`;
+    btn.innerHTML = `${_ico('shield', 13)} Executar Scan`;
   }
 }
 

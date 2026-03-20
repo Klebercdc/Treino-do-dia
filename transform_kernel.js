@@ -8,50 +8,50 @@ const TRANSFORMS = [
 id: 'treino',
 keywords: ['treino','exercício','musculação','série','repetição','gerar treino','montar treino','academia','supino','agachamento','barra'],
 action: () => { navTo('treino'); closeHome(); },
-botao: { label: '💪 Ir para Treino', cor: 'accent' }
+botao: { label: 'Ir para Treino', icon: 'dumbbell', cor: 'accent' }
 },
 {
 id: 'basal',
 // FIX: basal antes de dieta para 'caloria/kcal/tmb/tdee' não acionar dieta
 keywords: ['tmb','tdee','basal','metabolismo','gasto calórico','kcal','caloria'],
 action: () => openBasalSheet(),
-botao: { label: '🔥 Calculadora Basal', cor: 'accent' }
+botao: { label: 'Calculadora Basal', icon: 'flame', cor: 'accent' }
 },
 {
 id: 'dieta',
 keywords: ['dieta','alimentação','refeição','nutrição','gerar dieta','cardápio','proteína','carboidrato','o que comer','pós-treino'],
 action: () => openDietaSheet(),
-botao: { label: '🥗 Gerar Dieta', cor: 'green' }
+botao: { label: 'Gerar Dieta', icon: 'utensils', cor: 'green' }
 },
 {
 id: 'evolucao',
 keywords: ['evolução','progresso','gráfico','1rm','pr','recorde','melhora','cresci'],
 action: () => showEvoChart(),
-botao: { label: '📊 Ver Evolução', cor: 'blue' }
+botao: { label: 'Ver Evolução', icon: 'bar-chart-3', cor: 'blue' }
 },
 {
 id: 'plano',
 keywords: ['assinar','pro','plano','upgrade','premium','limite','consultas'],
 action: () => openPlanModal(),
-botao: { label: '⚡ Ver Planos', cor: 'accent' }
+botao: { label: 'Ver Planos', icon: 'zap', cor: 'accent' }
 },
 {
 id: 'mesociclo',
 keywords: ['mesociclo','periodização','bloco','semanas','plano de treino','deload'],
 action: () => abrirMesociclo(),
-botao: { label: '📅 Gerar Mesociclo', cor: 'purple' }
+botao: { label: 'Gerar Mesociclo', icon: 'calendar', cor: 'purple' }
 },
 {
 id: 'respiracao',
 keywords: ['respiração','relaxar','cool-down','estresse','ansiedade'],
 action: () => abrirRespiracao(),
-botao: { label: '🫁 Respiração', cor: 'blue' }
+botao: { label: 'Respiração', icon: 'wind', cor: 'blue' }
 },
 {
 id: 'historico',
 keywords: ['histórico','sessões anteriores','últimos treinos','ver treinos'],
 action: () => verHistorico(),
-botao: { label: '📋 Ver Histórico', cor: 'blue' }
+botao: { label: 'Ver Histórico', icon: 'list', cor: 'blue' }
 },
 ];
 
@@ -127,7 +127,7 @@ const c = colorMap[transform.botao.cor] || colorMap.accent;
 const btn = document.createElement('button');
 btn.className = 'transform-btn';
 btn.style.cssText = `display:block;width:100%;padding:12px 16px; background:rgba(${c.rgba},0.12); border:1.5px solid ${c.css};border-radius:12px;color:${c.css}; font-family:var(--font);font-size:0.88rem;font-weight:700; cursor:pointer;text-align:left;transition:all .15s; animation:fadeInUp .3s ease;`;
-btn.textContent = transform.botao.label;
+btn.innerHTML = `${_ico(transform.botao.icon || 'zap', 14)} ${transform.botao.label}`;
 
 // FIX BUG 1: touchstart + touchend para resetar cor
 btn.addEventListener('touchstart', () => {
