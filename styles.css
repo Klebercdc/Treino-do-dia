@@ -1080,3 +1080,17 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   padding: 14px;
   animation: teFadeIn 0.3s ease;
 }
+
+/* ═══════════════════════════════════════
+   LUCIDE ICONS — estilos globais
+═══════════════════════════════════════ */
+.lucide {
+  display: inline;
+  vertical-align: middle;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

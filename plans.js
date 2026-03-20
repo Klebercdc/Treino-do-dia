@@ -2,12 +2,12 @@
 // CONFIGURAÇÃO DO PLANO
 // ══════════════════════════════
 // URL de checkout carregada via /api/config (env var CHECKOUT_URL no Vercel)
-var HOTMART_CHECKOUT_URL = ‘’;
+var HOTMART_CHECKOUT_URL = '';
 var FREE_AI_LIMIT = 15; // valor padrão; sobrescrito após fetch do /api/config
 
 // Carrega configurações públicas do backend
 (function loadAppConfig() {
-fetch(’/api/config’)
+fetch('/api/config')
 .then(function(r) { return r.json(); })
 .then(function(cfg) {
 if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
@@ -16,7 +16,7 @@ if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
 .catch(function() { /* falha silenciosa — continua com defaults */ });
 })();
 
-var _userPlan = { plan: ‘free’, ai_requests_used: 0, limit: FREE_AI_LIMIT };
+var _userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT };
 
 // Busca plano do usuário no Supabase (anon pode ler o próprio registro via RLS)
 async function fetchUserPlan() {
@@ -24,9 +24,9 @@ try {
 const { data: { session } } = await _sb.auth.getSession();
 if (!session) return;
 const { data } = await _sb
-.from(‘user_plans’)
-.select(‘plan,ai_requests_used,period_start,expires_at’)
-.eq(‘user_id’, session.user.id)
+.from('user_plans')
+.select('plan,ai_requests_used,period_start,expires_at')
+.eq('user_id', session.user.id)
 .single();
 if (data) {
 _userPlan = { plan: data.plan, ai_requests_used: data.ai_requests_used || 0, limit: FREE_AI_LIMIT };
@@ -36,17 +36,17 @@ updatePlanBadge();
 }
 
 function updatePlanBadge() {
-const badge = document.getElementById(‘authMenuPlanBadge’);
+const badge = document.getElementById('authMenuPlanBadge');
 if (!badge) return;
-if (_userPlan.plan === ‘pro’) {
-badge.textContent = ‘PRO’;
-badge.style.background = ‘rgba(249,115,22,0.3)’;
-badge.style.color = ‘var(–accent)’;
+if (_userPlan.plan === 'pro') {
+badge.textContent = 'PRO';
+badge.style.background = 'rgba(249,115,22,0.3)';
+badge.style.color = 'var(–accent)';
 } else {
 var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
-badge.textContent = ’FREE · ’ + rem + ‘/’ + FREE_AI_LIMIT;
-badge.style.background = rem <= 3 ? ‘rgba(239,68,68,0.2)’ : ‘rgba(255,255,255,0.08)’;
-badge.style.color = rem <= 3 ? ‘#ef4444’ : ‘var(–text-2)’;
+badge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
+badge.style.background = rem <= 3 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
+badge.style.color = rem <= 3 ? '#ef4444' : 'var(–text-2)';
 }
 }
 
@@ -54,38 +54,38 @@ badge.style.color = rem <= 3 ? ‘#ef4444’ : ‘var(–text-2)’;
 // MODAL DE PLANOS
 // ══════════════════════════════
 function openPlanModal() {
-document.getElementById(‘planModal’).style.display = ‘block’;
-var usageEl = document.getElementById(‘planFreeUsage’);
-var statusEl = document.getElementById(‘planStatusMsg’);
-var btnAssinar = document.getElementById(‘btnAssinarPro’);
+document.getElementById('planModal').style.display = 'block';
+var usageEl = document.getElementById('planFreeUsage');
+var statusEl = document.getElementById('planStatusMsg');
+var btnAssinar = document.getElementById('btnAssinarPro');
 
-if (_userPlan.plan === ‘pro’) {
-if (usageEl) usageEl.textContent = ‘’;
-if (statusEl) statusEl.innerHTML = ‘✅ <strong style="color:var(--accent)">Você está no plano Pro.</strong> Obrigado!’;
-if (btnAssinar) { btnAssinar.textContent = ‘Gerenciar assinatura’; btnAssinar.onclick = assinarPro; }
+if (_userPlan.plan === 'pro') {
+if (usageEl) usageEl.textContent = '';
+if (statusEl) statusEl.innerHTML = '✅ <strong style="color:var(--accent)">Você está no plano Pro.</strong> Obrigado!';
+if (btnAssinar) { btnAssinar.textContent = 'Gerenciar assinatura'; btnAssinar.onclick = assinarPro; }
 } else {
 var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
-if (usageEl) usageEl.textContent = ‘Você usou ’ + _userPlan.ai_requests_used + ’ de ’ + FREE_AI_LIMIT + ’ consultas este mês (’ + rem + ’ restantes)’;
-if (statusEl) statusEl.innerHTML = rem === 0 ? ‘⚠️ Limite gratuito esgotado — faça upgrade para continuar.’ : ‘’;
-if (btnAssinar) { btnAssinar.textContent = ‘Assinar Pro — R$29,90/mês’; btnAssinar.onclick = assinarPro; }
+if (usageEl) usageEl.textContent = 'Você usou ' + _userPlan.ai_requests_used + ' de ' + FREE_AI_LIMIT + ' consultas este mês (' + rem + ' restantes)';
+if (statusEl) statusEl.innerHTML = rem === 0 ? '⚠️ Limite gratuito esgotado — faça upgrade para continuar.' : '';
+if (btnAssinar) { btnAssinar.textContent = 'Assinar Pro — R$29,90/mês'; btnAssinar.onclick = assinarPro; }
 }
 }
 
 function closePlanModal() {
-document.getElementById(‘planModal’).style.display = ‘none’;
+document.getElementById('planModal').style.display = 'none';
 }
 
 async function assinarPro() {
 if (!HOTMART_CHECKOUT_URL) {
-alert(‘Link de pagamento não configurado. Entre em contato com o suporte.’);
+alert('Link de pagamento não configurado. Entre em contato com o suporte.');
 return;
 }
 try {
 const { data: { session } } = await _sb.auth.getSession();
-var email = session && session.user && session.user.email ? ‘?email=’ + encodeURIComponent(session.user.email) : ‘’;
-window.open(HOTMART_CHECKOUT_URL + email, ‘_blank’);
+var email = session && session.user && session.user.email ? '?email=' + encodeURIComponent(session.user.email) : '';
+window.open(HOTMART_CHECKOUT_URL + email, '_blank');
 } catch(e) {
-window.open(HOTMART_CHECKOUT_URL, ‘_blank’);
+window.open(HOTMART_CHECKOUT_URL, '_blank');
 }
 }
 
@@ -93,30 +93,30 @@ window.open(HOTMART_CHECKOUT_URL, ‘_blank’);
 // PAYWALL
 // ══════════════════════════════
 function showPaywall(msg) {
-var modal = document.getElementById(‘paywallModal’);
+var modal = document.getElementById('paywallModal');
 if (!modal) return;
-var msgEl = document.getElementById(‘paywallMsg’);
+var msgEl = document.getElementById('paywallMsg');
 if (msgEl && msg) msgEl.textContent = msg;
-modal.style.display = ‘flex’;
+modal.style.display = 'flex';
 }
 
 function closePaywall() {
-var modal = document.getElementById(‘paywallModal’);
-if (modal) modal.style.display = ‘none’;
+var modal = document.getElementById('paywallModal');
+if (modal) modal.style.display = 'none';
 }
 
 // Intercepta respostas 402 (quota excedida) das APIs
 var _originalFetch = window.fetch;
 window.fetch = async function(url, opts) {
 var resp = await _originalFetch.apply(this, arguments);
-if (resp.status === 402 && typeof url === ‘string’ && url.startsWith(’/api/’)) {
+if (resp.status === 402 && typeof url === 'string' && url.startsWith('/api/')) {
 try {
 var clone = resp.clone();
 var json = await clone.json();
-if (json.code === ‘QUOTA_EXCEEDED’) {
+if (json.code === 'QUOTA_EXCEEDED') {
 _userPlan.ai_requests_used = json.used || FREE_AI_LIMIT;
 updatePlanBadge();
-showPaywall(json.error || ‘Limite do plano gratuito atingido. Faça upgrade para o Pro.’);
+showPaywall(json.error || 'Limite do plano gratuito atingido. Faça upgrade para o Pro.');
 }
 } catch(e) {}
 }
@@ -127,19 +127,19 @@ return resp;
 // EXPORTAR DADOS (LGPD)
 // ══════════════════════════════
 async function exportUserData() {
-showToast(‘Preparando seus dados para exportação…’, ‘info’, 3000);
+showToast('Preparando seus dados para exportação…', 'info', 3000);
 try {
-const resp = await apiFetch(’/api/lgpd-export’);
-if (!resp.ok) throw new Error(‘Falha na exportação’);
+const resp = await apiFetch('/api/lgpd-export');
+if (!resp.ok) throw new Error('Falha na exportação');
 const blob = await resp.blob();
 const url = URL.createObjectURL(blob);
-const a = document.createElement(‘a’);
-a.href = url; a.download = ‘titan-pro-meus-dados.json’;
+const a = document.createElement('a');
+a.href = url; a.download = 'titan-pro-meus-dados.json';
 document.body.appendChild(a); a.click();
 setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
-showToast(‘Dados exportados com sucesso!’, ‘success’, 3000);
+showToast('Dados exportados com sucesso!', 'success', 3000);
 } catch(e) {
-showToast(‘Erro ao exportar dados. Tente novamente.’, ‘error’, 4000);
+showToast('Erro ao exportar dados. Tente novamente.', 'error', 4000);
 }
 }
 
@@ -148,29 +148,29 @@ showToast(‘Erro ao exportar dados. Tente novamente.’, ‘error’, 4000);
 // ══════════════════════════════
 function confirmDeleteAccount() {
 var confirmed = window.confirm(
-‘ATENÇÃO: Esta ação é irreversível.\n\n’ +
-‘Todos os seus dados (treinos, histórico, perfil) serão permanentemente excluídos, conforme a LGPD (Art. 18, VI).\n\n’ +
-‘Deseja continuar?’
+'ATENÇÃO: Esta ação é irreversível.\n\n' +
+'Todos os seus dados (treinos, histórico, perfil) serão permanentemente excluídos, conforme a LGPD (Art. 18, VI).\n\n' +
+'Deseja continuar?'
 );
 if (!confirmed) return;
-var confirmed2 = window.confirm(‘Tem certeza absoluta? Esta ação NÃO pode ser desfeita.’);
+var confirmed2 = window.confirm('Tem certeza absoluta? Esta ação NÃO pode ser desfeita.');
 if (!confirmed2) return;
 deleteAccount();
 }
 
 async function deleteAccount() {
-showToast(‘Excluindo sua conta…’, ‘info’, 5000);
+showToast('Excluindo sua conta…', 'info', 5000);
 try {
-const resp = await apiFetch(’/api/lgpd-delete’, { method: ‘POST’ });
+const resp = await apiFetch('/api/lgpd-delete', { method: 'POST' });
 const json = await resp.json();
 if (json.ok) {
-showToast(‘Conta excluída. Obrigado por usar o TITAN PRO.’, ‘success’, 5000);
+showToast('Conta excluída. Obrigado por usar o TITAN PRO.', 'success', 5000);
 setTimeout(function() { window.location.reload(); }, 3000);
 } else {
-showToast(’Erro ao excluir conta: ’ + (json.error || ‘tente novamente’), ‘error’, 5000);
+showToast('Erro ao excluir conta: ' + (json.error || 'tente novamente'), 'error', 5000);
 }
 } catch(e) {
-showToast(‘Erro de conexão ao excluir conta.’, ‘error’, 4000);
+showToast('Erro de conexão ao excluir conta.', 'error', 4000);
 }
 }
 
@@ -179,7 +179,7 @@ showToast(‘Erro de conexão ao excluir conta.’, ‘error’, 4000);
 // ══════════════════════════════
 var _legalDocs = {
 privacy: {
-title: ‘Política de Privacidade — LGPD’,
+title: 'Política de Privacidade — LGPD',
 content: `
 <strong>Última atualização: março de 2026</strong><br><br>
 
@@ -217,8 +217,8 @@ Mantemos seus dados enquanto sua conta estiver ativa. Após exclusão da conta, 
 
 <strong>8. Seus Direitos (Art. 18, LGPD)</strong><br>
 Você tem direito a: confirmar a existência do tratamento; acessar seus dados; corrigir dados incompletos; portabilidade; exclusão. Para exercê-los:<br>
-• <em>Exportar dados</em>: Menu de conta → “Exportar meus dados”<br>
-• <em>Excluir conta</em>: Menu de conta → “Meu Plano” → “Excluir conta”<br><br>
+• <em>Exportar dados</em>: Menu de conta → "Exportar meus dados"<br>
+• <em>Excluir conta</em>: Menu de conta → "Meu Plano" → "Excluir conta"<br><br>
 
 <strong>9. Segurança</strong><br>
 Utilizamos autenticação JWT, HTTPS em todas as comunicações, Row Level Security no banco de dados e confirmação de e-mail obrigatória.<br><br>
@@ -281,25 +281,25 @@ Para suporte ou dúvidas, utilize os canais de atendimento disponíveis no aplic
 };
 
 function openLegalModal(type) {
-var modal = document.getElementById(‘legalModal’);
-var titleEl = document.getElementById(‘legalTitle’);
-var contentEl = document.getElementById(‘legalContent’);
+var modal = document.getElementById('legalModal');
+var titleEl = document.getElementById('legalTitle');
+var contentEl = document.getElementById('legalContent');
 if (!modal || !_legalDocs[type]) return;
 titleEl.textContent = _legalDocs[type].title;
 contentEl.innerHTML = _legalDocs[type].content;
 contentEl.scrollTop = 0;
-modal.style.display = ‘block’;
+modal.style.display = 'block';
 }
 
 function closeLegalModal() {
-document.getElementById(‘legalModal’).style.display = ‘none’;
+document.getElementById('legalModal').style.display = 'none';
 }
 
 // Fecha modais ao clicar no overlay
-document.getElementById(‘planModal’).addEventListener(‘click’, function(e) {
+document.getElementById('planModal').addEventListener('click', function(e) {
 if (e.target === this) closePlanModal();
 });
-document.getElementById(‘legalModal’).addEventListener(‘click’, function(e) {
+document.getElementById('legalModal').addEventListener('click', function(e) {
 if (e.target === this) closeLegalModal();
 });
 
@@ -308,7 +308,7 @@ _sb.auth.onAuthStateChange(function(event, session) {
 if (session && session.user) {
 setTimeout(fetchUserPlan, 1000);
 } else {
-_userPlan = { plan: ‘free’, ai_requests_used: 0, limit: FREE_AI_LIMIT };
+_userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT };
 updatePlanBadge();
 }
 });

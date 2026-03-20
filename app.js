@@ -478,11 +478,11 @@ async function onPressSetCell(el) {
         // Mostrar label inteligente
         const lbl = document.querySelector(".tsheet-label");
         if (lbl) {
-          const msg = rpeVal >= 9 ? "Esforço alto — descanse bem 💪"
-                    : rpeVal >= 7 ? "Bom esforço — recuperando 🔥"
-                    : rpeVal >= 1 ? "Série leve — descanse pouco ⚡"
+          const msg = rpeVal >= 9 ? `Esforço alto — descanse bem ${_ico('dumbbell', 16)}`
+                    : rpeVal >= 7 ? `Bom esforço — recuperando ${_ico('flame', 16)}`
+                    : rpeVal >= 1 ? `Série leve — descanse pouco ${_ico('zap', 16)}`
                     : "Descanso entre séries";
-          lbl.textContent = msg;
+          lbl.innerHTML = msg;
         }
 
         abrirTimer();
@@ -531,7 +531,7 @@ function updateSuggests(id) {
     if (!allFilled) {
       const result = calcNextSessionLoad(prev, card.querySelector(".ex-target")?.textContent || "");
       if (result) {
-        sugEl.textContent = result.msg;
+        sugEl.innerHTML = result.msg;
         sugEl.style.display = "block";
         sugEl.style.color = result.color;
       } else {
@@ -582,12 +582,12 @@ function calcNextSessionLoad(prevValues, targetMeta) {
       } else if (avgReps >= repMin) {
         // Dentro da faixa → progredir reps antes de aumentar peso
         suggest = baseKg;
-        msg = `🎯 RPE ideal — Mantenha ${suggest}kg, aumente as reps`;
+        msg = `${_ico('target', 16)} RPE ideal — Mantenha ${suggest}kg, aumente as reps`;
         color = "var(--accent)";
       } else {
         // Abaixo da faixa mínima → ajustar peso
         suggest = Math.round(baseKg * 0.975 * 2) / 2;
-        msg = `⚠️ Reps abaixo do alvo — Ajuste para ${suggest}kg`;
+        msg = `${_ico('alert-triangle', 16)} Reps abaixo do alvo — Ajuste para ${suggest}kg`;
         color = "var(--accent)";
       }
     } else {
@@ -605,7 +605,7 @@ function calcNextSessionLoad(prevValues, targetMeta) {
       color = "var(--green)";
     } else {
       suggest = baseKg;
-      msg = `🎯 Mantenha ${baseKg}kg — Aumente as reps primeiro`;
+      msg = `${_ico('target', 16)} Mantenha ${baseKg}kg — Aumente as reps primeiro`;
       color = "var(--accent)";
     }
   }
@@ -979,14 +979,14 @@ function calcPersonaEfetiva(hist, cfg) {
 
   // Marcos atingidos
   const marcos = [];
-  if (n >= 1)  marcos.push({ icon:"🏃", label:"Primeira sessão" });
-  if (n >= 5)  marcos.push({ icon:"🔥", label:"5 treinos" });
-  if (n >= 10) marcos.push({ icon:"💪", label:"10 treinos" });
-  if (n >= 20) marcos.push({ icon:"⚡", label:"20 treinos" });
-  if (n >= 50) marcos.push({ icon:"🏆", label:"50 treinos" });
-  if (calcStreak() >= 7)  marcos.push({ icon:"🗓️", label:"7 dias seguidos" });
-  if (calcStreak() >= 14) marcos.push({ icon:"🔆", label:"14 dias seguidos" });
-  if (totalExercicios >= 5) marcos.push({ icon:"📊", label:"5 exercícios trackeados" });
+  if (n >= 1)  marcos.push({ icon:_ico('activity', 16), label:"Primeira sessão" });
+  if (n >= 5)  marcos.push({ icon:_ico('flame', 16), label:"5 treinos" });
+  if (n >= 10) marcos.push({ icon:_ico('dumbbell', 16), label:"10 treinos" });
+  if (n >= 20) marcos.push({ icon:_ico('zap', 16), label:"20 treinos" });
+  if (n >= 50) marcos.push({ icon:_ico('trophy', 16), label:"50 treinos" });
+  if (calcStreak() >= 7)  marcos.push({ icon:_ico('calendar', 16), label:"7 dias seguidos" });
+  if (calcStreak() >= 14) marcos.push({ icon:_ico('sun', 16), label:"14 dias seguidos" });
+  if (totalExercicios >= 5) marcos.push({ icon:_ico('bar-chart-3', 16), label:"5 exercícios trackeados" });
 
   // Próximo marco
   let proximoMarco = null;
@@ -2348,15 +2348,15 @@ function openAI() {
   document.getElementById("aiModal").classList.add("show");
   document.getElementById("aiModal").style.display = "flex";
   if (_aiHistory.length === 0) {
-    addAIMessage("assistant", `Olá! Sou o **KRONOS**, seu personal trainer com IA. 💪\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
+    addAIMessage("assistant", `Olá! Sou o **KRONOS**, seu personal trainer com IA. ${_ico('dumbbell', 16)}\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
     const container = document.getElementById("aiMessages");
     const sug = document.createElement("div");
     sug.id = "aiSuggestions";
     sug.style.cssText = "display:flex;flex-direction:column;gap:8px;padding-left:38px;";
     sug.innerHTML = `
-      <button class="ai-suggest-btn" onclick="aiQuick('analise');document.getElementById('aiSuggestions')?.remove()">📊 Analisar meu treino de hoje</button>
-      <button class="ai-suggest-btn" onclick="aiQuick('gerar');document.getElementById('aiSuggestions')?.remove()">⚡ Gerar treino para hoje</button>
-      <button class="ai-suggest-btn" onclick="aiQuick('platô');document.getElementById('aiSuggestions')?.remove()">📉 Estou em platô, o que fazer?</button>
+      <button class="ai-suggest-btn" onclick="aiQuick('analise');document.getElementById('aiSuggestions')?.remove()">${_ico('bar-chart-3', 16)} Analisar meu treino de hoje</button>
+      <button class="ai-suggest-btn" onclick="aiQuick('gerar');document.getElementById('aiSuggestions')?.remove()">${_ico('zap', 16)} Gerar treino para hoje</button>
+      <button class="ai-suggest-btn" onclick="aiQuick('platô');document.getElementById('aiSuggestions')?.remove()">${_ico('trending-down', 16)} Estou em platô, o que fazer?</button>
       <button class="ai-suggest-btn" onclick="aiQuick('dica');document.getElementById('aiSuggestions')?.remove()">💡 Me dá uma dica de hoje</button>
     `;
     container.appendChild(sug);
@@ -2372,7 +2372,7 @@ function closeAI() {
 function clearAIChat() {
   _aiHistory = [];
   document.getElementById("aiMessages").innerHTML = "";
-  addAIMessage("assistant", "Chat limpo. Como posso te ajudar? 💪");
+  addAIMessage("assistant", `Chat limpo. Como posso te ajudar? ${_ico('dumbbell', 16)}`);
 }
 
 function renderMarkdown(text) {
@@ -2424,7 +2424,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
   document.getElementById("aiSuggestions")?.remove();
 
   // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
-  const displayText = isGerarTreino ? "⚡ Gerar treino para hoje" : text;
+  const displayText = isGerarTreino ? `${_ico('zap', 16)} Gerar treino para hoje` : text;
   addAIMessage("user", displayText);
   _aiHistory.push({ role: "user", content: text });
 
@@ -2471,7 +2471,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       }));
 
       const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
-      addAIMessage("assistant", "✅ Treino gerado: " + grupos.map(g => g.nome).join(", ") + " — " + total + " exercícios.");
+      addAIMessage("assistant", `${_ico('check-circle', 14)} Treino gerado: ` + grupos.map(g => g.nome).join(", ") + " — " + total + " exercícios.");
       const container = document.getElementById("aiMessages");
       const btnDiv = document.createElement("div");
       btnDiv.className = "ai-msg assistant";
@@ -2482,7 +2482,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
         <button onclick="window['${btnId}']()"
           style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent">
-          ⚡ Aplicar este treino na tela
+          ${_ico('zap', 16)} Aplicar este treino na tela
         </button>
       </div>`;
       container.appendChild(btnDiv);
@@ -2519,7 +2519,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       const container = document.getElementById("aiMessages");
       const btnDiv = document.createElement("div");
       btnDiv.className = "ai-msg assistant";
-      const label = "⚡ Aplicar este treino na tela";
+      const label = `${_ico('zap', 16)} Aplicar este treino na tela`;
       btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
         <button onclick="applyAIWorkoutFromText()"
           style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
@@ -2532,7 +2532,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
   } catch (err) {
     removeThinking();
-    addAIMessage("assistant", "⚠️ Erro: " + err.message);
+    addAIMessage("assistant", `${_ico('alert-triangle', 16)} Erro: ` + err.message);
   } finally {
     _aiTyping = false;
     if (sendBtn) sendBtn.style.opacity = "1";
@@ -2705,20 +2705,20 @@ function checkRPEAlert(input) {
   let msg = null, type = null;
   if (rpe >= 9) {
     const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
-    msg = `⚠️ Próxima série: ${suggest}kg`;
+    msg = `${_ico('alert-triangle', 16)} Próxima série: ${suggest}kg`;
     type = "warning";
   } else if (rpe <= 6 && reps > 0) {
     const suggest = Math.round(kg * (1 - diff * ADJUST_PER_POINT) * 2) / 2;
     msg = `💡 Próxima série: ${suggest}kg`;
     type = "info";
   } else if (rpe >= 7 && rpe <= 8) {
-    msg = `✅ RPE ideal — Mantenha ${kg}kg`;
+    msg = `${_ico('check-circle', 14)} RPE ideal — Mantenha ${kg}kg`;
     type = "ideal";
   }
   if (msg) {
     const alert = document.createElement("div");
     alert.className = `rpe-inline-alert ${type}`;
-    alert.textContent = msg;
+    alert.innerHTML = msg;
     row.after(alert);
   }
 }
@@ -4034,7 +4034,7 @@ function renderDavResult(r) {
   document.getElementById('davMassaMagra').textContent = r.massaMagra.toFixed(1) + ' kg';
   document.getElementById('davMassaGorda').textContent = r.massaGorda.toFixed(1) + ' kg';
   document.getElementById('davTMB').textContent = Math.round(r.tmb) + ' kcal';
-  const labels = { descanso: '😴 Descanso', treino: '💪 Treino', cardio: '🏃 Cardio', tec: '🔥 Treino + Cardio' };
+  const labels = { descanso: `${_ico('moon', 16)} Descanso`, treino: `${_ico('dumbbell', 16)} Treino`, cardio: `${_ico('activity', 16)} Cardio`, tec: `${_ico('flame', 16)} Treino + Cardio` };
   document.getElementById('davMacroRows').innerHTML = Object.entries(labels).map(([k, lbl]) => {
     const d = r.days[k];
     return `<div style="display:grid;grid-template-columns:1fr 0.7fr 0.7fr 0.7fr 0.7fr;gap:4px;padding:8px 0;border-top:1px solid var(--border)">

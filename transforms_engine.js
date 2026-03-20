@@ -84,18 +84,15 @@ const TE_DEFENSIVE = [
 const TE_SEV_COLOR = { high: '#EF4444', medium: '#F59E0B', low: '#6366F1' };
 
 /* ── SVG ICONS ──────────────────────────────────────────── */
-function teIcon(name, size = 16, color = 'currentColor') {
-  const s = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
-  const icons = {
-    'flame':        `<svg ${s}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
-    'trending-down':`<svg ${s}><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`,
-    'alert-circle': `<svg ${s}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2.5"/></svg>`,
-    'bar-chart':    `<svg ${s}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>`,
-    'repeat':       `<svg ${s}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
-    'check-circle': `<svg ${s}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
-    'alert-tri':    `<svg ${s}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2.5"/></svg>`,
+function teIcon(name, size = 16, color = null) {
+  const nameMap = {
+    'bar-chart': 'bar-chart-3',
+    'repeat': 'rotate-cw',
+    'alert-tri': 'alert-triangle'
   };
-  return icons[name] || '';
+  const ico = _ico(nameMap[name] || name, size);
+  if (!color) return ico;
+  return `<span style="color:${color};display:inline-flex">${ico}</span>`;
 }
 
 /* ── COMPUTE ATHLETE DATA FROM LOCALSTORAGE ─────────────── */
@@ -351,7 +348,7 @@ function teRenderCatalog() {
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
             <span style="width:8px;height:8px;border-radius:50%;background:${fromCfg?.color};flex-shrink:0"></span>
             <span style="color:${fromCfg?.color};font-size:0.7rem;font-weight:700">${t.from}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            ${_ico('arrow-right', 10)}
             <span style="width:8px;height:8px;border-radius:50%;background:${toCfg?.color};flex-shrink:0"></span>
             <span style="color:${toCfg?.color};font-size:0.7rem;font-weight:700">${t.to}</span>
           </div>
@@ -408,7 +405,7 @@ async function runDefensiveScan() {
   const btn = document.getElementById('btnDefensiveScan');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin .8s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Analisando...`;
+    btn.innerHTML = `${_ico('rotate-cw', 13)} Analisando...`;
   }
 
   const logBox   = document.getElementById('defensiveLog');
@@ -454,7 +451,7 @@ async function runDefensiveScan() {
   _teScanning = false;
   if (btn) {
     btn.disabled = false;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Executar Scan`;
+    btn.innerHTML = `${_ico('shield', 13)} Executar Scan`;
   }
 }
 
