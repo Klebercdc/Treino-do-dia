@@ -1,0 +1,564 @@
+import { useState } from “react”;
+import {
+Menu, X, Home, Dumbbell, Brain, Flame, BarChart2,
+Apple, Trophy, Settings, Shield, Zap, ChevronRight,
+Activity, RefreshCw, Lock, Globe, Cpu, Database,
+CheckCircle, AlertCircle, Clock, Send, User
+} from “lucide-react”;
+
+// ─── CONTRATOS DE API ────────────────────────────────────────────────────────
+const API_CONTRACTS = [
+{
+route: “/api/groq/chat”,
+method: “POST”,
+auth: true,
+plan: “Pro”,
+description: “KRONOS AI Coach — chat contextual”,
+payload: { message: “string”, history: “Message[]”, userProfile: “Profile” },
+response: { reply: “string”, tokens_used: “number” },
+groq_model: “llama3-70b-8192”,
+},
+{
+route: “/api/groq/analyze”,
+method: “POST”,
+auth: true,
+plan: “Pro”,
+description: “Análise de fadiga e RPE por KRONOS”,
+payload: { workouts: “Workout[]”, rpe: “number[]” },
+response: { fatigue_score: “number”, recommendation: “string” },
+groq_model: “mixtral-8x7b-32768”,
+},
+{
+route: “/api/workouts”,
+method: “GET | POST”,
+auth: true,
+plan: “Free”,
+description: “CRUD de treinos”,
+payload: { userId: “string”, workout: “Workout” },
+response: “Workout[]”,
+groq_model: null,
+},
+{
+route: “/api/nutrition”,
+method: “POST”,
+auth: true,
+plan: “Free”,
+description: “Calculadora Mifflin-St Jeor”,
+payload: { weight: “number”, height: “number”, age: “number”, goal: “string” },
+response: { tmb: “number”, diet: “MacroSplit” },
+groq_model: null,
+},
+{
+route: “/api/mesocycle”,
+method: “POST”,
+auth: true,
+plan: “Pro”,
+description: “Planejador de mesociclo”,
+payload: { weeks: “number”, split: “string”, experience: “string” },
+response: { plan: “MesocyclePlan[]” },
+groq_model: “llama3-70b-8192”,
+},
+{
+route: “/api/pr”,
+method: “GET”,
+auth: true,
+plan: “Free”,
+description: “Detecção de PR (Personal Record)”,
+payload: { userId: “string”, exercise: “string” },
+response: { pr: “PRRecord”, history: “PRHistory[]” },
+groq_model: null,
+},
+{
+route: “/api/auth/login”,
+method: “POST”,
+auth: false,
+plan: “Free”,
+description: “Login via Supabase Auth”,
+payload: { email: “string”, password: “string” },
+response: { session: “Session”, user: “User” },
+groq_model: null,
+},
+];
+
+// ─── PÁGINAS / ROTAS ─────────────────────────────────────────────────────────
+const PAGES = [
+{ path: “/”, label: “Home”, icon: Home, plan: “Free”, description: “Dashboard principal + streak” },
+{ path: “/treino”, label: “Treino”, icon: Dumbbell, plan: “Free”, description: “Registro de séries e cargas” },
+{ path: “/kronos”, label: “KRONOS”, icon: Brain, plan: “Pro”, description: “Chat IA + análise RPE” },
+{ path: “/nutricao”, label: “Nutrição”, icon: Apple, plan: “Free”, description: “Calculadora e dieta” },
+{ path: “/evolucao”, label: “Evolução”, icon: BarChart2, plan: “Free”, description: “Gráficos de progresso” },
+{ path: “/mesociclo”, label: “Mesociclo”, icon: Activity, plan: “Pro”, description: “Planejamento de fases” },
+{ path: “/prs”, label: “Records”, icon: Trophy, plan: “Free”, description: “PRs e metas pessoais” },
+{ path: “/heatmap”, label: “Heatmap”, icon: Flame, plan: “Pro”, description: “Mapa muscular visual” },
+{ path: “/perfil”, label: “Perfil”, icon: User, plan: “Free”, description: “Dados e onboarding” },
+{ path: “/configuracoes”, label: “Config”, icon: Settings, plan: “Free”, description: “Conta e preferências” },
+];
+
+// ─── GROQ MCP CONFIG ──────────────────────────────────────────────────────────
+const GROQ_CONFIG = {
+baseURL: “https://api.groq.com/openai/v1”,
+models: {
+fast: “llama3-8b-8192”,
+smart: “llama3-70b-8192”,
+long: “mixtral-8x7b-32768”,
+},
+kronos_system: `Você é KRONOS, coach de alta performance do TITAN PRO. Analise dados de treino, fadiga e RPE do atleta. Responda sempre em português brasileiro, de forma direta e baseada em evidências. Máximo 3 parágrafos por resposta.`,
+};
+
+// ─── CHAT DEMO COM API ────────────────────────────────────────────────────────
+function KronosChat() {
+const [messages, setMessages] = useState([
+{ role: “assistant”, content: “Olá! Sou o KRONOS. Me fale sobre seu último treino ou pergunta sobre performance.” }
+]);
+const [input, setInput] = useState(””);
+const [loading, setLoading] = useState(false);
+
+async function sendMessage() {
+if (!input.trim()) return;
+const userMsg = { role: “user”, content: input };
+const newMessages = […messages, userMsg];
+setMessages(newMessages);
+setInput(””);
+setLoading(true);
+
+```
+try {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: GROQ_CONFIG.kronos_system,
+      messages: newMessages,
+    }),
+  });
+  const data = await res.json();
+  const reply = data.content?.[0]?.text || "Erro ao processar resposta.";
+  setMessages([...newMessages, { role: "assistant", content: reply }]);
+} catch {
+  setMessages([...newMessages, { role: "assistant", content: "Erro de conexão. Verifique o modelo Groq." }]);
+} finally {
+  setLoading(false);
+}
+```
+
+}
+
+return (
+<div style={{ display: “flex”, flexDirection: “column”, height: “100%”, gap: 12 }}>
+<div style={{
+flex: 1, overflowY: “auto”, display: “flex”, flexDirection: “column”, gap: 10,
+padding: “4px 0”, maxHeight: 280
+}}>
+{messages.map((m, i) => (
+<div key={i} style={{
+alignSelf: m.role === “user” ? “flex-end” : “flex-start”,
+background: m.role === “user”
+? “linear-gradient(135deg, #FF6B00, #FF9A3C)”
+: “rgba(255,255,255,0.06)”,
+color: “#fff”,
+borderRadius: m.role === “user” ? “16px 16px 4px 16px” : “16px 16px 16px 4px”,
+padding: “10px 14px”,
+maxWidth: “82%”,
+fontSize: 13,
+lineHeight: 1.5,
+border: m.role === “assistant” ? “1px solid rgba(255,107,0,0.2)” : “none”,
+}}>
+{m.role === “assistant” && (
+<div style={{ color: “#FF6B00”, fontSize: 10, fontWeight: 700, marginBottom: 4, letterSpacing: 1 }}>
+⚡ KRONOS
+</div>
+)}
+{m.content}
+</div>
+))}
+{loading && (
+<div style={{
+alignSelf: “flex-start”, background: “rgba(255,107,0,0.1)”,
+border: “1px solid rgba(255,107,0,0.3)”, borderRadius: “16px 16px 16px 4px”,
+padding: “10px 16px”, color: “#FF6B00”, fontSize: 12
+}}>
+<RefreshCw size={12} style={{ animation: “spin 1s linear infinite”, marginRight: 6 }} />
+Analisando…
+</div>
+)}
+</div>
+<div style={{ display: “flex”, gap: 8 }}>
+<input
+value={input}
+onChange={e => setInput(e.target.value)}
+onKeyDown={e => e.key === “Enter” && sendMessage()}
+placeholder=“Pergunte ao KRONOS…”
+style={{
+flex: 1, background: “rgba(255,255,255,0.05)”, border: “1px solid rgba(255,107,0,0.3)”,
+borderRadius: 12, padding: “10px 14px”, color: “#fff”, fontSize: 13,
+outline: “none”,
+}}
+/>
+<button
+onClick={sendMessage}
+disabled={loading}
+style={{
+background: “linear-gradient(135deg, #FF6B00, #FF9A3C)”,
+border: “none”, borderRadius: 12, padding: “10px 16px”,
+cursor: “pointer”, color: “#fff”, display: “flex”, alignItems: “center”
+}}
+>
+<Send size={16} />
+</button>
+</div>
+</div>
+);
+}
+
+// ─── APP PRINCIPAL ─────────────────────────────────────────────────────────
+export default function TitanProNav() {
+const [menuOpen, setMenuOpen] = useState(false);
+const [activeTab, setActiveTab] = useState(“rotas”);
+const [selectedContract, setSelectedContract] = useState(null);
+
+const tabStyle = (t) => ({
+padding: “8px 16px”,
+borderRadius: 8,
+border: “none”,
+cursor: “pointer”,
+fontSize: 13,
+fontWeight: 600,
+letterSpacing: 0.5,
+transition: “all 0.2s”,
+background: activeTab === t ? “linear-gradient(135deg, #FF6B00, #FF9A3C)” : “rgba(255,255,255,0.06)”,
+color: activeTab === t ? “#fff” : “rgba(255,255,255,0.5)”,
+});
+
+return (
+<div style={{
+minHeight: “100vh”,
+background: “#0A0A0A”,
+fontFamily: “‘Barlow’, ‘DM Sans’, sans-serif”,
+color: “#fff”,
+position: “relative”,
+overflow: “hidden”,
+}}>
+{/* Grid bg */}
+<div style={{
+position: “fixed”, inset: 0, pointerEvents: “none”,
+backgroundImage: “linear-gradient(rgba(255,107,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,107,0,0.04) 1px, transparent 1px)”,
+backgroundSize: “40px 40px”,
+}} />
+
+```
+  {/* ── TOPBAR ── */}
+  <header style={{
+    position: "sticky", top: 0, zIndex: 100,
+    background: "rgba(10,10,10,0.9)", backdropFilter: "blur(20px)",
+    borderBottom: "1px solid rgba(255,107,0,0.15)",
+    padding: "0 20px", height: 60,
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+  }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 8,
+        background: "linear-gradient(135deg, #FF6B00, #FF9A3C)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Zap size={18} color="#fff" fill="#fff" />
+      </div>
+      <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: 1 }}>TITAN <span style={{ color: "#FF6B00" }}>PRO</span></span>
+    </div>
+
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <span style={{
+        fontSize: 11, fontWeight: 700, letterSpacing: 1,
+        color: "#FF6B00", border: "1px solid rgba(255,107,0,0.4)",
+        borderRadius: 20, padding: "2px 10px",
+      }}>GROQ ⚡</span>
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        style={{
+          background: menuOpen ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,107,0,0.3)",
+          borderRadius: 10, padding: "8px 10px",
+          cursor: "pointer", color: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.2s",
+        }}
+      >
+        {menuOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+    </div>
+  </header>
+
+  {/* ── DRAWER MENU ── */}
+  <div style={{
+    position: "fixed", top: 60, right: 0, bottom: 0, zIndex: 90,
+    width: menuOpen ? 280 : 0,
+    overflow: "hidden",
+    transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
+    background: "rgba(12,12,12,0.97)",
+    backdropFilter: "blur(30px)",
+    borderLeft: menuOpen ? "1px solid rgba(255,107,0,0.2)" : "none",
+  }}>
+    <div style={{ padding: "20px 16px", minWidth: 280 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,107,0,0.6)", letterSpacing: 2, marginBottom: 12 }}>
+        NAVEGAÇÃO
+      </div>
+      {PAGES.map((p) => (
+        <div key={p.path} style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "10px 12px", borderRadius: 10, marginBottom: 4,
+          cursor: "pointer", transition: "all 0.15s",
+          background: "rgba(255,255,255,0.03)",
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,107,0,0.1)"}
+          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+        >
+          <div style={{
+            width: 34, height: 34, borderRadius: 8,
+            background: p.plan === "Pro" ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.06)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            border: p.plan === "Pro" ? "1px solid rgba(255,107,0,0.3)" : "1px solid rgba(255,255,255,0.08)",
+          }}>
+            <p.icon size={16} color={p.plan === "Pro" ? "#FF6B00" : "rgba(255,255,255,0.5)"} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{p.label}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{p.path}</div>
+          </div>
+          {p.plan === "Pro" && (
+            <Lock size={12} color="#FF6B00" />
+          )}
+          <ChevronRight size={14} color="rgba(255,255,255,0.2)" />
+        </div>
+      ))}
+
+      <div style={{
+        marginTop: 20, padding: "12px 14px", borderRadius: 12,
+        background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <Cpu size={14} color="#FF6B00" />
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#FF6B00", letterSpacing: 1 }}>GROQ MCP</span>
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+          <div>🟢 llama3-70b-8192 — smart</div>
+          <div>🟢 mixtral-8x7b-32768 — long</div>
+          <div>🟢 llama3-8b-8192 — fast</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* ── CONTEÚDO ── */}
+  <main style={{ padding: "24px 20px", maxWidth: 800, margin: "0 auto" }}>
+
+    {/* TABS */}
+    <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+      {[
+        { id: "rotas", label: "📍 Rotas", icon: Globe },
+        { id: "contratos", label: "📋 Contratos API", icon: Database },
+        { id: "kronos", label: "⚡ KRONOS Live", icon: Brain },
+      ].map(t => (
+        <button key={t.id} style={tabStyle(t.id)} onClick={() => setActiveTab(t.id)}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+
+    {/* ── TAB: ROTAS ── */}
+    {activeTab === "rotas" && (
+      <div>
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>Mapa de Rotas</h2>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            {PAGES.filter(p => p.plan === "Free").length} rotas Free · {PAGES.filter(p => p.plan === "Pro").length} rotas Pro
+          </p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+          {PAGES.map(p => (
+            <div key={p.path} style={{
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 14, padding: "16px", cursor: "pointer", transition: "all 0.2s",
+            }}
+              onMouseEnter={e => {
+                e.currentTarget.style.border = "1px solid rgba(255,107,0,0.4)";
+                e.currentTarget.style.background = "rgba(255,107,0,0.05)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.border = "1px solid rgba(255,255,255,0.08)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: 10,
+                  background: p.plan === "Pro" ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.06)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: p.plan === "Pro" ? "1px solid rgba(255,107,0,0.4)" : "1px solid rgba(255,255,255,0.1)",
+                }}>
+                  <p.icon size={18} color={p.plan === "Pro" ? "#FF6B00" : "rgba(255,255,255,0.6)"} />
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                  background: p.plan === "Pro" ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.08)",
+                  color: p.plan === "Pro" ? "#FF6B00" : "rgba(255,255,255,0.4)",
+                  letterSpacing: 0.5,
+                }}>
+                  {p.plan === "Pro" ? "🔒 PRO" : "FREE"}
+                </span>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{p.label}</div>
+              <div style={{ fontSize: 11, color: "#FF6B00", marginBottom: 6, fontFamily: "monospace" }}>{p.path}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>{p.description}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* ── TAB: CONTRATOS ── */}
+    {activeTab === "contratos" && (
+      <div>
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>Contratos de API</h2>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            {API_CONTRACTS.filter(c => c.groq_model).length} endpoints Groq · {API_CONTRACTS.filter(c => !c.groq_model).length} endpoints padrão
+          </p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {API_CONTRACTS.map((c, i) => (
+            <div key={i}
+              onClick={() => setSelectedContract(selectedContract === i ? null : i)}
+              style={{
+                background: selectedContract === i ? "rgba(255,107,0,0.07)" : "rgba(255,255,255,0.03)",
+                border: selectedContract === i ? "1px solid rgba(255,107,0,0.4)" : "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 14, padding: "14px 16px", cursor: "pointer", transition: "all 0.2s",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6,
+                  background: c.method.includes("POST") ? "rgba(255,107,0,0.2)" : "rgba(100,200,100,0.15)",
+                  color: c.method.includes("POST") ? "#FF9A3C" : "#7AE89E",
+                  letterSpacing: 0.5, fontFamily: "monospace",
+                }}>
+                  {c.method}
+                </span>
+                <span style={{ fontFamily: "monospace", fontSize: 13, color: "#fff", fontWeight: 600 }}>
+                  {c.route}
+                </span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                  {c.groq_model && (
+                    <span style={{
+                      fontSize: 10, padding: "2px 8px", borderRadius: 20,
+                      background: "rgba(255,107,0,0.15)", color: "#FF6B00",
+                      fontWeight: 700, letterSpacing: 0.5,
+                    }}>⚡ GROQ</span>
+                  )}
+                  <span style={{
+                    fontSize: 10, padding: "2px 8px", borderRadius: 20,
+                    background: c.plan === "Pro" ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.08)",
+                    color: c.plan === "Pro" ? "#FF6B00" : "rgba(255,255,255,0.4)",
+                    fontWeight: 700,
+                  }}>
+                    {c.plan === "Pro" ? "🔒" : "✅"} {c.plan}
+                  </span>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>{c.description}</div>
+
+              {selectedContract === i && (
+                <div style={{
+                  marginTop: 14, padding: 14, borderRadius: 10,
+                  background: "rgba(0,0,0,0.4)", display: "grid",
+                  gridTemplateColumns: "1fr 1fr", gap: 12,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#FF6B00", letterSpacing: 1, marginBottom: 6 }}>PAYLOAD</div>
+                    <pre style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0,
+                      fontFamily: "monospace", lineHeight: 1.6,
+                      whiteSpace: "pre-wrap",
+                    }}>
+                      {typeof c.payload === "object"
+                        ? JSON.stringify(c.payload, null, 2)
+                        : c.payload}
+                    </pre>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#7AE89E", letterSpacing: 1, marginBottom: 6 }}>RESPONSE</div>
+                    <pre style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.6)", margin: 0,
+                      fontFamily: "monospace", lineHeight: 1.6,
+                      whiteSpace: "pre-wrap",
+                    }}>
+                      {typeof c.response === "object"
+                        ? JSON.stringify(c.response, null, 2)
+                        : c.response}
+                    </pre>
+                    {c.groq_model && (
+                      <div style={{ marginTop: 10, fontSize: 11, color: "#FF6B00" }}>
+                        <Cpu size={11} style={{ marginRight: 4 }} />
+                        {c.groq_model}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* ── TAB: KRONOS LIVE ── */}
+    {activeTab === "kronos" && (
+      <div>
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>
+            ⚡ KRONOS <span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 400, fontSize: 14 }}>via Groq MCP</span>
+          </h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+            {Object.entries(GROQ_CONFIG.models).map(([k, v]) => (
+              <span key={k} style={{
+                fontSize: 11, padding: "3px 10px", borderRadius: 20,
+                background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.3)",
+                color: "#FF9A3C", fontFamily: "monospace",
+              }}>
+                {k}: {v}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={{
+          background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,107,0,0.2)",
+          borderRadius: 16, padding: 20, height: 420,
+          display: "flex", flexDirection: "column",
+        }}>
+          <KronosChat />
+        </div>
+        <div style={{
+          marginTop: 14, padding: "12px 16px", borderRadius: 12,
+          background: "rgba(255,107,0,0.06)", border: "1px solid rgba(255,107,0,0.15)",
+          fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.6,
+        }}>
+          <Shield size={12} style={{ marginRight: 6, color: "#FF6B00" }} />
+          Endpoint: <code style={{ color: "#FF6B00" }}>POST /api/groq/chat</code> · Model: llama3-70b-8192 · Auth: Bearer token Supabase
+        </div>
+      </div>
+    )}
+  </main>
+
+  <style>{`
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    * { box-sizing: border-box; }
+    input::placeholder { color: rgba(255,255,255,0.25); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,107,0,0.3); border-radius: 4px; }
+  `}</style>
+</div>
+```
+
+);
+}
