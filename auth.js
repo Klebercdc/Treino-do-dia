@@ -374,4 +374,6 @@ Promise.all([
   updateAuthUI(session?.user || null);
   if (session?.user) { showApp(); navTo('inicio'); openHome(); }
   else showLogin();
+}).catch(() => {
+  showLogin();
 });
