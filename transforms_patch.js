@@ -64,14 +64,25 @@ window.addEventListener('load', aplicarPatch);
 /* ═══════════════════════════════════════════════════
 STARTUP — inicia o cérebro vivo do app
 ═══════════════════════════════════════════════════ */
-window.addEventListener('load', function() {
-  setTimeout(function() {
-    // Scan de entidades
-    try { if (typeof teSilentScan === 'function') teSilentScan(); } catch(e) {}
-    // Liga o KRONOS PULSE
-    try { if (typeof startKronosPulse === 'function') startKronosPulse(); } catch(e) {}
-  }, 3000);
-});
+// Startup robusto: tenta até as funções existirem (máx 10s)
+(function initKronosPulse() {
+  var attempts = 0;
+  function tryInit() {
+    var scanOk  = typeof teSilentScan    === 'function';
+    var pulseOk = typeof startKronosPulse === 'function';
+    if (scanOk && pulseOk) {
+      try { teSilentScan(); }    catch(e) {}
+      try { startKronosPulse(); } catch(e) {}
+      return;
+    }
+    if (++attempts < 20) setTimeout(tryInit, 500); // tenta a cada 500ms por até 10s
+  }
+  if (document.readyState === 'complete') {
+    tryInit();
+  } else {
+    window.addEventListener('load', tryInit);
+  }
+})();
 
 /* ═══════════════════════════════════════════════════
 HOOKS POR TELA — antecipação contextual
