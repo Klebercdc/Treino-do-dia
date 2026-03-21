@@ -3560,6 +3560,7 @@ function closeDieta() {
 function toggleOrientSuggestions() {
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
+  if (!row || !btn) return;
   const isCollapsed = row.classList.toggle("collapsed");
   btn.classList.toggle("open", !isCollapsed);
 }
@@ -3570,6 +3571,7 @@ function autoResizeOrientInput(el) {
 
 function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
+  if (!c) return null;
   const wrap = document.createElement("div");
   wrap.className = `ai-msg ${role}`;
   wrap.setAttribute("data-role", role);
