@@ -2918,16 +2918,9 @@ function updateHomeScreen() {
   }
   document.getElementById("homeStreak").textContent = streak;
 
-  // Card de perfil
-  const nome = cfg.nome || "ATLETA";
+  // Banner turista
   const banner = document.getElementById("turistaBanner");
   if (banner) banner.style.display = cfg.persona === "turista" ? "block" : "none";
-  document.getElementById("homeCardAvatar").textContent  = nome[0]?.toUpperCase() || "T";
-  document.getElementById("homeCardNome").textContent    = nome.toUpperCase();
-  document.getElementById("homeCardTreinos").textContent = hist.length;
-  document.getElementById("homeCardStreak").textContent  = streak;
-  document.getElementById("homeCardNivel").textContent   =
-    hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
 
   // Volume total + semana — em um único loop
   const semAgo = Date.now() - 7 * 86400000;
@@ -2937,9 +2930,6 @@ function updateHomeScreen() {
     volTotal += v;
     if (h.createdAt > semAgo) { volSem += v; semTreinos++; }
   }
-  document.getElementById("homeCardVol").textContent =
-    volTotal > 999999 ? (volTotal/1000000).toFixed(1)+"M" :
-    volTotal > 999    ? (volTotal/1000).toFixed(1)+"t"    : Math.round(volTotal)+"kg";
   document.getElementById("homeSemanaTreinos").textContent = semTreinos;
   document.getElementById("homeVolSemana").textContent =
     volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
@@ -3278,8 +3268,8 @@ function updatePerfilScreen() {
   const savedPhoto = localStorage.getItem('userAvatarPhoto');
   if (savedPhoto) {
     applyAvatarPhoto(savedPhoto);
-  } else if (cfg.nome) {
-    document.getElementById("perfilAvatar").textContent = cfg.nome[0]?.toUpperCase() || "T";
+  } else {
+    document.getElementById("perfilAvatar").textContent = cfg.nome ? cfg.nome[0].toUpperCase() : "A";
   }
   if (cfg.peso)   document.getElementById("perfilPeso").value   = cfg.peso;
   if (cfg.altura) document.getElementById("perfilAltura").value = cfg.altura;

@@ -851,16 +851,6 @@
 
   <div class="home-section-title">Acesso rápido</div>
   <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
-    <div class="home-quick-card" onclick="navTo('orientacao');openOrientacao()" style="grid-column:1/-1;background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(124,58,237,0.10));border-color:rgba(168,85,247,0.45);padding:18px 20px">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#a855f7,#7c3aed);width:52px;height:52px;border-radius:16px;flex-shrink:0">
-        <i data-lucide="zap" class="lucide" width="26" height="26" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="flex:1">
-        <div class="home-quick-name" style="font-size:1.1rem;color:#c084fc">KRONOS — AI Coach</div>
-        <div class="home-quick-sub" style="color:rgba(192,132,252,0.75)">Análise, estratégia e treinos com IA · Pergunte qualquer coisa</div>
-      </div>
-      <i data-lucide="chevron-right" class="lucide" width="18" height="18" stroke="rgba(168,85,247,0.6)" fill="none" stroke-width="2"></i>
-    </div>
     <div class="home-quick-card" onclick="navTo('programa');openConfig()">
       <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
         <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
@@ -897,16 +887,6 @@
         <div class="home-quick-sub">Guia completo e vantagens do app</div>
       </div>
     </div>
-    <div class="home-quick-card" onclick="openTransformsScreen()" style="grid-column:1/-1;border-color:rgba(249,115,22,0.35);background:rgba(249,115,22,0.05)">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#FF6B00,#FF9A3C)">
-        <i data-lucide="network" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="flex:1">
-        <div class="home-quick-name" style="color:#fff">TITAN TRANSFORMS</div>
-        <div class="home-quick-sub">Motor de inteligência defensiva · Maltego Kernel</div>
-      </div>
-      <span id="teScanBadge" style="font-size:0.6rem;font-weight:800;color:#FF6B00;border:1px solid rgba(249,115,22,0.4);border-radius:20px;padding:2px 8px;white-space:nowrap">ATIVO</span>
-    </div>
   </div>
 
   <div style="height:120px"></div>
@@ -940,7 +920,7 @@
 
   <div class="perfil-section">
     <div class="perfil-section-title">Conta</div>
-    <div id="perfilContaLogado" style="display:none">
+    <div id="perfilContaLogado" style="display:none;">
       <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:12px;margin-bottom:10px">
         <div style="width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;flex-shrink:0" id="perfilContaInicial">A</div>
         <div style="flex:1;min-width:0">
@@ -950,7 +930,7 @@
       </div>
       <button onclick="authSignOut()" style="width:100%;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px;color:#ef4444;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer">Sair da conta</button>
     </div>
-    <div id="perfilContaDeslogado" style="display:none">
+    <div id="perfilContaDeslogado" style="display:block">
       <button onclick="closePerfil();showEmailLogin(false)" style="width:100%;background:var(--accent);border:none;border-radius:10px;padding:12px;color:#fff;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer">Entrar / Criar conta</button>
     </div>
   </div>
