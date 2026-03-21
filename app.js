@@ -3570,18 +3570,16 @@ function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
   const wrap = document.createElement("div");
   wrap.className = `ai-msg ${role}`;
-
-  const avatarSVG = `<div class="ai-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg></div>`;
+  wrap.setAttribute("data-role", role);
 
   if (role === "assistant") {
-    wrap.innerHTML = `${avatarSVG}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
+    wrap.innerHTML = `<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
   } else {
-    wrap.innerHTML = `<div class="ai-bubble">${renderMarkdown(text)}</div>`;
+    wrap.innerHTML = `<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
   }
 
   c.appendChild(wrap);
   c.scrollTop = c.scrollHeight;
-  // retorna referência ao bubble para poder atualizar o typing
   return wrap.querySelector(".ai-bubble");
 }
 

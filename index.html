@@ -1342,33 +1342,24 @@
         </div>
       </div>
 
-```
   <div class="orient-chat-wrap">
     <div id="orientExpertMessages" class="orient-chat-messages"></div>
     <div class="orient-chat-bar">
-      <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()">
-        <i data-lucide="chevron-down" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-        Sugestões rápidas
-      </button>
       <div class="orient-input-wrap">
+        <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()" title="Sugestões rápidas">
+          <i data-lucide="zap" class="lucide" width="16" height="16" stroke="var(--accent)" fill="none" stroke-width="1.75"></i>
+        </button>
         <textarea id="orientExpertInput"
-          placeholder="Fale com o KRONOS..."
+          placeholder="Adicionar mensagem..."
           rows="1"
-          style="flex:1;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:0.92rem;outline:none;-webkit-appearance:none;resize:none;overflow:hidden;line-height:1.5;max-height:120px;overflow-y:auto;"
           oninput="autoResizeOrientInput(this)"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
-        <button id="orientSendBtn" onclick="sendOrientExpert()"
-          style="width:38px;height:38px;border-radius:12px;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;">
-          <i data-lucide="send" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+        <button id="orientSendBtn" onclick="sendOrientExpert()" title="Enviar">
+          <i data-lucide="arrow-up" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
         </button>
-      </div>
-      <div style="text-align:center;margin-top:7px;font-size:0.62rem;color:rgba(255,255,255,.18);letter-spacing:.02em;">
-        Enter para enviar · Shift+Enter para nova linha
       </div>
     </div>
   </div>
-</div>
-```
 
   </div>
 </div>
