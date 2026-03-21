@@ -3865,16 +3865,210 @@ function orientExpertQuick(tipo) {
     sendOrientExpert();
     return;
   }
+  if (tipo === 'dieta') {
+    iniciarFluxoDietaNutri();
+    return;
+  }
   const msgs = {
     analise:     "Analise meu treino atual e me dê feedback técnico.",
     plato:       "Detecte se há sinais de platô no meu histórico de treinos.",
     rpe:         "Baseado no meu RPE recente, devo ajustar minha carga?",
-    dieta:       "Monte uma dieta personalizada para mim com base no meu perfil e objetivo.",
     suplementos: "Quais suplementos têm evidência científica real e valem a pena?",
     postreino:   "O que comer no pós-treino para maximizar recuperação?"
   };
   document.getElementById("orientExpertInput").value = msgs[tipo] || "";
   sendOrientExpert();
+}
+
+/* ── KRONOS Nutritionist Questionnaire ───────────────── */
+var _wdRespostas = {};
+
+function iniciarFluxoDietaNutri() {
+  // Garante que a tela de orientação está aberta
+  const screen = document.getElementById('orientacaoScreen');
+  if (screen && !screen.classList.contains('show')) screen.classList.add('show');
+
+  // Remove card anterior
+  document.getElementById('wdCard')?.remove();
+  _wdRespostas = {};
+
+  // Pré-preenche dados do perfil se disponíveis
+  const cfg = safeJSON('kronia_config', {});
+  if (cfg.peso)   _wdRespostas.peso   = cfg.peso + ' kg';
+  if (cfg.altura) _wdRespostas.altura = cfg.altura + ' cm';
+  if (cfg.idade)  _wdRespostas.idade  = cfg.idade + ' anos';
+  if (cfg.sexo)   _wdRespostas.sexo   = cfg.sexo === 'F' ? 'Feminino' : 'Masculino';
+
+  const container = document.getElementById('orientExpertMessages');
+  if (!container) return;
+
+  const chipStyle = 'display:inline-block;padding:7px 14px;margin:4px 4px 0 0;border-radius:20px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s;';
+  const sectionStyle = 'margin-top:14px;';
+  const labelStyle = 'font-size:0.85rem;color:var(--text-secondary);margin:0 0 6px;';
+
+  const card = document.createElement('div');
+  card.id = 'wdCard';
+  card.className = 'ai-msg assistant';
+  card.innerHTML = `
+    <div class="ai-avatar-inner">
+      <div class="ai-bubble" style="max-width:100%;">
+        <b style="font-size:0.95rem;">Vou montar a dieta ideal pra você! Me conta um pouco sobre você 🥗</b>
+
+        <div style="${sectionStyle}">
+          <p style="${labelStyle}">🎯 <b>Objetivo:</b></p>
+          <div>
+            <button style="${chipStyle}" onclick="wdSelect(this,'objetivo','Emagrecimento')">Emagrecimento</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'objetivo','Ganho de massa')">Ganho de massa</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'objetivo','Definição')">Definição</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'objetivo','Manutenção / saúde')">Manutenção</button>
+          </div>
+        </div>
+
+        <div style="${sectionStyle}">
+          <p style="${labelStyle}">📅 <b>Refeições por dia:</b></p>
+          <div>
+            <button style="${chipStyle}" onclick="wdSelect(this,'refeicoes','3 refeições por dia')">3x</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'refeicoes','4 refeições por dia')">4x</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'refeicoes','5 refeições por dia')">5x</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'refeicoes','6 refeições por dia')">6x</button>
+          </div>
+        </div>
+
+        <div style="${sectionStyle}">
+          <p style="${labelStyle}">🥗 <b>Restrições alimentares:</b></p>
+          <div>
+            <button style="${chipStyle}" onclick="wdSelect(this,'restricao','Nenhuma restrição')">Nenhuma</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'restricao','Vegetariano')">Vegetariano</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'restricao','Vegano')">Vegano</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'restricao','Intolerante à lactose')">Sem lactose</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'restricao','Intolerante ao glúten')">Sem glúten</button>
+          </div>
+        </div>
+
+        <div style="${sectionStyle}">
+          <p style="${labelStyle}">🏥 <b>Patologia ou condição de saúde:</b></p>
+          <div>
+            <button style="${chipStyle}" onclick="wdSelect(this,'patologia','Nenhuma')">Nenhuma</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'patologia','Diabetes tipo 2')">Diabetes</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'patologia','Hipertensão arterial')">Hipertensão</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'patologia','Colesterol alto')">Colesterol</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'patologia','Hipotireoidismo')">Tireoide</button>
+          </div>
+        </div>
+
+        <div style="${sectionStyle}">
+          <p style="${labelStyle}">🍽️ <b>Preferência de pratos:</b></p>
+          <div>
+            <button style="${chipStyle}" onclick="wdSelect(this,'pratos','Comida brasileira tradicional (arroz, feijão, frango, etc.)')">Brasileira</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'pratos','Fitness simples e prático')">Fitness simples</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'pratos','Variedade de culinárias')">Variado</button>
+            <button style="${chipStyle}" onclick="wdSelect(this,'pratos','Sem preferência, qualquer coisa saudável')">Qualquer</button>
+          </div>
+        </div>
+
+        <div id="wdGerarBtn" style="display:none;margin-top:16px;">
+          <button onclick="gerarDietaComRespostas()" style="width:100%;padding:13px 16px;background:var(--green, #22c55e);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;">
+            ${_ico('utensils', 15)} Gerar minha dieta personalizada
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  container.appendChild(card);
+  container.scrollTop = container.scrollHeight;
+}
+
+function wdSelect(btn, campo, valor) {
+  _wdRespostas[campo] = valor;
+
+  const group = btn.parentElement;
+  group.querySelectorAll('button').forEach(function(b) {
+    b.style.background = 'transparent';
+    b.style.color = 'var(--accent)';
+  });
+  btn.style.background = 'var(--accent)';
+  btn.style.color = '#fff';
+
+  const required = ['objetivo', 'refeicoes', 'restricao', 'patologia', 'pratos'];
+  const allDone = required.every(function(k) { return _wdRespostas[k]; });
+  const gerarBtn = document.getElementById('wdGerarBtn');
+  if (gerarBtn) gerarBtn.style.display = allDone ? 'block' : 'none';
+
+  const container = document.getElementById('orientExpertMessages');
+  if (container) container.scrollTop = container.scrollHeight;
+}
+
+async function gerarDietaComRespostas() {
+  document.getElementById('wdCard')?.remove();
+
+  const r = _wdRespostas;
+  const dadosPerfil = [
+    r.sexo   ? '- Sexo: '   + r.sexo   : '',
+    r.peso   ? '- Peso: '   + r.peso   : '',
+    r.altura ? '- Altura: ' + r.altura : '',
+    r.idade  ? '- Idade: '  + r.idade  : '',
+  ].filter(Boolean).join('\n');
+
+  const prompt = [
+    'Crie uma dieta personalizada e detalhada para mim com as seguintes informações:',
+    '',
+    '**Objetivo:** ' + (r.objetivo || 'Manutenção'),
+    '**Refeições por dia:** ' + (r.refeicoes || '4 refeições por dia'),
+    '**Restrições alimentares:** ' + (r.restricao || 'Nenhuma'),
+    '**Patologia/condição:** ' + (r.patologia || 'Nenhuma'),
+    '**Preferência de pratos:** ' + (r.pratos || 'Sem preferência'),
+    dadosPerfil ? '\n**Dados físicos:**\n' + dadosPerfil : '',
+    '',
+    'Monte um cardápio completo com cada refeição, alimentos, quantidades em gramas e macros aproximados (proteínas, carboidratos, gorduras e calorias). Considere a patologia informada para evitar alimentos contraindicados. Use pratos reais e acessíveis de acordo com a preferência informada. No final, adicione orientações gerais de nutrição.',
+  ].filter(Boolean).join('\n');
+
+  _wdRespostas = {};
+  document.getElementById('orientExpertInput').value = prompt;
+  await sendOrientExpert();
+
+  // Adiciona botão de exportar PDF após a dieta ser gerada
+  const container = document.getElementById('orientExpertMessages');
+  if (!container) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-msg assistant transform-wrap';
+  const btn = document.createElement('button');
+  btn.className = 'transform-btn';
+  btn.style.cssText = 'display:block;width:100%;padding:12px 16px;background:rgba(34,197,94,0.12);border:1.5px solid var(--green,#22c55e);border-radius:12px;color:var(--green,#22c55e);font-family:var(--font);font-size:0.88rem;font-weight:700;cursor:pointer;text-align:left;transition:all .15s;animation:fadeInUp .3s ease;';
+  btn.innerHTML = _ico('file-text', 14) + ' Exportar dieta em PDF';
+  btn.onclick = function() { exportarDietaChatPDF(); wrap.remove(); };
+  wrap.appendChild(btn);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+function exportarDietaChatPDF() {
+  // Pega o último bubble de assistente do chat de orientação
+  const container = document.getElementById('orientExpertMessages');
+  if (!container) return;
+  const bubbles = container.querySelectorAll('.ai-msg[data-role="assistant"] .ai-bubble, .ai-msg.assistant .ai-bubble');
+  if (!bubbles.length) { showToast('Nenhuma dieta gerada ainda.', 'info'); return; }
+  const content = bubbles[bubbles.length - 1].innerHTML;
+
+  const cfg  = safeJSON('kronia_config', {});
+  const nome = cfg.nome || 'Atleta';
+  const data = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Permita popups para gerar o PDF.', 'info'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dieta KRONIA</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; color: #222; line-height: 1.6; }
+    h1 { color: #ff6b00; font-size: 1.4rem; } h2 { color: #333; font-size: 1.1rem; margin-top: 1.5em; }
+    p { margin: 0.4em 0; } ul,ol { padding-left: 1.4em; }
+    .header { border-bottom: 2px solid #ff6b00; padding-bottom: 12px; margin-bottom: 20px; }
+    .footer { margin-top: 30px; font-size: 0.8rem; color: #888; border-top: 1px solid #ddd; padding-top: 10px; }
+    @media print { body { margin: 20px; } }
+  </style></head><body>
+  <div class="header"><h1>Dieta Personalizada — KRONIA</h1><p><b>Atleta:</b> ${nome} &nbsp;|&nbsp; <b>Data:</b> ${data}</p></div>
+  <div>${content}</div>
+  <div class="footer">Gerado por KRONIA · Consulte sempre um nutricionista.</div>
+  <script>window.onload=function(){window.print();}<\/script></body></html>`);
+  win.document.close();
 }
 
 // ── Dieta Sheet ──────────────────────────────────────
