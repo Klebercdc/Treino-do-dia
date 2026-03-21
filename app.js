@@ -71,15 +71,19 @@ const TREINOS_PRONTOS = {
     { nome: "F (Legs 2)", exs: ["Levantamento Terra","Leg Press","Mesa Flexora","Panturrilha Sentado"] },
   ],
 };
-// Migração automática: copia chaves antigas (titanpro_*) para novas (kronia_*)
-(function migrateTitanProToKronia() {
-  const keys = ['draft_v2','history_v2','prev_v1','config','prs','mesociclo','calc_prefs','draftv3'];
-  keys.forEach(k => {
-    const from = 'titanpro_' + k, to = 'kronia_' + k;
-    if (localStorage.getItem(from) !== null && localStorage.getItem(to) === null) {
-      localStorage.setItem(to, localStorage.getItem(from));
-    }
+// Migração única: copia chaves legacy → kronia_* (roda só uma vez graças ao guard)
+(function() {
+  if (localStorage.getItem('_kronia_migrated')) return;
+  [['titanpro_','draft_v2'],['titanpro_','history_v2'],['titanpro_','prev_v1'],
+   ['titanpro_','config'],['titanpro_','prs'],['titanpro_','mesociclo'],
+   ['titanpro_','calc_prefs'],['titanpro_','draftv3'],
+   ['titan_','light'],['titan_','onboarded'],['titan_','unidade'],['titan_','plan']
+  ].forEach(([prefix, k]) => {
+    const from = prefix + k, to = 'kronia_' + k;
+    const val = localStorage.getItem(from);
+    if (val !== null && localStorage.getItem(to) === null) localStorage.setItem(to, val);
   });
+  localStorage.setItem('_kronia_migrated', '1');
 })();
 
 const STORAGE = Object.freeze({
@@ -1840,7 +1844,7 @@ function obNext(step) {
   btn.style.opacity="1"; btn.style.pointerEvents="";
 }
 function obFinish() {
-  localStorage.setItem("titan_onboarded","1");
+  localStorage.setItem("kronia_onboarded","1");
   const ob = document.getElementById("onboarding");
   if (ob) { ob.style.display = "none"; ob.classList.remove("show"); }
   const ls = document.getElementById("loginScreen");
@@ -2806,7 +2810,7 @@ window.onload = () => {
   try { navTo("inicio"); openHome(); } catch(e) { navTo("treino"); }
 
   // Tema salvo
-  if (localStorage.getItem("titan_light") === "1") {
+  if (localStorage.getItem("kronia_light") === "1") {
     document.body.classList.add('light-mode');
     const val = document.getElementById('settingsThemeVal');
     if (val) val.textContent = 'Claro';
@@ -2818,7 +2822,7 @@ window.onload = () => {
   applyPrevGhostsToAll();
 
   // Toast de boas-vindas para quem já treinou
-  if (localStorage.getItem("titan_onboarded")) {
+  if (localStorage.getItem("kronia_onboarded")) {
     const streak = calcStreak();
     if (streak >= 2) {
       setTimeout(() => showToast(`🔥 ${streak} dias seguidos. Continue assim!`, "success", 4000), 1200);
@@ -2826,7 +2830,7 @@ window.onload = () => {
   }
 
   // Onboarding apenas na primeira visita
-  if (!localStorage.getItem("titan_onboarded")) {
+  if (!localStorage.getItem("kronia_onboarded")) {
     document.getElementById("onboarding").classList.add("show");
   }
 };
@@ -3014,7 +3018,7 @@ function openSettingsScreen() {
   try {
     const badge = document.getElementById('settingsPlanBadge');
     if (badge) {
-      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('titan_plan') || 'free');
+      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('kronia_plan') || 'free');
       if (plan === 'ultra') {
         badge.textContent = 'ULTRA'; badge.style.background = 'rgba(139,92,246,0.15)'; badge.style.color = '#a855f7'; badge.style.borderColor = 'rgba(139,92,246,0.4)';
       } else if (plan === 'pro') {
@@ -3028,7 +3032,7 @@ function openSettingsScreen() {
     if (themeVal) themeVal.textContent = document.body.classList.contains('light-mode') ? 'Claro' : 'Escuro';
     // Unidade atual
     const unidadeVal = document.getElementById('settingsUnidadeVal');
-    if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('titan_unidade') || 'kg');
+    if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
   } catch(e) {}
   document.getElementById('settingsScreen').classList.add('show');
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3072,9 +3076,9 @@ function exportarDados() {
 }
 
 function toggleUnidade() {
-  const atual = localStorage.getItem('titan_unidade') || 'kg';
+  const atual = localStorage.getItem('kronia_unidade') || 'kg';
   const novo = atual === 'kg' ? 'lbs' : 'kg';
-  localStorage.setItem('titan_unidade', novo);
+  localStorage.setItem('kronia_unidade', novo);
   const el = document.getElementById('settingsUnidadeVal');
   if (el) el.textContent = novo;
   showToast(`Unidade alterada para ${novo}`, 'success', 2500);
@@ -3082,7 +3086,7 @@ function toggleUnidade() {
 
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
-  localStorage.setItem('titan_light', isLight ? '1' : '0');
+  localStorage.setItem('kronia_light', isLight ? '1' : '0');
   const val = document.getElementById('settingsThemeVal');
   if (val) val.textContent = isLight ? 'Claro' : 'Escuro';
   showToast(`Tema ${isLight ? 'claro' : 'escuro'} ativado`, 'success', 2000);
@@ -3433,7 +3437,7 @@ function updateHeatmap(hist) {
 function openOrientacao() {
   // Esconde homeScreen se estiver aberta para evitar conflito de z-index e bloqueio de scroll no iOS
   const homeEl = document.getElementById("homeScreen");
-  _orientFromHome = homeEl?.classList.contains("show") || false;
+  _orientFromHome = !!homeEl?.classList.contains("show");
   if (homeEl) homeEl.classList.remove("show");
   document.getElementById("orientacaoScreen").classList.add("show");
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
