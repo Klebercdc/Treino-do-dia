@@ -1195,7 +1195,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   position: fixed;
   inset: 0;
   background: #090909;
-  z-index: 500;
+  z-index: 99998;
   flex-direction: column;
   align-items: center;
   justify-content: center;
