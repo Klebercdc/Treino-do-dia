@@ -2450,16 +2450,13 @@ async function sendAI(overrideText, isGerarTreino = false) {
   const text  = overrideText || input?.value?.trim();
   if (!text) return;
 
-  // Detectar automaticamente pedido de treino quando o usuário digita
-  if (!isGerarTreino && !overrideText) {
-    isGerarTreino = _isPedidoDeTreino(text);
-  }
+  // Geração automática de treino desativada — KRONOS usa sempre o agente de chat
+  isGerarTreino = false;
 
   if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
   document.getElementById("aiSuggestions")?.remove();
 
-  // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
-  const displayText = isGerarTreino ? `${_ico('zap', 16)} Gerar treino para hoje` : text;
+  const displayText = text;
   addAIMessage("user", displayText);
   _aiHistory.push({ role: "user", content: text });
 
@@ -2472,12 +2469,9 @@ async function sendAI(overrideText, isGerarTreino = false) {
     const messages = _aiHistory.slice(-12);
     const userData = buildUserData();
 
-    // Gerar treino → /api/chat (especializado em JSON estruturado)
-    // Chat normal → /api/agent (tem acesso a ferramentas e dados reais)
-    const endpoint = isGerarTreino ? "/api/chat" : "/api/agent";
-    const body = isGerarTreino
-      ? { system: buildTrainingContext(), messages, isGerarTreino, model: "meta/llama-3.1-70b-instruct", max_tokens: 1000 }
-      : { messages, history: userData.history, profile: userData.profile };
+    // KRONOS usa sempre o agente de chat (sem geração estruturada de treino)
+    const endpoint = "/api/agent";
+    const body = { messages, history: userData.history, profile: userData.profile };
 
     const response = await apiFetch(endpoint, {
       method: "POST",
@@ -3543,7 +3537,12 @@ function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
-  navTo("treino");
+  const homeVisible = document.getElementById("homeScreen")?.classList.contains("show");
+  if (homeVisible) {
+    navTo("inicio");
+  } else {
+    navTo("treino");
+  }
 }
 function openDieta() {
   const cfg = safeJSON("titanpro_config", {});
