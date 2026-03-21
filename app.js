@@ -2976,6 +2976,99 @@ function closePerfil() {
 }
 
 // ══════════════════════════════════════════
+// TELA DE CONFIGURAÇÕES
+// ══════════════════════════════════════════
+function openSettingsScreen() {
+  // Atualiza badge do plano
+  try {
+    const badge = document.getElementById('settingsPlanBadge');
+    if (badge) {
+      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('titan_plan') || 'free');
+      if (plan === 'ultra') {
+        badge.textContent = 'ULTRA'; badge.style.background = 'rgba(139,92,246,0.15)'; badge.style.color = '#a855f7'; badge.style.borderColor = 'rgba(139,92,246,0.4)';
+      } else if (plan === 'pro') {
+        badge.textContent = 'PRO'; badge.style.background = 'rgba(249,115,22,0.15)'; badge.style.color = 'var(--accent)'; badge.style.borderColor = 'rgba(249,115,22,0.4)';
+      } else {
+        badge.textContent = 'FREE'; badge.style.background = 'rgba(255,255,255,0.07)'; badge.style.color = 'rgba(255,255,255,0.5)'; badge.style.borderColor = 'rgba(255,255,255,0.12)';
+      }
+    }
+    // Tema atual
+    const themeVal = document.getElementById('settingsThemeVal');
+    if (themeVal) themeVal.textContent = document.body.classList.contains('light-mode') ? 'Claro' : 'Escuro';
+    // Unidade atual
+    const unidadeVal = document.getElementById('settingsUnidadeVal');
+    if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('titan_unidade') || 'kg');
+  } catch(e) {}
+  document.getElementById('settingsScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeSettingsScreen() {
+  document.getElementById('settingsScreen').classList.remove('show');
+}
+
+function limparChatKronos() {
+  if (!confirm('Limpar histórico do chat com KRONOS?')) return;
+  try {
+    const msgs = document.getElementById('orientExpertMessages');
+    if (msgs) msgs.innerHTML = '';
+    const ai = document.getElementById('aiMessages');
+    if (ai) ai.innerHTML = '';
+    showToast('Chat limpo', 'success', 2500);
+  } catch(e) {}
+}
+
+function exportarDados() {
+  try {
+    const data = {
+      history: JSON.parse(localStorage.getItem('titanpro_history_v2') || '[]'),
+      config: JSON.parse(localStorage.getItem('titanpro_config') || '{}'),
+      prs: JSON.parse(localStorage.getItem('titanpro_prs') || '{}'),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'titanpro_backup_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+    showToast('Dados exportados!', 'success', 3000);
+  } catch(e) { showToast('Erro ao exportar', 'error'); }
+}
+
+function toggleUnidade() {
+  const atual = localStorage.getItem('titan_unidade') || 'kg';
+  const novo = atual === 'kg' ? 'lbs' : 'kg';
+  localStorage.setItem('titan_unidade', novo);
+  const el = document.getElementById('settingsUnidadeVal');
+  if (el) el.textContent = novo;
+  showToast(`Unidade alterada para ${novo}`, 'success', 2500);
+}
+
+// ══════════════════════════════════════════
+// TELA DE PREÇOS — FREE / PRO / ULTRA
+// ══════════════════════════════════════════
+function openPricingScreen() {
+  const el = document.getElementById('pricingScreen');
+  if (!el) return;
+  el.style.cssText = 'display:flex;flex-direction:column;position:fixed;inset:0;z-index:9000;overflow-y:auto;';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closePricingScreen() {
+  const el = document.getElementById('pricingScreen');
+  if (el) el.style.display = 'none';
+}
+
+function selectPlan(plan) {
+  if (plan === 'free') { closePricingScreen(); return; }
+  if (typeof assinarPro === 'function') {
+    assinarPro(plan);
+  } else {
+    showToast('Redirecionando para o checkout...', 'info', 3000);
+  }
+}
+
+// ══════════════════════════════════════════
 // TELA EDITAR PERFIL
 // ══════════════════════════════════════════
 function openEditarPerfil() {
