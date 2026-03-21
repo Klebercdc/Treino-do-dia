@@ -3909,6 +3909,24 @@ REGRAS PARA REFEIÇÕES:
 - Cada refeição deve ter alimentos reais, com quantidade em gramas/ml/unidades.
 ${orcamentoInstrucao}
 
+RACIOCÍNIO CULINÁRIO OBRIGATÓRIO — pense no prato antes de prescrevê-lo:
+- Valide o método de preparo de cada alimento: frango, carne, peixe, ovo → podem ser grelhados, assados, cozidos. Arroz, feijão, lentilha, macarrão → cozidos em água. Salada, pepino, tomate → crus. NUNCA escreva preparações absurdas como "alface grelhada", "banana assada em gordura", "feijão cru".
+- Informe as quantidades no estado em que o alimento vai ser CONSUMIDO (cozido/grelhado/cru). Exemplo: "100g de frango grelhado" (não cru), "80g de arroz cozido" (não seco).
+- Seja coerente com a refeição: café da manhã tem ovos, frutas, pão, tapioca. Almoço tem proteína + carboidrato + legumes + salada. Lanche é mais leve. Jantar é prático.
+- Quantidades realistas e visuais: um filé médio de frango grelhado = ~100-120g; uma concha de arroz cozido = ~80-100g; uma concha de feijão = ~80-100g.
+
+MEDIDAS CASEIRAS (OBRIGATÓRIO — inclua para cada alimento junto com os gramas):
+Muitas pessoas não têm balança. Para cada alimento, inclua a equivalência em medida caseira entre parênteses após a quantidade em gramas.
+Referências:
+- 1 concha média = ~80-100g de arroz ou feijão cozido
+- 1 colher de sopa cheia = ~15-20g (depende do alimento: azeite ~12g, pasta de amendoim ~20g, farinha ~15g)
+- 1 xícara de chá = ~240ml de líquido ou ~150g de arroz cozido
+- 1 filé médio = ~100-120g de proteína grelhada (frango, peixe)
+- 1 fatia média = ~30-40g de queijo, pão, bolo
+- 1 unidade = ovo, banana média (~120g), maçã média (~150g)
+- 1 pegador = ~100g de macarrão cozido
+- 1 escumadeira = ~150-200g de legumes cozidos
+
 FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS com os blocos abaixo, sem texto extra:
 
 ##META
@@ -3923,9 +3941,15 @@ TDEE: [TDEE]
 NOME: [nome da refeição]
 HORARIO: [ex: 07:00]
 TAG: [descrição curta, ex: Energia matinal]
-[Alimento]|[qtde]|[kcal]|[prot g]|[carb g]|[gord g]
-[Alimento]|[qtde]|[kcal]|[prot g]|[carb g]|[gord g]
+[Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
+[Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
 SUBTOTAL||[kcal]|[prot]|[carb]|[gord]
+
+Exemplo de linha correta:
+Frango grelhado|120g (1 filé médio)|198|37|0|4
+Arroz branco cozido|160g (2 conchas)|208|4|45|0
+Feijão carioca cozido|100g (1 concha)|77|5|14|0
+Azeite de oliva|10ml (1 col. sopa rasa)|88|0|0|10
 
 (repita o bloco ##REFEICAO para cada uma das ${refs} refeições)
 
