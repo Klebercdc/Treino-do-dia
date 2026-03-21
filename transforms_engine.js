@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   TITAN TRANSFORMS ENGINE
+   KRONIA TRANSFORMS ENGINE
    Motor de inteligência defensiva — inspirado no Maltego
    Entidades, Transforms e Defensive Transforms
 ═══════════════════════════════════════════════════════════ */
@@ -98,7 +98,7 @@ function teIcon(name, size = 16, color = null) {
 /* ── COMPUTE ATHLETE DATA FROM LOCALSTORAGE ─────────────── */
 function teComputeAthleteData() {
   const hist = (() => {
-    try { return JSON.parse(localStorage.getItem('titanpro_history_v2') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('kronia_history_v2') || '[]'); } catch { return []; }
   })();
 
   // Days since last workout
@@ -122,7 +122,7 @@ function teComputeAthleteData() {
     : 0;
 
   // Weeks without PR
-  const prKey = 'titanpro_prs';
+  const prKey = 'kronia_prs';
   let semSemPR = 0;
   try {
     const prs = JSON.parse(localStorage.getItem(prKey) || '{}');
@@ -491,7 +491,7 @@ async function teCallKronos(alerts, athleteData) {
       headers,
       body: JSON.stringify({
         messages: [{ role: 'user', content: userMsg }],
-        system: 'Você é KRONOS, coach de alta performance do TITAN PRO. Analise os alertas defensivos do atleta e dê recomendações diretas e baseadas em evidências em português brasileiro. Seja objetivo e prático. Máximo 2 parágrafos.',
+        system: 'Você é KRONOS, coach de alta performance do KRONIA. Analise os alertas defensivos do atleta e dê recomendações diretas e baseadas em evidências em português brasileiro. Seja objetivo e prático. Máximo 2 parágrafos.',
       }),
     });
 
@@ -554,7 +554,7 @@ async function teSilentScan() {
   const cache = { ts: Date.now(), alerts: found, entities, athleteData };
   try { localStorage.setItem(TE_CACHE_KEY, JSON.stringify(cache)); } catch(e) {}
 
-  // Update badge on TITAN TRANSFORMS home card
+  // Update badge on KRONIA TRANSFORMS home card
   teUpdateHomeBadge(found);
 
   return cache;

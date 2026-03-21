@@ -1,10 +1,10 @@
-const CACHE = 'titanpro-v5';
+const CACHE = 'kronia-v1';
 const STATIC = [
   '/',
   '/index.html',
   '/app.js',
   '/styles.css',
-  '/titanpro.png',
+  '/kronia.png',
   '/splash.png',
   '/manifest.json'
 ];

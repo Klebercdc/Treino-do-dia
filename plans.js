@@ -183,7 +183,7 @@ if (!resp.ok) throw new Error('Falha na exportação');
 const blob = await resp.blob();
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
-a.href = url; a.download = 'titan-pro-meus-dados.json';
+a.href = url; a.download = 'kronia-meus-dados.json';
 document.body.appendChild(a); a.click();
 setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
 showToast('Dados exportados com sucesso!', 'success', 3000);
@@ -213,7 +213,7 @@ try {
 const resp = await apiFetch('/api/lgpd-delete', { method: 'POST' });
 const json = await resp.json();
 if (json.ok) {
-showToast('Conta excluída. Obrigado por usar o TITAN PRO.', 'success', 5000);
+showToast('Conta excluída. Obrigado por usar o KRONIA.', 'success', 5000);
 setTimeout(function() { window.location.reload(); }, 3000);
 } else {
 showToast('Erro ao excluir conta: ' + (json.error || 'tente novamente'), 'error', 5000);
@@ -233,7 +233,7 @@ content: `
 <strong>Última atualização: março de 2026</strong><br><br>
 
 <strong>1. Responsável pelo Tratamento</strong><br>
-TITAN PRO (treino-do-dia-orpin.vercel.app) é responsável pelo tratamento dos seus dados pessoais, nos termos da Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).<br><br>
+KRONIA (treino-do-dia-orpin.vercel.app) é responsável pelo tratamento dos seus dados pessoais, nos termos da Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).<br><br>
 
 <strong>2. Dados Coletados</strong><br>
 Coletamos: endereço de e-mail (para autenticação), dados de treino (exercícios, séries, cargas, datas), configurações do perfil (peso, objetivo, frequência de treino) e registros de uso do app (data/hora, tipo de consulta).<br>
@@ -284,18 +284,18 @@ Notificaremos alterações relevantes por e-mail ou notificação no app com 15 
 <strong>Última atualização: março de 2026</strong><br><br>
 
 <strong>1. Aceitação dos Termos</strong><br>
-Ao criar uma conta e usar o TITAN PRO, você concorda com estes Termos de Uso. Se não concordar, não utilize o serviço.<br><br>
+Ao criar uma conta e usar o KRONIA, você concorda com estes Termos de Uso. Se não concordar, não utilize o serviço.<br><br>
 
 <strong>2. Descrição do Serviço</strong><br>
-O TITAN PRO é um aplicativo de registro e planejamento de treinos musculares, com funcionalidades de inteligência artificial para sugestão de exercícios, análise de progresso e coaching personalizado.<br><br>
+O KRONIA é um aplicativo de registro e planejamento de treinos musculares, com funcionalidades de inteligência artificial para sugestão de exercícios, análise de progresso e coaching personalizado.<br><br>
 
 <strong>3. ⚠️ DISCLAIMER IMPORTANTE — SAÚDE E EXERCÍCIO FÍSICO</strong><br>
-<span style="color:#f97316;font-weight:600">O TITAN PRO não substitui avaliação médica ou orientação profissional.</span><br><br>
+<span style="color:#f97316;font-weight:600">O KRONIA não substitui avaliação médica ou orientação profissional.</span><br><br>
 • As sugestões de treino geradas pela IA são baseadas em princípios gerais de musculação e devem ser adaptadas pelo usuário ou por um profissional de Educação Física;<br>
 • Consulte um médico antes de iniciar qualquer programa de exercícios, especialmente se tiver condições de saúde preexistentes;<br>
 • As informações nutricionais são estimativas baseadas em equações científicas e não substituem avaliação nutricional individualizada;<br>
 • O uso de cargas inadequadas pode causar lesões. Sempre priorize a técnica correta;<br>
-• Os desenvolvedores do TITAN PRO não se responsabilizam por lesões decorrentes do uso das sugestões do app.<br><br>
+• Os desenvolvedores do KRONIA não se responsabilizam por lesões decorrentes do uso das sugestões do app.<br><br>
 
 <strong>4. Elegibilidade</strong><br>
 O uso é permitido para maiores de 18 anos, ou menores com supervisão e consentimento dos responsáveis legais.<br><br>
@@ -309,13 +309,13 @@ O uso é permitido para maiores de 18 anos, ou menores com supervisão e consent
 É proibido: usar o serviço para fins ilícitos; tentar burlar limites de quota; fazer engenharia reversa; usar o Coach IA para obter diagnósticos médicos ou prescrição de medicamentos.<br><br>
 
 <strong>7. Propriedade Intelectual</strong><br>
-O código, design e marca TITAN PRO são de propriedade dos desenvolvedores. Seus dados de treino pertencem a você.<br><br>
+O código, design e marca KRONIA são de propriedade dos desenvolvedores. Seus dados de treino pertencem a você.<br><br>
 
 <strong>8. Disponibilidade</strong><br>
 O serviço pode ter interrupções por manutenção ou falhas de infraestrutura. Não garantimos disponibilidade de 100%.<br><br>
 
 <strong>9. Limitação de Responsabilidade</strong><br>
-Na extensão máxima permitida por lei, o TITAN PRO não se responsabiliza por danos indiretos, incidentais ou consequentes decorrentes do uso do serviço.<br><br>
+Na extensão máxima permitida por lei, o KRONIA não se responsabiliza por danos indiretos, incidentais ou consequentes decorrentes do uso do serviço.<br><br>
 
 <strong>10. Alterações</strong><br>
 Reservamos o direito de modificar estes termos com aviso prévio de 15 dias. O uso continuado após as alterações implica aceitação.<br><br>

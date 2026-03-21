@@ -16,7 +16,7 @@ function pulseCompute() {
   try {
     const hist    = (typeof safeJSON === 'function' && typeof STORAGE !== 'undefined')
                     ? safeJSON(STORAGE.historyKey, []) : [];
-    const cfg     = (typeof safeJSON === 'function') ? safeJSON('titanpro_config', {}) : {};
+    const cfg     = (typeof safeJSON === 'function') ? safeJSON('kronia_config', {}) : {};
     const streak  = (typeof calcStreak === 'function') ? calcStreak() : 0;
     const entity  = (typeof teGetEntityState === 'function') ? teGetEntityState() : null;
     const now     = new Date();
@@ -81,7 +81,7 @@ function pulseCompute() {
     readiness = Math.max(0, Math.min(10, Math.round(readiness)));
 
     // Próximo treino sugerido
-    const draft    = (typeof safeJSON === 'function') ? safeJSON('titanpro_draftv3', null) : null;
+    const draft    = (typeof safeJSON === 'function') ? safeJSON('kronia_draftv3', null) : null;
     const sections = draft?.sections || [];
     const nextIdx  = (typeof getNextTreinoIdx === 'function') ? getNextTreinoIdx() : 0;
     const nextSec  = sections[nextIdx];
