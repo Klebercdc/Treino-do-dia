@@ -960,7 +960,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #transformsScreen {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 4000;
   background: #090909;
   display: flex;
   flex-direction: column;
