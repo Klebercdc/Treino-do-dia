@@ -693,7 +693,7 @@ filter: drop-shadow(0 0 32px rgba(249,115,22,0.6));
 50%       { filter: drop-shadow(0 0 64px rgba(249,115,22,1)); }
 }
 #splashTexto {
-display: flex; align-items: baseline; gap: 10px;
+display: flex; align-items: baseline; gap: 0;
 margin-top: 20px;
 animation: splashTextIn 0.7s ease 0.8s both;
 }
