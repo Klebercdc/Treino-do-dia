@@ -564,7 +564,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 /* ══════════════════════════════════════════
    TELA ORIENTAÇÃO
 ══════════════════════════════════════════ */
-#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; }
+#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow: hidden; width: 100%; height: 100dvh; }
 #orientacaoScreen.show { display: flex; }
 #dietaScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 #dietaScreen.show { display: flex; }

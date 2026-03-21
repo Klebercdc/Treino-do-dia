@@ -1848,6 +1848,7 @@ function obFinish() {
 let _aiHistory = [];
 let _aiTyping  = false;
 let _orientExpertHistory = [];
+let _orientFromHome = false;
 
 function buildUserData() {
   return {
@@ -3419,6 +3420,10 @@ function updateHeatmap(hist) {
 // TELA ORIENTAÇÃO
 // ══════════════════════════════════════════
 function openOrientacao() {
+  // Esconde homeScreen se estiver aberta para evitar conflito de z-index e bloqueio de scroll no iOS
+  const homeEl = document.getElementById("homeScreen");
+  _orientFromHome = homeEl?.classList.contains("show") || false;
+  if (homeEl) homeEl.classList.remove("show");
   document.getElementById("orientacaoScreen").classList.add("show");
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
   const row = document.querySelector(".orient-shortcuts-row");
@@ -3541,8 +3546,8 @@ function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
-  const homeVisible = document.getElementById("homeScreen")?.classList.contains("show");
-  if (homeVisible) { navTo("inicio"); } else { navTo("treino"); }
+  if (_orientFromHome) { navTo("inicio"); openHome(); } else { navTo("treino"); }
+  _orientFromHome = false;
 }
 function openDieta() {
   const cfg = safeJSON("titanpro_config", {});
