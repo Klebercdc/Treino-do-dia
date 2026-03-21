@@ -2450,13 +2450,16 @@ async function sendAI(overrideText, isGerarTreino = false) {
   const text  = overrideText || input?.value?.trim();
   if (!text) return;
 
-  // Geração automática de treino desativada — KRONOS usa sempre o agente de chat
-  isGerarTreino = false;
+  // Detectar automaticamente pedido de treino quando o usuário digita
+  if (!isGerarTreino && !overrideText) {
+    isGerarTreino = _isPedidoDeTreino(text);
+  }
 
   if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
   document.getElementById("aiSuggestions")?.remove();
 
-  const displayText = text;
+  // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
+  const displayText = isGerarTreino ? `Gerar treino para hoje` : text;
   addAIMessage("user", displayText);
   _aiHistory.push({ role: "user", content: text });
 
@@ -2469,9 +2472,12 @@ async function sendAI(overrideText, isGerarTreino = false) {
     const messages = _aiHistory.slice(-12);
     const userData = buildUserData();
 
-    // KRONOS usa sempre o agente de chat (sem geração estruturada de treino)
-    const endpoint = "/api/agent";
-    const body = { messages, history: userData.history, profile: userData.profile };
+    // Gerar treino → /api/chat (especializado em JSON estruturado)
+    // Chat normal → /api/agent (tem acesso a ferramentas e dados reais)
+    const endpoint = isGerarTreino ? "/api/chat" : "/api/agent";
+    const body = isGerarTreino
+      ? { system: buildTrainingContext(), messages, isGerarTreino }
+      : { messages, history: userData.history, profile: userData.profile };
 
     const response = await apiFetch(endpoint, {
       method: "POST",
@@ -4162,7 +4168,7 @@ IMPORTANTE: Use as diretrizes ISSN — ≥1.6g/kg proteína para hipertrofia, d�
   try {
     const resp = await apiFetch("/api/chat", {
       method: "POST",
-      body: JSON.stringify({ system: buildTrainingContext(), messages: [{ role: "user", content: prompt }], isGerarTreino: false })
+      body: JSON.stringify({ system: buildTrainingContext(), messages: [{ role: "user", content: prompt }], isGerarTreino: false, maxTokens: 4000 })
     });
     const data = await resp.json();
     if (data.error) { txt.textContent = "Erro: " + data.error; return; }

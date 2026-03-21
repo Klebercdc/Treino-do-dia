@@ -226,10 +226,10 @@ function extrairDoTexto(text) {
 }
 
 function gerarTreino(userMsg, userId, callback) {
-  callChat(TREINO_SYSTEM, [userMsg], 1500, 0.1, userId, 'chat-treino', function(err, text) {
+  callChat(TREINO_SYSTEM, [userMsg], 4000, 0.1, userId, 'chat-treino', function(err, text) {
     try { return callback(null, parseWorkout(text||``)); } catch(e) {}
     try { return callback(null, extrairDoTexto(text||``)); } catch(e2) {}
-    callChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
+    callChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 4000, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
       try { return callback(null, parseWorkout(text2||``)); } catch(e3) {}
       try { return callback(null, extrairDoTexto(text2||``)); } catch(e4) {}
       callback(`Erro ao gerar treino: ` + (err2||'resposta inválida da IA') + `. Tente novamente.`, null);
@@ -268,7 +268,8 @@ module.exports = function(req, res) {
           res.status(200).json({content:[{type:`workout_json`,data:data}]});
         });
       } else {
-        callChat(buildCoachSystem(b.system), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+        var maxTok = (typeof b.maxTokens === 'number' && b.maxTokens > 0) ? Math.min(b.maxTokens, 6000) : 1200;
+        callChat(buildCoachSystem(b.system), messages, maxTok, 0.75, user.id, 'chat', function(err, text) {
           if (err) return res.status(500).json({error:err});
           res.status(200).json({content:[{type:`text`,text:text}]});
         });
