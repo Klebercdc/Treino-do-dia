@@ -2793,11 +2793,11 @@ window.onload = () => {
   // Abrir tela inicial
   try { navTo("inicio"); openHome(); } catch(e) { navTo("treino"); }
 
-  // Light mode (app é dark por padrão)
-  if (localStorage.getItem("titan_light")==="1") {
-    // light mode desativado
-    const icon = document.getElementById("darkIcon");
-    if (icon) icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  // Tema salvo
+  if (localStorage.getItem("titan_light") === "1") {
+    document.body.classList.add('light-mode');
+    const val = document.getElementById('settingsThemeVal');
+    if (val) val.textContent = 'Claro';
   }
 
   // UI
@@ -3066,6 +3066,14 @@ function toggleUnidade() {
   const el = document.getElementById('settingsUnidadeVal');
   if (el) el.textContent = novo;
   showToast(`Unidade alterada para ${novo}`, 'success', 2500);
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('titan_light', isLight ? '1' : '0');
+  const val = document.getElementById('settingsThemeVal');
+  if (val) val.textContent = isLight ? 'Claro' : 'Escuro';
+  showToast(`Tema ${isLight ? 'claro' : 'escuro'} ativado`, 'success', 2000);
 }
 
 // ══════════════════════════════════════════
