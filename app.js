@@ -3533,7 +3533,8 @@ function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
-  navTo("treino");
+  const homeVisible = document.getElementById("homeScreen")?.classList.contains("show");
+  if (homeVisible) { navTo("inicio"); } else { navTo("treino"); }
 }
 function openDieta() {
   const cfg = safeJSON("titanpro_config", {});
