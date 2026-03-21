@@ -3165,9 +3165,13 @@ function openEditarPerfil() {
   const cta = document.getElementById("epCtaTreino");
   if (cta) cta.style.display = "none";
   document.getElementById("editarPerfilScreen").classList.add("show");
+  const _footerEP = document.querySelector('.footer-actions');
+  if (_footerEP) _footerEP.style.display = 'none';
 }
 function closeEditarPerfil() {
   document.getElementById("editarPerfilScreen").classList.remove("show");
+  const _footerEP = document.querySelector('.footer-actions');
+  if (_footerEP) _footerEP.style.display = '';
 }
 function epAtualizarNome(val) {
   const display = document.getElementById("epNomeDisplay");
@@ -3432,6 +3436,8 @@ function openOrientacao() {
   }
   // Atualizar chips dinâmicos sempre que abre
   renderAriaChips();
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
 }
 
 function ariaGreeting() {
@@ -3535,6 +3541,8 @@ function ariaQuickSend(msg) {
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
   navTo("treino");
 }
 function openDieta() {
@@ -3550,9 +3558,13 @@ function openDieta() {
   if (prefs.davObj) { const el = document.querySelector(`#davObjChips [data-val="${prefs.davObj}"]`); if (el) selectDavObj(el); }
   if (prefs.davCiclo) { const el = document.querySelector(`#davCicloChips [data-val="${prefs.davCiclo}"]`); if (el) selectDavCiclo(el); }
   document.getElementById("dietaScreen").classList.add("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
 }
 function closeDieta() {
   document.getElementById("dietaScreen").classList.remove("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
   navTo("treino");
 }
 function toggleOrientSuggestions() {
