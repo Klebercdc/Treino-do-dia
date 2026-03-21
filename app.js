@@ -71,10 +71,25 @@ const TREINOS_PRONTOS = {
     { nome: "F (Legs 2)", exs: ["Levantamento Terra","Leg Press","Mesa Flexora","Panturrilha Sentado"] },
   ],
 };
+// Migração única: copia chaves legacy → kronia_* (roda só uma vez graças ao guard)
+(function() {
+  if (localStorage.getItem('_kronia_migrated')) return;
+  [['titanpro_','draft_v2'],['titanpro_','history_v2'],['titanpro_','prev_v1'],
+   ['titanpro_','config'],['titanpro_','prs'],['titanpro_','mesociclo'],
+   ['titanpro_','calc_prefs'],['titanpro_','draftv3'],
+   ['titan_','light'],['titan_','onboarded'],['titan_','unidade'],['titan_','plan']
+  ].forEach(([prefix, k]) => {
+    const from = prefix + k, to = 'kronia_' + k;
+    const val = localStorage.getItem(from);
+    if (val !== null && localStorage.getItem(to) === null) localStorage.setItem(to, val);
+  });
+  localStorage.setItem('_kronia_migrated', '1');
+})();
+
 const STORAGE = Object.freeze({
-  draftKey:   "titanpro_draft_v2",
-  historyKey: "titanpro_history_v2",
-  prevKey:    "titanpro_prev_v1",
+  draftKey:   "kronia_draft_v2",
+  historyKey: "kronia_history_v2",
+  prevKey:    "kronia_prev_v1",
   maxHistory: 80, maxTemplates: 20,
 });
 const divisoesGen = { "2":["A","B"],"3":["A","B","C"],"4":["A","B","C","D"],"5":["A","B","C","D","E"],"6":["A","B","C","D","E","F"] };
@@ -1011,12 +1026,12 @@ function calcPersonaEfetiva(hist, cfg) {
  * Se o usuário subiu de persona, mostra toast especial e persiste a nova persona.
  */
 function checkPersonaEvolucao(hist) {
-  const cfg = safeJSON("titanpro_config", {});
+  const cfg = safeJSON("kronia_config", {});
   if (!cfg.persona || cfg.persona === "atleta") return; // atleta já é o topo
   const ev = calcPersonaEfetiva(hist, cfg);
   if (!ev.evoluiu) return;
   // Só notificar uma vez por upgrade (guardar last notified)
-  const lastKey = "titanpro_persona_upgrade_" + ev.declarada;
+  const lastKey = "kronia_persona_upgrade_" + ev.declarada;
   if (localStorage.getItem(lastKey)) return;
   localStorage.setItem(lastKey, "1");
   const labels = { dedicado: "💪 Dedicado", atleta: "🔥 Atleta" };
@@ -1029,7 +1044,7 @@ function checkPersonaEvolucao(hist) {
     const ok = await dlgConfirm(`Seus dados mostram que você já passou do nível "${ev.declarada}" — quer atualizar seu perfil para ${novaLabel}?`);
     if (ok) {
       cfg.persona = ev.efetiva;
-      localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+      localStorage.setItem("kronia_config", JSON.stringify(cfg));
       // Atualizar chip na config sheet
       const chip = document.querySelector("#personaChips [data-val='" + ev.efetiva + "']");
       if (chip) { document.querySelectorAll("#personaChips .config-chip").forEach(c=>c.classList.remove("active")); chip.classList.add("active"); }
@@ -1056,7 +1071,7 @@ function checkNutricaoPosTreino(state, durationMin) {
   const ehIntensa = rpeMedia >= 7.5 || volTotal >= 3000;
   if (!ehIntensa) return;
 
-  const cfg = safeJSON("titanpro_config", {});
+  const cfg = safeJSON("kronia_config", {});
   const peso = parseFloat(cfg.peso) || 75;
   const protMin = Math.round(peso * 1.8);
   const protMax = Math.round(peso * 2.2);
@@ -1451,9 +1466,9 @@ function selectNivel(el) {
   document.querySelectorAll("#nivelChips .config-chip").forEach(c => c.classList.remove("active"));
   el.classList.add("active");
   // Salvar no localStorage
-  const cfg = safeJSON("titanpro_config", {});
+  const cfg = safeJSON("kronia_config", {});
   cfg.nivel = el.getAttribute("data-val");
-  localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+  localStorage.setItem("kronia_config", JSON.stringify(cfg));
 }
 
 function selectFase(el) {
@@ -1470,9 +1485,9 @@ function selectPersonaConfig(el) {
   document.querySelectorAll("#personaChips .config-chip").forEach(c => c.classList.remove("active"));
   el.classList.add("active");
   const val = el.dataset.val;
-  const cfg = safeJSON("titanpro_config", {});
+  const cfg = safeJSON("kronia_config", {});
   cfg.persona = val;
-  localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+  localStorage.setItem("kronia_config", JSON.stringify(cfg));
   // Sugestão automática de frequência para turista
   if (val === "turista") {
     const chip1 = document.querySelector("#freqChips [data-val='1']");
@@ -1492,7 +1507,7 @@ function getProgramaConfig() {
   const obj   = document.querySelector("#objChips .config-chip.active")?.dataset.val || "hipertrofia";
   const fase  = document.querySelector("#faseChips .config-chip.active")?.dataset.val || "1";
   const equip = document.querySelector("#equipChips .config-chip.active")?.dataset.val || "academia";
-  const persona = document.querySelector("#personaChips .config-chip.active")?.dataset.val || safeJSON("titanpro_config",{}).persona || "dedicado";
+  const persona = document.querySelector("#personaChips .config-chip.active")?.dataset.val || safeJSON("kronia_config",{}).persona || "dedicado";
   const muscs = [...document.querySelectorAll(".config-chip-musc.active")].map(c => c.dataset.val);
   const restric = [...document.querySelectorAll(".config-chip-restric.active")].map(c => c.dataset.val).filter(v => v !== "nenhuma");
   return { freq, obj, fase, equip, persona, muscs, restric };
@@ -1501,7 +1516,7 @@ function getProgramaConfig() {
 // Gera treino rápido (20-30 min) para físico turista
 function gerarTreinoExpress(equip) {
   // Override temporário da config para gerar treino express
-  const cfgOrig = safeJSON("titanpro_config", {});
+  const cfgOrig = safeJSON("kronia_config", {});
   const tmpChips = {
     "#freqChips": "1",
     "#equipChips": equip,
@@ -1533,7 +1548,7 @@ function gerarTreinoDoPrograma() {
   navTo("treino");
 
   // Ler perfil da pessoa
-  const perfil = safeJSON("titanpro_config", {});
+  const perfil = safeJSON("kronia_config", {});
   const idade = parseInt(perfil.idade) || 30;
   const nivel = cfg.nivel || perfil.nivel || "iniciante";
   const ehIdoso = idade >= 55;
@@ -1741,7 +1756,7 @@ function gerarTreinoDoPrograma() {
 function openConfig() {
   document.getElementById("configWarning").style.display="none";
   // Sync persona chip from saved config
-  const savedPersona = safeJSON("titanpro_config", {}).persona;
+  const savedPersona = safeJSON("kronia_config", {}).persona;
   if (savedPersona) {
     const chip = document.querySelector("#personaChips [data-val='" + savedPersona + "']");
     if (chip) { document.querySelectorAll("#personaChips .config-chip").forEach(c=>c.classList.remove("active")); chip.classList.add("active"); }
@@ -1749,7 +1764,7 @@ function openConfig() {
   // Sync nivel from session count
   const hist = safeJSON(STORAGE.historyKey, []);
   const autoNivel = hist.length < 3 ? "iniciante" : hist.length < 10 ? "intermediario" : "avancado";
-  const savedNivel = safeJSON("titanpro_config", {}).nivel;
+  const savedNivel = safeJSON("kronia_config", {}).nivel;
   const nivelToSet = savedNivel || autoNivel;
   const nivelChip = document.querySelector("#nivelChips [data-val='" + nivelToSet + "']");
   if (nivelChip) { document.querySelectorAll("#nivelChips .config-chip").forEach(c=>c.classList.remove("active")); nivelChip.classList.add("active"); }
@@ -1798,9 +1813,9 @@ function selectPersonaOb(el) {
   document.querySelectorAll(".ob-persona-chip").forEach(c=>c.classList.remove("active"));
   el.classList.add("active");
   const val = el.dataset.val;
-  const cfg = safeJSON("titanpro_config", {});
+  const cfg = safeJSON("kronia_config", {});
   cfg.persona = val;
-  localStorage.setItem("titanpro_config", JSON.stringify(cfg));
+  localStorage.setItem("kronia_config", JSON.stringify(cfg));
   const d = _OB_PERSONA_DATA[val] || _OB_PERSONA_DATA.dedicado;
   const iconWrap = document.querySelector("#ob-step-2 .ob-icon-wrap");
   if (iconWrap) { iconWrap.style.background = d.grad; iconWrap.innerHTML = d.icon; }
@@ -1829,7 +1844,7 @@ function obNext(step) {
   btn.style.opacity="1"; btn.style.pointerEvents="";
 }
 function obFinish() {
-  localStorage.setItem("titan_onboarded","1");
+  localStorage.setItem("kronia_onboarded","1");
   const ob = document.getElementById("onboarding");
   if (ob) { ob.style.display = "none"; ob.classList.remove("show"); }
   const ls = document.getElementById("loginScreen");
@@ -1839,7 +1854,7 @@ function obFinish() {
 /* IntersectionObserver timer removido */
 
 /* ═══════════════════════════════════════════════════
-   AI COACH — TITAN PRO
+   AI COACH — KRONIA
    • Chat livre com contexto completo do treino
    • Análise pós-treino automática
    • Gerador de treino por linguagem natural
@@ -1853,7 +1868,7 @@ let _orientFromHome = false;
 function buildUserData() {
   return {
     history: safeJSON(STORAGE.historyKey, []).slice(0, 25),
-    profile: safeJSON("titanpro_config", {})
+    profile: safeJSON("kronia_config", {})
   };
 }
 
@@ -1863,7 +1878,7 @@ function buildTrainingContext() {
   const streak  = calcStreak();
   const freq    = document.getElementById("freq")?.value || "3";
   const obj     = document.getElementById("obj")?.value  || "hipertrofia";
-  const cfg     = safeJSON("titanpro_config", {});
+  const cfg     = safeJSON("kronia_config", {});
 
   // PRs por exercício
   const prMap = buildPRMap();
@@ -1920,7 +1935,7 @@ function buildTrainingContext() {
   // Calcular persona efetiva baseada nos dados reais
   const _evData = calcPersonaEfetiva(hist, cfg);
   const personaEfetiva = _evData.efetiva;
-  const evoluiuSilencioso = _evData.evoluiu && !localStorage.getItem("titanpro_persona_upgrade_" + _evData.declarada);
+  const evoluiuSilencioso = _evData.evoluiu && !localStorage.getItem("kronia_persona_upgrade_" + _evData.declarada);
   const proximoMarcoStr = _evData.proximoMarco ? _evData.proximoMarco.label : null;
   const personaInstructions = {
     turista: `
@@ -1956,7 +1971,7 @@ PERFIL DE ATLETA: DEDICADO / CONSISTENTE
 - Linguagem: direta, motivada, profissional mas sem ser fria`
   };
 
-  return `Você é KRONOS — o coach pessoal de musculação e nutrição do app TITAN PRO. Seu nome vem do Titã do tempo e da progressão: você domina ciclos de treino, evolução e periodização. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Seja o capitão: direto, experiente, sem enrolação.
+  return `Você é KRONOS — o coach pessoal de musculação e nutrição do app KRONIA. Seu nome vem do Titã do tempo e da progressão: você domina ciclos de treino, evolução e periodização. Você tem acesso completo a todos os dados do usuário e os conhece de verdade. Seja o capitão: direto, experiente, sem enrolação.
 
 ═══════════════════════════════════════
 IDENTIDADE E PERSONALIDADE
@@ -2016,7 +2031,7 @@ ${(() => {
       ? alerts.map(a => `[${a.severity.toUpperCase()}] ${a.message}`).join(' | ')
       : 'nenhum alerta ativo';
     return `═══════════════════════════════════════
-ANÁLISE DAS ENTIDADES — TITAN TRANSFORMS ENGINE
+ANÁLISE DAS ENTIDADES — KRONIA TRANSFORMS ENGINE
 ═══════════════════════════════════════
 Fadiga acumulada (FadigaScore): ${d.fadigaScore.toFixed(1)}/10${d.fadigaScore > 8.5 ? ' ← CRÍTICO: risco de overtraining' : d.fadigaScore > 7 ? ' ← ATENÇÃO: fadiga moderada-alta' : ' ← OK'}
 Variância de RPE: ${d.rpeVariance.toFixed(1)}${d.rpeVariance > 3 ? ' ← RPE inconsistente, recalibrar' : ' ← estável'}
@@ -2140,7 +2155,7 @@ REGRAS
 3. Máximo 400 palavras, salvo treino completo
 4. Mantenha contexto da conversa
 5. Fontes: Brad Schoenfeld (hipertrofia), Eric Helms (periodização), Mike Israetel (MEV/MAV/MRV), ISSN/JISSN (nutrição/suplementação), NSCA/ACSM (diretrizes gerais)
-6. Se perguntarem quem você é, explique: coach de IA do TITAN PRO com base científica em musculação, nutrição esportiva e suplementação
+6. Se perguntarem quem você é, explique: coach de IA do KRONIA com base científica em musculação, nutrição esportiva e suplementação
 
 ═══════════════════════════════════════
 BOAS PRÁTICAS CLÍNICAS
@@ -2795,7 +2810,7 @@ window.onload = () => {
   try { navTo("inicio"); openHome(); } catch(e) { navTo("treino"); }
 
   // Tema salvo
-  if (localStorage.getItem("titan_light") === "1") {
+  if (localStorage.getItem("kronia_light") === "1") {
     document.body.classList.add('light-mode');
     const val = document.getElementById('settingsThemeVal');
     if (val) val.textContent = 'Claro';
@@ -2807,7 +2822,7 @@ window.onload = () => {
   applyPrevGhostsToAll();
 
   // Toast de boas-vindas para quem já treinou
-  if (localStorage.getItem("titan_onboarded")) {
+  if (localStorage.getItem("kronia_onboarded")) {
     const streak = calcStreak();
     if (streak >= 2) {
       setTimeout(() => showToast(`🔥 ${streak} dias seguidos. Continue assim!`, "success", 4000), 1200);
@@ -2815,7 +2830,7 @@ window.onload = () => {
   }
 
   // Onboarding apenas na primeira visita
-  if (!localStorage.getItem("titan_onboarded")) {
+  if (!localStorage.getItem("kronia_onboarded")) {
     document.getElementById("onboarding").classList.add("show");
   }
 };
@@ -2901,7 +2916,7 @@ function updateHomeScreen() {
 
   // Lê uma vez — reutiliza em tudo
   const hist = safeJSON(STORAGE.historyKey, []);
-  const cfg  = safeJSON("titanpro_config", {});
+  const cfg  = safeJSON("kronia_config", {});
 
   // Saudação por hora
   const hora  = new Date().getHours();
@@ -3003,7 +3018,7 @@ function openSettingsScreen() {
   try {
     const badge = document.getElementById('settingsPlanBadge');
     if (badge) {
-      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('titan_plan') || 'free');
+      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('kronia_plan') || 'free');
       if (plan === 'ultra') {
         badge.textContent = 'ULTRA'; badge.style.background = 'rgba(139,92,246,0.15)'; badge.style.color = '#a855f7'; badge.style.borderColor = 'rgba(139,92,246,0.4)';
       } else if (plan === 'pro') {
@@ -3017,7 +3032,7 @@ function openSettingsScreen() {
     if (themeVal) themeVal.textContent = document.body.classList.contains('light-mode') ? 'Claro' : 'Escuro';
     // Unidade atual
     const unidadeVal = document.getElementById('settingsUnidadeVal');
-    if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('titan_unidade') || 'kg');
+    if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
   } catch(e) {}
   document.getElementById('settingsScreen').classList.add('show');
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3046,24 +3061,24 @@ function limparChatKronos() {
 function exportarDados() {
   try {
     const data = {
-      history: JSON.parse(localStorage.getItem('titanpro_history_v2') || '[]'),
-      config: JSON.parse(localStorage.getItem('titanpro_config') || '{}'),
-      prs: JSON.parse(localStorage.getItem('titanpro_prs') || '{}'),
+      history: JSON.parse(localStorage.getItem('kronia_history_v2') || '[]'),
+      config: JSON.parse(localStorage.getItem('kronia_config') || '{}'),
+      prs: JSON.parse(localStorage.getItem('kronia_prs') || '{}'),
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'titanpro_backup_' + new Date().toISOString().slice(0,10) + '.json';
+    a.href = url; a.download = 'kronia_backup_' + new Date().toISOString().slice(0,10) + '.json';
     a.click(); URL.revokeObjectURL(url);
     showToast('Dados exportados!', 'success', 3000);
   } catch(e) { showToast('Erro ao exportar', 'error'); }
 }
 
 function toggleUnidade() {
-  const atual = localStorage.getItem('titan_unidade') || 'kg';
+  const atual = localStorage.getItem('kronia_unidade') || 'kg';
   const novo = atual === 'kg' ? 'lbs' : 'kg';
-  localStorage.setItem('titan_unidade', novo);
+  localStorage.setItem('kronia_unidade', novo);
   const el = document.getElementById('settingsUnidadeVal');
   if (el) el.textContent = novo;
   showToast(`Unidade alterada para ${novo}`, 'success', 2500);
@@ -3071,7 +3086,7 @@ function toggleUnidade() {
 
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
-  localStorage.setItem('titan_light', isLight ? '1' : '0');
+  localStorage.setItem('kronia_light', isLight ? '1' : '0');
   const val = document.getElementById('settingsThemeVal');
   if (val) val.textContent = isLight ? 'Claro' : 'Escuro';
   showToast(`Tema ${isLight ? 'claro' : 'escuro'} ativado`, 'success', 2000);
@@ -3137,7 +3152,7 @@ function selectPlan(plan) {
 // TELA EDITAR PERFIL
 // ══════════════════════════════════════════
 function openEditarPerfil() {
-  const cfg = safeJSON("titanpro_config", {});
+  const cfg = safeJSON("kronia_config", {});
   document.getElementById("epNome").value   = cfg.nome   || "";
   document.getElementById("epPeso").value   = cfg.peso   || "";
   document.getElementById("epAltura").value = cfg.altura || "";
@@ -3145,7 +3160,7 @@ function openEditarPerfil() {
   document.getElementById("epSono").value   = cfg.sono   || "";
   const nome = cfg.nome || "ATLETA";
   document.getElementById("epNomeDisplay").textContent = nome.toUpperCase();
-  const hist = safeJSON(STORAGE?.historyKey || "titanpro_history", []);
+  const hist = safeJSON(STORAGE?.historyKey || "kronia_history", []);
   const nivel = hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
   document.getElementById("epNivelDisplay").textContent = nivel;
   // Aplica foto salva ao avatar da tela de edição
@@ -3206,7 +3221,7 @@ function salvarPerfilEdit() {
     idade:  document.getElementById("epIdade").value,
     sono:   document.getElementById("epSono").value,
   };
-  localStorage.setItem("titanpro_config", JSON.stringify(data));
+  localStorage.setItem("kronia_config", JSON.stringify(data));
   if (typeof _dbSync !== "undefined") _dbSync.pushConfig();
   // Sincroniza todos os elementos visuais
   const nome = data.nome || "ATLETA";
@@ -3251,7 +3266,7 @@ function salvarMedidas() {
     idade:  document.getElementById("perfilIdade")?.value || "",
     sono:   document.getElementById("perfilSono")?.value   || "",
   };
-  localStorage.setItem("titanpro_config", JSON.stringify(data));
+  localStorage.setItem("kronia_config", JSON.stringify(data));
   _dbSync.pushConfig(); // backup silencioso na nuvem
   const nome = data.nome || "ATLETA";
   document.getElementById("perfilNome").textContent = nome.toUpperCase();
@@ -3265,7 +3280,7 @@ function salvarMedidas() {
 }
 
 function updatePerfilScreen() {
-  const cfg  = safeJSON("titanpro_config", {});
+  const cfg  = safeJSON("kronia_config", {});
   const hist = safeJSON(STORAGE.historyKey, []);
   const streak = calcStreak();
 
@@ -3422,7 +3437,7 @@ function updateHeatmap(hist) {
 function openOrientacao() {
   // Esconde homeScreen se estiver aberta para evitar conflito de z-index e bloqueio de scroll no iOS
   const homeEl = document.getElementById("homeScreen");
-  _orientFromHome = homeEl?.classList.contains("show") || false;
+  _orientFromHome = !!homeEl?.classList.contains("show");
   if (homeEl) homeEl.classList.remove("show");
   document.getElementById("orientacaoScreen").classList.add("show");
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
@@ -3444,7 +3459,7 @@ function openOrientacao() {
 }
 
 function ariaGreeting() {
-  const cfg    = safeJSON("titanpro_config", {});
+  const cfg    = safeJSON("kronia_config", {});
   const hist   = safeJSON(STORAGE.historyKey, []);
   const streak = calcStreak();
   const draft  = safeJSON(STORAGE.draftKey, null);
@@ -3500,7 +3515,7 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
 function renderAriaChips() {
   const container = document.getElementById("ariaChipsDynamic");
   if (!container) return;
-  const cfg    = safeJSON("titanpro_config", {});
+  const cfg    = safeJSON("kronia_config", {});
   const hist   = safeJSON(STORAGE.historyKey, []);
   const streak = calcStreak();
   const draft  = safeJSON(STORAGE.draftKey, null);
@@ -3550,8 +3565,8 @@ function closeOrientacao() {
   _orientFromHome = false;
 }
 function openDieta() {
-  const cfg = safeJSON("titanpro_config", {});
-  const prefs = safeJSON("titanpro_calc_prefs", {});
+  const cfg = safeJSON("kronia_config", {});
+  const prefs = safeJSON("kronia_calc_prefs", {});
   document.getElementById("davPeso").value    = prefs.davPeso    || cfg.peso    || "";
   document.getElementById("davAltura").value  = prefs.davAltura  || cfg.altura  || "";
   document.getElementById("davPescoco").value = prefs.davPescoco || "";
@@ -3632,7 +3647,7 @@ async function sendOrientExpert() {
 
 function orientExpertQuick(tipo) {
   if (tipo === 'basal') {
-    const cfg = safeJSON("titanpro_config", {});
+    const cfg = safeJSON("kronia_config", {});
     const peso   = parseFloat(cfg.peso)   || null;
     const altura = parseFloat(cfg.altura) || null;
     const idade  = parseInt(cfg.idade)    || null;
@@ -3689,8 +3704,8 @@ function selectDietaAtiv(el) { selDietaAtiv(el); }
 let _bsSexo = 'M', _bsAtiv = 1.375;
 
 function openBasalSheet() {
-  const cfg = safeJSON("titanpro_config", {});
-  const prefs = safeJSON("titanpro_calc_prefs", {});
+  const cfg = safeJSON("kronia_config", {});
+  const prefs = safeJSON("kronia_calc_prefs", {});
   document.getElementById("bsPeso").value   = prefs.bsPeso   || cfg.peso   || "";
   document.getElementById("bsAltura").value = prefs.bsAltura || cfg.altura || "";
   document.getElementById("bsIdade").value  = prefs.bsIdade  || cfg.idade  || "";
@@ -3720,8 +3735,8 @@ function calcBasal() {
   const idade  = parseInt(document.getElementById("bsIdade").value);
   if (!peso || peso <= 0 || !altura || altura <= 0 || !idade || idade <= 0) { showToast("Preencha peso, altura e idade com valores válidos.", "error"); return; }
   const _bsAtivEl = document.querySelector("#bsAtivChips .bs-chip.active");
-  localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
-    ...safeJSON("titanpro_calc_prefs", {}),
+  localStorage.setItem("kronia_calc_prefs", JSON.stringify({
+    ...safeJSON("kronia_calc_prefs", {}),
     bsPeso: document.getElementById("bsPeso").value,
     bsAltura: document.getElementById("bsAltura").value,
     bsIdade: document.getElementById("bsIdade").value,
@@ -3763,8 +3778,8 @@ function irGerarDieta() {
   setTimeout(() => openDietaSheet(), 320);
 }
 function preencherDietaDosPerfil() {
-  const cfg = safeJSON("titanpro_config", {});
-  const prefs = safeJSON("titanpro_calc_prefs", {});
+  const cfg = safeJSON("kronia_config", {});
+  const prefs = safeJSON("kronia_calc_prefs", {});
   document.getElementById("dietaPeso").value    = prefs.dietaPeso    || cfg.peso    || "";
   document.getElementById("dietaAltura").value  = prefs.dietaAltura  || cfg.altura  || "";
   document.getElementById("dietaIdade").value   = prefs.dietaIdade   || cfg.idade   || "";
@@ -3791,7 +3806,7 @@ function gerarDietaPDF() {
   const conteudo = document.getElementById("dietaTexto").textContent;
   if (!conteudo || conteudo.includes("Calculando")) return;
 
-  const cfg    = safeJSON("titanpro_config", {});
+  const cfg    = safeJSON("kronia_config", {});
   const nome   = cfg.nome || "Atleta";
   const peso   = document.getElementById("dietaPeso")?.value || cfg.peso || "";
   const altura = document.getElementById("dietaAltura")?.value || cfg.altura || "";
@@ -3799,7 +3814,7 @@ function gerarDietaPDF() {
   const obj    = document.querySelector("#dietaObjChips .bs-chip.active")?.textContent || "";
   const ativ   = document.querySelector("#dietaAtivChips .bs-chip.active")?.textContent || "";
   const data   = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
-  const logoUrl = window.location.origin + "/titanpro.png";
+  const logoUrl = window.location.origin + "/kronia.png";
 
   // ── Parser do formato estruturado por blocos ## ────────────────────
   function parseConteudo(txt) {
@@ -3995,7 +4010,7 @@ function gerarDietaPDF() {
 <body>
   <div class="hd">
     <div class="hd-l">
-      <div class="logo"><img src="${logoUrl}" alt="TITAN PRO"/></div>
+      <div class="logo"><img src="${logoUrl}" alt="KRONIA"/></div>
       <div>
         <div class="hd-title">PLANO ALIMENTAR PROFISSIONAL</div>
         <div class="hd-sub">Nutrição &nbsp;·&nbsp; Saúde &nbsp;·&nbsp; Performance</div>
@@ -4020,7 +4035,7 @@ function gerarDietaPDF() {
   </div>
   <div class="ft">
     <span>Este modelo é meramente ilustrativo. Consulte um nutricionista.</span>
-    <span class="ft-brand">TITAN PRO</span>
+    <span class="ft-brand">KRONIA</span>
   </div>
   <script>window.onload=()=>{window.print()}<\/script>
 </body>
@@ -4064,8 +4079,8 @@ PERFIL PREMIUM — DIRETRIZES:
 - Use alimentos de alta qualidade nutricional sem restrição de custo: salmão, frango orgânico, carnes nobres, azeite extravirgem, frutas vermelhas, oleaginosas, whey isolado, ovos caipiras.
 - Priorize variedade, biodisponibilidade e praticidade.`
   }[orcamento] || "";
-  localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
-    ...safeJSON("titanpro_calc_prefs", {}),
+  localStorage.setItem("kronia_calc_prefs", JSON.stringify({
+    ...safeJSON("kronia_calc_prefs", {}),
     dietaObj: obj,
     dietaSexo: document.getElementById("dietaSexoF").classList.contains("active") ? "F" : "M",
     dietaPeso: document.getElementById("dietaPeso").value,
@@ -4213,8 +4228,8 @@ function calcularDietaAvancada() {
   if (!peso || peso <= 0 || !altura || altura <= 0 || !pescoco || pescoco <= 0 || !cintura || cintura <= 0) { showToast('Preencha peso, altura, pescoço e cintura com valores válidos.', 'error'); return; }
   if (_davSexo === 'F' && (!quadril || quadril <= 0)) { showToast('Preencha o quadril com um valor válido.', 'error'); return; }
   const _davCicloEl = document.querySelector('#davCicloChips .config-chip.active');
-  localStorage.setItem("titanpro_calc_prefs", JSON.stringify({
-    ...safeJSON("titanpro_calc_prefs", {}),
+  localStorage.setItem("kronia_calc_prefs", JSON.stringify({
+    ...safeJSON("kronia_calc_prefs", {}),
     davPeso: document.getElementById('davPeso').value,
     davAltura: document.getElementById('davAltura').value,
     davPescoco: document.getElementById('davPescoco').value,
@@ -4938,7 +4953,7 @@ function checkHidratacaoPosTreino(state, durationMin) {
   const vol = calcVolumeTotal(state);
   const dur = parseFloat(durationMin) || 0;
   if (dur < 40 && vol < 2000) return;
-  const cfg   = safeJSON('titanpro_config', {});
+  const cfg   = safeJSON('kronia_config', {});
   const peso  = parseFloat(cfg.peso) || 75;
   const litros = Math.max(2, (peso * 0.035 + Math.ceil(dur / 30) * 0.35 + (vol >= 3000 ? 0.5 : 0))).toFixed(1);
   setTimeout(() => {
@@ -5029,7 +5044,7 @@ function getSonoWarning(h) {
 function gerarTextoRelatorio(state, prs, durationMin, dateStr) {
   const vol  = Math.round(calcVolumeTotal(state));
   const sets = (state.sections||[]).reduce((a,s)=>a+(s.cards||[]).reduce((b,c)=>b+(c.values||[]).filter(v=>v.kg&&v.reps).length,0),0);
-  let txt = `🏋️ TITAN PRO — Relatório de Treino\n📅 ${dateStr || new Date().toLocaleDateString('pt-BR')}\n`;
+  let txt = `🏋️ KRONIA — Relatório de Treino\n📅 ${dateStr || new Date().toLocaleDateString('pt-BR')}\n`;
   txt += `⏱ Duração: ${durationMin ? durationMin+'min' : '—'} | 📊 Volume: ${vol.toLocaleString('pt-BR')}kg | Séries: ${sets}\n\n`;
   if (prs && prs.length > 0) {
     txt += `🏆 Novos Recordes:\n`;
@@ -5043,7 +5058,7 @@ function gerarTextoRelatorio(state, prs, durationMin, dateStr) {
       if (setsStr) txt += `  • ${c.name}: ${setsStr}\n`;
     });
   });
-  txt += `\n— Registrado no TITAN PRO`;
+  txt += `\n— Registrado no KRONIA`;
   return txt;
 }
 
@@ -5053,7 +5068,7 @@ async function compartilharRelatorio() {
   const last = hist[0];
   const txt  = gerarTextoRelatorio(last.state, [], last.durationMin, new Date(last.createdAt).toLocaleDateString('pt-BR'));
   try {
-    if (navigator.share) { await navigator.share({ title: 'TITAN PRO — Treino', text: txt }); return; }
+    if (navigator.share) { await navigator.share({ title: 'KRONIA — Treino', text: txt }); return; }
   } catch {}
   window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
 }
@@ -5136,7 +5151,7 @@ const MESO_FASES = {
 function gerarMesociclo() {
   const total = parseInt(_mesoConf.dur);
   const fases = MESO_FASES[_mesoConf.obj] || MESO_FASES.hipertrofia;
-  const cfg   = safeJSON('titanpro_config', {});
+  const cfg   = safeJSON('kronia_config', {});
   const freq  = parseInt(cfg.freq || '3');
   const weeks = [];
   fases.forEach(f => {
@@ -5163,7 +5178,7 @@ function gerarMesociclo() {
 }
 function salvarMesociclo() {
   if (!_mesoAtual) return;
-  localStorage.setItem('titanpro_mesociclo', JSON.stringify(_mesoAtual));
+  localStorage.setItem('kronia_mesociclo', JSON.stringify(_mesoAtual));
   showToast('Mesociclo salvo!', 'success', 3000);
   fecharMesociclo();
 }

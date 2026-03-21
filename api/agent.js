@@ -315,7 +315,7 @@ function buildAgentSystem(userData) {
   var perfil = [nome, peso, altura, idade, obj, freq, nivel, sono]
     .filter(Boolean).join(' · ');
 
-  return `Você é o KRONOS — coach pessoal de musculação, nutrição e suplementação do TITAN PRO.
+  return `Você é o KRONOS — coach pessoal de musculação, nutrição e suplementação do KRONIA.
 Português coloquial, direto, como conversa real na academia. Você conhece o usuário e os dados dele.
 ${perfil ? '\nUSUÁRIO: ' + perfil : ''}
 

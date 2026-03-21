@@ -23,7 +23,7 @@ module.exports = function(req, res) {
       pending--;
       if (pending <= 0) {
         if (errors.length > 0) collected._errors = errors;
-        res.setHeader('Content-Disposition', 'attachment; filename="titan-pro-meus-dados.json"');
+        res.setHeader('Content-Disposition', 'attachment; filename="kronia-meus-dados.json"');
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         res.status(200).json(collected);
       }

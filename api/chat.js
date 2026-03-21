@@ -7,7 +7,7 @@ var rl = require('./_ratelimit');
 var plans = require('./_plans');
 var logger = require('./_logger');
 
-var TREINO_SYSTEM = `Você é o TITAN COACH. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
+var TREINO_SYSTEM = `Você é o KRONOS. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
 
 Formato obrigatório para QUALQUER treino (com ou sem periodização):
 {
@@ -77,7 +77,7 @@ PANTURRILHA: Panturrilha em Pé (gastrocnêmio), Panturrilha Sentado (sóleo), L
 
 ABDÔMEN: Prancha (core estabilizador), Abdominal Roda (reto abdominal), Elevação de Pernas (iliopsoas+reto), Russian Twist (oblíquos), Dead Bug (core profundo)`;
 
-var COACH_SYSTEM_TEMPLATE = `Você é o TITAN COACH, o coach pessoal de musculação e nutrição do app TITAN PRO.
+var COACH_SYSTEM_TEMPLATE = `Você é o KRONOS, o coach pessoal de musculação e nutrição do app KRONIA.
 
 ═══════════════════════════════════════
 PERSONALIDADE E FORMA DE FALAR

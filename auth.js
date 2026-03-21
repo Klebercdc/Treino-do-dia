@@ -85,7 +85,7 @@ const _dbSync = {
       const { data: { session } } = await _sb.auth.getSession();
       if (!session?.user) return;
       const userId = session.user.id;
-      const config = safeJSON('titanpro_config', {});
+      const config = safeJSON('kronia_config', {});
       await _sb.from('profiles').upsert({
         id: userId,
         config: config,
@@ -127,10 +127,10 @@ const _dbSync = {
         .single();
 
       if (profile?.config && Object.keys(profile.config).length > 0) {
-        const localCfg = safeJSON('titanpro_config', {});
+        const localCfg = safeJSON('kronia_config', {});
         // Nuvem tem prioridade apenas se local estiver vazio
         if (!Object.keys(localCfg).length) {
-          localStorage.setItem('titanpro_config', JSON.stringify(profile.config));
+          localStorage.setItem('kronia_config', JSON.stringify(profile.config));
         }
       }
     } catch (e) { /* silencioso */ }
