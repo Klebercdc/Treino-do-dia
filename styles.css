@@ -1654,218 +1654,336 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #pricingScreen {
   position: fixed;
   inset: 0;
-  background: #090909;
-  z-index: 700;
-  overflow-y: auto;
+  background: #0a0a0a;
+  z-index: 5500;
+  display: flex;
+  flex-direction: column;
   font-family: 'Barlow', 'DM Sans', sans-serif;
+  overflow: hidden;
 }
-.ff-pricing-bg {
+.pr-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image:
-    radial-gradient(ellipse at 50% 0%, rgba(255,107,0,0.1) 0%, transparent 55%),
-    linear-gradient(rgba(255,107,0,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,107,0,0.02) 1px, transparent 1px);
-  background-size: 100% 100%, 32px 32px, 32px 32px;
+  background:
+    radial-gradient(ellipse at 70% -10%, rgba(255,107,0,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 90%, rgba(139,92,246,0.08) 0%, transparent 45%);
   z-index: 0;
 }
-.ff-pricing-header {
+.pr-header {
   position: relative;
-  z-index: 1;
-  padding: 18px 22px;
+  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255,107,0,0.1);
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
 }
-.ff-ob-logo-row {
+.pr-logo-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
-.ff-pricing-close {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.4);
+.pr-logo-txt {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #fff;
+}
+.pr-close-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.5);
   cursor: pointer;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  transition: all 0.15s;
 }
-.ff-pricing-body {
+.pr-close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.pr-scroll {
   position: relative;
   z-index: 1;
-  padding: 26px 20px 40px;
+  overflow-y: auto;
+  flex: 1;
+  padding: 24px 18px 48px;
+  -webkit-overflow-scrolling: touch;
 }
-.ff-pricing-headline {
+.pr-headline {
   text-align: center;
-  margin-bottom: 26px;
+  margin-bottom: 22px;
 }
-.ff-pricing-tag {
+.pr-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   background: rgba(255,107,0,0.1);
-  border: 1px solid rgba(255,107,0,0.25);
-  border-radius: 20px;
-  padding: 4px 14px;
+  border: 1px solid rgba(255,107,0,0.22);
+  border-radius: 30px;
+  padding: 4px 13px;
   font-size: 9px;
   font-weight: 800;
   color: #FF6B00;
   letter-spacing: 1.5px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
-.ff-pricing-title {
-  font-size: 28px;
+.pr-title {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 30px;
   font-weight: 900;
-  margin: 0 0 8px;
   line-height: 1.1;
   letter-spacing: -0.5px;
   color: #fff;
-  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-}
-.ff-pricing-sub {
-  font-size: 13px;
-  color: rgba(255,255,255,0.3);
   margin: 0;
 }
-.ff-plan-cards {
+/* Billing toggle */
+.pr-billing-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 3px;
+  margin-bottom: 20px;
+  gap: 2px;
+}
+.pr-billing-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px 6px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: 'Barlow', 'DM Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.pr-billing-active {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.pr-discount-chip {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+/* Plan cards */
+.pr-cards {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
-.ff-plan-card {
+.pr-card {
   border-radius: 20px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
   padding: 20px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
   overflow: hidden;
   color: #fff;
 }
-.ff-plan-card:hover { transform: scale(1.01); }
-.ff-plan-pro {
-  background: rgba(255,107,0,0.05);
-  border: 2px solid rgba(255,107,0,0.28);
+.pr-card-free {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
 }
-.ff-plan-pro:hover { border-color: #FF6B00; box-shadow: 0 12px 40px rgba(255,107,0,0.18); transform: scale(1.02); }
-.ff-plan-ultra {
-  background: rgba(139,92,246,0.05);
-  border: 2px solid rgba(139,92,246,0.22);
+.pr-card-free:active { transform: scale(0.99); }
+.pr-card-pro {
+  background: linear-gradient(145deg, rgba(255,107,0,0.08) 0%, rgba(255,107,0,0.03) 100%);
+  border: 1.5px solid rgba(255,107,0,0.35);
+  box-shadow: 0 0 0 1px rgba(255,107,0,0.08) inset, 0 8px 32px rgba(255,107,0,0.12);
 }
-.ff-plan-ultra:hover { border-color: #8B5CF6; box-shadow: 0 12px 40px rgba(139,92,246,0.18); }
-.ff-plan-badge {
+.pr-card-pro:active { transform: scale(0.99); }
+.pr-card-ultra {
+  background: linear-gradient(145deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.03) 100%);
+  border: 1.5px solid rgba(139,92,246,0.3);
+  box-shadow: 0 0 0 1px rgba(139,92,246,0.06) inset, 0 8px 32px rgba(139,92,246,0.1);
+}
+.pr-card-ultra:active { transform: scale(0.99); }
+/* Popular / TUDO badges */
+.pr-popular-badge, .pr-ultra-badge {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  font-size: 9px;
+  top: 16px;
+  right: 16px;
+  font-size: 8px;
   font-weight: 900;
-  letter-spacing: 1.5px;
-  padding: 3px 10px;
+  letter-spacing: 1.2px;
+  padding: 3px 9px;
   border-radius: 20px;
-  background: rgba(255,107,0,0.2);
-  color: #fff;
-}
-.ff-plan-top {
-  display: flex;
-  align-items: flex-end;
-  margin-bottom: 16px;
-}
-.ff-plan-name {
-  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
   display: flex;
   align-items: center;
+  gap: 4px;
+}
+.pr-popular-badge {
+  background: rgba(255,107,0,0.18);
+  border: 1px solid rgba(255,107,0,0.3);
+  color: #FF6B00;
+}
+.pr-ultra-badge {
+  background: rgba(139,92,246,0.18);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: #A855F7;
+}
+/* Card inner layout */
+.pr-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.pr-plan-pill {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 5px 12px;
+  border-radius: 10px;
 }
-.ff-plan-tagline {
-  font-size: 11px;
-  color: rgba(255,255,255,0.28);
-  margin-top: 2px;
+.pr-pill-free {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.45);
 }
-.ff-plan-price-wrap {
-  margin-left: auto;
+.pr-pill-pro {
+  background: rgba(255,107,0,0.12);
+  color: #FF6B00;
+}
+.pr-pill-ultra {
+  background: rgba(139,92,246,0.12);
+  color: #A855F7;
+}
+.pr-price-block {
   text-align: right;
 }
-.ff-plan-price {
-  font-size: 28px;
+.pr-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 1px;
+}
+.pr-price-main {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 30px;
   font-weight: 900;
   color: #fff;
+  line-height: 1;
 }
-.ff-plan-cents {
-  font-size: 15px;
+.pr-price-cents {
+  font-size: 16px;
   font-weight: 700;
   color: rgba(255,255,255,0.5);
 }
-.ff-plan-period {
+.pr-price-sub {
+  display: block;
   font-size: 10px;
-  color: rgba(255,255,255,0.28);
+  color: rgba(255,255,255,0.3);
+  margin-top: 1px;
 }
-.ff-plan-divider {
-  height: 1px;
-  background: rgba(255,255,255,0.05);
+.pr-card-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
   margin-bottom: 14px;
+  line-height: 1.4;
 }
-.ff-plan-features {
+.pr-feats {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
-.ff-feat {
+.pr-feat {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: rgba(255,255,255,0.7);
-  font-family: 'Barlow', 'DM Sans', sans-serif;
+  color: rgba(255,255,255,0.75);
 }
-.ff-feat-locked {
-  opacity: 0.28;
-  text-decoration: line-through;
-  color: rgba(255,255,255,0.4);
+.pr-feat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.ff-plan-cta {
+.pr-feat-locked {
+  opacity: 0.3;
+  font-size: 12px;
+}
+.pr-feat-locked span, .pr-feat-locked svg { opacity: 0.5; }
+/* CTA Buttons */
+.pr-cta {
   width: 100%;
   padding: 14px;
   border: none;
-  border-radius: 12px;
+  border-radius: 13px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  transition: all 0.2s;
+  transition: all 0.18s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-family: 'Barlow', 'DM Sans', sans-serif;
 }
-.ff-pricing-footer {
+.pr-cta:active { transform: scale(0.97); }
+.pr-cta-free {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+}
+.pr-cta-pro {
+  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(255,107,0,0.35);
+}
+.pr-cta-pro:hover { box-shadow: 0 8px 28px rgba(255,107,0,0.5); }
+.pr-cta-ultra {
+  background: linear-gradient(135deg, #7C3AED, #A855F7);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(139,92,246,0.3);
+}
+.pr-cta-ultra:hover { box-shadow: 0 8px 28px rgba(139,92,246,0.45); }
+/* Trust bar */
+.pr-trust {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  margin-top: 24px;
+  gap: 10px;
   font-size: 11px;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.22);
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
-.ff-pricing-footer div {
+.pr-trust-item {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-.ff-pricing-url {
-  text-align: center;
-  margin-top: 8px;
-  font-size: 10px;
+.pr-trust-sep {
   color: rgba(255,255,255,0.12);
+}
+.pr-domain {
+  text-align: center;
+  font-size: 10px;
+  color: rgba(255,255,255,0.1);
+  letter-spacing: 1px;
 }
 
 /* ══════════════════════════════════════════

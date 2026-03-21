@@ -3050,8 +3050,40 @@ function toggleUnidade() {
 function openPricingScreen() {
   const el = document.getElementById('pricingScreen');
   if (!el) return;
-  el.style.cssText = 'display:flex;flex-direction:column;position:fixed;inset:0;z-index:9000;overflow-y:auto;';
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+  el.style.display = 'flex';
+  // Reset billing toggle to mensal on open
+  setPricingBilling('mensal');
+}
+
+function setPricingBilling(mode) {
+  const isAnual = mode === 'anual';
+  const btnM = document.getElementById('prBtnMensal');
+  const btnA = document.getElementById('prBtnAnual');
+  if (btnM) { btnM.className = isAnual ? 'pr-billing-btn' : 'pr-billing-btn pr-billing-active'; }
+  if (btnA) { btnA.className = isAnual ? 'pr-billing-btn pr-billing-active' : 'pr-billing-btn'; }
+
+  const proPrice  = document.getElementById('prProPrice');
+  const proCents  = document.getElementById('prProCents');
+  const proPeriod = document.getElementById('prProPeriod');
+  const ultraPrice  = document.getElementById('prUltraPrice');
+  const ultraCents  = document.getElementById('prUltraCents');
+  const ultraPeriod = document.getElementById('prUltraPeriod');
+
+  if (isAnual) {
+    if (proPrice)    proPrice.textContent  = 'R$20';
+    if (proCents)    proCents.textContent  = ',93';
+    if (proPeriod)   proPeriod.textContent = '/mês · cobrado anualmente';
+    if (ultraPrice)  ultraPrice.textContent  = 'R$41';
+    if (ultraCents)  ultraCents.textContent  = ',93';
+    if (ultraPeriod) ultraPeriod.textContent = '/mês · cobrado anualmente';
+  } else {
+    if (proPrice)    proPrice.textContent  = 'R$29';
+    if (proCents)    proCents.textContent  = ',90';
+    if (proPeriod)   proPeriod.textContent = '/mês';
+    if (ultraPrice)  ultraPrice.textContent  = 'R$59';
+    if (ultraCents)  ultraCents.textContent  = ',90';
+    if (ultraPeriod) ultraPeriod.textContent = '/mês';
+  }
 }
 
 function closePricingScreen() {
