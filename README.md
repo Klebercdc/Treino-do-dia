@@ -1,4 +1,4 @@
-# TITAN PRO — App de Musculação com IA
+# KRONIA — App de Musculação com IA
 
 > Coach inteligente de treino com periodização científica MEV/MAV/MRV e IA conversacional (KRONOS)
 
