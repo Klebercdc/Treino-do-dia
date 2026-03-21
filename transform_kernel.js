@@ -7,7 +7,7 @@ const TRANSFORMS = [
 {
 id: 'treino',
 keywords: ['treino','exercício','musculação','série','repetição','gerar treino','montar treino','academia','supino','agachamento','barra'],
-action: () => { navTo('treino'); closeHome(); },
+action: () => { try { closeOrientacao(); } catch(e) {} navTo('treino'); try { closeHome(); } catch(e) {} },
 botao: { label: 'Ir para Treino', icon: 'dumbbell', cor: 'accent' }
 },
 {
@@ -32,7 +32,7 @@ botao: { label: 'Ver Evolução', icon: 'bar-chart-3', cor: 'blue' }
 {
 id: 'plano',
 keywords: ['assinar','pro','plano','upgrade','premium','limite','consultas'],
-action: () => openPlanModal(),
+action: () => { try { closeOrientacao(); } catch(e) {} openPricingScreen(); },
 botao: { label: 'Ver Planos', icon: 'zap', cor: 'accent' }
 },
 {

@@ -361,7 +361,7 @@ _sb.auth.onAuthStateChange((_event, session) => {
 // Checar sessão ao carregar — após splash (mín 2.5s)
 Promise.all([
   _sb.auth.getSession(),
-  new Promise(r => setTimeout(r, 800))
+  new Promise(r => setTimeout(r, 4000))
 ]).then(([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
   if (session?.user) { showApp(); navTo('inicio'); openHome(); }
