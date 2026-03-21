@@ -172,20 +172,72 @@ body {
 .btn-add-ex:active { background: var(--card); border-color: var(--accent); color: var(--accent); border-style: solid; }
 
 /* ══════════════════════════════════════════
-   FOOTER — z-index 1000 (fix)
+   FOOTER — z-index 3700 (acima de telas, abaixo de modais)
 ══════════════════════════════════════════ */
-.footer-actions { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; background: rgba(15,15,15,0.96); border-top: 1px solid var(--border); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); gap: 2px; }
-.btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 7px 4px; border: none; background: transparent; border-radius: 12px; cursor: pointer; transition: background .12s, transform .1s; }
-.btn:active { background: var(--card); transform: scale(.9); }
-.btn .btn-icon { display: flex; align-items: center; justify-content: center; height: 22px; color: rgba(255,255,255,0.7); }
-.btn .btn-label { font-size: 0.48rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.75); }
-.btn-nav { color: rgba(255,255,255,0.55); transition: color .15s; }
-.btn-nav.active .btn-icon { color: var(--accent); }
-.btn-nav.active .btn-label { color: var(--accent); }
-.btn-nav svg { transition: stroke .15s; }
-.btn-save { flex: 1.8; margin: 0 6px; background: var(--accent) !important; border-radius: 14px; box-shadow: 0 4px 20px var(--accent-glow); }
-.btn-save .btn-icon { color: #fff !important; }
-.btn-save .btn-label { color: #fff !important; }
+.footer-actions {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  z-index: 3700;
+  display: flex; align-items: stretch;
+  background: rgba(13,13,13,0.97);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  gap: 0;
+  min-height: 58px;
+}
+.btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  padding: 8px 4px 10px;
+  border: none; background: transparent;
+  border-radius: 0; cursor: pointer;
+  transition: transform .12s;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(.88); }
+.btn .btn-icon {
+  display: flex; align-items: center; justify-content: center;
+  height: 24px; width: 24px;
+  color: rgba(255,255,255,0.38);
+  transition: color .18s, transform .18s;
+}
+.btn .btn-label {
+  font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.35);
+  transition: color .18s;
+}
+/* Indicador ativo — barra no topo do botão */
+.btn-nav::before {
+  content: '';
+  position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 22px; height: 2.5px;
+  background: var(--accent);
+  border-radius: 0 0 3px 3px;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.btn-nav.active::before { transform: translateX(-50%) scaleX(1); }
+.btn-nav.active .btn-icon { color: var(--accent); transform: translateY(-1px); }
+.btn-nav.active .btn-label { color: var(--accent); font-weight: 700; }
+.btn-nav svg { transition: all .18s; }
+/* Botão salvar — centro destacado */
+.btn-save {
+  flex: 1.6; margin: 6px 8px;
+  background: var(--accent) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 16px rgba(249,115,22,0.45);
+  padding: 0 !important;
+  gap: 2px !important;
+  transition: transform .12s, box-shadow .12s !important;
+}
+.btn-save:active { transform: scale(.9) !important; box-shadow: 0 1px 8px rgba(249,115,22,0.3) !important; }
+.btn-save .btn-icon { color: #fff !important; height: 22px !important; }
+.btn-save .btn-label { color: rgba(255,255,255,0.9) !important; font-size: 0.55rem !important; font-weight: 700 !important; }
+.btn-save::before { display: none; }
 .btn-save:active { transform: scale(.95) !important; opacity:.9; }
 
 /* ══════════════════════════════════════════
@@ -341,7 +393,11 @@ dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); }
 ══════════════════════════════════════════ */
 body.light-mode { --bg:#f5f5f5; --bg2:#ebebeb; --surface:#ffffff; --card:#ffffff; --card-hover:#f9f9f9; --border:rgba(0,0,0,0.08); --border-soft:rgba(0,0,0,0.04); --text:#0f0f0f; --text-2:#525252; --muted:#a3a3a3; --accent:#ea6c0a; --accent-dim:rgba(234,108,10,0.1); --accent-glow:rgba(234,108,10,0.2); color-scheme: light; }
 body.light-mode .top-header { background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); }
-body.light-mode .footer-actions { background: rgba(255,255,255,0.97) !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
+body.light-mode .footer-actions { background: rgba(250,250,250,0.98) !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
+body.light-mode .btn .btn-icon { color: rgba(0,0,0,0.3) !important; }
+body.light-mode .btn .btn-label { color: rgba(0,0,0,0.3) !important; }
+body.light-mode .btn-nav.active .btn-icon { color: var(--accent) !important; }
+body.light-mode .btn-nav.active .btn-label { color: var(--accent) !important; }
 body.light-mode .nav-pills { background: #fff; }
 body.light-mode .exercise-card { background: #fff; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
 body.light-mode .ex-title { color: #111; }
@@ -417,7 +473,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 /* ══════════════════════════════════════════
    TELA DE INÍCIO
 ══════════════════════════════════════════ */
-#homeScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; }
+#homeScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 #homeScreen.show { display: flex; }
 .home-header { padding: 56px 20px 20px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
 .home-greeting { font-size: 0.85rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 4px; }
@@ -444,7 +500,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 ══════════════════════════════════════════ */
 .btn-voltar { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; color: var(--accent); font-family: var(--font); font-size: 0.9rem; font-weight: 700; padding: 16px 20px 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .btn-voltar svg { flex-shrink: 0; }
-#perfilScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; }
+#perfilScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 #perfilScreen.show { display: flex; }
 .perfil-header { padding: 56px 20px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); }
 .perfil-avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 2rem; color: #fff; margin-bottom: 12px; }
@@ -494,7 +550,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 ══════════════════════════════════════════ */
 #orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; }
 #orientacaoScreen.show { display: flex; }
-#dietaScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; }
+#dietaScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 #dietaScreen.show { display: flex; }
 .transforms-screen { display: none; position: fixed; inset: 0; z-index: 3600; background: #0a0a0a; flex-direction: column; overflow-y: auto; }
 .transforms-screen.show { display: flex; }
