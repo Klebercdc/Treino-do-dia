@@ -160,9 +160,8 @@ document.getElementById("onboarding").classList.remove("show");
 _sb.auth.getSession().then(function(res) {
 const session = res.data.session;
 if (session && session.user) {
-setTimeout(function() {
-if (typeof openInstrucoes === 'function') openInstrucoes();
-}, 500);
+// Navega para a home corretamente
+try { navTo('inicio'); openHome(); } catch(e) {}
 } else {
 // Não logado — mostra login
 document.getElementById('splashScreen').style.display = 'none';

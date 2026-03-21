@@ -7,7 +7,7 @@ const TRANSFORMS = [
 {
 id: 'treino',
 keywords: ['treino','exercício','musculação','série','repetição','gerar treino','montar treino','academia','supino','agachamento','barra'],
-action: () => { navTo('treino'); closeHome(); },
+action: () => { try { closeOrientacao(); } catch(e) {} navTo('treino'); try { closeHome(); } catch(e) {} },
 botao: { label: 'Ir para Treino', icon: 'dumbbell', cor: 'accent' }
 },
 {
