@@ -83,14 +83,31 @@ fi
 DRIVE_OK=false
 if [[ "$LOCAL_ONLY" != "true" ]]; then
   echo -n "Verificando conectividade com Google Drive... "
-  if rclone about gdrive: --timeout 10s &>/dev/null; then
+  # Testa token OAuth via curl (mais rápido que rclone about)
+  # -I = HEAD request, -s = silent, não usa -f para evitar falso negativo em 4xx
+  HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" --max-time 8 https://oauth2.googleapis.com/ 2>/dev/null || echo "000")
+  if [[ "$HTTP_CODE" != "000" ]]; then
+    echo "OK (rede alcançável)"
     DRIVE_OK=true
-    echo "OK"
+    # Valida permissão real com rclone (timeout curto)
+    RCLONE_ERR=$(timeout 20 rclone lsd gdrive: 2>&1 || true)
+    if echo "$RCLONE_ERR" | grep -q "403"; then
+      DRIVE_OK=false
+      echo ""
+      echo "[ERRO 403] A service account não tem acesso ao Google Drive."
+      echo "  → Compartilhe a pasta no Drive com este email:"
+      echo "    rclone-drive@titan-pro-f2ab9.iam.gserviceaccount.com"
+      echo ""
+      echo "  Como compartilhar:"
+      echo "  1. Acesse drive.google.com"
+      echo "  2. Botão direito na pasta → Compartilhar"
+      echo "  3. Adicione o email acima como Editor"
+      echo ""
+    fi
   else
     echo "INDISPONÍVEL"
     echo ""
     echo "[AVISO] Google Drive inacessível neste ambiente."
-    echo "[AVISO] Possível causa: rede restringe acesso a googleapis.com."
     echo ""
   fi
 fi
