@@ -1851,6 +1851,51 @@ function obFinish() {
   if (ls) ls.style.display = "flex";
 }
 
+/* ═══════════════════════════════════════════════════
+   ONBOARDING FEATURE FLIPPER (novo)
+═══════════════════════════════════════════════════ */
+let _ffObCurrentSlide = 0;
+
+function ffObGoTo(idx) {
+  const slides = document.querySelectorAll('.ff-slide');
+  const dots = document.querySelectorAll('.ff-dot');
+  slides.forEach((s, i) => {
+    s.classList.toggle('ff-slide-active', i === idx);
+  });
+  dots.forEach((d, i) => {
+    d.classList.toggle('ff-dot-active', i === idx);
+  });
+  _ffObCurrentSlide = idx;
+  const cta = document.getElementById('ff-ob-cta');
+  if (cta) {
+    const isLast = idx >= slides.length - 1;
+    cta.innerHTML = isLast
+      ? 'Começar <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'
+      : 'Próximo <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  }
+}
+
+function ffObNext() {
+  const total = document.querySelectorAll('.ff-slide').length;
+  if (_ffObCurrentSlide >= total - 1) {
+    ffObFinish();
+  } else {
+    ffObGoTo(_ffObCurrentSlide + 1);
+  }
+}
+
+function ffObFinish() {
+  localStorage.setItem('kronia_onboarded', '1');
+  const ob = document.getElementById('onboarding');
+  if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }
+  if (typeof _appUnlocked !== 'undefined' && _appUnlocked) {
+    try { navTo('inicio'); openHome(); } catch(e) {}
+  } else {
+    const ls = document.getElementById('loginScreen');
+    if (ls) ls.style.display = 'flex';
+  }
+}
+
 /* IntersectionObserver timer removido */
 
 /* ═══════════════════════════════════════════════════
@@ -3621,6 +3666,19 @@ async function sendOrientExpert() {
   const txt = input.value.trim(); if (!txt) return;
   input.value = "";
   input.style.height = "auto";
+
+  // Navegação direta por palavra-chave
+  const lower = txt.toLowerCase().trim();
+  if (/^(ir para |abrir |ver )?(tela de )?treino$/i.test(lower)) {
+    closeOrientacao();
+    return;
+  }
+  if (/^(ir para |abrir |ver )?(tela de )?dieta$/i.test(lower)) {
+    closeOrientacao();
+    setTimeout(() => openDietaSheet(), 300);
+    return;
+  }
+
   // colapsa atalhos ao iniciar conversa
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -3642,6 +3700,11 @@ async function sendOrientExpert() {
     const text = data.content?.[0]?.text || data.error || "Sem resposta.";
     typing.innerHTML = renderMarkdown(text);
     _orientExpertHistory.push({ role: "assistant", content: text });
+    // Navegar para tela de treino se o assistente gerou um programa de treino
+    if (/\b(programa|plano|treino)\b.*\b(gerado|criado|montado|pronto)\b/i.test(text) ||
+        /\b(aqui (está|estão)|segue|confira)\b.*\b(treino|programa|plano)\b/i.test(text)) {
+      setTimeout(() => { closeOrientacao(); }, 1500);
+    }
   } catch { typing.innerHTML = "Erro de conexão."; }
 }
 
