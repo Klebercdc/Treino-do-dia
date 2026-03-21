@@ -226,10 +226,10 @@ function extrairDoTexto(text) {
 }
 
 function gerarTreino(userMsg, userId, callback) {
-  callChat(TREINO_SYSTEM, [userMsg], 1500, 0.1, userId, 'chat-treino', function(err, text) {
+  callChat(TREINO_SYSTEM, [userMsg], 4000, 0.1, userId, 'chat-treino', function(err, text) {
     try { return callback(null, parseWorkout(text||``)); } catch(e) {}
     try { return callback(null, extrairDoTexto(text||``)); } catch(e2) {}
-    callChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 1500, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
+    callChat(TREINO_SYSTEM, [{role:`user`,content:`JSON apenas: `+userMsg.content}], 4000, 0.0, userId, 'chat-treino-retry', function(err2, text2) {
       try { return callback(null, parseWorkout(text2||``)); } catch(e3) {}
       try { return callback(null, extrairDoTexto(text2||``)); } catch(e4) {}
       callback(`Erro ao gerar treino: ` + (err2||'resposta inválida da IA') + `. Tente novamente.`, null);
