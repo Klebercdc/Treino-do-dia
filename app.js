@@ -2823,8 +2823,12 @@ window.onload = () => {
 // TELA DE INÍCIO
 // ══════════════════════════════════════════
 function openHome() {
-  try { updateHomeScreen(); } catch(e) {}
-  document.getElementById("homeScreen").classList.add("show");
+  const el = document.getElementById("homeScreen");
+  el.classList.add("show");
+  // Atualiza dados no próximo frame — tela aparece antes de qualquer cálculo
+  requestAnimationFrame(() => {
+    try { updateHomeScreen(); } catch(e) {}
+  });
 }
 function closeHome() {
   document.getElementById("homeScreen").classList.remove("show");
@@ -2893,57 +2897,78 @@ function _lancarTreino() {
 
 function updateHomeScreen() {
   if (typeof STORAGE === 'undefined' || typeof safeJSON === 'undefined') return;
-  const hist  = safeJSON(STORAGE.historyKey, []);
-  const streak = calcStreak();
+
+  // Lê uma vez — reutiliza em tudo
+  const hist = safeJSON(STORAGE.historyKey, []);
+  const cfg  = safeJSON("titanpro_config", {});
+
+  // Saudação por hora
   const hora  = new Date().getHours();
   const sauds = ["Boa madrugada", "Bom dia", "Boa tarde", "Boa noite"];
-  const s     = hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3;
-  document.getElementById("homeGreeting").textContent = sauds[s];
-  document.getElementById("homeStreak").textContent   = streak;
+  document.getElementById("homeGreeting").textContent = sauds[hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3];
 
-  // Card de perfil no topo da home
-  const cfg = safeJSON("titanpro_config", {});
+  // Streak — calcula a partir do hist já lido (sem reler localStorage)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = new Set(hist.map(h => { const d = new Date(h.createdAt); d.setHours(0,0,0,0); return d.getTime(); }));
+  let streak = 0, cursor = today.getTime();
+  while (days.has(cursor) || days.has(cursor - 86400000)) {
+    if (days.has(cursor)) streak++;
+    cursor -= 86400000;
+    if (streak > 0 && !days.has(cursor) && !days.has(cursor + 86400000)) break;
+  }
+  document.getElementById("homeStreak").textContent = streak;
+
+  // Card de perfil
   const nome = cfg.nome || "ATLETA";
-  // Banner turista
   const banner = document.getElementById("turistaBanner");
   if (banner) banner.style.display = cfg.persona === "turista" ? "block" : "none";
-  document.getElementById("homeCardAvatar").textContent = nome[0]?.toUpperCase() || "T";
-  document.getElementById("homeCardNome").textContent   = nome.toUpperCase();
+  document.getElementById("homeCardAvatar").textContent  = nome[0]?.toUpperCase() || "T";
+  document.getElementById("homeCardNome").textContent    = nome.toUpperCase();
   document.getElementById("homeCardTreinos").textContent = hist.length;
   document.getElementById("homeCardStreak").textContent  = streak;
-  const volTotal = hist.reduce((a, h) => a + calcVolumeTotal(h.state), 0);
+  document.getElementById("homeCardNivel").textContent   =
+    hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
+
+  // Volume total + semana — em um único loop
+  const semAgo = Date.now() - 7 * 86400000;
+  let volTotal = 0, volSem = 0, semTreinos = 0;
+  for (const h of hist) {
+    const v = calcVolumeTotal(h.state);
+    volTotal += v;
+    if (h.createdAt > semAgo) { volSem += v; semTreinos++; }
+  }
   document.getElementById("homeCardVol").textContent =
     volTotal > 999999 ? (volTotal/1000000).toFixed(1)+"M" :
-    volTotal > 999 ? (volTotal/1000).toFixed(1)+"t" : Math.round(volTotal)+"kg";
-  const nivel = hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
-  document.getElementById("homeCardNivel").textContent = nivel;
-
-  // Treinos desta semana
-  const agora    = Date.now();
-  const semAgo   = agora - 7 * 86400000;
-  const semTreinos = hist.filter(h => h.createdAt > semAgo).length;
+    volTotal > 999    ? (volTotal/1000).toFixed(1)+"t"    : Math.round(volTotal)+"kg";
   document.getElementById("homeSemanaTreinos").textContent = semTreinos;
+  document.getElementById("homeVolSemana").textContent =
+    volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
 
-  // Volume da semana
-  const volSem = hist.filter(h => h.createdAt > semAgo)
-    .reduce((a, h) => a + calcVolumeTotal(h.state), 0);
-  document.getElementById("homeVolSemana").textContent = volSem > 999
-    ? (volSem / 1000).toFixed(1) + "t" : Math.round(volSem);
-
-  // Treino do dia sugerido — próximo na rotação baseado no histórico
+  // Treino do dia
   const draft    = safeJSON(STORAGE.draftKey, null);
   const sections = draft?.sections || [];
-  const nextIdx  = getNextTreinoIdx();
-  const nextSec  = sections[nextIdx];
-  const nextKey  = nextSec?.treinoKey || "A";
-  const exCount  = (nextSec?.cards || []).length;
-  document.getElementById("homeTodayTreino").textContent = "Treino " + nextKey;
-  document.getElementById("homeTodaySub").textContent =
-    exCount > 0 ? exCount + " exercícios" : "Configure seu programa";
+  const nextSec  = sections[getNextTreinoIdx()];
+  document.getElementById("homeTodayTreino").textContent = "Treino " + (nextSec?.treinoKey || "A");
+  document.getElementById("homeTodaySub").textContent    =
+    (nextSec?.cards || []).length > 0 ? nextSec.cards.length + " exercícios" : "Configure seu programa";
 
-  // Selector removido — seção apagada da home
-  try { renderDesafios();   } catch(e) {}
-  try { updateHomeBanner(); } catch(e) {}
+  // Passes streak/hist pré-computados para evitar reler
+  try { renderDesafios(); } catch(e) {}
+  try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+}
+
+function _updateHomeBannerFast(streak, totalTreinos) {
+  const msgs = [
+    { t:`${streak} dia${streak!==1?'s':''} seguidos. Não para agora.`, s:'Sequência ativa — cada treino conta.' },
+    { t:'Hoje é dia de evoluir.',                                        s:'Cada série te aproxima do objetivo.' },
+    { t:`${totalTreinos} treinos registrados.`,                          s:'Você é o que você repete. Continue.' },
+    { t:'Disciplina supera motivação.',                                   s:'Apareça. Os resultados vêm depois.' },
+  ];
+  const m = streak > 0 ? msgs[0] : msgs[Math.floor(Date.now()/86400000) % (msgs.length-1) + 1];
+  const t = document.getElementById('homeBannerTitle');
+  const s = document.getElementById('homeBannerSub');
+  if (t) t.textContent = m.t;
+  if (s) s.textContent = m.s;
 }
 
 // ══════════════════════════════════════════
