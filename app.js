@@ -2226,11 +2226,33 @@ ENCAMINHAMENTO PROFISSIONAL:
 function navTo(tab) {
   const th = document.getElementById("treinoHeader");
   const td = document.getElementById("treinoDash");
+  const pt = document.getElementById("posTreinoSection");
   if (th) th.style.display = tab === "treino" ? "flex" : "none";
   if (td) td.style.display = tab === "treino" ? "block" : "none";
+  if (pt) pt.style.display = tab === "treino" ? "block" : "none";
   document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('nav-' + tab);
   if (el) el.classList.add('active');
+}
+
+/* ── Pós-Treino: atalhos rápidos para o KRONOS ───── */
+function _orientPosTreino(msg) {
+  try { openOrientacao(); } catch(e) {}
+  setTimeout(function() {
+    try {
+      const inp = document.getElementById('orientExpertInput');
+      if (inp) { inp.value = msg; sendOrientExpert(); }
+    } catch(e) {}
+  }, 400);
+}
+function orientPosTreinoNutri() {
+  _orientPosTreino('Acabei de treinar. O que devo comer agora para maximizar recuperação e crescimento muscular? Me dê opções práticas.');
+}
+function orientPosTreinoRecup() {
+  _orientPosTreino('Quais as melhores estratégias de recuperação pós-treino? Fale sobre sono, alongamento, contraste de temperatura e outras técnicas baseadas em evidência.');
+}
+function orientPosTreinoSupl() {
+  _orientPosTreino('Quais suplementos têm evidência científica real para o período pós-treino? Whey, creatina, BCAA — o que realmente vale a pena e quando tomar?');
 }
 
 /* ═══════════════════════════════════════════════════

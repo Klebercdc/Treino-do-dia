@@ -65,13 +65,18 @@ const TRANSFORMS = [
             'minha dieta','cardápio personalizado','fazer dieta','meu cardápio'],
     medio: ['alimentação','nutrição','refeição','o que comer','o que devo comer',
             'dieta para','como comer','plano alimentar'],
-    fraco: ['dieta','carboidrato','gordura','pós-treino','macros']
+    fraco: ['dieta','carboidrato','gordura','macros']
   },
   action: function(cid) {
     if (cid === 'orientExpertMessages') {
-      try { iniciarFluxoDietaNutri(); } catch(e) { openDietaSheet(); }
+      // Já está na tela de orientação — chama diretamente
+      try { iniciarFluxoDietaNutri(); } catch(e) { try { openDietaSheet(); } catch(e2) {} }
     } else {
-      try { openOrientacao(); setTimeout(function() { iniciarFluxoDietaNutri(); }, 400); } catch(e) { openDietaSheet(); }
+      // Abre a orientação primeiro, depois inicia o fluxo de dieta
+      try { openOrientacao(); } catch(e) {}
+      setTimeout(function() {
+        try { iniciarFluxoDietaNutri(); } catch(e) { try { openDietaSheet(); } catch(e2) {} }
+      }, 500);
     }
   },
   botao: { label: 'Criar Dieta', icon: 'utensils', cor: 'green' }
@@ -249,15 +254,19 @@ function _scoreTransform(transform, texto) {
 
 /**
  * Roda os Transforms após cada resposta do KRONOS.
- * Usa pontuação ponderada — exibe o mais relevante acima do threshold.
+ * Mensagem do usuário tem peso 2x — intento real sempre vence o bot.
+ * Threshold mínimo: score > 2 para exibir o botão.
  */
 function runTransforms(userMessage, botResponse, containerId) {
-  var texto = ((userMessage || '') + ' ' + (botResponse || '')).toLowerCase();
+  var textoUser = (userMessage || '').toLowerCase();
+  var textoBot  = (botResponse  || '').toLowerCase();
   var best = null;
-  var bestScore = 1; // pontuação mínima: >1 para evitar falsos positivos
+  var bestScore = 2; // threshold: score > 2
 
   for (var i = 0; i < TRANSFORMS.length; i++) {
-    var sc = _scoreTransform(TRANSFORMS[i], texto);
+    // Usuário pesa 2x — evita que a resposta do bot sobrescreva o intent
+    var sc = _scoreTransform(TRANSFORMS[i], textoUser) * 2
+           + _scoreTransform(TRANSFORMS[i], textoBot);
     if (sc > bestScore) {
       bestScore = sc;
       best = TRANSFORMS[i];
