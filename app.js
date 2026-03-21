@@ -2995,9 +2995,13 @@ function openPerfil() {
     }
   }).catch(() => {});
   document.getElementById("perfilScreen").classList.add("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
 }
 function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
 }
 
 // ══════════════════════════════════════════
@@ -3030,6 +3034,11 @@ function openSettingsScreen() {
 
 function closeSettingsScreen() {
   document.getElementById('settingsScreen').classList.remove('show');
+  // Restaura o footer apenas se o perfilScreen também estiver fechado
+  if (!document.getElementById('perfilScreen').classList.contains('show')) {
+    const footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = '';
+  }
 }
 
 function limparChatKronos() {
