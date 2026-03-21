@@ -68,8 +68,11 @@ const _origOrient = sendOrientExpert;
 window.sendOrientExpert = async function() {
 const input = document.getElementById('orientExpertInput');
 const txt = input ? input.value.trim() : '';
-// Transforms defensivos antes de enviar
-try { if (typeof runDefensiveTransforms === 'function') runDefensiveTransforms(txt); } catch(e) {}
+// Defensive transforms: retorna IDs bloqueados ou 'block' para barrar envio
+var _defResult = [];
+try { if (typeof runDefensiveTransforms === 'function') _defResult = runDefensiveTransforms(txt); } catch(e) {}
+if (_defResult === 'block') return; // rate_guard bloqueou
+var _blockedIds = Array.isArray(_defResult) ? _defResult : [];
 await _origOrient.apply(this, arguments);
 // Após resposta, roda Transform Kernel + verifica se gerou treino
 setTimeout(() => {
@@ -84,7 +87,7 @@ const temExercicios = _orientRespostaTemTreino(botText);
 if (temExercicios) {
 _mostrarBotaoImportarTreino(msgs, last);
 } else {
-runTransforms(txt, botText, 'orientExpertMessages');
+runTransforms(txt, botText, 'orientExpertMessages', _blockedIds);
 }
 }
 } catch(e) {}
@@ -98,8 +101,11 @@ if (typeof sendAI === 'function') {
   window.sendAI = async function(overrideText, isGerarTreino) {
     const input = document.getElementById('aiInput');
     const txt = overrideText || (input ? input.value.trim() : '');
-    // Defensive transforms antes de enviar
-    try { if (typeof runDefensiveTransforms === 'function') runDefensiveTransforms(txt); } catch(e) {}
+    // Defensive transforms: retorna IDs bloqueados ou 'block' para barrar envio
+    var _defResult = [];
+    try { if (typeof runDefensiveTransforms === 'function') _defResult = runDefensiveTransforms(txt); } catch(e) {}
+    if (_defResult === 'block') return;
+    var _blockedIds = Array.isArray(_defResult) ? _defResult : [];
     await _origAI.apply(this, arguments);
     setTimeout(() => {
       try {
@@ -108,7 +114,7 @@ if (typeof sendAI === 'function') {
           const bubbles = msgs.querySelectorAll('.ai-bubble');
           const last = bubbles[bubbles.length - 1];
           const botText = last ? last.textContent : '';
-          runTransforms(txt, botText, 'aiMessages');
+          runTransforms(txt, botText, 'aiMessages', _blockedIds);
         }
       } catch(e) {}
     }, 300);
