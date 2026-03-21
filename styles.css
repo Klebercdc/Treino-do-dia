@@ -1207,9 +1207,9 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   z-index: 99998;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   font-family: 'Barlow', 'DM Sans', sans-serif;
-  padding: 24px 24px 40px;
+  padding: 60px 28px 48px;
   overflow: hidden;
 }
 #loginScreen.show { display: flex; }
@@ -1238,31 +1238,32 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 0;
 }
 #loginLogoIcon {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: 100px;
+  height: 100px;
+  border-radius: 28px;
   background: linear-gradient(135deg, #FF6B00, #FF9A3C);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 40px rgba(255,107,0,0.35);
-  margin-bottom: 14px;
+  box-shadow: 0 16px 56px rgba(255,107,0,0.4);
+  margin-bottom: 20px;
 }
 #loginLogoText {
   font-family: 'Barlow Condensed', 'Barlow', sans-serif;
   font-weight: 900;
-  font-size: 22px;
-  letter-spacing: 1.5px;
+  font-size: 36px;
+  letter-spacing: 2px;
   color: #fff;
 }
 #loginLogoText span { color: #FF6B00; }
 #loginLogoSub {
-  font-size: 13px;
-  color: rgba(255,255,255,0.35);
-  margin-top: 4px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 6px;
+  letter-spacing: 0.3px;
 }
 #btnGoogle {
   width: 100%;
@@ -1303,23 +1304,25 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 #btnShowEmail {
   width: 100%;
-  padding: 14px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
+  padding: 18px;
+  background: #FF6B00;
+  border: none;
+  border-radius: 16px;
   cursor: pointer;
-  color: rgba(255,255,255,0.7);
-  font-size: 14px;
-  font-weight: 600;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
   font-family: 'Barlow', 'DM Sans', sans-serif;
   transition: all 0.2s;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(255,107,0,0.35);
+  letter-spacing: 0.3px;
 }
-#btnShowEmail:hover { border-color: rgba(255,107,0,0.4); color: #fff; }
+#btnShowEmail:hover { background: #e55f00; }
 #loginRegisterLink {
   text-align: center;
-  font-size: 13px;
-  color: rgba(255,255,255,0.3);
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
   cursor: pointer;
   margin-bottom: 16px;
 }
@@ -1329,10 +1332,9 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 10px;
-  color: rgba(255,255,255,0.15);
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
   text-align: center;
-  margin-top: 24px;
 }
 
 /* ── EMAIL LOGIN SCREEN ── */
