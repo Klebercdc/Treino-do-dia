@@ -492,6 +492,8 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 #orientacaoScreen.show { display: flex; }
 #dietaScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; }
 #dietaScreen.show { display: flex; }
+.transforms-screen { display: none; position: fixed; inset: 0; z-index: 3600; background: #0a0a0a; flex-direction: column; overflow-y: auto; }
+.transforms-screen.show { display: flex; }
 .dav-header { padding: 56px 16px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .dav-title { font-family: var(--display); font-size: 1.8rem; letter-spacing: .04em; color: var(--text); flex: 1; text-align: center; }
 .dav-body { padding: 16px; padding-bottom: 100px; }
