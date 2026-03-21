@@ -1,7 +1,9 @@
-const CACHE = 'titanpro-v3';
+const CACHE = 'titanpro-v4';
 const STATIC = [
   '/',
   '/index.html',
+  '/app.js',
+  '/styles.css',
   '/titanpro.png',
   '/splash.png',
   '/manifest.json'
