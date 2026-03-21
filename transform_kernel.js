@@ -1,157 +1,336 @@
 /* ═══════════════════════════════════════════════════
-TRANSFORM KERNEL — inspirado no Maltego
-Cada mensagem do usuário é uma entidade.
-Cada Transform detecta intenção e gera uma ação.
+   TRANSFORM KERNEL — inspirado no Maltego
+   Cada mensagem é uma entidade. Cada Transform detecta
+   intenção com pontuação ponderada e roteia para a ação
+   mais relevante no contexto correto.
+
+   Pesos: forte=3pts · medio=2pts · fraco=1pt
+   Threshold mínimo para exibir botão: 2pts
 ═══════════════════════════════════════════════════ */
+
 const TRANSFORMS = [
+
+/* ── 1. GERAR TREINO ────────────────────────────── */
 {
-id: 'treino',
-keywords: ['treino','exercício','musculação','série','repetição','gerar treino','montar treino','academia','supino','agachamento','barra'],
-action: () => { try { closeOrientacao(); } catch(e) {} navTo('treino'); try { closeHome(); } catch(e) {} },
-botao: { label: 'Ir para Treino', icon: 'dumbbell', cor: 'accent' }
+  id: 'gerar_treino',
+  score: {
+    forte: ['gerar treino','montar treino','criar treino','quero um treino',
+            'preciso de treino','novo treino','treino pra mim','me dá um treino',
+            'faz um treino','elabora um treino'],
+    medio: ['treino personalizado','programa de treino','plano de treino'],
+    fraco: []
+  },
+  action: function() {
+    try { closeOrientacao(); } catch(e) {}
+    try { iniciarFluxoGeradorTreino(); } catch(e) { navTo('treino'); }
+  },
+  botao: { label: 'Criar Treino', icon: 'dumbbell', cor: 'accent' }
 },
+
+/* ── 2. NAVEGAR PARA TREINO ─────────────────────── */
 {
-id: 'basal',
-// FIX: basal antes de dieta para 'caloria/kcal/tmb/tdee' não acionar dieta
-keywords: ['tmb','tdee','basal','metabolismo','gasto calórico','kcal','caloria'],
-action: () => openBasalSheet(),
-botao: { label: 'Calculadora Basal', icon: 'flame', cor: 'accent' }
+  id: 'treino',
+  score: {
+    forte: ['supino','agachamento','leg press','rosca direta','terra','levantamento terra',
+            'barra fixa','crucifixo','desenvolvimento','remada','pulldown','cadeira extensora'],
+    medio: ['exercício','musculação','série','repetição','carga','academia','halter','barra'],
+    fraco: ['treino','malhar','malhação','ginástica']
+  },
+  action: function() {
+    try { closeOrientacao(); } catch(e) {}
+    navTo('treino');
+    try { closeHome(); } catch(e) {}
+  },
+  botao: { label: 'Ir para Treino', icon: 'dumbbell', cor: 'accent' }
 },
+
+/* ── 3. CALCULADORA BASAL / TDEE ────────────────── */
 {
-id: 'dieta',
-keywords: ['dieta','alimentação','refeição','nutrição','gerar dieta','cardápio','proteína','carboidrato','o que comer','pós-treino'],
-action: () => openDietaSheet(),
-botao: { label: 'Gerar Dieta', icon: 'utensils', cor: 'green' }
+  id: 'basal',
+  score: {
+    forte: ['tmb','tdee','taxa metabólica','gasto calórico total','metabolismo basal',
+            'calorias de manutenção','gasto energético'],
+    medio: ['metabolismo','gasto calórico','basal','mifflin'],
+    fraco: ['kcal','caloria','calorias']
+  },
+  action: function() { openBasalSheet(); },
+  botao: { label: 'Calculadora Basal', icon: 'flame', cor: 'accent' }
 },
+
+/* ── 4. CRIAR DIETA ─────────────────────────────── */
 {
-id: 'evolucao',
-keywords: ['evolução','progresso','gráfico','1rm','pr','recorde','melhora','cresci'],
-action: () => showEvoChart(),
-botao: { label: 'Ver Evolução', icon: 'bar-chart-3', cor: 'blue' }
+  id: 'dieta',
+  score: {
+    forte: ['gerar dieta','criar dieta','montar dieta','quero uma dieta','preciso de dieta',
+            'minha dieta','cardápio personalizado','fazer dieta','meu cardápio'],
+    medio: ['alimentação','nutrição','refeição','o que comer','o que devo comer',
+            'dieta para','como comer','plano alimentar'],
+    fraco: ['dieta','carboidrato','gordura','pós-treino','macros']
+  },
+  action: function(cid) {
+    if (cid === 'orientExpertMessages') {
+      try { iniciarFluxoDietaNutri(); } catch(e) { openDietaSheet(); }
+    } else {
+      try { openOrientacao(); setTimeout(function() { iniciarFluxoDietaNutri(); }, 400); } catch(e) { openDietaSheet(); }
+    }
+  },
+  botao: { label: 'Criar Dieta', icon: 'utensils', cor: 'green' }
 },
+
+/* ── 5. SUPLEMENTOS ─────────────────────────────── */
 {
-id: 'plano',
-keywords: ['assinar','pro','plano','upgrade','premium','limite','consultas'],
-action: () => { try { closeOrientacao(); } catch(e) {} openPricingScreen(); },
-botao: { label: 'Ver Planos', icon: 'zap', cor: 'accent' }
+  id: 'suplementos',
+  score: {
+    forte: ['creatina','whey protein','whey','bcaa','pré-treino','proteína em pó',
+            'hipercalórico','albumina','caseína','termogênico'],
+    medio: ['suplemento','suplementação','vitamina d','ômega 3','beta alanina',
+            'citrulina','cafeína','glutamina'],
+    fraco: ['vitamina','mineral','zinco','magnésio']
+  },
+  action: function(cid) {
+    var msg = 'Quais suplementos têm evidência científica real e realmente valem a pena para meus objetivos?';
+    if (cid === 'orientExpertMessages') {
+      var inp = document.getElementById('orientExpertInput');
+      if (inp) { inp.value = msg; sendOrientExpert(); }
+    } else {
+      try { openOrientacao(); setTimeout(function() {
+        var inp = document.getElementById('orientExpertInput');
+        if (inp) { inp.value = msg; sendOrientExpert(); }
+      }, 400); } catch(e) {}
+    }
+  },
+  botao: { label: 'Suplementos com Evidência', icon: 'zap', cor: 'blue' }
 },
+
+/* ── 6. EVOLUÇÃO / PROGRESSO ────────────────────── */
 {
-id: 'mesociclo',
-keywords: ['mesociclo','periodização','bloco','semanas','plano de treino','deload'],
-action: () => abrirMesociclo(),
-botao: { label: 'Gerar Mesociclo', icon: 'calendar', cor: 'purple' }
+  id: 'evolucao',
+  score: {
+    forte: ['ver evolução','meu progresso','meu pr','meu recorde','1rm estimado',
+            'quanto evoluí','quanto progredi'],
+    medio: ['evolução','progresso','gráfico de treino','1rm','pr'],
+    fraco: ['recorde','melhora','cresci','fiquei mais forte']
+  },
+  action: function() { showEvoChart(); },
+  botao: { label: 'Ver Evolução', icon: 'bar-chart-3', cor: 'blue' }
 },
+
+/* ── 7. HISTÓRICO ───────────────────────────────── */
 {
-id: 'respiracao',
-keywords: ['respiração','relaxar','cool-down','estresse','ansiedade'],
-action: () => abrirRespiracao(),
-botao: { label: 'Respiração', icon: 'wind', cor: 'blue' }
+  id: 'historico',
+  score: {
+    forte: ['histórico de treinos','sessões anteriores','últimos treinos',
+            'ver meus treinos','meus treinos passados'],
+    medio: ['histórico','treinos anteriores','sessões de treino'],
+    fraco: ['ver treinos']
+  },
+  action: function() { verHistorico(); },
+  botao: { label: 'Ver Histórico', icon: 'list', cor: 'blue' }
 },
+
+/* ── 8. MESOCICLO / PERIODIZAÇÃO ────────────────── */
 {
-id: 'historico',
-keywords: ['histórico','sessões anteriores','últimos treinos','ver treinos'],
-action: () => verHistorico(),
-botao: { label: 'Ver Histórico', icon: 'list', cor: 'blue' }
+  id: 'mesociclo',
+  score: {
+    forte: ['mesociclo','periodização','deload','bloco de treino',
+            'semanas de treino','periodizar','estruturar treino'],
+    medio: ['bloco','ondulação','linear','ciclo de treino'],
+    fraco: ['semanas','planejamento']
+  },
+  action: function() { abrirMesociclo(); },
+  botao: { label: 'Gerar Mesociclo', icon: 'calendar', cor: 'purple' }
 },
+
+/* ── 9. RECUPERAÇÃO ─────────────────────────────── */
+{
+  id: 'recuperacao',
+  score: {
+    forte: ['dor muscular','músculo doendo','dor no músculo','lesão','me machuquei',
+            'overtraining','sobretreinamento','muito cansado para treinar'],
+    medio: ['recuperação muscular','doms','descanso ativo','fadiga muscular',
+            'recuperar mais rápido'],
+    fraco: ['cansado','fatigado','exausto','dolorido']
+  },
+  action: function(cid) {
+    try { showToast('Ouça seu corpo. Em caso de dor aguda, consulte um profissional de saúde.', 'info', 5000); } catch(e) {}
+    var msg = 'Estou sentindo dor muscular e cansaço. O que fazer para acelerar minha recuperação e quando voltar a treinar?';
+    if (cid === 'orientExpertMessages') {
+      var inp = document.getElementById('orientExpertInput');
+      if (inp) { inp.value = msg; sendOrientExpert(); }
+    } else {
+      try { openOrientacao(); setTimeout(function() {
+        var inp = document.getElementById('orientExpertInput');
+        if (inp) { inp.value = msg; sendOrientExpert(); }
+      }, 400); } catch(e) {}
+    }
+  },
+  botao: { label: 'Dicas de Recuperação', icon: 'heart', cor: 'blue' }
+},
+
+/* ── 10. RESPIRAÇÃO / RELAXAMENTO ───────────────── */
+{
+  id: 'respiracao',
+  score: {
+    forte: ['exercício de respiração','respiração guiada','relaxamento','ansiedade',
+            'estresse','cool-down','meditação'],
+    medio: ['respirar','calma','tensão','nervoso','agitado'],
+    fraco: []
+  },
+  action: function() { abrirRespiracao(); },
+  botao: { label: 'Respiração Guiada', icon: 'wind', cor: 'blue' }
+},
+
+/* ── 11. PLANO PRO ──────────────────────────────── */
+{
+  id: 'plano',
+  score: {
+    forte: ['assinar pro','upgrade pro','virar pro','plano pro','quero o pro',
+            'consultas esgotadas','limite de mensagens','sem consultas'],
+    medio: ['plano premium','premium','sem limite','plano pago'],
+    fraco: ['assinar','pro','upgrade','premium','limite']
+  },
+  action: function() {
+    try { closeOrientacao(); } catch(e) {}
+    openPricingScreen();
+  },
+  botao: { label: 'Ver Planos PRO', icon: 'zap', cor: 'accent' }
+},
+
 ];
 
-/* Defensive Transforms — proteção do negócio */
+/* ═══════════════════════════════════════════════════
+   TRANSFORMS DEFENSIVOS — proteção e segurança
+   Rodam ANTES do envio e podem bloquear ou avisar.
+═══════════════════════════════════════════════════ */
 const DEFENSIVE_TRANSFORMS = [
 {
-id: 'paywall_bypass',
-detect: (txt) => /sem pagar|hack|burlar|contornar/i.test(txt),
-action: () => { /* silencioso */ }
+  id: 'paywall_bypass',
+  detect: function(txt) { return /sem pagar|hack|burlar|contornar|bypass/i.test(txt); },
+  action: function() { /* silencioso — não ativar */ }
 },
 {
-id: 'rate_guard',
-detect: (txt, history) => {
-if (!history || history.length < 5) return false;
-const last5 = history.slice(-5).filter(m => m.role === 'user');
-const prefix = txt.toLowerCase().slice(0, 10);
-return last5.filter(m => m.content.toLowerCase().includes(prefix)).length >= 3;
+  id: 'injury_alert',
+  detect: function(txt) {
+    return /dor\s+(aguda|forte|intensa|persistente)|lesão|lesionado|me machuquei|torci|quebrei|fraturei/i.test(txt);
+  },
+  action: function() {
+    try { showToast('Em caso de dor aguda ou lesão, consulte um médico ou fisioterapeuta antes de continuar treinando.', 'info', 6000); } catch(e) {}
+  }
 },
-action: () => showToast('Já respondi isso recentemente! Role para ver a resposta anterior.', 'info', 4000)
+{
+  id: 'rate_guard',
+  detect: function(txt, history) {
+    if (!history || history.length < 5) return false;
+    var last5 = history.slice(-5).filter(function(m) { return m.role === 'user'; });
+    var clean = txt.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 20);
+    return last5.filter(function(m) {
+      return m.content.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 20) === clean;
+    }).length >= 3;
+  },
+  action: function() {
+    try { showToast('Já respondi isso recentemente! Role para cima para ver a resposta.', 'info', 4000); } catch(e) {}
+  }
 }
 ];
 
+/* ═══════════════════════════════════════════════════
+   MOTOR DE PONTUAÇÃO
+   Calcula a relevância de cada Transform para a mensagem.
+═══════════════════════════════════════════════════ */
+function _scoreTransform(transform, texto) {
+  var score = 0;
+  var s = transform.score;
+  if (!s) return 0;
+  (s.forte || []).forEach(function(k) { if (texto.includes(k)) score += 3; });
+  (s.medio || []).forEach(function(k) { if (texto.includes(k)) score += 2; });
+  (s.fraco || []).forEach(function(k) { if (texto.includes(k)) score += 1; });
+  return score;
+}
+
 /**
+ * Roda os Transforms após cada resposta do KRONOS.
+ * Usa pontuação ponderada — exibe o mais relevante acima do threshold.
+ */
+function runTransforms(userMessage, botResponse, containerId) {
+  var texto = ((userMessage || '') + ' ' + (botResponse || '')).toLowerCase();
+  var best = null;
+  var bestScore = 1; // pontuação mínima: >1 para evitar falsos positivos
 
-- Roda os Transforms após cada resposta do KRONOS.
-  */
-  function runTransforms(userMessage, botResponse, containerId) {
-  const texto = ((userMessage || '') + ' ' + (botResponse || '')).toLowerCase();
-  for (const transform of TRANSFORMS) {
-  const match = transform.keywords.some(k => texto.includes(k));
-  if (match) {
-  renderTransformButton(transform, containerId);
-  break;
+  for (var i = 0; i < TRANSFORMS.length; i++) {
+    var sc = _scoreTransform(TRANSFORMS[i], texto);
+    if (sc > bestScore) {
+      bestScore = sc;
+      best = TRANSFORMS[i];
+    }
   }
-  }
-  }
+
+  if (best) renderTransformButton(best, containerId);
+}
 
 /**
-
-- Roda Defensive Transforms antes de enviar mensagem.
-- Retorna true se deve bloquear.
-  */
-  function runDefensiveTransforms(userMessage, history) {
-  for (const dt of DEFENSIVE_TRANSFORMS) {
-  if (dt.detect(userMessage, history)) {
-  dt.action();
-  if (dt.id === 'rate_guard') return true;
-  }
+ * Roda Defensive Transforms antes de enviar mensagem.
+ * Retorna true se deve bloquear o envio.
+ */
+function runDefensiveTransforms(userMessage, history) {
+  for (var i = 0; i < DEFENSIVE_TRANSFORMS.length; i++) {
+    var dt = DEFENSIVE_TRANSFORMS[i];
+    if (dt.detect(userMessage, history)) {
+      dt.action();
+      if (dt.id === 'rate_guard') return true;
+    }
   }
   return false;
-  }
+}
 
 /**
-
-- Renderiza botão de ação Transform no container do chat.
-  */
-  function renderTransformButton(transform, containerId) {
-  const container = document.getElementById(containerId || 'orientExpertMessages');
+ * Renderiza botão de ação Transform no container do chat.
+ */
+function renderTransformButton(transform, containerId) {
+  var container = document.getElementById(containerId || 'orientExpertMessages');
   if (!container) return;
 
-// FIX BUG 2: remove wrap inteiro (não só o btn)
-const oldWrap = container.querySelector('.transform-wrap');
-if (oldWrap) oldWrap.remove();
+  // Remove wrap anterior
+  var oldWrap = container.querySelector('.transform-wrap');
+  if (oldWrap) oldWrap.remove();
 
-const colorMap = {
-accent: { css: 'var(--accent)',  rgba: '249,115,22'  },
-green:  { css: 'var(--green)',   rgba: '34,197,94'   },
-blue:   { css: 'var(--blue)',    rgba: '59,130,246'  },
-purple: { css: 'var(--purple)',  rgba: '168,85,247'  },
-};
-const c = colorMap[transform.botao.cor] || colorMap.accent;
+  var colorMap = {
+    accent: { css: 'var(--accent)',          rgba: '249,115,22'  },
+    green:  { css: 'var(--green,#22c55e)',   rgba: '34,197,94'   },
+    blue:   { css: 'var(--blue,#3b82f6)',    rgba: '59,130,246'  },
+    purple: { css: 'var(--purple,#a855f7)',  rgba: '168,85,247'  },
+  };
+  var c = colorMap[transform.botao.cor] || colorMap.accent;
 
-const btn = document.createElement('button');
-btn.className = 'transform-btn';
-btn.style.cssText = `display:block;width:100%;padding:12px 16px; background:rgba(${c.rgba},0.12); border:1.5px solid ${c.css};border-radius:12px;color:${c.css}; font-family:var(--font);font-size:0.88rem;font-weight:700; cursor:pointer;text-align:left;transition:all .15s; animation:fadeInUp .3s ease;`;
-btn.innerHTML = `${_ico(transform.botao.icon || 'zap', 14)} ${transform.botao.label}`;
+  var btn = document.createElement('button');
+  btn.className = 'transform-btn';
+  btn.style.cssText = 'display:block;width:100%;padding:12px 16px;' +
+    'background:rgba(' + c.rgba + ',0.12);border:1.5px solid ' + c.css + ';' +
+    'border-radius:12px;color:' + c.css + ';font-family:var(--font);' +
+    'font-size:0.88rem;font-weight:700;cursor:pointer;text-align:left;' +
+    'transition:all .15s;animation:fadeInUp .3s ease;';
+  btn.innerHTML = _ico(transform.botao.icon || 'zap', 14) + ' ' + transform.botao.label;
 
-// FIX BUG 1: touchstart + touchend para resetar cor
-btn.addEventListener('touchstart', () => {
-btn.style.background = c.css;
-btn.style.color = '#fff';
-}, { passive: true });
-btn.addEventListener('touchend', () => {
-setTimeout(() => {
-btn.style.background = `rgba(${c.rgba},0.12)`;
-btn.style.color = c.css;
-}, 150);
-}, { passive: true });
+  btn.addEventListener('touchstart', function() {
+    btn.style.background = c.css;
+    btn.style.color = '#fff';
+  }, { passive: true });
+  btn.addEventListener('touchend', function() {
+    setTimeout(function() {
+      btn.style.background = 'rgba(' + c.rgba + ',0.12)';
+      btn.style.color = c.css;
+    }, 150);
+  }, { passive: true });
 
-// Cria wrap antes do onclick para evitar TDZ
-const wrap = document.createElement('div');
-wrap.className = 'ai-msg assistant transform-wrap';
-wrap.style.paddingLeft = containerId === 'orientExpertMessages' ? '0' : '38px';
-wrap.appendChild(btn);
+  var wrap = document.createElement('div');
+  wrap.className = 'ai-msg assistant transform-wrap';
+  wrap.style.paddingLeft = containerId === 'orientExpertMessages' ? '0' : '38px';
+  wrap.appendChild(btn);
 
-btn.onclick = () => {
-  try { transform.action(); } catch(e) { console.warn('[Transform] action error:', e); }
-  wrap.remove();
-};
+  btn.onclick = function() {
+    try { transform.action(containerId); } catch(e) { console.warn('[Transform] action error:', e); }
+    wrap.remove();
+  };
 
-container.appendChild(wrap);
-container.scrollTop = container.scrollHeight;
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
 }
