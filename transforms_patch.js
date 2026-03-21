@@ -10,8 +10,10 @@ const _origOrient = sendOrientExpert;
 window.sendOrientExpert = async function() {
 const input = document.getElementById('orientExpertInput');
 const txt = input ? input.value.trim() : '';
+// Defensive transforms antes de enviar
+try { if (typeof runDefensiveTransforms === 'function') runDefensiveTransforms(txt); } catch(e) {}
 await _origOrient.apply(this, arguments);
-// Após resposta, roda Transform
+// Após resposta, roda Transform Kernel
 setTimeout(() => {
 try {
 const msgs = document.getElementById('orientExpertMessages');
@@ -32,6 +34,8 @@ if (typeof sendAI === 'function') {
   window.sendAI = async function(overrideText, isGerarTreino) {
     const input = document.getElementById('aiInput');
     const txt = overrideText || (input ? input.value.trim() : '');
+    // Defensive transforms antes de enviar
+    try { if (typeof runDefensiveTransforms === 'function') runDefensiveTransforms(txt); } catch(e) {}
     await _origAI.apply(this, arguments);
     setTimeout(() => {
       try {
@@ -56,6 +60,20 @@ aplicarPatch();
 window.addEventListener('load', aplicarPatch);
 }
 })();
+
+/* ═══════════════════════════════════════════════════
+STARTUP SCAN — roda análise de entidades no carregamento
+═══════════════════════════════════════════════════ */
+window.addEventListener('load', function() {
+  // Scan inicial com delay para garantir que app.js e transforms_engine.js carregaram
+  setTimeout(function() {
+    try {
+      if (typeof teSilentScan === 'function') {
+        teSilentScan();
+      }
+    } catch(e) {}
+  }, 3000);
+});
 
 /* ═══════════════════════════════════════════════════
 PATCH 2: obFinish — pede login após onboarding

@@ -842,6 +842,8 @@ async function salvarTreino() {
     checkPersonaEvolucao(hist);
     checkNutricaoPosTreino(st, dur);
     checkHidratacaoPosTreino(st, dur);
+    // Atualiza entidades e alertas do Transforms Engine após cada sessão
+    setTimeout(() => { try { teSilentScan(); } catch(e) {} }, 1500);
     _sessionStart = null;
     _disposicaoAtual = null;
     try { renderDesafios(); } catch(e) {}
@@ -2002,6 +2004,28 @@ ${proximoMarcoStr ? `- Próximo marco: ${proximoMarcoStr}` : ""}
 - Horário atual: ${horaStr} (${saudacao}) — NÃO cumprimente com horário errado
 - Volume médio recente: ${tendencia}
 - Marcos conquistados: ${_evData.marcos.map(m=>m.icon+m.label).join(" | ") || "nenhum ainda"}
+
+${(() => {
+  try {
+    const cache = typeof teGetEntityState === 'function' ? teGetEntityState() : null;
+    if (!cache) return '';
+    const d = cache.athleteData;
+    const alerts = cache.alerts || [];
+    const alertStr = alerts.length > 0
+      ? alerts.map(a => `[${a.severity.toUpperCase()}] ${a.message}`).join(' | ')
+      : 'nenhum alerta ativo';
+    return `═══════════════════════════════════════
+ANÁLISE DAS ENTIDADES — TITAN TRANSFORMS ENGINE
+═══════════════════════════════════════
+Fadiga acumulada (FadigaScore): ${d.fadigaScore.toFixed(1)}/10${d.fadigaScore > 8.5 ? ' ← CRÍTICO: risco de overtraining' : d.fadigaScore > 7 ? ' ← ATENÇÃO: fadiga moderada-alta' : ' ← OK'}
+Variância de RPE: ${d.rpeVariance.toFixed(1)}${d.rpeVariance > 3 ? ' ← RPE inconsistente, recalibrar' : ' ← estável'}
+Semanas sem PR: ${d.semSemPR}${d.semSemPR >= 3 ? ' ← possível platô' : ' ← progredindo'}
+Regressão de carga: ${d.cargaRegression.toFixed(1)}%${d.cargaRegression < -5 ? ' ← carga caindo, investigar recuperação/nutrição' : ' ← estável'}
+Dias sem treinar: ${d.diasSemTreino}${d.diasSemTreino > 5 ? ' ← sequência interrompida' : ''}
+Alertas defensivos ativos: ${alertStr}
+USE esses dados para fundamentar suas recomendações. Se FadigaScore > 8.5, priorize recuperação. Se sem PR há 3+ semanas, sugira variação de estímulo ou deload.`;
+  } catch(e) { return ''; }
+})()}
 
 ═══════════════════════════════════════
 RECORDES PESSOAIS (1RM estimado por exercício)
