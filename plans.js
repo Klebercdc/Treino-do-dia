@@ -6,15 +6,14 @@ var HOTMART_CHECKOUT_URL = '';
 var FREE_AI_LIMIT = 15; // valor padrão; sobrescrito após fetch do /api/config
 
 // Carrega configurações públicas do backend
-(function loadAppConfig() {
-fetch('/api/config')
-.then(function(r) { return r.json(); })
-.then(function(cfg) {
-if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
-if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
-})
-.catch(function() { /* falha silenciosa — continua com defaults */ });
-})();
+// Promise guardada para que assinarPro() possa aguardar se ainda não resolveu
+var _configPromise = fetch('/api/config')
+  .then(function(r) { return r.json(); })
+  .then(function(cfg) {
+    if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
+    if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
+  })
+  .catch(function() { /* falha silenciosa — continua com defaults */ });
 
 var _userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT };
 
@@ -36,18 +35,64 @@ updatePlanBadge();
 }
 
 function updatePlanBadge() {
-const badge = document.getElementById('authMenuPlanBadge');
-if (!badge) return;
-if (_userPlan.plan === 'pro') {
-badge.textContent = 'PRO';
-badge.style.background = 'rgba(249,115,22,0.3)';
-badge.style.color = 'var(–accent)';
-} else {
-var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
-badge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
-badge.style.background = rem <= 3 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
-badge.style.color = rem <= 3 ? '#ef4444' : 'var(–text-2)';
-}
+  var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
+  var isPro = _userPlan.plan === 'pro';
+
+  // ── Badge no menu de conta ──
+  var badge = document.getElementById('authMenuPlanBadge');
+  if (badge) {
+    if (isPro) {
+      badge.textContent = 'PRO';
+      badge.style.background = 'rgba(249,115,22,0.3)';
+      badge.style.color = 'var(--accent)';
+    } else {
+      badge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
+      badge.style.background = rem <= 3 ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)';
+      badge.style.color = rem <= 3 ? '#ef4444' : 'var(--text-2)';
+    }
+  }
+
+  // ── Banner de upgrade na home ──
+  var homeBanner = document.getElementById('homeUpgradeBanner');
+  var homeSubtext = document.getElementById('homeUpgradeSubtext');
+  if (homeBanner) {
+    if (isPro) {
+      homeBanner.style.display = 'none';
+    } else {
+      homeBanner.style.display = 'flex';
+      if (homeSubtext) {
+        if (rem === 0) {
+          homeSubtext.textContent = 'Limite esgotado — faça upgrade para continuar usando a IA';
+        } else if (rem <= 5) {
+          homeSubtext.textContent = 'Apenas ' + rem + ' consulta' + (rem === 1 ? '' : 's') + ' restante' + (rem === 1 ? '' : 's') + ' este mês';
+        } else {
+          homeSubtext.textContent = 'Coach ilimitado · Dieta sem limite · R$29,90/mês';
+        }
+      }
+      homeBanner.style.borderColor = rem === 0
+        ? 'rgba(239,68,68,0.4)'
+        : rem <= 5 ? 'rgba(249,115,22,0.5)' : 'rgba(249,115,22,0.2)';
+    }
+  }
+
+  // ── Chip de quota no KRONOS ──
+  var orientChip = document.getElementById('orientQuotaChip');
+  var orientText = document.getElementById('orientQuotaText');
+  if (orientChip) {
+    if (isPro) {
+      orientChip.style.display = 'none';
+    } else {
+      orientChip.style.display = 'block';
+      if (orientText) {
+        orientText.textContent = rem === 0 ? 'Limite atingido' : rem + ' restante' + (rem === 1 ? '' : 's');
+        orientText.style.color = rem === 0 ? '#ef4444' : rem <= 3 ? 'var(--accent)' : 'var(--text-2)';
+      }
+      var chipEl = orientChip.querySelector('span');
+      if (chipEl) {
+        chipEl.style.borderColor = rem === 0 ? 'rgba(239,68,68,0.4)' : rem <= 3 ? 'rgba(249,115,22,0.4)' : 'var(--border)';
+      }
+    }
+  }
 }
 
 // ══════════════════════════════
@@ -76,17 +121,21 @@ document.getElementById('planModal').style.display = 'none';
 }
 
 async function assinarPro() {
-if (!HOTMART_CHECKOUT_URL) {
-alert('Link de pagamento não configurado. Entre em contato com o suporte.');
-return;
-}
-try {
-const { data: { session } } = await _sb.auth.getSession();
-var email = session && session.user && session.user.email ? '?email=' + encodeURIComponent(session.user.email) : '';
-window.open(HOTMART_CHECKOUT_URL + email, '_blank');
-} catch(e) {
-window.open(HOTMART_CHECKOUT_URL, '_blank');
-}
+  // Aguarda config carregar caso ainda não tenha resolvido (race condition)
+  await _configPromise;
+  if (!HOTMART_CHECKOUT_URL) {
+    if (typeof showToast === 'function') {
+      showToast('Checkout em breve. Fale com o suporte.', 'warning');
+    }
+    return;
+  }
+  try {
+    const { data: { session } } = await _sb.auth.getSession();
+    var email = session && session.user && session.user.email ? '?email=' + encodeURIComponent(session.user.email) : '';
+    window.open(HOTMART_CHECKOUT_URL + email, '_blank');
+  } catch(e) {
+    window.open(HOTMART_CHECKOUT_URL, '_blank');
+  }
 }
 
 // ══════════════════════════════

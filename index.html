@@ -787,6 +787,16 @@
   </div>
 
   <div class="home-section-title">Nutrição & Ferramentas</div>
+
+  <!-- Banner de upgrade — visível só para plano free, atualizado por updatePlanBadge() -->
+  <div id="homeUpgradeBanner" onclick="openPlanModal()" style="display:none;margin:0 16px 10px;background:linear-gradient(135deg,rgba(249,115,22,0.08),rgba(249,115,22,0.04));border:1px solid rgba(249,115,22,0.2);border-radius:14px;padding:11px 14px;cursor:pointer;align-items:center;gap:12px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--accent);letter-spacing:.01em">Desbloqueie a IA completa</div>
+      <div id="homeUpgradeSubtext" style="font-size:0.7rem;color:var(--text-2);margin-top:2px">Coach ilimitado · Dieta sem limite · R$29,90/mês</div>
+    </div>
+    <div style="flex-shrink:0;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;padding:6px 13px;border-radius:8px;letter-spacing:.03em">VER PRO</div>
+  </div>
+
   <div class="home-tools-grid" style="grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
     <div class="home-tool-card" onclick="openBasalSheet()">
       <div class="home-tool-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
@@ -1278,6 +1288,13 @@
     <div style="flex:1;text-align:center;padding-right:60px">
       <div class="orient-title" style="font-size:1.4rem;letter-spacing:.08em">KRONOS</div>
       <div style="font-size:0.6rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;opacity:.8">Coach Inteligente · Online</div>
+    </div>
+    <!-- Chip de quota — visível só para plano free -->
+    <div id="orientQuotaChip" onclick="openPlanModal()" style="display:none;position:absolute;right:16px;top:50%;transform:translateY(-50%);cursor:pointer">
+      <span style="display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:0.68rem;white-space:nowrap">
+        <span id="orientQuotaText" style="color:var(--text-2)">15 restantes</span>
+        <span style="color:var(--accent);font-weight:800">PRO</span>
+      </span>
     </div>
   </div>
   <div class="orient-content">
@@ -2120,9 +2137,10 @@
   </div>
 </div>
 
-<!-- Paywall -->
-
-<div id="paywallModal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px">
+<!-- ════════════════════════════════════════════════════
+     PAYWALL — quota esgotada
+════════════════════════════════════════════════════ -->
+<div id="paywallModal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--surface);border:1px solid rgba(249,115,22,0.4);border-radius:20px;max-width:360px;width:100%;padding:28px 24px;text-align:center">
     <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
     <div style="font-family:var(--font-display,'Bebas Neue'),sans-serif;font-size:1.6rem;color:var(--accent);margin-bottom:8px">Limite atingido</div>
