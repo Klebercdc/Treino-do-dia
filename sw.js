@@ -1,4 +1,4 @@
-const CACHE = 'titanpro-v4';
+const CACHE = 'titanpro-v5';
 const STATIC = [
   '/',
   '/index.html',
@@ -25,7 +25,8 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Cache-first para estáticos, network-first para API/Supabase
+// Network-first para arquivos do app (sempre pega versão nova quando online)
+// Cache fallback apenas quando offline
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
@@ -39,17 +40,20 @@ self.addEventListener('fetch', e => {
     url.hostname.includes('anthropic.com')
   ) return;
 
+  // Só intercepta requisições do mesmo origin
+  if (url.origin !== self.location.origin) return;
+
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        // Cacheia só respostas válidas do mesmo origin
-        if (res.ok && url.origin === self.location.origin) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => cached);
+    fetch(e.request).then(res => {
+      // Atualiza cache com versão nova
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => {
+      // Offline: serve do cache
+      return caches.match(e.request);
     })
   );
 });

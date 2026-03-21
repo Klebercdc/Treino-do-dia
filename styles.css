@@ -1353,8 +1353,8 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   position: fixed;
   inset: 0;
   background: #090909;
-  z-index: 600;
-  display: flex;
+  z-index: 8000;
+  display: none;
   flex-direction: column;
   font-family: 'Barlow Condensed', 'Barlow', sans-serif;
   overflow: hidden;
