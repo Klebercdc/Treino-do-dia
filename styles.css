@@ -1240,29 +1240,20 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   align-items: center;
   margin-bottom: 0;
 }
-#loginLogoIcon {
-  width: 100px;
-  height: 100px;
-  border-radius: 28px;
-  background: linear-gradient(135deg, #FF6B00, #FF9A3C);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 16px 56px rgba(255,107,0,0.4);
-  margin-bottom: 20px;
-}
 #loginLogoText {
-  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-  font-weight: 900;
-  font-size: 36px;
-  letter-spacing: 2px;
+  font-family: 'Bebas Neue', 'Barlow Condensed', sans-serif;
+  font-weight: 400;
+  font-size: 48px;
+  letter-spacing: 4px;
   color: #fff;
+  line-height: 1;
 }
 #loginLogoText span { color: #FF6B00; }
 #loginLogoSub {
-  font-size: 14px;
-  color: rgba(255,255,255,0.5);
-  margin-top: 6px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 8px;
+  font-style: italic;
   letter-spacing: 0.3px;
 }
 #btnGoogle {
