@@ -504,3 +504,70 @@ async function teCallKronos(alerts, athleteData) {
     addLog('Erro ao contactar KRONOS: ' + (err.message || 'conexão falhou'));
   }
 }
+
+/* ── ENTITY STATE CACHE KEY ─────────────────────────────── */
+const TE_CACHE_KEY = 'te_scan_cache_v1';
+
+/* ── GET CACHED ENTITY STATE ────────────────────────────── */
+function teGetEntityState() {
+  try {
+    const raw = localStorage.getItem(TE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Invalidate cache older than 4 hours
+    if (Date.now() - (parsed.ts || 0) > 4 * 60 * 60 * 1000) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+/* ── SILENT SCAN — roda sem abrir a tela ───────────────── */
+async function teSilentScan() {
+  if (!teComputeAthleteData) return;
+  const athleteData = teComputeAthleteData();
+  if (!athleteData.hasData) return;
+
+  const found = [];
+  for (const dt of TE_DEFENSIVE) {
+    try {
+      if (dt.trigger(athleteData)) {
+        found.push({ id: dt.id, name: dt.name, severity: dt.severity, icon: dt.icon, message: dt.message(athleteData) });
+      }
+    } catch(e) {}
+  }
+
+  // Compute active entity states
+  const entities = {
+    Usuario:     { active: true },
+    Treino:      { active: athleteData.hasData },
+    FadigaScore: { active: athleteData.fadigaScore > 0, value: athleteData.fadigaScore.toFixed(1) },
+    RPE:         { active: athleteData.fadigaScore > 0 },
+    Alerta:      { active: found.length > 0, count: found.length },
+    PR:          { active: athleteData.semSemPR < 4 },
+    Mesociclo:   { active: athleteData.hasData },
+    Recomendacao:{ active: false },
+  };
+
+  const cache = { ts: Date.now(), alerts: found, entities, athleteData };
+  try { localStorage.setItem(TE_CACHE_KEY, JSON.stringify(cache)); } catch(e) {}
+
+  // Update badge on TITAN TRANSFORMS home card
+  teUpdateHomeBadge(found);
+
+  return cache;
+}
+
+/* ── UPDATE HOME CARD BADGE ─────────────────────────────── */
+function teUpdateHomeBadge(alerts) {
+  const badge = document.getElementById('teScanBadge');
+  if (!badge) return;
+  if (alerts && alerts.length > 0) {
+    const hasHigh = alerts.some(a => a.severity === 'high');
+    badge.textContent = hasHigh ? `⚠ ${alerts.length} ALERTA${alerts.length > 1 ? 'S' : ''}` : `${alerts.length} aviso${alerts.length > 1 ? 's' : ''}`;
+    badge.style.color = hasHigh ? '#ef4444' : '#f97316';
+    badge.style.borderColor = hasHigh ? 'rgba(239,68,68,0.5)' : 'rgba(249,115,22,0.4)';
+  } else {
+    badge.textContent = 'ATIVO';
+    badge.style.color = '#10B981';
+    badge.style.borderColor = 'rgba(16,185,129,0.4)';
+  }
+}

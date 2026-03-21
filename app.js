@@ -842,6 +842,8 @@ async function salvarTreino() {
     checkPersonaEvolucao(hist);
     checkNutricaoPosTreino(st, dur);
     checkHidratacaoPosTreino(st, dur);
+    // Atualiza entidades e alertas do Transforms Engine após cada sessão
+    setTimeout(() => { try { teSilentScan(); } catch(e) {} }, 1500);
     _sessionStart = null;
     _disposicaoAtual = null;
     try { renderDesafios(); } catch(e) {}
@@ -2003,6 +2005,28 @@ ${proximoMarcoStr ? `- Próximo marco: ${proximoMarcoStr}` : ""}
 - Volume médio recente: ${tendencia}
 - Marcos conquistados: ${_evData.marcos.map(m=>m.icon+m.label).join(" | ") || "nenhum ainda"}
 
+${(() => {
+  try {
+    const cache = typeof teGetEntityState === 'function' ? teGetEntityState() : null;
+    if (!cache) return '';
+    const d = cache.athleteData;
+    const alerts = cache.alerts || [];
+    const alertStr = alerts.length > 0
+      ? alerts.map(a => `[${a.severity.toUpperCase()}] ${a.message}`).join(' | ')
+      : 'nenhum alerta ativo';
+    return `═══════════════════════════════════════
+ANÁLISE DAS ENTIDADES — TITAN TRANSFORMS ENGINE
+═══════════════════════════════════════
+Fadiga acumulada (FadigaScore): ${d.fadigaScore.toFixed(1)}/10${d.fadigaScore > 8.5 ? ' ← CRÍTICO: risco de overtraining' : d.fadigaScore > 7 ? ' ← ATENÇÃO: fadiga moderada-alta' : ' ← OK'}
+Variância de RPE: ${d.rpeVariance.toFixed(1)}${d.rpeVariance > 3 ? ' ← RPE inconsistente, recalibrar' : ' ← estável'}
+Semanas sem PR: ${d.semSemPR}${d.semSemPR >= 3 ? ' ← possível platô' : ' ← progredindo'}
+Regressão de carga: ${d.cargaRegression.toFixed(1)}%${d.cargaRegression < -5 ? ' ← carga caindo, investigar recuperação/nutrição' : ' ← estável'}
+Dias sem treinar: ${d.diasSemTreino}${d.diasSemTreino > 5 ? ' ← sequência interrompida' : ''}
+Alertas defensivos ativos: ${alertStr}
+USE esses dados para fundamentar suas recomendações. Se FadigaScore > 8.5, priorize recuperação. Se sem PR há 3+ semanas, sugira variação de estímulo ou deload.`;
+  } catch(e) { return ''; }
+})()}
+
 ═══════════════════════════════════════
 RECORDES PESSOAIS (1RM estimado por exercício)
 ═══════════════════════════════════════
@@ -2799,8 +2823,12 @@ window.onload = () => {
 // TELA DE INÍCIO
 // ══════════════════════════════════════════
 function openHome() {
-  try { updateHomeScreen(); } catch(e) {}
-  document.getElementById("homeScreen").classList.add("show");
+  const el = document.getElementById("homeScreen");
+  el.classList.add("show");
+  // Atualiza dados no próximo frame — tela aparece antes de qualquer cálculo
+  requestAnimationFrame(() => {
+    try { updateHomeScreen(); } catch(e) {}
+  });
 }
 function closeHome() {
   document.getElementById("homeScreen").classList.remove("show");
@@ -2869,57 +2897,78 @@ function _lancarTreino() {
 
 function updateHomeScreen() {
   if (typeof STORAGE === 'undefined' || typeof safeJSON === 'undefined') return;
-  const hist  = safeJSON(STORAGE.historyKey, []);
-  const streak = calcStreak();
+
+  // Lê uma vez — reutiliza em tudo
+  const hist = safeJSON(STORAGE.historyKey, []);
+  const cfg  = safeJSON("titanpro_config", {});
+
+  // Saudação por hora
   const hora  = new Date().getHours();
   const sauds = ["Boa madrugada", "Bom dia", "Boa tarde", "Boa noite"];
-  const s     = hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3;
-  document.getElementById("homeGreeting").textContent = sauds[s];
-  document.getElementById("homeStreak").textContent   = streak;
+  document.getElementById("homeGreeting").textContent = sauds[hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3];
 
-  // Card de perfil no topo da home
-  const cfg = safeJSON("titanpro_config", {});
+  // Streak — calcula a partir do hist já lido (sem reler localStorage)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = new Set(hist.map(h => { const d = new Date(h.createdAt); d.setHours(0,0,0,0); return d.getTime(); }));
+  let streak = 0, cursor = today.getTime();
+  while (days.has(cursor) || days.has(cursor - 86400000)) {
+    if (days.has(cursor)) streak++;
+    cursor -= 86400000;
+    if (streak > 0 && !days.has(cursor) && !days.has(cursor + 86400000)) break;
+  }
+  document.getElementById("homeStreak").textContent = streak;
+
+  // Card de perfil
   const nome = cfg.nome || "ATLETA";
-  // Banner turista
   const banner = document.getElementById("turistaBanner");
   if (banner) banner.style.display = cfg.persona === "turista" ? "block" : "none";
-  document.getElementById("homeCardAvatar").textContent = nome[0]?.toUpperCase() || "T";
-  document.getElementById("homeCardNome").textContent   = nome.toUpperCase();
+  document.getElementById("homeCardAvatar").textContent  = nome[0]?.toUpperCase() || "T";
+  document.getElementById("homeCardNome").textContent    = nome.toUpperCase();
   document.getElementById("homeCardTreinos").textContent = hist.length;
   document.getElementById("homeCardStreak").textContent  = streak;
-  const volTotal = hist.reduce((a, h) => a + calcVolumeTotal(h.state), 0);
+  document.getElementById("homeCardNivel").textContent   =
+    hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
+
+  // Volume total + semana — em um único loop
+  const semAgo = Date.now() - 7 * 86400000;
+  let volTotal = 0, volSem = 0, semTreinos = 0;
+  for (const h of hist) {
+    const v = calcVolumeTotal(h.state);
+    volTotal += v;
+    if (h.createdAt > semAgo) { volSem += v; semTreinos++; }
+  }
   document.getElementById("homeCardVol").textContent =
     volTotal > 999999 ? (volTotal/1000000).toFixed(1)+"M" :
-    volTotal > 999 ? (volTotal/1000).toFixed(1)+"t" : Math.round(volTotal)+"kg";
-  const nivel = hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
-  document.getElementById("homeCardNivel").textContent = nivel;
-
-  // Treinos desta semana
-  const agora    = Date.now();
-  const semAgo   = agora - 7 * 86400000;
-  const semTreinos = hist.filter(h => h.createdAt > semAgo).length;
+    volTotal > 999    ? (volTotal/1000).toFixed(1)+"t"    : Math.round(volTotal)+"kg";
   document.getElementById("homeSemanaTreinos").textContent = semTreinos;
+  document.getElementById("homeVolSemana").textContent =
+    volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
 
-  // Volume da semana
-  const volSem = hist.filter(h => h.createdAt > semAgo)
-    .reduce((a, h) => a + calcVolumeTotal(h.state), 0);
-  document.getElementById("homeVolSemana").textContent = volSem > 999
-    ? (volSem / 1000).toFixed(1) + "t" : Math.round(volSem);
-
-  // Treino do dia sugerido — próximo na rotação baseado no histórico
+  // Treino do dia
   const draft    = safeJSON(STORAGE.draftKey, null);
   const sections = draft?.sections || [];
-  const nextIdx  = getNextTreinoIdx();
-  const nextSec  = sections[nextIdx];
-  const nextKey  = nextSec?.treinoKey || "A";
-  const exCount  = (nextSec?.cards || []).length;
-  document.getElementById("homeTodayTreino").textContent = "Treino " + nextKey;
-  document.getElementById("homeTodaySub").textContent =
-    exCount > 0 ? exCount + " exercícios" : "Configure seu programa";
+  const nextSec  = sections[getNextTreinoIdx()];
+  document.getElementById("homeTodayTreino").textContent = "Treino " + (nextSec?.treinoKey || "A");
+  document.getElementById("homeTodaySub").textContent    =
+    (nextSec?.cards || []).length > 0 ? nextSec.cards.length + " exercícios" : "Configure seu programa";
 
-  // Selector removido — seção apagada da home
-  try { renderDesafios();   } catch(e) {}
-  try { updateHomeBanner(); } catch(e) {}
+  // Passes streak/hist pré-computados para evitar reler
+  try { renderDesafios(); } catch(e) {}
+  try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+}
+
+function _updateHomeBannerFast(streak, totalTreinos) {
+  const msgs = [
+    { t:`${streak} dia${streak!==1?'s':''} seguidos. Não para agora.`, s:'Sequência ativa — cada treino conta.' },
+    { t:'Hoje é dia de evoluir.',                                        s:'Cada série te aproxima do objetivo.' },
+    { t:`${totalTreinos} treinos registrados.`,                          s:'Você é o que você repete. Continue.' },
+    { t:'Disciplina supera motivação.',                                   s:'Apareça. Os resultados vêm depois.' },
+  ];
+  const m = streak > 0 ? msgs[0] : msgs[Math.floor(Date.now()/86400000) % (msgs.length-1) + 1];
+  const t = document.getElementById('homeBannerTitle');
+  const s = document.getElementById('homeBannerSub');
+  if (t) t.textContent = m.t;
+  if (s) s.textContent = m.s;
 }
 
 // ══════════════════════════════════════════
@@ -2949,6 +2998,131 @@ function openPerfil() {
 }
 function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
+}
+
+// ══════════════════════════════════════════
+// TELA DE CONFIGURAÇÕES
+// ══════════════════════════════════════════
+function openSettingsScreen() {
+  // Atualiza badge do plano
+  try {
+    const badge = document.getElementById('settingsPlanBadge');
+    if (badge) {
+      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('titan_plan') || 'free');
+      if (plan === 'ultra') {
+        badge.textContent = 'ULTRA'; badge.style.background = 'rgba(139,92,246,0.15)'; badge.style.color = '#a855f7'; badge.style.borderColor = 'rgba(139,92,246,0.4)';
+      } else if (plan === 'pro') {
+        badge.textContent = 'PRO'; badge.style.background = 'rgba(249,115,22,0.15)'; badge.style.color = 'var(--accent)'; badge.style.borderColor = 'rgba(249,115,22,0.4)';
+      } else {
+        badge.textContent = 'FREE'; badge.style.background = 'rgba(255,255,255,0.07)'; badge.style.color = 'rgba(255,255,255,0.5)'; badge.style.borderColor = 'rgba(255,255,255,0.12)';
+      }
+    }
+    // Tema atual
+    const themeVal = document.getElementById('settingsThemeVal');
+    if (themeVal) themeVal.textContent = document.body.classList.contains('light-mode') ? 'Claro' : 'Escuro';
+    // Unidade atual
+    const unidadeVal = document.getElementById('settingsUnidadeVal');
+    if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('titan_unidade') || 'kg');
+  } catch(e) {}
+  document.getElementById('settingsScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeSettingsScreen() {
+  document.getElementById('settingsScreen').classList.remove('show');
+}
+
+function limparChatKronos() {
+  if (!confirm('Limpar histórico do chat com KRONOS?')) return;
+  try {
+    const msgs = document.getElementById('orientExpertMessages');
+    if (msgs) msgs.innerHTML = '';
+    const ai = document.getElementById('aiMessages');
+    if (ai) ai.innerHTML = '';
+    showToast('Chat limpo', 'success', 2500);
+  } catch(e) {}
+}
+
+function exportarDados() {
+  try {
+    const data = {
+      history: JSON.parse(localStorage.getItem('titanpro_history_v2') || '[]'),
+      config: JSON.parse(localStorage.getItem('titanpro_config') || '{}'),
+      prs: JSON.parse(localStorage.getItem('titanpro_prs') || '{}'),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'titanpro_backup_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+    showToast('Dados exportados!', 'success', 3000);
+  } catch(e) { showToast('Erro ao exportar', 'error'); }
+}
+
+function toggleUnidade() {
+  const atual = localStorage.getItem('titan_unidade') || 'kg';
+  const novo = atual === 'kg' ? 'lbs' : 'kg';
+  localStorage.setItem('titan_unidade', novo);
+  const el = document.getElementById('settingsUnidadeVal');
+  if (el) el.textContent = novo;
+  showToast(`Unidade alterada para ${novo}`, 'success', 2500);
+}
+
+// ══════════════════════════════════════════
+// TELA DE PREÇOS — FREE / PRO / ULTRA
+// ══════════════════════════════════════════
+function openPricingScreen() {
+  const el = document.getElementById('pricingScreen');
+  if (!el) return;
+  el.style.display = 'flex';
+  // Reset billing toggle to mensal on open
+  setPricingBilling('mensal');
+}
+
+function setPricingBilling(mode) {
+  const isAnual = mode === 'anual';
+  const btnM = document.getElementById('prBtnMensal');
+  const btnA = document.getElementById('prBtnAnual');
+  if (btnM) { btnM.className = isAnual ? 'pr-billing-btn' : 'pr-billing-btn pr-billing-active'; }
+  if (btnA) { btnA.className = isAnual ? 'pr-billing-btn pr-billing-active' : 'pr-billing-btn'; }
+
+  const proPrice  = document.getElementById('prProPrice');
+  const proCents  = document.getElementById('prProCents');
+  const proPeriod = document.getElementById('prProPeriod');
+  const ultraPrice  = document.getElementById('prUltraPrice');
+  const ultraCents  = document.getElementById('prUltraCents');
+  const ultraPeriod = document.getElementById('prUltraPeriod');
+
+  if (isAnual) {
+    if (proPrice)    proPrice.textContent  = 'R$20';
+    if (proCents)    proCents.textContent  = ',93';
+    if (proPeriod)   proPeriod.textContent = '/mês · cobrado anualmente';
+    if (ultraPrice)  ultraPrice.textContent  = 'R$41';
+    if (ultraCents)  ultraCents.textContent  = ',93';
+    if (ultraPeriod) ultraPeriod.textContent = '/mês · cobrado anualmente';
+  } else {
+    if (proPrice)    proPrice.textContent  = 'R$29';
+    if (proCents)    proCents.textContent  = ',90';
+    if (proPeriod)   proPeriod.textContent = '/mês';
+    if (ultraPrice)  ultraPrice.textContent  = 'R$59';
+    if (ultraCents)  ultraCents.textContent  = ',90';
+    if (ultraPeriod) ultraPeriod.textContent = '/mês';
+  }
+}
+
+function closePricingScreen() {
+  const el = document.getElementById('pricingScreen');
+  if (el) el.style.display = 'none';
+}
+
+function selectPlan(plan) {
+  if (plan === 'free') { closePricingScreen(); return; }
+  if (typeof assinarPro === 'function') {
+    assinarPro(plan);
+  } else {
+    showToast('Redirecionando para o checkout...', 'info', 3000);
+  }
 }
 
 // ══════════════════════════════════════════
@@ -3909,6 +4083,24 @@ REGRAS PARA REFEIÇÕES:
 - Cada refeição deve ter alimentos reais, com quantidade em gramas/ml/unidades.
 ${orcamentoInstrucao}
 
+RACIOCÍNIO CULINÁRIO OBRIGATÓRIO — pense no prato antes de prescrevê-lo:
+- Valide o método de preparo de cada alimento: frango, carne, peixe, ovo → podem ser grelhados, assados, cozidos. Arroz, feijão, lentilha, macarrão → cozidos em água. Salada, pepino, tomate → crus. NUNCA escreva preparações absurdas como "alface grelhada", "banana assada em gordura", "feijão cru".
+- Informe as quantidades no estado em que o alimento vai ser CONSUMIDO (cozido/grelhado/cru). Exemplo: "100g de frango grelhado" (não cru), "80g de arroz cozido" (não seco).
+- Seja coerente com a refeição: café da manhã tem ovos, frutas, pão, tapioca. Almoço tem proteína + carboidrato + legumes + salada. Lanche é mais leve. Jantar é prático.
+- Quantidades realistas e visuais: um filé médio de frango grelhado = ~100-120g; uma concha de arroz cozido = ~80-100g; uma concha de feijão = ~80-100g.
+
+MEDIDAS CASEIRAS (OBRIGATÓRIO — inclua para cada alimento junto com os gramas):
+Muitas pessoas não têm balança. Para cada alimento, inclua a equivalência em medida caseira entre parênteses após a quantidade em gramas.
+Referências:
+- 1 concha média = ~80-100g de arroz ou feijão cozido
+- 1 colher de sopa cheia = ~15-20g (depende do alimento: azeite ~12g, pasta de amendoim ~20g, farinha ~15g)
+- 1 xícara de chá = ~240ml de líquido ou ~150g de arroz cozido
+- 1 filé médio = ~100-120g de proteína grelhada (frango, peixe)
+- 1 fatia média = ~30-40g de queijo, pão, bolo
+- 1 unidade = ovo, banana média (~120g), maçã média (~150g)
+- 1 pegador = ~100g de macarrão cozido
+- 1 escumadeira = ~150-200g de legumes cozidos
+
 FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS com os blocos abaixo, sem texto extra:
 
 ##META
@@ -3923,9 +4115,15 @@ TDEE: [TDEE]
 NOME: [nome da refeição]
 HORARIO: [ex: 07:00]
 TAG: [descrição curta, ex: Energia matinal]
-[Alimento]|[qtde]|[kcal]|[prot g]|[carb g]|[gord g]
-[Alimento]|[qtde]|[kcal]|[prot g]|[carb g]|[gord g]
+[Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
+[Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
 SUBTOTAL||[kcal]|[prot]|[carb]|[gord]
+
+Exemplo de linha correta:
+Frango grelhado|120g (1 filé médio)|198|37|0|4
+Arroz branco cozido|160g (2 conchas)|208|4|45|0
+Feijão carioca cozido|100g (1 concha)|77|5|14|0
+Azeite de oliva|10ml (1 col. sopa rasa)|88|0|0|10
 
 (repita o bloco ##REFEICAO para cada uma das ${refs} refeições)
 
