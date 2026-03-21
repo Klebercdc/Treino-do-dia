@@ -2,6 +2,64 @@
 TRANSFORMS PATCH — aplica Transform Kernel no app.js
 sem precisar modificar o app.js diretamente
 ═══════════════════════════════════════════════════ */
+
+/* Detecta se uma resposta de texto contém estrutura de treino */
+function _orientRespostaTemTreino(texto) {
+  if (!texto || texto.length < 80) return false;
+  // Precisa de ao menos 2 sinais distintos de treino estruturado
+  var sinais = 0;
+  if (/\d+\s*x\s*\d+|\d+\s*séries|\d+\s*repetições/i.test(texto)) sinais++;
+  if (/supino|agachamento|rosca|remada|desenvolvimento|terra|pulldown|leg press/i.test(texto)) sinais++;
+  if (/treino\s+[a-c]|treino\s+\d|dia\s+\d|exercício\s+\d/i.test(texto)) sinais++;
+  if (/\b(séries|reps|repetições)\b/i.test(texto) && /\b(kg|carga|peso)\b/i.test(texto)) sinais++;
+  return sinais >= 2;
+}
+
+/* Mostra botão de importar treino gerado pelo KRONOS para a tela */
+function _mostrarBotaoImportarTreino(container, bubbleEl) {
+  // Remove wrap anterior se houver
+  var oldWrap = container.querySelector('.transform-wrap');
+  if (oldWrap) oldWrap.remove();
+
+  var wrap = document.createElement('div');
+  wrap.className = 'ai-msg assistant transform-wrap';
+
+  var btn = document.createElement('button');
+  btn.className = 'transform-btn';
+  btn.style.cssText = 'display:block;width:100%;padding:12px 16px;' +
+    'background:rgba(249,115,22,0.12);border:1.5px solid var(--accent);' +
+    'border-radius:12px;color:var(--accent);font-family:var(--font);' +
+    'font-size:0.88rem;font-weight:700;cursor:pointer;text-align:left;' +
+    'transition:all .15s;animation:fadeInUp .3s ease;';
+
+  try { btn.innerHTML = _ico('dumbbell', 14) + ' Importar treino para a tela'; }
+  catch(e) { btn.textContent = 'Importar treino para a tela'; }
+
+  btn.addEventListener('touchstart', function() {
+    btn.style.background = 'var(--accent)'; btn.style.color = '#fff';
+  }, { passive: true });
+  btn.addEventListener('touchend', function() {
+    setTimeout(function() {
+      btn.style.background = 'rgba(249,115,22,0.12)'; btn.style.color = 'var(--accent)';
+    }, 150);
+  }, { passive: true });
+
+  btn.onclick = function() {
+    try {
+      var textoTreino = bubbleEl ? bubbleEl.textContent : '';
+      window._lastWorkoutReply = textoTreino;
+      if (typeof applyAIWorkoutFromText === 'function') applyAIWorkoutFromText();
+      try { closeOrientacao(); } catch(e) {}
+      try { navTo('treino'); } catch(e) {}
+      wrap.remove();
+    } catch(e) { console.warn('[ImportTreino]', e); }
+  };
+
+  wrap.appendChild(btn);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
 (function() {
 function aplicarPatch() {
 // Patch 1: sendOrientExpert
@@ -10,10 +68,10 @@ const _origOrient = sendOrientExpert;
 window.sendOrientExpert = async function() {
 const input = document.getElementById('orientExpertInput');
 const txt = input ? input.value.trim() : '';
-// Defensive transforms antes de enviar
+// Transforms defensivos antes de enviar
 try { if (typeof runDefensiveTransforms === 'function') runDefensiveTransforms(txt); } catch(e) {}
 await _origOrient.apply(this, arguments);
-// Após resposta, roda Transform Kernel
+// Após resposta, roda Transform Kernel + verifica se gerou treino
 setTimeout(() => {
 try {
 const msgs = document.getElementById('orientExpertMessages');
@@ -21,10 +79,16 @@ if (msgs && txt) {
 const bubbles = msgs.querySelectorAll('.ai-bubble');
 const last = bubbles[bubbles.length - 1];
 const botText = last ? last.textContent : '';
+// Detecta se a resposta contém exercícios → mostra botão de importar
+const temExercicios = _orientRespostaTemTreino(botText);
+if (temExercicios) {
+_mostrarBotaoImportarTreino(msgs, last);
+} else {
 runTransforms(txt, botText, 'orientExpertMessages');
 }
+}
 } catch(e) {}
-}, 300);
+}, 400);
 };
 }
 

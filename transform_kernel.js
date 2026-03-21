@@ -199,7 +199,8 @@ const TRANSFORMS = [
 ];
 
 /* ═══════════════════════════════════════════════════
-   DEFENSIVE TRANSFORMS — proteção e segurança
+   TRANSFORMS DEFENSIVOS — proteção e segurança
+   Rodam ANTES do envio e podem bloquear ou avisar.
 ═══════════════════════════════════════════════════ */
 const DEFENSIVE_TRANSFORMS = [
 {
@@ -233,7 +234,8 @@ const DEFENSIVE_TRANSFORMS = [
 ];
 
 /* ═══════════════════════════════════════════════════
-   SCORING ENGINE
+   MOTOR DE PONTUAÇÃO
+   Calcula a relevância de cada Transform para a mensagem.
 ═══════════════════════════════════════════════════ */
 function _scoreTransform(transform, texto) {
   var score = 0;
@@ -252,7 +254,7 @@ function _scoreTransform(transform, texto) {
 function runTransforms(userMessage, botResponse, containerId) {
   var texto = ((userMessage || '') + ' ' + (botResponse || '')).toLowerCase();
   var best = null;
-  var bestScore = 1; // threshold mínimo: >1 para evitar falsos positivos
+  var bestScore = 1; // pontuação mínima: >1 para evitar falsos positivos
 
   for (var i = 0; i < TRANSFORMS.length; i++) {
     var sc = _scoreTransform(TRANSFORMS[i], texto);
