@@ -426,6 +426,10 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 .home-today { margin: 0 16px 16px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 20px; padding: 20px; }
 .home-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
 .home-quick-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; cursor: pointer; transition: all .15s; -webkit-tap-highlight-color: transparent; }
+/* KRONOS PULSE — insight card vivo */
+#pulseInsightCard { display: none; margin: 0 16px 14px; border: 1px solid rgba(249,115,22,0.25); border-radius: 16px; padding: 14px 16px; transition: all .3s; }
+.pulse-action-btn:active { opacity: .85; transform: scale(.98); }
+@keyframes pulse-dot { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
 .home-quick-card:active { transform: scale(.97); background: var(--card-hover); }
 .home-quick-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,.35); }
 .home-quick-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
