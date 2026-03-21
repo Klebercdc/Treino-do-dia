@@ -976,9 +976,11 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   transform: translateY(100%);
   transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
   overflow: hidden;
+  pointer-events: none;
 }
 #transformsScreen.show {
   transform: translateY(0);
+  pointer-events: auto;
 }
 .transforms-header {
   position: sticky;
