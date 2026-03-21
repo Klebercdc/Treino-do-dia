@@ -5,15 +5,19 @@
  *   free → FREE_AI_LIMIT requisições de IA por mês
  *   pro  → ilimitado
  *
- * Variáveis de ambiente necessárias:
- *   SUPABASE_URL          = https://twxoddzogbmaysebhour.supabase.co
- *   SUPABASE_SERVICE_KEY  = chave service_role do projeto Supabase
+ * Variáveis de ambiente obrigatórias (configure via: vercel env add):
+ *   SUPABASE_URL          = URL do projeto Supabase (ex: https://xyz.supabase.co)
+ *   SUPABASE_SERVICE_KEY  = chave service_role — NUNCA expor no frontend
  */
 
 var https = require('https');
 
-var SUPABASE_URL        = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.supabase.co';
+var SUPABASE_URL        = process.env.SUPABASE_URL;
 var SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+
+if (!SUPABASE_URL) {
+  throw new Error('[_plans] SUPABASE_URL não configurada. Adicione a variável de ambiente no Vercel.');
+}
 var FREE_AI_LIMIT       = parseInt(process.env.FREE_AI_LIMIT || '15', 10); // req/mês grátis
 
 // ─── HTTP helper simples para Supabase REST ─────────
