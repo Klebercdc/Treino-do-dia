@@ -32,7 +32,7 @@ botao: { label: 'Ver Evolução', icon: 'bar-chart-3', cor: 'blue' }
 {
 id: 'plano',
 keywords: ['assinar','pro','plano','upgrade','premium','limite','consultas'],
-action: () => openPlanModal(),
+action: () => { try { closeOrientacao(); } catch(e) {} openPricingScreen(); },
 botao: { label: 'Ver Planos', icon: 'zap', cor: 'accent' }
 },
 {

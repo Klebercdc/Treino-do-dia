@@ -93,7 +93,7 @@
   /* ── Pricing Screen ── */
   window.openPricingScreen = function () {
     var ps = document.getElementById('pricingScreen');
-    if (ps) ps.style.display = 'block';
+    if (ps) ps.style.display = 'flex';
   };
 
   window.closePricingScreen = function () {
@@ -102,14 +102,14 @@
   };
 
   window.selectPlan = function (planId) {
-    /* Integra com a lógica existente de planos do app se disponível */
-    if (typeof window._userPlan !== 'undefined') {
-      window._userPlan = planId;
+    if (planId === 'free') {
+      closePricingScreen();
+      return;
     }
+    // PRO e ULTRA redirecionam para o checkout
     closePricingScreen();
-    if (typeof showToast === 'function') {
-      var names = { free: 'Plano Free ativado!', pro: 'Plano PRO ativado!', ultra: 'Plano ULTRA ativado!' };
-      showToast(names[planId] || 'Plano selecionado!', 'success', 3000);
+    if (typeof assinarPro === 'function') {
+      assinarPro();
     }
   };
 
