@@ -320,7 +320,7 @@ function renderPulseInsight() {
   el.innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="width:36px;height:36px;border-radius:10px;background:${ins.bg};border:1px solid ${ins.border};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <span style="color:${ins.color};display:flex">${_ico ? _ico(ins.icon, 18) : '⚡'}</span>
+        <i data-lucide="${ins.icon}" style="color:${ins.color};width:18px;height:18px;stroke:${ins.color};stroke-width:1.75;fill:none"></i>
       </div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;margin-bottom:3px">
@@ -331,6 +331,7 @@ function renderPulseInsight() {
         ${actionBtn}
       </div>
     </div>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 /* ── EXECUTAR AÇÃO DO INSIGHT ───────────────────────────── */

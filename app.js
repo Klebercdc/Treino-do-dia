@@ -2995,9 +2995,13 @@ function openPerfil() {
     }
   }).catch(() => {});
   document.getElementById("perfilScreen").classList.add("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
 }
 function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
 }
 
 // ══════════════════════════════════════════
@@ -3030,6 +3034,11 @@ function openSettingsScreen() {
 
 function closeSettingsScreen() {
   document.getElementById('settingsScreen').classList.remove('show');
+  // Restaura o footer apenas se o perfilScreen também estiver fechado
+  if (!document.getElementById('perfilScreen').classList.contains('show')) {
+    const footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = '';
+  }
 }
 
 function limparChatKronos() {
@@ -3156,9 +3165,13 @@ function openEditarPerfil() {
   const cta = document.getElementById("epCtaTreino");
   if (cta) cta.style.display = "none";
   document.getElementById("editarPerfilScreen").classList.add("show");
+  const _footerEP = document.querySelector('.footer-actions');
+  if (_footerEP) _footerEP.style.display = 'none';
 }
 function closeEditarPerfil() {
   document.getElementById("editarPerfilScreen").classList.remove("show");
+  const _footerEP = document.querySelector('.footer-actions');
+  if (_footerEP) _footerEP.style.display = '';
 }
 function epAtualizarNome(val) {
   const display = document.getElementById("epNomeDisplay");
@@ -3423,6 +3436,8 @@ function openOrientacao() {
   }
   // Atualizar chips dinâmicos sempre que abre
   renderAriaChips();
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
 }
 
 function ariaGreeting() {
@@ -3526,6 +3541,8 @@ function ariaQuickSend(msg) {
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
   navTo("treino");
 }
 function openDieta() {
@@ -3541,9 +3558,13 @@ function openDieta() {
   if (prefs.davObj) { const el = document.querySelector(`#davObjChips [data-val="${prefs.davObj}"]`); if (el) selectDavObj(el); }
   if (prefs.davCiclo) { const el = document.querySelector(`#davCicloChips [data-val="${prefs.davCiclo}"]`); if (el) selectDavCiclo(el); }
   document.getElementById("dietaScreen").classList.add("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
 }
 function closeDieta() {
   document.getElementById("dietaScreen").classList.remove("show");
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
   navTo("treino");
 }
 function toggleOrientSuggestions() {
@@ -3561,18 +3582,16 @@ function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
   const wrap = document.createElement("div");
   wrap.className = `ai-msg ${role}`;
-
-  const avatarSVG = `<div class="ai-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg></div>`;
+  wrap.setAttribute("data-role", role);
 
   if (role === "assistant") {
-    wrap.innerHTML = `${avatarSVG}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
+    wrap.innerHTML = `<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
   } else {
-    wrap.innerHTML = `<div class="ai-bubble">${renderMarkdown(text)}</div>`;
+    wrap.innerHTML = `<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
   }
 
   c.appendChild(wrap);
   c.scrollTop = c.scrollHeight;
-  // retorna referência ao bubble para poder atualizar o typing
   return wrap.querySelector(".ai-bubble");
 }
 

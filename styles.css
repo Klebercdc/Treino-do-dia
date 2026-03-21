@@ -178,12 +178,10 @@ body {
   position: fixed; bottom: 0; left: 0; right: 0;
   z-index: 3700;
   display: flex; align-items: stretch;
-  background: rgba(13,13,13,0.97);
-  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(13,13,13,1);
+  border-top: 1px solid rgba(255,255,255,0.1);
   padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom);
-  backdrop-filter: blur(28px) saturate(160%);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
   gap: 0;
   min-height: 58px;
 }
@@ -473,7 +471,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 /* ══════════════════════════════════════════
    TELA DE INÍCIO
 ══════════════════════════════════════════ */
-#homeScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+#homeScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(100px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
 #homeScreen.show { display: flex; animation: homeIn .22s cubic-bezier(.25,.46,.45,.94) both; }
 @keyframes homeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .home-header { padding: 56px 20px 20px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
@@ -499,7 +497,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 /* ══════════════════════════════════════════
    TELA DE CONFIGURAÇÕES
 ══════════════════════════════════════════ */
-#settingsScreen { display: none; position: fixed; inset: 0; z-index: 3600; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+#settingsScreen { display: none; position: fixed; inset: 0; z-index: 3900; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: 24px; }
 #settingsScreen.show { display: flex; }
 .settings-header { display: flex; align-items: center; padding: 16px 20px 8px; gap: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .settings-title { flex: 1; font-family: var(--display); font-size: 1.2rem; letter-spacing: .06em; color: var(--text); text-align: center; }
@@ -518,10 +516,10 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 ══════════════════════════════════════════ */
 .btn-voltar { display: inline-flex; align-items: center; gap: 8px; background: none; border: none; color: var(--accent); font-family: var(--font); font-size: 0.9rem; font-weight: 700; padding: 16px 20px 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .btn-voltar svg { flex-shrink: 0; }
-#perfilScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+#perfilScreen { display: none; position: fixed; inset: 0; z-index: 3800; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: 24px; }
 #perfilScreen.show { display: flex; }
-.perfil-header { padding: 56px 20px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); }
-.perfil-avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 2rem; color: #fff; margin-bottom: 12px; }
+.perfil-header { padding: 20px 20px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.perfil-avatar { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 2.2rem; color: #fff; margin-bottom: 0; }
 .perfil-name { font-family: var(--display); font-size: 1.6rem; color: var(--text); letter-spacing: .04em; }
 .perfil-badge { display: inline-block; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 100px; padding: 3px 10px; font-size: 0.92rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-top: 6px; }
 .perfil-section { padding: 16px 16px 0; }
@@ -596,13 +594,27 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 .orient-chip-icon { font-size: 1.15rem; line-height: 1; flex-shrink: 0; }
 .orient-chip-name { font-size: 0.82rem; font-weight: 700; color: var(--text); letter-spacing: .01em; flex: 1; }
 .orient-chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.orient-chat-messages { flex: 1; overflow-y: auto; padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 20px; }
-.orient-chat-bar { padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); flex: none; background: var(--bg); }
-.orient-input-wrap { display: flex; align-items: flex-end; background: var(--card); border: 1.5px solid var(--border); border-radius: 20px; padding: 10px 10px 10px 16px; gap: 8px; transition: border-color .2s; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
-.orient-input-wrap:focus-within { border-color: var(--accent); }
-.orient-suggestions-toggle { display: flex; align-items: center; gap: 6px; background: none; border: none; color: rgba(255,255,255,.45); font-size: 0.75rem; font-family: var(--font); cursor: pointer; padding: 0 0 8px; -webkit-tap-highlight-color: transparent; letter-spacing: .02em; }
-.orient-suggestions-toggle svg { transition: transform .2s; }
-.orient-suggestions-toggle.open svg { transform: rotate(180deg); }
+.orient-chat-messages { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; gap: 0; }
+/* Mensagens estilo card — inspirado no Claude Code */
+#orientExpertMessages .ai-msg { flex-direction: row !important; justify-content: flex-start !important; align-items: flex-start !important; gap: 0 !important; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent; animation: fadeInUp .18s ease; }
+#orientExpertMessages .ai-msg:hover { background: rgba(255,255,255,0.02); }
+#orientExpertMessages .ai-msg .ai-avatar { display: none !important; }
+#orientExpertMessages .ai-msg .ai-avatar-inner { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px; }
+#orientExpertMessages .ai-msg .ai-bubble { background: transparent !important; border: none !important; padding: 0 !important; border-radius: 0 !important; max-width: 100% !important; font-size: 0.875rem; line-height: 1.65; color: var(--text); }
+#orientExpertMessages .ai-msg::before { content: attr(data-role); font-size: 0.72rem; font-weight: 700; letter-spacing: .04em; color: rgba(255,255,255,.35); min-width: 52px; padding-top: 2px; flex-shrink: 0; text-transform: uppercase; font-family: var(--font); }
+#orientExpertMessages .ai-msg.user::before { content: 'Você'; color: var(--accent); }
+#orientExpertMessages .ai-msg.assistant::before { content: 'Kronos'; color: rgba(255,255,255,.4); }
+/* Barra de input estilo Claude Code */
+.orient-chat-bar { padding: 0; border-top: 1px solid rgba(255,255,255,0.08); flex: none; background: var(--bg); }
+.orient-input-wrap { display: flex; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); gap: 8px; }
+.orient-input-wrap textarea { flex: 1; background: transparent; border: none; color: var(--text); font-family: var(--font); font-size: 0.9rem; outline: none; -webkit-appearance: none; resize: none; overflow: hidden; line-height: 1.5; max-height: 120px; overflow-y: auto; padding: 0; }
+.orient-input-wrap textarea::placeholder { color: rgba(255,255,255,.3); }
+.orient-input-wrap:focus-within { border-top-color: rgba(255,255,255,0.15); }
+.orient-suggestions-toggle { width: 30px; height: 30px; background: none; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; transition: border-color .15s, background .15s; }
+.orient-suggestions-toggle:active { background: var(--accent-dim); border-color: var(--accent); }
+.orient-suggestions-toggle.open { border-color: var(--accent); }
+#orientSendBtn { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .15s, transform .1s; }
+#orientSendBtn:active { transform: scale(.88); }
 .orient-shortcuts-row.collapsed { max-height: 0 !important; overflow: hidden; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
 
 /* ══════════════════════════════════════════
@@ -960,7 +972,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #transformsScreen {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 4000;
   background: #090909;
   display: flex;
   flex-direction: column;
@@ -1195,7 +1207,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   position: fixed;
   inset: 0;
   background: #090909;
-  z-index: 500;
+  z-index: 99998;
   flex-direction: column;
   align-items: center;
   justify-content: center;
