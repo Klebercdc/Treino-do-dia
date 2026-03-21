@@ -211,13 +211,16 @@ const DEFENSIVE_TRANSFORMS = [
 {
   id: 'paywall_bypass',
   detect: function(txt) { return /sem pagar|hack|burlar|contornar|bypass/i.test(txt); },
-  action: function() { /* silencioso — não ativar */ }
+  blocks: [],
+  action: function() { /* silencioso */ }
 },
 {
   id: 'injury_alert',
   detect: function(txt) {
     return /dor\s+(aguda|forte|intensa|persistente)|lesão|lesionado|me machuquei|torci|quebrei|fraturei/i.test(txt);
   },
+  // Lesão ativa: bloqueia transforms de treino — não faz sentido sugerir "Ir para Treino"
+  blocks: ['treino', 'gerar_treino', 'mesociclo'],
   action: function() {
     try { showToast('Em caso de dor aguda ou lesão, consulte um médico ou fisioterapeuta antes de continuar treinando.', 'info', 6000); } catch(e) {}
   }
@@ -232,6 +235,7 @@ const DEFENSIVE_TRANSFORMS = [
       return m.content.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 20) === clean;
     }).length >= 3;
   },
+  blocks: [],
   action: function() {
     try { showToast('Já respondi isso recentemente! Role para cima para ver a resposta.', 'info', 4000); } catch(e) {}
   }
@@ -253,42 +257,112 @@ function _scoreTransform(transform, texto) {
 }
 
 /**
- * Roda os Transforms após cada resposta do KRONOS.
- * Mensagem do usuário tem peso 2x — intento real sempre vence o bot.
- * Threshold mínimo: score > 2 para exibir o botão.
+ * Boost contextual — lê histórico e config para aumentar relevância
+ * quando o contexto do usuário torna aquele transform mais pertinente.
  */
-function runTransforms(userMessage, botResponse, containerId) {
+function _contextBoost(transformId) {
+  var boost = 0;
+  try {
+    var hist = JSON.parse(localStorage.getItem('kronia_history_v2') || '[]');
+    var cfg  = JSON.parse(localStorage.getItem('kronia_config')     || '{}');
+    var last = hist.length ? hist[0] : null;
+    var horasDesdeUltimo = last
+      ? (Date.now() - new Date(last.createdAt).getTime()) / 3600000
+      : 999;
+    var draft = JSON.parse(localStorage.getItem('kronia_draft_v2') || 'null');
+    var temPrograma = draft && (draft.sections || []).length > 0;
+
+    if (transformId === 'recuperacao') {
+      // Treinou nas últimas 24h → recuperação mais relevante
+      if (horasDesdeUltimo < 24) boost += 2;
+      // Streak alto → corpo sob estresse acumulado
+      if (hist.length >= 5) boost += 1;
+    }
+    if (transformId === 'evolucao') {
+      // Só faz sentido mostrar se há histórico real para exibir
+      if (hist.length >= 3) boost += 2;
+    }
+    if (transformId === 'gerar_treino') {
+      // Sem programa → criar um é urgente
+      if (!temPrograma) boost += 2;
+    }
+    if (transformId === 'dieta') {
+      // Tem dados de perfil preenchidos → fluxo de dieta é completo
+      if (cfg.peso && cfg.objetivo) boost += 1;
+    }
+    if (transformId === 'mesociclo') {
+      // Só útil se já tem pelo menos 4 semanas de histórico (~8 sessões)
+      if (hist.length < 8) boost -= 2;
+    }
+  } catch(e) {}
+  return boost;
+}
+
+/* ── Memória de sessão: evita repetir o mesmo transform ── */
+var _usedTransforms = {};
+
+/**
+ * Roda os Transforms após cada resposta do KRONOS.
+ * — Mensagem do usuário tem peso 2x (intenção > contexto)
+ * — Boost contextual baseado em histórico e perfil real
+ * — Mostra até 2 botões quando há intenção dupla explícita
+ * — Ignora transforms já utilizados nesta sessão
+ * — Respeita bloqueios dos Defensive Transforms
+ */
+function runTransforms(userMessage, botResponse, containerId, blockedIds) {
   var textoUser = (userMessage || '').toLowerCase();
   var textoBot  = (botResponse  || '').toLowerCase();
-  var best = null;
-  var bestScore = 2; // threshold: score > 2
+  var bloqueados = blockedIds || [];
+  var THRESHOLD  = 2;
+  var scored = [];
 
   for (var i = 0; i < TRANSFORMS.length; i++) {
-    // Usuário pesa 2x — evita que a resposta do bot sobrescreva o intent
-    var sc = _scoreTransform(TRANSFORMS[i], textoUser) * 2
-           + _scoreTransform(TRANSFORMS[i], textoBot);
-    if (sc > bestScore) {
-      bestScore = sc;
-      best = TRANSFORMS[i];
-    }
+    var t = TRANSFORMS[i];
+    // Pula transforms bloqueados por Defensive ou já usados nesta sessão
+    if (bloqueados.indexOf(t.id) >= 0) continue;
+    if (_usedTransforms[t.id])         continue;
+
+    var sc = _scoreTransform(t, textoUser) * 2
+           + _scoreTransform(t, textoBot)
+           + _contextBoost(t.id);
+
+    if (sc > THRESHOLD) scored.push({ t: t, sc: sc, userSc: _scoreTransform(t, textoUser) });
   }
 
-  if (best) renderTransformButton(best, containerId);
+  if (!scored.length) return;
+
+  // Ordena por score
+  scored.sort(function(a, b) { return b.sc - a.sc; });
+
+  // Mostra o melhor + segundo se ambos têm intenção explícita do usuário
+  var toShow = [scored[0]];
+  if (scored.length >= 2 && scored[1].userSc > 0 && scored[1].sc >= scored[0].sc * 0.65) {
+    toShow.push(scored[1]);
+  }
+
+  toShow.forEach(function(item) { renderTransformButton(item.t, containerId); });
 }
 
 /**
  * Roda Defensive Transforms antes de enviar mensagem.
- * Retorna true se deve bloquear o envio.
+ * Retorna lista de IDs de Transforms ofensivos a bloquear.
  */
 function runDefensiveTransforms(userMessage, history) {
+  var blockedIds = [];
   for (var i = 0; i < DEFENSIVE_TRANSFORMS.length; i++) {
     var dt = DEFENSIVE_TRANSFORMS[i];
     if (dt.detect(userMessage, history)) {
       dt.action();
-      if (dt.id === 'rate_guard') return true;
+      // Acumula IDs bloqueados (sem impedir outros defensivos de rodar)
+      if (dt.blocks) {
+        dt.blocks.forEach(function(id) {
+          if (blockedIds.indexOf(id) < 0) blockedIds.push(id);
+        });
+      }
+      if (dt.id === 'rate_guard') return 'block'; // único que para o envio
     }
   }
-  return false;
+  return blockedIds; // array vazio = sem bloqueios
 }
 
 /**
@@ -336,6 +410,7 @@ function renderTransformButton(transform, containerId) {
   wrap.appendChild(btn);
 
   btn.onclick = function() {
+    _usedTransforms[transform.id] = true; // memoriza uso nesta sessão
     try { transform.action(containerId); } catch(e) { console.warn('[Transform] action error:', e); }
     wrap.remove();
   };
