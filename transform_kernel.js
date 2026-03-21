@@ -141,16 +141,17 @@ btn.style.color = c.css;
 }, 150);
 }, { passive: true });
 
-btn.onclick = () => {
-transform.action();
-wrap.remove(); // FIX BUG 2: remove o wrap inteiro
-};
-
-// FIX BUG 2: classe transform-wrap para identificar e remover
+// Cria wrap antes do onclick para evitar TDZ
 const wrap = document.createElement('div');
 wrap.className = 'ai-msg assistant transform-wrap';
 wrap.style.paddingLeft = containerId === 'orientExpertMessages' ? '0' : '38px';
 wrap.appendChild(btn);
+
+btn.onclick = () => {
+  try { transform.action(); } catch(e) { console.warn('[Transform] action error:', e); }
+  wrap.remove();
+};
+
 container.appendChild(wrap);
 container.scrollTop = container.scrollHeight;
 }

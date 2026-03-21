@@ -7,13 +7,21 @@ var FREE_AI_LIMIT = 15; // valor padrão; sobrescrito após fetch do /api/config
 
 // Carrega configurações públicas do backend
 // Promise guardada para que assinarPro() possa aguardar se ainda não resolveu
-var _configPromise = fetch('/api/config')
-  .then(function(r) { return r.json(); })
-  .then(function(cfg) {
-    if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
-    if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
-  })
-  .catch(function() { /* falha silenciosa — continua com defaults */ });
+var _configPromise = (function fetchConfigWithRetry(attempt) {
+  return fetch('/api/config')
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(cfg) {
+      if (cfg.checkoutUrl)   HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
+      if (cfg.freePlanLimit) FREE_AI_LIMIT = cfg.freePlanLimit;
+    })
+    .catch(function() {
+      if (attempt < 3) {
+        return new Promise(function(res) { setTimeout(res, 1000 * attempt); })
+          .then(function() { return fetchConfigWithRetry(attempt + 1); });
+      }
+      // Após 3 tentativas: continua com defaults
+    });
+})(1);
 
 var _userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT };
 
