@@ -471,7 +471,7 @@ body.light-mode .dark-toggle { background: #ebebeb; }
 /* ══════════════════════════════════════════
    TELA DE INÍCIO
 ══════════════════════════════════════════ */
-#homeScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(100px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+#homeScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: calc(68px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
 #homeScreen.show { display: flex; animation: homeIn .22s cubic-bezier(.25,.46,.45,.94) both; }
 @keyframes homeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .home-header { padding: 56px 20px 20px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
