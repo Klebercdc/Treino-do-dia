@@ -243,11 +243,14 @@ function openPlanModal() {
 
   // Uso atual no card FREE
   var usageEl = document.getElementById('planFreeUsage');
-  if (usageEl && !isPro) {
-    var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
-    usageEl.textContent = 'Você usou ' + _userPlan.ai_requests_used + ' de ' + FREE_AI_LIMIT + ' consultas este mês (' + rem + ' restantes)';
-  } else if (usageEl) {
-    usageEl.textContent = '';
+  if (usageEl) {
+    if (!isPro) {
+      var rem = Math.max(0, FREE_AI_LIMIT - _userPlan.ai_requests_used);
+      usageEl.textContent = 'Você usou ' + _userPlan.ai_requests_used + ' de ' + FREE_AI_LIMIT + ' consultas este mês (' + rem + ' restantes)';
+      usageEl.style.display = 'block';
+    } else {
+      usageEl.style.display = 'none';
+    }
   }
 
   // Scroll para o plano correto
@@ -266,35 +269,39 @@ function closePlanModal() {
   document.body.classList.remove('overlay-open');
 }
 
-// ── Carousel navigation ──
+// ── Carousel navigation (tab-based) ──
 function scrollPlanTo(idx) {
-  var carousel = document.getElementById('planCarousel');
-  if (!carousel) return;
-  var slides = carousel.querySelectorAll('.plan-card-slide');
-  if (!slides[idx]) return;
-  slides[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
   _planCarouselIdx = idx;
+  // Mostra apenas o slide correto
+  [0, 1, 2].forEach(function(i) {
+    var slide = document.getElementById('planSlide' + i);
+    if (slide) slide.style.display = (i === idx) ? 'block' : 'none';
+  });
+  // Reset scroll do container ao topo
+  var carousel = document.getElementById('planCarousel');
+  if (carousel) carousel.scrollTop = 0;
   updatePlanDots(idx);
   updatePlanCTA(idx);
 }
 
 function onPlanCarouselScroll(el) {
-  if (!el) return;
-  var slides = el.querySelectorAll('.plan-card-slide');
-  var idx = Math.round(el.scrollLeft / el.offsetWidth);
-  if (idx !== _planCarouselIdx) {
-    _planCarouselIdx = idx;
-    updatePlanDots(idx);
-    updatePlanCTA(idx);
-  }
+  // Não usado na versão tab — mantido por compatibilidade
 }
 
 function updatePlanDots(idx) {
-  var dots = document.querySelectorAll('#planDots .plan-dot');
-  var classes = ['plan-dot-active-free', 'plan-dot-active-pro', 'plan-dot-active-ultra'];
-  dots.forEach(function(d, i) {
-    d.className = 'plan-dot';
-    if (i === idx) d.classList.add(classes[idx] || 'plan-dot-active-pro');
+  // Atualiza tabs de seleção de plano
+  var colors  = ['rgba(255,255,255,0.14)', 'var(--accent)', '#a855f7'];
+  var tcolors = ['rgba(255,255,255,0.85)', '#fff', '#fff'];
+  [0, 1, 2].forEach(function(i) {
+    var tab = document.getElementById('planTab' + i);
+    if (!tab) return;
+    if (i === idx) {
+      tab.style.background = colors[i];
+      tab.style.color      = tcolors[i];
+    } else {
+      tab.style.background = 'transparent';
+      tab.style.color      = 'rgba(255,255,255,0.35)';
+    }
   });
 }
 
@@ -357,10 +364,9 @@ function setPlanBilling(mode) {
   updatePlanCTA(_planCarouselIdx);
 }
 
-// ── Sync scroll dots on open (after scroll settles) ──
+// ── Init: garante que o slide PRO aparece por padrão ──
 document.addEventListener('DOMContentLoaded', function() {
-  var c = document.getElementById('planCarousel');
-  if (c) c.addEventListener('scrollend', function() { onPlanCarouselScroll(c); });
+  // planSlide1 (PRO) já é o default — o JS inicializa via openPlanModal → scrollPlanTo
 });
 
 // ══════════════════════════════
