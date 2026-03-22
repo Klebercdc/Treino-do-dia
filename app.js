@@ -3240,6 +3240,9 @@ function updateHomeScreen() {
     document.getElementById("homeTodaySub").textContent = nextSubtitle;
   }
 
+  // Card Configurar Treino
+  try { _updateConfigTreinoCard(); } catch(e) {}
+
   // AchievementCard — última conquista
   _updateAchievementCard(streak, hist.length);
 
@@ -3253,6 +3256,47 @@ function updateHomeScreen() {
   // Passes streak/hist pré-computados para evitar reler
   try { renderDesafios(); } catch(e) {}
   try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+}
+
+function _updateConfigTreinoCard() {
+  const cfg = safeJSON("kronia_config", {});
+  const draft = safeJSON(STORAGE.draftKey, null);
+  const sections = draft?.sections || [];
+
+  // Frequência
+  const freq = document.querySelector("#freqChips .config-chip.active")?.dataset.val
+    || cfg.freq || "3";
+  const pillFreq = document.getElementById("pillFrequencia");
+  if (pillFreq) {
+    const span = pillFreq.querySelector("span");
+    if (span) span.textContent = freq + (freq === "1" ? " dia/sem" : " dias/sem");
+  }
+
+  // Objetivo
+  const objMap = { hipertrofia:"Hipertrofia", forca:"Força", definicao:"Definição", saude:"Saúde", resistencia:"Resistência" };
+  const obj = document.querySelector("#objChips .config-chip.active")?.dataset.val || cfg.objetivo || "hipertrofia";
+  const pillObj = document.getElementById("pillObjetivo");
+  if (pillObj) {
+    const span = pillObj.querySelector("span");
+    if (span) span.textContent = objMap[obj] || obj;
+  }
+
+  // Nível
+  const nivelMap = { iniciante:"Iniciante", intermediario:"Intermediário", avancado:"Avançado" };
+  const nivel = cfg.nivel || "iniciante";
+  const pillNivel = document.getElementById("pillNivel");
+  if (pillNivel) {
+    const span = pillNivel.querySelector("span");
+    if (span) span.textContent = nivelMap[nivel] || nivel;
+  }
+
+  // Divisão (letras dos treinos)
+  const divisaoEl = document.getElementById("pillDivisao");
+  if (divisaoEl && sections.length) {
+    divisaoEl.innerHTML = sections.map(s =>
+      `<div class="config-treino-day">${s.treinoKey || "?"}</div>`
+    ).join("");
+  }
 }
 
 function _updateAchievementCard(streak, totalTreinos) {
