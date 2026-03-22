@@ -666,7 +666,7 @@ to   { opacity: 0; pointer-events: none; visibility: hidden; }
 }
 #splashBg {
 position: absolute; inset: 0;
-background: #0a0a0a;
+background: #090909 url('Kronia.png?v=2') center 30% / 50% auto no-repeat;
 }
 #splashContent {
 position: relative; z-index: 1;
