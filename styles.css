@@ -1209,7 +1209,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   align-items: center;
   justify-content: space-between;
   font-family: 'Barlow', 'DM Sans', sans-serif;
-  padding: 60px 28px 48px;
+  padding: 60px 16px 48px;
   overflow: hidden;
 }
 #loginScreen.show { display: flex; }
@@ -1298,8 +1298,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   white-space: nowrap;
 }
 #btnShowEmail {
-  width: auto;
-  min-width: 220px;
+  width: 100%;
   padding: 13px 32px;
   background: #FF6B00;
   border: none;
@@ -1314,8 +1313,6 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   box-shadow: 0 6px 24px rgba(255,107,0,0.3);
   letter-spacing: 0.3px;
   display: block;
-  margin-left: auto;
-  margin-right: auto;
 }
 #btnShowEmail:hover { background: #e55f00; }
 #loginRegisterLink {
