@@ -99,7 +99,7 @@ WITH srpe_por_sessao AS (
   FROM workouts w
   JOIN workout_logs wl ON wl.workout_id = w.id
   WHERE w.duration_minutes IS NOT NULL
-  GROUP BY w.id
+  GROUP BY w.id, w.user_id, w.date, w.duration_minutes
 ),
 carga_aguda AS (
   -- Soma do sRPE dos últimos 7 dias por usuário
