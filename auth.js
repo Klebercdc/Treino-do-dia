@@ -43,8 +43,7 @@ async function apiFetch(url, opts = {}) {
     if (resp.status === 401) {
       await _sb.auth.signOut();
       _appUnlocked = false;
-      const loginScreen = document.getElementById('loginScreen');
-      if (loginScreen) loginScreen.style.display = 'flex';
+      showLogin();
       if (typeof showToast === 'function') {
         showToast('Sessão expirada. Faça login novamente.', 'error', 4000);
       }
@@ -151,13 +150,19 @@ function showApp() {
   if (_appUnlocked) return;
   _appUnlocked = true;
   hideSplash();
-  document.getElementById('loginScreen').style.display = 'none';
+  const login = document.getElementById('loginScreen');
+  if (login) login.style.display = 'none';
+  const emailLogin = document.getElementById('emailLoginScreen');
+  if (emailLogin) emailLogin.classList.remove('show');
 }
 
 function showLogin() {
   hideSplash();
   const login = document.getElementById('loginScreen');
-  login.style.display = 'flex';
+  if (login) login.style.display = 'flex';
+  // Esconde a home para não ficar visível atrás
+  const home = document.getElementById('homeScreen');
+  if (home) home.classList.remove('show');
 }
 
 function updateAuthUI(user) {
@@ -333,7 +338,10 @@ async function authSignOut() {
   await _sb.auth.signOut();
   closeAuthMenu();
   _appUnlocked = false;
-  document.getElementById('loginScreen').style.display = 'flex';
+  // Esconde home e mostra login
+  const home = document.getElementById('homeScreen');
+  if (home) home.classList.remove('show');
+  showLogin();
   showToast('Saiu da conta.', 'success', 3000);
 }
 
@@ -356,7 +364,7 @@ _sb.auth.onAuthStateChange((_event, session) => {
     _dbSync.pullAll(session.user.id);
   } else if (_appUnlocked) {
     _appUnlocked = false;
-    document.getElementById('loginScreen').style.display = 'flex';
+    showLogin();
   }
 });
 
