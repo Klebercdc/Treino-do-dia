@@ -1531,16 +1531,17 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .ff-chart-badge {
   position: absolute;
-  top: 0;
+  top: 6px;
   right: 8px;
-  background: rgba(255,107,0,0.12);
-  border: 1px solid rgba(255,107,0,0.4);
+  background: rgba(20,10,0,0.75);
+  border: 1px solid rgba(255,107,0,0.5);
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 800;
   color: #FF6B00;
   font-family: 'Barlow', sans-serif;
+  z-index: 2;
 }
 .ff-visual-timer {
   display: flex;

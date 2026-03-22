@@ -227,10 +227,12 @@ function showEmailLogin(isRegister) {
   _loginIsRegister = !!isRegister;
   const screen = document.getElementById('emailLoginScreen');
   screen.classList.add('show');
-  document.getElementById('emailLoginBodyTitle').textContent = isRegister ? 'Criar conta' : 'Entrar na conta';
+  const bodyTitle = document.getElementById('emailLoginBodyTitle');
+  if (bodyTitle) bodyTitle.textContent = isRegister ? 'Criar conta' : 'Entrar na conta';
   document.getElementById('btnEmail').textContent = isRegister ? 'Criar conta' : 'Entrar';
   document.getElementById('loginToggleLabel').textContent = isRegister ? 'Já tenho conta' : 'Criar conta';
-  document.getElementById('emailLoginHeaderTitle').textContent = isRegister ? 'Criar conta' : 'Login';
+  const headerTitle = document.getElementById('emailLoginHeaderTitle');
+  if (headerTitle) headerTitle.textContent = isRegister ? 'Criar conta' : 'Login';
   document.getElementById('loginPassword').placeholder = isRegister ? 'Criar senha (mín. 6 caracteres)' : 'Senha (mínimo 6 caracteres)';
   document.getElementById('loginPassword').autocomplete = isRegister ? 'new-password' : 'current-password';
   document.getElementById('loginError').textContent = '';

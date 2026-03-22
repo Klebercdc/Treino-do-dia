@@ -1847,8 +1847,7 @@ function obFinish() {
   localStorage.setItem("kronia_onboarded","1");
   const ob = document.getElementById("onboarding");
   if (ob) { ob.style.display = "none"; ob.classList.remove("show"); }
-  const ls = document.getElementById("loginScreen");
-  if (ls) ls.style.display = "flex";
+  showEmailLogin(false);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1891,8 +1890,7 @@ function ffObFinish() {
   if (typeof _appUnlocked !== 'undefined' && _appUnlocked) {
     try { navTo('inicio'); openHome(); } catch(e) {}
   } else {
-    const ls = document.getElementById('loginScreen');
-    if (ls) ls.style.display = 'flex';
+    showEmailLogin(false);
   }
 }
 
