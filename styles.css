@@ -1203,7 +1203,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   display: none;
   position: fixed;
   inset: 0;
-  background: #090909;
+  background: #090909 url('Kronia.png?v=2') center center / contain no-repeat;
   z-index: 99998;
   flex-direction: column;
   align-items: center;
@@ -1233,15 +1233,6 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   z-index: 10;
   width: 100%;
   max-width: 400px;
-}
-#loginLogoWrap {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 9;
 }
 #loginLogoText {
   font-family: 'Rajdhani', 'Barlow Condensed', sans-serif;
@@ -1338,7 +1329,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 
 /* ── EMAIL LOGIN SCREEN ── */
 #emailLoginScreen {
-  background: #090909;
+  background: #090909 url('Kronia.png?v=2') center center / contain no-repeat;
   justify-content: flex-end;
 }
 .ff-input {
