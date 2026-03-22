@@ -3945,7 +3945,11 @@ async function sendOrientExpert() {
         }
       }
 
-      const text = fullText || 'Sem resposta.';
+      // Strip trailing empty-object artifacts that some models emit before tool calls
+      const cleanText = fullText.replace(/\s*\{\s*\}\s*$/, '').trim();
+      const text = cleanText || 'Sem resposta.';
+      // Always update bubble — covers cases where no json.d chunks arrived
+      if (!cleanText) typing.innerHTML = renderMarkdown(text);
       _orientExpertHistory.push({ role: "assistant", content: text });
       if (/\b(programa|plano|treino)\b.*\b(gerado|criado|montado|pronto)\b/i.test(text) ||
           /\b(aqui (está|estão)|segue|confira)\b.*\b(treino|programa|plano)\b/i.test(text)) {
