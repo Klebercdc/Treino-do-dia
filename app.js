@@ -850,7 +850,17 @@ async function salvarTreino() {
     hist.unshift(item);
     if (hist.length > STORAGE.maxHistory) hist.length = STORAGE.maxHistory;
     localStorage.setItem(STORAGE.historyKey, JSON.stringify(hist));
-    _dbSync.pushHistory(); // backup silencioso na nuvem
+    // Backup na nuvem — se falhar (offline), agendamos background sync
+    try {
+      const pushResult = _dbSync.pushHistory();
+      if (pushResult && typeof pushResult.catch === 'function') {
+        pushResult.catch(() => {
+          if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready.then(reg => reg.sync.register('kronia-workout-sync')).catch(() => {});
+          }
+        });
+      }
+    } catch(e) { _dbSync.pushHistory(); }
     savePrevSnapshotFromState(st);
     prevMap = getPrevMap();
     clearAllInputsToGhost(); applyPrevGhostsToAll(); checkDeload();
@@ -3045,7 +3055,42 @@ window.onload = () => {
   if (!localStorage.getItem("kronia_onboarded")) {
     document.getElementById("onboarding").classList.add("show");
   }
+
+  // PWA: listener de mensagens do Service Worker (background sync)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data && e.data.type === 'KRONIA_SYNC_WORKOUT') {
+        try { _dbSync.pushHistory(); } catch(err) {}
+      }
+    });
+  }
+
+  // Pedir permissão de notificação após 30s (não invasivo)
+  setTimeout(() => { kronaRequestNotificationPermission(); }, 30000);
 };
+
+// ══ NOTIFICAÇÕES PWA ════════════════════════════════
+function kronaRequestNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    // Só pede se tiver streak — usuário engajado
+    const streak = typeof calcStreak === 'function' ? calcStreak() : 0;
+    if (streak >= 2) Notification.requestPermission();
+  }
+}
+
+function kronaNotify(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification(title, { body, icon: '/kronia.png', badge: '/kronia.png', tag: tag || 'kronia', renotify: true });
+      });
+    } else {
+      new Notification(title, { body, icon: '/kronia.png' });
+    }
+  } catch(e) {}
+}
 
 // ══════════════════════════════════════════
 // TELA DE INÍCIO
@@ -3869,13 +3914,53 @@ async function sendOrientExpert() {
     const messages = _orientExpertHistory.slice(-20);
     const resp = await apiFetch("/api/agent", {
       method: "POST",
-      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile })
+      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: true })
     });
+
+    // SSE streaming response
+    if (resp.headers.get('content-type')?.includes('text/event-stream')) {
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '', fullText = '';
+      typing.innerHTML = '';
+      const msgContainer = document.getElementById('orientExpertMessages');
+
+      outer: while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') break outer;
+          try {
+            const json = JSON.parse(raw);
+            if (json.d) {
+              fullText += json.d;
+              typing.innerHTML = renderMarkdown(fullText);
+              msgContainer.scrollTop = msgContainer.scrollHeight;
+            }
+            if (json.error) throw new Error(json.error);
+          } catch (e) { if (e.message && e.message.length < 120) {} }
+        }
+      }
+
+      const text = fullText || 'Sem resposta.';
+      _orientExpertHistory.push({ role: "assistant", content: text });
+      if (/\b(programa|plano|treino)\b.*\b(gerado|criado|montado|pronto)\b/i.test(text) ||
+          /\b(aqui (está|estão)|segue|confira)\b.*\b(treino|programa|plano)\b/i.test(text)) {
+        setTimeout(() => { closeOrientacao(); }, 1500);
+      }
+      return;
+    }
+
+    // Fallback: JSON response
     const data = await resp.json();
     const text = data.content?.[0]?.text || data.error || "Sem resposta.";
     typing.innerHTML = renderMarkdown(text);
     _orientExpertHistory.push({ role: "assistant", content: text });
-    // Navegar para tela de treino se o assistente gerou um programa de treino
     if (/\b(programa|plano|treino)\b.*\b(gerado|criado|montado|pronto)\b/i.test(text) ||
         /\b(aqui (está|estão)|segue|confira)\b.*\b(treino|programa|plano)\b/i.test(text)) {
       setTimeout(() => { closeOrientacao(); }, 1500);
@@ -5376,6 +5461,38 @@ function parseVozLog(text, card) {
   if (reps && ins[1]) { ins[1].value = reps; ins[1].dispatchEvent(new Event('input')); }
   if (rpe  && ins[2]) { ins[2].value = rpe;  ins[2].dispatchEvent(new Event('input')); }
   showToast(`Voz: ${kg||'?'}kg × ${reps||'?'} reps${rpe?' · RPE '+rpe:''}`, 'success', 3000);
+}
+
+/* ═══════════════════════════════════════════════════
+   VOZ NO CHAT KRONOS
+═══════════════════════════════════════════════════ */
+let _kronosVozRec = null;
+
+function iniciarKronosVoz(btn) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('Voz não suportada neste navegador.', 'error'); return; }
+  if (_kronosVozRec) { _kronosVozRec.stop(); return; }
+  const r = new SR();
+  r.lang = 'pt-BR'; r.interimResults = true; r.maxAlternatives = 1;
+  const input = document.getElementById('orientExpertInput');
+  r.onstart = () => {
+    btn.style.color = 'var(--accent)';
+    btn.querySelector('i')?.setAttribute('stroke', 'var(--accent)');
+  };
+  r.onend = () => {
+    btn.style.color = '';
+    btn.querySelector('i')?.setAttribute('stroke', 'currentColor');
+    _kronosVozRec = null;
+    // Send if we have text
+    if (input && input.value.trim()) sendOrientExpert();
+  };
+  r.onresult = e => {
+    const transcript = e.results[e.results.length - 1][0].transcript;
+    if (input) input.value = transcript;
+  };
+  r.onerror = () => showToast('Não entendeu. Tente falar novamente.', 'warning', 3000);
+  _kronosVozRec = r;
+  r.start();
 }
 
 /* ═══════════════════════════════════════════════════

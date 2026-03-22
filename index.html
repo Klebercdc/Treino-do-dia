@@ -1336,6 +1336,9 @@
           rows="1"
           oninput="autoResizeOrientInput(this)"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOrientExpert();}"></textarea>
+        <button id="orientVozBtn" onclick="iniciarKronosVoz(this)" title="Falar com KRONOS" style="background:none;border:none;padding:4px 6px;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;-webkit-tap-highlight-color:transparent;flex-shrink:0;transition:color .15s">
+          <i data-lucide="mic" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+        </button>
         <button id="orientSendBtn" onclick="sendOrientExpert()" title="Enviar">
           <i data-lucide="arrow-up" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
         </button>
