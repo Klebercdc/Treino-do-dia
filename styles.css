@@ -504,6 +504,20 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .home-stat-lbl { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,0.65); margin-top: 2px; }
 
 /* ══════════════════════════════════════════
+   PLAN CAROUSEL DOTS + BADGES
+══════════════════════════════════════════ */
+.plan-dot { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); cursor: pointer; transition: all .25s cubic-bezier(.34,1.1,.64,1); flex-shrink: 0; }
+.plan-dot.plan-dot-active-pro  { width: 20px; background: var(--accent); border-radius: 3px; }
+.plan-dot.plan-dot-active-ultra { width: 20px; background: #a855f7; border-radius: 3px; }
+.plan-dot.plan-dot-active-free { width: 12px; background: rgba(255,255,255,0.45); border-radius: 3px; }
+#planCarousel::-webkit-scrollbar { display: none; }
+#planModal.show { display: flex !important; }
+#homePlanBadge.badge-pro   { background:rgba(249,115,22,0.22); border-color:rgba(249,115,22,0.55); color:var(--accent); }
+#homePlanBadge.badge-ultra { background:rgba(168,85,247,0.22); border-color:rgba(168,85,247,0.55); color:#c084fc; }
+#homePlanBadge.badge-trial { background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#c084fc; }
+#homePlanBadge:active { transform: scale(.95); }
+
+/* ══════════════════════════════════════════
    TELA DE CONFIGURAÇÕES
 ══════════════════════════════════════════ */
 #settingsScreen { display: none; position: fixed; inset: 0; z-index: 3900; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: max(32px, env(safe-area-inset-bottom, 24px)); }
