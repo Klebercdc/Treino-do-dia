@@ -506,6 +506,34 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .home-stat-val { font-family: var(--display); font-size: 1.6rem; color: var(--accent); letter-spacing: .04em; }
 .home-stat-lbl { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,0.65); margin-top: 2px; }
 
+/* ═══ HERO TREINO DO DIA ═══ */
+.home-treino-hero {
+  margin: 0 16px 20px;
+  background: linear-gradient(135deg, #1a1025 0%, #1c1208 100%);
+  border: 1.5px solid rgba(255,140,0,0.3); border-radius: 22px;
+  padding: 20px 20px 20px; cursor: pointer; position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 32px rgba(0,0,0,0.5);
+  transition: transform .15s;
+}
+.home-treino-hero:active { transform: scale(.99); }
+.home-treino-hero-glow {
+  position: absolute; top: -60px; left: -60px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,140,0,0.18) 0%, transparent 65%);
+  pointer-events: none;
+}
+.home-start-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #FF8C00, #FF6B00);
+  border: none; border-radius: 100px; padding: 13px 22px;
+  color: #fff; font-family: var(--font); font-size: 0.88rem; font-weight: 800;
+  letter-spacing: .05em; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 18px rgba(255,107,0,0.45); position: relative;
+  animation: startBtnPulse 2.5s ease-in-out infinite;
+}
+.home-start-btn:active { transform: scale(.96); opacity:.9; }
+
 /* ═══ KRONOS AI CARD ═══ */
 .kronos-ai-card {
   flex: 1; background: linear-gradient(140deg, rgba(124,58,237,0.25) 0%, rgba(93,63,211,0.12) 100%);

@@ -755,6 +755,34 @@
     </div>
   </div>
 
+  <!-- ═══ HERO: TREINO DO DIA — primeira coisa visível ═══ -->
+  <div class="home-treino-hero" id="homeTodayCard" onclick="openStartWorkoutScreen()">
+    <!-- Glow de fundo -->
+    <div class="home-treino-hero-glow"></div>
+    <!-- Topo: badge + config -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;position:relative">
+      <div style="font-size:0.58rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:6px">
+        <span style="width:6px;height:6px;border-radius:50%;background:#FF8C00;display:inline-block;box-shadow:0 0 6px #FF8C00"></span>
+        TREINO DE HOJE
+      </div>
+      <div id="homeTodayBadge" style="display:none;background:rgba(255,255,255,0.2);border-radius:20px;padding:2px 9px;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:.06em"></div>
+      <button onclick="event.stopPropagation();navTo('programa');openConfig()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);border-radius:8px;padding:5px 10px;color:rgba(255,255,255,0.8);font-family:var(--font);font-size:0.62rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;letter-spacing:.03em;-webkit-tap-highlight-color:transparent">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        PERSONALIZAR
+      </button>
+    </div>
+    <!-- Título do treino -->
+    <div id="homeTodayTreino" style="font-family:var(--display);font-size:2rem;color:#fff;letter-spacing:.04em;line-height:1.05;margin-bottom:4px;position:relative">Treino A</div>
+    <div id="homeTodaySub" style="font-size:0.8rem;color:rgba(255,255,255,0.75);margin-bottom:16px;position:relative">Configure seu programa</div>
+    <!-- KRONOS insight inline -->
+    <div id="pulseInsightCard"></div>
+    <!-- Botão iniciar -->
+    <button onclick="event.stopPropagation();openStartWorkoutScreen()" class="home-start-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      INICIAR TREINO
+    </button>
+  </div>
+
   <!-- IA ROW — KRONOS + KRONIA lado a lado -->
   <div class="home-section-title">Inteligência IA</div>
   <div style="display:flex;gap:10px;padding:0 16px 16px">
