@@ -45,7 +45,7 @@ body {
   font-family: var(--font);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: 90px;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom));
   min-height: 100dvh;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -184,6 +184,12 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   gap: 0;
   min-height: 58px;
+  /* Fix iOS Safari position:fixed disappearing during scroll */
+  -webkit-transform: translate3d(0,0,0);
+  transform: translate3d(0,0,0);
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 .btn {
   flex: 1; display: flex; flex-direction: column;
@@ -2004,9 +2010,6 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
     linear-gradient(90deg, rgba(255,107,0,0.03) 1px, transparent 1px);
   background-size: 100% 100%, 40px 40px, 40px 40px;
   z-index: 0;
-}
-#transformsScreen {
-  position: relative;
 }
 #transformsScreen .transforms-header,
 #transformsScreen .transforms-content {
