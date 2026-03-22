@@ -134,9 +134,8 @@ function pulseGenerateInsight(s) {
     bg: 'rgba(168,85,247,0.08)',
     border: 'rgba(168,85,247,0.3)',
     title: 'KRONOS online e pronto',
-    sub: 'Comece seu primeiro treino. Cada dado que você registrar me alimenta — logo estarei analisando sua evolução em tempo real.',
-    action: 'treino',
-    actionLabel: 'Iniciar primeiro treino',
+    sub: 'Cada dado que você registrar me alimenta — logo estarei analisando sua evolução em tempo real.',
+    action: null,
     urgency: 'low',
   };
 
