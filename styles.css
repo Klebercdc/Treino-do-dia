@@ -1328,7 +1328,10 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 
 /* ── EMAIL LOGIN SCREEN ── */
 #emailLoginScreen {
-  background: #090909 url('Kronia.png?v=2') center 30% / 75% auto no-repeat;
+  background:
+    linear-gradient(to bottom, transparent 35%, rgba(9,9,9,0.8) 58%, #090909 75%),
+    url('Kronia.png?v=2') center 15% / 75% auto no-repeat,
+    #090909;
   justify-content: flex-end;
 }
 .ff-input {
