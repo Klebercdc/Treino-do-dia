@@ -758,7 +758,7 @@ to   { width: 100%; }
 #emailLoginBack { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--text); cursor: pointer; border-radius: 10px; transition: background 0.15s; }
 #emailLoginBack:active { background: var(--surface); }
 #emailLoginHeaderTitle { font-family: var(--font); font-size: 1.1rem; font-weight: 700; color: var(--text); position: absolute; left: 50%; transform: translateX(-50%); }
-#emailLoginBody { flex: 1; padding: 32px 28px; display: flex; flex-direction: column; gap: 14px; max-width: 420px; width: 100%; margin: 0 auto; }
+#emailLoginBody { flex: 1; padding: 32px 28px 48px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; max-width: 420px; width: 100%; margin: 0 auto; }
 #emailLoginBody h2 { font-family: var(--font); font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .login-input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.3); border-radius: 12px; color: #fff; font-family: var(--font); font-size: 0.95rem; outline: none; box-sizing: border-box; transition: border-color .2s; }
@@ -1328,7 +1328,10 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 
 /* ── EMAIL LOGIN SCREEN ── */
 #emailLoginScreen {
-  background: #090909 url('Kronia.png?v=2') center 30% / 75% auto no-repeat;
+  background:
+    linear-gradient(to bottom, transparent 35%, rgba(9,9,9,0.8) 58%, #090909 75%),
+    url('Kronia.png?v=2') center 30% / 75% auto no-repeat,
+    #090909;
   justify-content: flex-end;
 }
 .ff-input {
