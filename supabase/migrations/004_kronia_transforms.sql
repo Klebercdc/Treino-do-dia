@@ -70,9 +70,11 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   subscription_json JSONB NOT NULL,
   user_agent        TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (user_id, (subscription_json->>'endpoint'))
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subs_unique
+  ON push_subscriptions (user_id, (subscription_json->>'endpoint'));
 
 CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions (user_id);
 
