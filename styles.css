@@ -1209,7 +1209,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   align-items: center;
   justify-content: space-between;
   font-family: 'Barlow', 'DM Sans', sans-serif;
-  padding: 60px 28px 48px;
+  padding: 60px 16px 48px;
   overflow: hidden;
 }
 #loginScreen.show { display: flex; }
