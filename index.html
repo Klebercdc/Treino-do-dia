@@ -692,51 +692,54 @@
     <div class="home-title">BORA <span id="homeTreinoNome">TREINAR</span></div>
   </div>
 
-  <!-- KRONOS em destaque -->
-  <div onclick="navTo('orientacao');openOrientacao()" style="margin:0 16px 16px;background:linear-gradient(135deg,rgba(168,85,247,0.22),rgba(124,58,237,0.14));border:1.5px solid rgba(168,85,247,0.5);border-radius:20px;padding:20px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-    <div style="display:flex;align-items:center;gap:14px">
-      <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(145deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 18px rgba(168,85,247,0.45)">
-        <i data-lucide="zap" class="lucide" width="28" height="28" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="font-family:var(--display);font-size:1.2rem;letter-spacing:.08em;color:#c084fc">KRONOS</span>
-          <span style="font-size:0.58rem;font-weight:800;color:#a855f7;border:1px solid rgba(168,85,247,0.5);border-radius:20px;padding:1px 7px;letter-spacing:.08em">AI COACH</span>
-        </div>
-        <div style="font-size:0.8rem;color:rgba(192,132,252,0.8)">Pergunte, analise e gere treinos com IA</div>
-      </div>
-      <i data-lucide="chevron-right" class="lucide" width="20" height="20" stroke="rgba(168,85,247,0.6)" fill="none" stroke-width="2"></i>
-    </div>
-  </div>
-
-  <!-- KRONIA TRANSFORMS -->
-  <div onclick="openTransformsScreen()" style="margin:0 16px 16px;background:linear-gradient(135deg,rgba(255,107,0,0.18),rgba(255,107,0,0.08));border:1.5px solid rgba(255,107,0,0.4);border-radius:20px;padding:16px 20px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-    <div style="display:flex;align-items:center;gap:14px">
-      <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(145deg,#FF6B00,#FF9A3C);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 18px rgba(255,107,0,0.4)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="font-family:var(--display);font-size:1.05rem;letter-spacing:.08em;color:#fff">KRONIA</span>
-          <span style="font-size:0.58rem;font-weight:800;color:#FF6B00;border:1px solid rgba(255,107,0,0.5);border-radius:20px;padding:1px 7px;letter-spacing:.08em">TRANSFORMS</span>
-        </div>
-        <div style="font-size:0.78rem;color:rgba(255,255,255,0.6)">Grafo de dados · Catálogo · Defensive IA</div>
-      </div>
-      <i data-lucide="chevron-right" class="lucide" width="20" height="20" stroke="rgba(255,107,0,0.6)" fill="none" stroke-width="2"></i>
-    </div>
-  </div>
-
-  <!-- KRONOS PULSE — insight vivo, atualizado em tempo real -->
-  <div id="pulseInsightCard"></div>
-
+  <!-- HERO: Treino de hoje — ação principal, primeiro elemento -->
   <div class="home-today" id="homeTodayCard">
-    <div style="font-size:0.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:8px">Treino de hoje</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:0.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.7)">Treino de hoje</div>
+      <div id="homeTodayBadge" style="display:none;background:rgba(255,255,255,0.2);border-radius:20px;padding:2px 9px;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:.06em"></div>
+    </div>
     <div id="homeTodayTreino" style="font-family:var(--display);font-size:2rem;color:#fff;letter-spacing:.04em;margin-bottom:4px">Treino A</div>
-    <div id="homeTodaySub" style="font-size:0.82rem;color:rgba(255,255,255,0.85);margin-bottom:18px">Configure seu programa</div>
-    <button onclick="iniciarTreino()" style="background:#fff;color:var(--accent);border:none;border-radius:12px;padding:13px 24px;font-family:var(--font);font-size:0.9rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent">
+    <div id="homeTodaySub" style="font-size:0.82rem;color:rgba(255,255,255,0.85);margin-bottom:14px">Configure seu programa</div>
+    <!-- KRONOS PULSE inline — insight contextual antes de iniciar -->
+    <div id="pulseInsightCard"></div>
+    <button onclick="iniciarTreino()" style="background:#fff;color:var(--accent);border:none;border-radius:12px;padding:13px 24px;font-family:var(--font);font-size:0.9rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent;margin-top:4px">
       <i data-lucide="play" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       INICIAR TREINO
     </button>
+  </div>
+
+  <!-- IA ROW — KRONOS + KRONIA lado a lado, compactos -->
+  <div class="home-section-title">Inteligência IA</div>
+  <div style="display:flex;gap:10px;padding:0 16px 16px">
+
+    <!-- KRONOS AI Coach — compacto -->
+    <div onclick="navTo('orientacao');openOrientacao()" style="flex:1;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.1));border:1.5px solid rgba(168,85,247,0.45);border-radius:18px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 12px rgba(168,85,247,0.4)">
+          <i data-lucide="zap" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+        </div>
+        <div>
+          <div style="font-family:var(--display);font-size:0.95rem;letter-spacing:.06em;color:#c084fc;line-height:1">KRONOS</div>
+          <div style="font-size:0.55rem;font-weight:800;color:rgba(168,85,247,0.8);letter-spacing:.08em">AI COACH</div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:rgba(192,132,252,0.75);line-height:1.4">Pergunte, analise e gere treinos com IA</div>
+    </div>
+
+    <!-- KRONIA Transforms — compacto -->
+    <div onclick="openTransformsScreen()" style="flex:1;background:linear-gradient(135deg,rgba(255,107,0,0.16),rgba(255,107,0,0.07));border:1.5px solid rgba(255,107,0,0.38);border-radius:18px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#FF6B00,#FF9A3C);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 12px rgba(255,107,0,0.38)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div>
+          <div style="font-family:var(--display);font-size:0.95rem;letter-spacing:.06em;color:#fff;line-height:1">KRONIA</div>
+          <div style="font-size:0.55rem;font-weight:800;color:rgba(255,107,0,0.9);letter-spacing:.08em">TRANSFORMS</div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:rgba(255,255,255,0.55);line-height:1.4">Grafo · Catálogo · Defensive IA</div>
+    </div>
+
   </div>
 
   <div class="home-section-title">Esta semana</div>

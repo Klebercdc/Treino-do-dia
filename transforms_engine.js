@@ -175,6 +175,7 @@ let _teSim         = null;
 function openTransformsScreen() {
   document.getElementById('transformsScreen').classList.add('show');
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
   requestAnimationFrame(() => {
@@ -188,6 +189,7 @@ function openTransformsScreen() {
 function closeTransformsScreen() {
   document.getElementById('transformsScreen').classList.remove('show');
   document.body.style.overflow = '';
+  document.body.classList.remove('overlay-open');
   if (_teSim) { _teSim.stop(); _teSim = null; }
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';

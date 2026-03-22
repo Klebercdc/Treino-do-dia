@@ -3213,11 +3213,13 @@ function openPerfil() {
     }
   }).catch(() => {});
   document.getElementById("perfilScreen").classList.add("show");
+  document.body.classList.add('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
 }
 function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
+  document.body.classList.remove('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
 }
@@ -3247,6 +3249,7 @@ function openSettingsScreen() {
     if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
   } catch(e) {}
   document.getElementById('settingsScreen').classList.add('show');
+  document.body.classList.add('overlay-open');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -3256,6 +3259,7 @@ function closeSettingsScreen() {
   if (!document.getElementById('perfilScreen').classList.contains('show')) {
     const footer = document.querySelector('.footer-actions');
     if (footer) footer.style.display = '';
+    document.body.classList.remove('overlay-open');
   }
 }
 
@@ -3391,11 +3395,13 @@ function openEditarPerfil() {
   const cta = document.getElementById("epCtaTreino");
   if (cta) cta.style.display = "none";
   document.getElementById("editarPerfilScreen").classList.add("show");
+  document.body.classList.add('overlay-open');
   const _footerEP = document.querySelector('.footer-actions');
   if (_footerEP) _footerEP.style.display = 'none';
 }
 function closeEditarPerfil() {
   document.getElementById("editarPerfilScreen").classList.remove("show");
+  document.body.classList.remove('overlay-open');
   const _footerEP = document.querySelector('.footer-actions');
   if (_footerEP) _footerEP.style.display = '';
 }
@@ -3652,6 +3658,7 @@ function openOrientacao() {
   _orientFromHome = !!homeEl?.classList.contains("show");
   if (homeEl) homeEl.classList.remove("show");
   document.getElementById("orientacaoScreen").classList.add("show");
+  document.body.classList.add('overlay-open');
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -3771,6 +3778,7 @@ function ariaQuickSend(msg) {
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
+  document.body.classList.remove('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
   if (_orientFromHome) { navTo("inicio"); openHome(); } else { navTo("treino"); }
