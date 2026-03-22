@@ -25,7 +25,47 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Network-first para arquivos do app (sempre pega versão nova quando online)
+// ══ PWA PUSH NOTIFICATIONS ══════════════════════════
+self.addEventListener('push', e => {
+  let data = { title: 'KRONIA', body: 'Você tem uma atualização.' };
+  try { data = e.data ? e.data.json() : data; } catch (err) {}
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'KRONIA', {
+      body: data.body || '',
+      icon: '/kronia.png',
+      badge: '/kronia.png',
+      tag: data.tag || 'kronia-default',
+      renotify: true,
+      data: { url: data.url || '/' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.includes(self.location.origin) && 'focus' in c) return c.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
+
+// ══ BACKGROUND SYNC — workout cloud backup ══════════
+self.addEventListener('sync', e => {
+  if (e.tag === 'kronia-workout-sync') {
+    e.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+        list.forEach(c => c.postMessage({ type: 'KRONIA_SYNC_WORKOUT' }));
+      })
+    );
+  }
+});
+
+// ══ Network-first para arquivos do app ══════════════
 // Cache fallback apenas quando offline
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);

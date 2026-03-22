@@ -423,6 +423,29 @@ function pulseOnSetLogged(rpe) {
   } catch(e) {}
 }
 
+/* ── SUPABASE REALTIME — atualizações em tempo real ─────── */
+function pulseInitRealtime() {
+  try {
+    const sb = window._supabaseClient;
+    if (!sb) return;
+    sb.channel('kronia-pulse')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_plans' }, () => {
+        try {
+          if (typeof updatePlanBadge === 'function') updatePlanBadge();
+          pulseCompute();
+          if (document.getElementById('homeScreen')?.classList.contains('show')) renderPulseInsight();
+        } catch(e) {}
+      })
+      .on('broadcast', { event: 'pulse_update' }, () => {
+        try {
+          pulseCompute();
+          if (document.getElementById('homeScreen')?.classList.contains('show')) renderPulseInsight();
+        } catch(e) {}
+      })
+      .subscribe();
+  } catch(e) {}
+}
+
 /* ── HEARTBEAT — O PULSO DO SISTEMA ─────────────────────── */
 function startKronosPulse() {
   // Compute imediatamente
@@ -441,6 +464,9 @@ function startKronosPulse() {
     }).catch(() => {}), 500);
   }
 
+  // Supabase Realtime — reage a mudanças de dados sem polling extra
+  setTimeout(() => pulseInitRealtime(), 2000);
+
   // Pulso a cada 90 segundos
   _pulse.heartbeatId = setInterval(() => {
     try {
@@ -455,6 +481,14 @@ function startKronosPulse() {
         if (!localStorage.getItem(key)) {
           localStorage.setItem(key, '1');
           showToast(`Sequência de ${s.streak} dia${s.streak > 1 ? 's' : ''} — você ainda não treinou hoje`, 'warning', 6000);
+          // Push notification (funciona com app em background)
+          if (typeof kronaNotify === 'function') {
+            kronaNotify(
+              'KRONIA — Sequência em risco 🔥',
+              `${s.streak} dia${s.streak > 1 ? 's' : ''} seguidos. Você ainda não treinou hoje.`,
+              'streak-risk'
+            );
+          }
         }
       }
     } catch(e) {}

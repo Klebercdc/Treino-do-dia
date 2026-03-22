@@ -408,6 +408,74 @@ function agentLoop(userMessages, userData, callback) {
 }
 
 // ══════════════════════════════════════════
+// STREAMING AGENT LOOP — SSE via Groq
+// ══════════════════════════════════════════
+
+function agentLoopStream(userMessages, userData, res) {
+  var MAX_ITER = 6;
+  var iter = 0;
+  var msgs = [{ role: 'system', content: buildAgentSystem(userData) }].concat(userMessages);
+  var GROQ_KEY = process.env.GROQ_API_KEY;
+
+  function sendDone() {
+    try { res.write('data: [DONE]\n\n'); res.end(); } catch (e) {}
+  }
+
+  // Fallback: no Groq key — run non-streaming, send all at once
+  if (!GROQ_KEY) {
+    agentLoop(userMessages, userData, function(err, text) {
+      var t = err ? ('Erro: ' + err) : (text || 'Sem resposta.');
+      try { res.write('data: ' + JSON.stringify({ d: t }) + '\n\n'); } catch (e) {}
+      sendDone();
+    });
+    return;
+  }
+
+  function iterate() {
+    if (iter++ >= MAX_ITER) return sendDone();
+
+    var payload = {
+      messages: msgs,
+      tools: TOOLS,
+      tool_choice: 'auto',
+      max_tokens: 1500,
+      temperature: 0.7
+    };
+
+    gemini.callGeminiStreamWithTools(GROQ_KEY, payload, 30000,
+      function onDelta(delta) {
+        if (delta.content) {
+          try { res.write('data: ' + JSON.stringify({ d: delta.content }) + '\n\n'); } catch (e) {}
+        }
+      },
+      function onDone(toolCalls, contentAccum) {
+        if (toolCalls && toolCalls.length) {
+          // Process tool calls, then continue streaming
+          msgs.push({ role: 'assistant', content: contentAccum || '', tool_calls: toolCalls });
+          toolCalls.forEach(function(tc) {
+            var args = {};
+            try { args = JSON.parse(tc.function.arguments || '{}'); } catch (e) {}
+            var result = executeTool(tc.function.name, args, userData);
+            msgs.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify(result) });
+            try { res.write('data: ' + JSON.stringify({ tool: tc.function.name }) + '\n\n'); } catch (e) {}
+          });
+          iterate();
+        } else {
+          // Final text has been streamed chunk by chunk already
+          sendDone();
+        }
+      },
+      function onError(err) {
+        try { res.write('data: ' + JSON.stringify({ error: err }) + '\n\n'); } catch (e) {}
+        sendDone();
+      }
+    );
+  }
+
+  iterate();
+}
+
+// ══════════════════════════════════════════
 // HANDLER
 // ══════════════════════════════════════════
 
@@ -438,6 +506,18 @@ module.exports = function(req, res) {
         profile: b.profile || {}
       };
 
+      // SSE streaming mode
+      if (b.stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+        agentLoopStream(messages, userData, res);
+        return;
+      }
+
+      // Non-streaming JSON mode (backwards compatible)
       agentLoop(messages, userData, function(err, text) {
         if (err) return res.status(500).json({ error: err });
         var estimatedPrompt = JSON.stringify(messages).length / 4;
