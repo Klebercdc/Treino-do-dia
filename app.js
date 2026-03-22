@@ -1178,11 +1178,11 @@ function renderEvoChart() {
   if (evoStats) evoStats.innerHTML = `
     <div class="evo-stat"><div class="evo-stat-val">${pr>0?pr+(_evoTab!=="freq"?"kg":""):"-"}</div><div class="evo-stat-lbl">${_evoTab==="freq"?"Total":_evoTab==="peso"?"Mínimo":"Recorde"}</div></div>
     <div class="evo-stat"><div class="evo-stat-val">${last>0?last+(_evoTab==="freq"?"":"kg"):"-"}</div><div class="evo-stat-lbl">Última Sessão</div></div>
-    <div class="evo-stat"><div class="evo-stat-val" style="color:${delta>=0?"#16a34a":"#dc2626"}">${delta>=0?"+":""}${delta}%</div><div class="evo-stat-lbl">vs Anterior</div></div>`;
+    <div class="evo-stat"><div class="evo-stat-val" style="color:${delta>=0?"#10b981":"#ef4444"}">${delta>=0?"+":""}${delta}%</div><div class="evo-stat-lbl">vs Anterior</div></div>`;
   if (_evoChart) { _evoChart.destroy(); _evoChart=null; }
   _evoChart = new Chart(document.getElementById("evoCanvas"), {
     type:"line",
-    data: { labels, datasets: [{ label, data:values, borderColor:"#f97316", backgroundColor:"rgba(249,115,22,0.08)", fill:true, tension:.35, pointBackgroundColor:"#f97316", pointRadius:4, pointHoverRadius:6 }] },
+    data: { labels, datasets: [{ label, data:values, borderColor:"#10b981", backgroundColor:"rgba(16,185,129,0.1)", fill:true, tension:.38, pointBackgroundColor:"#10b981", pointRadius:4, pointHoverRadius:7, pointBorderColor:"#fff", pointBorderWidth:1.5 }] },
     options: { responsive:true, plugins:{legend:{display:false}}, scales: { y:{beginAtZero:false,grid:{color:"rgba(255,255,255,0.05)"},ticks:{color:"#a3a3a3",font:{size:11}}}, x:{grid:{display:false},ticks:{color:"#a3a3a3",font:{size:10},maxRotation:0}} } },
   });
 }
@@ -3211,11 +3211,13 @@ function openPerfil() {
     }
   }).catch(() => {});
   document.getElementById("perfilScreen").classList.add("show");
+  document.body.classList.add('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
 }
 function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
+  document.body.classList.remove('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
 }
@@ -3245,6 +3247,7 @@ function openSettingsScreen() {
     if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
   } catch(e) {}
   document.getElementById('settingsScreen').classList.add('show');
+  document.body.classList.add('overlay-open');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -3254,6 +3257,7 @@ function closeSettingsScreen() {
   if (!document.getElementById('perfilScreen').classList.contains('show')) {
     const footer = document.querySelector('.footer-actions');
     if (footer) footer.style.display = '';
+    document.body.classList.remove('overlay-open');
   }
 }
 
@@ -3389,11 +3393,13 @@ function openEditarPerfil() {
   const cta = document.getElementById("epCtaTreino");
   if (cta) cta.style.display = "none";
   document.getElementById("editarPerfilScreen").classList.add("show");
+  document.body.classList.add('overlay-open');
   const _footerEP = document.querySelector('.footer-actions');
   if (_footerEP) _footerEP.style.display = 'none';
 }
 function closeEditarPerfil() {
   document.getElementById("editarPerfilScreen").classList.remove("show");
+  document.body.classList.remove('overlay-open');
   const _footerEP = document.querySelector('.footer-actions');
   if (_footerEP) _footerEP.style.display = '';
 }
@@ -3650,6 +3656,7 @@ function openOrientacao() {
   _orientFromHome = !!homeEl?.classList.contains("show");
   if (homeEl) homeEl.classList.remove("show");
   document.getElementById("orientacaoScreen").classList.add("show");
+  document.body.classList.add('overlay-open');
   const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -3769,6 +3776,7 @@ function ariaQuickSend(msg) {
 }
 function closeOrientacao() {
   document.getElementById("orientacaoScreen").classList.remove("show");
+  document.body.classList.remove('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
   if (_orientFromHome) { navTo("inicio"); openHome(); } else { navTo("treino"); }
