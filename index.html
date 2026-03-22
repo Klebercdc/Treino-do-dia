@@ -66,6 +66,69 @@
 
 <!-- ═══ LOGIN SCREEN (TELA 1 — LANDING) ═══ -->
 
+<div id="loginScreen" style="display:none;position:fixed;inset:0;z-index:9000;background:#121212;flex-direction:column;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)">
+
+  <!-- Background glow -->
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 20%,rgba(255,107,0,0.14) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(93,63,211,0.1) 0%,transparent 50%);z-index:0"></div>
+
+  <!-- Top area — logo + tagline -->
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;padding-top:72px;text-align:center">
+    <div style="width:72px;height:72px;border-radius:22px;background:linear-gradient(145deg,#FF8C00,#FF6B00);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(255,107,0,0.4);margin-bottom:20px">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+    </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:.06em;color:#fff;line-height:1">KRONIA</div>
+    <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:6px;letter-spacing:.04em">Seu coach inteligente de treino</div>
+
+    <!-- Feature highlights -->
+    <div style="margin-top:48px;display:flex;flex-direction:column;gap:14px;width:100%;padding:0 32px;text-align:left">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div>
+          <div style="font-size:0.85rem;font-weight:700;color:#fff">Coach KRONOS com IA</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.45)">Treinos personalizados e análise em tempo real</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(93,63,211,0.15);border:1px solid rgba(93,63,211,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </div>
+        <div>
+          <div style="font-size:0.85rem;font-weight:700;color:#fff">Periodização MEV/MAV/MRV</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.45)">Ciência real aplicada ao seu programa</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div style="font-size:0.85rem;font-weight:700;color:#fff">100% gratuito para começar</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.45)">Sem cartão de crédito. Comece agora.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom CTA buttons -->
+  <div style="position:relative;z-index:1;width:100%;padding:24px 24px 32px;display:flex;flex-direction:column;gap:12px">
+    <button onclick="showEmailLogin(false)" style="width:100%;background:linear-gradient(135deg,#FF8C00,#FF6B00);border:none;border-radius:100px;padding:16px;color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.04em;box-shadow:0 6px 24px rgba(255,107,0,0.45);-webkit-tap-highlight-color:transparent">
+      Entrar na conta
+    </button>
+    <button onclick="showEmailLogin(true)" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:100px;padding:16px;color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      Criar conta grátis
+    </button>
+    <div style="text-align:center;font-size:0.68rem;color:rgba(255,255,255,0.25);margin-top:4px;line-height:1.6">
+      Ao continuar você concorda com nossos
+      <span onclick="openLegalModal('terms')" style="color:rgba(255,255,255,0.4);cursor:pointer;text-decoration:underline">Termos</span>
+      e
+      <span onclick="openLegalModal('privacy')" style="color:rgba(255,255,255,0.4);cursor:pointer;text-decoration:underline">Privacidade</span>.
+    </div>
+  </div>
+
+</div>
+
 <!-- ═══ EMAIL LOGIN SCREEN (TELA 2) ═══ -->
 
 <div id="emailLoginScreen">
@@ -133,7 +196,7 @@
     <div class="ff-slide" id="ff-slide-1">
       <div class="ff-slide-tag" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.35);color:rgba(255,255,255,0.5)">PLANO FREE</div>
       <div class="ff-slide-icon" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);box-shadow:0 12px 40px rgba(99,102,241,0.18)">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 7.05a2.121 2.121 0 0 0-3-3l-4.244 4.243 3 3 4.244-4.243z"/><path d="M5.343 17.657a2.121 2.121 0 0 0 3 3l4.244-4.243-3-3-4.244 4.243z"/><path d="m7.05 5.344-1.414 1.414a1 1 0 0 0 0 1.414l4.243 4.243a1 1 0 0 0 1.414 0l1.414-1.414-5.657-5.657z"/><path d="m17.657 16.243-1.414 1.414a1 1 0 0 1-1.414 0l-4.243-4.243a1 1 0 0 1 0-1.414l1.414-1.414 5.657 5.657z"/></svg>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
       </div>
       <h1 class="ff-slide-title">Treine com<br>liberdade.</h1>
       <p class="ff-slide-sub">Registre cargas e repetições sem bloqueios. Crie constância e prove a si mesmo que o acompanhamento real funciona.</p>
@@ -166,7 +229,7 @@
           <span>Energia</span>
         </div>
         <div class="ff-eco-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.3)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 7.05a2.121 2.121 0 0 0-3-3l-4.244 4.243 3 3 4.244-4.243z"/><path d="M5.343 17.657a2.121 2.121 0 0 0 3 3l4.244-4.243-3-3-4.244 4.243z"/><path d="m7.05 5.344-1.414 1.414a1 1 0 0 0 0 1.414l4.243 4.243a1 1 0 0 0 1.414 0l1.414-1.414-5.657-5.657z"/><path d="m17.657 16.243-1.414 1.414a1 1 0 0 1-1.414 0l-4.243-4.243a1 1 0 0 1 0-1.414l1.414-1.414 5.657 5.657z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
           <span>Treino</span>
         </div>
         <div class="ff-eco-icon" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.3)">
@@ -692,6 +755,34 @@
     </div>
   </div>
 
+  <!-- ═══ HERO: TREINO DO DIA — primeira coisa visível ═══ -->
+  <div class="home-treino-hero" id="homeTodayCard" onclick="openStartWorkoutScreen()">
+    <!-- Glow de fundo -->
+    <div class="home-treino-hero-glow"></div>
+    <!-- Topo: badge + config -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;position:relative">
+      <div style="font-size:0.58rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:6px">
+        <span style="width:6px;height:6px;border-radius:50%;background:#FF8C00;display:inline-block;box-shadow:0 0 6px #FF8C00"></span>
+        TREINO DE HOJE
+      </div>
+      <div id="homeTodayBadge" style="display:none;background:rgba(255,255,255,0.2);border-radius:20px;padding:2px 9px;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:.06em"></div>
+      <button onclick="event.stopPropagation();navTo('programa');openConfig()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);border-radius:8px;padding:5px 10px;color:rgba(255,255,255,0.8);font-family:var(--font);font-size:0.62rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;letter-spacing:.03em;-webkit-tap-highlight-color:transparent">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        PERSONALIZAR
+      </button>
+    </div>
+    <!-- Título do treino -->
+    <div id="homeTodayTreino" style="font-family:var(--display);font-size:2rem;color:#fff;letter-spacing:.04em;line-height:1.05;margin-bottom:4px;position:relative">Treino A</div>
+    <div id="homeTodaySub" style="font-size:0.8rem;color:rgba(255,255,255,0.75);margin-bottom:16px;position:relative">Configure seu programa</div>
+    <!-- KRONOS insight inline -->
+    <div id="pulseInsightCard"></div>
+    <!-- Botão iniciar -->
+    <button onclick="event.stopPropagation();openStartWorkoutScreen()" class="home-start-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      INICIAR TREINO
+    </button>
+  </div>
+
   <!-- IA ROW — KRONOS + KRONIA lado a lado -->
   <div class="home-section-title">Inteligência IA</div>
   <div style="display:flex;gap:10px;padding:0 16px 16px">
@@ -779,6 +870,60 @@
         <div class="weekly-bar-track">
           <div class="weekly-bar-fill vol" id="homeVolBarFill" style="width:0%"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CARD CONFIGURAR TREINO ═══ -->
+  <div class="home-section-title">Meu Programa</div>
+  <div class="config-treino-card" onclick="navTo('programa');openConfig()" id="configTreinoCard">
+    <!-- Ícone + título -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <div class="config-treino-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/>
+        </svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--display);font-size:1.15rem;letter-spacing:.05em;color:#fff;line-height:1">PROGRAMA DE TREINO</div>
+        <div style="font-size:0.68rem;color:rgba(255,255,255,0.55);margin-top:3px">Toque para configurar</div>
+      </div>
+      <div style="flex-shrink:0;color:rgba(255,140,0,0.7)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+
+    <!-- Pills com info do programa atual -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <div class="config-treino-pill" id="pillFrequencia">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>3 dias/sem</span>
+      </div>
+      <div class="config-treino-pill" id="pillObjetivo">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <span>Hipertrofia</span>
+      </div>
+      <div class="config-treino-pill" id="pillNivel">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+        <span>Intermediário</span>
+      </div>
+    </div>
+
+    <!-- Barra de divisão sutil -->
+    <div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:14px"></div>
+
+    <!-- Treinos da semana — pílulas A B C ... -->
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:0.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);flex-shrink:0">Divisão</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="pillDivisao">
+        <div class="config-treino-day">A</div>
+        <div class="config-treino-day">B</div>
+        <div class="config-treino-day">C</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="font-size:0.72rem;font-weight:700;color:#FF8C00;display:flex;align-items:center;gap:4px">
+        Configurar
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
     </div>
   </div>
