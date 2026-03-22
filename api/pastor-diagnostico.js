@@ -11,7 +11,6 @@
  *   3. Quotas de planos desatualizadas → auto-reset
  *   4. Webhooks de pagamento presos → alerta
  *   5. Compactação: remove logs de IA com mais de 90 dias
- *   6. Ping na NVIDIA API (valida chave)
  *
  * Segurança:
  *   Protegido por CRON_SECRET (env var). O header pode ser:
@@ -25,7 +24,6 @@
 
 var https = require('https');
 var cors = require('./_cors');
-var nvidia = require('./_nvidia');
 
 // ══════════════════════════════════════════
 // HELPER: chamada direta ao Supabase REST
@@ -75,27 +73,20 @@ function supabaseReq(method, path, body, callback) {
 // ══════════════════════════════════════════
 
 function checkEnv(report) {
-  var criticas  = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
-  var ia_keys   = ['NVIDIA_API_KEY', 'GROQ_API_KEY'];
+  var criticas  = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'GROQ_API_KEY'];
   var opcionais = ['CHECKOUT_URL', 'FREE_AI_LIMIT', 'CRON_SECRET'];
 
-  var faltando_criticas = criticas.filter(function(k) { return !process.env[k]; });
-  var tem_ia_key = ia_keys.some(function(k) { return !!process.env[k]; });
+  var faltando_criticas  = criticas.filter(function(k) { return !process.env[k]; });
   var faltando_opcionais = opcionais.filter(function(k) { return !process.env[k]; });
 
   report.checagens.env = {
-    ok: faltando_criticas.length === 0 && tem_ia_key,
+    ok: faltando_criticas.length === 0,
     faltando_criticas: faltando_criticas,
-    ia_configurada: tem_ia_key ? ia_keys.filter(function(k) { return !!process.env[k]; }) : [],
-    faltando_ia: !tem_ia_key,
     faltando_opcionais: faltando_opcionais
   };
 
   if (faltando_criticas.length) {
     report.erros.push('ENV: variáveis críticas ausentes: ' + faltando_criticas.join(', '));
-  }
-  if (!tem_ia_key) {
-    report.erros.push('ENV: nenhuma chave de IA configurada (NVIDIA_API_KEY ou GROQ_API_KEY)');
   }
 }
 
@@ -205,29 +196,6 @@ function compactarLogs(report, reparos, callback) {
 }
 
 // ══════════════════════════════════════════
-// CHECK 6 — Ping na NVIDIA API
-// ══════════════════════════════════════════
-
-function checkNvidiaApi(report, callback) {
-  if (!process.env.NVIDIA_API_KEY) {
-    report.checagens.nvidia_api = { ok: false, motivo: 'chave não configurada' };
-    return callback();
-  }
-  var payload = {
-    model: 'meta/llama-3.3-70b-instruct',
-    messages: [{ role: 'user', content: 'ping' }],
-    max_tokens: 3,
-    temperature: 0,
-    stream: false
-  };
-  nvidia.callNvidia(process.env.NVIDIA_API_KEY, payload, 12000, 1, function(err) {
-    report.checagens.nvidia_api = { ok: !err, erro: err || null };
-    if (err) report.avisos.push('NVIDIA API: ping falhou — ' + err);
-    callback();
-  });
-}
-
-// ══════════════════════════════════════════
 // SALVAR RELATÓRIO NA TABELA diagnosticos
 // ══════════════════════════════════════════
 
@@ -282,7 +250,6 @@ function executarRonda(callback) {
   checkERepararQuotaStale(report, reparos, function() {
   checkWebhooksPresos(report, function() {
   compactarLogs(report, reparos, function() {
-  checkNvidiaApi(report, function() {
 
     report.reparos_executados = reparos;
     report.status = report.erros.length > 0  ? 'erro'
@@ -302,7 +269,7 @@ function executarRonda(callback) {
       callback(null, report);
     });
 
-  }); }); }); }); });
+  }); }); }); });
 }
 
 // ══════════════════════════════════════════
