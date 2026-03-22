@@ -10,7 +10,7 @@
 
 ## Visão Geral
 
-O TITAN PRO é uma **Progressive Web App (PWA)** de musculação voltada para o mercado brasileiro. Combina registro de treinos, análise de progresso com periodização científica e um coach de IA conversacional chamado **KRONOS**, que responde com base no histórico real do usuário.
+O KRONIA é uma **Progressive Web App (PWA)** de musculação voltada para o mercado brasileiro. Combina registro de treinos, análise de progresso com periodização científica e um coach de IA conversacional chamado **KRONOS**, que responde com base no histórico real do usuário.
 
 ### Diferenciais
 
