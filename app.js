@@ -3697,6 +3697,46 @@ function updateHeatmap(hist) {
 // ══════════════════════════════════════════
 // TELA ORIENTAÇÃO
 // ══════════════════════════════════════════
+// ─── Health check diário ─────────────────────────────────────────────────────
+// Roda uma vez por dia ao abrir o chat. Detecta se a API está fora e avisa.
+function _kronosHealthCheck() {
+  const today = new Date().toDateString();
+  if (localStorage.getItem('_kronosHCDate') === today) return; // já verificou hoje
+
+  apiFetch("/api/agent", {
+    method: "POST",
+    body: JSON.stringify({ messages: [{ role: "user", content: "ping" }], stream: false })
+  })
+  .then(r => r.json())
+  .then(() => {
+    localStorage.setItem('_kronosHCDate', today);
+    localStorage.setItem('_kronosHCStatus', 'ok');
+    _kronosRemoveHealthBanner();
+  })
+  .catch(() => {
+    localStorage.setItem('_kronosHCDate', today);
+    localStorage.setItem('_kronosHCStatus', 'fail');
+    _kronosShowHealthBanner();
+  });
+
+  // Exibe banner se o último check registrado era falha
+  if (localStorage.getItem('_kronosHCStatus') === 'fail') _kronosShowHealthBanner();
+}
+
+function _kronosShowHealthBanner() {
+  if (document.getElementById('_kronosHealthBanner')) return;
+  const bar = document.createElement('div');
+  bar.id = '_kronosHealthBanner';
+  bar.style.cssText = 'position:sticky;top:0;z-index:10;background:#7c2d12;color:#fef3c7;font-size:0.75rem;padding:6px 14px;text-align:center;letter-spacing:.02em;';
+  bar.textContent = '⚠ KRONOS offline — respostas podem falhar. Verificando...';
+  const wrap = document.querySelector('.orient-chat-wrap');
+  if (wrap) wrap.prepend(bar);
+}
+
+function _kronosRemoveHealthBanner() {
+  document.getElementById('_kronosHealthBanner')?.remove();
+}
+
 function openOrientacao() {
   // Esconde homeScreen se estiver aberta para evitar conflito de z-index e bloqueio de scroll no iOS
   const homeEl = document.getElementById("homeScreen");
@@ -3720,6 +3760,8 @@ function openOrientacao() {
   renderAriaChips();
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
+  // Health check diário (silencioso)
+  _kronosHealthCheck();
 }
 
 function ariaGreeting() {
@@ -3881,6 +3923,65 @@ function addOrientMsg(containerId, role, text) {
   return wrap.querySelector(".ai-bubble");
 }
 
+// ─── Auto-healing agent call ────────────────────────────────────────────────
+// Tenta streaming → se vazio, cai para JSON → se falhar, aguarda e tenta 1x mais.
+// Retorna a string de resposta ou lança erro após esgotar as tentativas.
+async function _kronosCall(messages, userData, onChunk) {
+  async function tryStream() {
+    const resp = await apiFetch("/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: true })
+    });
+    if (!resp.headers.get('content-type')?.includes('text/event-stream')) return null;
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', fullText = '', hadError = false;
+    outer: while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') break outer;
+        try {
+          const json = JSON.parse(raw);
+          if (json.d) { fullText += json.d; onChunk && onChunk(fullText); }
+          if (json.error) { hadError = true; break outer; }
+        } catch (e) {}
+      }
+    }
+    if (hadError || !fullText.trim()) return null; // força fallback
+    return fullText.replace(/\s*\{\s*\}\s*$/, '').trim();
+  }
+
+  async function tryJson() {
+    const resp = await apiFetch("/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: false })
+    });
+    const data = await resp.json();
+    const text = (data.content?.[0]?.text || data.error || '').trim();
+    return text || null;
+  }
+
+  // 1ª tentativa: streaming
+  let result = await tryStream();
+  if (result) return result;
+
+  // 2ª tentativa: JSON sem stream (imediata)
+  result = await tryJson();
+  if (result) return result;
+
+  // 3ª tentativa: aguarda 2s e tenta streaming novamente
+  await new Promise(r => setTimeout(r, 2000));
+  result = await tryStream();
+  if (result) return result;
+
+  throw new Error('sem_resposta');
+}
+
 async function sendOrientExpert() {
   const input = document.getElementById("orientExpertInput");
   const txt = input.value.trim(); if (!txt) return;
@@ -3889,87 +3990,43 @@ async function sendOrientExpert() {
 
   // Navegação direta por palavra-chave
   const lower = txt.toLowerCase().trim();
-  if (/^(ir para |abrir |ver )?(tela de )?treino$/i.test(lower)) {
-    closeOrientacao();
-    return;
-  }
-  if (/^(ir para |abrir |ver )?(tela de )?dieta$/i.test(lower)) {
-    closeOrientacao();
-    setTimeout(() => openDietaSheet(), 300);
-    return;
-  }
+  if (/^(ir para |abrir |ver )?(tela de )?treino$/i.test(lower)) { closeOrientacao(); return; }
+  if (/^(ir para |abrir |ver )?(tela de )?dieta$/i.test(lower)) { closeOrientacao(); setTimeout(() => openDietaSheet(), 300); return; }
 
   // colapsa atalhos ao iniciar conversa
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
-  if (!row.classList.contains("collapsed")) {
-    row.classList.add("collapsed");
-    btn && btn.classList.remove("open");
-  }
+  if (!row.classList.contains("collapsed")) { row.classList.add("collapsed"); btn && btn.classList.remove("open"); }
+
   _orientExpertHistory.push({ role: "user", content: txt });
   addOrientMsg("orientExpertMessages", "user", txt);
   const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
+  const msgContainer = document.getElementById('orientExpertMessages');
+
+  const userData = buildUserData();
+  const messages = _orientExpertHistory.slice(-20);
+
   try {
-    const userData = buildUserData();
-    const messages = _orientExpertHistory.slice(-20);
-    const resp = await apiFetch("/api/agent", {
-      method: "POST",
-      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: true })
+    const text = await _kronosCall(messages, userData, (partial) => {
+      typing.innerHTML = renderMarkdown(partial);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
     });
-
-    // SSE streaming response
-    if (resp.headers.get('content-type')?.includes('text/event-stream')) {
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '', fullText = '';
-      typing.innerHTML = '';
-      const msgContainer = document.getElementById('orientExpertMessages');
-
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (raw === '[DONE]') break outer;
-          try {
-            const json = JSON.parse(raw);
-            if (json.d) {
-              fullText += json.d;
-              typing.innerHTML = renderMarkdown(fullText);
-              msgContainer.scrollTop = msgContainer.scrollHeight;
-            }
-            if (json.error) throw new Error(json.error);
-          } catch (e) { if (e.message && e.message.length < 120) {} }
-        }
-      }
-
-      // Strip trailing empty-object artifacts that some models emit before tool calls
-      const cleanText = fullText.replace(/\s*\{\s*\}\s*$/, '').trim();
-      const text = cleanText || 'Sem resposta.';
-      // Always update bubble — covers cases where no json.d chunks arrived
-      if (!cleanText) typing.innerHTML = renderMarkdown(text);
-      _orientExpertHistory.push({ role: "assistant", content: text });
-      if (/\b(programa|plano|treino)\b.*\b(gerado|criado|montado|pronto)\b/i.test(text) ||
-          /\b(aqui (está|estão)|segue|confira)\b.*\b(treino|programa|plano)\b/i.test(text)) {
-        setTimeout(() => { closeOrientacao(); }, 1500);
-      }
-      return;
-    }
-
-    // Fallback: JSON response
-    const data = await resp.json();
-    const text = data.content?.[0]?.text || data.error || "Sem resposta.";
     typing.innerHTML = renderMarkdown(text);
+    msgContainer.scrollTop = msgContainer.scrollHeight;
     _orientExpertHistory.push({ role: "assistant", content: text });
     if (/\b(programa|plano|treino)\b.*\b(gerado|criado|montado|pronto)\b/i.test(text) ||
         /\b(aqui (está|estão)|segue|confira)\b.*\b(treino|programa|plano)\b/i.test(text)) {
       setTimeout(() => { closeOrientacao(); }, 1500);
     }
-  } catch { typing.innerHTML = "Erro de conexão."; }
+  } catch {
+    typing.innerHTML = '<span style="color:var(--text-2);font-style:italic">Falha na conexão — toque para tentar novamente.</span>';
+    typing.parentElement?.parentElement?.addEventListener('click', () => {
+      typing.parentElement?.parentElement?.remove();
+      _orientExpertHistory.pop(); // remove última entrada do assistant
+      document.getElementById("orientExpertInput").value = txt;
+      sendOrientExpert();
+    }, { once: true });
+  }
 }
 
 function orientExpertQuick(tipo) {
