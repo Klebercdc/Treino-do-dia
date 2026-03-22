@@ -47,7 +47,7 @@
   <meta name="twitter:description" content="App de musculação com IA. Treinos científicos, análise de progresso e coach inteligente."/>
   <meta name="twitter:image" content="https://www.titanpro.app.br/kronia.png"/>
 
-  <link rel="stylesheet" href="styles.css?v=20260322c">
+  <link rel="stylesheet" href="styles.css?v=20260322d">
 
 </head>
 <body>
@@ -673,12 +673,12 @@
 
 <div id="homeScreen">
   <div class="home-header">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div class="home-greeting" id="homeGreeting">Bom treino</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="home-greeting" id="homeGreeting">BOM DIA</div>
       <!-- Badge do plano sempre visível -->
-      <div id="homePlanBadge" onclick="openPlanModal()" style="cursor:pointer;display:flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:0.65rem;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);-webkit-tap-highlight-color:transparent;transition:all .15s">FREE</div>
+      <div id="homePlanBadge" onclick="openPlanModal()" style="cursor:pointer;display:flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:0.65rem;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);-webkit-tap-highlight-color:transparent;transition:all .15s">FREE 5/5</div>
     </div>
-    <div class="home-title">BORA <span id="homeTreinoNome">TREINAR</span></div>
+    <div class="home-title" id="homeUserNameTitle">ATLETA</div>
     <!-- Trial countdown strip -->
     <div id="homeTrialStrip" style="display:none;margin-top:10px;background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(124,58,237,0.08));border:1px solid rgba(168,85,247,0.35);border-radius:12px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openPlanModal()">
       <div style="display:flex;align-items:center;gap:8px">
@@ -692,81 +692,106 @@
     </div>
   </div>
 
-  <!-- HERO: Treino de hoje — ação principal, primeiro elemento -->
-  <div class="home-today" id="homeTodayCard">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div style="font-size:0.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,0.7)">Treino de hoje</div>
-      <div id="homeTodayBadge" style="display:none;background:rgba(255,255,255,0.2);border-radius:20px;padding:2px 9px;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:.06em"></div>
-    </div>
-    <div id="homeTodayTreino" style="font-family:var(--display);font-size:2rem;color:#fff;letter-spacing:.04em;margin-bottom:4px">Treino A</div>
-    <div id="homeTodaySub" style="font-size:0.82rem;color:rgba(255,255,255,0.85);margin-bottom:14px">Configure seu programa</div>
-    <!-- KRONOS PULSE inline — insight contextual antes de iniciar -->
-    <div id="pulseInsightCard"></div>
-    <button onclick="iniciarTreino()" style="background:#fff;color:var(--accent);border:none;border-radius:12px;padding:13px 24px;font-family:var(--font);font-size:0.9rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent;margin-top:4px">
-      <i data-lucide="play" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-      INICIAR TREINO
-    </button>
-  </div>
-
-  <!-- IA ROW — KRONOS + KRONIA lado a lado, compactos -->
+  <!-- IA ROW — KRONOS + KRONIA lado a lado -->
   <div class="home-section-title">Inteligência IA</div>
   <div style="display:flex;gap:10px;padding:0 16px 16px">
 
-    <!-- KRONOS AI Coach — compacto -->
-    <div onclick="navTo('orientacao');openOrientacao()" style="flex:1;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.1));border:1.5px solid rgba(168,85,247,0.45);border-radius:18px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
-        <div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 12px rgba(168,85,247,0.4)">
-          <i data-lucide="zap" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+    <!-- KRONOS AI Coach -->
+    <div onclick="navTo('orientacao');openOrientacao()" class="kronos-ai-card">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(168,85,247,0.45)">
+          <i data-lucide="zap" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="2"></i>
         </div>
         <div>
-          <div style="font-family:var(--display);font-size:0.95rem;letter-spacing:.06em;color:#c084fc;line-height:1">KRONOS</div>
-          <div style="font-size:0.55rem;font-weight:800;color:rgba(168,85,247,0.8);letter-spacing:.08em">AI COACH</div>
+          <div style="font-family:var(--display);font-size:1rem;letter-spacing:.06em;color:#c084fc;line-height:1">KRONOS</div>
+          <div style="font-size:0.5rem;font-weight:800;color:rgba(168,85,247,0.8);letter-spacing:.1em">AI COACH</div>
         </div>
       </div>
-      <div style="font-size:0.72rem;color:rgba(192,132,252,0.75);line-height:1.4">Pergunte, analise e gere treinos com IA</div>
+      <div id="kronosDica" style="font-size:0.68rem;font-weight:700;color:#c084fc;text-transform:uppercase;letter-spacing:.04em;line-height:1.3;margin-bottom:8px">DICA DO KRONOS:<br>FOCO NA TÉCNICA HOJE</div>
+      <!-- Mini circular progress -->
+      <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+        <svg width="28" height="28" viewBox="0 0 28 28">
+          <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(168,85,247,0.2)" stroke-width="3"/>
+          <circle cx="14" cy="14" r="11" fill="none" stroke="#a855f7" stroke-width="3" stroke-dasharray="69" stroke-dashoffset="17" stroke-linecap="round" transform="rotate(-90 14 14)"/>
+        </svg>
+        <span style="font-size:0.58rem;color:rgba(168,85,247,0.7);font-weight:600">Train Model</span>
+      </div>
     </div>
 
-    <!-- KRONIA Transforms — compacto -->
-    <div onclick="openTransformsScreen()" style="flex:1;background:linear-gradient(135deg,rgba(255,107,0,0.16),rgba(255,107,0,0.07));border:1.5px solid rgba(255,107,0,0.38);border-radius:18px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
-        <div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#FF6B00,#FF9A3C);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 12px rgba(255,107,0,0.38)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <!-- KRONIA Evolution Tools -->
+    <div onclick="openTransformsScreen()" class="kronia-tools-card">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#FF6B00,#FF9A3C);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(255,107,0,0.4)">
+          <i data-lucide="settings" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="2"></i>
         </div>
         <div>
-          <div style="font-family:var(--display);font-size:0.95rem;letter-spacing:.06em;color:#fff;line-height:1">KRONIA</div>
-          <div style="font-size:0.55rem;font-weight:800;color:rgba(255,107,0,0.9);letter-spacing:.08em">TRANSFORMS</div>
+          <div style="font-family:var(--display);font-size:1rem;letter-spacing:.06em;color:#fff;line-height:1">KRONIA</div>
+          <div style="font-size:0.5rem;font-weight:800;color:rgba(255,140,0,0.9);letter-spacing:.1em">EVOLUTION TOOLS</div>
         </div>
       </div>
-      <div style="font-size:0.72rem;color:rgba(255,255,255,0.55);line-height:1.4">Grafo · Catálogo · Defensive IA</div>
+      <!-- Mini line chart -->
+      <svg width="100%" height="36" viewBox="0 0 100 36" preserveAspectRatio="none" style="display:block;margin-bottom:6px;opacity:0.85">
+        <polyline points="0,28 15,22 30,26 45,14 60,18 75,8 90,12 100,6" fill="none" stroke="#FF8C00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="0,28 15,22 30,26 45,14 60,18 75,8 90,12 100,6 100,36 0,36" fill="url(#kroniGrad)" opacity="0.25"/>
+        <defs><linearGradient id="kroniGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF8C00"/><stop offset="100%" stop-color="transparent"/></linearGradient></defs>
+      </svg>
     </div>
 
   </div>
 
+  <!-- ESTA SEMANA — WeeklyPerformanceCard unificado -->
   <div class="home-section-title">Esta semana</div>
-  <div class="home-stats-row">
-    <div class="home-stat-card">
-      <div class="home-stat-val" id="homeStreak">0</div>
-      <div class="home-stat-lbl">Sequência</div>
+  <div class="weekly-perf-card" id="weeklyPerfCard">
+    <!-- Left: Circular streak ring -->
+    <div class="weekly-perf-left">
+      <div class="weekly-ring-wrap">
+        <svg class="weekly-ring-svg" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="10"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#FF8C00" stroke-width="10"
+            stroke-dasharray="314" id="homeStreakRing" stroke-dashoffset="235"
+            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          <!-- Flame icons -->
+          <text x="50" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.6)">🔥</text>
+          <text x="70" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.4)">🔥</text>
+        </svg>
+        <div class="weekly-ring-inner">
+          <div class="weekly-ring-num" id="homeStreak">0</div>
+          <div class="weekly-ring-lbl">SEQUÊNCIA<br>DIAS</div>
+        </div>
+      </div>
     </div>
-    <div class="home-stat-card">
-      <div class="home-stat-val" id="homeSemanaTreinos">0</div>
-      <div class="home-stat-lbl">Treinos</div>
-    </div>
-    <div class="home-stat-card">
-      <div class="home-stat-val" id="homeVolSemana">0</div>
-      <div class="home-stat-lbl">Volume</div>
+    <!-- Right: Progress bars -->
+    <div class="weekly-perf-right">
+      <div class="weekly-bar-item">
+        <div class="weekly-bar-header">
+          <span class="weekly-bar-name">TREINOS</span>
+          <span class="weekly-bar-val"><span id="homeSemanaTreinos">0</span>/5</span>
+        </div>
+        <div class="weekly-bar-track">
+          <div class="weekly-bar-fill" id="homeTreinosBarFill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="weekly-bar-item" style="margin-top:14px">
+        <div class="weekly-bar-header">
+          <span class="weekly-bar-name">VOLUME</span>
+          <span class="weekly-bar-val"><span id="homeVolSemana">0</span>kg</span>
+        </div>
+        <div class="weekly-bar-track">
+          <div class="weekly-bar-fill vol" id="homeVolBarFill" style="width:0%"></div>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="home-section-title">Nutrição & Ferramentas</div>
 
-  <!-- Banner de upgrade — visível só para plano free, atualizado por updatePlanBadge() -->
-  <div id="homeUpgradeBanner" onclick="openPlanModal()" style="display:none;margin:0 16px 10px;background:linear-gradient(135deg,rgba(249,115,22,0.08),rgba(249,115,22,0.04));border:1px solid rgba(249,115,22,0.2);border-radius:14px;padding:11px 14px;cursor:pointer;align-items:center;gap:12px">
+  <!-- Banner de upgrade — melhorado com gradiente premium -->
+  <div id="homeUpgradeBanner" onclick="openPlanModal()" class="upgrade-banner-premium">
     <div style="flex:1;min-width:0">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--accent);letter-spacing:.01em">Desbloqueie a IA completa</div>
-      <div id="homeUpgradeSubtext" style="font-size:0.7rem;color:var(--text-2);margin-top:2px">Coach ilimitado · Dieta sem limite · R$29,90/mês</div>
+      <div style="font-size:0.85rem;font-weight:800;color:#FF8C00;letter-spacing:.01em">Desbloqueie a IA completa</div>
+      <div id="homeUpgradeSubtext" style="font-size:0.7rem;color:rgba(255,255,255,0.65);margin-top:3px">Coach ilimitado · Dieta · Mesociclo · R$29,90/mês</div>
     </div>
-    <div style="flex-shrink:0;background:var(--accent);color:#fff;font-size:0.72rem;font-weight:800;padding:6px 13px;border-radius:8px;letter-spacing:.03em">VER PRO</div>
+    <div style="flex-shrink:0;background:linear-gradient(135deg,#FF8C00,#FF6B00);color:#fff;font-size:0.72rem;font-weight:800;padding:8px 14px;border-radius:10px;letter-spacing:.04em;box-shadow:0 3px 10px rgba(255,107,0,0.4)">VER PRO</div>
   </div>
 
   <div class="home-tools-grid" style="grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
@@ -871,7 +896,88 @@
     </div>
   </div>
 
+  <!-- ÚLTIMA CONQUISTA + TREINO RECOMENDADO — lado a lado -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 20px">
+
+    <!-- AchievementCard -->
+    <div class="achievement-card" id="achievementCard">
+      <div class="achievement-card-title">ÚLTIMA CONQUISTA</div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:10px 0">
+        <div style="font-size:2rem">🏆</div>
+      </div>
+      <div class="achievement-card-desc" id="achievementDesc">Sua conquista</div>
+    </div>
+
+    <!-- RecommendedWorkoutCard -->
+    <div class="recommended-card" onclick="openStartWorkoutScreen()" id="recommendedWorkoutCard">
+      <div class="achievement-card-title">TREINO RECOMENDADO</div>
+      <div class="recommended-card-thumb">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.7)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+      </div>
+      <div class="achievement-card-desc" id="recommendedWorkoutDesc">Treino A:<br>Foco força superior</div>
+    </div>
+
+  </div>
+
   <div style="height:120px"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     START WORKOUT SCREEN (VAMOS TREINAR?)
+══════════════════════════════════════════ -->
+
+<div id="startWorkoutScreen">
+  <!-- Header -->
+  <div class="sws-header">
+    <button class="sws-back-btn" onclick="closeStartWorkoutScreen()">
+      <i data-lucide="chevron-left" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+    </button>
+    <div id="homePlanBadgeSWS" onclick="openPlanModal()" style="cursor:pointer;border-radius:20px;padding:4px 12px;font-size:0.65rem;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5)">FREE 5/5</div>
+  </div>
+  <div class="sws-title-area">
+    <div class="sws-subtitle" id="swsGreeting">BOA TARDE</div>
+    <div class="sws-title">VAMOS TREINAR?</div>
+  </div>
+
+  <!-- WorkoutHeroCard -->
+  <div class="workout-hero-card" id="workoutHeroCard">
+    <div class="workout-hero-badge">TREINO DE HOJE</div>
+    <div class="workout-hero-title" id="swsTodayTreino">TREINO A: FOCO FORÇA SUPERIOR (AVANÇADO)</div>
+    <button onclick="navTo('programa');openConfig();closeStartWorkoutScreen()" class="workout-hero-customize-btn">
+      <i data-lucide="settings" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"></i>
+      PERSONALIZAR PROGRAMA
+    </button>
+  </div>
+
+  <!-- KronosFeedbackCard -->
+  <div class="kronos-feedback-card" id="kronosFeedbackCard">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#7c3aed,#5b21b6);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 16px rgba(124,58,237,0.45)">
+        <i data-lucide="zap" class="lucide" width="20" height="20" stroke="#c084fc" fill="none" stroke-width="2"></i>
+      </div>
+      <!-- Audio wave visualization -->
+      <div class="audio-wave" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+    <div id="kronosFeedbackMsg" style="font-size:0.82rem;font-weight:700;color:#fff;margin-top:12px;line-height:1.4">
+      KRONOS: Seus dados estão processados, vamos lá!
+    </div>
+  </div>
+
+  <!-- StartWorkoutButton -->
+  <button class="start-workout-btn" onclick="iniciarTreino()">
+    INICIAR TREINO
+    <i data-lucide="play" class="lucide" width="20" height="20" stroke="currentColor" fill="currentColor" stroke-width="1.5"></i>
+  </button>
+
+  <!-- ExercisePreviewList -->
+  <div class="exercise-preview-list" id="exercisePreviewList">
+    <!-- items populated by JS -->
+  </div>
+
+  <div style="height:100px"></div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -1814,7 +1920,7 @@
 <div class="footer-actions">
   <button class="btn btn-nav active" id="nav-inicio" onclick="navTo('inicio');openHome()">
     <span class="btn-icon"><i data-lucide="home" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
-    <span class="btn-label">Início</span>
+    <span class="btn-label">Home</span>
   </button>
   <button class="btn btn-nav" id="nav-treino" onclick="navTo('treino');closeHome()">
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>

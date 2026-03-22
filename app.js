@@ -3122,6 +3122,8 @@ function getNextTreinoIdx() {
 let _disposicaoAtual = null;
 
 function iniciarTreino() {
+  // Se chamado da StartWorkoutScreen, fechar ela primeiro e então mostrar check-in
+  closeStartWorkoutScreen();
   // Mostrar check-in de disposição antes de iniciar
   const dlg = document.getElementById("modalDisposicao");
   if (dlg) {
@@ -3173,10 +3175,16 @@ function updateHomeScreen() {
   const hist = safeJSON(STORAGE.historyKey, []);
   const cfg  = safeJSON("kronia_config", {});
 
-  // Saudação por hora
+  // Saudação por hora + nome do usuário
   const hora  = new Date().getHours();
-  const sauds = ["Boa madrugada", "Bom dia", "Boa tarde", "Boa noite"];
-  document.getElementById("homeGreeting").textContent = sauds[hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3];
+  const sauds = ["BOA MADRUGADA", "BOM DIA", "BOA TARDE", "BOA NOITE"];
+  const saudIdx = hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3;
+  document.getElementById("homeGreeting").textContent = sauds[saudIdx];
+
+  // Nome do usuário no título
+  const userName = cfg.nome || localStorage.getItem("kronia_nome") || "";
+  const titleEl = document.getElementById("homeUserNameTitle");
+  if (titleEl) titleEl.textContent = userName ? userName.toUpperCase() : "ATLETA";
 
   // Streak — calcula a partir do hist já lido (sem reler localStorage)
   const today = new Date(); today.setHours(0,0,0,0);
@@ -3188,6 +3196,12 @@ function updateHomeScreen() {
     if (streak > 0 && !days.has(cursor) && !days.has(cursor + 86400000)) break;
   }
   document.getElementById("homeStreak").textContent = streak;
+  // Circular ring — circunferência ≈ 314, 30 dias = meta
+  const ringEl = document.getElementById("homeStreakRing");
+  if (ringEl) {
+    const pct = Math.min(streak / 30, 1);
+    ringEl.setAttribute("stroke-dashoffset", Math.round(314 * (1 - pct)));
+  }
 
   // Banner turista
   const banner = document.getElementById("turistaBanner");
@@ -3202,20 +3216,99 @@ function updateHomeScreen() {
     if (h.createdAt > semAgo) { volSem += v; semTreinos++; }
   }
   document.getElementById("homeSemanaTreinos").textContent = semTreinos;
-  document.getElementById("homeVolSemana").textContent =
-    volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
+  // Progress bar treinos
+  const treinosBar = document.getElementById("homeTreinosBarFill");
+  if (treinosBar) treinosBar.style.width = Math.min((semTreinos / 5) * 100, 100) + "%";
+
+  const volFormatted = volSem > 999 ? (volSem / 1000).toFixed(1) + "t" : Math.round(volSem) + "kg";
+  document.getElementById("homeVolSemana").textContent = volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
+  // Progress bar volume (meta 12.000kg/semana)
+  const volBar = document.getElementById("homeVolBarFill");
+  if (volBar) volBar.style.width = Math.min((volSem / 12000) * 100, 100) + "%";
 
   // Treino do dia
   const draft    = safeJSON(STORAGE.draftKey, null);
   const sections = draft?.sections || [];
   const nextSec  = sections[getNextTreinoIdx()];
-  document.getElementById("homeTodayTreino").textContent = "Treino " + (nextSec?.treinoKey || "A");
-  document.getElementById("homeTodaySub").textContent    =
-    (nextSec?.cards || []).length > 0 ? nextSec.cards.length + " exercícios" : "Configure seu programa";
+  const nextTreinoKey = nextSec?.treinoKey || "A";
+  const nextCards = nextSec?.cards || [];
+  const nextSubtitle = nextCards.length > 0 ? nextCards.length + " exercícios" : "Configure seu programa";
+  if (document.getElementById("homeTodayTreino")) {
+    document.getElementById("homeTodayTreino").textContent = "Treino " + nextTreinoKey;
+  }
+  if (document.getElementById("homeTodaySub")) {
+    document.getElementById("homeTodaySub").textContent = nextSubtitle;
+  }
+
+  // AchievementCard — última conquista
+  _updateAchievementCard(streak, hist.length);
+
+  // RecommendedWorkoutCard
+  const recDesc = document.getElementById("recommendedWorkoutDesc");
+  if (recDesc) {
+    const focusMap = { A:"Foco força superior", B:"Foco força inferior", C:"Hipertrofia total", D:"Força e potência", E:"Resistência muscular", F:"Full body" };
+    recDesc.innerHTML = `Treino ${nextTreinoKey}:<br>${focusMap[nextTreinoKey] || "Treino personalizado"}`;
+  }
 
   // Passes streak/hist pré-computados para evitar reler
   try { renderDesafios(); } catch(e) {}
   try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+}
+
+function _updateAchievementCard(streak, totalTreinos) {
+  const desc = document.getElementById("achievementDesc");
+  if (!desc) return;
+  if (streak >= 30) desc.textContent = "30 dias seguidos!";
+  else if (streak >= 14) desc.textContent = `${streak} dias na fila`;
+  else if (streak >= 7) desc.textContent = "1 semana completa";
+  else if (totalTreinos >= 100) desc.textContent = "100 treinos feitos";
+  else if (totalTreinos >= 50) desc.textContent = "50 treinos feitos";
+  else if (totalTreinos > 0) desc.textContent = `${totalTreinos} treinos registrados`;
+  else desc.textContent = "Comece a treinar!";
+}
+
+function openStartWorkoutScreen() {
+  const sws = document.getElementById("startWorkoutScreen");
+  if (!sws) return;
+  sws.classList.add("show");
+  // Update greeting
+  const hora = new Date().getHours();
+  const greets = ["BOA MADRUGADA", "BOM DIA", "BOA TARDE", "BOA NOITE"];
+  const swsGreet = document.getElementById("swsGreeting");
+  if (swsGreet) swsGreet.textContent = greets[hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3];
+  // Workout title
+  const draft = safeJSON(STORAGE.draftKey, null);
+  const sections = draft?.sections || [];
+  const nextSec = sections[getNextTreinoIdx()];
+  const nextKey = nextSec?.treinoKey || "A";
+  const focusMap = { A:"FOCO FORÇA SUPERIOR (AVANÇADO)", B:"FOCO FORÇA INFERIOR (AVANÇADO)", C:"HIPERTROFIA TOTAL", D:"FORÇA E POTÊNCIA", E:"RESISTÊNCIA MUSCULAR", F:"FULL BODY" };
+  const swsTitle = document.getElementById("swsTodayTreino");
+  if (swsTitle) swsTitle.textContent = `TREINO ${nextKey}: ${focusMap[nextKey] || "PERSONALIZADO"}`;
+  // Exercise preview list
+  _renderExercisePreviewList(nextSec?.cards || []);
+  // Lucide icons re-render
+  try { lucide.createIcons(); } catch(e) {}
+}
+
+function closeStartWorkoutScreen() {
+  const sws = document.getElementById("startWorkoutScreen");
+  if (sws) sws.classList.remove("show");
+}
+
+function _renderExercisePreviewList(cards) {
+  const list = document.getElementById("exercisePreviewList");
+  if (!list) return;
+  if (!cards.length) { list.innerHTML = ""; return; }
+  const muscleIcons = { peito:"💪", costas:"🔙", pernas:"🦵", ombros:"🙆", biceps:"💪", triceps:"💪", abdomen:"🧱", gluteos:"🍑" };
+  list.innerHTML = cards.slice(0, 6).map((c, i) => {
+    const ex = c.exercicios?.[0]?.nome || c.nomeBloco || `Exercício ${i+1}`;
+    return `<div class="exercise-preview-item">
+      <div class="exercise-preview-thumb">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.6)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+      </div>
+      <div class="exercise-preview-label">${ex}</div>
+    </div>`;
+  }).join("");
 }
 
 function _updateHomeBannerFast(streak, totalTreinos) {
