@@ -2011,9 +2011,6 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   background-size: 100% 100%, 40px 40px, 40px 40px;
   z-index: 0;
 }
-#transformsScreen {
-  position: relative;
-}
 #transformsScreen .transforms-header,
 #transformsScreen .transforms-content {
   position: relative;
