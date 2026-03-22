@@ -97,6 +97,10 @@
 
 <div id="emailLoginScreen">
   <div id="loginBgGrid" style="position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(ellipse at 50% 0%,rgba(255,107,0,0.12) 0%,transparent 55%),linear-gradient(rgba(255,107,0,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.02) 1px,transparent 1px);background-size:100% 100%,32px 32px,32px 32px;z-index:0"></div>
+  <!-- Logo tela cheia -->
+  <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0">
+    <img src="Kronia.png?v=2" style="width:100%;max-width:480px;height:auto;object-fit:contain;display:block;padding:24px;">
+  </div>
   <div id="emailLoginHeader" style="position:relative;z-index:1">
     <button id="emailLoginBack" onclick="hideEmailLogin()" aria-label="Voltar">
       <i data-lucide="chevron-left" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75" aria-hidden="true"></i>
@@ -104,11 +108,6 @@
     <div id="emailLoginHeaderTitle">Login</div>
   </div>
   <div id="emailLoginBody" style="position:relative;z-index:1">
-    <!-- Logo pequeno -->
-    <div style="display:flex;justify-content:center;margin-bottom:28px">
-      <img src="Kronia.png?v=2" style="width:100px;height:100px;object-fit:contain;display:block;">
-    </div>
-
     <div id="loginError" role="alert" aria-live="polite"></div>
     <label for="loginEmail" class="sr-only">E-mail</label>
     <input id="loginEmail" class="login-input ff-input" type="email" placeholder="seu@email.com" autocomplete="email" aria-label="E-mail" aria-required="true" />

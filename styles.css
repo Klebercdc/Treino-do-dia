@@ -1339,6 +1339,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 /* ── EMAIL LOGIN SCREEN ── */
 #emailLoginScreen {
   background: #090909;
+  justify-content: flex-end;
 }
 .ff-input {
   background: rgba(255,255,255,0.05) !important;
