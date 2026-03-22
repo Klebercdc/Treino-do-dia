@@ -796,7 +796,7 @@ function serializeCurrentState() {
   return { v:3, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
 }
 function loadState(state) {
-  if (!state || !Array.isArray(state.sections)) return false;
+  if (!state || !Array.isArray(state.sections) || state.sections.length === 0) return false;
   try {
     if (state.freq) document.getElementById("freq").value = state.freq;
     if (state.obj)  document.getElementById("obj").value  = state.obj;
@@ -3010,9 +3010,16 @@ window.onload = () => {
     if (r) loaded = loadState(JSON.parse(r));
   } catch {}
   if (!loaded) gerarProtocolo();
+  // Garante que o container nunca fique vazio
+  if (!document.getElementById("container").children.length) gerarProtocolo();
 
   // Abrir tela inicial
   try { navTo("inicio"); openHome(); } catch(e) { navTo("treino"); }
+  // Fallback: re-abre homeScreen se não tiver sido exibida
+  setTimeout(() => {
+    const hs = document.getElementById("homeScreen");
+    if (hs && !hs.classList.contains("show")) { try { openHome(); } catch(e) {} }
+  }, 300);
 
   // Tema salvo
   if (localStorage.getItem("kronia_light") === "1") {
