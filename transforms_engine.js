@@ -75,7 +75,7 @@ const TE_DEFENSIVE = [
     name: 'Streak em Risco',
     severity: 'low',
     icon: 'repeat',
-    trigger: d => d.diasSemTreino >= 2,
+    trigger: d => d.diasSemTreino != null && d.diasSemTreino >= 2,
     message: d => `${d.diasSemTreino} dias sem treino. Streak em risco.`,
     action: 'Retomar treino hoje',
   },
@@ -102,7 +102,7 @@ function teComputeAthleteData() {
   })();
 
   // Days since last workout
-  let diasSemTreino = 99;
+  let diasSemTreino = null;
   if (hist.length > 0) {
     const last = hist.reduce((a, b) => new Date(a.createdAt) > new Date(b.createdAt) ? a : b);
     diasSemTreino = Math.floor((Date.now() - new Date(last.createdAt)) / 86400000);
@@ -479,9 +479,10 @@ async function teCallKronos(alerts, athleteData) {
       ? alerts.map(a => `[${a.severity.toUpperCase()}] ${a.message}`).join(' | ')
       : 'Nenhum alerta crítico detectado.';
 
+    const diasStr = athleteData.diasSemTreino != null ? `${athleteData.diasSemTreino} dias` : 'sem dados (usuário novo, ainda sem treinos registrados)';
     const userMsg = alerts.length > 0
-      ? `Alertas detectados no atleta: ${alertSummary}. Dados fisiológicos: fadiga=${athleteData.fadigaScore.toFixed(1)}, semSemPR=${athleteData.semSemPR}, varianciaRPE=${athleteData.rpeVariance.toFixed(1)}, regressaoCarga=${athleteData.cargaRegression.toFixed(1)}%, diasSemTreino=${athleteData.diasSemTreino}. Dê recomendações práticas em português, máximo 2 parágrafos.`
-      : `O atleta está com dados saudáveis: fadiga=${athleteData.fadigaScore.toFixed(1)}, diasSemTreino=${athleteData.diasSemTreino}. Dê um feedback positivo e dica de manutenção, máximo 2 parágrafos.`;
+      ? `Alertas detectados no atleta: ${alertSummary}. Dados fisiológicos: fadiga=${athleteData.fadigaScore.toFixed(1)}, semSemPR=${athleteData.semSemPR}, varianciaRPE=${athleteData.rpeVariance.toFixed(1)}, regressaoCarga=${athleteData.cargaRegression.toFixed(1)}%, diasSemTreino=${diasStr}. Dê recomendações práticas em português, máximo 2 parágrafos.`
+      : `O atleta está com dados saudáveis: fadiga=${athleteData.fadigaScore.toFixed(1)}, diasSemTreino=${diasStr}. Dê um feedback positivo e dica de manutenção, máximo 2 parágrafos.`;
 
     let headers = { 'Content-Type': 'application/json' };
     try { headers = await getAuthHeaders(); } catch {}

@@ -24,7 +24,7 @@ function pulseCompute() {
     const dow     = now.getDay(); // 0=dom, 1=seg...
 
     // Dias sem treinar
-    let diasSemTreino = 99;
+    let diasSemTreino = null;
     if (hist.length > 0) {
       const last = hist[0]; // histórico já vem do mais recente
       if (last && last.createdAt) {

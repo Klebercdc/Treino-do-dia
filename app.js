@@ -2082,7 +2082,7 @@ Fadiga acumulada (FadigaScore): ${d.fadigaScore.toFixed(1)}/10${d.fadigaScore > 
 Variância de RPE: ${d.rpeVariance.toFixed(1)}${d.rpeVariance > 3 ? ' ← RPE inconsistente, recalibrar' : ' ← estável'}
 Semanas sem PR: ${d.semSemPR}${d.semSemPR >= 3 ? ' ← possível platô' : ' ← progredindo'}
 Regressão de carga: ${d.cargaRegression.toFixed(1)}%${d.cargaRegression < -5 ? ' ← carga caindo, investigar recuperação/nutrição' : ' ← estável'}
-Dias sem treinar: ${d.diasSemTreino}${d.diasSemTreino > 5 ? ' ← sequência interrompida' : ''}
+Dias sem treinar: ${d.diasSemTreino != null ? d.diasSemTreino : 'sem dados (nenhum treino registrado ainda)'}${d.diasSemTreino > 5 ? ' ← sequência interrompida' : ''}
 Alertas defensivos ativos: ${alertStr}
 USE esses dados para fundamentar suas recomendações. Se FadigaScore > 8.5, priorize recuperação. Se sem PR há 3+ semanas, sugira variação de estímulo ou deload.`;
   } catch(e) { return ''; }
