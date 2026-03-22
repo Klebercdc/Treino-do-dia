@@ -758,14 +758,14 @@ to   { width: 100%; }
 #emailLoginBack { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--text); cursor: pointer; border-radius: 10px; transition: background 0.15s; }
 #emailLoginBack:active { background: var(--surface); }
 #emailLoginHeaderTitle { font-family: var(--font); font-size: 1.1rem; font-weight: 700; color: var(--text); position: absolute; left: 50%; transform: translateX(-50%); }
-#emailLoginBody { flex: 1; padding: 32px 28px 48px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; max-width: 420px; width: 100%; margin: 0 auto; }
+#emailLoginBody { flex: 1; padding: 32px 28px calc(env(safe-area-inset-bottom, 16px) + 56px); display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; max-width: 420px; width: 100%; margin: 0 auto; }
 #emailLoginBody h2 { font-family: var(--font); font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .login-input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.3); border-radius: 12px; color: #fff; font-family: var(--font); font-size: 0.95rem; outline: none; box-sizing: border-box; transition: border-color .2s; }
 .login-input::placeholder { color: var(--muted); }
 .login-input:focus { border-color: var(--accent); }
 #forgotPassLink { font-size: 0.85rem; color: var(--accent); font-weight: 600; cursor: pointer; text-align: right; margin-top: -6px; background: none; border: none; font-family: var(--font); }
-#btnEmail { width: 100%; padding: 15px; background: var(--accent); color: #fff; border: none; border-radius: 14px; font-family: var(--font); font-size: 1rem; font-weight: 700; cursor: pointer; transition: transform .15s; margin-top: 4px; }
+#btnEmail { width: 100%; padding: 15px 32px; background: #FF6B00; color: #fff; border: none; border-radius: 14px; font-family: var(--font); font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 4px; box-shadow: 0 6px 24px rgba(255,107,0,0.3); letter-spacing: 0.3px; display: block; }
 #btnEmail:active { transform: scale(0.97); }
 #loginToggle { font-size: 0.85rem; color: var(--text-2); text-align: center; cursor: pointer; margin-top: 8px; }
 #loginToggle span { color: var(--accent); font-weight: 700; }
