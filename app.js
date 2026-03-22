@@ -1178,11 +1178,11 @@ function renderEvoChart() {
   if (evoStats) evoStats.innerHTML = `
     <div class="evo-stat"><div class="evo-stat-val">${pr>0?pr+(_evoTab!=="freq"?"kg":""):"-"}</div><div class="evo-stat-lbl">${_evoTab==="freq"?"Total":_evoTab==="peso"?"Mínimo":"Recorde"}</div></div>
     <div class="evo-stat"><div class="evo-stat-val">${last>0?last+(_evoTab==="freq"?"":"kg"):"-"}</div><div class="evo-stat-lbl">Última Sessão</div></div>
-    <div class="evo-stat"><div class="evo-stat-val" style="color:${delta>=0?"#16a34a":"#dc2626"}">${delta>=0?"+":""}${delta}%</div><div class="evo-stat-lbl">vs Anterior</div></div>`;
+    <div class="evo-stat"><div class="evo-stat-val" style="color:${delta>=0?"#10b981":"#ef4444"}">${delta>=0?"+":""}${delta}%</div><div class="evo-stat-lbl">vs Anterior</div></div>`;
   if (_evoChart) { _evoChart.destroy(); _evoChart=null; }
   _evoChart = new Chart(document.getElementById("evoCanvas"), {
     type:"line",
-    data: { labels, datasets: [{ label, data:values, borderColor:"#f97316", backgroundColor:"rgba(249,115,22,0.08)", fill:true, tension:.35, pointBackgroundColor:"#f97316", pointRadius:4, pointHoverRadius:6 }] },
+    data: { labels, datasets: [{ label, data:values, borderColor:"#10b981", backgroundColor:"rgba(16,185,129,0.1)", fill:true, tension:.38, pointBackgroundColor:"#10b981", pointRadius:4, pointHoverRadius:7, pointBorderColor:"#fff", pointBorderWidth:1.5 }] },
     options: { responsive:true, plugins:{legend:{display:false}}, scales: { y:{beginAtZero:false,grid:{color:"rgba(255,255,255,0.05)"},ticks:{color:"#a3a3a3",font:{size:11}}}, x:{grid:{display:false},ticks:{color:"#a3a3a3",font:{size:10},maxRotation:0}} } },
   });
 }
