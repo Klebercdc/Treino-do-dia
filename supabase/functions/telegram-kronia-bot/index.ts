@@ -8,7 +8,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const BOT_TOKEN       = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
-const ALLOWED_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID") ?? "";
 const SUPABASE_URL    = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY     = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GROQ_API_KEY    = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -179,14 +178,6 @@ Deno.serve(async (req: Request) => {
   const chatId = (message.chat as Record<string, unknown>)?.id as number;
   const text   = (message.text as string) ?? "";
 
-  // Log para diagnóstico
-  console.log(`[kronia-bot] chatId recebido: ${chatId} | ALLOWED: ${ALLOWED_CHAT_ID}`);
-
-  // Segurança: só responde ao chat autorizado
-  if (ALLOWED_CHAT_ID && String(chatId) !== String(ALLOWED_CHAT_ID)) {
-    console.warn(`[kronia-bot] chatId bloqueado: ${chatId}`);
-    return new Response("OK", { status: 200 });
-  }
 
   let reply = "";
 
