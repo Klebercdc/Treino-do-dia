@@ -51,9 +51,10 @@
     var lbl = document.getElementById('ksStepLabel');
     if (lbl) lbl.textContent = 'PASSO ' + (idx + 1) + ' DE ' + _ksTotal;
 
-    // Texto do botão
+    // Texto do botão — orientado a captação
     var ctaLbl = document.getElementById('ksCtaLabel');
-    if (ctaLbl) ctaLbl.textContent = idx === _ksTotal - 1 ? 'Vamos começar' : 'Continuar';
+    var labels = ['Continuar', 'Quase lá', 'Conhecer o KRONOS'];
+    if (ctaLbl) ctaLbl.textContent = labels[idx] || 'Continuar';
 
     ksValidate();
   }

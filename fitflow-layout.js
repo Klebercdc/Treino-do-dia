@@ -11,10 +11,11 @@
   var FF_OB_TOTAL = 5;
 
   var FF_SLIDE_BGS = [
-    'radial-gradient(ellipse at 30% 20%, rgba(255,107,0,0.18) 0%, transparent 60%)',
-    'radial-gradient(ellipse at 70% 10%, rgba(99,102,241,0.15) 0%, transparent 60%)',
-    'radial-gradient(ellipse at 20% 80%, rgba(16,185,129,0.12) 0%, transparent 60%)',
-    'radial-gradient(ellipse at 50% 30%, rgba(255,107,0,0.25) 0%, transparent 60%)',
+    'radial-gradient(ellipse at 30% 15%, rgba(255,107,0,0.28) 0%, transparent 55%)',
+    'radial-gradient(ellipse at 70% 20%, rgba(255,107,0,0.2) 0%, transparent 60%)',
+    'radial-gradient(ellipse at 20% 70%, rgba(255,107,0,0.18) 0%, transparent 55%)',
+    'radial-gradient(ellipse at 60% 25%, rgba(255,107,0,0.25) 0%, transparent 55%)',
+    'radial-gradient(ellipse at 40% 20%, rgba(255,107,0,0.22) 0%, transparent 60%)',
   ];
 
   function ffObUpdateDots() {
@@ -36,8 +37,8 @@
     var isLast = ffObCurrent === FF_OB_TOTAL - 1;
     btn.classList.toggle('ff-cta-final', isLast);
     btn.innerHTML = isLast
-      ? 'Escolher meu plano <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'
-      : 'Próximo <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
+      ? 'Ativar o KRONOS agora <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'
+      : 'Continuar <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
   }
 
   window.ffObGoTo = function (idx) {
