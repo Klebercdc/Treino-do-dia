@@ -2236,6 +2236,9 @@
       <button class="transforms-tab" data-tab="catalogo" onclick="switchTransformsTab('catalogo',this)">
         <i data-lucide="share-2" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="1.75" style="margin-right:5px"></i>Catálogo
       </button>
+      <button class="transforms-tab" data-tab="machines" onclick="switchTransformsTab('machines',this);teRenderMachinesTab()">
+        <i data-lucide="cpu" width="12" height="12"></i> Machines
+      </button>
       <button class="transforms-tab" data-tab="defensive" onclick="switchTransformsTab('defensive',this)">
         <i data-lucide="shield" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="1.75" style="margin-right:5px"></i>Defensive
       </button>
@@ -2260,6 +2263,14 @@
     </div>
 
     <!-- TAB: DEFENSIVE -->
+    <div class="transforms-panel" id="tab-machines" style="display:none">
+      <div style="padding:4px 0 14px">
+        <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Machines</h2>
+        <p id="machinesSubtitle" style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin:0">Pipelines automáticos — clique Run para executar</p>
+      </div>
+      <div id="machinesCatalogList" style="display:flex;flex-direction:column;gap:9px"></div>
+    </div>
+
     <div class="transforms-panel" id="tab-defensive" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:10px">
         <div>
@@ -2297,6 +2308,7 @@
 <script src="app.js"></script>
 
 <script src="transforms_patch.js"></script>
+<script src="machine_engine.js"></script>
 <script src="transforms_engine.js"></script>
 <script src="kronos_pulse.js"></script>
 

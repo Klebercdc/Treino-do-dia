@@ -6,16 +6,21 @@
 
 /* ── ENTIDADES ──────────────────────────────────────────── */
 const TE_ENTITIES = {
-  Usuario:       { color: '#FF6B00', abbr: 'USR', group: 0 },
-  Treino:        { color: '#3B82F6', abbr: 'TRN', group: 1 },
-  Exercicio:     { color: '#6366F1', abbr: 'EXC', group: 1 },
-  RPE:           { color: '#F59E0B', abbr: 'RPE', group: 2 },
-  FadigaScore:   { color: '#EF4444', abbr: 'FAD', group: 2 },
-  PR:            { color: '#10B981', abbr: 'PR',  group: 3 },
-  Nutricao:      { color: '#84CC16', abbr: 'NUT', group: 3 },
-  Mesociclo:     { color: '#8B5CF6', abbr: 'MESO',group: 4 },
-  Recomendacao:  { color: '#EC4899', abbr: 'REC', group: 4 },
-  Alerta:        { color: '#F97316', abbr: 'ALT', group: 5 },
+  // confidence: confiança base da entidade (0.0–1.0)
+  //   1.0 = dado direto do usuário
+  //   0.9 = inferido de dado direto
+  //   0.75–0.85 = calculado/agregado
+  //   0.5–0.7 = inferido por modelo
+  Usuario:       { color: '#FF6B00', abbr: 'USR', group: 0, confidence: 1.0 },
+  Treino:        { color: '#3B82F6', abbr: 'TRN', group: 1, confidence: 1.0 },
+  Exercicio:     { color: '#6366F1', abbr: 'EXC', group: 1, confidence: 1.0 },
+  RPE:           { color: '#F59E0B', abbr: 'RPE', group: 2, confidence: 0.9  },
+  FadigaScore:   { color: '#EF4444', abbr: 'FAD', group: 2, confidence: 0.85 },
+  PR:            { color: '#10B981', abbr: 'PR',  group: 3, confidence: 1.0  },
+  Nutricao:      { color: '#84CC16', abbr: 'NUT', group: 3, confidence: 0.9  },
+  Mesociclo:     { color: '#8B5CF6', abbr: 'MESO',group: 4, confidence: 0.75 },
+  Recomendacao:  { color: '#EC4899', abbr: 'REC', group: 4, confidence: 0.75 },
+  Alerta:        { color: '#F97316', abbr: 'ALT', group: 5, confidence: 0.85 },
 };
 
 /* ── TRANSFORMS ─────────────────────────────────────────── */
@@ -301,6 +306,8 @@ function teSelectNode(type) {
   const related = TE_TRANSFORMS.filter(t => t.from === _teActiveNode || t.to === _teActiveNode);
 
   detail.style.display = 'block';
+  const confPct  = Math.round((cfg.confidence || 1) * 100);
+  const confBar  = '█'.repeat(Math.round(confPct / 10)) + '░'.repeat(10 - Math.round(confPct / 10));
   detail.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div style="width:36px;height:36px;border-radius:10px;background:${cfg.color}18;border:1px solid ${cfg.color}35;display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -308,7 +315,9 @@ function teSelectNode(type) {
       </div>
       <div>
         <div style="font-size:0.95rem;font-weight:800">${_teActiveNode}</div>
-        <div style="font-size:0.7rem;color:rgba(255,255,255,0.35)">Entidade selecionada</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.3);font-family:monospace;margin-top:2px">
+          confiança ${confBar} ${confPct}%
+        </div>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
@@ -583,4 +592,34 @@ function teUpdateHomeBadge(alerts) {
     badge.style.color = '#10B981';
     badge.style.borderColor = 'rgba(16,185,129,0.4)';
   }
+}
+
+/* ── MACHINES CATALOG (integração com machine_engine.js) ─── */
+
+/**
+ * Renderiza o catálogo de machines no painel de tab "machines".
+ * Chamado por switchTransformsTab quando a aba "machines" é ativada.
+ */
+function teRenderMachinesTab() {
+  if (typeof kmRenderMachinesCatalog === 'function') {
+    kmRenderMachinesCatalog('machinesCatalogList');
+  } else {
+    const el = document.getElementById('machinesCatalogList');
+    if (el) el.innerHTML = '<div style="font-size:0.75rem;color:rgba(255,255,255,0.3);padding:12px">machine_engine.js não carregado.</div>';
+  }
+}
+
+/**
+ * Executa a machine de análise completa e integra com o fluxo
+ * defensivo existente. Fallback para o scan clássico se o
+ * machine_engine.js não estiver carregado.
+ */
+async function teRunFullAnalysis() {
+  if (typeof kmRunMachineUI !== 'function') {
+    return runDefensiveScan();
+  }
+  const uid = await _sb.auth.getSession()
+    .then(r => r.data?.session?.user?.id)
+    .catch(() => 'local') || 'local';
+  await kmRunMachineUI('kronia.full_analysis', uid);
 }

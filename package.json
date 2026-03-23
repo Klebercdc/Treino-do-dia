@@ -9,7 +9,11 @@
     "test:workout":  "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
     "db:pull":       "supabase db pull",
     "db:push:test":  "dotenv -e .env.test -- supabase db push --db-url \"$VITE_SUPABASE_DB_URL_TEST\"",
-    "serve":         "npx serve . -p 3000 --no-clipboard"
+    "serve":         "npx serve . -p 3000 --no-clipboard",
+    "scraper":       "node etl/scrapers/cli.js",
+    "scraper:wger":  "node etl/scrapers/cli.js --sources wger --stats",
+    "scraper:exrx":  "node etl/scrapers/cli.js --sources exrx --stats",
+    "scraper:all":   "node etl/scrapers/cli.js --sources wger,exrx --csv --stats"
   },
   "devDependencies": {
     "@playwright/test": "^1.43.0",
