@@ -162,6 +162,21 @@ async function handleKronos(pergunta: string): Promise<string> {
 
 // ── Handler principal ─────────────────────────────────────────
 Deno.serve(async (req: Request) => {
+  const url = new URL(req.url);
+
+  // GET /register — registra o webhook no Telegram
+  if (req.method === "GET" && url.searchParams.get("action") === "register") {
+    const webhookUrl = `${url.origin}/functions/v1/telegram-kronia-bot`;
+    const res = await fetch(
+      `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`
+    );
+    const data = await res.json();
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method !== "POST") {
     return new Response("KRONIA Telegram Bot online.", { status: 200 });
   }
