@@ -1705,12 +1705,12 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   background: rgba(255,107,0,0.07);
   border: 1px solid rgba(255,107,0,0.2);
   border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 9px;
+  padding: 6px 14px;
+  font-size: 11px;
   font-weight: 800;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.5);
   letter-spacing: 1.5px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
   align-self: flex-start;
 }
 .ff-slide-icon {
@@ -1724,16 +1724,16 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   margin-bottom: 20px;
 }
 .ff-slide-title {
-  font-size: 28px;
+  font-size: 42px;
   font-weight: 900;
-  line-height: 1.15;
-  margin: 0 0 12px;
-  letter-spacing: -0.3px;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  letter-spacing: -0.5px;
   white-space: pre-line;
   color: #fff;
 }
 .ff-slide-sub {
-  font-size: 14px;
+  font-size: 17px;
   color: rgba(255,255,255,0.5);
   line-height: 1.7;
   margin: 0 0 18px;
