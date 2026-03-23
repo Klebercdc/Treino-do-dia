@@ -88,14 +88,16 @@ function updatePlanBadge() {
   var homeBadge = document.getElementById('homePlanBadge');
   if (homeBadge) {
     homeBadge.className = '';
+    var _zapIco = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+    var _crownIco = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>';
     if (isUltra) {
-      homeBadge.textContent = '👑 ULTRA';
+      homeBadge.innerHTML = _crownIco + ' ULTRA';
       homeBadge.className = 'badge-ultra';
     } else if (isPro) {
-      homeBadge.textContent = '⚡ PRO';
+      homeBadge.innerHTML = _zapIco + ' PRO';
       homeBadge.className = 'badge-pro';
     } else if (inTrial) {
-      homeBadge.textContent = '⚡ TRIAL · ' + trial.daysLeft + 'd';
+      homeBadge.innerHTML = _zapIco + ' TRIAL · ' + trial.daysLeft + 'd';
       homeBadge.className = 'badge-trial';
     } else {
       homeBadge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
@@ -229,13 +231,13 @@ function openPlanModal() {
       statusEl.style.background = 'rgba(168,85,247,0.12)';
       statusEl.style.border = '1px solid rgba(168,85,247,0.3)';
       statusEl.style.color = '#c084fc';
-      statusEl.innerHTML = '👑 Você está no plano ULTRA. Obrigado!';
+      statusEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:5px"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>Você está no plano ULTRA. Obrigado!';
     } else if (isPro) {
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(249,115,22,0.1)';
       statusEl.style.border = '1px solid rgba(249,115,22,0.3)';
       statusEl.style.color = 'var(--accent)';
-      statusEl.innerHTML = '⚡ Você está no plano PRO. Obrigado!';
+      statusEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:5px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Você está no plano PRO. Obrigado!';
     } else {
       statusEl.style.display = 'none';
     }
@@ -319,12 +321,14 @@ function updatePlanCTA(idx) {
     btn.style.background = 'var(--accent)';
     btn.style.border = 'none';
     var proPrice = _planBilling === 'anual' ? 'R$20,93/mês' : 'R$29,90/mês';
-    btn.textContent = plan === 'pro' ? 'Gerenciar PRO' : '⚡ Assinar PRO — ' + proPrice;
+    var zapSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+    btn.innerHTML = plan === 'pro' ? 'Gerenciar PRO' : '<span style="display:flex;align-items:center;justify-content:center;gap:6px">' + zapSvg + 'Assinar PRO — ' + proPrice + '</span>';
   } else { // ULTRA
     btn.style.background = 'linear-gradient(135deg,#a855f7,#7c3aed)';
     btn.style.border = 'none';
     var ultraPrice = _planBilling === 'anual' ? 'R$41,93/mês' : 'R$59,90/mês';
-    btn.textContent = plan === 'ultra' ? 'Gerenciar ULTRA' : '👑 Assinar ULTRA — ' + ultraPrice;
+    var crownSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>';
+    btn.innerHTML = plan === 'ultra' ? 'Gerenciar ULTRA' : '<span style="display:flex;align-items:center;justify-content:center;gap:6px">' + crownSvg + 'Assinar ULTRA — ' + ultraPrice + '</span>';
   }
 }
 

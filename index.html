@@ -747,7 +747,7 @@
     <!-- Trial countdown strip -->
     <div id="homeTrialStrip" style="display:none;margin-top:10px;background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(124,58,237,0.08));border:1px solid rgba(168,85,247,0.35);border-radius:12px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openPlanModal()">
       <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:0.9rem">⚡</span>
+        <i data-lucide="zap" class="lucide" width="16" height="16" stroke="#c084fc" fill="none" stroke-width="2"></i>
         <div>
           <div style="font-size:0.72rem;font-weight:800;color:#c084fc" id="homeTrialTitle">Trial PRO ativo</div>
           <div style="font-size:0.62rem;color:rgba(192,132,252,0.65)" id="homeTrialSub">7 dias de acesso completo</div>
@@ -2228,7 +2228,7 @@
         <span class="transforms-header-title">KRONIA <span style="color:#FF6B00">TRANSFORMS</span></span>
       </div>
     </div>
-    <span class="transforms-kernel-badge">MALTEGO KERNEL ⚡</span>
+    <span class="transforms-kernel-badge" style="display:inline-flex;align-items:center;gap:4px">MALTEGO KERNEL <i data-lucide="zap" class="lucide" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2.5"></i></span>
   </header>
 
   <div class="transforms-content">
@@ -2362,7 +2362,7 @@
     <!-- Trial banner (condicional) -->
     <div id="planTrialBanner" style="display:none;margin:12px 20px 0;background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(124,58,237,0.08));border:1px solid rgba(168,85,247,0.35);border-radius:14px;padding:11px 14px;flex-shrink:0">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:1.2rem;line-height:1">⚡</div>
+        <i data-lucide="zap" class="lucide" width="20" height="20" stroke="#c084fc" fill="none" stroke-width="2"></i>
         <div>
           <div style="font-size:0.76rem;font-weight:800;color:#c084fc" id="planTrialTitle">Trial PRO ativo — 7 dias grátis</div>
           <div style="font-size:0.66rem;color:rgba(192,132,252,0.65);margin-top:1px" id="planTrialSub">Explorando todas as funcionalidades PRO</div>
@@ -2376,8 +2376,8 @@
     <!-- Tabs de seleção de plano -->
     <div style="display:flex;gap:5px;margin:14px 20px 0;background:rgba(255,255,255,0.05);border-radius:13px;padding:4px;flex-shrink:0">
       <button id="planTab0" onclick="scrollPlanTo(0)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.65)">FREE</button>
-      <button id="planTab1" onclick="scrollPlanTo(1)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:var(--accent);color:#fff">⚡ PRO</button>
-      <button id="planTab2" onclick="scrollPlanTo(2)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)">👑 ULTRA</button>
+      <button id="planTab1" onclick="scrollPlanTo(1)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:var(--accent);color:#fff"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="zap" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>PRO</span></button>
+      <button id="planTab2" onclick="scrollPlanTo(2)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="crown" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>ULTRA</span></button>
     </div>
 
     <!-- Área de conteúdo dos planos (scroll vertical) -->
@@ -2415,7 +2415,7 @@
       <!-- PRO -->
       <div class="plan-card-slide" id="planSlide1" data-plan="pro" style="display:none">
         <div style="text-align:center;margin-bottom:12px">
-          <span style="display:inline-block;background:var(--accent);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 18px;border-radius:20px;letter-spacing:.1em">⚡ RECOMENDADO</span>
+          <span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 14px;border-radius:20px;letter-spacing:.1em"><i data-lucide="zap" class="lucide" width="9" height="9" stroke="currentColor" fill="none" stroke-width="2.5"></i>RECOMENDADO</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
           <div>
@@ -2448,7 +2448,7 @@
       <!-- ULTRA -->
       <div class="plan-card-slide" id="planSlide2" data-plan="ultra" style="display:none">
         <div style="text-align:center;margin-bottom:12px">
-          <span style="display:inline-block;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 18px;border-radius:20px;letter-spacing:.1em">👑 MÁXIMO PODER</span>
+          <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 14px;border-radius:20px;letter-spacing:.1em"><i data-lucide="crown" class="lucide" width="9" height="9" stroke="currentColor" fill="none" stroke-width="2.5"></i>MÁXIMO PODER</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
           <div>
@@ -2488,7 +2488,7 @@
     <!-- CTA principal -->
     <div style="padding:0 20px calc(20px + env(safe-area-inset-bottom));flex-shrink:0">
       <button id="planCTA" onclick="onPlanCTA()" style="width:100%;border:none;border-radius:14px;padding:16px;color:#fff;font-family:var(--font);font-size:0.95rem;font-weight:800;cursor:pointer;letter-spacing:.02em;transition:all .15s;background:var(--accent)">
-        ⚡ Assinar PRO — R$29,90/mês
+        <span style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="zap" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2.5"></i>Assinar PRO — R$29,90/mês</span>
       </button>
       <div style="text-align:center;font-size:0.63rem;color:rgba(255,255,255,0.25);margin-top:8px">Cancele quando quiser · Sem fidelidade · Seguro</div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;font-size:0.63rem;color:rgba(255,255,255,0.22)">
@@ -2506,16 +2506,16 @@
 ════════════════════════════════════════════════════ -->
 <div id="paywallModal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);align-items:flex-end;justify-content:center">
   <div style="background:#111;border:1px solid rgba(249,115,22,0.35);border-radius:24px 24px 0 0;max-width:480px;width:100%;padding:28px 22px calc(28px + env(safe-area-inset-bottom));text-align:center">
-    <div style="font-size:2.2rem;margin-bottom:10px">⚡</div>
+    <div style="display:flex;justify-content:center;margin-bottom:10px"><i data-lucide="zap" class="lucide" width="36" height="36" stroke="var(--accent)" fill="none" stroke-width="1.75"></i></div>
     <div style="font-family:var(--display);font-size:1.5rem;color:var(--accent);margin-bottom:6px;letter-spacing:.04em">Limite atingido</div>
     <div id="paywallMsg" style="font-size:0.82rem;color:var(--text-2);margin-bottom:20px;line-height:1.65">Você usou todas as consultas de IA gratuitas deste mês. Faça upgrade e desbloqueie o potencial completo.</div>
     <!-- Two upgrade options -->
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <button onclick="closePaywall();openPlanModal();setTimeout(()=>scrollPlanTo(1),200)" style="flex:1;background:var(--accent);border:none;border-radius:13px;padding:13px 10px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;line-height:1.3">
-        ⚡ PRO<br><span style="font-size:0.7rem;font-weight:600;opacity:.85">R$29,90/mês</span>
+        <span style="display:flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="zap" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"></i>PRO</span><span style="font-size:0.7rem;font-weight:600;opacity:.85">R$29,90/mês</span>
       </button>
       <button onclick="closePaywall();openPlanModal();setTimeout(()=>scrollPlanTo(2),200)" style="flex:1;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:13px;padding:13px 10px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;line-height:1.3">
-        👑 ULTRA<br><span style="font-size:0.7rem;font-weight:600;opacity:.85">R$59,90/mês</span>
+        <span style="display:flex;align-items:center;justify-content:center;gap:5px"><i data-lucide="crown" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"></i>ULTRA</span><span style="font-size:0.7rem;font-weight:600;opacity:.85">R$59,90/mês</span>
       </button>
     </div>
     <button onclick="closePaywall()" style="width:100%;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:11px;color:rgba(255,255,255,0.4);font-family:var(--font);font-size:0.82rem;cursor:pointer">Continuar com plano gratuito</button>
