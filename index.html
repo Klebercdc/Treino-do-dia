@@ -809,6 +809,49 @@
 
   </div>
 
+  <!-- ═══ DASHBOARD ACWR — Nó FAD do KRONIA TRANSFORMS ═══ -->
+  <div class="home-section-title">Fadiga &amp; Risco</div>
+  <div style="padding:0 16px 4px">
+
+    <!-- Velocímetro ACWR + Carga lado a lado -->
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+
+      <!-- Gauge ACWR -->
+      <div style="
+        flex:1;
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:14px 12px 10px;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+      ">
+        <div style="font-size:0.55rem;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:.1em;margin-bottom:6px">ACWR</div>
+        <canvas id="kronia-acwr-gauge" width="120" height="90"></canvas>
+      </div>
+
+      <!-- Bar Chart Carga Aguda vs Crônica -->
+      <div style="
+        flex:1.2;
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:14px 12px 10px;
+      ">
+        <div style="font-size:0.55rem;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:.1em;margin-bottom:8px">CARGA SEMANAL (sRPE)</div>
+        <div style="height:80px;position:relative">
+          <canvas id="kronia-load-chart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Cartão de Recomendação -->
+    <div id="kronia-rec-card" style="margin-bottom:4px"></div>
+
+  </div>
+
   <!-- ESTA SEMANA — WeeklyPerformanceCard unificado -->
   <div class="home-section-title">Esta semana</div>
   <div class="weekly-perf-card" id="weeklyPerfCard">
@@ -2511,6 +2554,7 @@
   });
 </script>
 <script src="fitflow-layout.js"></script>
+<script src="transforms_dashboard_acwr.js"></script>
 
 </body>
 </html>

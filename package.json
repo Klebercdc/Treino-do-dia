@@ -1,0 +1,23 @@
+{
+  "name": "kronia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KRONIA — Sistema de Gestão Fisiológica e Periodização",
+  "scripts": {
+    "test:e2e":      "npm run db:push:test && playwright test",
+    "test:sanity":   "playwright test tests/e2e/sanity.spec.ts --reporter=list",
+    "test:workout":  "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
+    "db:pull":       "supabase db pull",
+    "db:push:test":  "dotenv -e .env.test -- supabase db push --db-url \"$VITE_SUPABASE_DB_URL_TEST\"",
+    "serve":         "npx serve . -p 3000 --no-clipboard"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.43.0",
+    "@supabase/supabase-js": "^2.43.0",
+    "@types/node": "^20.12.0",
+    "dotenv": "^16.4.5",
+    "dotenv-cli": "^7.4.2",
+    "serve": "^14.2.3",
+    "typescript": "^5.4.5"
+  }
+}

@@ -432,6 +432,7 @@ async function runDefensiveScan() {
   const found = [];
 
   for (const dt of TE_DEFENSIVE) {
+    if (!athleteData.hasData) break;
     await new Promise(r => setTimeout(r, 280));
     addLog(`Executando: ${dt.name}...`);
     if (dt.trigger(athleteData)) {
@@ -446,12 +447,17 @@ async function runDefensiveScan() {
   _teAlerts = found;
   teRenderDefensiveList(found);
 
-  const highAlerts = found.filter(a => a.severity === 'high');
-  if (highAlerts.length > 0 || found.length > 0) {
-    addLog('Enviando análise para KRONOS...');
-    await teCallKronos(found, athleteData);
+  if (!athleteData.hasData) {
+    addLog('Sem dados de treino suficientes para análise.');
+    addLog('Registre seus primeiros treinos e execute o scan novamente.');
   } else {
-    addLog('Nenhum alerta detectado. Atleta em boa forma!');
+    const highAlerts = found.filter(a => a.severity === 'high');
+    if (highAlerts.length > 0 || found.length > 0) {
+      addLog('Enviando análise para KRONOS...');
+      await teCallKronos(found, athleteData);
+    } else {
+      addLog('Nenhum alerta detectado. Atleta em boa forma!');
+    }
   }
 
   _teScanning = false;

@@ -1,0 +1,28 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (NUNCA commitar)
+.env
+.env.local
+.env.test
+.env.*.local
+*.env
+
+# Playwright
+playwright-report/
+test-results/
+tests/dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Supabase local
+.supabase/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
