@@ -731,9 +731,9 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 #settingsScreen.show { display: flex; }
 .settings-header { display: flex; align-items: center; padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px 8px; gap: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .settings-title { flex: 1; font-family: var(--display); font-size: 1.2rem; letter-spacing: .06em; color: var(--text); text-align: center; }
-.settings-section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 20px 20px 8px; }
-.settings-group { margin: 0 16px 6px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-.settings-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .12s; border-bottom: 1px solid var(--border); }
+.settings-section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 20px 20px 8px; flex-shrink: 0; }
+.settings-group { margin: 0 16px 6px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; flex-shrink: 0; }
+.settings-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .12s; border-bottom: 1px solid rgba(255,255,255,0.1); min-height: 54px; }
 .settings-row:last-child { border-bottom: none; }
 .settings-row:active { background: var(--card-hover); }
 .settings-row-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
