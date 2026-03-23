@@ -3395,7 +3395,7 @@ function openPerfil() {
       const inicial = nome.charAt(0).toUpperCase();
       document.getElementById('perfilContaNome').textContent = nome;
       document.getElementById('perfilContaEmail').textContent = user.email || '';
-      document.getElementById('perfilContaInicial').textContent = inicial;
+      document.getElementById('perfilAvatar').textContent = inicial;
       logado.style.display = 'block';
       deslogado.style.display = 'none';
     } else {
