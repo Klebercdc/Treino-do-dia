@@ -3057,13 +3057,7 @@ window.onload = () => {
     }
   }
 
-  // Onboarding apenas na primeira visita
-  if (!localStorage.getItem("kronia_onboarded")) {
-    document.getElementById("onboarding").classList.add("show");
-    document.body.classList.add('overlay-open');
-    const footerEl = document.querySelector('.footer-actions');
-    if (footerEl) footerEl.style.display = 'none';
-  }
+  // Onboarding/setup são exibidos após login via checkFirstTimeFlow() em auth.js
 
   // PWA: listener de mensagens do Service Worker (background sync)
   if ('serviceWorker' in navigator) {
@@ -3395,7 +3389,7 @@ function openPerfil() {
       const inicial = nome.charAt(0).toUpperCase();
       document.getElementById('perfilContaNome').textContent = nome;
       document.getElementById('perfilContaEmail').textContent = user.email || '';
-      document.getElementById('perfilContaInicial').textContent = inicial;
+      document.getElementById('perfilAvatar').textContent = inicial;
       logado.style.display = 'block';
       deslogado.style.display = 'none';
     } else {
