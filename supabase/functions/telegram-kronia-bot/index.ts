@@ -30,11 +30,24 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
 // ── Envio de mensagem ─────────────────────────────────────────
 async function send(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+  // Tenta com Markdown primeiro; se falhar (ex: caracteres inválidos), envia sem formatação
+  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("[telegram-kronia-bot] sendMessage error:", JSON.stringify(err));
+
+    // Fallback: envia sem parse_mode para não silenciar a resposta
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+  }
 }
 
 // ── /ajuda ────────────────────────────────────────────────────
