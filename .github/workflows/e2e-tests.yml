@@ -1,0 +1,88 @@
+name: Testes E2E
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Banco de testes (configurar nos Secrets do repositório)
+      VITE_SUPABASE_URL_TEST:          ${{ secrets.VITE_SUPABASE_URL_TEST }}
+      VITE_SUPABASE_SERVICE_KEY_TEST:  ${{ secrets.VITE_SUPABASE_SERVICE_KEY_TEST }}
+      VITE_SUPABASE_DB_URL_TEST:       ${{ secrets.VITE_SUPABASE_DB_URL_TEST }}
+      PLAYWRIGHT_BASE_URL:             http://localhost:3000
+
+    steps:
+      # ── 1. Código ─────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      # ── 3. Playwright ─────────────────────────────────────────────────────
+      - name: Instalar browsers do Playwright
+        run: npx playwright install chromium --with-deps
+
+      # ── 4. Gera .env.test a partir dos Secrets ────────────────────────────
+      - name: Criar .env.test
+        run: |
+          cat > .env.test << 'EOF'
+          VITE_SUPABASE_URL_TEST=${{ secrets.VITE_SUPABASE_URL_TEST }}
+          VITE_SUPABASE_SERVICE_KEY_TEST=${{ secrets.VITE_SUPABASE_SERVICE_KEY_TEST }}
+          VITE_SUPABASE_DB_URL_TEST=${{ secrets.VITE_SUPABASE_DB_URL_TEST }}
+          EOF
+
+      # ── 5. Migration no banco de testes (se secrets configurados) ─────────
+      - name: Aplicar migration no banco de testes
+        if: ${{ env.VITE_SUPABASE_DB_URL_TEST != '' }}
+        run: |
+          npx supabase db push --db-url "$VITE_SUPABASE_DB_URL_TEST"
+        continue-on-error: true   # não bloqueia se banco de testes não estiver configurado
+
+      # ── 6. Roda os testes ─────────────────────────────────────────────────
+      - name: Sanity check (verifica roteamento do banco)
+        run: npm run test:sanity
+        continue-on-error: true   # sanity é informativo, não bloqueia
+
+      - name: Testes E2E — Registro de Treino
+        run: npm run test:workout
+
+      # ── 7. Relatórios e artefatos ─────────────────────────────────────────
+      - name: Upload do relatório HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload de screenshots (somente em falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ github.run_number }}
+          path: test-results/
+          retention-days: 7
+
+      # ── 8. Resumo no PR ───────────────────────────────────────────────────
+      - name: Resumo dos testes no PR
+        if: always()
+        uses: daun/playwright-report-summary@v3
+        with:
+          report-file: playwright-report/results.json
+        continue-on-error: true   # não falha se o plugin não encontrar o arquivo
