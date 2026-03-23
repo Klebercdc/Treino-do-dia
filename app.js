@@ -3944,6 +3944,14 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
   .then(data => {
     const text = data.content?.[0]?.text || data.error || "Sistemas online.";
     typing.innerHTML = renderMarkdown(text);
+    // Botão "Ir para Treino" quando não há programa configurado
+    if (!nextKey) {
+      const actionBtn = document.createElement("button");
+      actionBtn.className = "kronos-action-btn";
+      actionBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg> Ir para Treino`;
+      actionBtn.onclick = () => { closeOrientacao(); navTo("treino"); };
+      typing.appendChild(actionBtn);
+    }
     _orientExpertHistory.push({ role: "assistant", content: text });
     // Colapsa chips após saudação
     const row = document.querySelector(".orient-shortcuts-row");
@@ -4047,8 +4055,10 @@ function addOrientMsg(containerId, role, text) {
   wrap.className = `ai-msg ${role}`;
   wrap.setAttribute("data-role", role);
 
+  const kronosAvatar = `<div class="orient-kronos-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>`;
+
   if (role === "assistant") {
-    wrap.innerHTML = `<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
+    wrap.innerHTML = `${kronosAvatar}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
   } else {
     wrap.innerHTML = `<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
   }
