@@ -3,25 +3,12 @@
  * ============================================
  * Webhook do Telegram. Recebe comandos e responde com dados
  * do projeto Kronia em tempo real.
- *
- * Deploy:
- *   supabase functions deploy telegram-kronia-bot
- *
- * Variáveis de ambiente necessárias (Supabase Dashboard → Secrets):
- *   SUPABASE_URL                → URL do projeto
- *   SUPABASE_SERVICE_ROLE_KEY   → Service Role Key
- *   TELEGRAM_BOT_TOKEN          → Token do @KroniaAppBot
- *   TELEGRAM_CHAT_ID            → Seu chat ID autorizado
- *   GROQ_API_KEY                → Chave da API do KRONOS
- *
- * Registrar webhook (rode uma vez após o deploy):
- *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://twxoddzogbmaysebhour.supabase.co/functions/v1/telegram-kronia-bot"
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const BOT_TOKEN       = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
-const ALLOWED_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID")!;
+const ALLOWED_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID") ?? "";
 const SUPABASE_URL    = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY     = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GROQ_API_KEY    = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -30,7 +17,6 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
 // ── Envio de mensagem ─────────────────────────────────────────
 async function send(chatId: number, text: string) {
-  // Tenta com Markdown primeiro; se falhar (ex: caracteres inválidos), envia sem formatação
   const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -39,9 +25,8 @@ async function send(chatId: number, text: string) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    console.error("[telegram-kronia-bot] sendMessage error:", JSON.stringify(err));
+    console.error("[kronia-bot] sendMessage error:", JSON.stringify(err));
 
-    // Fallback: envia sem parse_mode para não silenciar a resposta
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -164,7 +149,7 @@ async function handleKronos(pergunta: string): Promise<string> {
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
 
-  // GET /register — registra o webhook no Telegram
+  // GET ?action=register — registra o webhook no Telegram
   if (req.method === "GET" && url.searchParams.get("action") === "register") {
     const webhookUrl = `${url.origin}/functions/v1/telegram-kronia-bot`;
     const res = await fetch(
@@ -194,8 +179,12 @@ Deno.serve(async (req: Request) => {
   const chatId = (message.chat as Record<string, unknown>)?.id as number;
   const text   = (message.text as string) ?? "";
 
+  // Log para diagnóstico
+  console.log(`[kronia-bot] chatId recebido: ${chatId} | ALLOWED: ${ALLOWED_CHAT_ID}`);
+
   // Segurança: só responde ao chat autorizado
-  if (String(chatId) !== String(ALLOWED_CHAT_ID)) {
+  if (ALLOWED_CHAT_ID && String(chatId) !== String(ALLOWED_CHAT_ID)) {
+    console.warn(`[kronia-bot] chatId bloqueado: ${chatId}`);
     return new Response("OK", { status: 200 });
   }
 
