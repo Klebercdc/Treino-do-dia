@@ -154,6 +154,23 @@ function showApp() {
   if (login) login.style.display = 'none';
   const emailLogin = document.getElementById('emailLoginScreen');
   if (emailLogin) emailLogin.classList.remove('show');
+  // Dispara fluxo de primeira vez após telas fecharem
+  setTimeout(checkFirstTimeFlow, 350);
+}
+
+function checkFirstTimeFlow() {
+  if (!localStorage.getItem('kronia_profile_setup_done')) {
+    if (typeof openKronaSetup === 'function') openKronaSetup();
+  } else if (!localStorage.getItem('kronia_onboarded')) {
+    const ob = document.getElementById('onboarding');
+    if (ob) {
+      ob.classList.add('show');
+      document.body.classList.add('overlay-open');
+      const f = document.querySelector('.footer-actions');
+      if (f) f.style.display = 'none';
+      if (typeof ffObGoTo === 'function') ffObGoTo(0);
+    }
+  }
 }
 
 function showLogin() {

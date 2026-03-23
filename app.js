@@ -3057,13 +3057,7 @@ window.onload = () => {
     }
   }
 
-  // Onboarding apenas na primeira visita
-  if (!localStorage.getItem("kronia_onboarded")) {
-    document.getElementById("onboarding").classList.add("show");
-    document.body.classList.add('overlay-open');
-    const footerEl = document.querySelector('.footer-actions');
-    if (footerEl) footerEl.style.display = 'none';
-  }
+  // Onboarding/setup são exibidos após login via checkFirstTimeFlow() em auth.js
 
   // PWA: listener de mensagens do Service Worker (background sync)
   if ('serviceWorker' in navigator) {
