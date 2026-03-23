@@ -124,7 +124,7 @@ function renderLoadBarChart(canvasId, cargaAguda, cargaCronica) {
   _barChart = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: ['Carga Aguda (7d)', 'Carga Crônica (28d)'],
+      labels: ['Aguda (7d)', 'Crônica (28d)'],
       datasets: [{
         label: 'sRPE',
         data:            [cargaAguda || 0, cargaCronica || 0],
@@ -144,8 +144,8 @@ function renderLoadBarChart(canvasId, cargaAguda, cargaCronica) {
         },
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#9ca3af' } },
-        y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af' }, beginAtZero: true },
+        x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 9 } } },
+        y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af', font: { size: 9 }, maxTicksLimit: 3 }, beginAtZero: true },
       },
       animation: { duration: 600 },
     },
