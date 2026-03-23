@@ -4066,7 +4066,7 @@ function addOrientMsg(containerId, role, text) {
   wrap.className = `ai-msg ${role}`;
   wrap.setAttribute("data-role", role);
 
-  const kronosAvatar = `<div class="orient-kronos-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>`;
+  const kronosAvatar = `<div class="orient-kronos-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
 
   if (role === "assistant") {
     wrap.innerHTML = `${kronosAvatar}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
