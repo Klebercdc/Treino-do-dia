@@ -1868,33 +1868,41 @@ let _ffObCurrentSlide = 0;
 function ffObGoTo(idx) {
   const slides = document.querySelectorAll('.ff-slide');
   const dots = document.querySelectorAll('.ff-dot');
-  slides.forEach((s, i) => {
-    s.classList.toggle('ff-slide-active', i === idx);
-  });
-  dots.forEach((d, i) => {
-    d.classList.toggle('ff-dot-active', i === idx);
-  });
+  slides.forEach((s, i) => s.classList.toggle('ff-slide-active', i === idx));
+  dots.forEach((d, i) => d.classList.toggle('ff-dot-active', i === idx));
   _ffObCurrentSlide = idx;
-  const cta = document.getElementById('ff-ob-cta');
-  if (cta) {
-    const isLast = idx >= slides.length - 1;
-    cta.innerHTML = isLast
-      ? 'Começar <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'
-      : 'Próximo <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
-  }
 }
 
 function ffObNext() {
   const total = document.querySelectorAll('.ff-slide').length;
-  if (_ffObCurrentSlide >= total - 1) {
-    ffObFinish();
-  } else {
-    ffObGoTo(_ffObCurrentSlide + 1);
-  }
+  if (_ffObCurrentSlide < total - 1) ffObGoTo(_ffObCurrentSlide + 1);
 }
+
+// Swipe/tap para avançar slides
+(function() {
+  let _sx = 0, _sy = 0;
+  function initObSwipe() {
+    const el = document.getElementById('ff-ob-slides');
+    if (!el) return;
+    el.addEventListener('touchstart', e => { _sx = e.touches[0].clientX; _sy = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - _sx;
+      const dy = e.changedTouches[0].clientY - _sy;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+        if (dx < 0) ffObNext();
+        else ffObGoTo(Math.max(0, _ffObCurrentSlide - 1));
+      } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        ffObNext(); // tap
+      }
+    }, { passive: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initObSwipe);
+  else initObSwipe();
+})();
 
 function ffObFinish() {
   localStorage.setItem('kronia_onboarded', '1');
+  document.body.classList.remove('overlay-open');
   const ob = document.getElementById('onboarding');
   if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }
   if (typeof _appUnlocked !== 'undefined' && _appUnlocked) {
@@ -3052,6 +3060,7 @@ window.onload = () => {
   // Onboarding apenas na primeira visita
   if (!localStorage.getItem("kronia_onboarded")) {
     document.getElementById("onboarding").classList.add("show");
+    document.body.classList.add('overlay-open');
   }
 
   // PWA: listener de mensagens do Service Worker (background sync)
