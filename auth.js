@@ -362,6 +362,10 @@ _sb.auth.onAuthStateChange((_event, session) => {
     if (firstLoad) { navTo('inicio'); openHome(); }
     // Puxa dados da nuvem ao logar (fire & forget)
     _dbSync.pullAll(session.user.id);
+    // Renderiza dashboard ACWR assim que o usuário estiver autenticado
+    if (typeof window.KroniaDashboard !== 'undefined') {
+      window.KroniaDashboard.render(session.user.id);
+    }
   } else if (_appUnlocked) {
     _appUnlocked = false;
     showLogin();
