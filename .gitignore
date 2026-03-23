@@ -18,6 +18,7 @@ tests/dist/
 
 # Supabase local
 .supabase/
+supabase/.temp/
 
 # Sistema
 .DS_Store
