@@ -1114,6 +1114,18 @@
       <i data-lucide="settings" class="lucide" width="18" height="18" stroke="var(--text-2)" fill="none" stroke-width="1.75"></i>
     </button>
   </div>
+  <!-- Header limpo — avatar + nome editáveis -->
+  <div class="perfil-hero-clean" onclick="openEditarPerfil()">
+    <div style="position:relative;display:inline-block">
+      <div class="perfil-avatar" id="perfilAvatar"></div>
+      <div style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;background:#1C1C1E;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,0.12);">
+        <i data-lucide="camera" class="lucide" width="12" height="12" stroke="rgba(255,255,255,0.65)" fill="none" stroke-width="1.75"></i>
+      </div>
+    </div>
+    <div id="perfilNome" class="perfil-hero-name">ATLETA</div>
+    <div class="perfil-hero-hint">Toque para editar</div>
+  </div>
+
   <div class="perfil-section">
     <div class="perfil-section-title">Conta</div>
     <div id="perfilContaLogado" style="display:none;">
