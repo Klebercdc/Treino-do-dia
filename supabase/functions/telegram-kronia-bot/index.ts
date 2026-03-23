@@ -30,11 +30,24 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
 // ── Envio de mensagem ─────────────────────────────────────────
 async function send(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+  // Tenta com Markdown primeiro; se falhar (ex: caracteres inválidos), envia sem formatação
+  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("[telegram-kronia-bot] sendMessage error:", JSON.stringify(err));
+
+    // Fallback: envia sem parse_mode para não silenciar a resposta
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+  }
 }
 
 // ── /ajuda ────────────────────────────────────────────────────
@@ -71,9 +84,9 @@ async function handleUsuarios(): Promise<string> {
 async function handleTreinosHoje(): Promise<string> {
   const hoje = new Date().toISOString().split("T")[0];
   const { count, error } = await sb
-    .from("workout_history")
+    .from("workouts")
     .select("*", { count: "exact", head: true })
-    .gte("trained_at", hoje);
+    .eq("date", hoje);
 
   if (error) return `❌ Erro ao buscar treinos: ${error.message}`;
   return `*🏋️ Treinos hoje:* ${count ?? 0}`;
@@ -89,8 +102,8 @@ async function handleScan(): Promise<string> {
 
   const [{ count: total }, { count: ativos7d }, { count: ativos30d }] = await Promise.all([
     sb.from("profiles").select("*", { count: "exact", head: true }),
-    sb.from("workout_history").select("*", { count: "exact", head: true }).gte("trained_at", limite7d.toISOString()),
-    sb.from("workout_history").select("*", { count: "exact", head: true }).gte("trained_at", limite30d.toISOString()),
+    sb.from("workouts").select("user_id", { count: "exact", head: true }).gte("date", limite7d.toISOString().split("T")[0]),
+    sb.from("workouts").select("user_id", { count: "exact", head: true }).gte("date", limite30d.toISOString().split("T")[0]),
   ]);
 
   const t = total ?? 0;

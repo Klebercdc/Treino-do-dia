@@ -15,3 +15,10 @@ minimum_password_length = 8
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+
+# Edge Functions
+[functions.telegram-kronia-bot]
+verify_jwt = false
+
+[functions.check-inactivity]
+verify_jwt = false
