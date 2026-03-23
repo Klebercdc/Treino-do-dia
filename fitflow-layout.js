@@ -63,6 +63,8 @@
   window.ffObFinish = function () {
     var ob = document.getElementById('onboarding');
     if (ob) ob.style.display = 'none';
+    var footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = '';
     /* Chama a função existente do app.js se disponível */
     if (typeof obFinish === 'function') {
       obFinish();
