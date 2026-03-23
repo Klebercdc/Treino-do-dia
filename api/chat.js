@@ -1,5 +1,5 @@
 var https = require(`https`);
-var nvidia = require('./_nvidia');
+// nvidia removido — usando apenas Groq (_gemini.js)
 var gemini = require('./_gemini');
 var auth = require('./_auth');
 var cors = require('./_cors');
@@ -161,8 +161,7 @@ function isPedidoDeTreino(messages) {
 }
 
 function callChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
-  var GROQ_KEY   = process.env.GROQ_API_KEY;
-  var NVIDIA_KEY = process.env.NVIDIA_API_KEY;
+  var GROQ_KEY = process.env.GROQ_API_KEY;
   var m = [];
   if (system) m.push({ role: `system`, content: system });
   messages.forEach(function(x) { m.push(x); });
@@ -178,11 +177,8 @@ function callChat(system, messages, maxTokens, temp, userId, endpoint, callback)
 
   if (GROQ_KEY) {
     gemini.callGeminiFull(GROQ_KEY, payload, 25000, 3, onResult);
-  } else if (NVIDIA_KEY) {
-    payload.model = `meta/llama-3.3-70b-instruct`;
-    nvidia.callNvidiaFull(NVIDIA_KEY, payload, 25000, 3, onResult);
   } else {
-    callback('Nenhuma chave de API configurada (GROQ_API_KEY ou NVIDIA_API_KEY)', null);
+    callback('GROQ_API_KEY não configurada', null);
   }
 }
 
@@ -241,7 +237,7 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
   if (req.method!==`POST`){res.status(405).end();return;}
-  if (!process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY){res.status(500).json({error:'Nenhuma chave de API configurada'});return;}
+  if (!process.env.GROQ_API_KEY){res.status(500).json({error:'GROQ_API_KEY não configurada'});return;}
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {

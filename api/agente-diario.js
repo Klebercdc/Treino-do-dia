@@ -1,5 +1,5 @@
 var https = require('https');
-var nvidia = require('./_nvidia');
+var groq = require('./_gemini');
 var auth = require('./_auth');
 var cors = require('./_cors');
 var rl = require('./_ratelimit');
@@ -17,11 +17,11 @@ REGRAS:
 - Baseie-se APENAS nos dados recebidos no contexto`;
 
 function callNvidia(system, messages, callback) {
-  var KEY = process.env.NVIDIA_API_KEY;
-  if (!KEY) return callback('NVIDIA_API_KEY missing', null);
+  var KEY = process.env.GROQ_API_KEY;
+  if (!KEY) return callback('GROQ_API_KEY missing', null);
   var m = [{ role: 'system', content: system }].concat(messages);
-  var payload = { model: 'meta/llama-3.3-70b-instruct', messages: m, max_tokens: 800, temperature: 0.7, stream: false };
-  nvidia.callNvidia(KEY, payload, 25000, 3, callback);
+  var payload = { messages: m, max_tokens: 800, temperature: 0.7, stream: false };
+  groq.callGemini(KEY, payload, 25000, 3, callback);
 }
 
 function parseJSON(text) {
