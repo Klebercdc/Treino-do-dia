@@ -15,3 +15,18 @@ minimum_password_length = 8
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+
+# ── Edge Functions ──────────────────────────────────────────────
+# telegram-kronia-bot: webhook do Telegram (não requer JWT)
+[functions.telegram-kronia-bot]
+verify_jwt = false
+
+# check-inactivity: disparo de Web Push para usuários inativos
+[functions.check-inactivity]
+verify_jwt = false
+
+# ── Cron Jobs ──────────────────────────────────────────────────
+# check-inactivity: roda diariamente às 09:00 UTC
+[cron.check-inactivity-daily]
+schedule = "0 9 * * *"
+function_name = "check-inactivity"

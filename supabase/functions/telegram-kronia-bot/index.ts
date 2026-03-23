@@ -84,9 +84,9 @@ async function handleUsuarios(): Promise<string> {
 async function handleTreinosHoje(): Promise<string> {
   const hoje = new Date().toISOString().split("T")[0];
   const { count, error } = await sb
-    .from("workout_history")
+    .from("workouts")
     .select("*", { count: "exact", head: true })
-    .gte("trained_at", hoje);
+    .eq("date", hoje);
 
   if (error) return `❌ Erro ao buscar treinos: ${error.message}`;
   return `*🏋️ Treinos hoje:* ${count ?? 0}`;
@@ -102,8 +102,8 @@ async function handleScan(): Promise<string> {
 
   const [{ count: total }, { count: ativos7d }, { count: ativos30d }] = await Promise.all([
     sb.from("profiles").select("*", { count: "exact", head: true }),
-    sb.from("workout_history").select("*", { count: "exact", head: true }).gte("trained_at", limite7d.toISOString()),
-    sb.from("workout_history").select("*", { count: "exact", head: true }).gte("trained_at", limite30d.toISOString()),
+    sb.from("workouts").select("user_id", { count: "exact", head: true }).gte("date", limite7d.toISOString().split("T")[0]),
+    sb.from("workouts").select("user_id", { count: "exact", head: true }).gte("date", limite30d.toISOString().split("T")[0]),
   ]);
 
   const t = total ?? 0;
