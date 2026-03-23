@@ -3061,6 +3061,8 @@ window.onload = () => {
   if (!localStorage.getItem("kronia_onboarded")) {
     document.getElementById("onboarding").classList.add("show");
     document.body.classList.add('overlay-open');
+    const footerEl = document.querySelector('.footer-actions');
+    if (footerEl) footerEl.style.display = 'none';
   }
 
   // PWA: listener de mensagens do Service Worker (background sync)
