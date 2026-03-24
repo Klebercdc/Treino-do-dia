@@ -34,11 +34,13 @@
   function ffObUpdateCta() {
     var btn = document.getElementById('ff-ob-cta');
     var hint = document.getElementById('ff-ob-hint');
+    var footer = document.getElementById('ff-ob-footer');
     if (!btn) return;
     var isLast = ffObCurrent === FF_OB_TOTAL - 1;
     btn.classList.toggle('ff-cta-final', isLast);
     btn.style.display = isLast ? 'flex' : 'none';
     btn.style.pointerEvents = isLast ? 'auto' : 'none';
+    if (footer) footer.classList.toggle('has-cta', isLast);
     if (hint) hint.style.display = isLast ? 'none' : 'block';
     if (isLast) {
       btn.innerHTML = 'Ativar o KRONOS agora <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
