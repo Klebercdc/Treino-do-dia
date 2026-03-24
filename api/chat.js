@@ -326,7 +326,7 @@ module.exports = function(req, res) {
       }
 
       // ── INTENT: novo pedido de dieta ─────────────────────────────
-      if (!b.isGerarTreino && intent.isDietStart(lastContent)) {
+      if (!b.isGerarTreino && !b.isDietDirect && intent.isDietStart(lastContent)) {
         var flowStart = dietflow.startDietFlow();
         return res.status(200).json({
           content: [{ type: 'text', text: flowStart.response }],
