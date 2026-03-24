@@ -9,6 +9,7 @@
   var _ksTotal = 3;
   var _ksGoal = null;
   var _ksCtaBound = false;
+  var _ksLastTriggerAt = 0;
 
   /* ── Abrir / fechar ── */
   window.openKronaSetup = function () {
@@ -30,10 +31,16 @@
     if (!_ksCtaBound) {
       var cta = document.getElementById('ksCta');
       if (cta) {
-        cta.addEventListener('touchend', function (ev) {
-          ev.preventDefault();
-          if (!cta.disabled) window.ksNext();
-        }, { passive: false });
+        cta.addEventListener('click', function (ev) {
+          if (cta.disabled) {
+            ev.preventDefault();
+            return;
+          }
+          var now = Date.now();
+          if (now - _ksLastTriggerAt < 350) return;
+          _ksLastTriggerAt = now;
+          window.ksNext();
+        });
       }
       _ksCtaBound = true;
     }
