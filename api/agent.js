@@ -1,11 +1,13 @@
 var https = require('https');
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini = require('./_gemini');
-var auth = require('./_auth');
-var cors = require('./_cors');
-var rl = require('./_ratelimit');
-var plans = require('./_plans');
-var logger = require('./_logger');
+var gemini  = require('./_gemini');
+var auth    = require('./_auth');
+var cors    = require('./_cors');
+var rl      = require('./_ratelimit');
+var plans   = require('./_plans');
+var logger  = require('./_logger');
+var prompts = require('./_systemPrompts');
+var diet    = require('./_diet');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -41,18 +43,25 @@ var TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'calcular_nutricao',
-      description: 'Calcula TMB, TDEE e macros ideais (proteína, carbo, gordura, calorias) baseado no perfil e objetivo do usuário.',
+      name: 'calcular_dieta',
+      description: 'Calcula TMB, TDEE, macros (proteína, carbo, gordura, calorias) e monta plano alimentar completo com refeições adaptadas ao perfil, objetivo e restrições alimentares do usuário.',
       parameters: {
         type: 'object',
         properties: {
           objetivo: {
             type: 'string',
-            enum: ['hipertrofia', 'emagrecimento', 'manutencao', 'forca'],
-            description: 'Objetivo nutricional'
+            description: 'Objetivo nutricional (ex: hipertrofia, emagrecimento, manutencao). Omitir para usar o objetivo do perfil.'
           }
         }
       }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'verificar_deload',
+      description: 'Verifica se o usuário precisa de deload analisando semanas de treino consecutivas, tendência de RPE e sinais de fadiga acumulada.',
+      parameters: { type: 'object', properties: {} }
     }
   },
   {
@@ -153,46 +162,69 @@ function toolDetectarPlato(args, userData) {
   return result;
 }
 
-function toolCalcularNutricao(args, userData) {
-  var p = userData.profile || {};
+function toolCalcularDieta(args, userData) {
+  var p = Object.assign({}, userData.profile || {});
+  if (args && args.objetivo) p.objetivo = args.objetivo;
+
+  var plan = diet.buildDietPlan(p);
   var peso = parseFloat(p.peso) || 75;
-  var altura = parseFloat(p.altura) || 175;
-  var idade = parseInt(p.idade) || 25;
-  var sexo = (p.sexo || 'M').toUpperCase();
-  var freq = parseInt(p.freq) || 3;
-  var objetivo = (args && args.objetivo) || p.objetivo || 'hipertrofia';
 
-  var tmb = sexo === 'F'
-    ? Math.round(10 * peso + 6.25 * altura - 5 * idade - 161)
-    : Math.round(10 * peso + 6.25 * altura - 5 * idade + 5);
-
-  var mult = [1.2, 1.2, 1.375, 1.375, 1.55, 1.55, 1.725];
-  var tdee = Math.round(tmb * (mult[freq] || 1.55));
-
-  var calorias = tdee;
-  if (objetivo === 'hipertrofia') calorias = tdee + 300;
-  else if (objetivo === 'emagrecimento') calorias = tdee - 400;
-  else if (objetivo === 'forca') calorias = tdee + 150;
-
-  var protG = Math.round(peso * 2.0);
-  var gordG = Math.round((calorias * 0.25) / 9);
-  var carboG = Math.round((calorias - protG * 4 - gordG * 9) / 4);
+  // Resumo compacto das refeições para contexto da IA
+  var refeicoes = (plan.refeicoes || []).map(function(r) {
+    return r.horario + ' ' + r.nome + ': ' + r.proteinas.slice(0, 1).join(', ') + ' + ' + r.carbos.slice(0, 1).join(', ');
+  });
 
   return {
-    perfil: { peso: peso, altura: altura, idade: idade, sexo: sexo, freq: freq },
-    tmb: tmb,
-    tdee: tdee,
-    caloriasMeta: calorias,
-    objetivo: objetivo,
+    objetivo:     p.objetivo || 'manter',
+    calorias:     plan.meta.calorias,
     macros: {
-      proteina: { g: protG, range: peso * 1.6 + '-' + peso * 2.2 + 'g' },
-      carboidrato: { g: carboG },
-      gordura: { g: gordG }
+      proteina:   { g: plan.meta.proteina, gPorKg: diet.round(plan.meta.proteina / peso, 1) },
+      carbo:      { g: plan.meta.carbo },
+      gordura:    { g: plan.meta.gordura }
     },
+    hidratacao:   plan.hidratacao.litros + 'L/dia',
+    refeicoes:    refeicoes,
+    observacoes:  plan.observacoes,
     timing: {
-      preWorkout: '30-60min antes: 20-40g carbo + 10-20g proteína',
-      posWorkout: 'Até 2h depois: 20-40g proteína com leucina + carbo'
+      preTreino:  'Carbo 1-2h antes do treino — energia sem pico insulínico',
+      posTreino:  '20-40g proteína com leucina em até 2h — janela anabólica'
     }
+  };
+}
+
+function toolVerificarDeload(userData) {
+  var history = (userData.history || []);
+  var semanas = Math.ceil(history.length / 2); // ~2 sessões/semana
+
+  var rec = toolAnalisarRecuperacao(userData);
+  var vol = toolTendenciaVolume({ semanas: 4 }, userData);
+
+  // Detecta plateau de volume (últimas 2 semanas vs 2 anteriores)
+  var volUlt = vol.slice(-4).reduce(function(s, v) { return s + v.volume; }, 0) / 4;
+  var volAnt = vol.slice(-8, -4).reduce(function(s, v) { return s + v.volume; }, 0) / 4;
+  var tendVol = volAnt > 0 ? Math.round(((volUlt - volAnt) / volAnt) * 100) : 0;
+
+  var precisaDeload = rec.recomendarDeload ||
+    (semanas >= 8 && rec.rpeMediaGeral > 8.0) ||
+    (semanas >= 12);
+
+  return {
+    semanasConsecutivas:   semanas,
+    rpeMedia:              rec.rpeMediaGeral,
+    tendenciaRPE:          rec.tendenciaRPE,
+    tendenciaVolumePct:    tendVol,
+    recomendarDeload:      precisaDeload,
+    motivoPrincipal:       precisaDeload
+      ? (semanas >= 12 ? 'Mais de 12 semanas sem deload — obrigatório'
+         : rec.rpeMediaGeral > 8.8 ? 'RPE médio acima de 8.8 — acúmulo de fadiga crítico'
+         : 'RPE elevado com semanas suficientes — deload preventivo')
+      : 'Sem indicativo de deload agora',
+    protocolo: precisaDeload ? {
+      duracao:   '1 semana',
+      volume:    'Reduza para 50% das séries habituais',
+      carga:     'Mantenha a intensidade (não é descanso total)',
+      foco:      'Técnica, mobilidade e recuperação ativa'
+    } : null
   };
 }
 
@@ -260,9 +292,10 @@ function executeTool(name, args, userData) {
     switch (name) {
       case 'analisar_progresso':   return toolAnalisarProgresso(args, userData);
       case 'detectar_plato':       return toolDetectarPlato(args, userData);
-      case 'calcular_nutricao':    return toolCalcularNutricao(args, userData);
+      case 'calcular_dieta':       return toolCalcularDieta(args, userData);
       case 'analisar_recuperacao': return toolAnalisarRecuperacao(userData);
       case 'tendencia_volume':     return toolTendenciaVolume(args, userData);
+      case 'verificar_deload':     return toolVerificarDeload(userData);
       default: return { error: 'Ferramenta desconhecida: ' + name };
     }
   } catch (e) {
@@ -298,72 +331,7 @@ function callAgent(messages, tools, callback) {
 // ══════════════════════════════════════════
 
 function buildAgentSystem(userData) {
-  var p = userData.profile || {};
-  var nome    = p.nome    || null;
-  var peso    = p.peso    ? p.peso + ' kg'    : null;
-  var altura  = p.altura  ? p.altura + ' cm'  : null;
-  var idade   = p.idade   ? p.idade + ' anos' : null;
-  var obj     = p.objetivo    || null;
-  var freq    = p.frequencia  ? p.frequencia + 'x/semana' : null;
-  var nivel   = p.nivel       || null;
-  var sono    = p.sono        ? p.sono + 'h de sono' : null;
-
-  var perfil = [nome, peso, altura, idade, obj, freq, nivel, sono]
-    .filter(Boolean).join(' · ');
-
-  return `Você é o KRONOS — coach pessoal de musculação, nutrição e suplementação do KRONIA.
-Português coloquial, direto, como conversa real na academia. Você conhece o usuário e os dados dele.
-${perfil ? '\nUSUÁRIO: ' + perfil : ''}
-
-━━━ COMO RESPONDER ━━━
-Leia o que foi dito e responda de acordo com a INTENÇÃO real:
-
-• Saudação ou papo casual → 1-2 frases naturais, SEM ferramentas, SEM despejar dados
-• Dúvida sobre treino, nutrição ou suplementação → responda com conhecimento direto, sem ferramenta
-• "Como tá meu progresso?", "tô em platô?", "como tá minha recuperação?" → USE a ferramenta certa
-• "Calcula minha dieta", "analisa meu volume" → USE ferramenta e entregue resultado personalizado
-
-Resposta proporcional ao que foi pedido. Nada mais, nada menos.
-
-━━━ DOMÍNIOS ━━━
-MUSCULAÇÃO: hipertrofia, força, periodização, MEV/MAV/MRV, RPE, deload, progressão de carga
-NUTRIÇÃO: TDEE, macros (proteína 1,6–2,2g/kg, carbs, gorduras), timing, bulk/cutting/recomposição
-SUPLEMENTAÇÃO: creatina, whey, cafeína, beta-alanina, vitamina D3 (Tier 1 — evidência forte)
-
-━━━ RACIOCÍNIO BIOMECÂNICO — pense antes de prescrever exercício ━━━
-Não apenas cite exercícios — raciocine sobre o que vai acontecer no corpo do usuário:
-
-JOELHO: Agachamento livre, Leg Press, Cadeira Extensora, Passada → alta compressão patelofemoral. Usuário com dor no joelho? Prefira Hip Thrust, Abdução, Elevação Pélvica, Leg Press com amplitude reduzida.
-
-COTOVELO: Skull Crusher, Rosca Direta com Barra, Spider Curl → estresse no tendão distal do bíceps e epicôndilo lateral. Cotovelo comprometido? Prefira Corda no Pulley, Rosca Martelo, Extensão no Cabo.
-
-OMBRO: Desenvolvimento atrás da nuca, Elevação Frontal com barra → impingement do manguito rotador. Ombro instável? Prefira Desenvolvimento Neutro, Elevação Lateral no Cabo, Crucifixo com halteres.
-
-COLUNA LOMBAR: Stiff, Remada Curvada, Good Morning → alto cisalhamento em L4-L5. Hérnia ou lombar sensível? Prefira Remada na Máquina, Puxada, Extensão Lombar controlada.
-
-REGRA: Pense no padrão de movimento real (empurrar, puxar, agachar, flexionar, rodar). Escolha o exercício que cumpre o estímulo com menor risco articular para ESTE usuário específico.
-
-━━━ RACIOCÍNIO DIETÉTICO — pense no prato antes de prescrevê-lo ━━━
-Não apenas calcule macros — raciocine sobre o que o usuário vai de fato comer:
-
-MÉTODO DE PREPARO: Frango, peixe, carne → grelhado/assado/cozido. Arroz, feijão, lentilha → cozido. Ovo → mexido/cozido/estrelado. Salada → cru. NUNCA prescreva preparações incoerentes.
-
-PESO CONSUMIDO: Informe sempre o peso no estado final (cozido/grelhado). 100g de frango cru ≠ 100g grelhado (~75g após perda de água). 100g de arroz seco = ~300g cozido.
-
-MEDIDAS CASEIRAS: Nem todo usuário tem balança. Sempre ofereça equivalências:
-→ 1 concha média = ~80-100g de arroz ou feijão cozido
-→ 1 filé médio = ~100-120g de proteína grelhada
-→ 1 col. de sopa = ~15g (azeite ~12g, pasta de amendoim ~20g)
-→ 1 xícara de chá = ~240ml ou ~150g de arroz cozido
-→ 1 unidade = ovo, banana média (~120g), maçã (~150g)
-
-━━━ FERRAMENTAS (use só quando o contexto pedir) ━━━
-- analisar_progresso · detectar_plato · calcular_nutricao · analisar_recuperacao · tendencia_volume
-
-━━━ PERSONALIDADE ━━━
-- Coach de verdade: direto, com autoridade, sem rodeios
-- NUNCA comece com "Claro!", "Certamente!", "Olá!" — vá ao ponto
-- Máximo 400 palavras, salvo treino completo`;
+  return prompts.buildAgentSystem(userData.profile || {});
 }
 
 function agentLoop(userMessages, userData, callback) {
@@ -519,7 +487,7 @@ module.exports = function(req, res) {
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
         var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
-        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed });
+        logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed, tools: TOOLS.map(function(t){ return t.function.name; }).join(',') });
         res.status(200).json({ content: [{ type: 'text', text: text }] });
       });
     });
