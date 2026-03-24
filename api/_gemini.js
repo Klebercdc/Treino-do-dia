@@ -1,6 +1,6 @@
 /**
  * Helper para a API Groq (compatível com OpenAI).
- * Modelos: llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it
+ * Modelos: llama-3.3-70b-versatile, llama-3.1-8b-instant
  *
  * Variável de ambiente necessária (Vercel):
  *   GROQ_API_KEY = chave do console.groq.com
@@ -8,7 +8,17 @@
 
 var https = require('https');
 
-var GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it'];
+var GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+
+function isModelDeprecationError(status, rawBody) {
+  if (status !== 400) return false;
+  var body = String(rawBody || '').toLowerCase();
+  return (
+    body.indexOf('decommissioned') >= 0 ||
+    body.indexOf('no longer supported') >= 0 ||
+    body.indexOf('model') >= 0 && body.indexOf('not found') >= 0
+  );
+}
 
 function makeOptions(KEY, body) {
   return {
@@ -40,7 +50,7 @@ function tryModels(KEY, payload, timeoutMs, onData, callback) {
       res.on('data', function(c) { data += c; });
       res.on('end', function() {
         var status = res.statusCode;
-        if (status === 429 || status === 503) return attempt();
+        if (status === 429 || status === 503 || isModelDeprecationError(status, data)) return attempt();
         if (status >= 400) return callback('HTTP ' + status + ': ' + data.substring(0, 300), null);
         try {
           callback(null, onData(JSON.parse(data)));
@@ -110,7 +120,10 @@ function callGeminiStreamWithTools(KEY, payload, timeoutMs, onDelta, onDone, onE
       if (res.statusCode >= 400) {
         var e = '';
         res.on('data', function(c) { e += c; });
-        res.on('end', function() { onError('HTTP ' + res.statusCode + ': ' + e.substring(0, 300)); });
+        res.on('end', function() {
+          if (isModelDeprecationError(res.statusCode, e)) return attempt();
+          onError('HTTP ' + res.statusCode + ': ' + e.substring(0, 300));
+        });
         return;
       }
 
