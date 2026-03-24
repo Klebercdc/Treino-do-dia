@@ -93,7 +93,7 @@ Uso:
   node etl/scrapers/cli.js [opções]
 
 Opções:
-  --sources <lista>        Fontes: wger,exrx  (padrão: wger)
+  --sources <lista>        Fontes: wger,exrx,github  (padrão: wger)
   --output  <arquivo>      Arquivo JSON de saída
   --csv                    Também exporta CSV
   --force                  Re-coleta ignorando cache
@@ -104,13 +104,16 @@ Opções:
 
 Exemplos:
   node etl/scrapers/cli.js --sources wger --stats
-  node etl/scrapers/cli.js --sources wger,exrx --csv --stats
+  node etl/scrapers/cli.js --sources github --stats
+  node etl/scrapers/cli.js --sources wger,github --csv --stats
+  node etl/scrapers/cli.js --sources wger,exrx,github --csv --stats
   node etl/scrapers/cli.js --sources exrx --max-per-category 10 --categories "Chest,Back"
   node etl/scrapers/cli.js --force
 
 Fontes disponíveis:
-  wger  — API REST pública wger.de (rápido, sem browser)
-  exrx  — ExRx.net via Playwright (lento, dados ricos de instrução)
+  wger   — API REST pública wger.de (rápido, sem browser)
+  exrx   — ExRx.net via Playwright (lento, dados ricos de instrução)
+  github — yuhonas/free-exercise-db (rápido, ~900 exercícios, nível + mecânica + imagens)
 `);
 }
 
@@ -145,11 +148,11 @@ async function main() {
   }
 
   // Valida fontes
-  const validSources = new Set(['wger', 'exrx']);
+  const validSources = new Set(['wger', 'exrx', 'github']);
   const invalid = args.sources.filter(s => !validSources.has(s));
   if (invalid.length > 0) {
     console.error(`Fonte(s) inválida(s): ${invalid.join(', ')}`);
-    console.error('Fontes válidas: wger, exrx');
+    console.error('Fontes válidas: wger, exrx, github');
     process.exit(1);
   }
 

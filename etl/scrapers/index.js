@@ -7,7 +7,7 @@
  * Fontes suportadas:
  *   - wger   : API REST pública (wger.de) — exercícios multilíngues, músculos, equipamentos
  *   - exrx   : ExRx.net via Playwright — instruções detalhadas de execução
- *   - github : yuhonas/free-exercise-db (JSON) — base ampla de exercícios (já no seed.py)
+ *   - github : yuhonas/free-exercise-db (JSON) — ~900 exercícios com nível, mecânica, imagens
  *
  * Uso básico:
  *   const { KroniaScraper } = require('./etl/scrapers');
@@ -24,9 +24,10 @@
 const fs   = require('fs');
 const path = require('path');
 
-const wgerSource = require('./sources/wger-api');
-const exrxSource = require('./sources/exrx');
-const cache      = require('./cache');
+const wgerSource   = require('./sources/wger-api');
+const exrxSource   = require('./sources/exrx');
+const githubSource = require('./sources/github-exdb');
+const cache        = require('./cache');
 
 const OUTPUT_DIR = path.join(__dirname, 'output');
 
@@ -137,6 +138,13 @@ class KroniaScraper {
       this.log(`[KroniaScraper] exrx → ${exrxExercises.length} exercícios`);
     }
 
+    if (this.sources.includes('github')) {
+      this.log('[KroniaScraper] Fonte: yuhonas/free-exercise-db (GitHub)');
+      const githubExercises = await githubSource.scrapeExercises({ log: this.log });
+      lists.push(githubExercises);
+      this.log(`[KroniaScraper] github → ${githubExercises.length} exercícios`);
+    }
+
     this._exercises = mergeAndDeduplicate(lists);
     this.log(`[KroniaScraper] Total após deduplicação: ${this._exercises.length} exercícios`);
     return this._exercises;
@@ -236,6 +244,11 @@ class KroniaScraper {
       muscles_primary:   ex.muscles_primary   || [],
       muscles_secondary: ex.muscles_secondary || [],
       equipment:         ex.equipment         || [],
+      // Campos enriquecidos (fonte: github)
+      level:             ex.level             || null,
+      force:             ex.force             || null,
+      mechanic:          ex.mechanic          || null,
+      image_url:         ex.image_url         || null,
     }));
   }
 }
@@ -246,7 +259,8 @@ module.exports = {
   KroniaScraper,
   cache,
   sources: {
-    wger: wgerSource,
-    exrx: exrxSource,
+    wger:   wgerSource,
+    exrx:   exrxSource,
+    github: githubSource,
   },
 };

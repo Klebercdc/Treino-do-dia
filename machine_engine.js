@@ -261,6 +261,300 @@ kmRegister('kronosAdvise', (entity /*, config*/) => {
 });
 
 
+/* ── 4. TRANSFORMS DE ENRIQUECIMENTO (WEB) ──────────────────── */
+
+/**
+ * Cache em memória para o índice de exercícios (free-exercise-db).
+ * Carregado uma única vez por sessão de página.
+ * null = ainda não carregado | Map = índice pronto | 'error' = falha
+ */
+let _exdbIndex = null;
+const _EXDB_URL = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
+const _EXDB_IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+
+const _MUSCLE_GROUP = {
+  'abdominals':  'Abdômen/Lombar',  'abductors':   'Glúteos',
+  'adductors':   'Quadríceps/Isquiotibiais',        'biceps': 'Bíceps/Tríceps',
+  'calves':      'Panturrilha',     'chest':        'Peito',
+  'forearms':    'Antebraço',       'glutes':       'Glúteos',
+  'hamstrings':  'Quadríceps/Isquiotibiais',        'lats':   'Costas',
+  'lower back':  'Abdômen/Lombar',  'middle back':  'Costas',
+  'neck':        'Pescoço',         'quadriceps':   'Quadríceps/Isquiotibiais',
+  'shoulders':   'Ombros',          'traps':        'Costas',
+  'triceps':     'Bíceps/Tríceps',
+};
+
+/** Normaliza nome para lookup: minúsculas, só letras/números/espaço. */
+function _normKey(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Carrega o índice free-exercise-db (uma vez, depois fica em memória).
+ * @returns {Promise<Map<string, object>>}
+ */
+async function _loadExdb() {
+  if (_exdbIndex instanceof Map) return _exdbIndex;
+  if (_exdbIndex === 'error') return new Map();
+
+  try {
+    const res  = await fetch(_EXDB_URL);
+    const data = await res.json();
+    _exdbIndex = new Map();
+    for (const ex of data) {
+      const key = _normKey(ex.name);
+      if (key && !_exdbIndex.has(key)) _exdbIndex.set(key, ex);
+    }
+    return _exdbIndex;
+  } catch {
+    _exdbIndex = 'error';
+    return new Map();
+  }
+}
+
+/**
+ * enrichExercicio (ASYNC)
+ * Exercicio → ExercicioInfo
+ *
+ * Busca dados do free-exercise-db (GitHub CDN) por similaridade de nome.
+ * Enriquece o exercício com:
+ *   - Músculos primários/secundários
+ *   - Nível (beginner / intermediate / expert)
+ *   - Mecânica (compound / isolation)
+ *   - Tipo de força (push / pull / static)
+ *   - Instruções de execução
+ *   - URL de imagem
+ *
+ * Confidence:
+ *   - Match exato     → entity.confidence × 0.95
+ *   - Match parcial   → entity.confidence × 0.75
+ *   - Sem match       → 0.30 (dado mínimo)
+ */
+kmRegister('enrichExercicio', async (entity) => {
+  if (entity.type !== 'Exercicio') return [];
+  const nomeOriginal = (entity.value.nome || '').trim();
+  if (!nomeOriginal) return [];
+
+  const index   = await _loadExdb();
+  const keyBusca = _normKey(nomeOriginal);
+
+  // 1. Busca exata
+  let found      = index.get(keyBusca);
+  let matchType  = 'exato';
+  let confMult   = 0.95;
+
+  // 2. Busca por substring (keyBusca dentro do nome do índice)
+  if (!found) {
+    for (const [k, v] of index) {
+      if (k.includes(keyBusca) || keyBusca.includes(k)) {
+        found     = v;
+        matchType = 'parcial';
+        confMult  = 0.75;
+        break;
+      }
+    }
+  }
+
+  if (!found) {
+    return [new KroniaEntity(
+      'ExercicioInfo',
+      { nome: nomeOriginal, enriched: false },
+      0.30,
+      { ...entity.props, fonte: 'sem-match', matchType: 'nenhum' }
+    )];
+  }
+
+  const primaryMuscle = (found.primaryMuscles || [])[0] || '';
+  const muscleGroup   = _MUSCLE_GROUP[primaryMuscle] || 'Geral';
+
+  const instructions = Array.isArray(found.instructions)
+    ? found.instructions.join('\n')
+    : (found.instructions || '');
+
+  const imageUrl = (found.images && found.images.length > 0)
+    ? _EXDB_IMG + found.images[0]
+    : '';
+
+  return [new KroniaEntity(
+    'ExercicioInfo',
+    { nome: nomeOriginal, nomeEn: found.name },
+    entity.confidence * confMult,
+    {
+      muscleGroup,
+      musclesPrimary:    found.primaryMuscles   || [],
+      musclesSecondary:  found.secondaryMuscles || [],
+      equipment:         found.equipment        || '',
+      level:             found.level            || '',
+      mechanic:          found.mechanic         || '',
+      force:             found.force            || '',
+      instructions,
+      imageUrl,
+      matchType,
+      fonte: 'github-exdb',
+    }
+  )];
+});
+
+/**
+ * sugerirVariacoes
+ * ExercicioInfo → Recomendacao
+ *
+ * Gera recomendações contextuais baseadas em:
+ *   - Nível de dificuldade (beginner → sugerir progressão)
+ *   - Mecânica (compound → priorizar no início do treino)
+ *   - Tipo de força (push/pull → equilibrar no plano semanal)
+ * Confidence: entity.confidence × 0.85
+ */
+kmRegister('sugerirVariacoes', (entity) => {
+  if (entity.type !== 'ExercicioInfo') return [];
+  const { nome } = entity.value;
+  const { level, mechanic, force, muscleGroup } = entity.props;
+
+  const recs = [];
+  const conf = entity.confidence * 0.85;
+
+  if (level === 'beginner') {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `${nome}: iniciante — domine a técnica antes de progredir em carga.`,
+      conf,
+      { tipo: 'progressao', nivel: level, muscleGroup }
+    ));
+  } else if (level === 'expert') {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `${nome}: avançado — pré-requisito: domínio das variações intermediárias.`,
+      conf,
+      { tipo: 'progressao', nivel: level, muscleGroup }
+    ));
+  }
+
+  if (mechanic === 'compound') {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `${nome}: movimento composto — execute primeiro no treino, quando o SNC está descansado.`,
+      conf,
+      { tipo: 'ordem_treino', mecanica: mechanic }
+    ));
+  }
+
+  if (force === 'pull' || force === 'push') {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `${nome} (${force === 'pull' ? 'puxada' : 'empurrada'}) — equilibre com movimentos ${force === 'pull' ? 'de empurrada' : 'de puxada'} no bloco semanal.`,
+      conf,
+      { tipo: 'equilibrio_push_pull', force, muscleGroup }
+    ));
+  }
+
+  if (recs.length === 0) {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `${nome} — ${muscleGroup}: execute com foco na contração muscular e controle excêntrico.`,
+      conf * 0.80,
+      { tipo: 'tecnica', muscleGroup }
+    ));
+  }
+
+  return recs;
+});
+
+/**
+ * detectDesequilibrio (AGGREGATE — recebe TODAS as ExercicioInfo de uma vez)
+ * [ExercicioInfo, ...] → [Recomendacao, ...]
+ *
+ * Analisa o volume total de exercícios por grupo muscular e tipo (push/pull)
+ * para detectar desequilíbrios no plano de treino.
+ *
+ * Padrões detectados:
+ *   ▸ Push >> Pull (ou vice-versa) → risco de desequilíbrio postural
+ *   ▸ Grupo muscular dominante → sobrecarga isolada
+ *   ▸ Grupo ausente → omissão de músculo importante
+ *
+ * Registrado no registry mas usado via step type 'aggregate'.
+ */
+kmRegister('detectDesequilibrio', (entities) => {
+  const infos = entities.filter(e => e.type === 'ExercicioInfo' && e.props.enriched !== false);
+  if (infos.length < 2) return [];
+
+  const byGroup  = {};
+  const byForce  = { push: 0, pull: 0, static: 0, outro: 0 };
+  const total    = infos.length;
+
+  for (const e of infos) {
+    const g = e.props.muscleGroup || 'Geral';
+    byGroup[g] = (byGroup[g] || 0) + 1;
+
+    const f = (e.props.force || '').toLowerCase();
+    if (f === 'push')       byGroup[g] && (byForce.push++);
+    else if (f === 'pull')  byGroup[g] && (byForce.pull++);
+    else if (f === 'static') byForce.static++;
+    else                    byForce.outro++;
+  }
+
+  const recs = [];
+  const avgConf = infos.reduce((s, e) => s + e.confidence, 0) / total;
+
+  // ── Desequilíbrio Push/Pull ────────────────────────────────────
+  const push = byForce.push;
+  const pull = byForce.pull;
+  if (push > 0 && pull > 0) {
+    const ratio = push / pull;
+    if (ratio > 1.8) {
+      recs.push(new KroniaEntity(
+        'Recomendacao',
+        `Desequilíbrio push/pull detectado: ${push} exercícios de empurrada vs ${pull} de puxada. Adicione mais remadas e puxadas.`,
+        avgConf * 0.88,
+        { tipo: 'desequilibrio', subtipo: 'push_pull', ratioPushPull: parseFloat(ratio.toFixed(2)) }
+      ));
+    } else if (ratio < 0.55) {
+      recs.push(new KroniaEntity(
+        'Recomendacao',
+        `Desequilíbrio push/pull detectado: ${pull} exercícios de puxada vs ${push} de empurrada. Adicione mais supinos e desenvolvimentos.`,
+        avgConf * 0.88,
+        { tipo: 'desequilibrio', subtipo: 'push_pull', ratioPushPull: parseFloat(ratio.toFixed(2)) }
+      ));
+    }
+  }
+
+  // ── Grupo dominante (>40% do total) ───────────────────────────
+  const sorted = Object.entries(byGroup).sort((a, b) => b[1] - a[1]);
+  const [topGroup, topCount] = sorted[0] || [];
+  if (topGroup && topCount / total > 0.40) {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `Concentração excessiva em ${topGroup}: ${topCount}/${total} exercícios (${Math.round(topCount / total * 100)}%). Diversifique os grupos musculares.`,
+      avgConf * 0.85,
+      { tipo: 'desequilibrio', subtipo: 'grupo_dominante', grupo: topGroup, percentual: topCount / total }
+    ));
+  }
+
+  // ── Grupos ausentes (músculos-chave sem exercícios) ────────────
+  const CHAVE = ['Costas', 'Peito', 'Ombros', 'Abdômen/Lombar', 'Quadríceps/Isquiotibiais', 'Glúteos'];
+  const ausentes = CHAVE.filter(g => !byGroup[g]);
+  if (ausentes.length > 0) {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `Grupos musculares não trabalhados: ${ausentes.join(', ')}. Considere incluí-los no plano semanal.`,
+      avgConf * 0.80,
+      { tipo: 'desequilibrio', subtipo: 'grupo_ausente', grupos: ausentes }
+    ));
+  }
+
+  // ── Plano equilibrado ──────────────────────────────────────────
+  if (recs.length === 0) {
+    recs.push(new KroniaEntity(
+      'Recomendacao',
+      `Distribuição muscular equilibrada: ${Object.keys(byGroup).length} grupos trabalhados em ${total} exercícios. Continue assim.`,
+      avgConf * 0.90,
+      { tipo: 'equilibrio', distribuicao: byGroup }
+    ));
+  }
+
+  return recs;
+});
+
+
 /* ── 4. DEFINIÇÃO DE MACHINES ────────────────────────────────── */
 const KM_MACHINES = {
 
@@ -325,6 +619,80 @@ const KM_MACHINES = {
         id:         'step_4_projecao',
         type:       'sequential',
         transforms: ['projecaoEvolucao'],
+      },
+    ],
+  },
+
+  /**
+   * Inteligência de Exercício
+   * Entrada: Usuario → saída: [Recomendacao]
+   * Enriquece cada exercício dos treinos recentes com dados externos
+   * (músculos, nível, mecânica, imagens) e gera recomendações individuais.
+   */
+  'kronia.exercise_intel': {
+    id:          'kronia.exercise_intel',
+    displayName: 'Inteligência de Exercício',
+    description: 'Enriquece exercícios dos treinos com dados externos e gera recomendações por nível, mecânica e tipo de força.',
+    inputType:   'Usuario',
+    maxEntities: 48,
+    steps: [
+      {
+        id:          'step_1_treinos',
+        type:        'sequential',
+        transforms:  ['expandTreinos'],
+        maxEntities: 5,   // últimos 5 treinos
+      },
+      {
+        id:         'step_2_exercicios',
+        type:       'sequential',
+        transforms: ['expandExercicios'],
+      },
+      {
+        id:         'step_3_enrich',
+        type:       'sequential',
+        transforms: ['enrichExercicio'],  // async — busca no GitHub CDN
+      },
+      {
+        id:         'step_4_sugestoes',
+        type:       'sequential',
+        transforms: ['sugerirVariacoes'],
+      },
+    ],
+  },
+
+  /**
+   * Radar de Desequilíbrio Muscular
+   * Entrada: Usuario → saída: [Recomendacao]
+   * Analisa TODOS os exercícios dos treinos recentes de uma vez (aggregate)
+   * para detectar desequilíbrios push/pull, grupos dominantes e grupos ausentes.
+   */
+  'kronia.muscle_balance': {
+    id:          'kronia.muscle_balance',
+    displayName: 'Radar de Desequilíbrio Muscular',
+    description: 'Detecta desequilíbrios push/pull, grupos dominantes e músculos ausentes no plano de treino.',
+    inputType:   'Usuario',
+    maxEntities: 12,
+    steps: [
+      {
+        id:          'step_1_treinos',
+        type:        'sequential',
+        transforms:  ['expandTreinos'],
+        maxEntities: 10,
+      },
+      {
+        id:         'step_2_exercicios',
+        type:       'sequential',
+        transforms: ['expandExercicios'],
+      },
+      {
+        id:         'step_3_enrich',
+        type:       'sequential',
+        transforms: ['enrichExercicio'],
+      },
+      {
+        id:        'step_4_radar',
+        type:      'aggregate',          // novo step type: recebe TODOS de uma vez
+        transform: 'detectDesequilibrio',
       },
     ],
   },
@@ -406,7 +774,7 @@ async function _execStep(step, workingSet, logger) {
       const next = [];
       for (const entity of set) {
         try {
-          const results = fn(entity, step.config || {});
+          const results = await fn(entity, step.config || {});  // suporte async
           next.push(...(results || []));
         } catch(e) {
           logger(`[error] ${tName}(${entity.type}) → ${e.message}`);
@@ -426,7 +794,7 @@ async function _execStep(step, workingSet, logger) {
 
       for (const entity of workingSet) {
         try {
-          const results = fn(entity, step.config || {});
+          const results = await fn(entity, step.config || {});  // suporte async
           allResults.push(...(results || []));
         } catch(e) {
           logger(`[error] ${tName}(${entity.type}) → ${e.message}`);
@@ -436,6 +804,25 @@ async function _execStep(step, workingSet, logger) {
     const merged = _dedup(allResults);
     logger(`[step:${step.id}] parallel → ${merged.length} entidades (union)`);
     return _topN(merged, step.maxEntities);
+  }
+
+  // Novo tipo: 'aggregate' — passa o working set INTEIRO para um único transform
+  // Útil para análises que precisam ver todos os dados ao mesmo tempo (ex: detectDesequilibrio)
+  if (step.type === 'aggregate') {
+    const fn = KM_REGISTRY[step.transform];
+    if (!fn) {
+      logger(`[warn] aggregate transform "${step.transform}" não encontrado`);
+      return workingSet;
+    }
+    try {
+      const results = await fn(workingSet, step.config || {});
+      const merged  = _dedup(results || []);
+      logger(`[step:${step.id}] aggregate "${step.transform}" → ${merged.length} entidades`);
+      return _topN(merged, step.maxEntities);
+    } catch(e) {
+      logger(`[error] aggregate "${step.transform}" → ${e.message}`);
+      return [];
+    }
   }
 
   logger(`[warn] tipo de step desconhecido: "${step.type}"`);
