@@ -52,6 +52,34 @@
 </head>
 <body>
 
+<script>
+// ── Viewport real no mobile (evita bug do chrome mobile) ──────────
+(function() {
+  function setVH() {
+    var vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', vh + 'px');
+  }
+  setVH();
+  window.addEventListener('resize', setVH);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(setVH, 100); // aguarda recalculo do browser
+  });
+
+  // Bloqueia scroll no body — só permite em elementos com .app-scroll
+  document.addEventListener('touchmove', function(e) {
+    var el = e.target;
+    while (el && el !== document.body) {
+      if (el.classList && el.classList.contains('app-scroll')) return;
+      // também permite scroll em elementos com overflow-y próprio (bottomsheet, modais)
+      var style = window.getComputedStyle(el);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') return;
+      el = el.parentElement;
+    }
+    e.preventDefault();
+  }, { passive: false });
+})();
+</script>
+
 <!-- ═══ SPLASH SCREEN ═══ -->
 
 <div id="splashScreen">

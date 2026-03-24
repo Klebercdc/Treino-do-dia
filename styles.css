@@ -4,6 +4,7 @@
    Inspiração: Whoop · Nike Training · Strong
 ══════════════════════════════════════════ */
 :root {
+  --vh:          1vh;
   --bg:          #0f0f0f;
   --bg2:         #161616;
   --surface:     #1a1a1a;
@@ -40,18 +41,35 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
-html { scroll-behavior: smooth; }
+
+/* ── Layout base: sem página voando ───────────────────────────── */
+html {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 body {
+  height: calc(var(--vh, 1vh) * 100);
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: calc(68px + env(safe-area-inset-bottom));
-  min-height: 100dvh;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Área interna com scroll real — use em qualquer tela que precise rolar */
+.app-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 /* ══════════════════════════════════════════
