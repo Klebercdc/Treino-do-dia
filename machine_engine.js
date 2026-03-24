@@ -291,14 +291,20 @@ function _normKey(s) {
 
 /**
  * Carrega o índice free-exercise-db (uma vez, depois fica em memória).
+ * Circuit breaker: timeout de 6s — se a CDN do GitHub não responder,
+ * retorna Map vazio para não bloquear o pipeline.
  * @returns {Promise<Map<string, object>>}
  */
 async function _loadExdb() {
   if (_exdbIndex instanceof Map) return _exdbIndex;
-  if (_exdbIndex === 'error') return new Map();
+  if (_exdbIndex === 'error')    return new Map();
+
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout CDN')), 6000)
+  );
 
   try {
-    const res  = await fetch(_EXDB_URL);
+    const res  = await Promise.race([fetch(_EXDB_URL), timeout]);
     const data = await res.json();
     _exdbIndex = new Map();
     for (const ex of data) {
@@ -889,8 +895,8 @@ async function kmRunMachineUI(machineId, userId) {
   const machine = KM_MACHINES[machineId];
   if (!machine) return;
 
-  const logBox   = document.getElementById('defensiveLog');
-  const logLines = document.getElementById('defensiveLogLines');
+  const logBox     = document.getElementById('defensiveLog');
+  const logLines   = document.getElementById('defensiveLogLines');
   const kronosBox  = document.getElementById('kronosAnalysis');
   const kronosText = document.getElementById('kronosAnalysisText');
 
@@ -906,10 +912,48 @@ async function kmRunMachineUI(machineId, userId) {
     if (logBox) logBox.scrollTop = logBox.scrollHeight;
   }
 
-  const input = new KroniaEntity('Usuario', userId || 'local', 1.0);
-  const { entities, messages } = await kmRunMachine(machineId, input, addLog);
+  let entities = [], messages = [], usedServer = false;
 
-  // Mostra Recomendacoes no painel kronosAnalysis existente
+  // ── Tenta servidor primeiro (dados Supabase + sem localStorage) ──────────
+  try {
+    const { data: { session } } = await window._sb?.auth.getSession?.() || { data: {} };
+    const token = session?.access_token;
+    if (token) {
+      addLog(`▶ [server] Iniciando: ${machine.displayName}`);
+      const resp = await Promise.race([
+        fetch('/api/machine', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body:    JSON.stringify({ machineId }),
+        }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('API timeout')), 20000)),
+      ]);
+
+      if (resp.ok) {
+        const result = await resp.json();
+        entities    = result.entities  || [];
+        messages    = result.messages  || [];
+        usedServer  = true;
+        (result.messages || []).forEach(m => addLog(m.text));
+      }
+    }
+  } catch(e) {
+    addLog(`[warn] API server indisponível (${e.message}) — executando localmente…`);
+  }
+
+  // ── Fallback: execução local (localStorage) ────────────────────────────────
+  if (!usedServer) {
+    addLog(`▶ [local] Iniciando: ${machine.displayName}`);
+    const input  = new KroniaEntity('Usuario', userId || 'local', 1.0);
+    const result = await kmRunMachine(machineId, input, addLog);
+    entities = result.entities;
+    messages = result.messages;
+  }
+
+  // ── Badge de fonte ────────────────────────────────────────────────────────
+  addLog(usedServer ? '   Fonte: Supabase (dados em nuvem)' : '   Fonte: localStorage (dados locais)');
+
+  // ── Renderiza Recomendações ───────────────────────────────────────────────
   const recs = entities.filter(e => e.type === 'Recomendacao');
   const prs  = entities.filter(e => e.type === 'PR');
 
@@ -927,16 +971,14 @@ async function kmRunMachineUI(machineId, userId) {
     }).join('');
   }
 
-  if (prs.length > 0) {
-    prs.forEach(pr => {
-      addLog(`🏆 PR: ${pr.value.exercicio} — ${pr.value.peso} kg × ${pr.value.reps} reps (1RM ~${pr.value.oneRM} kg)`);
-    });
-  }
+  prs.forEach(pr => {
+    addLog(`PR: ${pr.value.exercicio} — ${pr.value.peso} kg × ${pr.value.reps} reps (1RM ~${pr.value.oneRM} kg)`);
+  });
 
   const errorCount = messages.filter(m => m.level === 'error').length;
   if (errorCount > 0) addLog(`⚠ ${errorCount} erro(s) — verifique o console.`);
 
-  return { entities, messages };
+  return { entities, messages, usedServer };
 }
 
 /**
