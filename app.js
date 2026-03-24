@@ -2283,6 +2283,9 @@ function orientPosTreinoRecup() {
 function orientPosTreinoSupl() {
   _orientPosTreino('Quais suplementos têm evidência científica real para o período pós-treino? Whey, creatina, BCAA — o que realmente vale a pena e quando tomar?');
 }
+function orientPosTreinoMob() {
+  _orientPosTreino('Me passe um protocolo rápido de mobilidade e alongamento pós-treino (5–10 min) para reduzir rigidez e melhorar recuperação.');
+}
 
 /* ═══════════════════════════════════════════════════
    DIVISÃO PICKER
