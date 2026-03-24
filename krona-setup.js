@@ -123,6 +123,9 @@
     if (_ksGoal) cfg.objetivo = _ksGoal;
     localStorage.setItem('kronia_config', JSON.stringify(cfg));
     localStorage.setItem('kronia_profile_setup_done', '1');
+    if (typeof _dbSync !== 'undefined' && typeof _dbSync.pushConfig === 'function') {
+      _dbSync.pushConfig();
+    }
 
     // Atualiza UI do perfil se disponível
     if (typeof updatePerfilScreen === 'function') updatePerfilScreen();

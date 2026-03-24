@@ -58,6 +58,25 @@ async function apiFetch(url, opts = {}) {
 // SINCRONIZAÇÃO COM SUPABASE (backup em nuvem)
 // ══════════════════════════════════════════════════════
 const _dbSync = {
+  // Combina config local + nuvem preservando campos já preenchidos
+  mergeConfig(localCfg, cloudCfg) {
+    const local = (localCfg && typeof localCfg === 'object') ? localCfg : {};
+    const cloud = (cloudCfg && typeof cloudCfg === 'object') ? cloudCfg : {};
+    const merged = Object.assign({}, cloud, local);
+
+    // Se campo local estiver vazio e nuvem tiver valor, prefere nuvem
+    Object.keys(cloud).forEach((k) => {
+      const vLocal = merged[k];
+      const vCloud = cloud[k];
+      const localVazio = vLocal === '' || vLocal === null || typeof vLocal === 'undefined';
+      if (localVazio && vCloud !== null && typeof vCloud !== 'undefined' && vCloud !== '') {
+        merged[k] = vCloud;
+      }
+    });
+
+    return merged;
+  },
+
   // Envia histórico de treinos para o banco em background
   async pushHistory() {
     try {
@@ -125,12 +144,21 @@ const _dbSync = {
         .eq('id', userId)
         .single();
 
-      if (profile?.config && Object.keys(profile.config).length > 0) {
-        const localCfg = safeJSON('kronia_config', {});
-        // Nuvem tem prioridade apenas se local estiver vazio
-        if (!Object.keys(localCfg).length) {
-          localStorage.setItem('kronia_config', JSON.stringify(profile.config));
-        }
+      const localCfg = safeJSON('kronia_config', {});
+      const cloudCfg = (profile && profile.config && typeof profile.config === 'object')
+        ? profile.config
+        : {};
+
+      const mergedCfg = this.mergeConfig(localCfg, cloudCfg);
+      localStorage.setItem('kronia_config', JSON.stringify(mergedCfg));
+
+      // Se nuvem estiver desatualizada/vazia, reenvia o merge para persistir
+      if (Object.keys(mergedCfg).length > Object.keys(cloudCfg).length) {
+        await _sb.from('profiles').upsert({
+          id: userId,
+          config: mergedCfg,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
       }
     } catch (e) { /* silencioso */ }
   }
