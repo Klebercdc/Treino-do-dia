@@ -2252,11 +2252,7 @@ function syncMainScrollArea() {
 }
 
 function navTo(tab) {
-  const th = document.getElementById("treinoHeader");
-  const td = document.getElementById("treinoDash");
   const pt = document.getElementById("posTreinoSection");
-  if (th) th.style.display = tab === "treino" ? "flex" : "none";
-  if (td) td.style.display = tab === "treino" ? "block" : "none";
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
   document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('nav-' + tab);
