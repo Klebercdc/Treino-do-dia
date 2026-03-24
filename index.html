@@ -1846,6 +1846,7 @@
   <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);line-height:1.5">
     💡 Meça cintura e pescoço na parte mais estreita. O % de gordura é calculado pela Fórmula Naval da US Navy.
   </div>
+
 </div>
 
 <button class="config-apply" style="width:100%;margin:4px 0 24px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="calcularDietaAvancada()">
@@ -2092,16 +2093,21 @@
       <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">Whey, creatina e o que realmente funciona</div>
     </div>
 
-    <!-- Salvar treino -->
-    <div onclick="salvarTreino()" style="background:rgba(249,115,22,0.08);border:1.5px solid var(--accent);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
-      <div style="width:34px;height:34px;border-radius:10px;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center">
-        <i data-lucide="save" class="lucide" width="16" height="16" stroke="var(--accent)" fill="none" stroke-width="1.75"></i>
+    <!-- Mobilidade -->
+    <div onclick="orientPosTreinoMob()" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
+      <div style="width:34px;height:34px;border-radius:10px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.25);display:flex;align-items:center;justify-content:center">
+        <i data-lucide="stretch-horizontal" class="lucide" width="16" height="16" stroke="#a855f7" fill="none" stroke-width="1.75"></i>
       </div>
-      <div style="font-size:0.82rem;font-weight:700;color:var(--accent)">Salvar Sessão</div>
-      <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">Registrar pesos e concluir o treino de hoje</div>
+      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Mobilidade</div>
+      <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">Alongamentos e soltura para acelerar a recuperação</div>
     </div>
 
   </div>
+
+  <button onclick="salvarTreino()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--accent),#fb923c);border:1.5px solid rgba(249,115,22,.55);border-radius:14px;padding:12px 14px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
+    <i data-lucide="save" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
+    Salvar Treino
+  </button>
 </div>
 
 <button class="btn-add-ex" onclick="abrirLibParaNovo()">
