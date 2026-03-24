@@ -2239,6 +2239,16 @@ ENCAMINHAMENTO PROFISSIONAL:
 - Endocrinologista: dúvidas hormonais, uso de EAAs`;
 }
 
+function syncMainScrollArea() {
+  const container = document.getElementById("container");
+  if (!container) return;
+  const footer = document.querySelector(".footer-actions");
+  const top = container.getBoundingClientRect().top;
+  const footerH = footer ? footer.getBoundingClientRect().height : 0;
+  const available = Math.floor(window.innerHeight - top - footerH);
+  container.style.height = `${Math.max(160, available)}px`;
+}
+
 function navTo(tab) {
   const th = document.getElementById("treinoHeader");
   const td = document.getElementById("treinoDash");
@@ -2249,7 +2259,12 @@ function navTo(tab) {
   document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('nav-' + tab);
   if (el) el.classList.add('active');
+  syncMainScrollArea();
 }
+
+window.addEventListener("resize", syncMainScrollArea);
+window.addEventListener("orientationchange", () => setTimeout(syncMainScrollArea, 120));
+window.addEventListener("load", () => setTimeout(syncMainScrollArea, 0));
 
 /* ── Pós-Treino: atalhos rápidos para o KRONOS ───── */
 function _orientPosTreino(msg) {
@@ -5961,5 +5976,3 @@ function updateHomeBanner() {
   if (t) t.textContent = m.t;
   if (s) s.textContent = m.s;
 }
-
-
