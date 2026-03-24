@@ -115,10 +115,20 @@ function processWebhook(provider, payload, callback) {
 
       var update;
       if (isActivate) {
-        // Pro: expira em 35 dias (margem sobre 30 dias para evitar corte antecipado)
+        // Detecta se é Ultra pelo campo product_name/product_id no payload
+        var productName = '';
+        if (provider === 'hotmart') {
+          productName = (payload.data && payload.data.product && payload.data.product.name) || '';
+        }
+        if (provider === 'kiwify') {
+          productName = (payload.product && payload.product.name) || '';
+        }
+        var isUltra = /ultra/i.test(productName);
+
+        // Pro/Ultra: expira em 35 dias (margem sobre 30 dias)
         var expires = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString();
         update = {
-          plan:          'pro',
+          plan:          isUltra ? 'ultra' : 'pro',
           activated_at:  now,
           expires_at:    expires,
           updated_at:    now

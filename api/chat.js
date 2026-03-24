@@ -1,11 +1,14 @@
 var https = require(`https`);
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini = require('./_gemini');
-var auth = require('./_auth');
-var cors = require('./_cors');
-var rl = require('./_ratelimit');
-var plans = require('./_plans');
-var logger = require('./_logger');
+var gemini   = require('./_gemini');
+var auth     = require('./_auth');
+var cors     = require('./_cors');
+var rl       = require('./_ratelimit');
+var plans    = require('./_plans');
+var logger   = require('./_logger');
+var intent   = require('./_intent');
+var dietflow = require('./_dietflow');
+var diet     = require('./_diet');
 
 var TREINO_SYSTEM = `Você é o KRONOS. Responda SOMENTE com JSON válido, sem texto antes ou depois, sem markdown.
 
@@ -145,6 +148,14 @@ REGRAS GERAIS
 4. Máximo 400 palavras por resposta, salvo treino completo
 5. Mantenha contexto da conversa`;
 
+function formatDietSummary(plan) {
+  return 'Dieta montada: ' + plan.meta.calorias + ' kcal/dia | '
+    + plan.meta.proteina + 'g proteína | '
+    + plan.meta.carbo    + 'g carbo | '
+    + plan.meta.gordura  + 'g gordura | '
+    + plan.hydration.litros + 'L água.';
+}
+
 function buildCoachSystem(systemFromClient) {
   if (systemFromClient && systemFromClient.length > 100) return systemFromClient;
   return COACH_SYSTEM_TEMPLATE
@@ -241,10 +252,10 @@ module.exports = function(req, res) {
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
-    plans.checkAndIncrementQuota(user.id, res, function() {
-      var b = req.body||{};
 
-      var messages = b.messages||[];
+      var b = req.body || {};
+
+      var messages = b.messages || [];
       if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
       if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
       var ALLOWED_ROLES = ['user', 'assistant', 'system'];
@@ -255,21 +266,103 @@ module.exports = function(req, res) {
         return { role: role, content: content };
       });
 
-      var isGerarTreino = b.isGerarTreino===true || isPedidoDeTreino(messages);
-      var userMsg = messages.slice(-1)[0]||{role:`user`,content:`Gere um treino`};
+      var lastMsg        = messages.slice(-1)[0] || { role: 'user', content: '' };
+      var lastContent    = lastMsg.content || '';
+      var convState      = b.conversationState || null;
 
-      if (isGerarTreino) {
-        gerarTreino(userMsg, user.id, function(err, data) {
-          if (err) return res.status(200).json({content:[{type:`text`,text:`⚠️ `+err}]});
-          res.status(200).json({content:[{type:`workout_json`,data:data}]});
+      // ── FLUXO DE DIETA ──────────────────────────────────────────
+      // Se há um fluxo ativo de coleta de dados
+      if (convState && convState.mode === 'diet') {
+        var stepResult = dietflow.continueDietFlow(convState.stepIndex, convState.collected, lastContent);
+
+        // Ainda coletando dados — sem consumir quota
+        if (!stepResult.finished) {
+          return res.status(200).json({
+            content: [{ type: 'text', text: stepResult.response }],
+            conversationState: {
+              mode:      stepResult.mode,
+              stepIndex: stepResult.stepIndex,
+              collected: stepResult.collected
+            }
+          });
+        }
+
+        // Dados completos — verifica quota antes de gerar
+        plans.getQuotaInfo(user.id, function(qErr, quota) {
+          if (qErr) {
+            console.error('[chat] erro ao verificar quota para dieta:', qErr);
+            // Falha silenciosa — gera sem incrementar
+            var dietPlan = diet.buildDietPlan(stepResult.collected);
+            return res.status(200).json({
+              content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
+              conversationState: null
+            });
+          }
+
+          if (!quota.allowed) {
+            // Preview antes do paywall — mostra calorias e macros sem dar o plano completo
+            var preview = diet.buildDietPlan(stepResult.collected);
+            return res.status(402).json({
+              error:   'QUOTA_EXCEEDED',
+              code:    'QUOTA_EXCEEDED',
+              used:    quota.used,
+              limit:   quota.limit,
+              plan:    quota.plan,
+              preview: {
+                calorias:  preview.meta.calorias,
+                proteina:  preview.meta.proteina,
+                carbo:     preview.meta.carbo,
+                gordura:   preview.meta.gordura,
+                refeicoes: preview.refeicoes.length
+              },
+              message: 'Sua dieta de ' + preview.meta.calorias + ' kcal está calculada. Faça upgrade para acessar o plano completo.'
+            });
+          }
+
+          // Quota ok — gera e incrementa
+          plans.checkAndIncrementQuota(user.id, res, function() {
+            var dietPlan = diet.buildDietPlan(stepResult.collected);
+            res.status(200).json({
+              content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
+              conversationState: null,
+              quota: { remaining: quota.remaining - 1 }
+            });
+          });
         });
-      } else {
-        callChat(buildCoachSystem(b.system), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
-          if (err) return res.status(500).json({error:err});
-          res.status(200).json({content:[{type:`text`,text:text}]});
+
+        return; // async — não cai no resto
+      }
+
+      // ── INTENT: novo pedido de dieta ─────────────────────────────
+      if (!b.isGerarTreino && intent.isDietStart(lastContent)) {
+        var flowStart = dietflow.startDietFlow();
+        return res.status(200).json({
+          content: [{ type: 'text', text: flowStart.response }],
+          conversationState: {
+            mode:      flowStart.mode,
+            stepIndex: flowStart.stepIndex,
+            collected: flowStart.collected
+          }
         });
       }
-    });
+
+      // ── TREINO + CHAT GERAL (fluxo original intacto) ─────────────
+      plans.checkAndIncrementQuota(user.id, res, function(planRow) {
+        var isGerarTreino = b.isGerarTreino === true || isPedidoDeTreino(messages);
+
+        if (isGerarTreino) {
+          gerarTreino(lastMsg, user.id, function(err, data) {
+            if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
+            res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+          });
+        } else {
+          callChat(buildCoachSystem(b.system), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+            if (err) return res.status(500).json({ error: err });
+            res.status(200).json({ content: [{ type: 'text', text: text }] });
+          });
+        }
+      });
+
     }, { max: 40, windowMs: 60000 }, user.id);
   });
 };
