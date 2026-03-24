@@ -19,6 +19,8 @@ if (!SUPABASE_URL) {
   throw new Error('[_plans] SUPABASE_URL não configurada. Adicione a variável de ambiente no Vercel.');
 }
 var FREE_AI_LIMIT       = parseInt(process.env.FREE_AI_LIMIT || '15', 10); // req/mês grátis
+var TRIAL_AI_LIMIT      = parseInt(process.env.TRIAL_AI_LIMIT || '30', 10); // req durante trial
+var TRIAL_DAYS          = parseInt(process.env.TRIAL_DAYS || '7', 10);
 
 // ─── HTTP helper simples para Supabase REST ─────────
 function supabaseRequest(method, path, body, callback) {
@@ -108,23 +110,51 @@ function checkAndIncrementQuota(userId, res, next) {
       return next({ plan: 'free', ai_requests_used: 0 });
     }
 
-    var isPro    = plan.plan === 'pro';
-    var used     = plan.ai_requests_used || 0;
+    var planName  = plan.plan || 'free';
+    var used      = plan.ai_requests_used || 0;
     var isExpired = plan.expires_at && new Date(plan.expires_at) < new Date();
 
-    // Pro expirado → downgrade para free
-    if (isPro && isExpired) {
+    // Planos ilimitados — passa direto
+    var isUnlimited = (planName === 'pro' || planName === 'ultra');
+
+    // Pro/Ultra expirado → downgrade para free
+    if (isUnlimited && isExpired) {
       supabaseRequest('PATCH', 'user_plans?user_id=eq.' + userId, { plan: 'free', updated_at: new Date().toISOString() }, function() {});
-      isPro = false;
+      isUnlimited = false;
+      planName = 'free';
     }
 
-    if (!isPro && used >= FREE_AI_LIMIT) {
+    // Trial: 7 dias + limite de requisições
+    var isTrial = (planName === 'trial');
+    if (isTrial) {
+      var trialStart   = plan.trial_started_at ? new Date(plan.trial_started_at) : null;
+      var trialExpired = trialStart ? ((Date.now() - trialStart.getTime()) > TRIAL_DAYS * 86400000) : true;
+      if (trialExpired) {
+        supabaseRequest('PATCH', 'user_plans?user_id=eq.' + userId, { plan: 'free', updated_at: new Date().toISOString() }, function() {});
+        isTrial = false;
+        planName = 'free';
+      }
+    }
+
+    var effectiveLimit = isTrial ? TRIAL_AI_LIMIT : FREE_AI_LIMIT;
+
+    if (!isUnlimited && !isTrial && used >= FREE_AI_LIMIT) {
       return res.status(402).json({
         error: 'Limite do plano gratuito atingido (' + FREE_AI_LIMIT + ' consultas/mês). Faça upgrade para o Pro.',
         code:  'QUOTA_EXCEEDED',
         used:  used,
         limit: FREE_AI_LIMIT,
-        plan:  'free'
+        plan:  planName
+      });
+    }
+
+    if (isTrial && used >= TRIAL_AI_LIMIT) {
+      return res.status(402).json({
+        error: 'Limite do trial atingido (' + TRIAL_AI_LIMIT + ' consultas). Faça upgrade para continuar.',
+        code:  'QUOTA_EXCEEDED',
+        used:  used,
+        limit: TRIAL_AI_LIMIT,
+        plan:  'trial'
       });
     }
 
@@ -145,9 +175,48 @@ function checkAndIncrementQuota(userId, res, next) {
  * Middleware Vercel: exige autenticação + verifica quota de IA.
  * Uso: checkQuota(user.id, res, function(plan) { ... })
  */
+/**
+ * Retorna informações de quota sem modificar o estado.
+ * Útil para mostrar preview antes do paywall.
+ * @param {string}   userId
+ * @param {function} callback - function(err, { allowed, used, limit, remaining, plan })
+ */
+function getQuotaInfo(userId, callback) {
+  getUserPlan(userId, function(err, plan) {
+    if (err) return callback(err, null);
+
+    var planName  = plan.plan || 'free';
+    var used      = plan.ai_requests_used || 0;
+    var isExpired = plan.expires_at && new Date(plan.expires_at) < new Date();
+    var isUnlimited = (planName === 'pro' || planName === 'ultra') && !isExpired;
+
+    if (isUnlimited) {
+      return callback(null, { allowed: true, used: used, limit: Infinity, remaining: Infinity, plan: planName });
+    }
+
+    var isTrial = (planName === 'trial');
+    var trialStart = plan.trial_started_at ? new Date(plan.trial_started_at) : null;
+    var trialExpired = isTrial && trialStart ? ((Date.now() - trialStart.getTime()) > TRIAL_DAYS * 86400000) : true;
+    if (isTrial && trialExpired) { isTrial = false; planName = 'free'; }
+
+    var limit = isTrial ? TRIAL_AI_LIMIT : FREE_AI_LIMIT;
+    var allowed = used < limit;
+
+    callback(null, {
+      allowed:   allowed,
+      used:      used,
+      limit:     limit,
+      remaining: Math.max(0, limit - used),
+      plan:      planName
+    });
+  });
+}
+
 module.exports = {
-  getUserPlan:           getUserPlan,
+  getUserPlan:            getUserPlan,
   checkAndIncrementQuota: checkAndIncrementQuota,
-  FREE_AI_LIMIT:         FREE_AI_LIMIT,
-  supabaseRequest:       supabaseRequest
+  getQuotaInfo:           getQuotaInfo,
+  FREE_AI_LIMIT:          FREE_AI_LIMIT,
+  TRIAL_AI_LIMIT:         TRIAL_AI_LIMIT,
+  supabaseRequest:        supabaseRequest
 };
