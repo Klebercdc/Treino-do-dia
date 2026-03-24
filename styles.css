@@ -930,7 +930,9 @@ to   { opacity: 0; pointer-events: none; visibility: hidden; }
 }
 #splashBg {
 position: absolute; inset: 0;
-background: #090909 url('Kronia.png?v=2') center center / contain no-repeat;
+background:
+  radial-gradient(ellipse at 50% 35%, rgba(249,115,22,0.22) 0%, rgba(9,9,9,0.8) 52%, #090909 100%),
+  #090909;
 }
 #splashContent {
 position: relative; z-index: 1;
