@@ -273,7 +273,13 @@ body {
 /* ══════════════════════════════════════════
    CONTAINER
 ══════════════════════════════════════════ */
-#container { padding: 14px 12px calc(68px + env(safe-area-inset-bottom)); }
+#container {
+  padding: 14px 12px calc(68px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
 .section { display: none; }
 .section.active { display: block; animation: fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity:.4; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
