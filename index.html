@@ -274,7 +274,7 @@
   </div>
 
   <!-- CTA footer -->
-  <div style="padding:16px 20px calc(18px + env(safe-area-inset-bottom));flex-shrink:0">
+  <div id="ksFooter" style="padding:16px 20px max(108px, calc(26px + env(safe-area-inset-bottom)));flex-shrink:0">
     <button id="ksCta" onclick="ksNext()" disabled style="width:100%;border:none;border-radius:14px;padding:17px;color:#fff;font-family:var(--font);font-size:0.95rem;font-weight:800;cursor:pointer;background:#FF6B00;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s;opacity:0.38">
       <span id="ksCtaLabel">Continuar</span>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -487,6 +487,7 @@
 
   <!-- Footer fixo: botão CTA sempre visível, fora do overflow:hidden dos slides -->
   <div id="ff-ob-footer">
+    <div id="ff-ob-hint">Deslize para continuar</div>
     <button id="ff-ob-cta" onclick="event.stopPropagation();ffObNext()">
       Próximo
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
