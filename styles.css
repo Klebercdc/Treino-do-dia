@@ -1708,6 +1708,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 #ff-ob-slides {
   flex: 1;
+  min-height: 0;
   position: relative;
   z-index: 10;
   overflow: hidden;
@@ -1720,9 +1721,14 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   justify-content: center;
   padding: 12px 24px;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 18px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   animation: ffSlideIn 0.26s ease;
 }
+.ff-slide::-webkit-scrollbar { display: none; }
 @media (max-height: 700px) {
   .ff-slide { justify-content: flex-start; padding-top: 6px; }
 }
