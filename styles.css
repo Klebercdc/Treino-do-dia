@@ -60,7 +60,7 @@ body {
   text-size-adjust: 100%;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  touch-action: pan-y;
 }
 
 /* Área interna com scroll real — use em qualquer tela que precise rolar */
@@ -1909,14 +1909,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #ff-ob-footer {
   position: relative;
   z-index: 10;
-  padding: 16px 28px max(44px, calc(20px + env(safe-area-inset-bottom)));
-}
-#ff-ob-hint {
-  text-align: center;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: rgba(255,255,255,0.34);
-  font-family: 'Barlow', 'DM Sans', sans-serif;
+  padding: 12px 28px max(44px, calc(20px + env(safe-area-inset-bottom)));
 }
 /* ── Krona Setup ── */
 .ks-step { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 28px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity .35s ease,transform .35s cubic-bezier(.4,0,.2,1); }
