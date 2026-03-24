@@ -320,7 +320,27 @@ function callAgent(messages, tools, callback) {
   };
 
   if (GROQ_KEY) {
-    gemini.callGeminiAgent(GROQ_KEY, payload, 30000, 3, callback);
+    gemini.callGeminiAgent(GROQ_KEY, payload, 30000, 3, function(err, msg) {
+      if (!err) return callback(null, msg);
+
+      // Fallback resiliente: em alguns casos o provider retorna HTTP 400 por
+      // falha de geração de function call ("Failed to call a function").
+      // Nesses cenários, seguimos sem tools para evitar quebra da experiência.
+      if (/failed to call a function/i.test(String(err || ''))) {
+        var noToolPayload = {
+          messages: messages,
+          max_tokens: 1200,
+          temperature: 0.4,
+          stream: false
+        };
+        return gemini.callGemini(GROQ_KEY, noToolPayload, 30000, 2, function(fallbackErr, text) {
+          if (fallbackErr) return callback(err, null);
+          callback(null, { content: text || '' });
+        });
+      }
+
+      callback(err, null);
+    });
   } else {
     callback('GROQ_API_KEY não configurada', null);
   }
@@ -430,6 +450,20 @@ function agentLoopStream(userMessages, userData, res) {
         }
       },
       function onError(err) {
+        if (/failed to call a function/i.test(String(err || ''))) {
+          var noToolPayload = {
+            messages: msgs,
+            max_tokens: 1200,
+            temperature: 0.4,
+            stream: false
+          };
+          return gemini.callGemini(GROQ_KEY, noToolPayload, 30000, 2, function(fallbackErr, text) {
+            var t = fallbackErr ? ('Erro: ' + err) : (text || '');
+            try { res.write('data: ' + JSON.stringify({ d: t }) + '\n\n'); } catch (e) {}
+            sendDone();
+          });
+        }
+
         try { res.write('data: ' + JSON.stringify({ error: err }) + '\n\n'); } catch (e) {}
         sendDone();
       }
