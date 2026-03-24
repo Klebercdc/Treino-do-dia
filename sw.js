@@ -4,7 +4,7 @@ const STATIC = [
   '/index.html',
   '/app.js',
   '/styles.css',
-  '/kronia.png',
+  '/Kronia.png',
   '/splash.png',
   '/manifest.json'
 ];
@@ -32,8 +32,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'KRONIA', {
       body: data.body || '',
-      icon: '/kronia.png',
-      badge: '/kronia.png',
+      icon: '/Kronia.png',
+      badge: '/Kronia.png',
       tag: data.tag || 'kronia-default',
       renotify: true,
       data: { url: data.url || '/' }

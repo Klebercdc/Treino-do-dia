@@ -3104,10 +3104,10 @@ function kronaNotify(title, body, tag) {
   try {
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification(title, { body, icon: '/kronia.png', badge: '/kronia.png', tag: tag || 'kronia', renotify: true });
+        reg.showNotification(title, { body, icon: '/Kronia.png', badge: '/Kronia.png', tag: tag || 'kronia', renotify: true });
       });
     } else {
-      new Notification(title, { body, icon: '/kronia.png' });
+      new Notification(title, { body, icon: '/Kronia.png' });
     }
   } catch(e) {}
 }
@@ -4559,7 +4559,7 @@ function gerarDietaPDF() {
   const obj    = document.querySelector("#dietaObjChips .bs-chip.active")?.textContent || "";
   const ativ   = document.querySelector("#dietaAtivChips .bs-chip.active")?.textContent || "";
   const data   = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"long", year:"numeric" });
-  const logoUrl = window.location.origin + "/kronia.png";
+  const logoUrl = window.location.origin + "/Kronia.png";
 
   // ── Parser do formato estruturado por blocos ## ────────────────────
   function parseConteudo(txt) {

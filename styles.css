@@ -1470,7 +1470,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   display: none;
   position: fixed;
   inset: 0;
-  background: #090909 url('Kronia.png?v=2') center 30% / 75% auto no-repeat;
+  background: #090909 url('splash.png') center 28% / min(78vw,360px) auto no-repeat;
   z-index: 99998;
   flex-direction: column;
   align-items: center;
@@ -1598,7 +1598,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #emailLoginScreen {
   background:
     linear-gradient(to bottom, transparent 35%, rgba(9,9,9,0.8) 58%, #090909 75%),
-    url('Kronia.png?v=2') center 30% / 75% auto no-repeat,
+    url('splash.png') center 28% / min(78vw,360px) auto no-repeat,
     #090909;
   justify-content: flex-end;
 }
