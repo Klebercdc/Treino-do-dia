@@ -11,10 +11,7 @@
 
 var https = require('https');
 
-var SUPABASE_URL = process.env.SUPABASE_URL;
-if (!SUPABASE_URL) {
-  throw new Error('[_auth] SUPABASE_URL não configurada. Adicione a variável de ambiente no Vercel.');
-}
+var SUPABASE_URL = process.env.SUPABASE_URL || '';
 
 /**
  * Verifica o JWT do Supabase delegando ao endpoint /auth/v1/user.
@@ -24,10 +21,13 @@ if (!SUPABASE_URL) {
 function verifyToken(token, callback) {
   if (!token) return callback('Token ausente', null);
 
+  var supabaseUrl = process.env.SUPABASE_URL || '';
+  if (!supabaseUrl) return callback('[_auth] SUPABASE_URL não configurada', null);
+
   var apiKey = process.env.SUPABASE_SERVICE_KEY
              || process.env.SUPABASE_ANON_KEY;
 
-  var baseUrl = SUPABASE_URL.replace(/\/$/, '');
+  var baseUrl = supabaseUrl.replace(/\/$/, '');
   var urlObj = new URL(baseUrl + '/auth/v1/user');
 
   var options = {
