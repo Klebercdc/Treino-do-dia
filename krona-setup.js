@@ -8,6 +8,7 @@
   var _ksStep = 0;
   var _ksTotal = 3;
   var _ksGoal = null;
+  var _ksCtaBound = false;
 
   /* ── Abrir / fechar ── */
   window.openKronaSetup = function () {
@@ -25,6 +26,17 @@
     try { cfg = JSON.parse(localStorage.getItem('kronia_config') || '{}'); } catch (e) {}
     var nomeEl = document.getElementById('ksNomeInput');
     if (nomeEl && cfg.nome) nomeEl.value = cfg.nome;
+
+    if (!_ksCtaBound) {
+      var cta = document.getElementById('ksCta');
+      if (cta) {
+        cta.addEventListener('touchend', function (ev) {
+          ev.preventDefault();
+          if (!cta.disabled) window.ksNext();
+        }, { passive: false });
+      }
+      _ksCtaBound = true;
+    }
   };
 
   function ksClose() {
