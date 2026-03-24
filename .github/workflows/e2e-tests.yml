@@ -48,20 +48,37 @@ jobs:
           VITE_SUPABASE_DB_URL_TEST=${{ secrets.VITE_SUPABASE_DB_URL_TEST }}
           EOF
 
+      - name: Validar secrets de teste
+        id: test_secrets
+        run: |
+          if [ -n "$VITE_SUPABASE_URL_TEST" ] && [ -n "$VITE_SUPABASE_SERVICE_KEY_TEST" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Secrets de teste detectados."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Secrets de teste ausentes. Testes E2E serão ignorados neste run."
+          fi
+
       # ── 4. Migration no banco de testes (se secrets configurados) ─────────
       - name: Aplicar migration no banco de testes
-        if: ${{ env.VITE_SUPABASE_DB_URL_TEST != '' }}
+        if: ${{ steps.test_secrets.outputs.available == 'true' && env.VITE_SUPABASE_DB_URL_TEST != '' }}
         run: |
           npx supabase db push --db-url "$VITE_SUPABASE_DB_URL_TEST"
         continue-on-error: true   # não bloqueia se banco de testes não estiver configurado
 
       # ── 5. Roda os testes ─────────────────────────────────────────────────
       - name: Sanity check (verifica roteamento do banco)
+        if: ${{ steps.test_secrets.outputs.available == 'true' }}
         run: npm run test:sanity
         continue-on-error: true   # sanity é informativo, não bloqueia
 
       - name: Testes E2E — Registro de Treino
+        if: ${{ steps.test_secrets.outputs.available == 'true' }}
         run: npm run test:workout
+
+      - name: Pular E2E quando secrets não estiverem disponíveis
+        if: ${{ steps.test_secrets.outputs.available != 'true' }}
+        run: echo "E2E ignorado porque os secrets de Supabase não estão disponíveis para este workflow."
 
       # ── 6. Relatórios e artefatos ─────────────────────────────────────────
       - name: Upload do relatório HTML
