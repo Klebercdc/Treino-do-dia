@@ -1765,6 +1765,8 @@ function gerarTreinoDoPrograma() {
 
 function openConfig() {
   document.getElementById("configWarning").style.display="none";
+  const configBox = document.getElementById("configBox");
+  if (configBox) configBox.scrollTop = 0;
   // Sync persona chip from saved config
   const savedPersona = safeJSON("kronia_config", {}).persona;
   if (savedPersona) {
