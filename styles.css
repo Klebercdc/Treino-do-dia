@@ -168,7 +168,8 @@ body {
 #configSheet.show { display: flex; }
 #configBox { background: var(--card); width: 100%; max-width: 520px; border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); padding: max(10px, env(safe-area-inset-top, 0px)) 18px 32px; animation: slideUp .28s cubic-bezier(.34,1.1,.64,1); max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px)); overflow-y: auto; scrollbar-width: none; }
 #configBox::-webkit-scrollbar { display: none; }
-.config-handle { width: 32px; height: 3px; background: var(--border); border-radius: 2px; margin: 12px auto 20px; }
+.config-sheet-header { position: sticky; top: 0; z-index: 3; background: var(--card); margin: 0 -18px 14px; padding: 4px 18px 0; }
+.config-handle { width: 32px; height: 3px; background: var(--border); border-radius: 2px; margin: 10px auto 14px; }
 .config-title { font-family: var(--display); font-size: 1.4rem; letter-spacing: .04em; color: var(--text); margin-bottom: 20px; }
 .config-section { margin-bottom: 22px; }
 .config-section-lbl { font-size: 0.88rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,0.7); margin-bottom: 10px; }
@@ -452,6 +453,7 @@ body.light-mode .tbar-adj-btn { background: #f0f0f0; border-color: rgba(0,0,0,0.
 body.light-mode .btn-t { background: #f0f0f0; border-color: rgba(0,0,0,0.12); color: #333; }
 body.light-mode .tsheet-close { background: #f0f0f0; border-color: rgba(0,0,0,0.12); color: #666; }
 body.light-mode #configBox { background: #fff; }
+body.light-mode .config-sheet-header { background: #fff; }
 body.light-mode #summaryBox { background: #fff; }
 body.light-mode #evoBox { background: #fff; }
 body.light-mode dialog { background: #fff; }
