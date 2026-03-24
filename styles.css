@@ -1597,10 +1597,16 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 /* ── EMAIL LOGIN SCREEN ── */
 #emailLoginScreen {
   background:
-    linear-gradient(to bottom, transparent 35%, rgba(9,9,9,0.8) 58%, #090909 75%),
-    url('splash.png') center 28% / min(78vw,360px) auto no-repeat,
+    linear-gradient(to bottom, rgba(9,9,9,0.1) 20%, rgba(9,9,9,0.82) 56%, #090909 74%),
     #090909;
   justify-content: flex-end;
+}
+.email-login-logo {
+  width: min(44vw, 164px);
+  max-width: 164px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(255,107,0,0.22));
 }
 .ff-input {
   background: rgba(255,255,255,0.07) !important;
