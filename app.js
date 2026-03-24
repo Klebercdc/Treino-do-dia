@@ -4822,7 +4822,9 @@ PERFIL MODERADO — DIRETRIZES:
     premium: `
 PERFIL PREMIUM — DIRETRIZES:
 - Use alimentos de alta qualidade nutricional sem restrição de custo: salmão, frango orgânico, carnes nobres, azeite extravirgem, frutas vermelhas, oleaginosas, whey isolado, ovos caipiras.
-- Priorize variedade, biodisponibilidade e praticidade.`
+- Estruture uma dieta premium com foco em performance e saúde intestinal: fibras distribuídas no dia, fontes de ômega-3, vegetais coloridos e proteína de alto valor biológico em todas as refeições.
+- Inclua substituições premium por refeição (1 opção equivalente para cada principal alimento), mantendo macros semelhantes.
+- Priorize variedade, biodisponibilidade, praticidade e aderência de longo prazo.`
   }[orcamento] || "";
   localStorage.setItem("kronia_calc_prefs", JSON.stringify({
     ...safeJSON("kronia_calc_prefs", {}),
@@ -4929,7 +4931,12 @@ IMPORTANTE: Use as diretrizes ISSN — ≥1.6g/kg proteína para hipertrofia, d�
   try {
     const resp = await apiFetch("/api/chat", {
       method: "POST",
-      body: JSON.stringify({ system: buildTrainingContext(), messages: [{ role: "user", content: prompt }], isGerarTreino: false })
+      body: JSON.stringify({
+        system: buildTrainingContext(),
+        messages: [{ role: "user", content: prompt }],
+        isGerarTreino: false,
+        isDietDirect: true
+      })
     });
     const data = await resp.json();
     if (data.error) { txt.textContent = "Erro: " + data.error; return; }
