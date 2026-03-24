@@ -50,8 +50,8 @@ interface InactiveUser {
 const PUSH_PAYLOAD = JSON.stringify({
   title:  "KRONIA: Hora de treinar? 🏋️",
   body:   "Sua fadiga está dissipada. Não deixe seu progresso esfriar!",
-  icon:   "/kronia.png",
-  badge:  "/kronia.png",
+  icon:   "/Kronia.png",
+  badge:  "/Kronia.png",
   tag:    "kronia-reengajamento",
   url:    "/",
   renotify: true,
