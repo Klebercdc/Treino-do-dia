@@ -166,7 +166,7 @@ body {
 .setup-panel { display: none; }
 #configSheet { display: none; position: fixed; inset: 0; z-index: 4000; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); align-items: flex-end; justify-content: center; }
 #configSheet.show { display: flex; }
-#configBox { background: var(--card); width: 100%; max-width: 520px; border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); padding: 0 18px 32px; animation: slideUp .28s cubic-bezier(.34,1.1,.64,1); max-height: 90vh; overflow-y: auto; scrollbar-width: none; }
+#configBox { background: var(--card); width: 100%; max-width: 520px; border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); padding: max(10px, env(safe-area-inset-top, 0px)) 18px 32px; animation: slideUp .28s cubic-bezier(.34,1.1,.64,1); max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 8px)); overflow-y: auto; scrollbar-width: none; }
 #configBox::-webkit-scrollbar { display: none; }
 .config-handle { width: 32px; height: 3px; background: var(--border); border-radius: 2px; margin: 12px auto 20px; }
 .config-title { font-family: var(--display); font-size: 1.4rem; letter-spacing: .04em; color: var(--text); margin-bottom: 20px; }
