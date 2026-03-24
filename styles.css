@@ -1918,10 +1918,11 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   padding: 12px 28px max(44px, calc(20px + env(safe-area-inset-bottom)));
 }
 /* ── Krona Setup ── */
-.ks-step { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 28px;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity .35s ease,transform .35s cubic-bezier(.4,0,.2,1); }
+.ks-step { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px 28px 20px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;transform:translateX(48px);transition:opacity .35s ease,transform .35s cubic-bezier(.4,0,.2,1); }
 .ks-step-active { opacity:1;pointer-events:all;transform:translateX(0); }
 .ks-step-exit { opacity:0;transform:translateX(-48px); }
 .ks-step-inner { width:100%;max-width:340px; }
+.ks-step-inner { padding-bottom:16px; }
 .ks-icon-wrap { width:60px;height:60px;border-radius:18px;border:1px solid;display:flex;align-items:center;justify-content:center;margin-bottom:22px; }
 .ks-title { font-family:var(--display);font-size:2rem;color:#fff;line-height:1.15;letter-spacing:.02em;margin:0 0 10px; }
 .ks-sub { font-size:0.82rem;color:rgba(255,255,255,0.38);line-height:1.65;margin:0 0 24px; }
@@ -1931,6 +1932,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 .ks-goal-chip { display:flex;align-items:center;gap:14px;width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:13px;padding:14px 18px;color:rgba(255,255,255,0.55);font-family:var(--font);font-size:0.88rem;font-weight:600;cursor:pointer;transition:all .18s;text-align:left; }
 .ks-goal-chip.selected { background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.4);color:#fff; }
 .ks-goal-chip.selected svg { stroke:#FF6B00; }
+#ksFooter { position:relative;z-index:2; }
 /* Nav grid no tour */
 .ff-nav-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;width:100%; }
 .ff-nav-item { display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:13px 14px;font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.7); }
