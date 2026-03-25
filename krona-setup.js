@@ -28,23 +28,22 @@
     var nomeEl = document.getElementById('ksNomeInput');
     if (nomeEl && cfg.nome) nomeEl.value = cfg.nome;
 
-    if (!_ksCtaBound) {
-      var cta = document.getElementById('ksCta');
-      if (cta) {
-        cta.addEventListener('click', function (ev) {
-          if (cta.disabled) {
-            ev.preventDefault();
-            return;
-          }
-          var now = Date.now();
-          if (now - _ksLastTriggerAt < 350) return;
-          _ksLastTriggerAt = now;
-          window.ksNext();
-        });
-      }
-      _ksCtaBound = true;
-    }
+    bindKronaCta();
   };
+
+  function bindKronaCta() {
+    if (_ksCtaBound) return;
+    var cta = document.getElementById('ksCta');
+    if (!cta) return;
+    cta.addEventListener('click', function (ev) {
+      if (cta.disabled) {
+        ev.preventDefault();
+        return;
+      }
+      window.ksNext();
+    });
+    _ksCtaBound = true;
+  }
 
   function ksClose() {
     var el = document.getElementById('kronaSetup');
@@ -79,6 +78,9 @@
   }
 
   window.ksNext = function () {
+    var now = Date.now();
+    if (now - _ksLastTriggerAt < 350) return;
+    _ksLastTriggerAt = now;
     if (_ksStep < _ksTotal - 1) {
       ksGoTo(_ksStep + 1);
     } else {
