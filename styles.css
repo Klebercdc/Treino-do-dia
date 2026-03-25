@@ -1621,6 +1621,8 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #onboarding {
   position: fixed;
   inset: 0;
+  height: 100dvh;
+  min-height: 100svh;
   background: #090909;
   z-index: 8000;
   display: none;
@@ -1629,6 +1631,11 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: pan-x pan-y;
+}
+@supports (-webkit-touch-callout: none) {
+  #onboarding {
+    min-height: -webkit-fill-available;
+  }
 }
 #ff-ob-bg {
   position: absolute;
@@ -1714,6 +1721,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   overflow: hidden;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .ff-slide {
   display: none;
