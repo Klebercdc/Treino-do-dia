@@ -35,13 +35,19 @@
     if (_ksCtaBound) return;
     var cta = document.getElementById('ksCta');
     if (!cta) return;
-    cta.addEventListener('click', function (ev) {
+
+    function trigger(ev) {
       if (cta.disabled) {
         ev.preventDefault();
         return;
       }
+      ev.preventDefault();
+      ev.stopPropagation();
       window.ksNext();
-    });
+    }
+
+    cta.addEventListener('click', trigger);
+    cta.addEventListener('touchend', trigger, { passive: false });
     _ksCtaBound = true;
   }
 
