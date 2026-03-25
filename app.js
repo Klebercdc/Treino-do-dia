@@ -5266,7 +5266,10 @@ function switchGuiaTab(tab) {
 function abrirYouTube() {
   const query = GUIA_YT_QUERY[_guiaExNome] || ("como fazer " + _guiaExNome + " execução correta musculação");
   const url = "https://www.youtube.com/results?search_query=" + encodeURIComponent(query);
-  window.open(url, "_blank");
+  const novaAba = window.open(url, "_blank", "noopener,noreferrer");
+  if (!novaAba) {
+    window.location.href = url;
+  }
 }
 
 // Busca curada por exercício → query específica pro YouTube
