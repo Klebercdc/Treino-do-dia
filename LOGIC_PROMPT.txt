@@ -1,0 +1,6 @@
+Claude, utilize os arquivos ARCHITECTURE.md, DATABASE_SCHEMA.sql e STYLES_THEME.js como base.
+1. Implemente a interface de chat idêntica ao WhatsApp iOS no Modo Escuro (#000000).
+2. O avatar do KRONOS deve ser um círculo minimalista com o núcleo laranja (#A56700).
+3. A cada novo treino registrado, consulte a View 'v_fatigue_analysis'.
+4. Se o status for 'RISCO CRÍTICO', o KRONOS deve interromper o fluxo e dizer:
+   'Senhor, os dados biométricos indicam sobrecarga. Recomendo redução imediata de volume'.

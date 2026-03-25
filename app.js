@@ -873,9 +873,41 @@ async function salvarTreino() {
     _disposicaoAtual = null;
     try { renderDesafios(); } catch(e) {}
     updateStreakUI(); updateWorkoutProgress();
+    const analiseAcwr = await _avaliarFadigaAcwr();
+    _aplicarAlertaCriticoAcwr(analiseAcwr);
     showSummary(st, prs, dur);
     if (prs.length > 0) setTimeout(() => showToast(`🏆 ${prs.length} PR${prs.length>1?"s":""} batido${prs.length>1?"s":""}!`, "success", 4000), 800);
   } catch { showToast("Erro ao salvar. Memória cheia?", "error"); }
+}
+
+
+
+async function _avaliarFadigaAcwr() {
+  try {
+    const { data: { session } } = await _sb.auth.getSession();
+    if (!session?.user?.id) return null;
+    const { data, error } = await _sb
+      .from('v_fatigue_analysis')
+      .select('status, acwr_index')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function _aplicarAlertaCriticoAcwr(analise) {
+  if (!analise || analise.status !== 'RISCO CRÍTICO') return;
+  const aviso = 'Senhor, os dados biométricos indicam sobrecarga. Recomendo redução imediata de volume';
+  showToast('⚠️ RISCO CRÍTICO detectado no ACWR.', 'warning', 5200);
+  addOrientMsg('orientExpertMessages', 'assistant', aviso + (Number.isFinite(analise.acwr_index) ? `\n\nACWR atual: ${Number(analise.acwr_index).toFixed(2)}.` : ''));
+  const input = document.getElementById('orientExpertInput');
+  if (input) {
+    input.value = '';
+    input.placeholder = 'Fluxo interrompido por segurança. Priorize recuperação.';
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2533,7 +2565,7 @@ function addAIMessage(role, text, isThinking = false) {
   const div = document.createElement("div");
   div.className = `ai-msg ${role}`;
   const now = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
-  const avatarSVG = `<div class="ai-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg></div>`;
+  const avatarSVG = `<div class="kronos-reactor-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.75"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
 
   if (role === "assistant") {
     if (isThinking) {
@@ -2719,7 +2751,7 @@ function iniciarFluxoGeradorTreino() {
   const container = document.getElementById('aiMessages');
   if (!container) return;
 
-  const avatarSVG = `<div class="ai-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg></div>`;
+  const avatarSVG = `<div class="kronos-reactor-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.75"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
 
   const chipStyle = 'display:inline-block;padding:7px 14px;margin:4px 4px 0 0;border-radius:20px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s;';
   const sectionStyle = 'margin-top:14px;';
@@ -4076,7 +4108,7 @@ function addOrientMsg(containerId, role, text) {
   wrap.className = `ai-msg ${role}`;
   wrap.setAttribute("data-role", role);
 
-  const kronosAvatar = `<div class="orient-kronos-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
+  const kronosAvatar = `<div class="orient-kronos-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.75"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
 
   if (role === "assistant") {
     wrap.innerHTML = `${kronosAvatar}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
