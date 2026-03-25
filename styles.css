@@ -1035,7 +1035,7 @@ to   { width: 100%; }
 #btnEmail:active { transform: scale(0.97); }
 #loginToggle { font-size: 0.85rem; color: var(--text-2); text-align: center; cursor: pointer; margin-top: 8px; }
 #loginToggle span { color: var(--accent); font-weight: 700; }
-#loginError { color: #f87171; font-size: 0.82rem; text-align: center; min-height: 18px; }
+#loginError { color: #f87171; font-size: 0.82rem; text-align: center; min-height: 0; }
 
 /* ══════════════════════════════════════════
    TREINO DASHBOARD
