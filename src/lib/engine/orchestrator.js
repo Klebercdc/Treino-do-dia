@@ -1,7 +1,10 @@
 import { classifyIntent } from "./intentClassifier";
+import { classifySupplementIntent } from "./supplementClassifier";
 import { DietFlow } from "../flows/dietFlow";
 import { WorkoutAgent } from "../agents/workoutAgent";
 import { ChatAgent } from "../agents/chatAgent";
+import { SupplementAgent } from "../agents/supplementAgent";
+import { SupplementStackAgent } from "../agents/supplementStackAgent";
 
 export async function orchestrate(message, user) {
   const intent = classifyIntent(message);
@@ -24,6 +27,31 @@ export async function orchestrate(message, user) {
 
   if (intent.domain === "diet" && intent.action === "start_diet_flow") {
     return await DietFlow.start(user);
+  }
+
+  const supplementIntent = classifySupplementIntent(message);
+
+  if (supplementIntent.domain === "supplement") {
+    if (supplementIntent.action === "build_stack") {
+      const stack = await SupplementStackAgent.build(user, message);
+
+      return {
+        type: "supplement_stack",
+        uiAction: "show_supplement_result",
+        response: "Estratégia de suplementação montada.",
+        data: stack,
+        intent: supplementIntent
+      };
+    }
+
+    const supplementResponse = await SupplementAgent.respond(message, user);
+
+    return {
+      type: "supplement_chat",
+      uiAction: "show_supplement_result",
+      response: supplementResponse,
+      intent: supplementIntent
+    };
   }
 
   const resposta = await ChatAgent.respond(message, user, intent);

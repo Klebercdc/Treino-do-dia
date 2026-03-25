@@ -6,19 +6,8 @@ function normalizeText(text = "") {
     .trim();
 }
 
-function hasPhrase(text, phrase) {
-  if (!phrase || phrase.split(" ").length < 2) {
-    return false;
-  }
-
-  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "i");
-
-  return pattern.test(text);
-}
-
-function hasAnyPhrase(text, patterns) {
-  return patterns.some((pattern) => hasPhrase(text, pattern));
+function hasAny(text, patterns) {
+  return patterns.some((pattern) => text.includes(pattern));
 }
 
 export function classifyIntent(message) {
@@ -76,22 +65,31 @@ export function classifyIntent(message) {
     "me fala sobre alimentacao",
     "me fala sobre nutricao",
     "o que comer",
-    "como dividir macros",
-    "como bater proteina",
-    "como ajustar carboidrato",
-    "como ajustar gordura"
+    "macros",
+    "proteina",
+    "carboidrato",
+    "gordura"
   ];
 
   const supplementPatterns = [
-    "falar sobre creatina",
-    "falar sobre whey",
-    "sobre suplementacao",
+    "creatina",
+    "whey",
+    "suplemento",
     "pre treino",
     "pre-treino",
-    "uso de cafeina"
+    "cafeina",
+    "vitamina d",
+    "vitamina b12",
+    "magnesio",
+    "zinco",
+    "ferro",
+    "omega 3",
+    "omega-3",
+    "termogenico",
+    "termogênico"
   ];
 
-  if (hasAnyPhrase(msg, workoutGeneratePatterns)) {
+  if (hasAny(msg, workoutGeneratePatterns)) {
     return {
       domain: "workout",
       action: "generate_workout",
@@ -100,7 +98,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAnyPhrase(msg, dietGeneratePatterns)) {
+  if (hasAny(msg, dietGeneratePatterns)) {
     return {
       domain: "diet",
       action: "start_diet_flow",
@@ -109,7 +107,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAnyPhrase(msg, workoutChatPatterns)) {
+  if (hasAny(msg, workoutChatPatterns)) {
     return {
       domain: "workout",
       action: "chat",
@@ -118,7 +116,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAnyPhrase(msg, dietChatPatterns)) {
+  if (hasAny(msg, dietChatPatterns)) {
     return {
       domain: "diet",
       action: "chat",
@@ -127,7 +125,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAnyPhrase(msg, supplementPatterns)) {
+  if (hasAny(msg, supplementPatterns)) {
     return {
       domain: "supplement",
       action: "chat",

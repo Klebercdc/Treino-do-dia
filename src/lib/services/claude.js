@@ -8,7 +8,7 @@ export async function callClaude(prompt) {
     },
     body: JSON.stringify({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1400,
+      max_tokens: 1800,
       temperature: 0.3,
       messages: [
         {
