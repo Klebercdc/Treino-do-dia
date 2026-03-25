@@ -6,8 +6,19 @@ function normalizeText(text = "") {
     .trim();
 }
 
-function hasAny(text, patterns) {
-  return patterns.some((pattern) => text.includes(pattern));
+function hasPhrase(text, phrase) {
+  if (!phrase || phrase.split(" ").length < 2) {
+    return false;
+  }
+
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "i");
+
+  return pattern.test(text);
+}
+
+function hasAnyPhrase(text, patterns) {
+  return patterns.some((pattern) => hasPhrase(text, pattern));
 }
 
 export function classifyIntent(message) {
@@ -65,22 +76,22 @@ export function classifyIntent(message) {
     "me fala sobre alimentacao",
     "me fala sobre nutricao",
     "o que comer",
-    "macros",
-    "proteina",
-    "carboidrato",
-    "gordura"
+    "como dividir macros",
+    "como bater proteina",
+    "como ajustar carboidrato",
+    "como ajustar gordura"
   ];
 
   const supplementPatterns = [
-    "creatina",
-    "whey",
-    "suplemento",
+    "falar sobre creatina",
+    "falar sobre whey",
+    "sobre suplementacao",
     "pre treino",
     "pre-treino",
-    "cafeina"
+    "uso de cafeina"
   ];
 
-  if (hasAny(msg, workoutGeneratePatterns)) {
+  if (hasAnyPhrase(msg, workoutGeneratePatterns)) {
     return {
       domain: "workout",
       action: "generate_workout",
@@ -89,7 +100,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAny(msg, dietGeneratePatterns)) {
+  if (hasAnyPhrase(msg, dietGeneratePatterns)) {
     return {
       domain: "diet",
       action: "start_diet_flow",
@@ -98,7 +109,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAny(msg, workoutChatPatterns)) {
+  if (hasAnyPhrase(msg, workoutChatPatterns)) {
     return {
       domain: "workout",
       action: "chat",
@@ -107,7 +118,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAny(msg, dietChatPatterns)) {
+  if (hasAnyPhrase(msg, dietChatPatterns)) {
     return {
       domain: "diet",
       action: "chat",
@@ -116,7 +127,7 @@ export function classifyIntent(message) {
     };
   }
 
-  if (hasAny(msg, supplementPatterns)) {
+  if (hasAnyPhrase(msg, supplementPatterns)) {
     return {
       domain: "supplement",
       action: "chat",

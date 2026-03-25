@@ -4,6 +4,15 @@ function normalize(value = "") {
 
 export function validateDietProteins(dietJson, allowedProteins = []) {
   const allowed = allowedProteins.map(normalize);
+  const forbiddenPreparationTerms = [
+    "grelhado",
+    "cozido",
+    "mexido",
+    "assado",
+    "frito",
+    "temperado",
+    "com sal"
+  ];
 
   for (const refeicao of dietJson.refeicoes || []) {
     for (const item of refeicao.itens || []) {
@@ -23,6 +32,14 @@ export function validateDietProteins(dietJson, allowedProteins = []) {
         if (!permitted) {
           throw new Error(`Proteína fora da lista permitida: ${item.alimento}`);
         }
+      }
+
+      const hasForbiddenPreparation = forbiddenPreparationTerms.some((term) =>
+        alimento.includes(term)
+      );
+
+      if (hasForbiddenPreparation) {
+        throw new Error(`Modo de preparo não permitido sem solicitação: ${item.alimento}`);
       }
     }
   }
