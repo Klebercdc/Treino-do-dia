@@ -11,6 +11,7 @@ var dietflow     = require('./_dietflow');
 var workoutflow  = require('./_workoutflow');
 var diet         = require('./_diet');
 var prompts      = require('./_systemPrompts');
+var scienceInsight = require('../src/lib/science/scienceInsightService');
 
 // ─── Sistema de treino — JSON estruturado ──────────────────────────
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
@@ -356,22 +357,47 @@ module.exports = function(req, res) {
       // ── TREINO + CHAT GERAL (fluxo original intacto) ─────────────
       // Passa o contexto do body para buildCoachSystem quando disponível
       var coachContext = b.context || {};
+      var isGerarTreino = b.isGerarTreino === true || isPedidoDeTreino(messages);
 
-      plans.checkAndIncrementQuota(user.id, res, function(planRow) {
-        var isGerarTreino = b.isGerarTreino === true || isPedidoDeTreino(messages);
+      Promise.resolve()
+        .then(function() {
+          if (isGerarTreino) return null;
+          return scienceInsight.buildScienceContextFromText(lastContent);
+        })
+        .then(function(scienceContext) {
+          if (scienceContext) {
+            coachContext = Object.assign({}, coachContext, { science_context: scienceContext });
+          }
 
-        if (isGerarTreino) {
-          gerarTreino(lastMsg, user.id, function(err, data) {
-            if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
-            res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+          plans.checkAndIncrementQuota(user.id, res, function(planRow) {
+            if (isGerarTreino) {
+              gerarTreino(lastMsg, user.id, function(err, data) {
+                if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
+                res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+              });
+            } else {
+              callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+                if (err) return res.status(500).json({ error: err });
+                res.status(200).json({ content: [{ type: 'text', text: text }] });
+              });
+            }
           });
-        } else {
-          callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
-            if (err) return res.status(500).json({ error: err });
-            res.status(200).json({ content: [{ type: 'text', text: text }] });
+        })
+        .catch(function() {
+          plans.checkAndIncrementQuota(user.id, res, function(planRow) {
+            if (isGerarTreino) {
+              gerarTreino(lastMsg, user.id, function(err, data) {
+                if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
+                res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+              });
+            } else {
+              callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+                if (err) return res.status(500).json({ error: err });
+                res.status(200).json({ content: [{ type: 'text', text: text }] });
+              });
+            }
           });
-        }
-      });
+        });
 
     }, { max: 40, windowMs: 60000 }, user.id);
   });

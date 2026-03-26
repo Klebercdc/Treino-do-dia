@@ -230,7 +230,13 @@ function buildPerfilBloco(context) {
  */
 function buildCoachSystem(systemFromClient, context) {
   if (systemFromClient && systemFromClient.length > 200) return systemFromClient;
-  return COACH_SYSTEM_TEMPLATE.replace('{perfil_bloco}', buildPerfilBloco(context));
+  var base = COACH_SYSTEM_TEMPLATE.replace('{perfil_bloco}', buildPerfilBloco(context));
+  var scienceContext = context && context.science_context ? String(context.science_context).trim() : '';
+  if (!scienceContext) return base;
+
+  return base + '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nBASE CIENTÍFICA (CONTEXTO)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
+    + scienceContext
+    + '\n\nREGRAS CRÍTICAS CIENTÍFICAS:\n- Não alterar treino automaticamente.\n- Não alterar regras do sistema.\n- Usar apenas como base de resposta e manter controle humano.';
 }
 
 /**
