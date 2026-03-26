@@ -8,53 +8,26 @@ var SUPABASE_URL = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.sup
 
 function handleScienceArticles(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  var status = (req.query && req.query.status) || 'pending_review';
-  return plans.supabaseRequest('GET', 'scientific_articles?review_status=eq.' + status + '&select=id,title,source,doi,published_at,review_status&order=created_at.desc', null, function(err, rows) {
-    if (err) return res.status(500).json({ error: String(err) });
-    return res.status(200).json({ items: rows || [] });
-  });
+  return handleScienceReview(req, res);
 }
 
-function handleScienceReview(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
-  var body = req.body || {};
-  if (!body.articleId || !['approved', 'rejected'].includes(body.decision)) {
-    return res.status(400).json({ error: 'payload inválido' });
+async function handleScienceReview(req, res) {
+  if (req.method !== 'GET') return res.status(405).end();
+  try {
+    var items = await scienceSync.listPendingReviews();
+    return res.status(200).json({ items: items });
+  } catch (error) {
+    return res.status(200).json({ items: [], warning: String(error.message || error) });
   }
-
-  return plans.supabaseRequest('PATCH', 'scientific_articles?id=eq.' + body.articleId, {
-    review_status: body.decision,
-    reviewed_at: new Date().toISOString()
-  }, function(err) {
-    if (err) return res.status(500).json({ error: String(err) });
-    return res.status(200).json({ ok: true });
-  });
 }
 
 async function handleScienceSync(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   try {
-    var query = (req.body && req.body.query) || 'resistance training hypertrophy meta analysis';
-    var suggestions = await scienceSync.collectScientificSuggestions(query);
-
-    for (var i = 0; i < suggestions.length; i += 1) {
-      var row = suggestions[i];
-      await new Promise(function(resolve) {
-        plans.supabaseRequest('POST', 'scientific_articles', {
-          source: row.source,
-          external_id: row.external_id,
-          title: row.title,
-          doi: row.doi,
-          published_at: row.published_at,
-          metadata: row.raw_payload,
-          review_status: 'pending_review'
-        }, function() { resolve(); });
-      });
-    }
-
-    return res.status(200).json({ ok: true, inserted: suggestions.length });
+    var result = await scienceSync.syncScientificTopics();
+    return res.status(200).json(result);
   } catch (error) {
-    return res.status(500).json({ error: String(error.message || error) });
+    return res.status(200).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error) });
   }
 }
 
