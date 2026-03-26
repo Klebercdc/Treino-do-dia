@@ -1,6 +1,7 @@
 const { searchPubmedArticles } = require('./pubmedClient');
 const { searchCrossrefByTitle } = require('./crossrefClient');
 const { createSupabaseAdminClient } = require('../supabase/admin');
+const { classifyScientificEvidence } = require('./evidenceClassifier');
 
 function tokenize(text) {
   return String(text || '')
@@ -64,7 +65,7 @@ async function safeCrossrefEnrichment(article) {
     return {
       ...article,
       doi: article.doi || best.doi || null,
-      publisher: best.publisher || null,
+      publisher: article.publisher || best.publisher || null,
       reference_count: best.reference_count,
       raw_payload_json: {
         pubmed: article.raw_payload_json,
@@ -82,7 +83,12 @@ async function searchScientificArticles(query) {
 
   for (let i = 0; i < pubmedArticles.length; i += 1) {
     const article = await safeCrossrefEnrichment(pubmedArticles[i]);
-    enriched.push(article);
+    const evidence = classifyScientificEvidence(article);
+
+    enriched.push({
+      ...article,
+      ...evidence
+    });
   }
 
   return enriched;
@@ -98,11 +104,10 @@ async function getExistingArticleByIdentifiers(client, pmid, doi) {
   return rows && rows[0] ? rows[0] : null;
 }
 
-async function saveArticle(client, article) {
-  const existing = await getExistingArticleByIdentifiers(client, article.pmid, article.doi);
-  if (existing) return { row: existing, isNew: false };
+function buildArticlePayload(article) {
+  const evidence = classifyScientificEvidence(article);
 
-  const payload = {
+  return {
     source: article.source || 'pubmed',
     pmid: article.pmid || null,
     doi: article.doi || null,
@@ -112,8 +117,30 @@ async function saveArticle(client, article) {
     journal: article.journal || null,
     publisher: article.publisher || null,
     published_at: article.published_at || null,
+    classification: evidence.classification,
+    evidence_score: evidence.evidence_score,
+    confidence_label: evidence.confidence_label,
+    classification_reason: evidence.classification_reason,
     raw_payload_json: article.raw_payload_json || {}
   };
+}
+
+async function saveArticle(client, article) {
+  const existing = await getExistingArticleByIdentifiers(client, article.pmid, article.doi);
+  const payload = buildArticlePayload(article);
+
+  if (existing) {
+    const mergedPayload = {
+      ...payload,
+      raw_payload_json: {
+        ...(existing.raw_payload_json || {}),
+        ...(payload.raw_payload_json || {})
+      }
+    };
+
+    const updated = await client.request('PATCH', `scientific_articles?id=eq.${existing.id}`, mergedPayload);
+    return { row: (updated && updated[0]) || { ...existing, ...mergedPayload }, isNew: false };
+  }
 
   const created = await client.request('POST', 'scientific_articles', payload);
   return { row: (created && created[0]) || payload, isNew: true };
@@ -122,7 +149,7 @@ async function saveArticle(client, article) {
 async function fetchTopicEvidences(client, topicId) {
   return client.request(
     'GET',
-    `scientific_evidence?topic_id=eq.${topicId}&select=id,summary,created_at,relevance_score,article:scientific_articles(id,title,abstract,published_at)&order=created_at.desc`
+    `scientific_evidence?topic_id=eq.${topicId}&select=id,summary,created_at,relevance_score,needs_review,article:scientific_articles(id,title,abstract,published_at)&order=created_at.desc`
   );
 }
 
