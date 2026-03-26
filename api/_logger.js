@@ -21,7 +21,7 @@ var OUTPUT_COST = parseFloat(process.env.NVIDIA_OUTPUT_COST_PER_1K || '0.00040')
  *
  * @param {object} opts
  * @param {string} opts.userId
- * @param {string} opts.endpoint      - 'chat' | 'agent' | 'agente-alunos' | etc.
+ * @param {string} opts.endpoint      - ex.: 'chat' | 'agent' | 'plan-current' | 'science-sync'
  * @param {number} opts.promptTokens
  * @param {number} opts.completionTokens
  * @param {string} [opts.model]

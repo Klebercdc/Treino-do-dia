@@ -1,0 +1,122 @@
+RELATÓRIO COMPLETO — AUDITORIA + FECHAMENTO TÉCNICO
+Projeto: KRONIA / Treino-do-dia
+Data: 2026-03-25
+Escopo: mudanças realizadas nesta conversa (planos, trial, banco, afiliados, ciência, profile/training)
+
+=====================================================================
+1) RESUMO EXECUTIVO
+=====================================================================
+- A base evoluiu em modularização, mas há risco alto por sobreposição de regras críticas.
+- Pontos críticos iniciais foram tratados: função SQL temporal corrigida para STABLE e endpoint de venda de afiliado protegido.
+- Ainda existem pendências importantes: transação/idempotência de comissões, unificação final da fonte de verdade de plano efetivo, alinhamento total trial duration.
+
+=====================================================================
+2) O QUE FOI CRIADO/ALTERADO (VISÃO GERAL)
+=====================================================================
+Principais áreas alteradas:
+- API: planos, billing, afiliados, ciência
+- Libs: plans/profile/training/affiliate/science/supabase
+- Banco: migrations 007, 008, 009 e correção 010
+
+Arquivos estruturais novos/relevantes:
+- src/lib/plans/planRules.js
+- api/_plans.js
+- api/plan-current.js
+- api/plan-features.js
+- api/affiliate-referral.js
+- api/affiliate-commissions.js
+- api/affiliate-sale.js
+- supabase/migrations/007_product_modularization.sql
+- supabase/migrations/008_plan_access_and_usage.sql
+- supabase/migrations/009_affiliate_sales_and_commission_flow.sql
+- supabase/migrations/010_fix_resolve_effective_plan_stability.sql
+
+=====================================================================
+3) ACHADOS DE RISCO (PRIORIDADE)
+=====================================================================
+
+[P0 - CRÍTICO]
+P0.1 Função SQL temporal incorreta (corrigido)
+- Problema original: resolve_effective_plan com NOW() estava IMMUTABLE.
+- Correção aplicada: migration 010 recriou a função como STABLE.
+- Status: RESOLVIDO.
+
+P0.2 Endpoint de venda de afiliado aberto (corrigido)
+- Problema original: api/affiliate-sale sem auth/assinatura.
+- Correção aplicada: agora exige token de serviço (x-affiliate-token) OU auth.requireAuth.
+- Status: RESOLVIDO.
+
+[P1 - ALTO]
+P1.1 Fluxo venda/comissão sem transação atômica
+- affiliate_sales e affiliate_commissions ainda são gravados em etapas separadas.
+- Risco: estado parcial em falha intermediária.
+- Status: PENDENTE.
+
+P1.2 Idempotência de venda/comissão incompleta
+- sale_id é único no banco, mas o endpoint não trata replay de forma idempotente amigável.
+- Risco: erro operacional em reprocessamento legítimo.
+- Status: PENDENTE.
+
+P1.3 Regra de plano efetivo ainda duplicada
+- Existe em JS (api/_plans.js) e SQL (resolve_effective_plan/view snapshot).
+- Risco: drift de regra.
+- Status: PENDENTE.
+
+[P2 - MÉDIO]
+P2.1 Trial duration em múltiplas fontes
+- Node usa env TRIAL_DAYS; SQL da migration 008 usa 7 fixo no snapshot.
+- Risco: inconsistência se configuração mudar.
+- Status: PENDENTE.
+
+P2.2 Feature usage logs sem dedupe forte
+- RPC + fallback insert sem chave idempotente única por evento.
+- Risco: duplicidade de logs.
+- Status: PENDENTE.
+
+P2.3 Typecheck insuficiente para código novo
+- tsconfig atual não cobre API/src libs novos com checagem estática efetiva.
+- Status: PENDENTE.
+
+=====================================================================
+4) DUPLICAÇÕES E CONFLITOS
+=====================================================================
+- Duplicação de regra de plano efetivo: JS + SQL.
+- Duplicação de configuração de trial duration: env + SQL hardcoded.
+- Cálculo visual de trial no frontend ainda depende de relógio local.
+
+=====================================================================
+5) PENDÊNCIAS DE FECHAMENTO (EXECUTÁVEIS)
+=====================================================================
+1. Criar RPC transacional para processar venda + comissões em uma operação atômica.
+2. Implementar idempotência explícita para replays de sale_id no endpoint.
+3. Unificar fonte única de verdade do plano efetivo (preferência: snapshot SQL consumido pelo backend).
+4. Unificar trial duration em configuração persistida única.
+5. Adicionar dedupe em feature_usage_logs (event_key + unique constraint).
+6. Cobrir plano/trial/affiliate com testes de regressão.
+
+=====================================================================
+6) FONTE ÚNICA DE VERDADE (RECOMENDADA)
+=====================================================================
+- Plano efetivo: user_plan_access_snapshot (SQL) + resolve_effective_plan (STABLE).
+- Trial duration: configuração persistida no banco.
+- Quotas de plano: backend (planRules + configuração central) com enforcement em api/_plans.
+- Status da assinatura: user_plans/expires_at + snapshot SQL.
+- Comissão de afiliado: ledger no banco (affiliate_sales + affiliate_commissions) via fluxo transacional.
+
+=====================================================================
+7) ORDEM EXATA RECOMENDADA
+=====================================================================
+1. (já feito) corrigir função SQL temporal (STABLE).
+2. (já feito) proteger api/affiliate-sale com auth/token.
+3. transação atômica sale+commissions.
+4. idempotência de sale replay.
+5. unificação final de plano efetivo JS/SQL.
+6. unificação trial duration.
+7. dedupe de feature usage logs.
+8. testes de regressão críticos.
+
+=====================================================================
+8) STATUS DESTA ENTREGA
+=====================================================================
+- Escopo solicitado aqui: gerar arquivo TXT consolidado da análise.
+- Arquivo gerado: AUDITORIA_FECHAMENTO_TECNICO.txt

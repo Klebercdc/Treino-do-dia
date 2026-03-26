@@ -1,0 +1,75 @@
+const SEX = Object.freeze({
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+  PREFER_NOT_TO_SAY: 'PREFER_NOT_TO_SAY'
+});
+
+const PHYSIOLOGICAL_PROFILE = Object.freeze({
+  MALE_TYPICAL: 'MALE_TYPICAL',
+  FEMALE_TYPICAL: 'FEMALE_TYPICAL',
+  NEUTRAL_ADAPTIVE: 'NEUTRAL_ADAPTIVE'
+});
+
+const AGE_GROUP = Object.freeze({
+  TEEN: 'TEEN',
+  ADULT: 'ADULT',
+  MATURE: 'MATURE',
+  SENIOR: 'SENIOR'
+});
+
+const KNOWLEDGE_LEVEL = Object.freeze({
+  BEGINNER: 'BEGINNER',
+  INTERMEDIATE: 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED',
+  TECHNICAL: 'TECHNICAL'
+});
+
+const TRAINING_LEVEL = Object.freeze({
+  BEGINNER: 'BEGINNER',
+  INTERMEDIATE: 'INTERMEDIATE',
+  ADVANCED: 'ADVANCED',
+  ATHLETE: 'ATHLETE'
+});
+
+const EXPERIENCE_MODE = Object.freeze({
+  SIMPLE: 'SIMPLE',
+  ADVANCED: 'ADVANCED'
+});
+
+const GOAL = Object.freeze({
+  HYPERTROPHY: 'HYPERTROPHY',
+  FAT_LOSS: 'FAT_LOSS',
+  STRENGTH: 'STRENGTH',
+  ENDURANCE: 'ENDURANCE',
+  HEALTH: 'HEALTH'
+});
+
+const EFFORT_MODE = Object.freeze({
+  SIMPLE_EFFORT_MODE: 'SIMPLE_EFFORT_MODE',
+  REPS_IN_RESERVE_MODE: 'REPS_IN_RESERVE_MODE',
+  ADVANCED_RPE_MODE: 'ADVANCED_RPE_MODE'
+});
+
+const PLAN = Object.freeze({
+  FREE: 'FREE',
+  PRO: 'PRO',
+  ULTRA: 'ULTRA',
+  TRIAL_ULTRA_7_DAYS: 'TRIAL_ULTRA_7_DAYS'
+});
+
+function isEnumValue(enumObj, value) {
+  return Object.values(enumObj).includes(value);
+}
+
+module.exports = {
+  SEX,
+  PHYSIOLOGICAL_PROFILE,
+  AGE_GROUP,
+  KNOWLEDGE_LEVEL,
+  TRAINING_LEVEL,
+  EXPERIENCE_MODE,
+  GOAL,
+  EFFORT_MODE,
+  PLAN,
+  isEnumValue
+};
