@@ -150,17 +150,17 @@ function processWebhook(provider, payload, callback) {
 function validateToken(req, provider) {
   if (provider === 'hotmart') {
     var token = process.env.HOTMART_WEBHOOK_TOKEN;
-    if (!token) return true; // sem token configurado → aceita (dev)
+    if (!token) return { ok: false, reason: 'missing_hotmart_token_config' };
     var received = req.headers['x-hotmart-hottok'] || req.headers['x-hotmart-token'] || '';
-    return received === token;
+    return { ok: received === token, reason: 'invalid_hotmart_token' };
   }
   if (provider === 'kiwify') {
     var ktoken = process.env.KIWIFY_WEBHOOK_TOKEN;
-    if (!ktoken) return true;
+    if (!ktoken) return { ok: false, reason: 'missing_kiwify_token_config' };
     var kreceived = req.headers['x-webhook-token'] || req.headers['x-kiwify-token'] || '';
-    return kreceived === ktoken;
+    return { ok: kreceived === ktoken, reason: 'invalid_kiwify_token' };
   }
-  return false;
+  return { ok: false, reason: 'invalid_provider' };
 }
 
 // ─── Handler Vercel ───────────────────────────────────
@@ -174,7 +174,17 @@ module.exports = function(req, res) {
     return res.status(400).json({ error: 'provider inválido. Use ?provider=hotmart ou ?provider=kiwify' });
   }
 
-  if (!validateToken(req, provider)) {
+  if (!process.env.SUPABASE_SERVICE_KEY) {
+    console.error('[webhook] SUPABASE_SERVICE_KEY ausente. Requisição rejeitada por segurança.');
+    return res.status(503).json({ error: 'Webhook temporariamente indisponível por configuração de segurança ausente.' });
+  }
+
+  var tokenValidation = validateToken(req, provider);
+  if (!tokenValidation.ok) {
+    if (tokenValidation.reason === 'missing_hotmart_token_config' || tokenValidation.reason === 'missing_kiwify_token_config') {
+      console.error('[webhook] token de validação não configurado para provider:', provider);
+      return res.status(503).json({ error: 'Webhook indisponível: token de validação não configurado.' });
+    }
     console.warn('[webhook] token inválido para provider:', provider);
     return res.status(401).json({ error: 'Token de webhook inválido' });
   }
