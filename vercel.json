@@ -7,8 +7,10 @@
     { "source": "/api/affiliate-referral", "destination": "/api/affiliate?__route=affiliate-referral" },
     { "source": "/api/affiliate-commissions", "destination": "/api/affiliate?__route=affiliate-commissions" },
     { "source": "/api/science-articles", "destination": "/api/system?__route=science-articles" },
-    { "source": "/api/science-review", "destination": "/api/system?__route=science-review" },
-    { "source": "/api/science-sync", "destination": "/api/system?__route=science-sync" },
+    { "source": "/api/science-search", "destination": "/api/science?__route=science-search" },
+    { "source": "/api/science-review", "destination": "/api/science?__route=science-review" },
+    { "source": "/api/science-sync", "destination": "/api/science?__route=science-sync" },
+    { "source": "/api/science-insight", "destination": "/api/science?__route=science-insight" },
     { "source": "/api/lgpd-export", "destination": "/api/system?__route=lgpd-export" },
     { "source": "/api/lgpd-delete", "destination": "/api/system?__route=lgpd-delete" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
