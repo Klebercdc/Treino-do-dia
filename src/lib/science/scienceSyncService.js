@@ -200,8 +200,134 @@ async function listPendingReviews() {
   return rows || [];
 }
 
+function clampBatchLimit(limit) {
+  const parsed = Number(limit);
+  if (!Number.isFinite(parsed)) return 25;
+  if (parsed < 1) return 1;
+  if (parsed > 50) return 50;
+  return Math.floor(parsed);
+}
+
+function normalizeScore(value) {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 100) return 100;
+  return Math.round(value * 100) / 100;
+}
+
+function detectClassificationSignals(article) {
+  const text = [
+    article && article.title ? article.title : '',
+    article && article.abstract ? article.abstract : '',
+    article && article.journal ? article.journal : '',
+    article && article.publisher ? article.publisher : ''
+  ].join(' ').toLowerCase();
+
+  const signals = [];
+  function has(pattern) {
+    return pattern.test(text);
+  }
+
+  if (has(/\bguideline(s)?\b|\bposition stand\b|\bconsensus statement\b|\bpractice guideline\b|\brecommendation(s)?\b/)) {
+    signals.push({ classification: 'guideline_or_position_stand', score: 92, confidence: 'high', reason: 'termos de guideline/consenso detectados' });
+  }
+  if (has(/\bmeta[-\s]?analysis\b|\bnetwork meta[-\s]?analysis\b|\bpooled analysis\b/)) {
+    signals.push({ classification: 'meta_analysis', score: 90, confidence: 'high', reason: 'meta-análise identificada no título/resumo' });
+  }
+  if (has(/\bsystematic review\b|\bsystematic literature review\b/)) {
+    signals.push({ classification: 'systematic_review', score: 84, confidence: 'high', reason: 'revisão sistemática detectada' });
+  }
+  if (has(/\brandomi[sz]ed\b|\brandomised\b|\brandomized\b|\bcontrolled trial\b|\bdouble[-\s]?blind\b|\bplacebo[-\s]?controlled\b|\brct\b/)) {
+    signals.push({ classification: 'randomized_controlled_trial', score: 78, confidence: 'moderate', reason: 'sinais de ensaio clínico randomizado' });
+  }
+  if (has(/\bcohort\b|\bobservational\b|\bprospective\b|\bretrospective\b|\blongitudinal\b|\bcase[-\s]?control\b|\bcross[-\s]?sectional\b/)) {
+    signals.push({ classification: 'cohort_or_observational', score: 64, confidence: 'moderate', reason: 'desenho observacional/coorte identificado' });
+  }
+  if (has(/\bcase report\b|\bcase study\b|\bcase series\b/)) {
+    signals.push({ classification: 'case_study', score: 48, confidence: 'low', reason: 'relato ou série de casos detectado' });
+  }
+  if (has(/\bnarrative review\b|\bexpert opinion\b|\bliterature review\b|\breview article\b/)) {
+    signals.push({ classification: 'narrative_review', score: 42, confidence: 'low', reason: 'revisão narrativa/opinião especializada' });
+  }
+
+  return signals;
+}
+
+function classifyArticleRow(article) {
+  const signals = detectClassificationSignals(article);
+  if (!signals.length) {
+    return {
+      classification: 'unknown',
+      evidence_score: 18,
+      confidence_label: 'very_low',
+      classification_reason: 'sinais insuficientes para classificar com segurança'
+    };
+  }
+
+  const best = signals.sort((a, b) => b.score - a.score)[0];
+  const text = `${article && article.title ? article.title : ''} ${article && article.abstract ? article.abstract : ''}`.toLowerCase();
+  let score = best.score;
+
+  if (/\bprotocol\b|\bstudy protocol\b/.test(text)) score -= 15;
+  if (/\bpilot\b/.test(text)) score -= 8;
+  if (/\banimal study\b|\bmurine\b|\bmouse\b|\bin vitro\b/.test(text)) score -= 20;
+  if (/\bmulticenter\b/.test(text)) score += 3;
+  if (/\bdouble[-\s]?blind\b/.test(text)) score += 3;
+
+  const normalizedScore = normalizeScore(score);
+  let confidence = best.confidence;
+  if (normalizedScore < 35) confidence = 'very_low';
+  else if (normalizedScore < 55 && confidence !== 'very_low') confidence = 'low';
+  else if (normalizedScore >= 88) confidence = 'high';
+
+  return {
+    classification: best.classification,
+    evidence_score: normalizedScore,
+    confidence_label: confidence,
+    classification_reason: best.reason
+  };
+}
+
+async function classifyScientificArticlesBatch(limit) {
+  const client = createSupabaseAdminClient();
+  const batchLimit = clampBatchLimit(limit);
+  const rows = await client.request(
+    'GET',
+    `scientific_articles?classification=is.null&select=id,title,abstract,journal,publisher,raw_payload_json&order=created_at.asc&limit=${batchLimit}`
+  );
+
+  const articles = rows || [];
+  let updatedCount = 0;
+
+  for (let i = 0; i < articles.length; i += 1) {
+    const article = articles[i];
+    const classified = classifyArticleRow(article);
+
+    await client.request(
+      'PATCH',
+      `scientific_articles?id=eq.${article.id}`,
+      {
+        classification: classified.classification,
+        evidence_score: classified.evidence_score,
+        confidence_label: classified.confidence_label,
+        classification_reason: classified.classification_reason
+      }
+    );
+
+    updatedCount += 1;
+  }
+
+  return {
+    ok: true,
+    scanned_articles: articles.length,
+    updated_articles: updatedCount,
+    limit: batchLimit
+  };
+}
+
 module.exports = {
   searchScientificArticles,
   syncScientificTopics,
-  listPendingReviews
+  listPendingReviews,
+  classifyScientificArticlesBatch
 };

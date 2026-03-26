@@ -40,6 +40,7 @@ function detectRoute(req) {
   if (pathname.endsWith('/science-sync')) return 'science-sync';
   if (pathname.endsWith('/science-review')) return 'science-review';
   if (pathname.endsWith('/science-insight')) return 'science-insight';
+  if (pathname.endsWith('/science-classify')) return 'science-classify';
   if (pathname.endsWith('/science')) return 'science';
 
   return '';
@@ -58,6 +59,22 @@ module.exports = async function(req, res) {
       return res.status(200).json(cronResult);
     } catch (error) {
       return res.status(200).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error) });
+    }
+  }
+
+  if (route === 'science-classify' && isValidCronSecret(req)) {
+    if (req.method !== 'POST') return res.status(405).end();
+    try {
+      var cronLimit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
+      var cronResult = await science.classifyScientificArticlesBatch(cronLimit);
+      return res.status(200).json(cronResult);
+    } catch (error) {
+      return res.status(200).json({
+        ok: false,
+        updated_articles: 0,
+        scanned_articles: 0,
+        warning: String(error.message || error)
+      });
     }
   }
 
@@ -119,6 +136,22 @@ module.exports = async function(req, res) {
           synthesis: null,
           evidence_level: null,
           top_articles: []
+        });
+      }
+    }
+
+    if (route === 'science-classify') {
+      if (req.method !== 'POST') return res.status(405).end();
+      try {
+        var limit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
+        var result = await science.classifyScientificArticlesBatch(limit);
+        return res.status(200).json(result);
+      } catch (error) {
+        return res.status(200).json({
+          ok: false,
+          updated_articles: 0,
+          scanned_articles: 0,
+          warning: String(error.message || error)
         });
       }
     }
