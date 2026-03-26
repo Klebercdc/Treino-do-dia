@@ -2,7 +2,7 @@ import { KronosEngine } from "@/lib/engine/kronosEngine";
 
 let user = {
   id: "1",
-  plan: "pro",
+  plan: "PRO",
   mode: null,
   step: 0,
   data: {},

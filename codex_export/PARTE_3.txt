@@ -1,0 +1,283 @@
+====FILE_START:supabase/migrations/010_fix_resolve_effective_plan_stability.sql====
+-- KRONIA — Migração 010: correção de volatilidade da função resolve_effective_plan
+-- Motivo: função usa NOW(), portanto não pode ser IMMUTABLE.
+
+CREATE OR REPLACE FUNCTION public.resolve_effective_plan(
+  p_plan TEXT,
+  p_trial_started_at TIMESTAMPTZ,
+  p_expires_at TIMESTAMPTZ,
+  p_trial_days INTEGER DEFAULT 7
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  IF p_plan IS NULL THEN
+    RETURN 'free';
+  END IF;
+
+  IF p_plan IN ('pro', 'ultra') THEN
+    IF p_expires_at IS NOT NULL AND p_expires_at < NOW() THEN
+      RETURN 'free';
+    END IF;
+    RETURN p_plan;
+  END IF;
+
+  IF p_plan IN ('trial', 'trial_ultra_7_days') THEN
+    IF p_trial_started_at IS NULL THEN
+      RETURN 'free';
+    END IF;
+
+    IF p_trial_started_at + make_interval(days => p_trial_days) <= NOW() THEN
+      RETURN 'free';
+    END IF;
+
+    RETURN 'trial_ultra_7_days';
+  END IF;
+
+  RETURN 'free';
+END;
+$$;
+====FILE_END:supabase/migrations/010_fix_resolve_effective_plan_stability.sql====
+====FILE_START:supabase/migrations/011_affiliate_sale_atomic_idempotent.sql====
+-- KRONIA — Migração 011: venda/comissão de afiliado atômica e idempotente
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_affiliate_commissions_sale_affiliate_type_level
+  ON affiliate_commissions (sale_id, affiliate_user_id, commission_type, level);
+
+CREATE OR REPLACE FUNCTION public.process_affiliate_sale(
+  p_sale JSONB,
+  p_commissions JSONB DEFAULT '[]'::jsonb
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_sale_id TEXT;
+  v_inserted_sale BOOLEAN := false;
+  v_commission_count INTEGER := 0;
+  v_commissions JSONB := '[]'::jsonb;
+BEGIN
+  v_sale_id := p_sale->>'sale_id';
+  IF v_sale_id IS NULL OR btrim(v_sale_id) = '' THEN
+    RAISE EXCEPTION 'sale_id obrigatório';
+  END IF;
+
+  INSERT INTO affiliate_sales (
+    sale_id,
+    buyer_user_id,
+    level1_affiliate_user_id,
+    level2_affiliate_user_id,
+    gross_amount,
+    is_recurring,
+    provider
+  )
+  VALUES (
+    v_sale_id,
+    NULLIF(p_sale->>'buyer_user_id', '')::uuid,
+    NULLIF(p_sale->>'level1_affiliate_user_id', '')::uuid,
+    NULLIF(p_sale->>'level2_affiliate_user_id', '')::uuid,
+    (p_sale->>'gross_amount')::numeric,
+    COALESCE((p_sale->>'is_recurring')::boolean, false),
+    NULLIF(p_sale->>'provider', '')
+  )
+  ON CONFLICT (sale_id) DO NOTHING;
+
+  v_inserted_sale := FOUND;
+
+  IF v_inserted_sale AND jsonb_typeof(p_commissions) = 'array' AND jsonb_array_length(p_commissions) > 0 THEN
+    INSERT INTO affiliate_commissions (
+      sale_id,
+      buyer_user_id,
+      affiliate_user_id,
+      commission_type,
+      level,
+      rate,
+      amount,
+      status,
+      created_at
+    )
+    SELECT
+      c.sale_id,
+      c.buyer_user_id,
+      c.affiliate_user_id,
+      c.commission_type,
+      c.level,
+      c.rate,
+      c.amount,
+      COALESCE(c.status, 'pending'),
+      COALESCE(c.created_at, NOW())
+    FROM jsonb_to_recordset(p_commissions) AS c(
+      sale_id text,
+      buyer_user_id uuid,
+      affiliate_user_id uuid,
+      commission_type text,
+      level smallint,
+      rate numeric,
+      amount numeric,
+      status text,
+      created_at timestamptz
+    )
+    ON CONFLICT (sale_id, affiliate_user_id, commission_type, level) DO NOTHING;
+  END IF;
+
+  SELECT COALESCE(COUNT(*), 0)
+    INTO v_commission_count
+  FROM affiliate_commissions
+  WHERE sale_id = v_sale_id;
+
+  SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.created_at), '[]'::jsonb)
+    INTO v_commissions
+  FROM affiliate_commissions c
+  WHERE c.sale_id = v_sale_id;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'sale_id', v_sale_id,
+    'idempotent', NOT v_inserted_sale,
+    'commission_count', v_commission_count,
+    'commissions', v_commissions
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.process_affiliate_sale(JSONB, JSONB) TO service_role;
+GRANT EXECUTE ON FUNCTION public.process_affiliate_sale(JSONB, JSONB) TO authenticated;
+====FILE_END:supabase/migrations/011_affiliate_sale_atomic_idempotent.sql====
+====FILE_START:supabase/migrations/012_unify_trial_duration_source.sql====
+-- KRONIA — Migração 012: fonte única para duração de trial
+
+CREATE TABLE IF NOT EXISTS public.app_runtime_settings (
+  key TEXT PRIMARY KEY,
+  int_value INTEGER NOT NULL CHECK (int_value > 0),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO public.app_runtime_settings (key, int_value)
+VALUES ('trial_days', 7)
+ON CONFLICT (key) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.get_trial_days()
+RETURNS INTEGER
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT COALESCE(
+    (SELECT int_value FROM public.app_runtime_settings WHERE key = 'trial_days' LIMIT 1),
+    7
+  )::INTEGER;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_trial_days() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_trial_days() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.resolve_effective_plan(
+  p_plan TEXT,
+  p_trial_started_at TIMESTAMPTZ,
+  p_expires_at TIMESTAMPTZ,
+  p_trial_days INTEGER DEFAULT public.get_trial_days()
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  IF p_plan IS NULL THEN
+    RETURN 'free';
+  END IF;
+
+  IF p_plan IN ('pro', 'ultra') THEN
+    IF p_expires_at IS NOT NULL AND p_expires_at < NOW() THEN
+      RETURN 'free';
+    END IF;
+    RETURN p_plan;
+  END IF;
+
+  IF p_plan IN ('trial', 'trial_ultra_7_days') THEN
+    IF p_trial_started_at IS NULL THEN
+      RETURN 'free';
+    END IF;
+
+    IF p_trial_started_at + make_interval(days => p_trial_days) <= NOW() THEN
+      RETURN 'free';
+    END IF;
+
+    RETURN 'trial_ultra_7_days';
+  END IF;
+
+  RETURN 'free';
+END;
+$$;
+
+CREATE OR REPLACE VIEW public.user_plan_access_snapshot AS
+SELECT
+  up.user_id,
+  up.plan AS raw_plan,
+  public.resolve_effective_plan(
+    up.plan,
+    up.trial_started_at,
+    up.expires_at,
+    public.get_trial_days()
+  ) AS effective_plan,
+  up.ai_requests_used,
+  up.period_start,
+  up.trial_started_at,
+  CASE
+    WHEN up.trial_started_at IS NULL THEN NULL
+    ELSE up.trial_started_at + make_interval(days => public.get_trial_days())
+  END AS trial_expires_at,
+  up.expires_at,
+  (up.expires_at IS NOT NULL AND up.expires_at >= NOW()) AS subscription_active
+FROM public.user_plans up;
+
+ALTER VIEW public.user_plan_access_snapshot OWNER TO postgres;
+====FILE_END:supabase/migrations/012_unify_trial_duration_source.sql====
+====FILE_START:supabase/migrations/013_feature_usage_idempotent_event_key.sql====
+-- KRONIA — Migração 013: idempotência de feature usage por event_key
+
+ALTER TABLE public.feature_usage_logs
+  ADD COLUMN IF NOT EXISTS event_key TEXT;
+
+UPDATE public.feature_usage_logs
+SET event_key = id::text
+WHERE event_key IS NULL;
+
+ALTER TABLE public.feature_usage_logs
+  ALTER COLUMN event_key SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_feature_usage_event_key
+  ON public.feature_usage_logs (event_key);
+
+CREATE OR REPLACE FUNCTION public.register_feature_usage(
+  p_user_id UUID,
+  p_feature_key TEXT,
+  p_plan_at_use TEXT,
+  p_quantity INTEGER DEFAULT 1,
+  p_metadata JSONB DEFAULT '{}',
+  p_event_key TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_id UUID;
+  v_event_key TEXT;
+BEGIN
+  v_event_key := COALESCE(NULLIF(p_event_key, ''), gen_random_uuid()::text);
+
+  INSERT INTO public.feature_usage_logs (user_id, feature_key, plan_at_use, quantity, metadata, event_key)
+  VALUES (p_user_id, p_feature_key, p_plan_at_use, GREATEST(1, p_quantity), COALESCE(p_metadata, '{}'::jsonb), v_event_key)
+  ON CONFLICT (event_key) DO UPDATE
+  SET event_key = EXCLUDED.event_key
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.register_feature_usage(UUID, TEXT, TEXT, INTEGER, JSONB, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.register_feature_usage(UUID, TEXT, TEXT, INTEGER, JSONB, TEXT) TO authenticated;
+====FILE_END:supabase/migrations/013_feature_usage_idempotent_event_key.sql====

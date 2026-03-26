@@ -19,6 +19,9 @@
 
 var cors    = require('./_cors');
 var plans   = require('./_plans');
+var planRules = require('../src/lib/plans/planRules');
+var billingProviders = require('../src/lib/plans/billingProviders');
+var { PLAN } = require('../src/types/domain');
 
 // ─── Eventos que ativam o Pro ─────────────────────────
 var PRO_ACTIVATE_EVENTS = [
@@ -115,20 +118,10 @@ function processWebhook(provider, payload, callback) {
 
       var update;
       if (isActivate) {
-        // Detecta se é Ultra pelo campo product_name/product_id no payload
-        var productName = '';
-        if (provider === 'hotmart') {
-          productName = (payload.data && payload.data.product && payload.data.product.name) || '';
-        }
-        if (provider === 'kiwify') {
-          productName = (payload.product && payload.product.name) || '';
-        }
-        var isUltra = /ultra/i.test(productName);
-
-        // Pro/Ultra: expira em 35 dias (margem sobre 30 dias)
+        var detectedPlan = billingProviders.detectPlanFromPayload(provider, payload);
         var expires = new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString();
         update = {
-          plan:          isUltra ? 'ultra' : 'pro',
+          plan:          planRules.toDbPlan(detectedPlan),
           activated_at:  now,
           expires_at:    expires,
           updated_at:    now
@@ -136,7 +129,7 @@ function processWebhook(provider, payload, callback) {
         if (provider === 'hotmart' && subscriberId) update.hotmart_subscriber_code = subscriberId;
         if (provider === 'kiwify'  && subscriberId) update.kiwify_subscriber_id    = subscriberId;
       } else {
-        update = { plan: 'free', expires_at: now, updated_at: now };
+        update = { plan: planRules.toDbPlan(PLAN.FREE), expires_at: now, updated_at: now };
       }
 
       plans.supabaseRequest('PATCH', 'user_plans?user_id=eq.' + userId, update, function(updateErr) {

@@ -1,0 +1,36 @@
+var cors = require('./_cors');
+var auth = require('./_auth');
+var plans = require('./_plans');
+var billingProviders = require('../src/lib/plans/billingProviders');
+var planRules = require('../src/lib/plans/planRules');
+var { PLAN } = require('../src/types/domain');
+
+module.exports = function(req, res) {
+  cors.setCors(req, res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).end();
+
+  return auth.requireAuth(req, res, function(user) {
+    var body = req.body || {};
+    var provider = (body.provider || 'hotmart').toLowerCase();
+    var targetPlan = planRules.toCanonicalPlan(body.targetPlan || PLAN.PRO);
+
+    if (!['hotmart', 'kiwify'].includes(provider)) {
+      return res.status(400).json({ error: 'provider inválido' });
+    }
+    if (![PLAN.PRO, PLAN.ULTRA].includes(targetPlan)) {
+      return res.status(400).json({ error: 'targetPlan inválido' });
+    }
+
+    var checkoutUrl = billingProviders.getCheckoutUrl(provider, targetPlan, user.email);
+    if (!checkoutUrl) return res.status(400).json({ error: 'checkout não configurado' });
+
+    plans.supabaseRequest('PATCH', 'user_plans?user_id=eq.' + user.id, { updated_at: new Date().toISOString() }, function() {
+      return res.status(200).json({
+        checkoutUrl: checkoutUrl,
+        targetPlan: targetPlan,
+        provider: provider
+      });
+    });
+  });
+};
