@@ -49,6 +49,24 @@ function handlePlanCurrent(req, res) {
           plans.getPlanSnapshot(user.id, function(sErr, snapshot) {
             var rawPlanDb = snapshot ? snapshot.raw_plan : planRow.plan;
             var effectivePlanDb = snapshot ? snapshot.effective_plan : null;
+            var canonicalPlan = info.plan;
+            var trialStatus = {
+              active: canonicalPlan === 'trial_ultra_7_days',
+              expired: canonicalPlan !== 'trial_ultra_7_days' && planRules.toCanonicalPlan(rawPlanDb) === 'trial_ultra_7_days',
+              daysLeft: null,
+              hoursLeft: null,
+              source: 'backend'
+            };
+            var trialExpiresAt = snapshot ? snapshot.trial_expires_at : null;
+            if (trialStatus.active && trialExpiresAt) {
+              var expiresTs = new Date(trialExpiresAt).getTime();
+              if (Number.isFinite(expiresTs)) {
+                var remainingMs = expiresTs - Date.now();
+                var safeMs = remainingMs > 0 ? remainingMs : 0;
+                trialStatus.daysLeft = Math.ceil(safeMs / (24 * 60 * 60 * 1000));
+                trialStatus.hoursLeft = Math.floor(safeMs / (60 * 60 * 1000));
+              }
+            }
 
             if (sErr) {
               return res.status(200).json({
@@ -58,7 +76,8 @@ function handlePlanCurrent(req, res) {
                 aiRequestsUsed: planRow.ai_requests_used || 0,
                 trialStartedAt: planRow.trial_started_at || null,
                 expiresAt: planRow.expires_at || null,
-                trialDays: safeTrialDays
+                trialDays: safeTrialDays,
+                trialStatus: trialStatus
               });
             }
 
@@ -70,10 +89,11 @@ function handlePlanCurrent(req, res) {
               effectivePlanCanonical: effectivePlanDb ? planRules.toCanonicalPlan(effectivePlanDb) : null,
               aiRequestsUsed: planRow.ai_requests_used || 0,
               trialStartedAt: planRow.trial_started_at || null,
-              trialExpiresAt: snapshot ? snapshot.trial_expires_at : null,
+              trialExpiresAt: trialExpiresAt,
               expiresAt: planRow.expires_at || null,
               subscriptionActive: snapshot ? snapshot.subscription_active : null,
-              trialDays: safeTrialDays
+              trialDays: safeTrialDays,
+              trialStatus: trialStatus
             });
           });
         });

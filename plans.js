@@ -22,7 +22,14 @@ var _configPromise = (function fetchConfigWithRetry(attempt) {
     });
 })(1);
 
-var _userPlan = { plan: 'free', ai_requests_used: 0, limit: FREE_AI_LIMIT, trial_started_at: null };
+var _userPlan = {
+  plan: 'free',
+  ai_requests_used: 0,
+  limit: FREE_AI_LIMIT,
+  trial_started_at: null,
+  trial_expires_at: null,
+  trial_status: null
+};
 
 function normalizePlanId(plan) {
   var normalized = String(plan || '').trim().toLowerCase();
@@ -42,21 +49,10 @@ function initTrial() {
 }
 
 function getTrialStatus() {
-  if (_userPlan.plan !== 'trial' && _userPlan.plan !== 'trial_ultra_7_days') return null;
-  if (!_userPlan.trial_started_at) return { active: false, expired: true };
-
-  var startMs = new Date(_userPlan.trial_started_at).getTime();
-  if (Number.isNaN(startMs)) return { active: false, expired: true };
-
-  var nowMs = Date.now();
-  var diffDays = (nowMs - startMs) / (1000 * 60 * 60 * 24);
-  if (diffDays < TRIAL_DAYS) {
-    var daysLeft = Math.ceil(TRIAL_DAYS - diffDays);
-    var hoursLeft = Math.floor((TRIAL_DAYS - diffDays) * 24);
-    return { active: true, daysLeft: daysLeft, hoursLeft: hoursLeft };
+  if (_userPlan.trial_status && typeof _userPlan.trial_status === 'object') {
+    return _userPlan.trial_status;
   }
-
-  return { active: false, expired: true };
+  return null;
 }
 
 // ══════════════════════════════
@@ -85,6 +81,8 @@ async function fetchUserPlan() {
       plan: normalizePlanId(current.plan),
       ai_requests_used: usage,
       trial_started_at: current.trialStartedAt || null,
+      trial_expires_at: current.trialExpiresAt || null,
+      trial_status: current.trialStatus && typeof current.trialStatus === 'object' ? current.trialStatus : null,
       limit: quotaLimit
     };
     updatePlanBadge();
@@ -100,6 +98,8 @@ function updatePlanBadge() {
   var isPro   = plan === 'pro' || isUltra;
   var trial   = getTrialStatus();
   var inTrial = trial && trial.active && !isPro;
+  var trialDaysLeft = trial && Number.isFinite(Number(trial.daysLeft)) ? Math.max(0, Number(trial.daysLeft)) : null;
+  var trialDaysLabel = trialDaysLeft === null ? '—' : String(trialDaysLeft);
   var activeLimit = Number.isFinite(Number(_userPlan.limit))
     ? Number(_userPlan.limit)
     : (inTrial ? TRIAL_AI_LIMIT : FREE_AI_LIMIT);
@@ -118,7 +118,7 @@ function updatePlanBadge() {
       homeBadge.innerHTML = _zapIco + ' PRO';
       homeBadge.className = 'badge-pro';
     } else if (inTrial) {
-      homeBadge.innerHTML = _zapIco + ' TRIAL · ' + trial.daysLeft + 'd';
+      homeBadge.innerHTML = _zapIco + ' TRIAL · ' + trialDaysLabel + 'd';
       homeBadge.className = 'badge-trial';
     } else {
       homeBadge.textContent = 'FREE · ' + rem + '/' + FREE_AI_LIMIT;
@@ -133,12 +133,12 @@ function updatePlanBadge() {
       var titleEl = document.getElementById('homeTrialTitle');
       var subEl   = document.getElementById('homeTrialSub');
       var daysEl  = document.getElementById('homeTrialDays');
-      if (titleEl) titleEl.textContent = trial.daysLeft === 1 ? 'Trial expira amanhã!' : 'Trial PRO ativo';
-      if (subEl)   subEl.textContent   = trial.daysLeft <= 2
+      if (titleEl) titleEl.textContent = trialDaysLeft === 1 ? 'Trial expira amanhã!' : 'Trial PRO ativo';
+      if (subEl)   subEl.textContent   = (trialDaysLeft !== null && trialDaysLeft <= 2)
         ? 'Assine agora e não perca o acesso ⚡'
-        : trial.daysLeft + ' dias restantes de acesso completo';
-      if (daysEl)  daysEl.textContent  = trial.daysLeft + 'd';
-      if (daysEl && trial.daysLeft <= 2) daysEl.style.color = '#ef4444';
+        : trialDaysLabel + ' dias restantes de acesso completo';
+      if (daysEl)  daysEl.textContent  = trialDaysLabel + 'd';
+      if (daysEl && trialDaysLeft !== null && trialDaysLeft <= 2) daysEl.style.color = '#ef4444';
     }
   }
 
@@ -227,6 +227,8 @@ function openPlanModal() {
   var isPro   = plan === 'pro' || isUltra;
   var trial   = getTrialStatus();
   var inTrial = trial && trial.active && !isPro;
+  var trialDaysLeft = trial && Number.isFinite(Number(trial.daysLeft)) ? Math.max(0, Number(trial.daysLeft)) : null;
+  var trialDaysLabel = trialDaysLeft === null ? '—' : String(trialDaysLeft);
 
   // Trial banner
   var trialBanner = document.getElementById('planTrialBanner');
@@ -235,9 +237,9 @@ function openPlanModal() {
     if (inTrial) {
       var t = document.getElementById('planTrialTitle');
       var s = document.getElementById('planTrialSub');
-      if (t) t.textContent = trial.daysLeft <= 2
-        ? '⚠️ Trial expira em ' + trial.daysLeft + ' dia' + (trial.daysLeft === 1 ? '' : 's') + '!'
-        : 'Trial PRO ativo — ' + trial.daysLeft + ' dias restantes';
+      if (t) t.textContent = (trialDaysLeft !== null && trialDaysLeft <= 2)
+        ? '⚠️ Trial expira em ' + trialDaysLabel + ' dia' + (trialDaysLeft === 1 ? '' : 's') + '!'
+        : 'Trial PRO ativo — ' + trialDaysLabel + ' dias restantes';
       if (s) s.textContent = inTrial
         ? 'Você está com acesso completo PRO durante o trial'
         : '';

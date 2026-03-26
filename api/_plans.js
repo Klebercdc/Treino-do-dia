@@ -23,6 +23,9 @@ function getTrialDays(callback) {
 }
 
 function supabaseRequest(method, path, body, callback) {
+  if (!SUPABASE_SERVICE_KEY) {
+    return callback('[_plans] SUPABASE_SERVICE_KEY não configurada.', null);
+  }
   var hostname = SUPABASE_URL.replace('https://', '').replace('http://', '').split('/')[0];
   var bodyStr = body ? JSON.stringify(body) : '';
   var headers = {
@@ -163,12 +166,20 @@ function registerFeatureUsage(userId, featureKey, planAtUse, metadata) {
 }
 
 function checkAndIncrementQuota(userId, res, next) {
-  if (!SUPABASE_SERVICE_KEY) return next({ plan: planRules.toDbPlan(PLAN.FREE), ai_requests_used: 0 });
+  if (!SUPABASE_SERVICE_KEY) {
+    return res.status(503).json({
+      error: 'Serviço temporariamente indisponível para validar quota.',
+      code: 'QUOTA_GUARD_UNAVAILABLE'
+    });
+  }
 
   getUserPlan(userId, function(err, planRow) {
     if (err) {
       console.error('[plans] erro ao verificar plano:', err);
-      return next({ plan: planRules.toDbPlan(PLAN.FREE), ai_requests_used: 0 });
+      return res.status(503).json({
+        error: 'Serviço temporariamente indisponível para validar quota.',
+        code: 'QUOTA_GUARD_UNAVAILABLE'
+      });
     }
 
     resolveEffectivePlan(userId, planRow, function(state) {
@@ -201,6 +212,9 @@ function checkAndIncrementQuota(userId, res, next) {
 }
 
 function getQuotaInfo(userId, callback) {
+  if (!SUPABASE_SERVICE_KEY) {
+    return callback('[_plans] quota guard indisponível: SUPABASE_SERVICE_KEY ausente.', null);
+  }
   getUserPlan(userId, function(err, planRow) {
     if (err) return callback(err, null);
 

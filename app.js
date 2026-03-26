@@ -3465,7 +3465,7 @@ function openSettingsScreen() {
   try {
     const badge = document.getElementById('settingsPlanBadge');
     if (badge) {
-      const plan = typeof getUserPlan === 'function' ? getUserPlan() : (localStorage.getItem('kronia_plan') || 'free');
+      const plan = typeof getUserPlan === 'function' ? getUserPlan() : 'free';
       if (plan === 'ultra') {
         badge.textContent = 'ULTRA'; badge.style.background = 'rgba(139,92,246,0.15)'; badge.style.color = '#a855f7'; badge.style.borderColor = 'rgba(139,92,246,0.4)';
       } else if (plan === 'pro') {
