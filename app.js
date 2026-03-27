@@ -2560,6 +2560,21 @@ function renderMarkdown(text) {
     .replace(/\n/g, "<br>");
 }
 
+function getKronosAvatarMarkup(wrapperClass = "kronos-reactor-avatar") {
+  return `<div class="${wrapperClass}" aria-label="Avatar do KRONOS">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="kronosAvatarGold" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#F6C36B"/>
+          <stop offset="1" stop-color="#A56700"/>
+        </linearGradient>
+      </defs>
+      <path d="M12 2.5 20 6.1v5.35c0 4.5-2.85 8.63-8 10.05-5.15-1.42-8-5.56-8-10.05V6.1L12 2.5Z" stroke="url(#kronosAvatarGold)" stroke-width="1.6"/>
+      <path d="M8.2 7.8v8.4m0-4.2h2.3l2.7-4.2m-2.7 4.2 2.9 4.2h2.4" stroke="url(#kronosAvatarGold)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>`;
+}
+
 function addAIMessage(role, text, isThinking = false) {
   const container = document.getElementById("aiMessages");
   if (!container) return;
@@ -2567,7 +2582,7 @@ function addAIMessage(role, text, isThinking = false) {
   const div = document.createElement("div");
   div.className = `ai-msg ${role}`;
   const now = new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
-  const avatarSVG = `<div class="kronos-reactor-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.75"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
+  const avatarSVG = getKronosAvatarMarkup();
 
   if (role === "assistant") {
     if (isThinking) {
@@ -2753,7 +2768,7 @@ function iniciarFluxoGeradorTreino() {
   const container = document.getElementById('aiMessages');
   if (!container) return;
 
-  const avatarSVG = `<div class="kronos-reactor-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.75"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
+  const avatarSVG = getKronosAvatarMarkup();
 
   const chipStyle = 'display:inline-block;padding:7px 14px;margin:4px 4px 0 0;border-radius:20px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s;';
   const sectionStyle = 'margin-top:14px;';
@@ -3929,30 +3944,8 @@ function _kronosRemoveHealthBanner() {
 }
 
 function openOrientacao() {
-  // Esconde homeScreen se estiver aberta para evitar conflito de z-index e bloqueio de scroll no iOS
-  const homeEl = document.getElementById("homeScreen");
-  _orientFromHome = !!homeEl?.classList.contains("show");
-  if (homeEl) homeEl.classList.remove("show");
-  document.getElementById("orientacaoScreen").classList.add("show");
-  document.body.classList.add('overlay-open');
-  const hasMsgs = document.getElementById("orientExpertMessages").children.length > 0;
-  const row = document.querySelector(".orient-shortcuts-row");
-  const btn = document.getElementById("orientSuggestBtn");
-  if (hasMsgs) {
-    row.classList.add("collapsed");
-    btn && btn.classList.remove("open");
-  } else {
-    row.classList.remove("collapsed");
-    btn && btn.classList.add("open");
-    // Saudação proativa ARIA — só na primeira abertura da sessão
-    ariaGreeting();
-  }
-  // Atualizar chips dinâmicos sempre que abre
-  renderAriaChips();
-  const footer = document.querySelector('.footer-actions');
-  if (footer) footer.style.display = 'none';
-  // Health check diário (silencioso)
-  _kronosHealthCheck();
+  // Versão unificada do chat: qualquer entrada abre o modal principal do KRONOS.
+  openAI();
 }
 
 function ariaGreeting() {
@@ -4111,7 +4104,7 @@ function addOrientMsg(containerId, role, text) {
   wrap.className = `ai-msg ${role}`;
   wrap.setAttribute("data-role", role);
 
-  const kronosAvatar = `<div class="orient-kronos-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A56700" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.75"/><circle cx="12" cy="12" r="2" fill="#A56700" stroke="none"/></svg></div>`;
+  const kronosAvatar = getKronosAvatarMarkup("orient-kronos-avatar");
 
   if (role === "assistant") {
     wrap.innerHTML = `${kronosAvatar}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div></div>`;
