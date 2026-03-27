@@ -147,30 +147,48 @@ function handleNutritionPlan(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   var bodyPayload = parseJsonBodyIfNeeded(req);
-  var essentialKeys = ['sexo', 'idade', 'peso', 'peso_kg', 'pesoKg', 'altura', 'altura_cm', 'alturaCm', 'nivelAtividade', 'nivel_atividade', 'objetivo', 'refeicoesPorDia', 'refeicoes_por_dia'];
-  var hasEssentialBodyKeys = essentialKeys.some(function(key) {
-    return bodyPayload && bodyPayload[key] !== undefined && bodyPayload[key] !== null && bodyPayload[key] !== '';
-  });
-
-  var fallbackQueryPayload = {
-    sexo: req.query && req.query.sexo,
-    idade: req.query && req.query.idade,
-    peso_kg: req.query && req.query.peso_kg,
-    pesoKg: req.query && req.query.pesoKg,
-    peso: req.query && req.query.peso,
-    altura_cm: req.query && req.query.altura_cm,
-    alturaCm: req.query && req.query.alturaCm,
-    altura: req.query && req.query.altura,
-    nivel_atividade: req.query && req.query.nivel_atividade,
-    nivelAtividade: req.query && req.query.nivelAtividade,
-    objetivo: req.query && req.query.objetivo,
-    refeicoes_por_dia: req.query && req.query.refeicoes_por_dia,
-    refeicoesPorDia: req.query && req.query.refeicoesPorDia
+  var queryPayload = req && req.query ? req.query : {};
+  var isNonEmptyValue = function(value) {
+    return value !== undefined && value !== null && value !== '';
+  };
+  var pickValue = function(aliases) {
+    for (var i = 0; i < aliases.length; i++) {
+      var alias = aliases[i];
+      if (bodyPayload && isNonEmptyValue(bodyPayload[alias])) return bodyPayload[alias];
+    }
+    for (var j = 0; j < aliases.length; j++) {
+      var fallbackAlias = aliases[j];
+      if (isNonEmptyValue(queryPayload[fallbackAlias])) return queryPayload[fallbackAlias];
+    }
+    return undefined;
+  };
+  var toNumber = function(value) {
+    if (!isNonEmptyValue(value)) return undefined;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+    var normalized = String(value).trim();
+    if (!normalized) return undefined;
+    var parsed = Number(normalized.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : undefined;
   };
 
-  var sourcePayload = hasEssentialBodyKeys ? Object.assign({}, fallbackQueryPayload, bodyPayload) : fallbackQueryPayload;
-  var payload = normalizeNutritionPayload(sourcePayload);
-  var result = nutritionService.generateNutritionPlan(payload);
+  var payloadFinal = {
+    sexo: pickValue(['sexo']),
+    idade: toNumber(pickValue(['idade'])),
+    peso: toNumber(pickValue(['peso', 'peso_kg', 'pesoKg'])),
+    altura: toNumber(pickValue(['altura', 'altura_cm', 'alturaCm'])),
+    nivelAtividade: pickValue(['nivelAtividade', 'nivel_atividade']),
+    objetivo: pickValue(['objetivo']),
+    refeicoesPorDia: toNumber(pickValue(['refeicoesPorDia', 'refeicoes_por_dia']))
+  };
+
+  var forwardedKeys = Object.keys(payloadFinal).filter(function(key) {
+    return isNonEmptyValue(payloadFinal[key]);
+  });
+  console.log('[nutrition-plan] payload mapping', {
+    forwardedKeys: forwardedKeys
+  });
+
+  var result = nutritionService.generateNutritionPlan(payloadFinal);
 
   if (result.failSafe) {
     return res.status(200).json({
