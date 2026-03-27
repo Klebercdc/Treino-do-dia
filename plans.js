@@ -213,7 +213,7 @@ function updatePlanBadge() {
 // ══════════════════════════════
 // MODAL DE PLANOS
 // ══════════════════════════════
-var _planCarouselIdx = 1; // começa no PRO
+var _planCarouselIdx = 2; // começa no ULTRA
 var _planBilling = 'mensal';
 
 function openPlanModal() {
@@ -280,7 +280,7 @@ function openPlanModal() {
   }
 
   // Scroll para o plano correto
-  var targetIdx = isPro ? (isUltra ? 2 : 1) : (inTrial ? 1 : 0);
+  var targetIdx = isUltra ? 2 : (isPro ? 1 : 2);
   setTimeout(function() { scrollPlanTo(targetIdx); }, 80);
 
   // Atualizar preços
@@ -316,7 +316,7 @@ function onPlanCarouselScroll(el) {
 
 function updatePlanDots(idx) {
   // Atualiza tabs de seleção de plano
-  var colors  = ['rgba(255,255,255,0.14)', 'var(--accent)', '#a855f7'];
+  var colors  = ['rgba(255,255,255,0.14)', 'var(--accent)', 'linear-gradient(135deg,#a855f7,#7c3aed)'];
   var tcolors = ['rgba(255,255,255,0.85)', '#fff', '#fff'];
   [0, 1, 2].forEach(function(i) {
     var tab = document.getElementById('planTab' + i);
@@ -392,9 +392,9 @@ function setPlanBilling(mode) {
   updatePlanCTA(_planCarouselIdx);
 }
 
-// ── Init: garante que o slide PRO aparece por padrão ──
+// ── Init: garante que o slide ULTRA aparece por padrão ──
 document.addEventListener('DOMContentLoaded', function() {
-  // planSlide1 (PRO) já é o default — o JS inicializa via openPlanModal → scrollPlanTo
+  // planSlide2 (ULTRA) é o default — o JS inicializa via openPlanModal → scrollPlanTo
 });
 
 // ══════════════════════════════
