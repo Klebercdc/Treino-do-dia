@@ -18,6 +18,19 @@
     'radial-gradient(ellipse at 40% 20%, rgba(255,107,0,0.22) 0%, transparent 60%)',
   ];
 
+  function ffSafeGetStorage(key) {
+    try {
+      return window.localStorage ? window.localStorage.getItem(key) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function ffGetOnboardingTotal() {
+    var slides = document.querySelectorAll('.ff-slide');
+    return slides.length || FF_OB_TOTAL;
+  }
+
   function ffObUpdateDots() {
     var dots = document.querySelectorAll('.ff-dot');
     dots.forEach(function (d, i) {
@@ -36,7 +49,8 @@
     var hint = document.getElementById('ff-ob-hint');
     var footer = document.getElementById('ff-ob-footer');
     if (!btn) return;
-    var isLast = ffObCurrent === FF_OB_TOTAL - 1;
+    var total = ffGetOnboardingTotal();
+    var isLast = ffObCurrent === total - 1;
     btn.classList.toggle('ff-cta-final', isLast);
     btn.style.display = isLast ? 'flex' : 'none';
     btn.style.pointerEvents = isLast ? 'auto' : 'none';
@@ -48,7 +62,8 @@
   }
 
   window.ffObGoTo = function (idx) {
-    if (idx < 0 || idx >= FF_OB_TOTAL) return;
+    var total = ffGetOnboardingTotal();
+    if (idx < 0 || idx >= total) return;
     var slides = document.querySelectorAll('.ff-slide');
     slides.forEach(function (s) { s.classList.remove('ff-slide-active'); });
     var target = document.getElementById('ff-slide-' + idx);
@@ -60,7 +75,8 @@
   };
 
   window.ffObNext = function () {
-    if (ffObCurrent < FF_OB_TOTAL - 1) {
+    var total = ffGetOnboardingTotal();
+    if (ffObCurrent < total - 1) {
       window.ffObGoTo(ffObCurrent + 1);
     } else {
       window.ffObFinish();
@@ -69,10 +85,12 @@
 
   window.ffObFinish = function () {
     var appLayer = window.KroniaApplication && window.KroniaApplication.application;
+    var userId = ffSafeGetStorage('kronia_user_id') || 'anonymous';
+    var hasPlan = !!ffSafeGetStorage('kronia_plan');
     var completion = appLayer
       ? appLayer.completeOnboarding({
-          userId: localStorage.getItem('kronia_user_id') || 'anonymous',
-          hasPlan: !!localStorage.getItem('kronia_plan')
+          userId: userId,
+          hasPlan: hasPlan
         })
       : { status: 'success', nextAction: { route: 'plans' } };
 
@@ -127,11 +145,11 @@
 
   window.selectPlan = function (planId) {
     if (planId === 'free') {
-      closePricingScreen();
+      window.closePricingScreen();
       return;
     }
     // PRO e ULTRA redirecionam para o checkout
-    closePricingScreen();
+    window.closePricingScreen();
     if (typeof assinarPro === 'function') {
       assinarPro();
     }
@@ -150,5 +168,4 @@
       /* deixa o app.js controlar a visibilidade */
     }
   });
-
 })();
