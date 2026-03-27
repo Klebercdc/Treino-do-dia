@@ -15,12 +15,11 @@ export async function runAiCheck(_context: CheckContext): Promise<CheckResult> {
 
   return {
     name: 'ia_provider',
-    status: ai.embeddingsEnabled ? 'OK' : 'WARNING',
-    summary: ai.embeddingsEnabled ? 'Groq configurado com chat e embeddings.' : 'Groq configurado para chat; embeddings opcionais estão desabilitados.',
+    status: 'OK',
+    summary: 'Groq configurado para chat.',
     details: {
       provider: ai.provider,
       chatModel: ai.chatModel,
-      embeddingModel: ai.embeddingModel ?? null,
     },
   };
 }

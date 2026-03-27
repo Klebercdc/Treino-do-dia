@@ -17,7 +17,6 @@ export async function GET() {
       ai: {
         provider: ai.provider,
         chatKeyFound: !!ai.chatApiKey,
-        embeddingsEnabled: ai.embeddingsEnabled,
       },
       timestamp: new Date().toISOString(),
     },
