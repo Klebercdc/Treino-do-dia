@@ -113,6 +113,10 @@ module.exports = async function(req, res) {
     }
   }
 
+  if (route === 'nutrition-plan' && isValidCronSecret(req)) {
+    return handleNutritionPlan(req, res);
+  }
+
   return auth.requireAuth(req, res, async function() {
     if (route === 'science-search') {
       if (req.method !== 'POST') return res.status(405).end();
