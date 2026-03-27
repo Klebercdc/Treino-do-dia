@@ -41,6 +41,7 @@ function parseJsonBodyIfNeeded(req) {
 
 function normalizeNutritionPayload(rawPayload) {
   var payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  // Canonical mapping used by /nutrition-plan in both authenticated and CRON-secret bypass flows.
   var pickFirst = function() {
     for (var i = 0; i < arguments.length; i++) {
       var value = arguments[i];
