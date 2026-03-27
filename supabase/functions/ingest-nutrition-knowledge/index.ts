@@ -37,10 +37,6 @@ function sanitize(text: string): string {
   return text.normalize('NFKC').replace(/\s+/g, ' ').trim();
 }
 
-function getEmbeddingKey(): string | undefined {
-  return Deno.env.get('GROQ_API_KEY') ?? undefined;
-}
-
 async function sha256(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
@@ -57,17 +53,6 @@ function chunkText(text: string, size = 1200, overlap = 200): string[] {
     start = Math.max(0, end - overlap);
   }
   return chunks.filter(Boolean);
-}
-
-async function embedChunks(apiKey: string, model: string, chunks: string[]): Promise<number[][]> {
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, input: chunks }),
-  });
-  if (!response.ok) throw new Error(`Embedding provider failed: ${response.status} ${await response.text()}`);
-  const payload = await response.json();
-  return payload.data.map((item: { embedding: number[] }) => item.embedding);
 }
 
 function requireServiceRoleAuthorization(req: Request, serviceRoleKey: string): void {
@@ -88,8 +73,6 @@ Deno.serve(async (req) => {
   try {
     const url = Deno.env.get('SUPABASE_URL');
     const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const embeddingKey = getEmbeddingKey();
-    const embeddingModel = Deno.env.get('AI_EMBEDDING_MODEL') ?? '';
 
     if (!url || !serviceRole) return jsonResponse(500, { error: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.' });
 
@@ -150,17 +133,6 @@ Deno.serve(async (req) => {
     if (documentInsertError || !documentRow) return jsonResponse(500, { error: `Document insert failed: ${documentInsertError?.message}` });
 
     const chunks = chunkText(content);
-    let embeddingsSkipped = false;
-    let embeddings: number[][] = [];
-
-    if (embeddingKey && embeddingModel) {
-      embeddings = await embedChunks(embeddingKey, embeddingModel, chunks);
-      if (embeddings.length !== chunks.length) {
-        return jsonResponse(500, { error: 'Embedding batch length mismatch.' });
-      }
-    } else {
-      embeddingsSkipped = true;
-    }
 
     const chunkRows = chunks.map((chunk, index) => ({
       document_id: documentRow.id,
@@ -174,9 +146,8 @@ Deno.serve(async (req) => {
         source_type: sourceType,
         source_reference: sourceReference,
         ingestion_at: new Date().toISOString(),
-        embeddings_skipped: embeddingsSkipped,
       },
-      embedding: embeddingsSkipped ? null : embeddings[index],
+      embedding: null,
     }));
 
     const { error: chunkInsertError } = await admin.from('nutrition_knowledge_chunks').insert(chunkRows);
@@ -190,7 +161,6 @@ Deno.serve(async (req) => {
       checksum,
       category,
       tags,
-      embeddingsSkipped,
     });
   } catch (error) {
     return jsonResponse(500, { error: (error as Error).message });

@@ -27,9 +27,8 @@ export function runEnvCheck(): { context?: CheckContext; result: CheckResult } {
       supabaseUrl: supabase.url,
       anonKey: supabase.anonKey,
       serviceRoleKey: supabase.serviceRoleKey as string,
-      aiApiKey: ai.chatApiKey,
+      groqApiKey: ai.chatApiKey,
       aiChatModel: ai.chatModel,
-      aiEmbeddingModel: ai.embeddingModel,
     },
     result: {
       name: 'ambiente',
