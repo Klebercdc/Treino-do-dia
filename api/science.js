@@ -2,6 +2,7 @@ var cors = require('./_cors');
 var auth = require('./_auth');
 var science = require('../src/lib/science/scienceSyncService');
 var scienceInsight = require('../src/lib/science/scienceInsightService');
+var nutritionService = require('../src/lib/nutrition/nutritionService');
 
 function getCronSecret(req) {
   if (!req) return '';
@@ -41,9 +42,43 @@ function detectRoute(req) {
   if (pathname.endsWith('/science-review')) return 'science-review';
   if (pathname.endsWith('/science-insight')) return 'science-insight';
   if (pathname.endsWith('/science-classify')) return 'science-classify';
+  if (pathname.endsWith('/nutrition-calc')) return 'nutrition-calc';
+  if (pathname.endsWith('/nutrition-plan')) return 'nutrition-plan';
   if (pathname.endsWith('/science')) return 'science';
 
   return '';
+}
+
+function handleNutritionCalc(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var payload = req.body || {};
+  var result = nutritionService.calculateNutrition(payload);
+
+  if (result.failSafe) {
+    return res.status(200).json({
+      ok: false,
+      failSafe: true,
+      limitedOrientation: result.limitedOrientation
+    });
+  }
+
+  return res.status(200).json({ ok: true, failSafe: false, data: result });
+}
+
+function handleNutritionPlan(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var payload = req.body || {};
+  var result = nutritionService.generateNutritionPlan(payload);
+
+  if (result.failSafe) {
+    return res.status(200).json({
+      ok: false,
+      failSafe: true,
+      limitedOrientation: result.limitedOrientation
+    });
+  }
+
+  return res.status(200).json({ ok: true, failSafe: false, data: result });
 }
 
 module.exports = async function(req, res) {
@@ -66,8 +101,8 @@ module.exports = async function(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
     try {
       var cronLimit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
-      var cronResult = await science.classifyScientificArticlesBatch(cronLimit);
-      return res.status(200).json(cronResult);
+      var cronClassifyResult = await science.classifyScientificArticlesBatch(cronLimit);
+      return res.status(200).json(cronClassifyResult);
     } catch (error) {
       return res.status(200).json({
         ok: false,
@@ -95,8 +130,8 @@ module.exports = async function(req, res) {
     if (route === 'science-sync') {
       if (req.method !== 'POST') return res.status(405).end();
       try {
-        var result = await science.syncScientificTopics();
-        return res.status(200).json(result);
+        var syncResult = await science.syncScientificTopics();
+        return res.status(200).json(syncResult);
       } catch (error) {
         return res.status(200).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error) });
       }
@@ -143,9 +178,9 @@ module.exports = async function(req, res) {
     if (route === 'science-classify') {
       if (req.method !== 'POST') return res.status(405).end();
       try {
-        var limit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
-        var result = await science.classifyScientificArticlesBatch(limit);
-        return res.status(200).json(result);
+        var classifyLimit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
+        var classifyResult = await science.classifyScientificArticlesBatch(classifyLimit);
+        return res.status(200).json(classifyResult);
       } catch (error) {
         return res.status(200).json({
           ok: false,
@@ -154,6 +189,14 @@ module.exports = async function(req, res) {
           warning: String(error.message || error)
         });
       }
+    }
+
+    if (route === 'nutrition-calc') {
+      return handleNutritionCalc(req, res);
+    }
+
+    if (route === 'nutrition-plan') {
+      return handleNutritionPlan(req, res);
     }
 
     return res.status(404).json({ error: 'rota científica não encontrada' });
