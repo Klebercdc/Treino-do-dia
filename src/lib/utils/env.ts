@@ -22,8 +22,6 @@ export interface AIConfig {
   provider: 'groq';
   chatApiKey?: string;
   chatModel: string;
-  embeddingModel?: string;
-  embeddingsEnabled: boolean;
 }
 
 export function requireEnv(name: string): string {
@@ -65,19 +63,12 @@ export function getAIConfig(options?: { requireChatKey?: boolean }): AIConfig {
   const provider: 'groq' = 'groq';
   const chatApiKey = getOptionalEnv('GROQ_API_KEY');
   const chatModel = getOptionalEnv('AI_CHAT_MODEL') ?? 'llama-3.3-70b-versatile';
-  const embeddingModel = getOptionalEnv('AI_EMBEDDING_MODEL');
 
   if (options?.requireChatKey && !chatApiKey) {
     throw new Error('GROQ_API_KEY não está carregada no runtime.');
   }
 
-  return {
-    provider,
-    chatApiKey,
-    chatModel,
-    embeddingModel,
-    embeddingsEnabled: Boolean(chatApiKey && embeddingModel),
-  };
+  return { provider, chatApiKey, chatModel };
 }
 
 export function maskSecret(value?: string): string {

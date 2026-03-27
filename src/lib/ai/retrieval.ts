@@ -3,24 +3,20 @@ import type { KnowledgeChunk } from './types';
 
 export interface RetrievalFilters {
   category?: string;
-  tags?: string[];
   topK?: number;
 }
 
 export async function retrieveKnowledgeChunks(
   db: SupabaseClient,
-  queryEmbedding: number[] | null,
+  query: string,
   filters: RetrievalFilters = {},
 ): Promise<KnowledgeChunk[]> {
-  if (!queryEmbedding || queryEmbedding.length === 0) {
-    return [];
-  }
+  if (!query.trim()) return [];
 
-  const { data, error } = await db.rpc('match_nutrition_knowledge', {
-    query_embedding: queryEmbedding,
+  const { data, error } = await db.rpc('search_nutrition_knowledge', {
+    search_query: query,
     match_count: Math.max(1, Math.min(filters.topK ?? 8, 20)),
     category_filter: filters.category ?? null,
-    tags_filter: filters.tags?.length ? filters.tags : null,
   });
 
   if (error) throw error;

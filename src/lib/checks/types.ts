@@ -14,7 +14,6 @@ export interface CheckContext {
   supabaseUrl: string;
   anonKey: string;
   serviceRoleKey: string;
-  aiApiKey?: string;
+  groqApiKey?: string;
   aiChatModel?: string;
-  aiEmbeddingModel?: string;
 }
