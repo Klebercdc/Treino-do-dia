@@ -5,6 +5,14 @@ import type { RetrievedContextItem } from "./types"
 import type { EmbeddingProvider } from "./embeddings"
 import { vectorToSqlLiteral } from "./embeddings"
 
+interface SupabaseRagRow {
+  id: string | number
+  title?: string
+  content?: string
+  similarity?: number
+  metadata?: Record<string, unknown>
+}
+
 export class SupabaseRagProvider implements RagProvider {
   private readonly supabase: SupabaseClient
 
@@ -25,7 +33,7 @@ export class SupabaseRagProvider implements RagProvider {
       throw new Error(`Erro RAG: ${error.message}`)
     }
 
-    return (data ?? []).map((row: any) => ({
+    return (data ?? []).map((row: SupabaseRagRow) => ({
       id: String(row.id),
       title: row.title ?? undefined,
       content: String(row.content ?? ""),

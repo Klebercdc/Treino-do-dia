@@ -5,6 +5,8 @@ export type ResolvedAppAction =
   | { type: "navigation"; screen: "WorkoutConfig"; payload: null }
   | { type: "navigation"; screen: "ExerciseScreen"; payload: NonNullable<AssistantStructuredResponse["workoutPayload"]> }
   | { type: "navigation"; screen: "DietConfig"; payload: NonNullable<AssistantStructuredResponse["dietPayload"]> | null }
+  | { type: "navigation"; screen: "SupplementScreen"; payload: NonNullable<AssistantStructuredResponse["supplementPayload"]> | null }
+  | { type: "navigation"; screen: "MobilityScreen"; payload: NonNullable<AssistantStructuredResponse["mobilityPayload"]> | null }
   | { type: "pdf"; payload: NonNullable<AssistantStructuredResponse["dietPayload"]> }
 
 export function resolveAppAction(response: AssistantStructuredResponse): ResolvedAppAction {
@@ -22,6 +24,12 @@ export function resolveAppAction(response: AssistantStructuredResponse): Resolve
     case "gerar_pdf_dieta":
       if (!response.dietPayload) throw new Error("dietPayload ausente")
       return { type: "pdf", payload: response.dietPayload }
+
+    case "responder_suplementacao":
+      return { type: "navigation", screen: "SupplementScreen", payload: response.supplementPayload ?? null }
+
+    case "responder_mobilidade":
+      return { type: "navigation", screen: "MobilityScreen", payload: response.mobilityPayload ?? null }
 
     default:
       return { type: "chat" }

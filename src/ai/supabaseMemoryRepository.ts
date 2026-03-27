@@ -3,6 +3,16 @@ import { AI_ENV } from "./env"
 import type { MemoryItem } from "./types"
 import type { MemoryRepository } from "./memory"
 
+interface SupabaseMemoryRow {
+  id: string | number
+  user_id: string
+  memory_type: MemoryItem["memoryType"]
+  content: string
+  importance?: number
+  created_at?: string
+  updated_at?: string
+}
+
 export class SupabaseMemoryRepository implements MemoryRepository {
   private readonly supabase: SupabaseClient
 
@@ -25,7 +35,7 @@ export class SupabaseMemoryRepository implements MemoryRepository {
 
     if (error) throw new Error(`Erro ao buscar memória: ${error.message}`)
 
-    return (data ?? []).map((row: any) => ({
+    return (data ?? []).map((row: SupabaseMemoryRow) => ({
       id: String(row.id),
       userId: String(row.user_id),
       memoryType: row.memory_type,

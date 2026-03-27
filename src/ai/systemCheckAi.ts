@@ -32,10 +32,11 @@ export async function runAiSystemCheck(): Promise<{
       status: "OK",
       message: "Groq funcionando",
     }
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro na IA"
     return {
       status: "ERROR",
-      message: e?.message ?? "Erro na IA",
+      message,
     }
   }
 }
