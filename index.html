@@ -2539,7 +2539,7 @@
 </div>
 
 <div id="planModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:flex-end;justify-content:center">
-  <div style="background:#131313;border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:92dvh;display:flex;flex-direction:column">
+  <div style="background:#131313;border-radius:28px 28px 0 0;width:100%;max-width:560px;max-height:96dvh;display:flex;flex-direction:column">
 
     <!-- Handle + Header -->
     <div style="padding:14px 20px 0;flex-shrink:0">
@@ -2569,9 +2569,9 @@
 
     <!-- Tabs de seleção de plano -->
     <div style="display:flex;gap:5px;margin:14px 20px 0;background:rgba(255,255,255,0.05);border-radius:13px;padding:4px;flex-shrink:0">
-      <button id="planTab0" onclick="scrollPlanTo(0)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.65)">FREE</button>
-      <button id="planTab1" onclick="scrollPlanTo(1)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:var(--accent);color:#fff"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="zap" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>PRO</span></button>
-      <button id="planTab2" onclick="scrollPlanTo(2)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="crown" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>ULTRA</span></button>
+      <button id="planTab2" onclick="scrollPlanTo(2)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="crown" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>ULTRA</span></button>
+      <button id="planTab1" onclick="scrollPlanTo(1)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="zap" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>PRO</span></button>
+      <button id="planTab0" onclick="scrollPlanTo(0)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)">FREE</button>
     </div>
 
     <!-- Área de conteúdo dos planos (scroll vertical) -->
@@ -2608,9 +2608,6 @@
 
       <!-- PRO -->
       <div class="plan-card-slide" id="planSlide1" data-plan="pro" style="display:none">
-        <div style="text-align:center;margin-bottom:12px">
-          <span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 14px;border-radius:20px;letter-spacing:.1em"><i data-lucide="zap" class="lucide" width="9" height="9" stroke="currentColor" fill="none" stroke-width="2.5"></i>RECOMENDADO</span>
-        </div>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
           <div>
             <div style="font-size:0.5rem;font-weight:800;letter-spacing:.16em;color:rgba(255,107,0,0.75);text-transform:uppercase;margin-bottom:4px">ATLETA</div>
@@ -2642,7 +2639,7 @@
       <!-- ULTRA -->
       <div class="plan-card-slide" id="planSlide2" data-plan="ultra" style="display:none">
         <div style="text-align:center;margin-bottom:12px">
-          <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 14px;border-radius:20px;letter-spacing:.1em"><i data-lucide="crown" class="lucide" width="9" height="9" stroke="currentColor" fill="none" stroke-width="2.5"></i>MÁXIMO PODER</span>
+          <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:0.6rem;font-weight:900;padding:4px 14px;border-radius:20px;letter-spacing:.1em"><i data-lucide="crown" class="lucide" width="9" height="9" stroke="currentColor" fill="none" stroke-width="2.5"></i>RECOMENDADO · ULTRA PRO</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
           <div>
