@@ -139,7 +139,31 @@ function handleNutritionCalc(req, res) {
 
 function handleNutritionPlan(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  var payload = normalizeNutritionPayload(parseJsonBodyIfNeeded(req));
+
+  var bodyPayload = parseJsonBodyIfNeeded(req);
+  var essentialKeys = ['sexo', 'idade', 'peso', 'peso_kg', 'pesoKg', 'altura', 'altura_cm', 'alturaCm', 'nivelAtividade', 'nivel_atividade', 'objetivo', 'refeicoesPorDia', 'refeicoes_por_dia'];
+  var hasEssentialBodyKeys = essentialKeys.some(function(key) {
+    return bodyPayload && bodyPayload[key] !== undefined && bodyPayload[key] !== null && bodyPayload[key] !== '';
+  });
+
+  var fallbackQueryPayload = {
+    sexo: req.query && req.query.sexo,
+    idade: req.query && req.query.idade,
+    peso_kg: req.query && req.query.peso_kg,
+    pesoKg: req.query && req.query.pesoKg,
+    peso: req.query && req.query.peso,
+    altura_cm: req.query && req.query.altura_cm,
+    alturaCm: req.query && req.query.alturaCm,
+    altura: req.query && req.query.altura,
+    nivel_atividade: req.query && req.query.nivel_atividade,
+    nivelAtividade: req.query && req.query.nivelAtividade,
+    objetivo: req.query && req.query.objetivo,
+    refeicoes_por_dia: req.query && req.query.refeicoes_por_dia,
+    refeicoesPorDia: req.query && req.query.refeicoesPorDia
+  };
+
+  var sourcePayload = hasEssentialBodyKeys ? bodyPayload : fallbackQueryPayload;
+  var payload = normalizeNutritionPayload(sourcePayload);
   var result = nutritionService.generateNutritionPlan(payload);
 
   if (result.failSafe) {
