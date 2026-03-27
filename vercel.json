@@ -12,6 +12,8 @@
     { "source": "/api/science-sync", "destination": "/api/science?__route=science-sync" },
     { "source": "/api/science-insight", "destination": "/api/science?__route=science-insight" },
     { "source": "/api/science-classify", "destination": "/api/science?__route=science-classify" },
+    { "source": "/api/nutrition-calc", "destination": "/api/science?__route=nutrition-calc" },
+    { "source": "/api/nutrition-plan", "destination": "/api/science?__route=nutrition-plan" },
     { "source": "/api/lgpd-export", "destination": "/api/system?__route=lgpd-export" },
     { "source": "/api/lgpd-delete", "destination": "/api/system?__route=lgpd-delete" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
