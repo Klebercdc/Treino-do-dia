@@ -172,11 +172,14 @@ Papo casual, dúvida técnica simples → responda direto, SEM ferramenta
 COMO VOCÊ FALA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Português brasileiro. Direto. Coach de verdade.
-NUNCA comece com "Claro!", "Certamente!" — vá ao ponto.
+NUNCA comece com "Claro!", "Certamente!", "Com prazer!", "Olá!" — vá ao ponto.
+Saudação simples ("oi", "tudo bem", "olá", "e aí") → resposta curta e casual (1-2 linhas). NÃO pergunte sobre treino automaticamente — só mencione treino se o usuário mencionou ou se o campo "Último treino" indicar que treinou nas últimas 3h.
+Comentário casual ("cansei", "tô cansado hoje", "kkk") → responda como amigo, não coach analisando dados.
 Resposta proporcional ao que foi pedido. Nada mais, nada menos.
 Tom humano e contínuo: converse, não recite manual.
 Comece pela conclusão prática, depois mostre o porquê com os dados.
 Se houver incerteza por falta de dados, diga explicitamente o que falta e busque via ferramenta.
+Varie o jeito de responder — não repita o mesmo padrão de abertura duas vezes seguidas.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PROTOCOLO DE RESPOSTA ANALÍTICA
@@ -240,11 +243,53 @@ function buildCoachSystem(systemFromClient, context) {
 }
 
 /**
+ * Monta o bloco de perfil enriquecido com dados de recência de treino.
+ * @param {object} context - perfil do usuário
+ * @param {Array}  history - array de sessões de treino (mais recente primeiro)
+ */
+function buildPerfilBlocoComHistorico(context, history) {
+  var base = buildPerfilBloco(context);
+  var linhas = [];
+
+  if (Array.isArray(history) && history.length > 0) {
+    var ultima = history[0];
+    if (ultima && ultima.createdAt) {
+      var horas = (Date.now() - new Date(ultima.createdAt).getTime()) / 3600000;
+      var totalSessoes = history.length;
+
+      if (horas < 1) {
+        linhas.push('Último treino: agora mesmo (< 1h atrás) — usuário pode estar em treino ou acabou de terminar');
+      } else if (horas < 3) {
+        var h = Math.round(horas * 10) / 10;
+        linhas.push('Último treino: ' + h + 'h atrás — acabou de treinar');
+      } else if (horas < 24) {
+        linhas.push('Último treino: hoje (' + Math.round(horas) + 'h atrás)');
+      } else if (horas < 48) {
+        linhas.push('Último treino: ontem');
+      } else {
+        var dias = Math.floor(horas / 24);
+        linhas.push('Último treino: ' + dias + ' dias atrás');
+      }
+
+      linhas.push('Total de sessões registradas: ' + totalSessoes);
+    }
+  } else {
+    linhas.push('Nenhuma sessão de treino registrada ainda');
+  }
+
+  return base + '\n' + linhas.join('\n');
+}
+
+/**
  * Monta o system prompt do agente para agent.js
  * @param {object} context - perfil do usuário (profile do body)
+ * @param {Array}  history - sessões de treino (opcional, mais recente primeiro)
  */
-function buildAgentSystem(context) {
-  return AGENT_SYSTEM_TEMPLATE.replace('{perfil_bloco}', buildPerfilBloco(context));
+function buildAgentSystem(context, history) {
+  var perfilBloco = history && history.length > 0
+    ? buildPerfilBlocoComHistorico(context, history)
+    : buildPerfilBloco(context);
+  return AGENT_SYSTEM_TEMPLATE.replace('{perfil_bloco}', perfilBloco);
 }
 
 module.exports = {

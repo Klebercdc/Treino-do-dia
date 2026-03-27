@@ -111,9 +111,18 @@ if (typeof sendAI === 'function') {
       try {
         const msgs = document.getElementById('aiMessages');
         if (msgs && txt) {
-          const bubbles = msgs.querySelectorAll('.ai-bubble');
-          const last = bubbles[bubbles.length - 1];
-          const botText = last ? last.textContent : '';
+          // Pega o texto da resposta do bot de forma robusta:
+          // Ignora bubbles de botão (curtas ou com "Aplicar"/"Importar")
+          // e pega a última bubble substantiva do assistant
+          const allBubbles = msgs.querySelectorAll('.ai-msg.assistant:not(.transform-wrap) .ai-bubble:not(.thinking)');
+          let botText = '';
+          for (let i = allBubbles.length - 1; i >= 0; i--) {
+            const t = (allBubbles[i].textContent || '').trim();
+            if (t.length > 40 && !/^(Aplicar|Importar|Ver Plan)/i.test(t)) {
+              botText = t;
+              break;
+            }
+          }
           runTransforms(txt, botText, 'aiMessages', _blockedIds);
         }
       } catch(e) {}

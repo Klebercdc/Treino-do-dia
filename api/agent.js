@@ -351,7 +351,7 @@ function callAgent(messages, tools, callback) {
 // ══════════════════════════════════════════
 
 function buildAgentSystem(userData) {
-  return prompts.buildAgentSystem(userData.profile || {});
+  return prompts.buildAgentSystem(userData.profile || {}, userData.history || []);
 }
 
 function agentLoop(userMessages, userData, callback) {

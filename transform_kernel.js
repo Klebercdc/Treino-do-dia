@@ -6,7 +6,15 @@
 
    Pesos: forte=3pts · medio=2pts · fraco=1pt
    Threshold mínimo para exibir botão: 2pts
+   v2.0 — normalização de acentos + keywords expandidas
 ═══════════════════════════════════════════════════ */
+
+/* ── Normaliza texto: remove acentos + lowercase ── */
+function _normalizeText(str) {
+  return (str || '').toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
 
 const TRANSFORMS = [
 
@@ -14,11 +22,26 @@ const TRANSFORMS = [
 {
   id: 'gerar_treino',
   score: {
-    forte: ['gerar treino','montar treino','criar treino','quero um treino',
-            'preciso de treino','novo treino','treino pra mim','me dá um treino',
-            'faz um treino','elabora um treino'],
-    medio: ['treino personalizado','programa de treino','plano de treino'],
-    fraco: []
+    forte: [
+      'gerar treino','montar treino','criar treino','quero um treino',
+      'preciso de treino','novo treino','treino pra mim','me da um treino',
+      'faz um treino','elabora um treino','quero treinar','fazer treino',
+      'me passa um treino','montar um treino','cria um treino','preciso treinar',
+      'treino para hoje','treino de hoje','fazer musculacao','treino para iniciante',
+      'treino para ganhar massa','treino para emagrecer','treino para perder peso',
+      'treino para hipertrofia','montar meu treino','criar meu treino',
+      'quero comecar a treinar','quero comecar treinar','me monta um treino',
+      'me cria um treino','treino de pernas','treino de peito','treino de costas',
+      'treino de ombro','treino de braco','treino de bracos','treino completo',
+      'treino fullbody','treino upper lower'
+    ],
+    medio: [
+      'treino personalizado','programa de treino','plano de treino',
+      'rotina de treino','rotina de musculacao','exercicios para',
+      'exercicios de pernas','exercicios de peito','exercicios de costas',
+      'exercicios de ombro','exercicios de biceps','exercicios de triceps'
+    ],
+    fraco: ['treino','rotina','programa','musculacao','academia']
   },
   action: function() {
     try { closeOrientacao(); } catch(e) {}
@@ -31,10 +54,20 @@ const TRANSFORMS = [
 {
   id: 'treino',
   score: {
-    forte: ['supino','agachamento','leg press','rosca direta','terra','levantamento terra',
-            'barra fixa','crucifixo','desenvolvimento','remada','pulldown','cadeira extensora'],
-    medio: ['exercício','musculação','série','repetição','carga','academia','halter','barra'],
-    fraco: ['treino','malhar','malhação','ginástica']
+    forte: [
+      'supino','agachamento','leg press','rosca direta','terra','levantamento terra',
+      'barra fixa','crucifixo','desenvolvimento','remada','pulldown','cadeira extensora',
+      'pernas','peito','costas','ombro','biceps','triceps','abdomen','gluteo',
+      'panturrilha','quadriceps','isquiotibiais','deltoides','trapezio',
+      'stiff','hack squat','smith','afundo','bulgarian','rdl','good morning',
+      'extensao de quadril','extensao de joelho'
+    ],
+    medio: [
+      'exercicio','musculacao','serie','repeticao','carga','academia','halter','barra',
+      'exercicios compostos','exercicios isolados','amplitude','contração','tensao',
+      'tempo sob tensao','falha muscular','carga progressiva'
+    ],
+    fraco: ['treino','malhar','malhacao','ginastica','peso','levantar']
   },
   action: function() {
     try { closeOrientacao(); } catch(e) {}
@@ -48,10 +81,19 @@ const TRANSFORMS = [
 {
   id: 'basal',
   score: {
-    forte: ['tmb','tdee','taxa metabólica','gasto calórico total','metabolismo basal',
-            'calorias de manutenção','gasto energético'],
-    medio: ['metabolismo','gasto calórico','basal','mifflin'],
-    fraco: ['kcal','caloria','calorias']
+    forte: [
+      'tmb','tdee','taxa metabolica','gasto calorico total','metabolismo basal',
+      'calorias de manutencao','gasto energetico','quantas calorias preciso',
+      'quantas calorias devo comer','quanto devo comer','meu gasto calorico',
+      'calcular calorias','calculo de calorias','calorias para emagrecer',
+      'calorias para ganhar massa','deficit calorico','superavit calorico',
+      'quantas kcal'
+    ],
+    medio: [
+      'metabolismo','gasto calorico','basal','mifflin','quantas calorias',
+      'gasto diario','manutencao calorica','meta calorica','necessidade calorica'
+    ],
+    fraco: ['kcal','caloria','calorias','metabolismo']
   },
   action: function() { openBasalSheet(); },
   botao: { label: 'Calculadora Basal', icon: 'flame', cor: 'accent' }
@@ -61,18 +103,31 @@ const TRANSFORMS = [
 {
   id: 'dieta',
   score: {
-    forte: ['gerar dieta','criar dieta','montar dieta','quero uma dieta','preciso de dieta',
-            'minha dieta','cardápio personalizado','fazer dieta','meu cardápio'],
-    medio: ['alimentação','nutrição','refeição','o que comer','o que devo comer',
-            'dieta para','como comer','plano alimentar'],
-    fraco: ['dieta','carboidrato','gordura','macros']
+    forte: [
+      'gerar dieta','criar dieta','montar dieta','quero uma dieta','preciso de dieta',
+      'minha dieta','cardapio personalizado','fazer dieta','meu cardapio',
+      'emagrecer','quero emagrecer','perder peso','quero perder peso','quero secar',
+      'ganhar massa','quero ganhar massa','aumentar massa','quero engordar',
+      'como me alimentar','o que devo comer','minha alimentacao',
+      'plano alimentar','dieta para hipertrofia','dieta para emagrecimento',
+      'cardapio saudavel','dieta balanceada','alimentacao saudavel',
+      'refeicoes do dia','o que comer no dia'
+    ],
+    medio: [
+      'alimentacao','nutricao','refeicao','o que comer','como comer',
+      'dieta para','comida','alimento','proteina','bulking','cutting',
+      'deficit','superavit','comer para','macro','macros',
+      'cafe da manha','almoco','janta','lanche','pos treino alimentar'
+    ],
+    fraco: [
+      'dieta','carboidrato','gordura','proteina','refeicao',
+      'comer','alimento','comida'
+    ]
   },
   action: function(cid) {
     if (cid === 'orientExpertMessages') {
-      // Já está na tela de orientação — chama diretamente
       try { iniciarFluxoDietaNutri(); } catch(e) { try { openDietaSheet(); } catch(e2) {} }
     } else {
-      // Abre a orientação primeiro, depois inicia o fluxo de dieta
       try { openOrientacao(); } catch(e) {}
       setTimeout(function() {
         try { iniciarFluxoDietaNutri(); } catch(e) { try { openDietaSheet(); } catch(e2) {} }
@@ -86,11 +141,20 @@ const TRANSFORMS = [
 {
   id: 'suplementos',
   score: {
-    forte: ['creatina','whey protein','whey','bcaa','pré-treino','proteína em pó',
-            'hipercalórico','albumina','caseína','termogênico'],
-    medio: ['suplemento','suplementação','vitamina d','ômega 3','beta alanina',
-            'citrulina','cafeína','glutamina'],
-    fraco: ['vitamina','mineral','zinco','magnésio']
+    forte: [
+      'creatina','whey protein','whey','bcaa','pre-treino','proteina em po',
+      'hipercalorico','albumina','caseina','termogenico',
+      'qual suplemento','quais suplementos','devo tomar suplemento',
+      'suplemento para ganhar massa','suplemento para emagrecer',
+      'tomar proteina','proteina pos treino','creatina funciona','whey funciona',
+      'monohidrato','cafeina para treino','beta alanina funciona'
+    ],
+    medio: [
+      'suplemento','suplementacao','vitamina d','omega 3','beta alanina',
+      'citrulina','cafeina','glutamina','proteina','pos treino',
+      'pre treino','suplemento esportivo','suplemento fitness'
+    ],
+    fraco: ['vitamina','mineral','zinco','magnesio','omega','suplemento']
   },
   action: function(cid) {
     var msg = 'Quais suplementos têm evidência científica real e realmente valem a pena para meus objetivos?';
@@ -111,10 +175,22 @@ const TRANSFORMS = [
 {
   id: 'evolucao',
   score: {
-    forte: ['ver evolução','meu progresso','meu pr','meu recorde','1rm estimado',
-            'quanto evoluí','quanto progredi'],
-    medio: ['evolução','progresso','gráfico de treino','1rm','pr'],
-    fraco: ['recorde','melhora','cresci','fiquei mais forte']
+    forte: [
+      'ver evolucao','meu progresso','meu pr','meu recorde','1rm estimado',
+      'quanto evolui','quanto progredi','ver meu progresso','minha evolucao',
+      'como evolui','quero ver meu pr','meus recordes','minha forca',
+      'estou evoluindo','quero ver minha evolucao','meu historico de pr',
+      'minha performance','ver grafico','meu 1rm'
+    ],
+    medio: [
+      'evolucao','progresso','grafico de treino','1rm','pr',
+      'meu desempenho','comparar','antes e depois','minha forca atual',
+      'carga atual','evolucao de carga','quanto to carregando'
+    ],
+    fraco: [
+      'recorde','melhora','cresci','fiquei mais forte','evoluir',
+      'melhorar','crescer','ficar forte','forca'
+    ]
   },
   action: function() { showEvoChart(); },
   botao: { label: 'Ver Evolução', icon: 'bar-chart-3', cor: 'blue' }
@@ -124,10 +200,19 @@ const TRANSFORMS = [
 {
   id: 'historico',
   score: {
-    forte: ['histórico de treinos','sessões anteriores','últimos treinos',
-            'ver meus treinos','meus treinos passados'],
-    medio: ['histórico','treinos anteriores','sessões de treino'],
-    fraco: ['ver treinos']
+    forte: [
+      'historico de treinos','sessoes anteriores','ultimos treinos',
+      'ver meus treinos','meus treinos passados','ver meus treinos anteriores',
+      'o que eu treinei','minhas sessoes','log de treino','diario de treino',
+      'registro de treino','ver o que fiz','treinos da semana','semana passada treinei'
+    ],
+    medio: [
+      'historico','treinos anteriores','sessoes de treino',
+      'passado','sessoes','registro','ultimo treino','ontem treinei'
+    ],
+    fraco: [
+      'ver treinos','ontem','semana passada','ultimo treino','antes'
+    ]
   },
   action: function() { verHistorico(); },
   botao: { label: 'Ver Histórico', icon: 'list', cor: 'blue' }
@@ -137,10 +222,20 @@ const TRANSFORMS = [
 {
   id: 'mesociclo',
   score: {
-    forte: ['mesociclo','periodização','deload','bloco de treino',
-            'semanas de treino','periodizar','estruturar treino'],
-    medio: ['bloco','ondulação','linear','ciclo de treino'],
-    fraco: ['semanas','planejamento']
+    forte: [
+      'mesociclo','periodizacao','deload','bloco de treino',
+      'semanas de treino','periodizar','estruturar treino',
+      'planejar treino','planejamento de treino','estruturar meu treino',
+      'proximo ciclo','periodizar meus treinos','programa de 12 semanas',
+      'programa de 8 semanas','planilha de treino','plano de treinamento',
+      'fase de ganho','fase de definicao','ciclo de treino completo'
+    ],
+    medio: [
+      'bloco','ondulacao','linear','ciclo de treino',
+      'progressao','longo prazo','meses de treino','macrociclo',
+      'semanas de programa','ciclos de treino'
+    ],
+    fraco: ['semanas','planejamento','planejar','organizar','estruturar','ciclo']
   },
   action: function() { abrirMesociclo(); },
   botao: { label: 'Gerar Mesociclo', icon: 'calendar', cor: 'purple' }
@@ -150,11 +245,25 @@ const TRANSFORMS = [
 {
   id: 'recuperacao',
   score: {
-    forte: ['dor muscular','músculo doendo','dor no músculo','lesão','me machuquei',
-            'overtraining','sobretreinamento','muito cansado para treinar'],
-    medio: ['recuperação muscular','doms','descanso ativo','fadiga muscular',
-            'recuperar mais rápido'],
-    fraco: ['cansado','fatigado','exausto','dolorido']
+    forte: [
+      'dor muscular','musculo doendo','dor no musculo','lesao','me machuquei',
+      'overtraining','sobretreinamento','muito cansado para treinar',
+      'estou com dor','dor nas costas','dor no joelho','dor no ombro',
+      'muito cansado','esgotado','sem energia para treinar','corpo destruido',
+      'nao consigo treinar','me recuperar mais rapido',
+      'musculo inflamado','inflamacao muscular','tendinite','tendinite',
+      'dor aguda','dor forte','dor intensa'
+    ],
+    medio: [
+      'recuperacao muscular','doms','descanso ativo','fadiga muscular',
+      'recuperar mais rapido','sono','dormir','descanso','descansar',
+      'inflamacao','alongamento','massagem','fisioterapia','gelo no musculo',
+      'compressao','anti-inflamatorio','ibuprofeno muscular'
+    ],
+    fraco: [
+      'cansado','fatigado','exausto','dolorido','dor','cansaco',
+      'doendo','machucado','lesao','descanso','descansar','dormindo'
+    ]
   },
   action: function(cid) {
     try { showToast('Ouça seu corpo. Em caso de dor aguda, consulte um profissional de saúde.', 'info', 5000); } catch(e) {}
@@ -176,10 +285,19 @@ const TRANSFORMS = [
 {
   id: 'respiracao',
   score: {
-    forte: ['exercício de respiração','respiração guiada','relaxamento','ansiedade',
-            'estresse','cool-down','meditação'],
-    medio: ['respirar','calma','tensão','nervoso','agitado'],
-    fraco: []
+    forte: [
+      'exercicio de respiracao','respiracao guiada','relaxamento','ansiedade',
+      'estresse','cool-down','meditacao','ansioso','muito estressado',
+      'preciso relaxar','tecnica de respiracao','respirar fundo',
+      'controle de ansiedade','exercicio de relaxamento','exercicio respiratorio',
+      'tenho ansiedade','ataque de panico','panico','hiperventilando'
+    ],
+    medio: [
+      'respirar','calma','tensao','nervoso','agitado',
+      'estressado','stress','nervosismo','panico','calmar',
+      'acalmar','meditacao','mindfulness','relaxar','desestressar'
+    ],
+    fraco: ['respirar','calma','relaxar','estresse','ansioso','nervoso']
   },
   action: function() { abrirRespiracao(); },
   botao: { label: 'Respiração Guiada', icon: 'wind', cor: 'blue' }
@@ -189,10 +307,19 @@ const TRANSFORMS = [
 {
   id: 'plano',
   score: {
-    forte: ['assinar pro','upgrade pro','virar pro','plano pro','quero o pro',
-            'consultas esgotadas','limite de mensagens','sem consultas'],
-    medio: ['plano premium','premium','sem limite','plano pago'],
-    fraco: ['assinar','pro','upgrade','premium','limite']
+    forte: [
+      'assinar pro','upgrade pro','virar pro','plano pro','quero o pro',
+      'consultas esgotadas','limite de mensagens','sem consultas',
+      'quero assinar','assinar o pro','plano pago','versao paga',
+      'funcionalidades pro','recursos pro','desbloquear','sem limite de mensagens',
+      'acabou minhas mensagens','esgotei','consultas acabaram',
+      'mensagens acabaram','quero mais mensagens','quero mais consultas'
+    ],
+    medio: [
+      'plano premium','premium','sem limite','plano pago',
+      'sem acesso','bloqueado','tier','versao pro'
+    ],
+    fraco: ['assinar','pro','premium','upgrade','pago','limite','mensagens']
   },
   action: function() {
     try { closeOrientacao(); } catch(e) {}
@@ -217,9 +344,10 @@ const DEFENSIVE_TRANSFORMS = [
 {
   id: 'injury_alert',
   detect: function(txt) {
-    return /dor\s+(aguda|forte|intensa|persistente)|lesão|lesionado|me machuquei|torci|quebrei|fraturei/i.test(txt);
+    return /dor\s+(aguda|forte|intensa|persistente)|lesao|lesionado|me machuquei|torci|quebrei|fraturei/i.test(
+      _normalizeText(txt)
+    );
   },
-  // Lesão ativa: bloqueia transforms de treino — não faz sentido sugerir "Ir para Treino"
   blocks: ['treino', 'gerar_treino', 'mesociclo'],
   action: function() {
     try { showToast('Em caso de dor aguda ou lesão, consulte um médico ou fisioterapeuta antes de continuar treinando.', 'info', 6000); } catch(e) {}
@@ -230,9 +358,9 @@ const DEFENSIVE_TRANSFORMS = [
   detect: function(txt, history) {
     if (!history || history.length < 5) return false;
     var last5 = history.slice(-5).filter(function(m) { return m.role === 'user'; });
-    var clean = txt.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 20);
+    var clean = _normalizeText(txt).replace(/\s+/g, ' ').trim().slice(0, 20);
     return last5.filter(function(m) {
-      return m.content.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 20) === clean;
+      return _normalizeText(m.content).replace(/\s+/g, ' ').trim().slice(0, 20) === clean;
     }).length >= 3;
   },
   blocks: [],
@@ -244,21 +372,26 @@ const DEFENSIVE_TRANSFORMS = [
 
 /* ═══════════════════════════════════════════════════
    MOTOR DE PONTUAÇÃO
-   Calcula a relevância de cada Transform para a mensagem.
+   Usa normalização de acentos para matching robusto.
 ═══════════════════════════════════════════════════ */
 function _scoreTransform(transform, texto) {
   var score = 0;
   var s = transform.score;
   if (!s) return 0;
-  (s.forte || []).forEach(function(k) { if (texto.includes(k)) score += 3; });
-  (s.medio || []).forEach(function(k) { if (texto.includes(k)) score += 2; });
-  (s.fraco || []).forEach(function(k) { if (texto.includes(k)) score += 1; });
+  var norm = _normalizeText(texto);
+  (s.forte || []).forEach(function(k) { if (norm.includes(_normalizeText(k))) score += 3; });
+  (s.medio || []).forEach(function(k) { if (norm.includes(_normalizeText(k))) score += 2; });
+  (s.fraco || []).forEach(function(k) {
+    // fraco: match apenas palavras completas para evitar falsos positivos
+    var kn = _normalizeText(k);
+    var re = new RegExp('(?:^|\\s|[^a-z])' + kn.replace(/[-]/g, '[-]') + '(?=$|\\s|[^a-z])', 'i');
+    if (re.test(norm)) score += 1;
+  });
   return score;
 }
 
 /**
  * Boost contextual — lê histórico e config para aumentar relevância
- * quando o contexto do usuário torna aquele transform mais pertinente.
  */
 function _contextBoost(transformId) {
   var boost = 0;
@@ -273,65 +406,60 @@ function _contextBoost(transformId) {
     var temPrograma = draft && (draft.sections || []).length > 0;
 
     if (transformId === 'recuperacao') {
-      // Treinou nas últimas 24h → recuperação mais relevante
       if (horasDesdeUltimo < 24) boost += 2;
-      // Streak alto → corpo sob estresse acumulado
       if (hist.length >= 5) boost += 1;
     }
     if (transformId === 'evolucao') {
-      // Só faz sentido mostrar se há histórico real para exibir
       if (hist.length >= 3) boost += 2;
     }
     if (transformId === 'gerar_treino') {
-      // Sem programa → criar um é urgente
       if (!temPrograma) boost += 2;
     }
     if (transformId === 'dieta') {
-      // Tem dados de perfil preenchidos → fluxo de dieta é completo
       if (cfg.peso && cfg.objetivo) boost += 1;
     }
     if (transformId === 'mesociclo') {
-      // Só útil se já tem pelo menos 4 semanas de histórico (~8 sessões)
       if (hist.length < 8) boost -= 2;
+    }
+    if (transformId === 'historico') {
+      if (hist.length < 1) boost -= 3; // sem histórico = botão inútil
+    }
+    if (transformId === 'evolucao') {
+      if (hist.length < 1) boost -= 3;
     }
   } catch(e) {}
   return boost;
 }
 
-/* ── Memória de sessão: evita repetir o mesmo transform ── */
-var _usedTransforms = {};
-
 /**
  * Roda os Transforms após cada resposta do KRONOS.
+ *
  * — Mensagem do usuário tem peso 2x (intenção > contexto)
  * — Boost contextual baseado em histórico e perfil real
  * — Mostra até 2 botões quando há intenção dupla explícita
- * — Ignora transforms já utilizados nesta sessão
- * — Respeita bloqueios dos Defensive Transforms
+ * — Threshold: score >= 2 (era > 2, agora mais sensível)
+ * — Sem bloqueio permanente de sessão (mostra se relevante)
  */
 function runTransforms(userMessage, botResponse, containerId, blockedIds) {
-  var textoUser = (userMessage || '').toLowerCase();
-  var textoBot  = (botResponse  || '').toLowerCase();
+  var textoUser = (userMessage || '');
+  var textoBot  = (botResponse  || '');
   var bloqueados = blockedIds || [];
-  var THRESHOLD  = 2;
+  var THRESHOLD  = 2; // >= THRESHOLD para mostrar
   var scored = [];
 
   for (var i = 0; i < TRANSFORMS.length; i++) {
     var t = TRANSFORMS[i];
-    // Pula transforms bloqueados por Defensive ou já usados nesta sessão
     if (bloqueados.indexOf(t.id) >= 0) continue;
-    if (_usedTransforms[t.id])         continue;
 
-    var sc = _scoreTransform(t, textoUser) * 2
-           + _scoreTransform(t, textoBot)
-           + _contextBoost(t.id);
+    var userSc = _scoreTransform(t, textoUser);
+    var botSc  = _scoreTransform(t, textoBot);
+    var sc = userSc * 2 + botSc + _contextBoost(t.id);
 
-    if (sc > THRESHOLD) scored.push({ t: t, sc: sc, userSc: _scoreTransform(t, textoUser) });
+    if (sc >= THRESHOLD) scored.push({ t: t, sc: sc, userSc: userSc });
   }
 
   if (!scored.length) return;
 
-  // Ordena por score
   scored.sort(function(a, b) { return b.sc - a.sc; });
 
   // Mostra o melhor + segundo se ambos têm intenção explícita do usuário
@@ -340,12 +468,23 @@ function runTransforms(userMessage, botResponse, containerId, blockedIds) {
     toShow.push(scored[1]);
   }
 
+  // Limpa wraps anteriores uma vez antes de renderizar
+  _clearTransformWraps(containerId);
   toShow.forEach(function(item) { renderTransformButton(item.t, containerId); });
 }
 
 /**
+ * Remove todos os botões transform anteriores do container.
+ */
+function _clearTransformWraps(containerId) {
+  var container = document.getElementById(containerId || 'orientExpertMessages');
+  if (!container) return;
+  var wraps = container.querySelectorAll('.transform-wrap');
+  wraps.forEach(function(w) { w.remove(); });
+}
+
+/**
  * Roda Defensive Transforms antes de enviar mensagem.
- * Retorna lista de IDs de Transforms ofensivos a bloquear.
  */
 function runDefensiveTransforms(userMessage, history) {
   var blockedIds = [];
@@ -353,28 +492,24 @@ function runDefensiveTransforms(userMessage, history) {
     var dt = DEFENSIVE_TRANSFORMS[i];
     if (dt.detect(userMessage, history)) {
       dt.action();
-      // Acumula IDs bloqueados (sem impedir outros defensivos de rodar)
       if (dt.blocks) {
         dt.blocks.forEach(function(id) {
           if (blockedIds.indexOf(id) < 0) blockedIds.push(id);
         });
       }
-      if (dt.id === 'rate_guard') return 'block'; // único que para o envio
+      if (dt.id === 'rate_guard') return 'block';
     }
   }
-  return blockedIds; // array vazio = sem bloqueios
+  return blockedIds;
 }
 
 /**
  * Renderiza botão de ação Transform no container do chat.
+ * Não remove wraps anteriores — _clearTransformWraps faz isso antes.
  */
 function renderTransformButton(transform, containerId) {
   var container = document.getElementById(containerId || 'orientExpertMessages');
   if (!container) return;
-
-  // Remove wrap anterior
-  var oldWrap = container.querySelector('.transform-wrap');
-  if (oldWrap) oldWrap.remove();
 
   var colorMap = {
     accent: { css: 'var(--accent)',          rgba: '249,115,22'  },
@@ -410,7 +545,6 @@ function renderTransformButton(transform, containerId) {
   wrap.appendChild(btn);
 
   btn.onclick = function() {
-    _usedTransforms[transform.id] = true; // memoriza uso nesta sessão
     try { transform.action(containerId); } catch(e) { console.warn('[Transform] action error:', e); }
     wrap.remove();
   };
