@@ -41,7 +41,6 @@ function parseJsonBodyIfNeeded(req) {
 
 function normalizeNutritionPayload(rawPayload) {
   var payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
-  // Canonical mapping used by /nutrition-plan in both authenticated and CRON-secret bypass flows.
   var pickFirst = function() {
     for (var i = 0; i < arguments.length; i++) {
       var value = arguments[i];
@@ -49,31 +48,38 @@ function normalizeNutritionPayload(rawPayload) {
     }
     return undefined;
   };
+  var toNumberIfNeeded = function(value) {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+    var normalized = String(value).trim();
+    if (!normalized) return undefined;
+    var parsed = Number(normalized.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
 
-  var canonical = Object.assign({}, payload, {
+  var canonical = {
     sexo: pickFirst(payload.sexo),
-    idade: pickFirst(payload.idade),
-    peso: pickFirst(payload.peso, payload.peso_kg, payload.pesoKg),
-    altura: pickFirst(payload.altura, payload.altura_cm, payload.alturaCm),
+    idade: toNumberIfNeeded(pickFirst(payload.idade)),
+    peso: toNumberIfNeeded(pickFirst(payload.peso, payload.peso_kg, payload.pesoKg)),
+    altura: toNumberIfNeeded(pickFirst(payload.altura, payload.altura_cm, payload.alturaCm)),
     nivelAtividade: pickFirst(payload.nivelAtividade, payload.nivel_atividade),
     objetivo: pickFirst(payload.objetivo),
-    refeicoesPorDia: pickFirst(payload.refeicoesPorDia, payload.refeicoes_por_dia),
-    peso_kg: pickFirst(payload.peso_kg, payload.pesoKg, payload.peso),
-    altura_cm: pickFirst(payload.altura_cm, payload.alturaCm, payload.altura),
-    nivel_atividade: pickFirst(payload.nivel_atividade, payload.nivelAtividade),
-    refeicoes_por_dia: pickFirst(payload.refeicoes_por_dia, payload.refeicoesPorDia)
+    refeicoesPorDia: toNumberIfNeeded(pickFirst(payload.refeicoesPorDia, payload.refeicoes_por_dia))
+  };
+
+  var forwardedPayload = {};
+  Object.keys(canonical).forEach(function(key) {
+    if (canonical[key] !== undefined) forwardedPayload[key] = canonical[key];
   });
 
   var receivedKeys = Object.keys(payload);
-  var forwardedKeys = Object.keys(canonical).filter(function(key) {
-    return canonical[key] !== undefined;
-  });
+  var forwardedKeys = Object.keys(forwardedPayload);
   console.log('[nutrition-plan] payload mapping', {
     receivedKeys: receivedKeys,
     forwardedKeys: forwardedKeys
   });
 
-  return canonical;
+  return forwardedPayload;
 }
 
 function getCronSecret(req) {
@@ -162,7 +168,7 @@ function handleNutritionPlan(req, res) {
     refeicoesPorDia: req.query && req.query.refeicoesPorDia
   };
 
-  var sourcePayload = hasEssentialBodyKeys ? bodyPayload : fallbackQueryPayload;
+  var sourcePayload = hasEssentialBodyKeys ? Object.assign({}, fallbackQueryPayload, bodyPayload) : fallbackQueryPayload;
   var payload = normalizeNutritionPayload(sourcePayload);
   var result = nutritionService.generateNutritionPlan(payload);
 
