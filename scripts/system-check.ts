@@ -142,16 +142,12 @@ function checkSensitiveKeyLeak(): CheckResult {
 
 async function checkAIProvider(): Promise<CheckResult> {
   const ai = getAIConfig();
-  console.log(
-    `AI CHECK provider: ${ai.provider} status: ${ai.chatApiKey ? 'key-found' : 'key-missing'} chat key: ${ai.chatApiKey ? 'found' : 'missing'} embedding key: ${ai.embeddingsEnabled ? 'found' : 'missing'} embeddings: ${ai.embeddingsEnabled ? 'enabled' : 'skipped'}`,
-  );
+  console.log(`AI CHECK provider: ${ai.provider} chatKey: ${ai.chatApiKey ? 'found' : 'missing'} model: ${ai.chatModel}`);
 
   const details = {
     provider: ai.provider,
     chatModel: ai.chatModel,
     chatKey: maskSecret(ai.chatApiKey),
-    embeddingModel: ai.embeddingModel ?? 'missing',
-    embeddings: ai.embeddingsEnabled ? 'enabled' : 'SKIPPED',
   };
 
   if (!ai.chatApiKey) {
@@ -164,9 +160,8 @@ async function checkAIProvider(): Promise<CheckResult> {
     };
   }
 
-  const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${ai.chatApiKey}`,
@@ -183,7 +178,7 @@ async function checkAIProvider(): Promise<CheckResult> {
       return {
         name: 'ai_provider',
         status: 'ERROR',
-        summary: 'GROQ_API_KEY encontrada, mas chamada ao provider falhou.',
+        summary: 'GROQ_API_KEY encontrada, mas chamada ao Groq falhou.',
         error: `${response.status} ${await response.text()}`,
         details,
       };
@@ -191,16 +186,16 @@ async function checkAIProvider(): Promise<CheckResult> {
 
     return {
       name: 'ai_provider',
-      status: ai.embeddingsEnabled ? 'OK' : 'WARNING',
-      summary: ai.embeddingsEnabled ? 'Provider Groq funcionando com embeddings configurados.' : 'Provider Groq funcionando; embeddings pulados com segurança.',
+      status: 'OK',
+      summary: 'Groq acessível, chave válida e resposta recebida.',
       details,
     };
   } catch (error) {
     return {
       name: 'ai_provider',
       status: 'ERROR',
-      summary: 'Falha de runtime ao chamar provider Groq.',
-      error: (error as Error).message,
+      summary: 'Falha de runtime ao chamar o Groq.',
+      error: error instanceof Error ? error.message : String(error),
       details,
     };
   }
