@@ -31,6 +31,30 @@ function computeRelevance(topic, article) {
   return Number(base.toFixed(4));
 }
 
+function computeRecencyScore(publishedAt) {
+  if (!publishedAt) return 0.20;
+
+  const ms = Date.now() - new Date(publishedAt).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return 0.20;
+
+  const ageDays = ms / (1000 * 60 * 60 * 24);
+  if (ageDays <= 365) return 1.00;
+  if (ageDays <= 365 * 3) return 0.80;
+  if (ageDays <= 365 * 5) return 0.65;
+  if (ageDays <= 365 * 8) return 0.50;
+  if (ageDays <= 365 * 12) return 0.35;
+  return 0.20;
+}
+
+function computeAiRankScore(relevanceScore, evidenceScore, publishedAt) {
+  const relevanceNorm = Math.max(0, Math.min(1, Number(relevanceScore || 0)));
+  const evidenceNorm = Math.max(0, Math.min(100, Number(evidenceScore || 20))) / 100;
+  const recency = computeRecencyScore(publishedAt);
+
+  const ranking = (relevanceNorm * 0.50) + (evidenceNorm * 0.35) + (recency * 0.15);
+  return Number(ranking.toFixed(4));
+}
+
 async function safeCrossrefEnrichment(article) {
   try {
     const matches = await searchCrossrefByTitle(article.title || '', 3);
@@ -119,20 +143,38 @@ function shouldFlagReview({ topic, article, relevanceScore, isNewArticle, existi
 }
 
 async function upsertEvidence(client, topic, articleRow, relevanceScore, needsReview) {
+  const aiRankScore = computeAiRankScore(relevanceScore, articleRow.evidence_score, articleRow.published_at);
+  const recencyScore = computeRecencyScore(articleRow.published_at);
+  const summary = `Evidência para o tópico "${topic.topic}" com relevance_score ${relevanceScore}, evidence_score ${articleRow.evidence_score || 'N/A'} e classificação ${articleRow.classification || 'unknown'}. Revisão manual obrigatória antes de qualquer mudança de regra.`;
+
   const already = await client.request(
     'GET',
-    `scientific_evidence?topic_id=eq.${topic.id}&article_id=eq.${articleRow.id}&select=id&limit=1`
+    `scientific_evidence?topic_id=eq.${topic.id}&article_id=eq.${articleRow.id}&select=id,needs_review&limit=1`
   );
-  if (already && already[0]) return { created: false, needsReview: false };
 
-  const summary = `Evidência para o tópico "${topic.topic}" com score ${relevanceScore}. Revisão manual obrigatória antes de qualquer mudança de regra.`;
+  if (already && already[0]) {
+    const current = already[0];
+    const updatedNeedsReview = Boolean(current.needs_review || needsReview);
+
+    await client.request('PATCH', `scientific_evidence?id=eq.${current.id}`, {
+      relevance_score: relevanceScore,
+      summary,
+      needs_review: updatedNeedsReview,
+      ai_rank_score: aiRankScore,
+      recency_score: recencyScore
+    });
+
+    return { created: false, needsReview: updatedNeedsReview };
+  }
 
   await client.request('POST', 'scientific_evidence', {
     topic_id: topic.id,
     article_id: articleRow.id,
     relevance_score: relevanceScore,
     summary,
-    needs_review: needsReview
+    needs_review: needsReview,
+    ai_rank_score: aiRankScore,
+    recency_score: recencyScore
   });
 
   return { created: true, needsReview };
@@ -194,7 +236,7 @@ async function listPendingReviews() {
   const client = createSupabaseAdminClient();
   const rows = await client.request(
     'GET',
-    'scientific_evidence?needs_review=eq.true&select=id,relevance_score,summary,created_at,topic:scientific_topics(id,topic,keywords),article:scientific_articles(id,source,pmid,doi,title,abstract,journal,publisher,published_at)&order=created_at.desc'
+    'scientific_evidence?needs_review=eq.true&select=id,relevance_score,recency_score,ai_rank_score,summary,created_at,topic:scientific_topics(id,topic,keywords),article:scientific_articles(id,source,pmid,doi,title,abstract,journal,publisher,published_at,classification,evidence_score,confidence_label,classification_reason)&order=ai_rank_score.desc.nullslast,created_at.desc'
   );
 
   return rows || [];
@@ -329,5 +371,7 @@ module.exports = {
   searchScientificArticles,
   syncScientificTopics,
   listPendingReviews,
-  classifyScientificArticlesBatch
+  classifyScientificArticlesBatch,
+  computeRecencyScore,
+  computeAiRankScore
 };
