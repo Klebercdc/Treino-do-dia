@@ -122,6 +122,7 @@ function detectRoute(req) {
   if (pathname.endsWith('/science-classify')) return 'science-classify';
   if (pathname.endsWith('/nutrition-calc')) return 'nutrition-calc';
   if (pathname.endsWith('/nutrition-plan')) return 'nutrition-plan';
+  if (pathname.endsWith('/nutrition-selftest')) return 'nutrition-selftest';
   if (pathname.endsWith('/science')) return 'science';
 
   return '';
@@ -143,7 +144,7 @@ function handleNutritionCalc(req, res) {
   return res.status(200).json({ ok: true, failSafe: false, data: result });
 }
 
-function handleNutritionPlan(req, res) {
+async function handleNutritionPlan(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   var bodyPayload = parseJsonBodyIfNeeded(req);
@@ -198,7 +199,19 @@ function handleNutritionPlan(req, res) {
     });
   }
 
-  return res.status(200).json({ ok: true, failSafe: false, data: result });
+  var scienceEvidence = [];
+  try {
+    scienceEvidence = await science.listEvidenceByObjective(payloadFinal.objetivo, 3);
+  } catch (_) {
+    scienceEvidence = [];
+  }
+
+  return res.status(200).json({
+    ok: true,
+    failSafe: false,
+    data: result,
+    science: scienceEvidence
+  });
 }
 
 module.exports = async function(req, res) {
@@ -236,6 +249,28 @@ module.exports = async function(req, res) {
 
   if (route === 'nutrition-plan' && isValidCronSecret(req)) {
     return handleNutritionPlan(req, res);
+  }
+
+  if (route === 'nutrition-selftest' && isValidCronSecret(req)) {
+    var selfTestPayload = {
+      sexo: 'masculino', idade: 40, peso: 80, altura: 175,
+      nivelAtividade: 'moderado', objetivo: 'hipertrofia', refeicoesPorDia: 4
+    };
+    try {
+      var selfTestResult = nutritionService.generateNutritionPlan(selfTestPayload);
+      var selfTestEvidence = [];
+      try { selfTestEvidence = await science.listEvidenceByObjective('hipertrofia', 3); } catch (_) {}
+      return res.status(200).json({
+        ok: true,
+        test: true,
+        timestamp: new Date().toISOString(),
+        payload_used: selfTestPayload,
+        plan: selfTestResult,
+        science: selfTestEvidence
+      });
+    } catch (err) {
+      return res.status(200).json({ ok: false, test: true, error: String(err.message || err) });
+    }
   }
 
   return auth.requireAuth(req, res, async function() {

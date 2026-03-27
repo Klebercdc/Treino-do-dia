@@ -367,11 +367,55 @@ async function classifyScientificArticlesBatch(limit) {
   };
 }
 
+var OBJETIVO_TOPIC_KEYWORDS = {
+  hipertrofia: ['hypertrophy', 'protein', 'strength', 'creatine'],
+  emagrecimento: ['fat loss', 'protein'],
+  manutencao: ['protein', 'recovery'],
+  recomposicao: ['fat loss', 'hypertrophy', 'protein']
+};
+
+async function listEvidenceByObjective(objetivo, limit) {
+  const client = createSupabaseAdminClient();
+  const keywords = OBJETIVO_TOPIC_KEYWORDS[String(objetivo || '').toLowerCase()] || ['protein'];
+  const safeLimit = Math.min(Number(limit) || 3, 10);
+
+  const topicFilter = keywords.map(function(k) {
+    return 'topic.ilike.*' + k.replace(/ /g, '%20') + '*';
+  }).join(',');
+
+  let topics = [];
+  try {
+    topics = await client.request('GET', 'scientific_topics?or=(' + topicFilter + ')&status=eq.active&select=id,topic') || [];
+  } catch (_) {
+    return [];
+  }
+
+  if (!topics.length) return [];
+
+  const topicIds = topics.map(function(t) { return t.id; }).join(',');
+
+  let evidence = [];
+  try {
+    evidence = await client.request(
+      'GET',
+      'scientific_evidence?topic_id=in.(' + topicIds + ')&needs_review=eq.false' +
+      '&select=relevance_score,ai_rank_score,recency_score,topic:scientific_topics(topic)' +
+      ',article:scientific_articles(title,journal,published_at,classification,evidence_score,confidence_label)' +
+      '&order=ai_rank_score.desc.nullslast,relevance_score.desc&limit=' + safeLimit
+    ) || [];
+  } catch (_) {
+    return [];
+  }
+
+  return evidence;
+}
+
 module.exports = {
   searchScientificArticles,
   syncScientificTopics,
   listPendingReviews,
   classifyScientificArticlesBatch,
   computeRecencyScore,
-  computeAiRankScore
+  computeAiRankScore,
+  listEvidenceByObjective
 };
