@@ -143,7 +143,9 @@
     }
 
     // Atualiza UI do perfil se disponível
-    if (typeof updatePerfilScreen === 'function') updatePerfilScreen();
+    if (typeof updatePerfilScreen === 'function') {
+      try { updatePerfilScreen(); } catch(e) {}
+    }
 
     ksClose();
 

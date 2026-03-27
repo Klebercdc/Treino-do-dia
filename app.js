@@ -3764,7 +3764,8 @@ function updatePerfilScreen() {
   // Nível (usa persona efetiva)
   const _evPerfil = calcPersonaEfetiva(hist, cfg);
   const nivelLabels = { turista:"✈️ Turista", iniciante:"🌱 Iniciante", dedicado:"💪 Dedicado", atleta:"🔥 Atleta" };
-  document.getElementById("perfilNivel").textContent = nivelLabels[_evPerfil.efetiva] || _evPerfil.efetiva;
+  const _nivelEl = document.getElementById("perfilNivel");
+  if (_nivelEl) _nivelEl.textContent = nivelLabels[_evPerfil.efetiva] || _evPerfil.efetiva;
 
   // Conquistas
   const conquistasEl = document.getElementById("perfilConquistas");
