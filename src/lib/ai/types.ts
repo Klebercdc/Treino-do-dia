@@ -64,8 +64,7 @@ export interface RuntimeContext {
     supabaseUrl: string;
     supabaseAnonKey: string;
     supabaseServiceRoleKey: string;
-    aiApiKey?: string;
+    groqApiKey?: string;
     aiChatModel?: string;
-    aiEmbeddingModel?: string;
   };
 }

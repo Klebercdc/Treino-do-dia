@@ -3,9 +3,16 @@
 -- - Remove dependency on vector embeddings (OpenAI removed)
 -- - Add text-based knowledge search using PostgreSQL full-text
 -- - Ensure get_recent_food_logs and get_recent_hydration_logs exist
+-- - Add missing columns to ai_context_logs
 -- =========================================================
 
--- Ensure get_recent_food_logs exists (was in 009 but guarantee here)
+-- Add missing columns to ai_context_logs
+ALTER TABLE public.ai_context_logs
+  ADD COLUMN IF NOT EXISTS intent TEXT,
+  ADD COLUMN IF NOT EXISTS response_text TEXT,
+  ADD COLUMN IF NOT EXISTS retrieved_recent_logs JSONB;
+
+-- Ensure get_recent_food_logs exists (column is consumed_at)
 CREATE OR REPLACE FUNCTION public.get_recent_food_logs(p_user_id UUID, p_limit INTEGER DEFAULT 20)
 RETURNS SETOF public.user_food_logs
 LANGUAGE sql
@@ -14,11 +21,11 @@ AS $$
   SELECT *
   FROM public.user_food_logs
   WHERE user_id = p_user_id
-  ORDER BY logged_at DESC
+  ORDER BY consumed_at DESC
   LIMIT GREATEST(1, LEAST(p_limit, 100));
 $$;
 
--- Ensure get_recent_hydration_logs exists (was in 009 but guarantee here)
+-- Ensure get_recent_hydration_logs exists (column is consumed_at)
 CREATE OR REPLACE FUNCTION public.get_recent_hydration_logs(p_user_id UUID, p_limit INTEGER DEFAULT 20)
 RETURNS SETOF public.hydration_logs
 LANGUAGE sql
@@ -27,12 +34,11 @@ AS $$
   SELECT *
   FROM public.hydration_logs
   WHERE user_id = p_user_id
-  ORDER BY logged_at DESC
+  ORDER BY consumed_at DESC
   LIMIT GREATEST(1, LEAST(p_limit, 100));
 $$;
 
--- Full-text knowledge search (replaces vector-based match_nutrition_knowledge)
--- Does NOT require embeddings or OpenAI — uses PostgreSQL tsvector
+-- Full-text knowledge search — does NOT require embeddings or OpenAI
 CREATE OR REPLACE FUNCTION public.search_nutrition_knowledge(
   search_query  TEXT,
   match_count   INTEGER DEFAULT 8,

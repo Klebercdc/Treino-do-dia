@@ -207,8 +207,8 @@ CREATE TABLE IF NOT EXISTS public.nutrition_knowledge_documents (
   UNIQUE(source_id, checksum)
 );
 
--- Dimensão padrão 1536 (OpenAI text-embedding-3-small). Se trocar provider/modelo,
--- crie nova migration ajustando a coluna embedding.
+-- Coluna embedding reservada para uso futuro (atualmente sempre NULL).
+-- Busca de conhecimento usa full-text search (search_nutrition_knowledge).
 CREATE TABLE IF NOT EXISTS public.nutrition_knowledge_chunks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   document_id UUID NOT NULL REFERENCES public.nutrition_knowledge_documents(id) ON DELETE CASCADE,
