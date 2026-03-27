@@ -4,6 +4,52 @@ var science = require('../src/lib/science/scienceSyncService');
 var scienceInsight = require('../src/lib/science/scienceInsightService');
 var nutritionService = require('../src/lib/nutrition/nutritionService');
 
+function isJsonContentType(req) {
+  var contentType = req && req.headers ? req.headers['content-type'] || req.headers['Content-Type'] : '';
+  var normalized = String(contentType || '').toLowerCase();
+  return normalized.indexOf('application/json') === 0 || normalized.indexOf('+json') > -1;
+}
+
+function parseJsonBodyIfNeeded(req) {
+  if (!req) return {};
+
+  var currentBody = req.body;
+  if (currentBody && typeof currentBody === 'object' && !Buffer.isBuffer(currentBody)) return currentBody;
+
+  var raw = currentBody;
+  if ((raw === undefined || raw === null || raw === '') && req.rawBody !== undefined && req.rawBody !== null) {
+    raw = req.rawBody;
+  }
+
+  if (Buffer.isBuffer(raw)) raw = raw.toString('utf8');
+
+  if (typeof raw === 'string') {
+    var trimmed = raw.trim();
+    if (!trimmed) return {};
+
+    if (isJsonContentType(req) || trimmed[0] === '{' || trimmed[0] === '[') {
+      try {
+        return JSON.parse(trimmed);
+      } catch (_) {
+        return {};
+      }
+    }
+  }
+
+  return {};
+}
+
+function normalizeNutritionPayload(rawPayload) {
+  var payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+
+  return Object.assign({}, payload, {
+    peso_kg: payload.peso_kg !== undefined ? payload.peso_kg : payload.pesoKg,
+    altura_cm: payload.altura_cm !== undefined ? payload.altura_cm : payload.alturaCm,
+    nivel_atividade: payload.nivel_atividade !== undefined ? payload.nivel_atividade : payload.nivelAtividade,
+    refeicoes_por_dia: payload.refeicoes_por_dia !== undefined ? payload.refeicoes_por_dia : payload.refeicoesPorDia
+  });
+}
+
 function getCronSecret(req) {
   if (!req) return '';
 
@@ -67,7 +113,7 @@ function handleNutritionCalc(req, res) {
 
 function handleNutritionPlan(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  var payload = req.body || {};
+  var payload = normalizeNutritionPayload(parseJsonBodyIfNeeded(req));
   var result = nutritionService.generateNutritionPlan(payload);
 
   if (result.failSafe) {
@@ -84,6 +130,7 @@ function handleNutritionPlan(req, res) {
 module.exports = async function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+  req.body = parseJsonBodyIfNeeded(req);
 
   var route = detectRoute(req);
 
