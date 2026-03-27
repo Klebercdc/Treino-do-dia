@@ -167,19 +167,14 @@ function registerFeatureUsage(userId, featureKey, planAtUse, metadata) {
 
 function checkAndIncrementQuota(userId, res, next) {
   if (!SUPABASE_SERVICE_KEY) {
-    return res.status(503).json({
-      error: 'Serviço temporariamente indisponível para validar quota.',
-      code: 'QUOTA_GUARD_UNAVAILABLE'
-    });
+    console.warn('[plans] SUPABASE_SERVICE_KEY ausente — quota guard indisponível, acesso permitido.');
+    return next({ ai_requests_used: 0, plan: 'free', _degraded: true });
   }
 
   getUserPlan(userId, function(err, planRow) {
     if (err) {
-      console.error('[plans] erro ao verificar plano:', err);
-      return res.status(503).json({
-        error: 'Serviço temporariamente indisponível para validar quota.',
-        code: 'QUOTA_GUARD_UNAVAILABLE'
-      });
+      console.error('[plans] erro ao verificar plano:', err, '— acesso permitido em modo degradado.');
+      return next({ ai_requests_used: 0, plan: 'free', _degraded: true });
     }
 
     resolveEffectivePlan(userId, planRow, function(state) {

@@ -3995,7 +3995,7 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
   })
   .then(r => r.json())
   .then(data => {
-    const text = data.content?.[0]?.text || data.error || "Sistemas online.";
+    const text = data.content?.[0]?.text || "Sistemas online.";
     typing.innerHTML = renderMarkdown(text);
     // Botão "Ir para Treino" quando não há programa configurado
     if (!nextKey) {
@@ -4159,8 +4159,9 @@ async function _kronosCall(messages, userData, onChunk) {
       method: "POST",
       body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: false })
     });
+    if (!resp.ok) return null;
     const data = await resp.json();
-    const text = (data.content?.[0]?.text || data.error || '').trim();
+    const text = (data.content?.[0]?.text || '').trim();
     return text || null;
   }
 
