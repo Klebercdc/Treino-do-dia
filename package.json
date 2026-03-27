@@ -4,16 +4,17 @@
   "private": true,
   "description": "KRONIA — Sistema de Gestão Fisiológica e Periodização",
   "scripts": {
-    "test:e2e":      "npm run db:push:test && playwright test",
-    "test:sanity":   "playwright test tests/e2e/sanity.spec.ts --reporter=list",
-    "test:workout":  "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
-    "db:pull":       "supabase db pull",
-    "db:push:test":  "dotenv -e .env.test -- supabase db push --db-url \"$VITE_SUPABASE_DB_URL_TEST\"",
-    "serve":         "npx serve . -p 3000 --no-clipboard",
-    "scraper":       "node etl/scrapers/cli.js",
-    "scraper:wger":  "node etl/scrapers/cli.js --sources wger --stats",
-    "scraper:exrx":  "node etl/scrapers/cli.js --sources exrx --stats",
-    "scraper:all":   "node etl/scrapers/cli.js --sources wger,exrx --csv --stats"
+    "test:e2e": "npm run db:push:test && playwright test",
+    "test:sanity": "playwright test tests/e2e/sanity.spec.ts --reporter=list",
+    "test:workout": "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
+    "db:pull": "supabase db pull",
+    "db:push:test": "dotenv -e .env.test -- supabase db push --db-url \"$VITE_SUPABASE_DB_URL_TEST\"",
+    "serve": "npx serve . -p 3000 --no-clipboard",
+    "scraper": "node etl/scrapers/cli.js",
+    "scraper:wger": "node etl/scrapers/cli.js --sources wger --stats",
+    "scraper:exrx": "node etl/scrapers/cli.js --sources exrx --stats",
+    "scraper:all": "node etl/scrapers/cli.js --sources wger,exrx --csv --stats",
+    "system:check": "tsc --pretty false --target ES2020 --module commonjs --lib ES2020,DOM --esModuleInterop --skipLibCheck --outDir .tmp-system-check scripts/system-check.ts lib/checks/*.ts && node .tmp-system-check/scripts/system-check.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.43.0",
