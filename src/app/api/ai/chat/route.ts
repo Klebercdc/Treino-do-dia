@@ -1,38 +1,49 @@
+import { NextResponse } from 'next/server';
+import type { ChatRequest, ChatResponse } from '../../../../lib/ai/types';
 import { createServerSupabaseClient } from '../../../../lib/supabase/server';
+import { getAIConfig, getSupabaseConfig } from '../../../../lib/utils/env';
 
-interface BodyPayload {
-  conversationId: string;
-  userMessage: string;
-}
-
-export async function POST(req: Request): Promise<Response> {
+export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization') ?? '';
-    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-    if (!token) {
-      return Response.json({ error: 'Token ausente' }, { status: 401 });
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = (await req.json()) as BodyPayload;
-    if (!body?.userMessage || !body?.conversationId) {
-      return Response.json({ error: 'conversationId e userMessage são obrigatórios' }, { status: 400 });
+    const accessToken = authHeader.replace('Bearer ', '').trim();
+    const db = createServerSupabaseClient(accessToken);
+    const { data: userData, error: authError } = await db.auth.getUser();
+
+    if (authError || !userData.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerSupabaseClient(token);
-    const { data, error } = await supabase.functions.invoke('generate-nutrition-context', {
-      body: {
-        conversationId: body.conversationId,
-        userMessage: body.userMessage,
+    const body = (await req.json()) as ChatRequest;
+    if (!body?.userMessage || typeof body.userMessage !== 'string') {
+      return NextResponse.json({ error: 'userMessage is required' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseConfig('server');
+    const ai = getAIConfig();
+
+    const response = await fetch(`${supabase.url}/functions/v1/generate-nutrition-context`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: supabase.anonKey,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(body),
     });
 
-    if (error) {
-      return Response.json({ error: error.message }, { status: 500 });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      return NextResponse.json({ error: payload?.error ?? 'Chat execution failed', provider: ai.provider }, { status: response.status });
     }
 
-    return Response.json(data, { status: 200 });
+    return NextResponse.json(payload as ChatResponse, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro inesperado';
-    return Response.json({ error: message }, { status: 500 });
+    const ai = getAIConfig();
+    return NextResponse.json({ error: (error as Error).message, provider: ai.provider }, { status: 500 });
   }
 }

@@ -1,45 +1,34 @@
-import type { IntentType, NutritionContextData, HybridContext, SemanticChunk } from './types';
+import type { BuiltContext, RetrievalIntent } from './types';
 
-export function detectIntent(userMessage: string): IntentType {
-  const text = userMessage.toLowerCase();
-  if (/(plano|dieta|refeiç|cardápio)/.test(text)) return 'diet_current';
-  if (/(progresso|evoluç|peso|medidas|hidrata)/.test(text)) return 'progress';
-  if (/(suplement|creatina|whey|vitamina|mineral)/.test(text)) return 'supplementation';
-  if (/(o que é|como funciona|conceito|explica)/.test(text)) return 'conceptual';
-  return 'general';
-}
-
-export function contextPriorityForIntent(intent: IntentType): string[] {
-  switch (intent) {
-    case 'diet_current':
-      return ['meal_plans', 'meal_plan_items', 'nutrition_goals', 'profile'];
-    case 'progress':
-      return ['body_metrics', 'hydration_logs', 'user_food_logs', 'nutrition_goals'];
-    case 'supplementation':
-      return ['supplement_protocols', 'nutrition_knowledge_chunks', 'profile', 'objective'];
-    case 'conceptual':
-      return ['nutrition_knowledge_chunks', 'profile'];
-    default:
-      return ['profile', 'nutrition_goals', 'nutrition_knowledge_chunks'];
-  }
-}
-
-export function buildHybridContext(input: {
-  intent: IntentType;
-  structured: NutritionContextData;
-  semanticChunks: SemanticChunk[];
-}): HybridContext {
-  const { intent, structured, semanticChunks } = input;
-  const missing: string[] = [];
-  if (!structured.profile) missing.push('perfil');
-  if (!structured.goals) missing.push('metas nutricionais');
-  if (!structured.activePlan.plan) missing.push('plano alimentar ativo');
-
-  const contextSummary = [
-    `Prioridades: ${contextPriorityForIntent(intent).join(', ')}`,
-    `Chunks semânticos recuperados: ${semanticChunks.length}`,
-    missing.length ? `Dados ausentes: ${missing.join(', ')}` : 'Dados principais disponíveis.',
+export function buildContextSummary(context: BuiltContext): string {
+  return [
+    `intent=${context.intent}`,
+    `profile=${context.profile ? 'yes' : 'no'}`,
+    `goals=${context.goals ? 'yes' : 'no'}`,
+    `plan_items=${context.planItems.length}`,
+    `food_logs=${context.foodLogs.length}`,
+    `hydration_logs=${context.hydrationLogs.length}`,
+    `body_metrics=${context.bodyMetrics.length}`,
+    `supplements=${context.supplements.length}`,
+    `knowledge_chunks=${context.knowledgeChunks.length}`,
   ].join(' | ');
+}
 
-  return { intent, structured, semanticChunks, contextSummary };
+export function prioritizeByIntent(intent: RetrievalIntent): string[] {
+  if (intent === 'current_diet') return ['profile', 'nutrition_goals', 'meal_plans', 'meal_plan_items'];
+  if (intent === 'progress_analysis') return ['body_metrics', 'user_food_logs', 'hydration_logs', 'nutrition_goals'];
+  if (intent === 'supplementation') return ['supplement_protocols', 'profiles', 'nutrition_knowledge_chunks'];
+  if (intent === 'general_nutrition_question') return ['nutrition_knowledge_chunks', 'profiles'];
+  if (intent === 'hydration') return ['hydration_logs', 'nutrition_goals', 'profiles'];
+  if (intent === 'body_composition') return ['body_metrics', 'nutrition_goals', 'profiles'];
+  return ['profiles', 'nutrition_goals', 'nutrition_knowledge_chunks'];
+}
+
+export function buildFinalContext(context: Omit<BuiltContext, 'contextSummary'>): BuiltContext {
+  const withSummary: BuiltContext = {
+    ...context,
+    contextSummary: '',
+  };
+  withSummary.contextSummary = `${buildContextSummary(withSummary)} | priority=${prioritizeByIntent(withSummary.intent).join(',')}`;
+  return withSummary;
 }

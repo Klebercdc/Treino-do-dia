@@ -1,0 +1,20 @@
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text,
+  birth_date date,
+  sex text,
+  height_cm numeric,
+  current_weight_kg numeric,
+  goal_weight_kg numeric,
+  activity_level text,
+  objective text,
+  dietary_pattern text,
+  allergies text[] default '{}'::text[],
+  intolerances text[] default '{}'::text[],
+  disliked_foods text[] default '{}'::text[],
+  liked_foods text[] default '{}'::text[],
+  clinical_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint profiles_sex_check check (sex is null or sex in ('male', 'female', 'other'))
+);

@@ -1,108 +1,73 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { NutritionContextData, UserProfile } from '../ai/types';
+import type {
+  AiMessage,
+  BodyMetric,
+  HydrationLog,
+  MealPlan,
+  MealPlanItem,
+  NutritionGoal,
+  SupplementProtocol,
+  UserFoodLog,
+  UserNutritionProfile,
+} from '../ai/types';
 
-export async function fetchNutritionContext(
-  db: SupabaseClient,
-  userId: string,
-  conversationId?: string,
-): Promise<NutritionContextData> {
-  const [
-    profile,
-    goals,
-    activePlan,
-    recentMeals,
-    hydration,
-    bodyMetrics,
-    supplements,
-    conversationHistory,
-  ] = await Promise.all([
-    getProfile(db, userId),
-    getLatestNutritionGoals(db, userId),
-    getActiveMealPlanWithItems(db, userId),
-    getRecentFoodLogs(db, userId, 8),
-    getRecentHydration(db, userId, 8),
-    getRecentBodyMetrics(db, userId, 8),
-    getActiveSupplements(db, userId),
-    conversationId ? getRecentConversationMessages(db, userId, conversationId, 8) : Promise.resolve([]),
-  ]);
-
-  return {
-    profile,
-    goals,
-    activePlan,
-    recentMeals,
-    hydration,
-    bodyMetrics,
-    supplements,
-    conversationHistory,
-  };
-}
-
-export async function getProfile(db: SupabaseClient, userId: string): Promise<UserProfile | null> {
+export async function getProfile(db: SupabaseClient, userId: string): Promise<UserNutritionProfile | null> {
   const { data, error } = await db.from('profiles').select('*').eq('id', userId).maybeSingle();
   if (error) throw error;
-  return (data as UserProfile | null) ?? null;
+  return data as UserNutritionProfile | null;
 }
 
-export async function getLatestNutritionGoals(db: SupabaseClient, userId: string) {
+export async function getActiveGoals(db: SupabaseClient, userId: string): Promise<NutritionGoal | null> {
   const { data, error } = await db
     .from('nutrition_goals')
     .select('*')
     .eq('user_id', userId)
+    .eq('active', true)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  return data as NutritionGoal | null;
 }
 
-export async function getActiveMealPlanWithItems(db: SupabaseClient, userId: string) {
-  const { data: planData, error: planError } = await db.rpc('get_active_meal_plan', { p_user_id: userId }).maybeSingle();
-  if (planError) throw planError;
-
-  const plan = (planData ?? null) as Record<string, unknown> | null;
-
-  if (!plan) return { plan: null, items: [] };
-
-  const { data: items, error: itemError } = await db
-    .from('meal_plan_items')
-    .select('*')
-    .eq('meal_plan_id', String(plan.id))
-    .order('sort_order', { ascending: true });
-
-  if (itemError) throw itemError;
-  return { plan, items: items ?? [] };
-}
-
-export async function getRecentFoodLogs(db: SupabaseClient, userId: string, limit = 8) {
+export async function getActivePlan(db: SupabaseClient, userId: string): Promise<MealPlan | null> {
   const { data, error } = await db
-    .from('user_food_logs')
+    .from('meal_plans')
     .select('*')
     .eq('user_id', userId)
-    .order('consumed_at', { ascending: false })
-    .limit(limit);
+    .eq('active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error) throw error;
-  return data ?? [];
+  return data as MealPlan | null;
 }
 
-export async function getRecentHydration(db: SupabaseClient, userId: string, limit = 8) {
-  const { data, error } = await db
-    .from('hydration_logs')
-    .select('*')
-    .eq('user_id', userId)
-    .order('consumed_at', { ascending: false })
-    .limit(limit);
+export async function getPlanItems(db: SupabaseClient, mealPlanId: string): Promise<MealPlanItem[]> {
+  const { data, error } = await db.from('meal_plan_items').select('*').eq('meal_plan_id', mealPlanId).order('sort_order', { ascending: true });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as MealPlanItem[];
 }
 
-export async function getRecentBodyMetrics(db: SupabaseClient, userId: string, limit = 5) {
-  const { data, error } = await db.rpc('get_latest_body_metrics', { p_user_id: userId, p_limit: limit });
+export async function getRecentFoodLogs(db: SupabaseClient, userId: string, limit = 20): Promise<UserFoodLog[]> {
+  const { data, error } = await db.rpc('get_recent_food_logs', { p_user_id: userId, p_limit: limit });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as UserFoodLog[];
 }
 
-export async function getActiveSupplements(db: SupabaseClient, userId: string) {
+export async function getRecentHydration(db: SupabaseClient, userId: string, limit = 20): Promise<HydrationLog[]> {
+  const { data, error } = await db.rpc('get_recent_hydration_logs', { p_user_id: userId, p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as HydrationLog[];
+}
+
+export async function getLatestBodyMetrics(db: SupabaseClient, userId: string): Promise<BodyMetric[]> {
+  const { data, error } = await db.rpc('get_latest_body_metrics', { p_user_id: userId });
+  if (error) throw error;
+  return (data ?? []) as BodyMetric[];
+}
+
+export async function getActiveSupplements(db: SupabaseClient, userId: string): Promise<SupplementProtocol[]> {
   const { data, error } = await db
     .from('supplement_protocols')
     .select('*')
@@ -110,23 +75,16 @@ export async function getActiveSupplements(db: SupabaseClient, userId: string) {
     .eq('active', true)
     .order('updated_at', { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as SupplementProtocol[];
 }
 
-export async function getRecentConversationMessages(
-  db: SupabaseClient,
-  userId: string,
-  conversationId: string,
-  limit = 8,
-) {
+export async function getRecentConversationMessages(db: SupabaseClient, conversationId: string, limit = 12): Promise<AiMessage[]> {
   const { data, error } = await db
     .from('ai_messages')
-    .select('role, content, created_at')
-    .eq('user_id', userId)
+    .select('*')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(limit);
-
   if (error) throw error;
-  return (data ?? []).reverse().map((row) => ({ role: row.role, content: row.content }));
+  return ((data ?? []) as AiMessage[]).reverse();
 }
