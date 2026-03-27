@@ -186,10 +186,13 @@ function showApp() {
   setTimeout(checkFirstTimeFlow, 350);
 }
 
-function checkFirstTimeFlow() {
-  if (!localStorage.getItem('kronia_profile_setup_done')) {
+function handleBusinessRoute(route) {
+  if (route === 'krona-setup') {
     if (typeof openKronaSetup === 'function') openKronaSetup();
-  } else if (!localStorage.getItem('kronia_onboarded')) {
+    return;
+  }
+
+  if (route === 'onboarding') {
     const ob = document.getElementById('onboarding');
     if (ob) {
       ob.classList.add('show');
@@ -198,7 +201,36 @@ function checkFirstTimeFlow() {
       if (f) f.style.display = 'none';
       if (typeof ffObGoTo === 'function') ffObGoTo(0);
     }
+    return;
   }
+
+  if (route === 'plans') {
+    if (typeof openPlanModal === 'function') openPlanModal();
+    return;
+  }
+
+  if (typeof navTo === 'function') navTo('inicio');
+  if (typeof openHome === 'function') openHome();
+}
+
+function checkFirstTimeFlow() {
+  const appLayer = window.KroniaApplication && window.KroniaApplication.application;
+  if (!appLayer) {
+    handleBusinessRoute(!localStorage.getItem('kronia_profile_setup_done') ? 'krona-setup' : (!localStorage.getItem('kronia_onboarded') ? 'onboarding' : 'inicio'));
+    return;
+  }
+
+  const routeResolution = appLayer.resolveInitialRoute({
+    isAuthenticated: true,
+    profileSetupDone: !!localStorage.getItem('kronia_profile_setup_done'),
+    onboardingDone: !!localStorage.getItem('kronia_onboarded'),
+    hasPlan: !!localStorage.getItem('kronia_plan'),
+    planActive: true,
+    planExpired: false,
+    blocked: false,
+  });
+
+  handleBusinessRoute(routeResolution && routeResolution.nextAction ? routeResolution.nextAction.route : 'inicio');
 }
 
 function showLogin() {

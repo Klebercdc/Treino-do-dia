@@ -68,17 +68,31 @@
   };
 
   window.ffObFinish = function () {
+    var appLayer = window.KroniaApplication && window.KroniaApplication.application;
+    var completion = appLayer
+      ? appLayer.completeOnboarding({
+          userId: localStorage.getItem('kronia_user_id') || 'anonymous',
+          hasPlan: !!localStorage.getItem('kronia_plan')
+        })
+      : { status: 'success', nextAction: { route: 'plans' } };
+
+    if (completion.status === 'error') {
+      if (typeof showToast === 'function') showToast('Erro ao concluir onboarding.', 'error');
+      return;
+    }
+
     var ob = document.getElementById('onboarding');
     if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }
     document.body.classList.remove('overlay-open');
-    localStorage.setItem('kronia_onboarded', '1');
-    /* Mostra a tela de planos antes de entrar no app */
-    if (typeof openPlanModal === 'function') {
+
+    var nextRoute = completion && completion.nextAction ? completion.nextAction.route : 'plans';
+    if (nextRoute === 'plans' && typeof openPlanModal === 'function') {
       openPlanModal();
     } else if (typeof navTo === 'function') {
       navTo('inicio');
       if (typeof openHome === 'function') openHome();
     }
+
     var footer = document.querySelector('.footer-actions');
     if (footer) footer.style.display = '';
   };

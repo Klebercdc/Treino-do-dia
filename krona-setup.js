@@ -128,29 +128,52 @@
     var altura = document.getElementById('ksAlturaInput')?.value  || '';
     var idade  = document.getElementById('ksIdadeInput')?.value   || '';
 
-    // Salva no config
-    var cfg = {};
-    try { cfg = JSON.parse(localStorage.getItem('kronia_config') || '{}'); } catch (e) {}
-    if (nome)   cfg.nome   = nome;
-    if (peso)   cfg.peso   = peso;
-    if (altura) cfg.altura = altura;
-    if (idade)  cfg.idade  = idade;
-    if (_ksGoal) cfg.objetivo = _ksGoal;
-    localStorage.setItem('kronia_config', JSON.stringify(cfg));
-    localStorage.setItem('kronia_profile_setup_done', '1');
+    var profilePayload = {
+      nome: nome,
+      peso: peso,
+      altura: altura,
+      idade: idade,
+      objetivo: _ksGoal,
+    };
+
+    var appLayer = window.KroniaApplication && window.KroniaApplication.application;
+    var saveResult = null;
+
+    if (appLayer) {
+      saveResult = appLayer.saveUserProfile({
+        userId: localStorage.getItem('kronia_user_id') || 'anonymous',
+        profile: profilePayload,
+      });
+    } else {
+      var cfg = {};
+      try { cfg = JSON.parse(localStorage.getItem('kronia_config') || '{}'); } catch (e) {}
+      if (nome) cfg.nome = nome;
+      if (peso) cfg.peso = peso;
+      if (altura) cfg.altura = altura;
+      if (idade) cfg.idade = idade;
+      if (_ksGoal) cfg.objetivo = _ksGoal;
+      localStorage.setItem('kronia_config', JSON.stringify(cfg));
+      localStorage.setItem('kronia_profile_setup_done', '1');
+      saveResult = { status: 'success', nextAction: { route: 'onboarding' } };
+    }
+
+    if (saveResult && saveResult.status === 'error') {
+      if (typeof showToast === 'function') showToast('Erro ao salvar perfil. Revise seus dados.', 'error');
+      return;
+    }
+
     if (typeof _dbSync !== 'undefined' && typeof _dbSync.pushConfig === 'function') {
       _dbSync.pushConfig();
     }
 
-    // Atualiza UI do perfil se disponível
     if (typeof updatePerfilScreen === 'function') {
       try { updatePerfilScreen(); } catch(e) {}
     }
 
     ksClose();
 
-    // Próximo passo: feature tour (se ainda não viu)
-    if (!localStorage.getItem('kronia_onboarded')) {
+    var nextRoute = saveResult && saveResult.nextAction ? saveResult.nextAction.route : 'onboarding';
+    if (nextRoute === 'onboarding') {
       var ob = document.getElementById('onboarding');
       if (ob) {
         ob.classList.add('show');
@@ -160,7 +183,6 @@
         if (typeof ffObGoTo === 'function') ffObGoTo(0);
       }
     } else {
-      // Já viu o tour → vai direto ao app
       if (typeof navTo === 'function') navTo('inicio');
       if (typeof openHome === 'function') openHome();
     }

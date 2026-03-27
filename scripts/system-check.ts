@@ -140,6 +140,107 @@ function checkSensitiveKeyLeak(): CheckResult {
   };
 }
 
+
+function checkApplicationLayerIntegrity(): CheckResult {
+  const appFile = 'src/application/kronia-application.js';
+  if (!existsSync(appFile)) {
+    return {
+      name: 'application_layer_integrity',
+      status: 'ERROR',
+      summary: 'Camada de aplicação central não encontrada.',
+      suggestion: 'Crie src/application/kronia-application.js com os use-cases centrais.',
+    };
+  }
+
+  const content = readFileSync(appFile, 'utf8');
+  const requiredUseCases = [
+    'resolveInitialRoute',
+    'resolvePostLoginRoute',
+    'completeOnboarding',
+    'saveUserProfile',
+    'generateWorkoutPlan',
+    'generateDietPlan',
+    'generateSupplementProtocol',
+    'classifyChatIntent',
+    'processChatMessage',
+    'loadUserDashboard',
+    'updatePlan',
+    'approvePlan',
+    'validateAccess',
+    'resolveNextAction',
+    'handleBusinessError',
+  ];
+
+  const missingUseCases = requiredUseCases.filter((useCase) => !content.includes(`${useCase}:`) && !content.includes(`function ${useCase}`));
+
+  const requiredStates = [
+    'visitor',
+    'authenticated',
+    'onboarding_pending',
+    'onboarding_in_progress',
+    'onboarding_completed',
+    'plan_not_created',
+    'plan_generating',
+    'plan_generated',
+    'plan_active',
+    'plan_expired',
+    'blocked',
+  ];
+
+  const missingStates = requiredStates.filter((state) => !content.includes(`'${state}'`));
+
+  const hasResultContract = content.includes('status:') && content.includes('data:') && content.includes('errors:') && content.includes('nextAction:');
+
+  if (missingUseCases.length || missingStates.length || !hasResultContract) {
+    return {
+      name: 'application_layer_integrity',
+      status: 'ERROR',
+      summary: 'Camada de aplicação incompleta ou fora do contrato.',
+      details: { missingUseCases, missingStates, hasResultContract },
+      suggestion: 'Implemente todos os use-cases obrigatórios e contrato padrão {status,data,errors,nextAction}.',
+    };
+  }
+
+  return {
+    name: 'application_layer_integrity',
+    status: 'OK',
+    summary: 'Use-cases centrais, estados e contrato padrão detectados na camada de aplicação.',
+  };
+}
+
+function checkClientPrivilegeIsolation(): CheckResult {
+  const rootFrontendFiles = ['auth.js', 'plans.js', 'krona-setup.js', 'fitflow-layout.js', 'app.js'].filter((file) => existsSync(file));
+  const publicFiles = [
+    'index.html',
+    ...listFrontendFiles('src/app'),
+    ...listFrontendFiles('src/components'),
+    ...listFrontendFiles('src/pages'),
+    ...listFrontendFiles('src/application'),
+    ...rootFrontendFiles,
+  ].filter((file, idx, arr) => !file.includes('node_modules') && arr.indexOf(file) === idx);
+  const offenders: string[] = [];
+
+  for (const file of publicFiles) {
+    if (/^api\//.test(file) || file.includes('/supabase/functions/') || file.includes('/app/api/') || /route\.(ts|js)$/.test(file)) continue;
+    const content = readFileSync(file, 'utf8');
+    if (content.includes('SERVICE_ROLE') || content.includes('service_role')) offenders.push(file);
+  }
+
+  return offenders.length
+    ? {
+        name: 'client_privilege_isolation',
+        status: 'ERROR',
+        summary: 'Referências a privilégios administrativos detectadas no client.',
+        details: { offenders },
+        suggestion: 'Remova SERVICE_ROLE do frontend e mantenha acesso sensível somente em backend/edge.',
+      }
+    : {
+        name: 'client_privilege_isolation',
+        status: 'OK',
+        summary: 'Nenhuma referência a SERVICE_ROLE detectada em código de client.',
+      };
+}
+
 async function checkAIProvider(): Promise<CheckResult> {
   const ai = getAIConfig();
   console.log(`AI CHECK provider: ${ai.provider} chatKey: ${ai.chatApiKey ? 'found' : 'missing'} model: ${ai.chatModel}`);
@@ -207,6 +308,8 @@ async function run(): Promise<void> {
   const steps: Array<Promise<CheckResult> | CheckResult> = [
     checkRuntimeEnv(),
     checkSensitiveKeyLeak(),
+    checkApplicationLayerIntegrity(),
+    checkClientPrivilegeIsolation(),
     checkSupabaseSelectOne(),
     checkAIProvider(),
   ];
