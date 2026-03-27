@@ -41,13 +41,38 @@ function parseJsonBodyIfNeeded(req) {
 
 function normalizeNutritionPayload(rawPayload) {
   var payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  var pickFirst = function() {
+    for (var i = 0; i < arguments.length; i++) {
+      var value = arguments[i];
+      if (value !== undefined && value !== null && value !== '') return value;
+    }
+    return undefined;
+  };
 
-  return Object.assign({}, payload, {
-    peso_kg: payload.peso_kg !== undefined ? payload.peso_kg : payload.pesoKg,
-    altura_cm: payload.altura_cm !== undefined ? payload.altura_cm : payload.alturaCm,
-    nivel_atividade: payload.nivel_atividade !== undefined ? payload.nivel_atividade : payload.nivelAtividade,
-    refeicoes_por_dia: payload.refeicoes_por_dia !== undefined ? payload.refeicoes_por_dia : payload.refeicoesPorDia
+  var canonical = Object.assign({}, payload, {
+    sexo: pickFirst(payload.sexo),
+    idade: pickFirst(payload.idade),
+    peso: pickFirst(payload.peso, payload.peso_kg, payload.pesoKg),
+    altura: pickFirst(payload.altura, payload.altura_cm, payload.alturaCm),
+    nivelAtividade: pickFirst(payload.nivelAtividade, payload.nivel_atividade),
+    objetivo: pickFirst(payload.objetivo),
+    refeicoesPorDia: pickFirst(payload.refeicoesPorDia, payload.refeicoes_por_dia),
+    peso_kg: pickFirst(payload.peso_kg, payload.pesoKg, payload.peso),
+    altura_cm: pickFirst(payload.altura_cm, payload.alturaCm, payload.altura),
+    nivel_atividade: pickFirst(payload.nivel_atividade, payload.nivelAtividade),
+    refeicoes_por_dia: pickFirst(payload.refeicoes_por_dia, payload.refeicoesPorDia)
   });
+
+  var receivedKeys = Object.keys(payload);
+  var forwardedKeys = Object.keys(canonical).filter(function(key) {
+    return canonical[key] !== undefined;
+  });
+  console.log('[nutrition-plan] payload mapping', {
+    receivedKeys: receivedKeys,
+    forwardedKeys: forwardedKeys
+  });
+
+  return canonical;
 }
 
 function getCronSecret(req) {
