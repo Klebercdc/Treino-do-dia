@@ -1,0 +1,14 @@
+alter table public.profiles enable row level security;
+alter table public.nutrition_goals enable row level security;
+alter table public.meal_plans enable row level security;
+alter table public.meal_plan_items enable row level security;
+alter table public.user_food_logs enable row level security;
+alter table public.hydration_logs enable row level security;
+alter table public.body_metrics enable row level security;
+alter table public.supplement_protocols enable row level security;
+alter table public.ai_conversations enable row level security;
+alter table public.ai_messages enable row level security;
+alter table public.ai_context_logs enable row level security;
+alter table public.nutrition_knowledge_sources enable row level security;
+alter table public.nutrition_knowledge_documents enable row level security;
+alter table public.nutrition_knowledge_chunks enable row level security;

@@ -1,191 +1,198 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-interface IngestDocument {
-  title: string;
-  text: string;
-  category?: string;
-  subcategory?: string;
-  tags?: string[];
-  metadata?: Record<string, unknown>;
-  version?: string;
+const allowedCategories = new Set([
+  'emagrecimento',
+  'hipertrofia',
+  'recomposicao_corporal',
+  'nutricao_clinica',
+  'saude_intestinal',
+  'low_carb',
+  'jejum_intermitente',
+  'diabetes',
+  'hipertensao',
+  'alimentacao_infantil',
+  'alimentacao_da_mulher',
+  'alimentacao_do_homem',
+  'suplementacao',
+  'vitaminas_minerais',
+  'estrategias_comportamentais',
+  'adesao_ao_plano',
+  'educacao_alimentar',
+  'substituicoes_alimentares',
+]);
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+function jsonResponse(status: number, payload: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
-interface IngestPayload {
-  source: {
-    id?: string;
-    title: string;
-    sourceType: string;
-    sourceReference?: string;
-    category?: string;
-    tags?: string[];
-    language?: string;
-    status?: 'draft' | 'active' | 'archived';
-  };
-  documents: IngestDocument[];
+function sanitize(text: string): string {
+  return text.normalize('NFKC').replace(/\s+/g, ' ').trim();
 }
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const AI_API_KEY = Deno.env.get('AI_API_KEY') ?? '';
-const AI_EMBEDDING_MODEL = Deno.env.get('AI_EMBEDDING_MODEL') ?? 'text-embedding-3-small';
-const AI_API_URL = Deno.env.get('AI_API_URL') ?? 'https://api.openai.com/v1';
-const CHUNK_SIZE = Number(Deno.env.get('INGEST_CHUNK_SIZE') ?? '900');
-const CHUNK_OVERLAP = Number(Deno.env.get('INGEST_CHUNK_OVERLAP') ?? '120');
-
-function normalizeContent(text: string): string {
-  return text.replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+function getEmbeddingKey(): string | undefined {
+  return Deno.env.get('GROQ_API_KEY') ?? undefined;
 }
 
-function chunkText(text: string, chunkSize: number, overlap: number): string[] {
-  const normalized = normalizeContent(text);
-  if (normalized.length <= chunkSize) return [normalized];
+async function sha256(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
+function chunkText(text: string, size = 1200, overlap = 200): string[] {
   const chunks: string[] = [];
   let start = 0;
-
-  while (start < normalized.length) {
-    const end = Math.min(normalized.length, start + chunkSize);
-    chunks.push(normalized.slice(start, end).trim());
-    if (end === normalized.length) break;
+  while (start < text.length) {
+    const end = Math.min(text.length, start + size);
+    chunks.push(text.slice(start, end).trim());
+    if (end >= text.length) break;
     start = Math.max(0, end - overlap);
   }
-
   return chunks.filter(Boolean);
 }
 
-async function sha256(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+async function embedChunks(apiKey: string, model: string, chunks: string[]): Promise<number[][]> {
+  const response = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, input: chunks }),
+  });
+  if (!response.ok) throw new Error(`Embedding provider failed: ${response.status} ${await response.text()}`);
+  const payload = await response.json();
+  return payload.data.map((item: { embedding: number[] }) => item.embedding);
 }
 
-async function embedMany(inputs: string[]): Promise<number[][]> {
-  const response = await fetch(`${AI_API_URL}/embeddings`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${AI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ model: AI_EMBEDDING_MODEL, input: inputs }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Embedding provider error: ${response.status} ${await response.text()}`);
+function requireServiceRoleAuthorization(req: Request, serviceRoleKey: string): void {
+  const header = req.headers.get('Authorization') ?? '';
+  if (!header.startsWith('Bearer ')) {
+    throw new Error('Authorization Bearer token is required.');
   }
 
-  const payload = await response.json();
-  return (payload.data ?? []).map((row: { embedding: number[] }) => row.embedding);
+  const token = header.replace('Bearer ', '').trim();
+  if (token !== serviceRoleKey) {
+    throw new Error('Only service role key can execute ingestion.');
+  }
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
   try {
-    if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !AI_API_KEY) {
-      throw new Error('Env vars obrigatórias ausentes.');
+    const url = Deno.env.get('SUPABASE_URL');
+    const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const embeddingKey = getEmbeddingKey();
+    const embeddingModel = Deno.env.get('AI_EMBEDDING_MODEL') ?? '';
+
+    if (!url || !serviceRole) return jsonResponse(500, { error: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.' });
+
+    requireServiceRoleAuthorization(req, serviceRole);
+
+    const admin = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
+
+    const body = await req.json();
+    const title = sanitize(String(body.title ?? ''));
+    const content = sanitize(String(body.content ?? ''));
+    const category = sanitize(String(body.category ?? ''));
+    const subcategory = body.subcategory ? sanitize(String(body.subcategory)) : null;
+    const tags = Array.isArray(body.tags) ? body.tags.map((tag: string) => sanitize(String(tag))).filter(Boolean) : [];
+    const sourceType = body.source_type ? sanitize(String(body.source_type)) : 'manual';
+    const sourceReference = body.source_reference ? sanitize(String(body.source_reference)) : `manual://${title.toLowerCase().replace(/\s+/g, '-')}`;
+
+    if (!title || !content || !category) return jsonResponse(400, { error: 'title, content and category are required.' });
+    if (!allowedCategories.has(category)) return jsonResponse(400, { error: 'Invalid category for ingestion.' });
+
+    const checksum = await sha256(content);
+    const { data: existingDocument, error: duplicateCheckError } = await admin
+      .from('nutrition_knowledge_documents')
+      .select('id')
+      .eq('checksum', checksum)
+      .maybeSingle();
+
+    if (duplicateCheckError) return jsonResponse(500, { error: `Duplicate check failed: ${duplicateCheckError.message}` });
+    if (existingDocument?.id) {
+      return jsonResponse(200, { duplicated: true, documentId: existingDocument.id });
     }
 
-    const authHeader = req.headers.get('Authorization') ?? '';
-    if (!authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Authorization ausente' }), { status: 401 });
-    }
+    const { data: existingSource, error: sourceLookupError } = await admin
+      .from('nutrition_knowledge_sources')
+      .select('id')
+      .eq('source_reference', sourceReference)
+      .maybeSingle();
 
-    // Requer service role para ingestão administrativa.
-    const token = authHeader.replace('Bearer ', '').trim();
-    if (token !== SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(JSON.stringify({ error: 'Apenas backend administrativo pode ingerir repertório' }), { status: 403 });
-    }
+    if (sourceLookupError) return jsonResponse(500, { error: `Source lookup failed: ${sourceLookupError.message}` });
 
-    const payload = (await req.json()) as IngestPayload;
-    if (!payload?.source?.title || !payload?.source?.sourceType || !payload.documents?.length) {
-      return new Response(JSON.stringify({ error: 'Payload inválido' }), { status: 400 });
-    }
-
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    let sourceId = payload.source.id;
+    let sourceId = existingSource?.id as string | undefined;
     if (!sourceId) {
-      const { data: source, error } = await admin
+      const { data: sourceRow, error: sourceInsertError } = await admin
         .from('nutrition_knowledge_sources')
-        .insert({
-          title: payload.source.title,
-          source_type: payload.source.sourceType,
-          source_reference: payload.source.sourceReference ?? null,
-          category: payload.source.category ?? null,
-          tags: payload.source.tags ?? [],
-          language: payload.source.language ?? 'pt-BR',
-          status: payload.source.status ?? 'active',
-        })
+        .insert({ title, source_type: sourceType, source_reference: sourceReference, category, tags, status: 'active' })
         .select('id')
         .single();
-      if (error) throw error;
-      sourceId = source.id;
+
+      if (sourceInsertError || !sourceRow) return jsonResponse(500, { error: `Source insert failed: ${sourceInsertError?.message}` });
+      sourceId = sourceRow.id;
     }
 
-    const results: Array<{ title: string; skipped: boolean; chunks: number }> = [];
+    const { data: documentRow, error: documentInsertError } = await admin
+      .from('nutrition_knowledge_documents')
+      .insert({ source_id: sourceId, title, document_text: content, checksum, version: '1.0.0' })
+      .select('id')
+      .single();
 
-    for (const document of payload.documents) {
-      const normalized = normalizeContent(document.text);
-      const checksum = await sha256(`${document.title}::${normalized}`);
+    if (documentInsertError || !documentRow) return jsonResponse(500, { error: `Document insert failed: ${documentInsertError?.message}` });
 
-      const { data: existingDoc } = await admin
-        .from('nutrition_knowledge_documents')
-        .select('id')
-        .eq('source_id', sourceId)
-        .eq('checksum', checksum)
-        .maybeSingle();
+    const chunks = chunkText(content);
+    let embeddingsSkipped = false;
+    let embeddings: number[][] = [];
 
-      if (existingDoc) {
-        results.push({ title: document.title, skipped: true, chunks: 0 });
-        continue;
+    if (embeddingKey && embeddingModel) {
+      embeddings = await embedChunks(embeddingKey, embeddingModel, chunks);
+      if (embeddings.length !== chunks.length) {
+        return jsonResponse(500, { error: 'Embedding batch length mismatch.' });
       }
-
-      const { data: newDocument, error: docError } = await admin
-        .from('nutrition_knowledge_documents')
-        .insert({
-          source_id: sourceId,
-          title: document.title,
-          document_text: normalized,
-          checksum,
-          version: document.version ?? 'v1',
-        })
-        .select('id')
-        .single();
-
-      if (docError) throw docError;
-
-      const chunks = chunkText(normalized, CHUNK_SIZE, CHUNK_OVERLAP);
-      const embeddings = await embedMany(chunks);
-
-      const rows = chunks.map((content, index) => ({
-        document_id: newDocument.id,
-        source_id: sourceId,
-        chunk_index: index,
-        content,
-        category: document.category ?? payload.source.category ?? null,
-        subcategory: document.subcategory ?? null,
-        tags: document.tags ?? payload.source.tags ?? [],
-        metadata: document.metadata ?? {},
-        embedding: embeddings[index],
-      }));
-
-      const { error: chunkError } = await admin.from('nutrition_knowledge_chunks').insert(rows);
-      if (chunkError) throw chunkError;
-
-      results.push({ title: document.title, skipped: false, chunks: rows.length });
+    } else {
+      embeddingsSkipped = true;
     }
 
-    return new Response(JSON.stringify({ sourceId, results }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+    const chunkRows = chunks.map((chunk, index) => ({
+      document_id: documentRow.id,
+      source_id: sourceId,
+      chunk_index: index,
+      content: chunk,
+      category,
+      subcategory,
+      tags,
+      metadata: {
+        source_type: sourceType,
+        source_reference: sourceReference,
+        ingestion_at: new Date().toISOString(),
+        embeddings_skipped: embeddingsSkipped,
+      },
+      embedding: embeddingsSkipped ? null : embeddings[index],
+    }));
+
+    const { error: chunkInsertError } = await admin.from('nutrition_knowledge_chunks').insert(chunkRows);
+    if (chunkInsertError) return jsonResponse(500, { error: `Chunk insert failed: ${chunkInsertError.message}` });
+
+    return jsonResponse(200, {
+      ok: true,
+      sourceId,
+      documentId: documentRow.id,
+      chunksInserted: chunkRows.length,
+      checksum,
+      category,
+      tags,
+      embeddingsSkipped,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Erro interno';
-    console.error('[ingest-nutrition-knowledge] error', message);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse(500, { error: (error as Error).message });
   }
 });

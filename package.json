@@ -14,7 +14,8 @@
     "scraper:wger": "node etl/scrapers/cli.js --sources wger --stats",
     "scraper:exrx": "node etl/scrapers/cli.js --sources exrx --stats",
     "scraper:all": "node etl/scrapers/cli.js --sources wger,exrx --csv --stats",
-    "system:check": "tsc --pretty false --target ES2020 --module commonjs --lib ES2020,DOM --esModuleInterop --skipLibCheck --outDir .tmp-system-check scripts/system-check.ts lib/checks/*.ts && node .tmp-system-check/scripts/system-check.js"
+    "system:check": "sh -c 'if command -v tsx >/dev/null 2>&1; then tsx scripts/system-check.ts; else npm run -s system:check:legacy; fi'",
+    "system:check:legacy": "tsc --pretty false --target ES2020 --module commonjs --lib ES2020,DOM --esModuleInterop --skipLibCheck --outDir .tmp-system-check scripts/system-check.ts src/lib/checks/*.ts src/lib/utils/env.ts && node .tmp-system-check/scripts/system-check.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.43.0",
@@ -23,6 +24,7 @@
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",
     "serve": "^14.2.3",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "tsx": "^4.20.0"
   }
 }
