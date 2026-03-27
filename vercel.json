@@ -14,6 +14,7 @@
     { "source": "/api/science-classify", "destination": "/api/science?__route=science-classify" },
     { "source": "/api/nutrition-calc", "destination": "/api/science?__route=nutrition-calc" },
     { "source": "/api/nutrition-plan", "destination": "/api/science?__route=nutrition-plan" },
+    { "source": "/api/nutrition-selftest", "destination": "/api/science?__route=nutrition-selftest" },
     { "source": "/api/lgpd-export", "destination": "/api/system?__route=lgpd-export" },
     { "source": "/api/lgpd-delete", "destination": "/api/system?__route=lgpd-delete" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
