@@ -458,7 +458,12 @@ function agentLoopStream(userMessages, userData, res) {
             stream: false
           };
           return gemini.callGemini(GROQ_KEY, noToolPayload, 30000, 2, function(fallbackErr, text) {
-            var t = fallbackErr ? ('Erro: ' + err) : (text || '');
+            if (fallbackErr) {
+              try { res.write('data: ' + JSON.stringify({ error: 'Serviço de IA temporariamente indisponível.' }) + '\n\n'); } catch (e) {}
+              sendDone();
+              return;
+            }
+            var t = text || '';
             try { res.write('data: ' + JSON.stringify({ d: t }) + '\n\n'); } catch (e) {}
             sendDone();
           });
