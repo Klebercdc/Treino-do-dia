@@ -2285,58 +2285,7 @@ function syncMainScrollArea() {
   container.style.height = `${Math.max(160, available)}px`;
 }
 
-function ensurePosTreinoCards() {
-  const section = document.getElementById("posTreinoSection");
-  if (!section) return;
-  const hasAllCards = [
-    "orientPosTreinoNutri()",
-    "orientPosTreinoRecup()",
-    "orientPosTreinoSupl()",
-    "orientPosTreinoMob()"
-  ].every((handler) => !!section.querySelector(`[onclick="${handler}"]`));
-  if (hasAllCards) return;
-
-  section.innerHTML = `
-  <div style="font-size:0.72rem;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Pós-Treino</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div onclick="orientPosTreinoNutri()" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
-      <div style="width:34px;height:34px;border-radius:10px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);display:flex;align-items:center;justify-content:center">
-        <i data-lucide="utensils" class="lucide" width="16" height="16" stroke="#22c55e" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Nutrição</div>
-      <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">O que comer agora para recuperar mais rápido</div>
-    </div>
-    <div onclick="orientPosTreinoRecup()" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
-      <div style="width:34px;height:34px;border-radius:10px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);display:flex;align-items:center;justify-content:center">
-        <i data-lucide="heart" class="lucide" width="16" height="16" stroke="#3b82f6" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Recuperação</div>
-      <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">Estratégias para otimizar o descanso muscular</div>
-    </div>
-    <div onclick="orientPosTreinoSupl()" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
-      <div style="width:34px;height:34px;border-radius:10px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);display:flex;align-items:center;justify-content:center">
-        <i data-lucide="zap" class="lucide" width="16" height="16" stroke="var(--accent)" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Suplementação</div>
-      <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">Whey, creatina e o que realmente funciona</div>
-    </div>
-    <div onclick="orientPosTreinoMob()" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
-      <div style="width:34px;height:34px;border-radius:10px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.25);display:flex;align-items:center;justify-content:center">
-        <i data-lucide="stretch-horizontal" class="lucide" width="16" height="16" stroke="#a855f7" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Mobilidade</div>
-      <div style="font-size:0.72rem;color:var(--muted);line-height:1.3">Alongamentos e soltura para acelerar a recuperação</div>
-    </div>
-  </div>
-  <button onclick="salvarTreino()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--accent),#fb923c);border:1.5px solid rgba(249,115,22,.55);border-radius:14px;padding:12px 14px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
-    <i data-lucide="save" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
-    Salvar Treino
-  </button>`;
-  if (typeof lucide !== "undefined" && lucide?.createIcons) lucide.createIcons();
-}
-
 function navTo(tab) {
-  ensurePosTreinoCards();
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
   document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
