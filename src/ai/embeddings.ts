@@ -7,7 +7,7 @@ export interface EmbeddingProvider {
   embedText(input: string): Promise<EmbeddingVector>
 }
 
-// Dimensão padrão dos embeddings do sistema (text-embedding-3-small / nomic-embed-text-v1.5).
+// Dimensão padrão dos embeddings do sistema.
 export const EMBEDDING_DIMENSION = 1536
 
 export class PlaceholderEmbeddingProvider implements EmbeddingProvider {
@@ -19,6 +19,10 @@ export class PlaceholderEmbeddingProvider implements EmbeddingProvider {
       ((input.charCodeAt(i % len) || 0) % 97) / 100,
     )
   }
+}
+
+export function createEmbeddingProvider(): EmbeddingProvider {
+  return new PlaceholderEmbeddingProvider()
 }
 
 export function vectorToSqlLiteral(vector: number[]): string {

@@ -276,8 +276,7 @@ create index if not exists nutrition_knowledge_documents_source_idx
   on public.nutrition_knowledge_documents(source_id);
 
 -- ── Chunks vetorizados de conhecimento nutricional ────────────
--- Dimensão 1536 compatível com text-embedding-3-small (OpenAI)
--- e nomic-embed-text-v1.5 (Nomic, via Groq ou local)
+-- Dimensão 1536 para embeddings RAG (nomic-embed-text-v1.5 ou similar).
 -- Ajuste a dimensão conforme o modelo de embeddings adotado.
 create table if not exists public.nutrition_knowledge_chunks (
   id          uuid primary key default gen_random_uuid(),
