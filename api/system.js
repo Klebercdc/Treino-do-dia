@@ -77,7 +77,7 @@ function handleLgpdExport(req, res) {
 }
 
 function deleteAuthUser(userId, callback) {
-  var serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  var serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) return callback(null, 'sem service key — exclusão de auth pendente');
 
   var hostname = SUPABASE_URL.replace('https://', '').replace('http://', '');

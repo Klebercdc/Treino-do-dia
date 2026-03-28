@@ -4,7 +4,7 @@ var planRules = require('../src/lib/plans/planRules');
 var { PLAN } = require('../src/types/domain');
 
 var SUPABASE_URL = process.env.SUPABASE_URL;
-var SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+var SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!SUPABASE_URL) {
   throw new Error('[_plans] SUPABASE_URL não configurada.');
