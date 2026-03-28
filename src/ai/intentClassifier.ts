@@ -8,28 +8,62 @@ export function classifyIntent(message: string, previousAssistantMessage?: strin
 
   const treinoTerms = [
     "quero um treino",
+    "quero treino",
     "monte um treino",
+    "monta um treino",
+    "monta treino",
+    "montar treino",
     "gera um treino",
     "gere um treino",
+    "gerar treino",
     "crie um treino",
+    "criar treino",
     "fazer um treino",
     "me passa um treino",
+    "me manda um treino",
     "treino para mim",
     "ajuste meu treino",
-    "monta treino",
+    "ajusta meu treino",
+    "muda meu treino",
+    "novo treino",
+    "um treino de",
+    "treino de força",
+    "treino de resistência",
+    "treino de resistencia",
+    "treino de hipertrofia",
+    "treino de emagrecimento",
+    "treino de funcional",
+    "preciso de um treino",
+    "pode me dar um treino",
+    "me faz um treino",
+    "faz um treino",
+    "me gera um treino",
   ]
 
   const dietaTerms = [
     "quero uma dieta",
+    "quero dieta",
     "monte uma dieta",
+    "monta uma dieta",
+    "montar dieta",
     "gera uma dieta",
     "gere uma dieta",
+    "gerar dieta",
     "crie uma dieta",
+    "criar dieta",
     "me passa uma dieta",
+    "me manda uma dieta",
     "plano alimentar",
     "cardápio",
     "cardapio",
     "ajuste minha dieta",
+    "ajusta minha dieta",
+    "muda minha dieta",
+    "nova dieta",
+    "preciso de uma dieta",
+    "pode me dar uma dieta",
+    "me faz uma dieta",
+    "faz uma dieta",
   ]
 
   const suplementoTerms = [
@@ -38,23 +72,35 @@ export function classifyIntent(message: string, previousAssistantMessage?: strin
     "whey",
     "pré treino",
     "pre treino",
+    "pre-treino",
     "vitamina",
     "magnésio",
     "magnesio",
     "termogênico",
     "termogenico",
+    "bcaa",
+    "proteína em pó",
+    "proteina em po",
+    "caseína",
+    "caseina",
+    "glutamina",
+    "omega 3",
+    "ômega 3",
   ]
 
   const mobilidadeTerms = [
     "mobilidade",
     "alongamento",
     "alongar",
-    "travado",
     "encurtamento",
     "dor ao agachar",
     "dor no ombro",
     "dor no quadril",
     "tornozelo duro",
+    "flexibilidade",
+    "exercício de mobilidade",
+    "exercicio de mobilidade",
+    "plano de alongamento",
   ]
 
   const configTerms = [
@@ -76,7 +122,44 @@ export function classifyIntent(message: string, previousAssistantMessage?: strin
     "me de",
     "quero",
     "preciso",
+    "me passa",
+    "me manda",
+    "me faz",
   ]
+
+  // Termos que claramente são CHAT/RELATO — nunca devem virar ação
+  const chatOnlyTerms = [
+    "estou cansado",
+    "tô cansado",
+    "to cansado",
+    "nao consegui treinar",
+    "não consegui treinar",
+    "não treinei",
+    "nao treinei",
+    "estou sem fome",
+    "comi mal",
+    "comi pouco",
+    "estou desmotivado",
+    "tô desmotivado",
+    "to desmotivado",
+    "estou indisposto",
+    "acordei ruim",
+    "acordei mal",
+    "estou com dor",
+    "tô com dor",
+    "sinto dor",
+    "estou travado",
+    "tô travado",
+    "estou treinando",
+    "tô treinando",
+    "to treinando",
+    "tenho treinado",
+    "meu objetivo é",
+    "meu foco é",
+    "estou focado",
+  ]
+
+  if (containsAny(text, chatOnlyTerms)) return "chat"
 
   if (containsAny(text, treinoTerms)) return "treino"
   if (containsAny(text, dietaTerms)) return "dieta"
@@ -98,24 +181,6 @@ export function classifyIntent(message: string, previousAssistantMessage?: strin
     return "configuracao"
   }
 
-  const conversationTerms = [
-    "estou cansado",
-    "to cansado",
-    "tô cansado",
-    "nao consegui treinar",
-    "não consegui treinar",
-    "estou sem fome",
-    "comi mal",
-    "estou desmotivado",
-    "to desmotivado",
-    "tô desmotivado",
-    "estou indisposto",
-    "acordei ruim",
-    "estou travado",
-    "estou com dor",
-  ]
-
-  if (containsAny(text, conversationTerms)) return "chat"
   if (text.includes("?")) return "duvida"
   if (previousAssistantMessage && text.length < 40) return "continuidade"
 

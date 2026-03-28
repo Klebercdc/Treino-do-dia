@@ -30,7 +30,8 @@ export class GroqClient implements AIModelClient {
       body: JSON.stringify({
         model: AI_ENV.MODEL,
         temperature: input.temperature ?? 0.2,
-        max_tokens: input.maxTokens ?? 1800,
+        max_tokens: input.maxTokens ?? 800,
+        response_format: { type: "json_object" },
         messages,
       }),
     })

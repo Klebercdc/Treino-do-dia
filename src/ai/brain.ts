@@ -33,11 +33,14 @@ export class KroniaBrain {
       },
     ]
 
+    const payloadIntents = new Set(["treino", "dieta", "suplementacao", "mobilidade"])
+    const maxTokens = payloadIntents.has(hintIntent) ? 1800 : 600
+
     const raw = await this.modelClient.generate({
       systemPrompt: KRONIA_SYSTEM_PROMPT,
       messages,
       temperature: 0.2,
-      maxTokens: 1800,
+      maxTokens,
     })
 
     const parsed = safeJsonParse<AssistantStructuredResponse>(raw)
