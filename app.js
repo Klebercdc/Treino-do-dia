@@ -2562,16 +2562,7 @@ function renderMarkdown(text) {
 
 function getKronosAvatarMarkup(wrapperClass = "kronos-reactor-avatar") {
   return `<div class="${wrapperClass}" aria-label="Avatar do KRONOS">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="kronosAvatarGold" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#F6C36B"/>
-          <stop offset="1" stop-color="#A56700"/>
-        </linearGradient>
-      </defs>
-      <path d="M12 2.5 20 6.1v5.35c0 4.5-2.85 8.63-8 10.05-5.15-1.42-8-5.56-8-10.05V6.1L12 2.5Z" stroke="url(#kronosAvatarGold)" stroke-width="1.6"/>
-      <path d="M8.2 7.8v8.4m0-4.2h2.3l2.7-4.2m-2.7 4.2 2.9 4.2h2.4" stroke="url(#kronosAvatarGold)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+    <img src="/Kronia.png" alt="Logo KRONIA" loading="lazy" decoding="async" />
   </div>`;
 }
 
