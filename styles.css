@@ -2388,15 +2388,15 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .pr-card-free:active { transform: scale(0.99); }
 .pr-card-pro {
-  background: linear-gradient(145deg, rgba(255,107,0,0.055) 0%, rgba(255,107,0,0.02) 100%);
-  border: 1px solid rgba(255,107,0,0.24);
-  box-shadow: 0 0 0 1px rgba(255,107,0,0.05) inset, 0 6px 20px rgba(255,107,0,0.08);
+  background: linear-gradient(145deg, rgba(255,107,0,0.035) 0%, rgba(255,107,0,0.012) 100%);
+  border: 1px solid rgba(255,107,0,0.18);
+  box-shadow: 0 0 0 1px rgba(255,107,0,0.04) inset, 0 4px 14px rgba(255,107,0,0.05);
 }
 .pr-card-pro:active { transform: scale(0.99); }
 .pr-card-ultra {
-  background: linear-gradient(145deg, rgba(139,92,246,0.16) 0%, rgba(124,58,237,0.06) 100%);
-  border: 1.5px solid rgba(168,85,247,0.5);
-  box-shadow: 0 0 0 1px rgba(168,85,247,0.18) inset, 0 14px 40px rgba(124,58,237,0.22);
+  background: linear-gradient(145deg, rgba(139,92,246,0.22) 0%, rgba(124,58,237,0.1) 100%);
+  border: 1.5px solid rgba(168,85,247,0.68);
+  box-shadow: 0 0 0 1px rgba(216,180,254,0.2) inset, 0 18px 44px rgba(124,58,237,0.34);
 }
 .pr-card-ultra:active { transform: scale(0.99); }
 /* Popular / TUDO badges */
