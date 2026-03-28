@@ -34,7 +34,7 @@ const TRANSFORMS = [
     forte: ['supino','agachamento','leg press','rosca direta','terra','levantamento terra',
             'barra fixa','crucifixo','desenvolvimento','remada','pulldown','cadeira extensora'],
     medio: ['exercício','musculação','série','repetição','carga','academia','halter','barra'],
-    fraco: ['treino','malhar','malhação','ginástica']
+    fraco: ['malhar','malhação','ginástica']
   },
   action: function() {
     try { closeOrientacao(); } catch(e) {}
@@ -309,11 +309,28 @@ var _usedTransforms = {};
  * — Ignora transforms já utilizados nesta sessão
  * — Respeita bloqueios dos Defensive Transforms
  */
+// Padrões que indicam intenção informacional — não de navegação.
+// Quando presentes, transforms de navegação (treino, dieta, etc.) não devem aparecer.
+var INFO_INTENT_PATTERNS = [
+  'dica','me dê','me de ','me explica','como posso','como fazer','como devo',
+  'por que','qual é','qual a','o que é','o que devo','me conta','me fala',
+  'maximizar','melhorar','aumentar resultado','entender','analis','diagnos',
+  'me oriente','me ajude a entender','qual seria','devo fazer'
+];
+
+function _isInfoIntent(texto) {
+  return INFO_INTENT_PATTERNS.some(function(p) { return texto.includes(p); });
+}
+
+// Transforms que são de NAVEGAÇÃO — bloqueados quando usuário só pede info
+var NAV_TRANSFORM_IDS = ['treino', 'gerar_treino', 'dieta', 'suplemento', 'evolucao'];
+
 function runTransforms(userMessage, botResponse, containerId, blockedIds) {
   var textoUser = (userMessage || '').toLowerCase();
   var textoBot  = (botResponse  || '').toLowerCase();
   var bloqueados = blockedIds || [];
   var THRESHOLD  = 2;
+  var infoIntent = _isInfoIntent(textoUser);
   var scored = [];
 
   for (var i = 0; i < TRANSFORMS.length; i++) {
@@ -321,6 +338,8 @@ function runTransforms(userMessage, botResponse, containerId, blockedIds) {
     // Pula transforms bloqueados por Defensive ou já usados nesta sessão
     if (bloqueados.indexOf(t.id) >= 0) continue;
     if (_usedTransforms[t.id])         continue;
+    // Se o usuário está pedindo dica/info, não mostra botões de navegação
+    if (infoIntent && NAV_TRANSFORM_IDS.indexOf(t.id) >= 0) continue;
 
     var sc = _scoreTransform(t, textoUser) * 2
            + _scoreTransform(t, textoBot)
