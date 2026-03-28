@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { ChatRequest, ChatResponse } from '../../../../lib/ai/types';
 import { createServerSupabaseClient } from '../../../../lib/supabase/server';
 import { getAIConfig, getSupabaseConfig } from '../../../../lib/utils/env';
+import { checkRateLimit } from '../../../../lib/utils/serverRateLimit';
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +17,11 @@ export async function POST(req: Request) {
 
     if (authError || !userData.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const rl = checkRateLimit(userData.user.id, { max: 20, windowMs: 60000 });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
     const body = (await req.json()) as ChatRequest;

@@ -22,8 +22,9 @@
  * POST /api/pastor-diagnostico → executa a ronda completa.
  */
 
-var https = require('https');
-var cors = require('./_cors');
+var https  = require('https');
+var crypto = require('crypto');
+var cors   = require('./_cors');
 
 // ══════════════════════════════════════════
 // HELPER: chamada direta ao Supabase REST
@@ -285,8 +286,14 @@ function isAuthorized(req) {
     var ip = req.socket && req.socket.remoteAddress || '';
     return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
   }
-  var authHeader = req.headers['authorization'] || req.headers['x-cron-secret'] || '';
-  return authHeader === 'Bearer ' + secret || authHeader === secret;
+  var raw = req.headers['authorization'] || req.headers['x-cron-secret'] || '';
+  var candidate = raw.startsWith('Bearer ') ? raw.slice(7) : raw;
+  if (!candidate || candidate.length !== secret.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(secret));
+  } catch (_) {
+    return false;
+  }
 }
 
 module.exports = function(req, res) {

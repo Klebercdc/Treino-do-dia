@@ -1,6 +1,7 @@
-var cors = require('./_cors');
-var auth = require('./_auth');
-var rl   = require('./_ratelimit');
+var cors   = require('./_cors');
+var auth   = require('./_auth');
+var rl     = require('./_ratelimit');
+var crypto = require('crypto');
 var science = require('../src/lib/science/scienceSyncService');
 var scienceInsight = require('../src/lib/science/scienceInsightService');
 var nutritionService = require('../src/lib/nutrition/nutritionService');
@@ -103,7 +104,12 @@ function isValidCronSecret(req) {
   if (!expected) return false;
 
   var provided = getCronSecret(req);
-  return Boolean(provided) && provided === expected;
+  if (!provided || provided.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+  } catch (_) {
+    return false;
+  }
 }
 
 function detectRoute(req) {

@@ -13,10 +13,8 @@ export async function GET() {
       version: '1.0.0',
       runtime: envStatus.runtime,
       source: envStatus.source,
-      env: envStatus.vars,
       ai: {
         provider: ai.provider,
-        chatKeyFound: !!ai.chatApiKey,
       },
       timestamp: new Date().toISOString(),
     },
