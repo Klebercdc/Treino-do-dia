@@ -253,12 +253,10 @@ module.exports = function(req, res) {
         // Dados completos — verifica quota antes de gerar
         plans.getQuotaInfo(user.id, function(qErr, quota) {
           if (qErr) {
-            console.error('[chat] erro ao verificar quota para dieta:', qErr);
-            // Falha silenciosa — gera sem incrementar
-            var dietPlan = diet.buildDietPlan(stepResult.collected);
-            return res.status(200).json({
-              content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
-              conversationState: null
+            console.error('[chat] erro ao verificar quota para dieta (fail-closed):', qErr);
+            return res.status(503).json({
+              error: 'Não foi possível verificar seu plano. Tente novamente em instantes.',
+              code: 'QUOTA_CHECK_FAILED'
             });
           }
 

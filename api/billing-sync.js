@@ -1,5 +1,6 @@
 var cors = require('./_cors');
 var auth = require('./_auth');
+var rl   = require('./_ratelimit');
 var plans = require('./_plans');
 var billingProviders = require('../src/lib/plans/billingProviders');
 var planRules = require('../src/lib/plans/planRules');
@@ -11,6 +12,7 @@ module.exports = function(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   return auth.requireAuth(req, res, function(user) {
+    return rl.rateLimit(req, res, function() {
     var body = req.body || {};
     var provider = (body.provider || 'hotmart').toLowerCase();
     var targetPlan = planRules.toCanonicalPlan(body.targetPlan || PLAN.PRO);
@@ -32,5 +34,6 @@ module.exports = function(req, res) {
         provider: provider
       });
     });
+    }, { max: 5, windowMs: 60000 }, user.id);
   });
 };

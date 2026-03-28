@@ -1,10 +1,11 @@
 var cors = require('./_cors');
 var auth = require('./_auth');
+var rl   = require('./_ratelimit');
 var plans = require('./_plans');
 var scienceSync = require('../src/lib/science/scienceSyncService');
 var https = require('https');
 
-var SUPABASE_URL = process.env.SUPABASE_URL || 'https://twxoddzogbmaysebhour.supabase.co';
+var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 
 function handleScienceArticles(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -106,6 +107,7 @@ function deleteAuthUser(userId, callback) {
 function handleLgpdDelete(req, res) {
   if (req.method !== 'POST') { res.status(405).end(); return; }
   return auth.requireAuth(req, res, function(user) {
+    return rl.rateLimit(req, res, function() {
     var uid = user.id;
     var record = { user_id: uid, status: 'pending', requested_at: new Date().toISOString() };
     plans.supabaseRequest('POST', 'deletion_requests', record, function(logErr) {
@@ -138,6 +140,7 @@ function handleLgpdDelete(req, res) {
       });
       });
     });
+    }, { max: 3, windowMs: 3600000 }, user.id); // 3 req/hora — operação irreversível
   });
 }
 

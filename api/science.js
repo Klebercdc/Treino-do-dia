@@ -1,5 +1,6 @@
 var cors = require('./_cors');
 var auth = require('./_auth');
+var rl   = require('./_ratelimit');
 var science = require('../src/lib/science/scienceSyncService');
 var scienceInsight = require('../src/lib/science/scienceInsightService');
 var nutritionService = require('../src/lib/nutrition/nutritionService');
@@ -273,7 +274,7 @@ module.exports = async function(req, res) {
     }
   }
 
-  return auth.requireAuth(req, res, async function() {
+  return auth.requireAuth(req, res, function(user) { rl.rateLimit(req, res, async function() {
     if (route === 'science-search') {
       if (req.method !== 'POST') return res.status(405).end();
       try {
@@ -360,5 +361,5 @@ module.exports = async function(req, res) {
     }
 
     return res.status(404).json({ error: 'rota científica não encontrada' });
-  });
+  }, { max: 20, windowMs: 60000 }, user.id); });
 };
