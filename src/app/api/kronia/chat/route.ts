@@ -95,8 +95,10 @@ export async function POST(req: Request) {
       mobilityPayload: result.response.mobilityPayload ?? null,
     })
   } catch (error) {
+    // Loga o erro real no servidor mas nunca expõe detalhes internos ao cliente
+    console.error("[kronia/chat] erro interno:", error instanceof Error ? error.message : error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Erro interno" },
+      { error: "Não foi possível processar sua mensagem. Tente novamente." },
       { status: 500 },
     )
   }
