@@ -178,6 +178,14 @@ supabase db push
 # Os arquivos estão em: supabase/migrations/
 ```
 
+### Troubleshooting: erro 503 no chat
+
+Se o chat retornar 503 em produção por falta de tabelas (ex.: `user_plans`), siga o runbook:
+
+- `DOC_FIX_503_SUPABASE_MIGRATIONS.md`
+
+Resumo: aplicar o script SQL idempotente de criação das tabelas faltantes e, em seguida, alinhar o ambiente com `supabase db push`.
+
 ---
 
 ## Modelo de Negócio
