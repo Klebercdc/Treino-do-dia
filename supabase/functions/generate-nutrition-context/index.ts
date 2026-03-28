@@ -10,15 +10,28 @@ type RetrievalIntent =
   | 'body_composition'
   | 'fallback';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const ALLOWED_ORIGINS = [
+  'https://kronia.app',
+  'https://www.kronia.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+];
 
-function jsonResponse(status: number, payload: Record<string, unknown>): Response {
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+}
+
+function jsonResponse(req: Request, status: number, payload: Record<string, unknown>): Response {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -52,24 +65,14 @@ function detectIntent(message: string): RetrievalIntent {
 
 function buildSystemPrompt(context: Record<string, unknown>): string {
   return [
-    'Você é uma IA de nutrição clínica e esportiva.',
-    'Nunca invente dados e use apenas as informações do contexto.',
-    'Separe claramente dados pessoais de conhecimento geral.',
+    'Você é uma IA de nutrição clínica e esportiva do aplicativo KRONIA.',
+    'Nunca invente dados e use apenas as informações do contexto fornecido.',
+    'Separe claramente dados pessoais do usuário de conhecimento geral.',
     'Se faltar dado do usuário, declare explicitamente a ausência.',
-    'Responda de forma objetiva, segura e personalizável para app de nutrição.',
+    'Responda de forma objetiva, segura e personalizada.',
+    'Nunca exponha dados técnicos internos, IDs, tokens ou estrutura do sistema na resposta.',
     `CONTEXTO_JSON: ${JSON.stringify(context)}`,
   ].join('\n\n');
-}
-
-function validateAiResponse(content: string, hasContext: boolean): string {
-  const trimmed = content.trim();
-  if (!trimmed) {
-    return 'Não consegui gerar uma resposta segura agora. Tente novamente em alguns instantes.';
-  }
-  if (hasContext && !/plano|meta|perfil|dados|hidrata|registro|contexto|suplement/i.test(trimmed)) {
-    return 'Consigo responder com segurança, mas preciso reforçar o uso do seu contexto. Tente reformular sua pergunta.';
-  }
-  return trimmed;
 }
 
 async function generateChatCompletion(
@@ -84,6 +87,7 @@ async function generateChatCompletion(
     body: JSON.stringify({
       model,
       temperature: 0.2,
+      max_tokens: 1800,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
@@ -92,14 +96,23 @@ async function generateChatCompletion(
   });
 
   if (!response.ok) {
-    throw new Error(`Groq error: ${response.status} ${await response.text()}`);
+    const text = await response.text().catch(() => '');
+    throw new Error(`Groq error: ${response.status} ${text}`);
   }
   const payload = await response.json();
-  return payload.choices?.[0]?.message?.content?.trim() ?? '';
+  const content = payload.choices?.[0]?.message?.content?.trim() ?? '';
+  if (!content) throw new Error('Groq não retornou conteúdo.');
+  return content;
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: getCorsHeaders(req) });
+  }
+
+  if (req.method !== 'POST') {
+    return jsonResponse(req, 405, { error: 'Method Not Allowed' });
+  }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -111,27 +124,35 @@ Deno.serve(async (req) => {
     console.log(`[AI] provider=groq model=${chatModel} chatKey=${maskSecret(chatKey)}`);
 
     if (!supabaseUrl || !supabaseAnon || !supabaseService) {
-      return jsonResponse(500, { error: 'Variáveis de ambiente do Supabase ausentes.' });
+      return jsonResponse(req, 500, { error: 'Variáveis de ambiente do Supabase ausentes.' });
     }
     if (!chatKey) {
-      return jsonResponse(500, { error: 'GROQ_API_KEY não configurada.' });
+      return jsonResponse(req, 500, { error: 'GROQ_API_KEY não configurada.' });
     }
 
     const token = req.headers.get('Authorization')?.replace('Bearer ', '').trim();
-    if (!token) return jsonResponse(401, { error: 'Unauthorized' });
+    if (!token) return jsonResponse(req, 401, { error: 'Unauthorized' });
 
     const userClient = createClient(supabaseUrl, supabaseAnon, {
       global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
     });
     const adminClient = createClient(supabaseUrl, supabaseService, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
     const { data: authData, error: authError } = await userClient.auth.getUser();
-    if (authError || !authData.user) return jsonResponse(401, { error: 'Autenticação falhou.' });
+    if (authError || !authData.user) return jsonResponse(req, 401, { error: 'Autenticação falhou.' });
 
     const userId = authData.user.id;
-    const body = await req.json();
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse(req, 400, { error: 'Body inválido.' });
+    }
+
     const conversationId = typeof body.conversationId === 'string' ? body.conversationId : undefined;
     const userMessage = sanitizeInput(String(body.userMessage ?? ''));
     const intent = detectIntent(userMessage);
@@ -147,10 +168,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (conversationError) {
-        return jsonResponse(500, { error: `Validação da conversa falhou: ${conversationError.message}` });
+        return jsonResponse(req, 500, { error: `Validação da conversa falhou: ${conversationError.message}` });
       }
       if (!conversation) {
-        return jsonResponse(403, { error: 'Conversa não pertence ao usuário atual.' });
+        return jsonResponse(req, 403, { error: 'Conversa não pertence ao usuário atual.' });
       }
     } else {
       const { data: inserted, error: createError } = await adminClient
@@ -160,7 +181,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (createError || !inserted) {
-        return jsonResponse(500, { error: `Não foi possível criar conversa: ${createError?.message}` });
+        return jsonResponse(req, 500, { error: `Não foi possível criar conversa: ${createError?.message}` });
       }
       ensuredConversationId = inserted.id;
     }
@@ -190,11 +211,11 @@ Deno.serve(async (req) => {
         .maybeSingle(),
     ]);
 
-    if (profileError) return jsonResponse(500, { error: `Perfil: ${profileError.message}` });
-    if (goalsError) return jsonResponse(500, { error: `Metas: ${goalsError.message}` });
-    if (planError) return jsonResponse(500, { error: `Plano alimentar: ${planError.message}` });
+    if (profileError) return jsonResponse(req, 500, { error: `Perfil: ${profileError.message}` });
+    if (goalsError) return jsonResponse(req, 500, { error: `Metas: ${goalsError.message}` });
+    if (planError) return jsonResponse(req, 500, { error: `Plano alimentar: ${planError.message}` });
 
-    // Buscar dados dependentes do plano + logs em paralelo
+    // Buscar dados dependentes em paralelo
     const [
       { data: planItems, error: planItemsError },
       { data: foodLogs, error: foodLogsError },
@@ -215,12 +236,14 @@ Deno.serve(async (req) => {
       userClient.rpc('get_recent_hydration_logs', { p_user_id: userId, p_limit: 20 }),
       userClient.rpc('get_latest_body_metrics', { p_user_id: userId }),
       userClient.from('supplement_protocols').select('*').eq('user_id', userId).eq('active', true),
-      userClient
-        .from('ai_messages')
-        .select('role,content,created_at')
-        .eq('conversation_id', ensuredConversationId)
-        .order('created_at', { ascending: false })
-        .limit(12),
+      ensuredConversationId
+        ? userClient
+            .from('ai_messages')
+            .select('role,content,created_at')
+            .eq('conversation_id', ensuredConversationId)
+            .order('created_at', { ascending: false })
+            .limit(12)
+        : Promise.resolve({ data: [], error: null }),
       userClient.rpc('search_nutrition_knowledge', {
         search_query: userMessage,
         match_count: 8,
@@ -228,12 +251,12 @@ Deno.serve(async (req) => {
       }),
     ]);
 
-    if (planItemsError) return jsonResponse(500, { error: `Itens do plano: ${planItemsError.message}` });
-    if (foodLogsError) return jsonResponse(500, { error: `Logs de refeição: ${foodLogsError.message}` });
-    if (hydrationError) return jsonResponse(500, { error: `Logs de hidratação: ${hydrationError.message}` });
-    if (metricsError) return jsonResponse(500, { error: `Métricas corporais: ${metricsError.message}` });
-    if (supplementError) return jsonResponse(500, { error: `Suplementos: ${supplementError.message}` });
-    if (recentMessagesError) return jsonResponse(500, { error: `Histórico de mensagens: ${recentMessagesError.message}` });
+    if (planItemsError) return jsonResponse(req, 500, { error: `Itens do plano: ${planItemsError.message}` });
+    if (foodLogsError) return jsonResponse(req, 500, { error: `Logs de refeição: ${foodLogsError.message}` });
+    if (hydrationError) return jsonResponse(req, 500, { error: `Logs de hidratação: ${hydrationError.message}` });
+    if (metricsError) return jsonResponse(req, 500, { error: `Métricas corporais: ${metricsError.message}` });
+    if (supplementError) return jsonResponse(req, 500, { error: `Suplementos: ${supplementError.message}` });
+    if (recentMessagesError) return jsonResponse(req, 500, { error: `Histórico de mensagens: ${recentMessagesError.message}` });
 
     if (chunksError) {
       console.warn('[AI] Busca na base de conhecimento falhou:', chunksError.message);
@@ -256,10 +279,11 @@ Deno.serve(async (req) => {
     };
 
     const systemPrompt = buildSystemPrompt(context);
-    const rawAnswer = await generateChatCompletion(chatKey, chatModel, systemPrompt, userMessage);
-    const answer = validateAiResponse(rawAnswer, Boolean(profile || goals || (knowledgeChunks ?? []).length));
+    const answer = await generateChatCompletion(chatKey, chatModel, systemPrompt, userMessage);
 
-    // Persistir mensagens
+    // Persistir mensagens — falha aqui não deve bloquear a resposta ao usuário
+    const persistErrors: string[] = [];
+
     const { error: insertMessagesError } = await adminClient.from('ai_messages').insert([
       {
         conversation_id: ensuredConversationId,
@@ -277,10 +301,10 @@ Deno.serve(async (req) => {
       },
     ]);
     if (insertMessagesError) {
-      return jsonResponse(500, { error: `Falha ao salvar mensagens: ${insertMessagesError.message}` });
+      persistErrors.push(`messages: ${insertMessagesError.message}`);
+      console.error('[AI] Falha ao salvar mensagens:', insertMessagesError.message);
     }
 
-    // Log de contexto para auditoria
     const { error: contextLogError } = await adminClient.from('ai_context_logs').insert({
       user_id: userId,
       conversation_id: ensuredConversationId,
@@ -301,10 +325,11 @@ Deno.serve(async (req) => {
       response_text: answer,
     });
     if (contextLogError) {
-      return jsonResponse(500, { error: `Falha ao salvar log de contexto: ${contextLogError.message}` });
+      persistErrors.push(`context_log: ${contextLogError.message}`);
+      console.error('[AI] Falha ao salvar log de contexto:', contextLogError.message);
     }
 
-    return jsonResponse(200, {
+    return jsonResponse(req, 200, {
       message: answer,
       intent,
       conversationId: ensuredConversationId,
@@ -313,10 +338,12 @@ Deno.serve(async (req) => {
         provider: 'groq',
         model: chatModel,
         chunkCount: (knowledgeChunks ?? []).length,
+        persistErrors: persistErrors.length > 0 ? persistErrors : undefined,
       },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro interno.';
-    return jsonResponse(500, { error: message });
+    console.error('[AI] Erro não tratado:', message);
+    return jsonResponse(req, 500, { error: message });
   }
 });

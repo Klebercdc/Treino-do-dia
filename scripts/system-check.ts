@@ -18,8 +18,38 @@ interface CheckResult {
   suggestion?: string;
 }
 
+const REQUIRED_TABLES = [
+  'profiles',
+  'nutrition_goals',
+  'meal_plans',
+  'meal_plan_items',
+  'user_food_logs',
+  'hydration_logs',
+  'body_metrics',
+  'supplement_protocols',
+  'ai_conversations',
+  'ai_messages',
+  'ai_context_logs',
+  'workouts',
+  'workout_logs',
+  'push_subscriptions',
+  'nutrition_knowledge_sources',
+  'nutrition_knowledge_documents',
+  'nutrition_knowledge_chunks',
+] as const;
+
+const REQUIRED_FUNCTIONS = [
+  'get_recent_food_logs',
+  'get_recent_hydration_logs',
+  'get_latest_body_metrics',
+  'search_nutrition_knowledge',
+] as const;
+
 function print(result: CheckResult): void {
-  const icon = result.status === 'OK' ? '✅' : result.status === 'WARNING' ? '⚠️' : result.status === 'SKIPPED' ? '⏭️' : '❌';
+  const icon =
+    result.status === 'OK' ? '✅' :
+    result.status === 'WARNING' ? '⚠️' :
+    result.status === 'SKIPPED' ? '⏭️' : '❌';
   console.log(`${icon} ${result.name}: ${result.summary}`);
   if (result.error) console.log(`   erro: ${result.error}`);
   if (result.suggestion) console.log(`   sugestão: ${result.suggestion}`);
@@ -29,8 +59,7 @@ function detectVarSource(key: string): 'env runtime' | '.env.local (not loaded)'
   if (process.env[key]) return 'env runtime';
   if (existsSync('.env.local')) {
     const content = readFileSync('.env.local', 'utf8');
-    const hasKey = new RegExp(`^${key}=`, 'm').test(content);
-    if (hasKey) return '.env.local (not loaded)';
+    if (new RegExp(`^${key}=`, 'm').test(content)) return '.env.local (not loaded)';
   }
   return 'missing';
 }
@@ -46,57 +75,165 @@ function checkRuntimeEnv(): CheckResult {
 
   console.log('\nRUNTIME ENV REPORT:');
   for (const item of vars) {
-    console.log(`- ${item.key}: ${item.found} | source: ${item.source}`);
+    console.log(`  - ${item.key}: ${item.found} | source: ${item.source}`);
   }
-  console.log(`- runtime: ${status.runtime}`);
-  console.log(`- source: ${status.source}`);
+  console.log(`  - runtime: ${status.runtime}`);
+  console.log(`  - source: ${status.source}`);
 
-  const missing = vars.filter((item) => item.found === 'missing' && ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'GROQ_API_KEY'].includes(item.key));
+  const missing = vars.filter(
+    (item) =>
+      item.found === 'missing' &&
+      ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'GROQ_API_KEY'].includes(item.key),
+  );
 
   return {
     name: 'runtime_env',
     status: missing.length ? 'ERROR' : 'OK',
-    summary: missing.length ? 'Variáveis críticas ausentes ou não carregadas em runtime.' : 'Variáveis críticas carregadas em runtime.',
+    summary: missing.length
+      ? 'Variáveis críticas ausentes ou não carregadas em runtime.'
+      : 'Variáveis críticas carregadas em runtime.',
     details: { runtime: status.runtime, source: status.source, vars },
-    suggestion: missing.length && status.runtime === 'local'
-      ? 'As envs podem existir na Vercel, mas este check está local. Crie/preencha .env.local com os mesmos valores.'
-      : undefined,
+    suggestion:
+      missing.length && status.runtime === 'local'
+        ? 'Crie .env.local com SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY e GROQ_API_KEY.'
+        : undefined,
   };
 }
 
-async function checkSupabaseSelectOne(): Promise<CheckResult> {
+async function checkSupabaseTables(): Promise<CheckResult> {
   try {
     const supabase = getSupabaseConfig('server');
-    const db = createClient(supabase.url, supabase.serviceRoleKey as string, { auth: { persistSession: false } });
-    const { error } = await db.from('profiles').select('id').limit(1);
+    const db = createClient(supabase.url, supabase.serviceRoleKey as string, {
+      auth: { persistSession: false },
+    });
 
-    if (error) {
+    const missing: string[] = [];
+    for (const table of REQUIRED_TABLES) {
+      const { error } = await db.from(table).select('id').limit(0);
+      if (error && /does not exist|relation/i.test(error.message)) {
+        missing.push(table);
+      }
+    }
+
+    if (missing.length > 0) {
       return {
-        name: 'supabase_select_1',
+        name: 'supabase_tables',
         status: 'ERROR',
-        summary: 'Falha de conectividade com Supabase na consulta de teste.',
-        error: error.message,
-        suggestion: 'Valide URL/keys e se as migrations já foram aplicadas.',
+        summary: `${missing.length} tabela(s) ausente(s) no banco.`,
+        error: `Missing: ${missing.join(', ')}`,
+        suggestion: 'Execute sql/003_nutrition_schema.sql no Supabase SQL Editor.',
+        details: { missing },
       };
     }
 
     return {
-      name: 'supabase_select_1',
+      name: 'supabase_tables',
       status: 'OK',
-      summary: 'Conexão com Supabase válida (consulta de teste executada).',
+      summary: `Todas as ${REQUIRED_TABLES.length} tabelas obrigatórias existem.`,
     };
   } catch (error) {
     return {
-      name: 'supabase_select_1',
+      name: 'supabase_tables',
       status: 'SKIPPED',
-      summary: 'Check de Supabase pulado por env não carregada.',
+      summary: 'Check de tabelas pulado — env não carregada.',
       error: (error as Error).message,
-      suggestion: 'Garanta SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY no runtime atual.',
     };
   }
 }
 
-function listFrontendFiles(root: string): string[] {
+async function checkSupabaseFunctions(): Promise<CheckResult> {
+  try {
+    const supabase = getSupabaseConfig('server');
+    const db = createClient(supabase.url, supabase.serviceRoleKey as string, {
+      auth: { persistSession: false },
+    });
+
+    const missing: string[] = [];
+    for (const fn of REQUIRED_FUNCTIONS) {
+      const { error } = await db.rpc(fn, { p_user_id: '00000000-0000-0000-0000-000000000000', p_limit: 1 });
+      if (error && /function.*does not exist/i.test(error.message)) {
+        missing.push(fn);
+      }
+    }
+
+    if (missing.length > 0) {
+      return {
+        name: 'supabase_functions',
+        status: 'ERROR',
+        summary: `${missing.length} função(ões) SQL ausente(s).`,
+        error: `Missing: ${missing.join(', ')}`,
+        suggestion: 'Execute sql/005_nutrition_functions.sql no Supabase SQL Editor.',
+        details: { missing },
+      };
+    }
+
+    return {
+      name: 'supabase_functions',
+      status: 'OK',
+      summary: `Todas as ${REQUIRED_FUNCTIONS.length} funções SQL disponíveis.`,
+    };
+  } catch (error) {
+    return {
+      name: 'supabase_functions',
+      status: 'SKIPPED',
+      summary: 'Check de funções pulado — env não carregada.',
+      error: (error as Error).message,
+    };
+  }
+}
+
+async function checkEmbeddings(): Promise<CheckResult> {
+  try {
+    const supabase = getSupabaseConfig('server');
+    const db = createClient(supabase.url, supabase.serviceRoleKey as string, {
+      auth: { persistSession: false },
+    });
+
+    const { count: total } = await db
+      .from('nutrition_knowledge_chunks')
+      .select('*', { count: 'exact', head: true });
+
+    if ((total ?? 0) === 0) {
+      return {
+        name: 'embeddings',
+        status: 'WARNING',
+        summary: 'Nenhum chunk de conhecimento cadastrado — RAG sem conteúdo.',
+        suggestion: 'Ingira documentos via POST /functions/v1/ingest-nutrition-knowledge.',
+      };
+    }
+
+    const { count: nullCount } = await db
+      .from('nutrition_knowledge_chunks')
+      .select('*', { count: 'exact', head: true })
+      .is('embedding', null);
+
+    if ((nullCount ?? 0) > 0) {
+      return {
+        name: 'embeddings',
+        status: 'ERROR',
+        summary: `${nullCount}/${total} chunks sem embedding — busca semântica inoperante.`,
+        suggestion: 'Execute o pipeline de geração de embeddings para popular a coluna embedding.',
+        details: { total, nullCount },
+      };
+    }
+
+    return {
+      name: 'embeddings',
+      status: 'OK',
+      summary: `${total} chunks com embeddings populados — RAG operacional.`,
+      details: { total },
+    };
+  } catch (error) {
+    return {
+      name: 'embeddings',
+      status: 'SKIPPED',
+      summary: 'Check de embeddings pulado — env não carregada.',
+      error: (error as Error).message,
+    };
+  }
+}
+
+function listFiles(root: string): string[] {
   if (!existsSync(root)) return [];
   const out: string[] = [];
   const walk = (dir: string) => {
@@ -112,11 +249,14 @@ function listFrontendFiles(root: string): string[] {
 }
 
 function checkSensitiveKeyLeak(): CheckResult {
-  const frontendFiles = [...listFrontendFiles('src/app'), ...listFrontendFiles('src/components'), ...listFrontendFiles('src/pages')];
+  const frontendFiles = [
+    ...listFiles('src/app'),
+    ...listFiles('src/components'),
+    ...listFiles('src/pages'),
+  ].filter((f) => !f.includes('/api/'));
 
   const offenders: string[] = [];
   for (const file of frontendFiles) {
-    if (file.includes('/api/')) continue;
     const content = readFileSync(file, 'utf8');
     if (content.includes('SUPABASE_SERVICE_ROLE_KEY') || content.includes('GROQ_API_KEY')) {
       offenders.push(file);
@@ -212,10 +352,10 @@ function checkClientPrivilegeIsolation(): CheckResult {
   const rootFrontendFiles = ['auth.js', 'plans.js', 'krona-setup.js', 'fitflow-layout.js', 'app.js'].filter((file) => existsSync(file));
   const publicFiles = [
     'index.html',
-    ...listFrontendFiles('src/app'),
-    ...listFrontendFiles('src/components'),
-    ...listFrontendFiles('src/pages'),
-    ...listFrontendFiles('src/application'),
+    ...listFiles('src/app'),
+    ...listFiles('src/components'),
+    ...listFiles('src/pages'),
+    ...listFiles('src/application'),
     ...rootFrontendFiles,
   ].filter((file, idx, arr) => !file.includes('node_modules') && arr.indexOf(file) === idx);
   const offenders: string[] = [];
@@ -243,8 +383,6 @@ function checkClientPrivilegeIsolation(): CheckResult {
 
 async function checkAIProvider(): Promise<CheckResult> {
   const ai = getAIConfig();
-  console.log(`AI CHECK provider: ${ai.provider} chatKey: ${ai.chatApiKey ? 'found' : 'missing'} model: ${ai.chatModel}`);
-
   const details = {
     provider: ai.provider,
     chatModel: ai.chatModel,
@@ -303,29 +441,30 @@ async function checkAIProvider(): Promise<CheckResult> {
 }
 
 async function run(): Promise<void> {
+  console.log('🔍 KRONIA System Check\n');
+
   const results: CheckResult[] = [];
 
-  const steps: Array<Promise<CheckResult> | CheckResult> = [
+  for (const step of [
     checkRuntimeEnv(),
     checkSensitiveKeyLeak(),
     checkApplicationLayerIntegrity(),
     checkClientPrivilegeIsolation(),
-    checkSupabaseSelectOne(),
+    checkSupabaseTables(),
+    checkSupabaseFunctions(),
+    checkEmbeddings(),
     checkAIProvider(),
-  ];
-
-  for (const step of steps) {
+  ]) {
     const result = await Promise.resolve(step);
     results.push(result);
     print(result);
   }
 
-  const hasError = results.some((result) => result.status === 'ERROR');
-  const hasWarning = results.some((result) => result.status === 'WARNING');
+  const hasError = results.some((r) => r.status === 'ERROR');
+  const hasWarning = results.some((r) => r.status === 'WARNING');
   const overall = hasError ? 'ERROR' : hasWarning ? 'WARNING' : 'OK';
 
   console.log(`\nSTATUS GERAL: ${overall}`);
-  console.log(JSON.stringify({ status: overall, results }, null, 2));
   process.exit(hasError ? 1 : 0);
 }
 

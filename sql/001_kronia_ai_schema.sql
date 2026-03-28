@@ -37,13 +37,19 @@ create table if not exists public.knowledge_chunks (
   title text null,
   content text not null,
   metadata jsonb not null default '{}'::jsonb,
-  embedding vector(16) not null,
+  -- Dimensão 1536 (text-embedding-3-small / nomic-embed-text-v1.5).
+  -- Nullable: chunks podem ser inseridos antes do pipeline de embeddings.
+  embedding vector(1536) null,
   created_at timestamptz not null default now(),
   unique(document_id, chunk_index)
 );
 
 create index if not exists knowledge_chunks_document_id_idx on public.knowledge_chunks(document_id);
-create index if not exists knowledge_chunks_embedding_idx on public.knowledge_chunks using ivfflat (embedding vector_cosine_ops);
+-- Índice vetorial: só criar após popular embeddings.
+-- execute manualmente após inserir dados:
+--   create index knowledge_chunks_embedding_idx
+--     on public.knowledge_chunks using ivfflat (embedding vector_cosine_ops)
+--     with (lists = 100);
 
 create table if not exists public.assistant_logs (
   id uuid primary key default gen_random_uuid(),
@@ -98,7 +104,7 @@ create table if not exists public.conversation_summaries (
 create index if not exists conversation_summaries_user_id_idx on public.conversation_summaries(user_id);
 
 create or replace function public.match_knowledge_chunks(
-  query_embedding vector(16),
+  query_embedding vector(1536),
   match_count int default 8
 )
 returns table (
@@ -110,6 +116,8 @@ returns table (
 )
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select
     kc.id,
@@ -118,6 +126,7 @@ as $$
     kc.metadata,
     1 - (kc.embedding <=> query_embedding) as similarity
   from public.knowledge_chunks kc
+  where kc.embedding is not null
   order by kc.embedding <=> query_embedding
   limit match_count;
 $$;
