@@ -39,7 +39,18 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      # ── 3. Gera .env.test a partir dos Secrets ────────────────────────────
+      # ── 3. System check — valida env, tabelas, RAG e IA ──────────────────
+      - name: System Check
+        id: system_check
+        env:
+          SUPABASE_URL:              ${{ secrets.VITE_SUPABASE_URL_TEST }}
+          SUPABASE_ANON_KEY:         ${{ secrets.VITE_SUPABASE_ANON_KEY_TEST }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_KEY_TEST }}
+          GROQ_API_KEY:              ${{ secrets.GROQ_API_KEY_TEST }}
+        run: npm run system:check
+        continue-on-error: true   # informativo — não bloqueia o pipeline se secrets ausentes
+
+      # ── 4. Gera .env.test a partir dos Secrets ────────────────────────────
       - name: Criar .env.test
         run: |
           cat > .env.test << 'EOF'

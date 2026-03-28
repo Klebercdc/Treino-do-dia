@@ -17,11 +17,54 @@
  *   URL do webhook: https://treino-do-dia-orpin.vercel.app/api/payment-webhook?provider=hotmart
  */
 
+var crypto  = require('crypto');
 var cors    = require('./_cors');
 var plans   = require('./_plans');
 var planRules = require('../src/lib/plans/planRules');
 var billingProviders = require('../src/lib/plans/billingProviders');
 var { PLAN } = require('../src/types/domain');
+
+// ─── Replay guard (in-memory, TTL 10 min) ────────────
+// Impede que a mesma requisição seja processada duas vezes
+// (proteção contra replay attacks e retransmissões duplas do provider).
+var _seenNonces = Object.create(null);
+var NONCE_TTL_MS = 10 * 60 * 1000;
+setInterval(function() {
+  var cut = Date.now() - NONCE_TTL_MS;
+  Object.keys(_seenNonces).forEach(function(k) {
+    if (_seenNonces[k] < cut) delete _seenNonces[k];
+  });
+}, 60 * 1000);
+
+function _checkReplay(nonce) {
+  if (!nonce) return false;
+  if (_seenNonces[nonce]) return true; // já visto = replay
+  _seenNonces[nonce] = Date.now();
+  return false;
+}
+
+// ─── Extrai campos seguros do payload (sem PII desnecessária) ──
+// Nunca persiste o payload bruto — apenas campos necessários para auditoria.
+function _sanitizePayload(provider, payload) {
+  var safe = {};
+  try {
+    if (provider === 'hotmart') {
+      var purchase = (payload.data && payload.data.purchase) || {};
+      var product  = (payload.data && payload.data.product)  || {};
+      safe.transaction_id = purchase.transaction || null;
+      safe.amount         = (purchase.price && purchase.price.value) || null;
+      safe.currency       = (purchase.price && purchase.price.currencyValue) || 'BRL';
+      safe.product_name   = product.name || null;
+    }
+    if (provider === 'kiwify') {
+      safe.transaction_id = payload.order_id || null;
+      safe.amount         = payload.amount   || null;
+      safe.currency       = 'BRL';
+      safe.product_name   = (payload.product && payload.product.name) || null;
+    }
+  } catch(e) {}
+  return safe;
+}
 
 // ─── Eventos que ativam o Pro ─────────────────────────
 var PRO_ACTIVATE_EVENTS = [
@@ -77,12 +120,12 @@ function processWebhook(provider, payload, callback) {
   var buyerEmail  = extractEmail(provider, payload);
   var subscriberId = extractSubscriberId(provider, payload);
 
-  // Salva webhook recebido (auditoria)
+  // Salva webhook recebido (auditoria) — apenas campos necessários, sem PII extra
   var webhookRecord = {
     provider:    provider,
     event:       event,
     buyer_email: buyerEmail,
-    payload:     payload,
+    payload:     _sanitizePayload(provider, payload),
     processed:   false
   };
 
@@ -146,20 +189,90 @@ function processWebhook(provider, payload, callback) {
   });
 }
 
-// ─── Token validation ─────────────────────────────────
-function validateToken(req, provider) {
+// ─── Validação de assinatura HMAC-SHA256 ─────────────
+//
+// Hotmart v2 envia HMAC-SHA256 no header "x-hotmart-hmac-sha256".
+// Kiwify envia HMAC-SHA256 no campo "signature" do body ou header "x-kiwify-signature".
+// Ambos usam o token configurado no painel como secret.
+//
+// Fallback para token simples (header) enquanto o provider não estiver configurado
+// para enviar HMAC — compatibilidade com fase de ativação inicial.
+//
+// NOTA: O HMAC é computado sobre JSON.stringify(body). Para verificação
+// byte-exata, desabilite o body parser do Vercel e buffer o raw body.
+function validateSignature(req, provider) {
+  // ── Hotmart ──────────────────────────────────────────
   if (provider === 'hotmart') {
-    var token = process.env.HOTMART_WEBHOOK_TOKEN;
-    if (!token) return { ok: false, reason: 'missing_hotmart_token_config' };
-    var received = req.headers['x-hotmart-hottok'] || req.headers['x-hotmart-token'] || '';
-    return { ok: received === token, reason: 'invalid_hotmart_token' };
+    var secret = process.env.HOTMART_WEBHOOK_TOKEN;
+    if (!secret) return { ok: false, reason: 'missing_hotmart_token_config' };
+
+    var hmacHeader = req.headers['x-hotmart-hmac-sha256'] || '';
+    if (hmacHeader) {
+      // Verificação HMAC com timing-safe (previne timing attacks)
+      try {
+        var bodyStr  = JSON.stringify(req.body || {});
+        var expected = crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+        var sigBuf   = Buffer.from(hmacHeader.toLowerCase(), 'hex');
+        var expBuf   = Buffer.from(expected, 'hex');
+        if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+          return { ok: false, reason: 'invalid_hotmart_hmac' };
+        }
+      } catch(e) {
+        return { ok: false, reason: 'invalid_hotmart_hmac' };
+      }
+    } else {
+      // Fallback: token simples no header (fase inicial / painel não configurado para HMAC)
+      var tokenReceived = req.headers['x-hotmart-hottok'] || req.headers['x-hotmart-token'] || '';
+      if (!crypto.timingSafeEqual(Buffer.from(tokenReceived), Buffer.from(secret))) {
+        return { ok: false, reason: 'invalid_hotmart_token' };
+      }
+    }
+
+    // Validação de timestamp (Hotmart envia creation_date em ms no payload)
+    var ts = req.body && req.body.creation_date;
+    if (ts && Math.abs(Date.now() - Number(ts)) > 5 * 60 * 1000) {
+      return { ok: false, reason: 'timestamp_expired' };
+    }
+
+    // Replay guard: usa transaction id como nonce
+    var nonce = (req.body && req.body.data && req.body.data.purchase && req.body.data.purchase.transaction) || null;
+    if (_checkReplay(nonce)) return { ok: false, reason: 'replay_detected' };
+
+    return { ok: true };
   }
+
+  // ── Kiwify ───────────────────────────────────────────
   if (provider === 'kiwify') {
-    var ktoken = process.env.KIWIFY_WEBHOOK_TOKEN;
-    if (!ktoken) return { ok: false, reason: 'missing_kiwify_token_config' };
-    var kreceived = req.headers['x-webhook-token'] || req.headers['x-kiwify-token'] || '';
-    return { ok: kreceived === ktoken, reason: 'invalid_kiwify_token' };
+    var ksecret = process.env.KIWIFY_WEBHOOK_TOKEN;
+    if (!ksecret) return { ok: false, reason: 'missing_kiwify_token_config' };
+
+    var ksig = (req.body && req.body.signature) || req.headers['x-kiwify-signature'] || '';
+    if (ksig) {
+      try {
+        var kBodyStr  = JSON.stringify(req.body || {});
+        var kExpected = crypto.createHmac('sha256', ksecret).update(kBodyStr).digest('hex');
+        var kSigBuf   = Buffer.from(ksig.toLowerCase(), 'hex');
+        var kExpBuf   = Buffer.from(kExpected, 'hex');
+        if (kSigBuf.length !== kExpBuf.length || !crypto.timingSafeEqual(kSigBuf, kExpBuf)) {
+          return { ok: false, reason: 'invalid_kiwify_hmac' };
+        }
+      } catch(e) {
+        return { ok: false, reason: 'invalid_kiwify_hmac' };
+      }
+    } else {
+      var kTokenReceived = req.headers['x-webhook-token'] || req.headers['x-kiwify-token'] || '';
+      if (!crypto.timingSafeEqual(Buffer.from(kTokenReceived), Buffer.from(ksecret))) {
+        return { ok: false, reason: 'invalid_kiwify_token' };
+      }
+    }
+
+    // Replay guard: usa order_id como nonce
+    var kNonce = (req.body && req.body.order_id) || null;
+    if (_checkReplay(kNonce)) return { ok: false, reason: 'replay_detected' };
+
+    return { ok: true };
   }
+
   return { ok: false, reason: 'invalid_provider' };
 }
 
@@ -179,14 +292,18 @@ module.exports = function(req, res) {
     return res.status(503).json({ error: 'Webhook temporariamente indisponível por configuração de segurança ausente.' });
   }
 
-  var tokenValidation = validateToken(req, provider);
-  if (!tokenValidation.ok) {
-    if (tokenValidation.reason === 'missing_hotmart_token_config' || tokenValidation.reason === 'missing_kiwify_token_config') {
-      console.error('[webhook] token de validação não configurado para provider:', provider);
-      return res.status(503).json({ error: 'Webhook indisponível: token de validação não configurado.' });
+  var sigValidation = validateSignature(req, provider);
+  if (!sigValidation.ok) {
+    if (sigValidation.reason === 'missing_hotmart_token_config' || sigValidation.reason === 'missing_kiwify_token_config') {
+      console.error('[webhook] token/secret não configurado para provider:', provider);
+      return res.status(503).json({ error: 'Webhook indisponível: credencial de validação não configurada.' });
     }
-    console.warn('[webhook] token inválido para provider:', provider);
-    return res.status(401).json({ error: 'Token de webhook inválido' });
+    if (sigValidation.reason === 'replay_detected') {
+      console.warn('[webhook] replay detectado para provider:', provider);
+      return res.status(200).json({ ok: true, result: { status: 'ignored', reason: 'replay' } });
+    }
+    console.warn('[webhook] assinatura inválida para provider:', provider, '—', sigValidation.reason);
+    return res.status(401).json({ error: 'Assinatura de webhook inválida.' });
   }
 
   var payload = req.body || {};
