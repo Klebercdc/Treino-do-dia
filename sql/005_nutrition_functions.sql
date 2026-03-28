@@ -101,7 +101,6 @@ begin
   from public.nutrition_knowledge_chunks c
   where
     (category_filter is null or c.category = category_filter)
-    and c.embedding is not null
     and to_tsvector('portuguese', c.content) @@ plainto_tsquery('portuguese', search_query)
   order by similarity desc
   limit match_count;
