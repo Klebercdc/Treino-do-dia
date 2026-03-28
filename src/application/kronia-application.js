@@ -224,7 +224,7 @@
       infrastructure.storage.markOnboardingDone();
       infrastructure.events.emit('onboarding_completed', { userId: input.userId });
       var result = this.resolveNextAction({
-        currentState: USER_STATES.ONBOARDING_IN_PROGRESS,
+        currentState: USER_STATES.ONBOARDING_COMPLETED,
         context: { isAuthenticated: true, profileSetupDone: true, onboardingDone: true, hasPlan: !!(input && input.hasPlan), planActive: !!(input && input.hasPlan) },
       });
       infrastructure.logger.log({ userId: input.userId, action: 'completeOnboarding', input: input, result: result });
