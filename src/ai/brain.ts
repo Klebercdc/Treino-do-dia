@@ -3,12 +3,15 @@ import { safeJsonParse } from "./json"
 import { validateAssistantResponse } from "./validator"
 import { buildUserMessageBundle } from "./contextBuilder"
 import { IntentAgent } from "./intentAgent"
+import { classifyIntent } from "./intentClassifier"
 import type {
   AIModelClient,
   AIRequestInput,
   AssistantStructuredResponse,
   ChatMessage,
 } from "./types"
+
+const PAYLOAD_INTENTS = new Set(["treino", "dieta", "suplementacao", "mobilidade"])
 
 export class KroniaBrain {
   private readonly intentAgent: IntentAgent
@@ -26,6 +29,12 @@ export class KroniaBrain {
       userProfile: input.userProfile,
     })
 
+    // Se o IntentAgent falhou (caiu em fallback "chat"), usa o classificador
+    // de palavras como segurança para não truncar payloads de treino/dieta.
+    const keywordIntent = classifyIntent(input.userMessage)
+    const likelyNeedsPayload =
+      classification.needsPayload || PAYLOAD_INTENTS.has(keywordIntent)
+
     const syntheticUserPrompt = buildUserMessageBundle({
       ...input,
       sourceOfTruthMode: input.sourceOfTruthMode ?? "rag_required",
@@ -38,8 +47,7 @@ export class KroniaBrain {
       },
     ]
 
-    // Tokens altos apenas quando o IntentAgent confirmou que há payload necessário
-    const maxTokens = classification.needsPayload ? 1800 : 600
+    const maxTokens = likelyNeedsPayload ? 1800 : 600
 
     const raw = await this.modelClient.generate({
       systemPrompt: KRONIA_SYSTEM_PROMPT,
