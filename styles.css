@@ -797,40 +797,60 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   background: rgba(255,255,255,0.2);
 }
 .plan-modal-header {
-  min-height: 86px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  padding: 2px 2px 18px;
+  gap: 12px;
+  width: 100%;
+  min-height: 86px;
+  padding: 18px 18px 8px 18px;
+  box-sizing: border-box;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .plan-modal-brand {
+  flex: 1 1 auto;
   min-width: 0;
+  width: calc(100% - 88px);
+  max-width: calc(100% - 88px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+.plan-modal-brand img,
+.plan-modal-brand svg,
+.plan-modal-brand .logo,
+.plan-modal-logo {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: 72px;
+  object-fit: contain;
+  object-position: left center;
+  margin: 0;
 }
 .plan-modal-logo {
-  height: 42px;
-  width: auto;
-  max-width: min(52vw, 240px);
-  object-fit: contain;
-  display: block;
+  min-width: 0;
 }
 .plan-modal-subtitle {
-  margin-top: 6px;
+  margin: 6px 0 0 0;
+  text-align: left;
+  padding: 0;
   font-size: 0.79rem;
   line-height: 1.4;
   letter-spacing: .01em;
   color: rgba(255,255,255,0.68);
 }
+.plan-modal-close,
 .plan-modal-close-btn {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
   border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 14px;
+  border-radius: 20px;
   background: linear-gradient(150deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
   color: rgba(255,255,255,0.72);
   display: flex;
@@ -883,11 +903,33 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   padding: 0 18px calc(16px + env(safe-area-inset-bottom));
   flex-shrink: 0;
 }
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .plan-modal-shell { padding-inline: 8px; }
   .plan-modal-card { border-radius: 26px; }
-  .plan-modal-header { min-height: 80px; padding-bottom: 14px; }
-  .plan-modal-logo { height: 37px; max-width: min(50vw, 200px); }
+  .plan-modal-header {
+    min-height: 80px;
+    padding: 16px 14px 6px 14px;
+    gap: 10px;
+  }
+  .plan-modal-brand {
+    width: calc(100% - 78px);
+    max-width: calc(100% - 78px);
+  }
+  .plan-modal-brand img,
+  .plan-modal-brand svg,
+  .plan-modal-brand .logo,
+  .plan-modal-logo {
+    max-height: 64px;
+    width: 100%;
+  }
+  .plan-modal-close,
+  .plan-modal-close-btn {
+    flex: 0 0 58px;
+    width: 58px;
+    height: 58px;
+    min-width: 58px;
+    border-radius: 18px;
+  }
   .plan-modal-subtitle { font-size: 0.74rem; }
   .plan-modal-tabs,
   .plan-modal-billing { margin-left: 14px; margin-right: 14px; }
