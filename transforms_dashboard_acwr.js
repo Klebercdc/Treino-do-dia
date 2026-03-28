@@ -24,6 +24,10 @@ window.KroniaDashboard = (function () {
   let _gaugeChart = null;
   let _loadChart  = null;
 
+  function isLightMode() {
+    return document.body && document.body.classList.contains('light-mode');
+  }
+
   // ── Zonas de risco (Gabbett 2016) ────────────────────────────────────────
   const ZONAS = {
     sem_historico: { label: 'Sem histórico',  cor: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
@@ -71,6 +75,7 @@ window.KroniaDashboard = (function () {
     const zona  = getZona(acwr);
     const valor = acwr != null ? Math.min(Math.max(acwr, 0), 2.0) : 0;
     const resto = Math.max(0, 2.0 - valor);
+    const light = isLightMode();
 
     const ctx = canvas.getContext('2d');
     _gaugeChart = new Chart(ctx, {
@@ -78,7 +83,7 @@ window.KroniaDashboard = (function () {
       data: {
         datasets: [{
           data: [valor, resto],
-          backgroundColor: [zona.cor, 'rgba(255,255,255,0.05)'],
+          backgroundColor: [zona.cor, light ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.05)'],
           borderWidth: 0,
           circumference: 270,
           rotation: -135,
@@ -109,7 +114,7 @@ window.KroniaDashboard = (function () {
 
           // Rótulo da zona
           c.font = '700 9px Barlow, sans-serif';
-          c.fillStyle = 'rgba(255,255,255,0.45)';
+          c.fillStyle = light ? 'rgba(15,23,42,0.52)' : 'rgba(255,255,255,0.45)';
           c.fillText(zona.label.toUpperCase(), cx, cy + 16);
 
           c.restore();
@@ -125,6 +130,7 @@ window.KroniaDashboard = (function () {
 
     if (_loadChart) { _loadChart.destroy(); _loadChart = null; }
 
+    const light = isLightMode();
     const ctx = canvas.getContext('2d');
     _loadChart = new Chart(ctx, {
       type: 'bar',
@@ -150,14 +156,14 @@ window.KroniaDashboard = (function () {
           x: {
             grid: { display: false },
             ticks: {
-              color: 'rgba(255,255,255,0.5)',
+              color: light ? 'rgba(15,23,42,0.58)' : 'rgba(255,255,255,0.5)',
               font: { family: 'Barlow, sans-serif', size: 11 },
             },
           },
           y: {
-            grid: { color: 'rgba(255,255,255,0.05)' },
+            grid: { color: light ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.05)' },
             ticks: {
-              color: 'rgba(255,255,255,0.35)',
+              color: light ? 'rgba(15,23,42,0.44)' : 'rgba(255,255,255,0.35)',
               font: { family: 'Barlow, sans-serif', size: 10 },
             },
           },
@@ -200,6 +206,7 @@ window.KroniaDashboard = (function () {
     const el = document.getElementById(containerId);
     if (!el) return;
 
+    const light = isLightMode();
     const zona  = getZona(acwr);
     const chave = zonaRisco || Object.keys(ZONAS).find(k => ZONAS[k].cor === zona.cor) || 'sem_historico';
     const presc = PRESCRICOES[chave] || PRESCRICOES.sem_historico;
@@ -227,7 +234,7 @@ window.KroniaDashboard = (function () {
           ">${presc.titulo}</div>
           <div style="
             font-size:0.78rem;
-            color:rgba(255,255,255,0.68);
+            color:${light ? 'rgba(15,23,42,0.72)' : 'rgba(255,255,255,0.68)'};
             line-height:1.5;
           ">${presc.corpo}</div>
         </div>

@@ -480,6 +480,35 @@ body.light-mode .evo-tab.active { background: var(--accent); color: #fff; }
 body.light-mode .summary-stat { background: #f0f0f0; }
 body.light-mode .date-badge { background: #ebebeb; border-color: rgba(0,0,0,0.08); color: #333; }
 body.light-mode .dark-toggle { background: #ebebeb; }
+body.light-mode .kronos-ai-card {
+  background: linear-gradient(145deg, rgba(168,85,247,0.22) 0%, rgba(196,181,253,0.38) 58%, rgba(255,255,255,0.82) 100%);
+  border-color: rgba(168,85,247,0.5);
+  box-shadow: 0 10px 26px rgba(124,58,237,0.18);
+}
+body.light-mode .kronia-tools-card {
+  background: linear-gradient(145deg, rgba(255,128,0,0.24) 0%, rgba(255,184,120,0.34) 55%, rgba(255,255,255,0.82) 100%);
+  border-color: rgba(255,107,0,0.52);
+  box-shadow: 0 10px 26px rgba(234,108,10,0.18);
+}
+body.light-mode .kronos-ai-card:active,
+body.light-mode .kronia-tools-card:active { transform: scale(.975); }
+body.light-mode .kronos-ai-title { color: #7e22ce; }
+body.light-mode .kronos-ai-subtitle { color: rgba(126,34,206,0.74); }
+body.light-mode .kronos-ai-tip { color: #8b5cf6; }
+body.light-mode .kronos-ai-model { color: rgba(124,58,237,0.82); }
+body.light-mode .kronia-tools-title { color: #9a3412; }
+body.light-mode .kronia-tools-subtitle { color: rgba(194,65,12,0.84); }
+body.light-mode .risk-card-title { color: rgba(17,24,39,0.55); }
+
+@keyframes lightCardDrift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+body.light-mode .kronos-ai-card,
+body.light-mode .kronia-tools-card {
+  background-size: 160% 160%;
+  animation: lightCardDrift 8s ease-in-out infinite;
+}
 
 /* ══════════════════════════════════════════
    AI COACH
@@ -562,17 +591,27 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .kronos-ai-card {
   flex: 1; background: linear-gradient(140deg, rgba(124,58,237,0.25) 0%, rgba(93,63,211,0.12) 100%);
   border: 1.5px solid rgba(168,85,247,0.45); border-radius: 20px; padding: 16px 14px;
-  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s, box-shadow .22s ease, border-color .2s ease;
+  box-shadow: 0 8px 22px rgba(71,32,173,0.16);
 }
 .kronos-ai-card:active { transform: scale(.97); }
+.kronos-ai-title { font-family:var(--display);font-size:1rem;letter-spacing:.06em;color:#c084fc;line-height:1; }
+.kronos-ai-subtitle { font-size:0.5rem;font-weight:800;color:rgba(168,85,247,0.8);letter-spacing:.1em; }
+.kronos-ai-tip { font-size:0.68rem;font-weight:700;color:#c084fc;text-transform:uppercase;letter-spacing:.04em;line-height:1.3;margin-bottom:8px; }
+.kronos-ai-model { font-size:0.58rem;color:rgba(168,85,247,0.7);font-weight:600; }
 
 /* ═══ KRONIA TOOLS CARD ═══ */
 .kronia-tools-card {
   flex: 1; background: linear-gradient(140deg, rgba(255,107,0,0.18) 0%, rgba(255,140,0,0.07) 100%);
   border: 1.5px solid rgba(255,107,0,0.4); border-radius: 20px; padding: 16px 14px;
-  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s, box-shadow .22s ease, border-color .2s ease;
+  box-shadow: 0 8px 22px rgba(200,96,16,0.16);
 }
 .kronia-tools-card:active { transform: scale(.97); }
+.kronia-tools-title { font-family:var(--display);font-size:1rem;letter-spacing:.06em;color:#fff;line-height:1; }
+.kronia-tools-subtitle { font-size:0.5rem;font-weight:800;color:rgba(255,140,0,0.9);letter-spacing:.1em; }
+.risk-card-title { font-size:0.55rem;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:.1em;margin-bottom:6px; }
+.risk-card-title-sm { font-size:0.5rem; font-weight:700; letter-spacing:.08em; margin-bottom:4px; }
 
 /* ═══ WEEKLY PERFORMANCE CARD ═══ */
 .weekly-perf-card {
