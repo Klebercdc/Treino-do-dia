@@ -133,7 +133,7 @@ function updatePlanBadge() {
       var titleEl = document.getElementById('homeTrialTitle');
       var subEl   = document.getElementById('homeTrialSub');
       var daysEl  = document.getElementById('homeTrialDays');
-      if (titleEl) titleEl.textContent = trialDaysLeft === 1 ? 'Trial expira amanhã!' : 'Trial PRO ativo';
+      if (titleEl) titleEl.textContent = trialDaysLeft === 1 ? 'Trial expira amanhã!' : 'Trial ULTRA ativo';
       if (subEl)   subEl.textContent   = (trialDaysLeft !== null && trialDaysLeft <= 2)
         ? 'Assine agora e não perca o acesso ⚡'
         : trialDaysLabel + ' dias restantes de acesso completo';
@@ -158,11 +158,11 @@ function updatePlanBadge() {
         } else if (rem <= 2) {
           homeSubtext.textContent = 'Última' + (rem === 1 ? '' : 's') + ' ' + rem + ' consulta' + (rem === 1 ? '' : 's') + ' do mês';
         } else {
-          homeSubtext.textContent = 'Coach ilimitado · Dieta · Mesociclo · R$29,90/mês';
+          homeSubtext.textContent = 'ULTRA: Transforms + PDF premium + análise avançada · PRO como opção intermediária';
         }
       }
       homeBanner.style.borderColor = rem === 0 ? 'rgba(239,68,68,0.4)'
-        : rem <= 2 ? 'rgba(249,115,22,0.5)' : 'rgba(249,115,22,0.2)';
+        : rem <= 2 ? 'rgba(168,85,247,0.55)' : 'rgba(168,85,247,0.3)';
     }
   }
 
@@ -239,9 +239,9 @@ function openPlanModal() {
       var s = document.getElementById('planTrialSub');
       if (t) t.textContent = (trialDaysLeft !== null && trialDaysLeft <= 2)
         ? '⚠️ Trial expira em ' + trialDaysLabel + ' dia' + (trialDaysLeft === 1 ? '' : 's') + '!'
-        : 'Trial PRO ativo — ' + trialDaysLabel + ' dias restantes';
+        : 'Trial ULTRA ativo — ' + trialDaysLabel + ' dias restantes';
       if (s) s.textContent = inTrial
-        ? 'Você está com acesso completo PRO durante o trial'
+        ? 'Você está com acesso completo do ULTRA durante o trial'
         : '';
     }
   }
@@ -551,7 +551,7 @@ O KRONIA é um aplicativo de registro e planejamento de treinos musculares, com 
 • Os desenvolvedores do KRONIA não se responsabilizam por lesões decorrentes do uso do app.<br><br>
 <strong>4. Planos e Pagamento</strong><br>
 • <em>Plano Gratuito</em>: acesso básico com 5 consultas de IA por mês;<br>
-• <em>Trial de 7 dias</em>: acesso PRO completo nos primeiros 7 dias após cadastro;<br>
+• <em>Trial de 7 dias</em>: acesso ULTRA completo nos primeiros 7 dias após cadastro;<br>
 • <em>Plano Pro</em>: R$29,90/mês — Coach IA ilimitado e recursos avançados;<br>
 • <em>Plano Ultra</em>: R$59,90/mês — tudo do Pro + KRONIA TRANSFORMS completo;<br>
 • Cancelamentos seguem a política do Hotmart/Kiwify (até 7 dias após a compra, CDC Art. 49).<br><br>
