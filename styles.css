@@ -873,6 +873,13 @@ body.overlay-open #aiFloatBtn { display: none !important; }
     inset 0 0 0 1px rgba(255,255,255,0.05),
     0 4px 12px rgba(0,0,0,0.38),
     0 0 0 1px rgba(165,103,0,0.22);
+  overflow: hidden;
+}
+.orient-kronos-avatar img, .kronos-reactor-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 #orientExpertMessages .ai-msg .ai-avatar { display: none !important; }
 /* Bubble wrappers */
