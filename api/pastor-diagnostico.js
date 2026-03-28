@@ -278,10 +278,12 @@ function executarRonda(callback) {
 
 function isAuthorized(req) {
   var secret = process.env.CRON_SECRET;
+  // Em produção, CRON_SECRET é obrigatório — x-forwarded-for é forjável no Vercel
   if (!secret) {
-    // Sem secret definido: aceita apenas localhost/127.0.0.1
-    var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-    return ip.includes('127.0.0.1') || ip.includes('::1') || ip.includes('localhost');
+    if (process.env.VERCEL_ENV === 'production') return false;
+    // Local/preview: aceita apenas loopback (sem x-forwarded-for para evitar bypass)
+    var ip = req.socket && req.socket.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
   }
   var authHeader = req.headers['authorization'] || req.headers['x-cron-secret'] || '';
   return authHeader === 'Bearer ' + secret || authHeader === secret;

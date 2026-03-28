@@ -33,6 +33,7 @@
 var https = require('https');
 var cors  = require('./_cors');
 var auth  = require('./_auth');
+var rl    = require('./_ratelimit');
 
 var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 var SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
@@ -503,6 +504,12 @@ module.exports = async function handler(req, res) {
     auth.verifyToken(token, function(err, u) { resolve(err ? null : u); });
   });
   if (!user) { res.status(401).json({ error: 'Token inválido ou expirado' }); return; }
+
+  // Rate limit: 20 req/min por usuário
+  var rateLimitDone = await new Promise(function(resolve) {
+    rl.rateLimit(req, res, resolve, { max: 20, windowMs: 60000 }, user.id);
+  });
+  if (res.headersSent) return; // rate limit bloqueou
 
   // Valida body
   var body      = req.body || {};

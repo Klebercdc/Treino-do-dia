@@ -1,13 +1,21 @@
+var crypto = require('crypto');
 var cors = require('./_cors');
-var auth = require('./_auth');
 var plans = require('./_plans');
 var { getMonthStartIso, buildCommissionBundle } = require('../src/lib/affiliate/affiliateService');
 
+// Endpoint restrito a service token — nunca acessível por usuários comuns.
+// Chamado apenas pelo webhook de pagamento (payment-webhook.js) ou serviço interno.
 function hasValidServiceToken(req) {
   var configured = process.env.AFFILIATE_SALE_TOKEN || '';
   if (!configured) return false;
   var received = req.headers['x-affiliate-token'] || '';
-  return received === configured;
+  // timingSafeEqual previne timing attacks na comparação do token
+  if (received.length !== configured.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(received), Buffer.from(configured));
+  } catch(e) {
+    return false;
+  }
 }
 
 function handleSale(req, res) {
@@ -72,11 +80,11 @@ module.exports = function(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  if (hasValidServiceToken(req)) {
-    return handleSale(req, res);
+  // Somente service token autorizado — não permite acesso de usuários comuns
+  // para evitar registro fraudulento de comissões de afiliados.
+  if (!hasValidServiceToken(req)) {
+    return res.status(401).json({ error: 'Não autorizado.' });
   }
 
-  return auth.requireAuth(req, res, function() {
-    return handleSale(req, res);
-  });
+  return handleSale(req, res);
 };
