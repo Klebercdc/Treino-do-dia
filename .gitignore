@@ -31,3 +31,4 @@ npm-debug.log*
 # Scraper — cache e output gerados localmente
 etl/scrapers/.cache/
 etl/scrapers/output/
+.tmp-system-check/
