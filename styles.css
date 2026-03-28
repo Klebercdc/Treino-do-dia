@@ -757,6 +757,144 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 #planModal.show { display: flex !important; }
 .plan-card-slide { animation: planSlideIn .18s ease-out; }
 @keyframes planSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── PLAN MODAL (UPGRADE) ── */
+.plan-modal-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 10px 10px calc(8px + env(safe-area-inset-bottom));
+}
+.plan-modal-card {
+  background: #131313;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 30px;
+  width: min(100%, 620px);
+  max-height: min(940px, calc(100dvh - 14px - env(safe-area-inset-bottom)));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.62), 0 1px 0 rgba(255,255,255,0.08) inset;
+}
+.plan-modal-header-wrap {
+  padding: max(10px, calc(6px + env(safe-area-inset-top))) 18px 0;
+  flex-shrink: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 85%),
+    radial-gradient(ellipse at 12% -30%, rgba(255,107,0,0.16) 0%, rgba(255,107,0,0) 58%);
+}
+.plan-modal-handle {
+  width: 42px;
+  height: 4px;
+  border-radius: 99px;
+  margin: 0 auto 14px;
+  background: rgba(255,255,255,0.2);
+}
+.plan-modal-header {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 2px 2px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.plan-modal-brand {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.plan-modal-logo {
+  height: 42px;
+  width: auto;
+  max-width: min(52vw, 240px);
+  object-fit: contain;
+  display: block;
+}
+.plan-modal-subtitle {
+  margin-top: 6px;
+  font-size: 0.79rem;
+  line-height: 1.4;
+  letter-spacing: .01em;
+  color: rgba(255,255,255,0.68);
+}
+.plan-modal-close-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+  color: rgba(255,255,255,0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: all .16s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.26), 0 1px 0 rgba(255,255,255,0.08) inset;
+  -webkit-tap-highlight-color: transparent;
+}
+.plan-modal-close-btn:hover,
+.plan-modal-close-btn:active {
+  color: #fff;
+  border-color: rgba(255,255,255,0.28);
+  transform: translateY(1px);
+}
+.plan-modal-tabs {
+  display: flex;
+  gap: 5px;
+  margin: 12px 18px 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.plan-modal-carousel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 13px 18px 4px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.plan-modal-carousel::-webkit-scrollbar { display: none; }
+.plan-modal-billing {
+  display: flex;
+  gap: 6px;
+  margin: 8px 18px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 4px;
+  flex-shrink: 0;
+}
+.plan-modal-footer {
+  padding: 0 18px calc(16px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+@media (max-width: 380px) {
+  .plan-modal-shell { padding-inline: 8px; }
+  .plan-modal-card { border-radius: 26px; }
+  .plan-modal-header { min-height: 80px; padding-bottom: 14px; }
+  .plan-modal-logo { height: 37px; max-width: min(50vw, 200px); }
+  .plan-modal-subtitle { font-size: 0.74rem; }
+  .plan-modal-tabs,
+  .plan-modal-billing { margin-left: 14px; margin-right: 14px; }
+  .plan-modal-carousel { padding-left: 14px; padding-right: 14px; }
+  .plan-modal-footer { padding-left: 14px; padding-right: 14px; }
+  .plan-modal-carousel { padding-top: 11px; }
+}
 #homePlanBadge.badge-pro   { background:rgba(249,115,22,0.22); border-color:rgba(249,115,22,0.55); color:var(--accent); }
 #homePlanBadge.badge-ultra { background:rgba(168,85,247,0.22); border-color:rgba(168,85,247,0.55); color:#c084fc; }
 #homePlanBadge.badge-trial { background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#c084fc; }

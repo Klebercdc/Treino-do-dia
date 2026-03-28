@@ -2574,18 +2574,18 @@
   </div>
 </div>
 
-<div id="planModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:flex-end;justify-content:center">
-  <div style="background:#131313;border-radius:28px 28px 0 0;width:100%;max-width:560px;max-height:96dvh;display:flex;flex-direction:column">
+<div id="planModal" class="plan-modal-shell" style="display:none" onclick="if(event.target===this)closePlanModal()">
+  <div class="plan-modal-card">
 
     <!-- Handle + Header -->
-    <div style="padding:14px 20px 0;flex-shrink:0">
-      <div style="width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 14px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <img src="layout.png" alt="KRONIA" style="height:28px;object-fit:contain;display:block" />
-          <div style="font-size:0.68rem;color:rgba(255,255,255,0.38);margin-top:2px">Escolha o plano que acelera sua evolução</div>
+    <div class="plan-modal-header-wrap">
+      <div class="plan-modal-handle"></div>
+      <div class="plan-modal-header">
+        <div class="plan-modal-brand">
+          <img src="layout.png" alt="KRONIA" class="plan-modal-logo" />
+          <div class="plan-modal-subtitle">Escolha o plano que acelera sua evolução</div>
         </div>
-        <button onclick="closePlanModal()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.5);font-size:1rem;flex-shrink:0">✕</button>
+        <button onclick="closePlanModal()" class="plan-modal-close-btn" aria-label="Fechar modal de planos">✕</button>
       </div>
     </div>
 
@@ -2604,14 +2604,14 @@
     <div id="planStatusMsg" style="display:none;margin:8px 20px 0;padding:9px 14px;border-radius:12px;font-size:0.76rem;font-weight:600;flex-shrink:0"></div>
 
     <!-- Tabs de seleção de plano -->
-    <div style="display:flex;gap:5px;margin:14px 20px 0;background:rgba(255,255,255,0.05);border-radius:13px;padding:4px;flex-shrink:0">
+    <div class="plan-modal-tabs">
       <button id="planTab2" onclick="scrollPlanTo(2)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="crown" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>ULTRA</span></button>
       <button id="planTab1" onclick="scrollPlanTo(1)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)"><span style="display:flex;align-items:center;justify-content:center;gap:3px"><i data-lucide="zap" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>PRO</span></button>
       <button id="planTab0" onclick="scrollPlanTo(0)" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.02em;background:transparent;color:rgba(255,255,255,0.35)">FREE</button>
     </div>
 
     <!-- Área de conteúdo dos planos (scroll vertical) -->
-    <div id="planCarousel" style="flex:1;overflow-y:auto;padding:14px 20px 4px;min-height:0;scrollbar-width:none">
+    <div id="planCarousel" class="plan-modal-carousel">
 
       <!-- FREE -->
       <div class="plan-card-slide" id="planSlide0" data-plan="free">
@@ -2707,13 +2707,13 @@
     </div><!-- fim área de planos -->
 
     <!-- Toggle mensal/anual -->
-    <div style="display:flex;gap:6px;margin:8px 20px;background:rgba(255,255,255,0.05);border-radius:12px;padding:4px;flex-shrink:0">
+    <div class="plan-modal-billing">
       <button id="planBtnMensal" onclick="setPlanBilling('mensal')" style="flex:1;padding:9px;border:none;border-radius:9px;background:rgba(255,255,255,0.14);color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;transition:all .2s">Mensal</button>
       <button id="planBtnAnual" onclick="setPlanBilling('anual')" style="flex:1;padding:9px;border:none;border-radius:9px;background:transparent;color:rgba(255,255,255,0.45);font-size:0.78rem;font-weight:700;cursor:pointer;transition:all .2s">Anual <span style="color:#10b981;font-weight:900">−30%</span></button>
     </div>
 
     <!-- CTA principal -->
-    <div style="padding:0 20px calc(20px + env(safe-area-inset-bottom));flex-shrink:0">
+    <div class="plan-modal-footer">
       <button id="planCTA" onclick="onPlanCTA()" style="width:100%;border:none;border-radius:14px;padding:16px;color:#fff;font-family:var(--font);font-size:0.95rem;font-weight:800;cursor:pointer;letter-spacing:.02em;transition:all .15s;background:var(--accent)">
         <span style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="zap" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2.5"></i>Assinar PRO — R$29,90/mês</span>
       </button>
