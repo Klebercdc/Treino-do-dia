@@ -15,7 +15,9 @@ export class KroniaBrain {
 
   async think(input: AIRequestInput): Promise<AssistantStructuredResponse> {
     const previousAssistant = [...input.history].reverse().find((m) => m.role === "assistant")?.content
-    const hintIntent = classifyIntent(input.userMessage, previousAssistant)
+    // O classificador de palavras é usado apenas para otimizar o limite de tokens.
+    // A classificação real de intenção é feita semanticamente pelo LLM via system prompt.
+    const tokenHint = classifyIntent(input.userMessage, previousAssistant)
 
     const syntheticUserPrompt = buildUserMessageBundle({
       ...input,
@@ -25,16 +27,12 @@ export class KroniaBrain {
     const messages: ChatMessage[] = [
       {
         role: "user",
-        content: [
-          `INTENÇÃO SUGERIDA PELO CLASSIFICADOR: ${hintIntent}`,
-          "",
-          syntheticUserPrompt,
-        ].join("\n"),
+        content: syntheticUserPrompt,
       },
     ]
 
     const payloadIntents = new Set(["treino", "dieta", "suplementacao", "mobilidade"])
-    const maxTokens = payloadIntents.has(hintIntent) ? 1800 : 600
+    const maxTokens = payloadIntents.has(tokenHint) ? 1800 : 600
 
     const raw = await this.modelClient.generate({
       systemPrompt: KRONIA_SYSTEM_PROMPT,
