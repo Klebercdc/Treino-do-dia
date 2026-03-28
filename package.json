@@ -15,7 +15,7 @@
     "scraper:exrx": "node etl/scrapers/cli.js --sources exrx --stats",
     "scraper:all": "node etl/scrapers/cli.js --sources wger,exrx --csv --stats",
     "system:check": "sh -c 'if command -v tsx >/dev/null 2>&1; then tsx scripts/system-check.ts; else npm run -s system:check:legacy; fi'",
-    "system:check:legacy": "tsc --pretty false --target ES2020 --module commonjs --lib ES2020,DOM --esModuleInterop --skipLibCheck --outDir .tmp-system-check scripts/system-check.ts src/lib/checks/*.ts src/lib/utils/env.ts && node .tmp-system-check/scripts/system-check.js",
+    "system:check:legacy": "tsc --pretty false --target ES2020 --module node16 --moduleResolution node16 --lib ES2020,DOM --types node --esModuleInterop --skipLibCheck --outDir .tmp-system-check scripts/system-check.ts src/lib/checks/*.ts src/lib/utils/env.ts && node .tmp-system-check/scripts/system-check.js",
     "migrate": "tsx scripts/run-migrations.ts",
     "migrate:dry": "tsx scripts/run-migrations.ts --dry-run"
   },
