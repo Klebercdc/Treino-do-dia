@@ -25,8 +25,9 @@
 
 'use strict';
 
-var https = require('https');
-var cors  = require('./_cors');
+var https  = require('https');
+var crypto = require('crypto');
+var cors   = require('./_cors');
 
 var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 var SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -141,9 +142,14 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'GET')     { res.status(405).json({ error: 'Use GET' }); return; }
 
-  // Segurança: valida o secret do cron
+  // Segurança: valida o secret do cron (timing-safe para evitar timing attacks)
   var secret = req.headers['x-cron-secret'] || (req.query && req.query.secret) || '';
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
+  var secretBuf   = Buffer.from(CRON_SECRET || '');
+  var receivedBuf = Buffer.from(secret);
+  var validSecret = CRON_SECRET &&
+    receivedBuf.length === secretBuf.length &&
+    crypto.timingSafeEqual(receivedBuf, secretBuf);
+  if (!validSecret) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }

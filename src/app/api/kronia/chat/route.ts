@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { checkRateLimit } from "../../../../lib/utils/serverRateLimit"
 import { createServerSupabaseClient } from "../../../../lib/supabase/server"
 import { KroniaChatService } from "../../../../ai/chatService"
 import { SupabasePlanRepository } from "../../../../ai/supabasePlanRepository"
@@ -26,6 +27,12 @@ export async function POST(req: Request) {
     }
 
     const userId = userData.user.id
+
+    // 1b. Rate limit
+    const rl = checkRateLimit(userId, { max: 20, windowMs: 60000 })
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
 
     // 2. Validação do body
     const body = await req.json().catch(() => null)

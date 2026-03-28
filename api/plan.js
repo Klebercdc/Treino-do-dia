@@ -1,5 +1,6 @@
 var cors = require('./_cors');
 var auth = require('./_auth');
+var rl   = require('./_ratelimit');
 var plans = require('./_plans');
 var planRules = require('../src/lib/plans/planRules');
 
@@ -20,24 +21,27 @@ function handleConfig(req, res) {
 function handlePlanFeatures(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   return auth.requireAuth(req, res, function(user) {
-    plans.getQuotaInfo(user.id, function(err, info) {
-      if (err) return res.status(500).json({ error: String(err) });
-      return res.status(200).json({
-        plan: info.plan,
-        features: info.features,
-        quota: {
-          used: info.used,
-          limit: info.limit,
-          remaining: info.remaining
-        }
+    return rl.rateLimit(req, res, function() {
+      plans.getQuotaInfo(user.id, function(err, info) {
+        if (err) return res.status(500).json({ error: String(err) });
+        return res.status(200).json({
+          plan: info.plan,
+          features: info.features,
+          quota: {
+            used: info.used,
+            limit: info.limit,
+            remaining: info.remaining
+          }
+        });
       });
-    });
+    }, { max: 10, windowMs: 60000 }, user.id);
   });
 }
 
 function handlePlanCurrent(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   return auth.requireAuth(req, res, function(user) {
+    return rl.rateLimit(req, res, function() {
     plans.getTrialDays(function(tdErr, trialDays) {
       var safeTrialDays = tdErr ? 7 : trialDays;
       plans.getUserPlan(user.id, function(err, planRow) {
@@ -99,6 +103,7 @@ function handlePlanCurrent(req, res) {
         });
       });
     });
+    }, { max: 10, windowMs: 60000 }, user.id);
   });
 }
 
