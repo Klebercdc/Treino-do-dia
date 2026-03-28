@@ -55,15 +55,50 @@
 <script>
 // ── Viewport real no mobile (evita bug do chrome mobile) ──────────
 (function() {
-  function setVH() {
+  function updateViewportLayout() {
     var vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--vh', vh + 'px');
+
+    var inputBar = document.querySelector('.chat-input');
+    if (!inputBar) return;
+
+    if (window.visualViewport) {
+      var keyboardOffset = Math.max(
+        0,
+        window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop
+      );
+      inputBar.style.bottom = keyboardOffset + 'px';
+      document.documentElement.style.setProperty('--keyboard-offset', keyboardOffset + 'px');
+    } else {
+      inputBar.style.bottom = '0px';
+      document.documentElement.style.setProperty('--keyboard-offset', '0px');
+    }
+
+    document.documentElement.style.setProperty('--chat-input-height', inputBar.offsetHeight + 'px');
   }
-  setVH();
-  window.addEventListener('resize', setVH);
-  window.addEventListener('orientationchange', function() {
-    setTimeout(setVH, 100); // aguarda recalculo do browser
+
+  window.addEventListener('load', updateViewportLayout);
+  window.addEventListener('resize', updateViewportLayout);
+  window.addEventListener('orientationchange', updateViewportLayout);
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateViewportLayout);
+    window.visualViewport.addEventListener('scroll', updateViewportLayout);
+  }
+
+  if (window.ResizeObserver) {
+    var observedInputBar = document.querySelector('.chat-input');
+    if (observedInputBar) {
+      var chatInputResizeObserver = new ResizeObserver(updateViewportLayout);
+      chatInputResizeObserver.observe(observedInputBar);
+    }
+  }
+
+  document.addEventListener('focusin', updateViewportLayout);
+  document.addEventListener('focusout', function() {
+    setTimeout(updateViewportLayout, 60);
   });
+  setTimeout(updateViewportLayout, 0);
 
   // Bloqueia scroll no body — só permite em elementos com .app-scroll
   document.addEventListener('touchmove', function(e) {
@@ -1759,9 +1794,9 @@
         </div>
       </div>
 
-  <div class="orient-chat-wrap">
-    <div id="orientExpertMessages" class="orient-chat-messages"></div>
-    <div class="orient-chat-bar">
+  <div class="orient-chat-wrap chat-wrapper">
+    <div id="orientExpertMessages" class="orient-chat-messages chat-messages"></div>
+    <div class="orient-chat-bar chat-input">
       <div class="orient-input-wrap">
         <button class="orient-suggestions-toggle" id="orientSuggestBtn" onclick="toggleOrientSuggestions()" title="Sugestões rápidas">
           <i data-lucide="plus" class="lucide" width="16" height="16" stroke="#8E8E93" fill="none" stroke-width="1.9"></i>
@@ -1778,7 +1813,7 @@
           <i data-lucide="arrow-up" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
         </button>
       </div>
-      <p style="text-align:center;font-size:0.65rem;color:rgba(255,255,255,0.2);margin:4px 16px calc(6px + env(safe-area-inset-bottom));line-height:1.4;font-family:-apple-system,'SF Pro Text',sans-serif;">KRONOS pode cometer erros. Considere verificar informações importantes.</p>
+      <p style="text-align:center;font-size:0.65rem;color:rgba(255,255,255,0.2);margin:4px 16px 6px;line-height:1.4;font-family:-apple-system,'SF Pro Text',sans-serif;">KRONOS pode cometer erros. Considere verificar informações importantes.</p>
     </div>
   </div>
 
