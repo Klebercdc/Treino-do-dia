@@ -17,21 +17,22 @@ CATEGORIAS DE INTENÇÃO:
 
 - "treino": o usuário quer que a IA GERE ou AJUSTE um treino. Exemplos: "quero um treino", "me monta algo pra resistência", "preciso de uma rotina de exercícios", "cria algo pra eu fazer na academia".
 - "dieta": o usuário quer que a IA GERE ou AJUSTE uma dieta ou cardápio. Exemplos: "me faz um plano alimentar", "quero comer melhor, me ajuda?", "preciso de um cardápio".
-- "suplementacao": o usuário quer recomendação ou geração de protocolo de suplementos. Exemplos: "o que devo tomar?", "me indica um suplemento", "preciso de creatina?".
+- "suplementacao": o usuário quer recomendação pessoal ou geração de protocolo de suplementos. Exemplos: "o que devo tomar?", "me indica um suplemento", "preciso de creatina?", "quero um protocolo de suplementação". NÃO inclui: perguntas sobre fontes/referências da IA, perguntas técnicas sobre o que é um suplemento, ou qualquer pergunta sobre o conhecimento do assistente.
 - "mobilidade": o usuário quer um plano de alongamento ou mobilidade. Exemplos: "preciso de exercícios pra mobilidade", "me ajuda com alongamento".
 - "ajuste": o usuário quer MODIFICAR algo já gerado anteriormente (treino, dieta, etc.).
 - "configuracao": o usuário quer abrir configurações, ajustar preferências no app.
-- "duvida": o usuário faz uma PERGUNTA técnica ou geral, quer aprender ou entender algo. Exemplos: "qual a diferença entre whey concentrado e isolado?", "quantas proteínas devo comer?", "o que é periodização?".
+- "duvida": o usuário faz uma PERGUNTA técnica ou geral, quer aprender ou entender algo. Inclui perguntas sobre suplementos, sobre fontes de referência da IA, ou sobre o próprio assistente. Exemplos: "qual a diferença entre whey concentrado e isolado?", "quantas proteínas devo comer?", "o que é periodização?", "qual sua referência de suplemento?", "qual sua base científica?".
 - "continuidade": o usuário está respondendo diretamente ao que a IA disse, com frase curta sem mudar de assunto.
 - "chat": o usuário está relatando algo, cumprimentando, desabafando, compartilhando contexto do dia, mas NÃO está pedindo geração de nenhum conteúdo. Exemplos: "estou cansado hoje", "não treinei essa semana", "tô focado em resistência", "meu objetivo é emagrecer".
 - "acao_direta": o usuário quer executar uma ação específica no app (abrir tela, gerar PDF, etc.).
 
 REGRAS CRÍTICAS:
 1. Mensagens de RELATO, CONTEXTO ou ESTADO ("estou treinando", "meu foco é", "hoje fiz") = "chat", nunca "treino".
-2. Só classifique "treino"/"dieta"/"suplementacao"/"mobilidade" se houver PEDIDO IMPLÍCITO ou EXPLÍCITO de geração.
-3. Perguntas com "como", "por que", "qual", "quando", "o que" = "duvida".
-4. Em caso de dúvida entre "chat" e outro intent, prefira "chat".
-5. Use o histórico recente para entender contexto de continuidade.
+2. Só classifique "treino"/"dieta"/"suplementacao"/"mobilidade" se houver PEDIDO IMPLÍCITO ou EXPLÍCITO de geração para o usuário.
+3. Perguntas com "como", "por que", "qual", "quando", "o que", "qual sua" = "duvida".
+4. Perguntas sobre as referências, fontes ou conhecimento da IA = "duvida", NUNCA "suplementacao".
+5. Em caso de dúvida entre "chat" e outro intent, prefira "chat".
+6. Use o histórico recente para entender contexto de continuidade.
 
 CAMPO needsPayload: true apenas se intent for treino, dieta, suplementacao ou mobilidade E o usuário claramente quer a geração (não só tirar dúvida).
 CAMPO requiresClarification: true se a mensagem for ambígua e precisar de pergunta antes de agir.

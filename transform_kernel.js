@@ -313,9 +313,10 @@ var _usedTransforms = {};
 // Quando presentes, transforms de navegação (treino, dieta, etc.) não devem aparecer.
 var INFO_INTENT_PATTERNS = [
   'dica','me dê','me de ','me explica','como posso','como fazer','como devo',
-  'por que','qual é','qual a','o que é','o que devo','me conta','me fala',
+  'por que','qual é','qual a','qual sua','qual seu','o que é','o que devo','me conta','me fala',
   'maximizar','melhorar','aumentar resultado','entender','analis','diagnos',
-  'me oriente','me ajude a entender','qual seria','devo fazer'
+  'me oriente','me ajude a entender','qual seria','devo fazer',
+  'sua referência','seu conhecimento','sua base','sua fonte','você usa','você tem acesso'
 ];
 
 function _isInfoIntent(texto) {
