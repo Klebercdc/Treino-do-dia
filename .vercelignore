@@ -1,0 +1,9 @@
+# TypeScript/test files — not needed for deployment
+playwright.config.ts
+tsconfig.json
+tests/
+etl/
+*.py
+*.sh
+backup-to-drive.sh
+PROXIMOS-PASSOS.md
