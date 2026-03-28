@@ -174,8 +174,8 @@ module.exports = function(req, res) {
     return res.status(400).json({ error: 'provider inválido. Use ?provider=hotmart ou ?provider=kiwify' });
   }
 
-  if (!process.env.SUPABASE_SERVICE_KEY) {
-    console.error('[webhook] SUPABASE_SERVICE_KEY ausente. Requisição rejeitada por segurança.');
+  if (!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[webhook] SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY ausente. Requisição rejeitada por segurança.');
     return res.status(503).json({ error: 'Webhook temporariamente indisponível por configuração de segurança ausente.' });
   }
 
