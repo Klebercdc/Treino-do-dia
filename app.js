@@ -74,9 +74,9 @@ const TREINOS_PRONTOS = {
 // Migração única: copia chaves legacy → kronia_* (roda só uma vez graças ao guard)
 (function() {
   if (localStorage.getItem('_kronia_migrated')) return;
-  [['titanpro_','draft_v2'],['titanpro_','history_v2'],['titanpro_','prev_v1'],
-   ['titanpro_','config'],['titanpro_','prs'],['titanpro_','mesociclo'],
-   ['titanpro_','calc_prefs'],['titanpro_','draftv3'],
+  [['kronia_','draft_v2'],['kronia_','history_v2'],['kronia_','prev_v1'],
+   ['kronia_','config'],['kronia_','prs'],['kronia_','mesociclo'],
+   ['kronia_','calc_prefs'],['kronia_','draftv3'],
    ['titan_','light'],['titan_','onboarded'],['titan_','unidade'],['titan_','plan']
   ].forEach(([prefix, k]) => {
     const from = prefix + k, to = 'kronia_' + k;
