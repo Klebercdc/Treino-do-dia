@@ -130,7 +130,7 @@ body {
 ══════════════════════════════════════════ */
 .timer-area { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px 0; }
 #timerSheet {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 3800;
   background: #1a1a1a; border-radius: 20px 20px 0 0;
   border-top: 1px solid rgba(255,255,255,0.1);
   padding: 0 20px calc(16px + env(safe-area-inset-bottom));
