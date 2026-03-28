@@ -3598,8 +3598,10 @@ function closePricingScreen() {
 
 function selectPlan(plan) {
   if (plan === 'free') { closePricingScreen(); return; }
-  if (typeof assinarPro === 'function') {
-    assinarPro(plan);
+  if (plan === 'ultra' && typeof assinarUltra === 'function') {
+    assinarUltra();
+  } else if (typeof assinarPro === 'function') {
+    assinarPro();
   } else {
     showToast('Redirecionando para o checkout...', 'info', 3000);
   }

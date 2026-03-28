@@ -2301,7 +2301,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .pr-headline {
   text-align: center;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 .pr-eyebrow {
   display: inline-flex;
@@ -2319,12 +2319,42 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .pr-title {
   font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-  font-size: 30px;
+  font-size: 35px;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.05;
   letter-spacing: -0.5px;
   color: #fff;
   margin: 0;
+}
+.pr-subtitle {
+  margin: 11px auto 0;
+  max-width: 620px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.72);
+}
+.pr-offer-banner {
+  background: linear-gradient(135deg, rgba(34,197,94,0.22), rgba(124,58,237,0.3));
+  border: 1px solid rgba(167,243,208,0.45);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(16,185,129,0.22);
+}
+.pr-offer-main {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 23px;
+  line-height: 1;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+.pr-offer-sub {
+  margin-top: 7px;
+  font-size: 12px;
+  color: rgba(236,253,245,0.95);
+  font-weight: 700;
 }
 /* Billing toggle */
 .pr-billing-toggle {
@@ -2397,6 +2427,10 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   background: linear-gradient(145deg, rgba(139,92,246,0.22) 0%, rgba(124,58,237,0.1) 100%);
   border: 1.5px solid rgba(168,85,247,0.68);
   box-shadow: 0 0 0 1px rgba(216,180,254,0.2) inset, 0 18px 44px rgba(124,58,237,0.34);
+}
+.pr-card-ultra-main {
+  padding: 24px;
+  margin-bottom: 16px;
 }
 .pr-card-ultra:active { transform: scale(0.99); }
 /* Popular / TUDO badges */
@@ -2482,9 +2516,10 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .pr-card-desc {
   font-size: 12px;
-  color: rgba(255,255,255,0.38);
+  color: rgba(233,213,255,0.8);
   margin-bottom: 14px;
   line-height: 1.4;
+  font-weight: 700;
 }
 .pr-feats {
   display: flex;
@@ -2494,10 +2529,11 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 }
 .pr-feat {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   font-size: 13px;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255,255,255,0.86);
+  line-height: 1.35;
 }
 .pr-feat-dot {
   width: 6px;
@@ -2545,6 +2581,86 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   box-shadow: 0 6px 20px rgba(139,92,246,0.3);
 }
 .pr-cta-ultra:hover { box-shadow: 0 8px 28px rgba(139,92,246,0.45); }
+.pr-cta-sticky {
+  position: sticky;
+  bottom: 14px;
+  z-index: 5;
+  font-size: 14px;
+  padding: 16px 12px;
+  margin-bottom: 6px;
+  box-shadow: 0 14px 34px rgba(124,58,237,0.5);
+}
+.pr-cta-subtext {
+  text-align: center;
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+.pr-anchor-price {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  color: #f5f3ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.pr-compare {
+  margin-bottom: 20px;
+}
+.pr-compare-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 8px;
+}
+.pr-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pr-compare-col {
+  border-radius: 14px;
+  padding: 12px;
+}
+.pr-compare-muted {
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.02);
+  opacity: 0.58;
+}
+.pr-compare-plan {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.64);
+}
+.pr-compare-item {
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 5px;
+  line-height: 1.35;
+}
+.pr-compare-price {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.75);
+}
+.pr-compare-price small {
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+}
+.pr-compare-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.58);
+  line-height: 1.4;
+}
 /* Trust bar */
 .pr-trust {
   display: flex;
@@ -2555,6 +2671,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   color: rgba(255,255,255,0.22);
   flex-wrap: wrap;
   margin-bottom: 10px;
+  margin-top: 4px;
 }
 .pr-trust-item {
   display: flex;

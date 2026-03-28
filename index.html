@@ -588,132 +588,82 @@
 
     <!-- Headline -->
     <div class="pr-headline">
-      <div class="pr-eyebrow">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        ULTRA EM DESTAQUE
-      </div>
-      <h1 class="pr-title">Escolha seu nível.<br><span style="color:#A855F7">ULTRA é o completo.</span></h1>
+      <h1 class="pr-title">Teste o ULTRA por 7 dias e sinta a diferença no seu treino</h1>
+      <p class="pr-subtitle">Acesso completo à IA KRONIA para treinos, dieta e análise avançada — sem risco.</p>
+    </div>
+
+    <div class="pr-offer-banner">
+      <div class="pr-offer-main">7 DIAS GRÁTIS COM ACESSO TOTAL AO ULTRA</div>
+      <div class="pr-offer-sub">Sem cobrança agora • Cancele quando quiser</div>
     </div>
 
     <!-- Billing Toggle -->
     <div class="pr-billing-toggle">
       <button class="pr-billing-btn pr-billing-active" id="prBtnMensal" onclick="setPricingBilling('mensal')">Mensal</button>
-      <button class="pr-billing-btn" id="prBtnAnual" onclick="setPricingBilling('anual')">Anual <span class="pr-discount-chip">-30%</span></button>
+      <button class="pr-billing-btn" id="prBtnAnual" onclick="setPricingBilling('anual')">Anual <span class="pr-discount-chip">Economize 30%</span></button>
     </div>
 
-    <!-- Plan Cards -->
-    <div class="pr-cards">
-
-      <!-- FREE -->
-      <div class="pr-card pr-card-free" onclick="selectPlan('free')">
-        <div class="pr-card-header">
-          <div class="pr-plan-pill pr-pill-free">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            FREE
-          </div>
-          <div class="pr-price-block">
-            <span class="pr-price-main">R$0</span>
-            <span class="pr-price-sub">para sempre</span>
-          </div>
-        </div>
-        <div class="pr-card-desc">Registre treinos, descubra PRs e comece a evoluir.</div>
-        <div class="pr-feats">
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#6b7280"></span>Registro de treinos ilimitado</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#6b7280"></span>Detecção automática de PRs</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#6b7280"></span>Streak e calendário de treinos</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#6b7280"></span>Calculadora nutricional</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#6b7280"></span>5 conversas com KRONOS/mês</div>
-          <div class="pr-feat pr-feat-locked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>KRONOS PULSE</div>
-          <div class="pr-feat pr-feat-locked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Mesociclo IA</div>
-          <div class="pr-feat pr-feat-locked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Heatmap muscular</div>
-        </div>
-        <button class="pr-cta pr-cta-free">Continuar grátis</button>
+    <!-- ULTRA protagonista -->
+    <div class="pr-card pr-card-ultra pr-card-ultra-main" onclick="selectPlan('ultra')">
+      <div class="pr-ultra-badge">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#A855F7"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+        ULTRA ATIVO NO TESTE
       </div>
-
-      <!-- PRO (intermediário) -->
-      <div class="pr-card pr-card-pro" onclick="selectPlan('pro')">
-        <div class="pr-popular-badge">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          INTERMEDIÁRIO
+      <div class="pr-card-header">
+        <div class="pr-plan-pill pr-pill-ultra">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#A855F7"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
+          PLANO ULTRA
         </div>
-        <div class="pr-card-header">
-          <div class="pr-plan-pill pr-pill-pro">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            PRO
+        <div class="pr-price-block">
+          <div class="pr-price-row">
+            <span class="pr-price-main" id="prUltraPrice">R$59</span><span class="pr-price-cents" id="prUltraCents">,90</span>
           </div>
-          <div class="pr-price-block">
-            <div class="pr-price-row">
-              <span class="pr-price-main" id="prProPrice">R$29</span><span class="pr-price-cents" id="prProCents">,90</span>
-            </div>
-            <span class="pr-price-sub" id="prProPeriod">/mês</span>
-          </div>
+          <span class="pr-price-sub" id="prUltraPeriod">/mês</span>
         </div>
-        <div class="pr-card-desc">Plano intermediário com IA para treino, dieta e chat.</div>
-        <div class="pr-feats">
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#FF6B00"></span>Tudo do FREE</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#FF6B00"></span>Treino com IA</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#FF6B00"></span>Dieta com IA</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#FF6B00"></span>Chat com IA</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#FF6B00"></span>Análise premium intermediária</div>
-          <div class="pr-feat pr-feat-locked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,107,0,0.3)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>KRONIA TRANSFORMS</div>
-          <div class="pr-feat pr-feat-locked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,107,0,0.3)" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>PDF premium</div>
-        </div>
-        <button class="pr-cta pr-cta-pro">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          Escolher PRO
-        </button>
       </div>
-
-      <!-- ULTRA -->
-      <div class="pr-card pr-card-ultra" onclick="selectPlan('ultra')">
-        <div class="pr-ultra-badge">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="#A855F7"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
-          MAIS COMPLETO
-        </div>
-        <div class="pr-card-header">
-          <div class="pr-plan-pill pr-pill-ultra">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#A855F7"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
-            ULTRA
-          </div>
-          <div class="pr-price-block">
-            <div class="pr-price-row">
-              <span class="pr-price-main" id="prUltraPrice">R$59</span><span class="pr-price-cents" id="prUltraCents">,90</span>
-            </div>
-            <span class="pr-price-sub" id="prUltraPeriod">/mês</span>
-          </div>
-        </div>
-        <div class="pr-card-desc">Plano mais completo: tudo do PRO + recursos premium avançados.</div>
-        <div class="pr-feats">
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Tudo do PRO</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>KRONIA TRANSFORMS completo</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>PDF premium liberado</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Análise premium avançada</div>
-          <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Treino, dieta e chat com IA</div>
-        </div>
-        <button class="pr-cta pr-cta-ultra">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/></svg>
-          Assinar ULTRA (Flagship)
-        </button>
+      <div class="pr-card-desc">Você treina com estratégia, não no achismo.</div>
+      <div class="pr-feats">
+        <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Treino adaptativo com IA baseado na sua fadiga e performance</div>
+        <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Dieta personalizada com geração automática de PDF profissional</div>
+        <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Ajustes inteligentes semana a semana (progressão real)</div>
+        <div class="pr-feat pr-feat-ok"><span class="pr-feat-dot" style="background:#A855F7"></span>Controle completo da sua evolução (volume, carga e histórico)</div>
       </div>
-
+      <div class="pr-anchor-price">Menos de R$2 por dia para treinar com inteligência</div>
     </div>
+
+    <div class="pr-compare">
+      <div class="pr-compare-title">Comparação rápida (secundária)</div>
+      <div class="pr-compare-grid">
+        <div class="pr-compare-col pr-compare-muted">
+          <div class="pr-compare-plan">PRO</div>
+          <div class="pr-compare-item">– Sem análise avançada</div>
+          <div class="pr-compare-item">– Sem PDF automático</div>
+          <div class="pr-compare-item">– Ajustes limitados</div>
+          <div class="pr-compare-price"><span id="prProPrice">R$29</span><span id="prProCents">,90</span> <small id="prProPeriod">/mês</small></div>
+        </div>
+        <div class="pr-compare-col pr-compare-muted">
+          <div class="pr-compare-plan">FREE</div>
+          <div class="pr-compare-item">– Apenas registro básico após 7 dias</div>
+          <div class="pr-compare-item">– Sem personalização inteligente</div>
+          <div class="pr-compare-item">– Sem evolução guiada</div>
+          <div class="pr-compare-price">R$0 <small>modo básico</small></div>
+        </div>
+      </div>
+      <div class="pr-compare-note">O plano FREE inclui 7 dias completos de ULTRA. Após isso, volta para o modo básico.</div>
+    </div>
+
+    <button class="pr-cta pr-cta-ultra pr-cta-sticky" onclick="event.stopPropagation();selectPlan('ultra')">
+      COMEÇAR TESTE GRATUITO DE 7 DIAS
+    </button>
+    <div class="pr-cta-subtext">Acesso imediato ao ULTRA • Sem cobrança agora</div>
 
     <!-- Trust Bar -->
     <div class="pr-trust">
-      <div class="pr-trust-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        Pagamento seguro
-      </div>
-      <div class="pr-trust-sep">·</div>
-      <div class="pr-trust-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        LGPD
-      </div>
-      <div class="pr-trust-sep">·</div>
-      <div class="pr-trust-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Cancele quando quiser
-      </div>
+      <div class="pr-trust-item">Sem fidelidade</div>
+      <div class="pr-trust-sep">•</div>
+      <div class="pr-trust-item">Cancelamento fácil</div>
+      <div class="pr-trust-sep">•</div>
+      <div class="pr-trust-item">100% seguro</div>
     </div>
     <div class="pr-domain">titanpro.app.br</div>
 
