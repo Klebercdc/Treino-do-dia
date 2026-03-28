@@ -507,7 +507,7 @@ backgroundSize:“100% 100%,32px 32px,32px 32px”,
     {/* LGPD */}
     <div style={{ textAlign:"center", marginTop:16, fontSize:10, color:"rgba(255,255,255,0.15)", lineHeight:1.6 }}>
       <ShieldCheck size={10} style={{ marginRight:4, verticalAlign:"middle" }}/>
-      Seus dados são protegidos conforme a LGPD · titanpro.app.br
+      Seus dados são protegidos conforme a LGPD · kronia.app.br
     </div>
   </div>
 
@@ -676,7 +676,7 @@ backgroundSize:“100% 100%,32px 32px,32px 32px”,
       <div style={{ display:"flex", alignItems:"center", gap:5 }}><ShieldCheck size={11}/> LGPD</div>
       <div style={{ display:"flex", alignItems:"center", gap:5 }}><X size={11}/> Sem fidelidade</div>
     </div>
-    <div style={{ textAlign:"center", marginTop:8, fontSize:10, color:"rgba(255,255,255,0.12)" }}>titanpro.app.br</div>
+    <div style={{ textAlign:"center", marginTop:8, fontSize:10, color:"rgba(255,255,255,0.12)" }}>kronia.app.br</div>
   </div>
 </div>
 ```
@@ -798,7 +798,7 @@ display:“flex”, alignItems:“center”, justifyContent:“space-between”,
 }
 
 // ─── APP PRINCIPAL ────────────────────────────────────────────────────────────
-export default function TitanProApp() {
+export default function KroniaApp() {
 const [screen, setScreen] = useState(“onboarding”);
 const [userPlan, setUserPlan] = useState(“free”);
 

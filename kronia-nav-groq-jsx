@@ -213,7 +213,7 @@ cursor: “pointer”, color: “#fff”, display: “flex”, alignItems: “ce
 }
 
 // ─── APP PRINCIPAL ─────────────────────────────────────────────────────────
-export default function TitanProNav() {
+export default function KroniaNav() {
 const [menuOpen, setMenuOpen] = useState(false);
 const [activeTab, setActiveTab] = useState(“rotas”);
 const [selectedContract, setSelectedContract] = useState(null);

@@ -841,8 +841,8 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  min-height: 86px;
-  padding: 18px 18px 8px 18px;
+  min-height: 64px;
+  padding: 8px 18px 8px 18px;
   box-sizing: border-box;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
@@ -865,7 +865,7 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   width: 100%;
   max-width: 100%;
   height: auto;
-  max-height: 72px;
+  max-height: 44px;
   object-fit: contain;
   object-position: left center;
   margin: 0;
@@ -884,22 +884,22 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 }
 .plan-modal-close,
 .plan-modal-close-btn {
-  flex: 0 0 64px;
-  width: 64px;
-  height: 64px;
-  min-width: 64px;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 20px;
-  background: linear-gradient(150deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+  border-radius: 12px;
+  background: linear-gradient(150deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
   color: rgba(255,255,255,0.72);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1.15rem;
+  font-size: 1rem;
   line-height: 1;
   transition: all .16s ease;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.26), 0 1px 0 rgba(255,255,255,0.08) inset;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.08) inset;
   -webkit-tap-highlight-color: transparent;
 }
 .plan-modal-close-btn:hover,
@@ -946,28 +946,28 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   .plan-modal-shell { padding-inline: 8px; }
   .plan-modal-card { border-radius: 26px; }
   .plan-modal-header {
-    min-height: 80px;
-    padding: 16px 14px 6px 14px;
+    min-height: 56px;
+    padding: 8px 14px 6px 14px;
     gap: 10px;
   }
   .plan-modal-brand {
-    width: calc(100% - 78px);
-    max-width: calc(100% - 78px);
+    width: calc(100% - 52px);
+    max-width: calc(100% - 52px);
   }
   .plan-modal-brand img,
   .plan-modal-brand svg,
   .plan-modal-brand .logo,
   .plan-modal-logo {
-    max-height: 64px;
+    max-height: 40px;
     width: 100%;
   }
   .plan-modal-close,
   .plan-modal-close-btn {
-    flex: 0 0 58px;
-    width: 58px;
-    height: 58px;
-    min-width: 58px;
-    border-radius: 18px;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 10px;
   }
   .plan-modal-subtitle { font-size: 0.74rem; }
   .plan-modal-tabs,

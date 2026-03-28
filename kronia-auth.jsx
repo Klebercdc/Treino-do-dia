@@ -255,7 +255,7 @@ padding: “40px 24px”,
       fontSize: 10, color: "rgba(255,255,255,0.12)",
       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
     }}>
-      <ShieldCheck size={10} /> Protegido conforme a LGPD · titanpro.app.br
+      <ShieldCheck size={10} /> Protegido conforme a LGPD · kronia.app.br
     </div>
   </div>
 
