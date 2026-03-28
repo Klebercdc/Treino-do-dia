@@ -154,9 +154,9 @@ function updatePlanBadge() {
       homeBanner.style.display = 'flex';
       if (homeSubtext) {
         if (rem === 0) {
-          homeSubtext.textContent = 'Limite esgotado — faça upgrade para continuar com a IA';
+          homeSubtext.textContent = 'Limite esgotado — vá de ULTRA para liberar IA + transforms + PDF premium + análise avançada';
         } else if (rem <= 2) {
-          homeSubtext.textContent = 'Última' + (rem === 1 ? '' : 's') + ' ' + rem + ' consulta' + (rem === 1 ? '' : 's') + ' do mês';
+          homeSubtext.textContent = 'ULTRA é o próximo passo: transforms, PDF premium e análise avançada · PRO como alternativa intermediária';
         } else {
           homeSubtext.textContent = 'ULTRA: Transforms + PDF premium + análise avançada · PRO como opção intermediária';
         }
@@ -552,8 +552,8 @@ O KRONIA é um aplicativo de registro e planejamento de treinos musculares, com 
 <strong>4. Planos e Pagamento</strong><br>
 • <em>Plano Gratuito</em>: acesso básico com 5 consultas de IA por mês;<br>
 • <em>Trial de 7 dias</em>: acesso ULTRA completo nos primeiros 7 dias após cadastro;<br>
-• <em>Plano Pro</em>: R$29,90/mês — Coach IA ilimitado e recursos avançados;<br>
-• <em>Plano Ultra</em>: R$59,90/mês — tudo do Pro + KRONIA TRANSFORMS completo;<br>
+• <em>Plano Pro</em>: R$29,90/mês — treino com IA, dieta com IA, chat com IA e análise premium intermediária;<br>
+• <em>Plano Ultra</em>: R$59,90/mês — tudo do Pro + KRONIA TRANSFORMS, PDF premium e análise premium avançada;<br>
 • Cancelamentos seguem a política do Hotmart/Kiwify (até 7 dias após a compra, CDC Art. 49).<br><br>
 <strong>5. Uso Aceitável</strong><br>
 É proibido: usar o serviço para fins ilícitos; tentar burlar limites de quota; fazer engenharia reversa.<br><br>
