@@ -124,7 +124,7 @@ export interface AssistantStructuredResponse {
   action: AssistantAction
   depth: ResponseDepth
   shouldCreateButton: boolean
-  buttonType?: "treino" | "dieta" | null
+  buttonType?: "treino" | "dieta" | "suplemento" | null
   message: string
   workoutPayload?: WorkoutPayload | null
   dietPayload?: DietPayload | null

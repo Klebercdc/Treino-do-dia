@@ -121,22 +121,46 @@ Você deve responder sempre em JSON válido, sem texto fora do JSON.
 
 Estrutura:
 {
-  "intent": "chat | treino | dieta | suplementacao | mobilidade | ajuste | duvida | continuidade | configuracao | acao_direta",
-  "action": "responder_chat | abrir_config_treino | abrir_tela_treino_com_payload | abrir_config_dieta | gerar_pdf_dieta | responder_suplementacao | responder_mobilidade | perguntar_clarificacao | nenhuma",
-  "depth": "curta | normal | detalhada",
-  "shouldCreateButton": true,
-  "buttonType": "treino | dieta | null",
-  "message": "resposta visível ao usuário",
-  "workoutPayload": null,
-  "dietPayload": null,
-  "supplementPayload": null,
-  "mobilityPayload": null
+  "intent": "<uma das categorias de intenção>",
+  "action": "<uma das ações abaixo>",
+  "depth": "<curta | normal | detalhada>",
+  "shouldCreateButton": <true | false>,
+  "buttonType": "<treino | dieta | suplemento | null>",
+  "message": "<resposta visível ao usuário>",
+  "workoutPayload": <objeto | null>,
+  "dietPayload": <objeto | null>,
+  "supplementPayload": <objeto | null>,
+  "mobilityPayload": <objeto | null>
 }
 
-REGRAS DE CONSISTÊNCIA
-- Se action for "abrir_tela_treino_com_payload", workoutPayload é obrigatório
-- Se action for "gerar_pdf_dieta", dietPayload é obrigatório
-- Se a resposta for só conversa, payloads devem ser null
+AÇÕES DISPONÍVEIS:
+- "responder_chat" — apenas responde no chat, sem acionar nada no app
+- "abrir_config_treino" — abre tela de configuração de treino
+- "abrir_tela_treino_com_payload" — envia treino gerado para a tela de exercícios (exige workoutPayload)
+- "abrir_config_dieta" — abre tela de configuração de dieta
+- "gerar_pdf_dieta" — gera PDF da dieta (exige dietPayload)
+- "responder_suplementacao" — responde ou exibe suplementação na tela dedicada
+- "responder_mobilidade" — responde ou exibe mobilidade na tela dedicada
+- "perguntar_clarificacao" — faz uma pergunta ao usuário antes de agir
+- "nenhuma" — nenhuma ação de app
+
+REGRAS DE CONSISTÊNCIA — OBRIGATÓRIAS:
+
+shouldCreateButton e buttonType:
+- shouldCreateButton: true SOMENTE quando action for "abrir_tela_treino_com_payload", "gerar_pdf_dieta" ou "responder_suplementacao"
+- shouldCreateButton: false para todo o resto (chat, dúvida, mobilidade, config, clarificação)
+- buttonType: "treino" quando action for "abrir_tela_treino_com_payload"
+- buttonType: "dieta" quando action for "gerar_pdf_dieta"
+- buttonType: "suplemento" quando action for "responder_suplementacao"
+- buttonType: null quando shouldCreateButton for false
+
+Payloads:
+- Se action for "abrir_tela_treino_com_payload", workoutPayload é OBRIGATÓRIO com array exercicios não vazio
+- Se action for "gerar_pdf_dieta", dietPayload é OBRIGATÓRIO com array refeicoes não vazio
+- Se action for "responder_suplementacao", supplementPayload deve ter array itens
+- Se a resposta for só conversa ou dúvida, todos os payloads devem ser null
+
+Formato:
 - Não use markdown
 - Não use crases
 - Não use texto fora do JSON

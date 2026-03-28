@@ -40,7 +40,8 @@ export function validateAssistantResponse(response: unknown): AssistantStructure
   if (typeof r.message !== "string" || !r.message.trim()) throw new Error("Message inválida")
   if (typeof r.shouldCreateButton !== "boolean") throw new Error("shouldCreateButton inválido")
 
-  if (r.buttonType !== undefined && r.buttonType !== null && r.buttonType !== "treino" && r.buttonType !== "dieta") {
+  const validButtonTypes = ["treino", "dieta", "suplemento"]
+  if (r.buttonType !== undefined && r.buttonType !== null && !validButtonTypes.includes(r.buttonType)) {
     throw new Error("buttonType inválido")
   }
 
