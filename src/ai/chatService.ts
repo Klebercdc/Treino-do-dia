@@ -29,12 +29,18 @@ export class KroniaChatService {
   }
 
   async run(input: ChatServiceInput) {
-    const retrievedContext: RetrievedContextItem[] =
-      await this.ragProvider.search({
+    // RAG pode falhar (função não existe no DB, timeout, etc).
+    // Nunca deve derrubar a request — continua com contexto vazio.
+    let retrievedContext: RetrievedContextItem[] = []
+    try {
+      retrievedContext = await this.ragProvider.search({
         userId: input.userId,
         query: input.userMessage,
         topK: 8,
       })
+    } catch {
+      // sem contexto recuperado — o modelo continuará com perfil e memória
+    }
 
     return this.orchestrator.run({
       userId: input.userId,

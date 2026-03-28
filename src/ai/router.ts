@@ -15,14 +15,20 @@ export function resolveAppAction(response: AssistantStructuredResponse): Resolve
       return { type: "navigation", screen: "WorkoutConfig", payload: null }
 
     case "abrir_tela_treino_com_payload":
-      if (!response.workoutPayload) throw new Error("workoutPayload ausente")
+      // Degrada para chat se payload ausente ou inválido — evita 500
+      if (!response.workoutPayload?.exercicios?.length) {
+        return { type: "chat" }
+      }
       return { type: "navigation", screen: "ExerciseScreen", payload: response.workoutPayload }
 
     case "abrir_config_dieta":
       return { type: "navigation", screen: "DietConfig", payload: response.dietPayload ?? null }
 
     case "gerar_pdf_dieta":
-      if (!response.dietPayload) throw new Error("dietPayload ausente")
+      // Degrada para DietConfig se payload ausente — exibe o que tem
+      if (!response.dietPayload?.refeicoes?.length) {
+        return { type: "navigation", screen: "DietConfig", payload: null }
+      }
       return { type: "pdf", payload: response.dietPayload }
 
     case "responder_suplementacao":

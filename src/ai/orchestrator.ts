@@ -13,6 +13,19 @@ export interface OrchestratorResult {
   planId?: string
 }
 
+const FALLBACK_RESPONSE: AssistantStructuredResponse = {
+  intent: "chat",
+  action: "responder_chat",
+  depth: "curta",
+  shouldCreateButton: false,
+  buttonType: null,
+  message: "Tive um problema ao processar sua mensagem. Pode tentar novamente?",
+  workoutPayload: null,
+  dietPayload: null,
+  supplementPayload: null,
+  mobilityPayload: null,
+}
+
 export class KroniaOrchestrator {
   private readonly brain: KroniaBrain
 
@@ -28,17 +41,27 @@ export class KroniaOrchestrator {
     let memoryItems = args.memoryItems ?? []
 
     if (args.userId && this.memoryRepository && memoryItems.length === 0) {
-      memoryItems = await this.memoryRepository.getRelevantMemory({
-        userId: args.userId,
-        query: args.userMessage,
-        limit: 8,
-      })
+      try {
+        memoryItems = await this.memoryRepository.getRelevantMemory({
+          userId: args.userId,
+          query: args.userMessage,
+          limit: 8,
+        })
+      } catch {
+        // memória indisponível — continua sem ela
+      }
     }
 
-    const response = await this.brain.think({
-      ...args,
-      memoryItems,
-    })
+    let response: AssistantStructuredResponse
+    try {
+      response = await this.brain.think({ ...args, memoryItems })
+    } catch {
+      // Falha total do modelo — retorna mensagem amigável em vez de 500
+      return {
+        response: FALLBACK_RESPONSE,
+        appAction: { type: "chat" },
+      }
+    }
 
     const appAction = resolveAppAction(response)
 
@@ -49,34 +72,36 @@ export class KroniaOrchestrator {
 
     let planId: string | undefined
     if (this.repository) {
-      const persisted = await persistAssistantResult({
-        repository: this.repository,
-        userId: args.userId,
-        userMessage: args.userMessage,
-        response,
-        retrievedContext: args.retrievedContext,
-        memoryItems,
-      })
-      planId = persisted.planId
-    }
-
-    if (args.userId && this.memoryRepository) {
-      const memories = selectMemoryWorthPersisting({
-        userId: args.userId,
-        userMessage: args.userMessage,
-        assistantMessage: response.message,
-      })
-
-      for (const memory of memories) {
-        await this.memoryRepository.saveMemory(memory)
+      try {
+        const persisted = await persistAssistantResult({
+          repository: this.repository,
+          userId: args.userId,
+          userMessage: args.userMessage,
+          response,
+          retrievedContext: args.retrievedContext,
+          memoryItems,
+        })
+        planId = persisted.planId
+      } catch {
+        // falha ao persistir não interrompe a resposta ao usuário
       }
     }
 
-    return {
-      response,
-      appAction,
-      pdfHtml,
-      planId,
+    if (args.userId && this.memoryRepository) {
+      try {
+        const memories = selectMemoryWorthPersisting({
+          userId: args.userId,
+          userMessage: args.userMessage,
+          assistantMessage: response.message,
+        })
+        for (const memory of memories) {
+          await this.memoryRepository.saveMemory(memory)
+        }
+      } catch {
+        // falha ao salvar memória não interrompe o fluxo
+      }
     }
+
+    return { response, appAction, pdfHtml, planId }
   }
 }
