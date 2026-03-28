@@ -1,7 +1,39 @@
 /* ═══════════════════════════════════════════════════
 TRANSFORMS PATCH — aplica Transform Kernel no app.js
-sem precisar modificar o app.js diretamente
+sem precisar modificar o app.js diretamente.
+
+BRIDGE: chama /api/kronia/intent em paralelo com a
+resposta do KRONOS para que os Transforms usem a
+intenção classificada pelo IntentAgent (semântica),
+não por palavras-chave.
 ═══════════════════════════════════════════════════ */
+
+/**
+ * Classifica a intenção da mensagem via IntentAgent (servidor).
+ * Retorna a intent string ou "chat" como fallback seguro.
+ */
+async function _classifyIntentRemote(message, history) {
+  try {
+    const session = await _sb.auth.getSession();
+    const token = session?.data?.session?.access_token;
+    if (!token) return "chat";
+
+    const resp = await fetch("/api/kronia/intent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token,
+      },
+      body: JSON.stringify({ message, history: history || [] }),
+    });
+
+    if (!resp.ok) return "chat";
+    const data = await resp.json();
+    return data.intent || "chat";
+  } catch {
+    return "chat";
+  }
+}
 
 /* Detecta se uma resposta de texto contém estrutura de treino */
 function _orientRespostaTemTreino(texto) {
@@ -66,32 +98,37 @@ function aplicarPatch() {
 if (typeof sendOrientExpert === 'function') {
 const _origOrient = sendOrientExpert;
 window.sendOrientExpert = async function() {
-const input = document.getElementById('orientExpertInput');
-const txt = input ? input.value.trim() : '';
-// Defensive transforms: retorna IDs bloqueados ou 'block' para barrar envio
-var _defResult = [];
-try { if (typeof runDefensiveTransforms === 'function') _defResult = runDefensiveTransforms(txt); } catch(e) {}
-if (_defResult === 'block') return; // rate_guard bloqueou
-var _blockedIds = Array.isArray(_defResult) ? _defResult : [];
-await _origOrient.apply(this, arguments);
-// Após resposta, roda Transform Kernel + verifica se gerou treino
-setTimeout(() => {
-try {
-const msgs = document.getElementById('orientExpertMessages');
-if (msgs && txt) {
-const bubbles = msgs.querySelectorAll('.ai-bubble');
-const last = bubbles[bubbles.length - 1];
-const botText = last ? last.textContent : '';
-// Detecta se a resposta contém exercícios → mostra botão de importar
-const temExercicios = _orientRespostaTemTreino(botText);
-if (temExercicios) {
-_mostrarBotaoImportarTreino(msgs, last);
-} else {
-runTransforms(txt, botText, 'orientExpertMessages', _blockedIds);
-}
-}
-} catch(e) {}
-}, 400);
+  const input = document.getElementById('orientExpertInput');
+  const txt = input ? input.value.trim() : '';
+  var _defResult = [];
+  try { if (typeof runDefensiveTransforms === 'function') _defResult = runDefensiveTransforms(txt); } catch(e) {}
+  if (_defResult === 'block') return;
+  var _blockedIds = Array.isArray(_defResult) ? _defResult : [];
+
+  // Classifica intenção em paralelo com a chamada ao KRONOS
+  const intentPromise = _classifyIntentRemote(txt, typeof _orientExpertHistory !== 'undefined' ? _orientExpertHistory : []);
+
+  await _origOrient.apply(this, arguments);
+
+  // Aguarda intent (já deve estar resolvido — chamada leve ~150ms)
+  const serverIntent = await intentPromise.catch(() => "chat");
+
+  setTimeout(() => {
+    try {
+      const msgs = document.getElementById('orientExpertMessages');
+      if (msgs && txt) {
+        const bubbles = msgs.querySelectorAll('.ai-bubble');
+        const last = bubbles[bubbles.length - 1];
+        const botText = last ? last.textContent : '';
+        const temExercicios = _orientRespostaTemTreino(botText);
+        if (temExercicios) {
+          _mostrarBotaoImportarTreino(msgs, last);
+        } else {
+          runTransforms(txt, botText, 'orientExpertMessages', _blockedIds, serverIntent);
+        }
+      }
+    } catch(e) {}
+  }, 400);
 };
 }
 
@@ -101,12 +138,18 @@ if (typeof sendAI === 'function') {
   window.sendAI = async function(overrideText, isGerarTreino) {
     const input = document.getElementById('aiInput');
     const txt = overrideText || (input ? input.value.trim() : '');
-    // Defensive transforms: retorna IDs bloqueados ou 'block' para barrar envio
     var _defResult = [];
     try { if (typeof runDefensiveTransforms === 'function') _defResult = runDefensiveTransforms(txt); } catch(e) {}
     if (_defResult === 'block') return;
     var _blockedIds = Array.isArray(_defResult) ? _defResult : [];
+
+    // Classifica intenção em paralelo com a resposta da IA
+    const intentPromise = _classifyIntentRemote(txt, typeof _aiHistory !== 'undefined' ? _aiHistory : []);
+
     await _origAI.apply(this, arguments);
+
+    const serverIntent = await intentPromise.catch(() => "chat");
+
     setTimeout(() => {
       try {
         const msgs = document.getElementById('aiMessages');
@@ -114,7 +157,7 @@ if (typeof sendAI === 'function') {
           const bubbles = msgs.querySelectorAll('.ai-bubble');
           const last = bubbles[bubbles.length - 1];
           const botText = last ? last.textContent : '';
-          runTransforms(txt, botText, 'aiMessages', _blockedIds);
+          runTransforms(txt, botText, 'aiMessages', _blockedIds, serverIntent);
         }
       } catch(e) {}
     }, 300);

@@ -325,12 +325,21 @@ function _isInfoIntent(texto) {
 // Transforms que são de NAVEGAÇÃO — bloqueados quando usuário só pede info
 var NAV_TRANSFORM_IDS = ['treino', 'gerar_treino', 'dieta', 'suplemento', 'evolucao'];
 
-function runTransforms(userMessage, botResponse, containerId, blockedIds) {
+// Intents classificadas pelo IntentAgent que NÃO devem acionar transforms de navegação
+var SERVER_INTENT_NO_NAV = ['chat', 'duvida', 'continuidade', 'ajuste'];
+
+function runTransforms(userMessage, botResponse, containerId, blockedIds, serverIntent) {
   var textoUser = (userMessage || '').toLowerCase();
   var textoBot  = (botResponse  || '').toLowerCase();
   var bloqueados = blockedIds || [];
   var THRESHOLD  = 2;
-  var infoIntent = _isInfoIntent(textoUser);
+
+  // Gate primário: IntentAgent semântico (servidor) tem prioridade sobre keywords
+  // Se o agente classificou como conversa/dúvida/continuidade → zero transforms de nav
+  var serverSaysNoNav = serverIntent && SERVER_INTENT_NO_NAV.indexOf(serverIntent) >= 0;
+  // Fallback: detecção client-side por padrões de texto (quando serverIntent ausente)
+  var infoIntent = serverSaysNoNav || (!serverIntent && _isInfoIntent(textoUser));
+
   var scored = [];
 
   for (var i = 0; i < TRANSFORMS.length; i++) {
@@ -338,7 +347,7 @@ function runTransforms(userMessage, botResponse, containerId, blockedIds) {
     // Pula transforms bloqueados por Defensive ou já usados nesta sessão
     if (bloqueados.indexOf(t.id) >= 0) continue;
     if (_usedTransforms[t.id])         continue;
-    // Se o usuário está pedindo dica/info, não mostra botões de navegação
+    // Gate semântico: se servidor (ou fallback client) diz que é info/chat, bloqueia nav
     if (infoIntent && NAV_TRANSFORM_IDS.indexOf(t.id) >= 0) continue;
 
     var sc = _scoreTransform(t, textoUser) * 2
