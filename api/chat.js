@@ -352,6 +352,19 @@ module.exports = function(req, res) {
         });
       }
 
+      // ── DIETA DIRETA — gerada pelo formulário de dieta (isDietDirect=true) ────
+      // O prompt já contém todos os dados do usuário incluindo proteínas preferidas.
+      // Usa limite maior de tokens para garantir a dieta completa com todas as refeições.
+      if (b.isDietDirect === true) {
+        plans.checkAndIncrementQuota(user.id, res, function() {
+          callChat(buildCoachSystem(b.system, b.context || {}), messages, 3000, 0.4, user.id, 'chat-diet-direct', function(err, text) {
+            if (err) return res.status(500).json({ error: err });
+            res.status(200).json({ content: [{ type: 'text', text: text }] });
+          });
+        });
+        return;
+      }
+
       // ── TREINO + CHAT GERAL (fluxo original intacto) ─────────────
       // Passa o contexto do body para buildCoachSystem quando disponível
       var coachContext = b.context || {};

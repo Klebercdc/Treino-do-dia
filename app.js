@@ -4873,6 +4873,11 @@ PERFIL PREMIUM — DIRETRIZES:
     ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
     : Math.round(10*peso + 6.25*altura - 5*idade + 5);
 
+  // Extrai proteínas específicas mencionadas pelo usuário para enforcê-las no prompt
+  const proteinsLine = prefs
+    ? `\nPROTEÍNAS OBRIGATÓRIAS — REGRA CRÍTICA:\nO usuário gosta de e quer usar: "${prefs}"\n→ Identifique os alimentos proteicos nessa lista (ex: ovo, frango, patinho, carne, peixe, atum, etc.).\n→ Use SOMENTE essas proteínas em TODAS as refeições que contêm proteína.\n→ NÃO inclua nenhuma outra fonte proteica animal que não esteja mencionada.\n→ Distribua essas proteínas de forma inteligente ao longo do dia (ex: ovo no café da manhã, frango no almoço, patinho no jantar).\n→ Se alguma proteína mencionada não fizer sentido em uma refeição específica, simplesmente não a use nessa refeição — mas não substitua por outra proteína não listada.\n→ Para os demais alimentos (carboidratos, legumes, frutas, gorduras), escolha o que melhor serve ao objetivo.`
+    : "";
+
   let prompt = `Crie uma dieta 100% personalizada para ${obj}.
 
 DADOS DO USUÁRIO:
@@ -4882,8 +4887,9 @@ DADOS DO USUÁRIO:
 - Nível de atividade: ${ativ}
 - Número de refeições por dia: ${refs}
 - Restrições/alergias/não gosta: ${restric}
-${prefs ? `- Preferências: ${prefs}` : ""}
+- Alimentos que gosta: ${prefs || "sem preferência específica"}
 ${orcamento ? `- Perfil de orçamento: ${orcamento}` : ""}
+${proteinsLine}
 
 REGRAS PARA REFEIÇÕES:
 - A PRIMEIRA refeição do dia DEVE ser um café da manhã completo, típico brasileiro, incluindo obrigatoriamente: café com leite (ou café preto), e ao menos dois outros itens nutritivos como ovos (mexido, estrelado ou cozido), pão integral, tapioca, frutas, iogurte ou aveia. Monte o café da manhã como uma refeição real e satisfatória.
@@ -4927,11 +4933,12 @@ TAG: [descrição curta, ex: Energia matinal]
 [Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
 SUBTOTAL||[kcal]|[prot]|[carb]|[gord]
 
-Exemplo de linha correta:
+Exemplo de linha correta (quando o usuário pediu ovo, frango e patinho):
+Ovo mexido|2 un (120g)|148|12|1|10
 Frango grelhado|120g (1 filé médio)|198|37|0|4
+Patinho grelhado|120g (1 bife médio)|192|30|0|7
 Arroz branco cozido|160g (2 conchas)|208|4|45|0
 Feijão carioca cozido|100g (1 concha)|77|5|14|0
-Azeite de oliva|10ml (1 col. sopa rasa)|88|0|0|10
 
 (repita o bloco ##REFEICAO para cada uma das ${refs} refeições)
 
@@ -4950,7 +4957,10 @@ Refeições|Mastigar devagar. Comer sem telas. Parar ao sentir saciedade.
 IMPORTANTE: Use as diretrizes ISSN — ≥1.6g/kg proteína para hipertrofia, déficit 300-500kcal para emagrecimento, superávit 200-300kcal para ganho de massa. Seja preciso nos números.`;
 
   try {
-    const resp = await apiFetch("/api/chat", {
+    const _apiBase = (typeof location !== "undefined" && location.origin && location.origin !== "null")
+      ? location.origin
+      : "";
+    const resp = await apiFetch(_apiBase + "/api/chat", {
       method: "POST",
       body: JSON.stringify({
         system: buildTrainingContext(),
