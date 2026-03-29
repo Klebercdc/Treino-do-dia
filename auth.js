@@ -166,6 +166,34 @@ const _dbSync = {
 
 let _authMenuOpen = false;
 let _appUnlocked = false;
+const KRONIA_DEFAULT_WEB_REDIRECT = window.location.origin + window.location.pathname;
+const KRONIA_DEFAULT_MOBILE_REDIRECT = 'kronia://login-callback';
+
+function isKroniaDeepLink(url) {
+  return typeof url === 'string' && /^[a-z][a-z0-9+.-]*:\/\//i.test(url) && !/^https?:\/\//i.test(url);
+}
+
+function resolveOAuthRedirectUrl() {
+  const configured = (window.KRONIA_OAUTH_REDIRECT_TO || localStorage.getItem('kronia_oauth_redirect_to') || '').trim();
+  if (configured) return configured;
+  const runningInMobileContainer = !!(
+    window.Capacitor ||
+    window.cordova ||
+    window.ReactNativeWebView ||
+    window.KRONIA_MOBILE_OAUTH
+  );
+  if (runningInMobileContainer) return KRONIA_DEFAULT_MOBILE_REDIRECT;
+  return KRONIA_DEFAULT_WEB_REDIRECT;
+}
+
+function resolveOAuthOptions() {
+  const redirectTo = resolveOAuthRedirectUrl();
+  const isDeepLink = isKroniaDeepLink(redirectTo);
+  return {
+    redirectTo,
+    skipBrowserRedirect: isDeepLink
+  };
+}
 
 function hideSplash() {
   const el = document.getElementById('splashScreen');
@@ -381,10 +409,17 @@ async function authSignInGoogle() {
   const btn = document.getElementById('btnGoogle');
   if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
   try {
-    const { error } = await _sb.auth.signInWithOAuth({
+    const oauthOptions = resolveOAuthOptions();
+    const { data, error } = await _sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + window.location.pathname }
+      options: oauthOptions
     });
+
+    if (!error && oauthOptions.skipBrowserRedirect && data?.url) {
+      window.location.href = data.url;
+      return;
+    }
+
     if (error) {
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
       const errEl = document.getElementById('loginError');
@@ -460,3 +495,12 @@ Promise.all([
 }).catch(() => {
   showLogin();
 });
+
+window.KroniaAuth = window.KroniaAuth || {};
+window.KroniaAuth.setOAuthRedirectTo = function setOAuthRedirectTo(url) {
+  if (typeof url !== 'string' || !url.trim()) return;
+  localStorage.setItem('kronia_oauth_redirect_to', url.trim());
+};
+window.KroniaAuth.getOAuthRedirectTo = function getOAuthRedirectTo() {
+  return resolveOAuthRedirectUrl() || KRONIA_DEFAULT_MOBILE_REDIRECT;
+};
