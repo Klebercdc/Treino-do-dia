@@ -496,8 +496,8 @@ body.light-mode .kronos-ai-title { color: #7e22ce; }
 body.light-mode .kronos-ai-subtitle { color: rgba(126,34,206,0.74); }
 body.light-mode .kronos-ai-tip { color: #8b5cf6; }
 body.light-mode .kronos-ai-model { color: rgba(124,58,237,0.82); }
-body.light-mode .kronia-tools-title { color: #9a3412; }
-body.light-mode .kronia-tools-subtitle { color: rgba(194,65,12,0.84); }
+body.light-mode .kronia-tools-title { color: #0c4a6e; }
+body.light-mode .kronia-tools-subtitle { color: rgba(8,145,178,0.84); }
 body.light-mode .risk-card-title { color: rgba(17,24,39,0.55); }
 
 @keyframes lightCardDrift {
@@ -703,14 +703,14 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 
 /* ═══ KRONIA TOOLS CARD ═══ */
 .kronia-tools-card {
-  flex: 1; background: linear-gradient(140deg, rgba(255,107,0,0.18) 0%, rgba(255,140,0,0.07) 100%);
-  border: 1.5px solid rgba(255,107,0,0.4); border-radius: 20px; padding: 16px 14px;
+  flex: 1; background: linear-gradient(140deg, rgba(8,145,178,0.18) 0%, rgba(14,116,144,0.07) 100%);
+  border: 1.5px solid rgba(8,145,178,0.38); border-radius: 20px; padding: 16px 14px;
   cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s, box-shadow .22s ease, border-color .2s ease;
-  box-shadow: 0 8px 22px rgba(200,96,16,0.16);
+  box-shadow: 0 8px 22px rgba(8,145,178,0.14);
 }
 .kronia-tools-card:active { transform: scale(.97); }
 .kronia-tools-title { font-family:var(--display);font-size:1rem;letter-spacing:.06em;color:#fff;line-height:1; }
-.kronia-tools-subtitle { font-size:0.5rem;font-weight:800;color:rgba(255,140,0,0.9);letter-spacing:.1em; }
+.kronia-tools-subtitle { font-size:0.5rem;font-weight:800;color:rgba(34,211,238,0.85);letter-spacing:.1em; }
 .risk-card-title { font-size:0.55rem;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:.1em;margin-bottom:6px; }
 .risk-card-title-sm { font-size:0.5rem; font-weight:700; letter-spacing:.08em; margin-bottom:4px; }
 
