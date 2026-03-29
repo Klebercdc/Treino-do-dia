@@ -3,7 +3,8 @@ export function handleKronosResult(result, actions) {
     setExerciseTable,
     setCurrentScreen,
     setDietResult,
-    setSupplementResult
+    setSupplementResult,
+    setExerciseDiscoveryResult
   } = actions;
 
   if (result.uiAction === "send_to_exercise_table") {
@@ -26,5 +27,13 @@ export function handleKronosResult(result, actions) {
   if (result.uiAction === "show_supplement_result") {
     setSupplementResult(result.data || result.response);
     setCurrentScreen("supplement_result");
+    return;
+  }
+
+  if (result.uiAction === "discover_exercise") {
+    if (typeof setExerciseDiscoveryResult === "function") {
+      setExerciseDiscoveryResult(result.data || null);
+    }
+    setCurrentScreen("exercise_discovery");
   }
 }

@@ -25,6 +25,18 @@ export async function orchestrate(message, user) {
     };
   }
 
+  if (intent.domain === "exercise" && intent.action === "discover_exercise") {
+    return {
+      type: "exercise_discovery",
+      uiAction: "discover_exercise",
+      response: "Entendi seu pedido de exercício. Vou buscar a melhor opção com mídia premium.",
+      data: {
+        query: message,
+      },
+      intent,
+    };
+  }
+
   if (intent.domain === "diet" && intent.action === "start_diet_flow") {
     return await DietFlow.start(user);
   }
