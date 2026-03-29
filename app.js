@@ -5286,9 +5286,10 @@ ${sono === "menos de 5h" || sono === "5-6h" ? "Sono|ATENÇÃO: sono insuficiente
 ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado aumenta cortisol — incluir adaptógenos naturais (ashwagandha), magnésio, ômega-3." : ""}`;
 
   try {
-    let _apiChatUrl;
-    try { _apiChatUrl = new URL("/api/chat", location.href).href; }
-    catch(_) { _apiChatUrl = "/api/chat"; }
+    // URL absoluta — evita "The string did not match the expected pattern" no iOS Safari
+    const _apiChatUrl = (location.protocol && location.host)
+      ? location.protocol + '//' + location.host + '/api/chat'
+      : 'https://kronia.app.br/api/chat';
     const resp = await apiFetch(_apiChatUrl, {
       method: "POST",
       body: JSON.stringify({

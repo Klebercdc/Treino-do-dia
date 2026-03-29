@@ -4,7 +4,11 @@
  * Em produção (VERCEL_ENV=production), localhost é bloqueado.
  */
 
-var PROD_ORIGINS = ['https://treino-do-dia-orpin.vercel.app'];
+var PROD_ORIGINS = [
+  'https://treino-do-dia-orpin.vercel.app',
+  'https://kronia.app.br',
+  'https://www.kronia.app.br'
+];
 var DEV_ORIGINS  = ['http://localhost:3000', 'http://localhost:5173'];
 
 var ALLOWED_ORIGINS = process.env.VERCEL_ENV === 'production'
