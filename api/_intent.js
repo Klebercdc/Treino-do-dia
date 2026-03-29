@@ -15,6 +15,15 @@ var DIET_KEYWORDS    = ['dieta', 'alimentacao', 'cardapio', 'plano alimentar', '
 var WORKOUT_KEYWORDS = ['treino', 'treinar', 'academia', 'exercicio', 'periodizacao', 'hipertrofia', 'ficha'];
 var SUPPLEMENT_KEYWORDS = ['suplemento', 'creatina', 'whey', 'pre treino', 'cafeina', 'multivitaminico', 'bcaa', 'glutamina'];
 
+var EXERCISE_DISCOVERY_PATTERNS = [
+  'exercicio de ', 'exercicio para ', 'exercicios de ', 'exercicios para ',
+  'me mostra ', 'me mostre ', 'mostra um exercicio', 'mostre um exercicio',
+  'troque esse exercicio', 'substitua esse exercicio', 'trocar exercicio',
+  'variacoes de ', 'variações de ', 'variacao de ',
+  'como fazer ', 'como executar ',
+  'substituto para ', 'alternativa para '
+];
+
 var DIET_START_PATTERNS = [
   'faca uma dieta', 'monta uma dieta', 'monte uma dieta',
   'crie uma dieta', 'quero dieta', 'quero uma dieta',
@@ -50,4 +59,9 @@ function isDietStart(message) {
   return DIET_START_PATTERNS.some(function(p) { return msg.includes(p); });
 }
 
-module.exports = { detectIntent: detectIntent, isDietStart: isDietStart };
+function isExerciseDiscovery(message) {
+  var msg = normalizeText(message);
+  return EXERCISE_DISCOVERY_PATTERNS.some(function(p) { return msg.includes(p); });
+}
+
+module.exports = { detectIntent: detectIntent, isDietStart: isDietStart, isExerciseDiscovery: isExerciseDiscovery };

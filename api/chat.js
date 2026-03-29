@@ -324,6 +324,15 @@ module.exports = function(req, res) {
         return;
       }
 
+      // ── INTENT: exercise discovery ────────────────────────────────
+      if (!b.isGerarTreino && !b.isDietDirect && intent.isExerciseDiscovery(lastContent)) {
+        return res.status(200).json({
+          content: [{ type: 'text', text: 'Buscando exercício...' }],
+          isExerciseDiscovery: true,
+          exerciseQuery: lastContent
+        });
+      }
+
       // ── INTENT: novo pedido de dieta ─────────────────────────────
       if (!b.isGerarTreino && !b.isDietDirect && intent.isDietStart(lastContent)) {
         var flowStart = dietflow.startDietFlow();

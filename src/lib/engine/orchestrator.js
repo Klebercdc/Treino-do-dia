@@ -5,6 +5,8 @@ import { WorkoutAgent } from "../agents/workoutAgent";
 import { ChatAgent } from "../agents/chatAgent";
 import { SupplementAgent } from "../agents/supplementAgent";
 import { SupplementStackAgent } from "../agents/supplementStackAgent";
+import { KroniaExerciseApplication } from "../exercises/application";
+import { createAdminSupabaseClient } from "../supabase/admin";
 
 export async function orchestrate(message, user) {
   const intent = classifyIntent(message);
@@ -26,13 +28,21 @@ export async function orchestrate(message, user) {
   }
 
   if (intent.domain === "exercise" && intent.action === "discover_exercise") {
+    const adminDb = createAdminSupabaseClient();
+    const exerciseApp = new KroniaExerciseApplication(adminDb);
+    const result = await exerciseApp.searchExercisesByContext({
+      userId: user.id,
+      message,
+      locale: "pt",
+    });
+    const found = result.status === "success" && result.data;
     return {
       type: "exercise_discovery",
       uiAction: "discover_exercise",
-      response: "Entendi seu pedido de exercício. Vou buscar a melhor opção com mídia premium.",
-      data: {
-        query: message,
-      },
+      response: found
+        ? `Encontrei: **${result.data.names?.pt || result.data.names?.en}** (${result.data.muscles?.target || ""}). Músculos secundários: ${(result.data.muscles?.secondary || []).join(", ") || "—"}.`
+        : "Não encontrei um exercício específico. Tente ser mais preciso (ex: 'supino reto com barra').",
+      data: found ? result.data : null,
       intent,
     };
   }

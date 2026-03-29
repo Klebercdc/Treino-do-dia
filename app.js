@@ -4181,6 +4181,23 @@ async function sendOrientExpert() {
   if (/^(ir para |abrir |ver )?(tela de )?treino$/i.test(lower)) { closeOrientacao(); return; }
   if (/^(ir para |abrir |ver )?(tela de )?dieta$/i.test(lower)) { closeOrientacao(); setTimeout(() => openDietaSheet(), 300); return; }
 
+  // Exercise discovery intent — detecta no frontend antes de chamar a IA
+  const _exercisePatterns = [
+    /exerc[ií]cio[s]?\s+(de|para)\s/i, /me\s+mostr[ae]\s/i,
+    /como\s+(fazer|executar)\s/i, /variaa?[çc][oõ]es?\s+de\s/i,
+    /troque?\s+(esse|o)\s+exerc/i, /substitua?\s+(esse|o|por)\s/i,
+    /alternativa\s+para\s/i, /substituto\s+para\s/i
+  ];
+  if (_exercisePatterns.some(p => p.test(lower))) {
+    addOrientMsg("orientExpertMessages", "user", txt);
+    const typing = addOrientMsg("orientExpertMessages", "assistant", "Buscando exercício para você...");
+    setTimeout(() => {
+      typing.textContent = `Abrindo descoberta de exercício 🔍`;
+      openExerciseDiscovery(txt);
+    }, 400);
+    return;
+  }
+
   // colapsa atalhos ao iniciar conversa
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -4443,6 +4460,97 @@ function exportarDietaChatPDF() {
 }
 
 // ── Dieta Sheet ──────────────────────────────────────
+// ══════════════════════════════════════════
+// EXERCISE DISCOVERY
+// ══════════════════════════════════════════
+function openExerciseDiscSheet() {
+  const sheet = document.getElementById('exerciseDiscSheet');
+  sheet.classList.add('show');
+  // re-init lucide dentro do sheet
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeExerciseDiscSheet() {
+  document.getElementById('exerciseDiscSheet').classList.remove('show');
+}
+
+function _exerciseDiscSetState(state) {
+  document.getElementById('exerciseDiscLoading').style.display = state === 'loading' ? 'flex' : 'none';
+  document.getElementById('exerciseDiscResult').style.display  = state === 'result'  ? 'block' : 'none';
+  document.getElementById('exerciseDiscError').style.display   = state === 'error'   ? 'block' : 'none';
+}
+
+async function openExerciseDiscovery(query) {
+  openExerciseDiscSheet();
+  _exerciseDiscSetState('loading');
+
+  try {
+    const apiUrl = location.protocol + '//' + location.host + '/api/kronia/exercises/discovery';
+    const resp = await apiFetch(apiUrl, {
+      method: 'POST',
+      body: JSON.stringify({ message: query, locale: 'pt' })
+    });
+    const json = await resp.json();
+
+    if (json.status !== 'success' || !json.data) {
+      document.getElementById('exerciseDiscErrorMsg').textContent =
+        json.errors?.[0]?.message || 'Exercício não encontrado. Tente descrever de outra forma.';
+      _exerciseDiscSetState('error');
+      return;
+    }
+
+    _renderExerciseDiscResult(json.data);
+    _exerciseDiscSetState('result');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch(e) {
+    document.getElementById('exerciseDiscErrorMsg').textContent = 'Erro de conexão: ' + e.message;
+    _exerciseDiscSetState('error');
+  }
+}
+
+function _renderExerciseDiscResult(d) {
+  // ── Mídia ──────────────────────────────────────────────
+  const mediaEl = document.getElementById('exerciseDiscMedia');
+  const mediaSrc = d.media?.primary;
+  if (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc)) {
+    mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:220px;object-fit:cover"></video>`;
+  } else if (mediaSrc) {
+    mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:220px;object-fit:cover">`;
+  } else {
+    mediaEl.innerHTML = `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:0.78rem">Sem mídia disponível</div>`;
+  }
+
+  // ── Info ───────────────────────────────────────────────
+  const muscles = [d.muscles?.target, ...(d.muscles?.secondary || [])].filter(Boolean).join(', ');
+  document.getElementById('exerciseDiscInfo').innerHTML = `
+    <div style="font-family:var(--display);font-size:1.1rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
+    ${d.names?.en ? `<div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px">${d.names.en}</div>` : ''}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+      ${d.muscles?.target ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:rgba(255,107,0,0.15);color:#FFB347;border-radius:99px;border:1px solid rgba(255,107,0,0.25)">${d.muscles.target}</span>` : ''}
+      ${d.equipment ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.equipment}</span>` : ''}
+      ${d.muscles?.bodyPart ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.muscles.bodyPart}</span>` : ''}
+    </div>`;
+
+  // ── Instruções ─────────────────────────────────────────
+  const instrs = Array.isArray(d.instructions) ? d.instructions : [];
+  const instrHtml = instrs.length
+    ? `<div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Execução</div>
+       <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+         ${instrs.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}
+       </ol>`
+    : '';
+  document.getElementById('exerciseDiscInstructions').innerHTML = instrHtml;
+
+  // ── Variações ──────────────────────────────────────────
+  const vars = d.variations || [];
+  const varHtml = vars.length
+    ? `<div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Variações</div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px">
+         ${vars.map(v => `<button onclick="openExerciseDiscovery('${(v.name_pt || v.name_en || '').replace(/'/g,"\\'")} ')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.name_pt || v.name_en}</button>`).join('')}
+       </div>`
+    : '';
+  document.getElementById('exerciseDiscVariations').innerHTML = varHtml;
+}
+
 async function openDietaSheet() {
   preencherDietaDosPerfil();
   document.getElementById("dietaSheet").classList.add("show");
