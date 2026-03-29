@@ -574,18 +574,119 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .home-stat-lbl { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,0.65); margin-top: 2px; }
 
 /* ═══ BOTÃO CONFIGURAR TREINO ═══ */
-.btn-config-treino {
-  margin: 0 16px 16px;
-  background: rgba(255,140,0,0.08);
-  border: 1.5px solid rgba(255,140,0,0.55);
-  border-radius: 14px; padding: 14px 18px;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  font-family: var(--display); font-size: 1rem; letter-spacing: .1em;
-  color: #FFB347; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform .15s, background .15s;
-  box-shadow: 0 0 18px rgba(255,140,0,0.1);
+/* ─── legado — mantido para retrocompatibilidade ─── */
+.btn-config-treino { display: none; }
+
+/* ═══ HOME HERO CARDS — TREINO + DIETA ═══ */
+.home-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 16px 20px;
 }
-.btn-config-treino:active { transform: scale(.97); background: rgba(255,140,0,0.14); }
+.home-hero-card {
+  position: relative;
+  border-radius: 22px;
+  padding: 18px 14px 16px;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s, box-shadow .15s;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.home-hero-card:active { transform: scale(.96); }
+
+/* TREINO — laranja */
+.home-hero-treino {
+  background: linear-gradient(145deg,#1c1309 0%,#201508 60%,#1a1005 100%);
+  border: 1px solid rgba(255,107,0,0.28);
+  box-shadow: 0 6px 28px rgba(255,107,0,0.14), inset 0 1px 0 rgba(255,180,80,0.08);
+}
+/* DIETA — verde */
+.home-hero-dieta {
+  background: linear-gradient(145deg,#0b1a0c 0%,#0c1f0e 60%,#091408 100%);
+  border: 1px solid rgba(34,197,94,0.25);
+  box-shadow: 0 6px 28px rgba(34,197,94,0.11), inset 0 1px 0 rgba(100,255,120,0.06);
+}
+
+/* Glow ambiental (blur circle no canto) */
+.home-hero-glow {
+  position: absolute;
+  top: -28px; left: -28px;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  filter: blur(28px);
+  pointer-events: none;
+}
+.home-hero-glow--orange { background: rgba(255,107,0,0.3); }
+.home-hero-glow--green  { background: rgba(34,197,94,0.22); }
+
+/* Ícone */
+.home-hero-icon {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.home-hero-icon--orange {
+  background: linear-gradient(135deg,#FF6B00,#FF9A3C);
+  box-shadow: 0 4px 16px rgba(255,107,0,0.45);
+}
+.home-hero-icon--green {
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  box-shadow: 0 4px 16px rgba(34,197,94,0.4);
+}
+
+/* Textos */
+.home-hero-body { position: relative; flex: 1; }
+.home-hero-label {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: .08em;
+  margin-bottom: 3px;
+  line-height: 1.1;
+}
+.home-hero-sub {
+  font-size: 0.67rem;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: .03em;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+/* Badge pill */
+.home-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: 4px 9px;
+  border-radius: 99px;
+  background: rgba(255,107,0,0.18);
+  color: #FFB347;
+  border: 1px solid rgba(255,107,0,0.3);
+}
+.home-hero-badge--green {
+  background: rgba(34,197,94,0.15);
+  color: #4ade80;
+  border-color: rgba(34,197,94,0.28);
+}
+
+/* Seta canto inferior direito */
+.home-hero-arrow {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  color: rgba(255,107,0,0.55);
+}
+.home-hero-arrow--green { color: rgba(34,197,94,0.5); }
 
 /* ═══ KRONOS AI CARD ═══ */
 .kronos-ai-card {

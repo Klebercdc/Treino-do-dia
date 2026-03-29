@@ -993,13 +993,47 @@
     </div>
   </div>
 
-  <!-- ═══ BOTÃO CONFIGURAR TREINO ═══ -->
-  <div class="btn-config-treino" onclick="navTo('programa');openConfig()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-    CONFIGURAR TREINO
+  <!-- ═══ HERO ACTION CARDS — TREINO + DIETA ═══ -->
+  <div class="home-hero-grid">
+
+    <!-- Card TREINO -->
+    <div class="home-hero-card home-hero-treino" onclick="navTo('programa');openConfig()">
+      <div class="home-hero-glow home-hero-glow--orange"></div>
+      <div class="home-hero-body">
+        <div class="home-hero-icon home-hero-icon--orange">
+          <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="home-hero-label">TREINO</div>
+        <div class="home-hero-sub">Configurar &amp; personalizar</div>
+        <div class="home-hero-badge">
+          <i data-lucide="settings-2" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+          Configurar
+        </div>
+      </div>
+      <div class="home-hero-arrow">
+        <i data-lucide="chevron-right" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+      </div>
+    </div>
+
+    <!-- Card DIETA IA -->
+    <div class="home-hero-card home-hero-dieta" onclick="openDietaSheet()">
+      <div class="home-hero-glow home-hero-glow--green"></div>
+      <div class="home-hero-body">
+        <div class="home-hero-icon home-hero-icon--green">
+          <i data-lucide="utensils" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="home-hero-label">DIETA IA</div>
+        <div class="home-hero-sub">Plano alimentar com IA</div>
+        <div class="home-hero-badge home-hero-badge--green">
+          <i data-lucide="sparkles" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+          Gerar agora
+        </div>
+      </div>
+      <div class="home-hero-arrow home-hero-arrow--green">
+        <i data-lucide="chevron-right" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+      </div>
+    </div>
+
   </div>
 
   <!-- IA ROW — KRONOS + KRONIA lado a lado -->
@@ -1156,13 +1190,6 @@
       </div>
       <div class="home-tool-name">Calculadora Basal</div>
       <div class="home-tool-sub">TMB e TDEE personalizados</div>
-    </div>
-    <div class="home-tool-card" onclick="openDietaSheet()">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
-        <i data-lucide="utensils" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Gerar Dieta</div>
-      <div class="home-tool-sub">Plano alimentar com IA + copiar</div>
     </div>
     <div class="home-tool-card" onclick="navTo('orientacao');openOrientacao();setTimeout(()=>orientExpertQuick('analise'),400)">
       <div class="home-tool-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
