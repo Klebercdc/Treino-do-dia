@@ -23,6 +23,10 @@ async function getAuthHeaders() {
  * Se ainda 401 após retry (sessão expirada), faz logout e exibe aviso.
  */
 async function apiFetch(url, opts = {}) {
+  // iOS Safari PWA fix — relative URLs throw "The string did not match the expected pattern"
+  if (typeof url === 'string' && url.startsWith('/')) {
+    url = location.protocol + '//' + location.host + url;
+  }
   opts.headers = opts.headers || await getAuthHeaders();
   let resp = await fetch(url, opts);
 
