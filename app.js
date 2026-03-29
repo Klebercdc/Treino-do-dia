@@ -4567,7 +4567,7 @@ function atualizarBasalDieta() {
 
   // Katch-McArdle (requer % gordura)
   let tmbKatch = null, massaMagra = null;
-  if (gordPct > 2 && gordPct < 60) {
+  if (gordPct && gordPct > 2 && gordPct < 60) {
     massaMagra = Math.round(peso * (1 - gordPct/100) * 10) / 10;
     tmbKatch   = Math.round(370 + 21.6 * massaMagra);
   }
