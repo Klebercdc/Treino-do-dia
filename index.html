@@ -2317,49 +2317,234 @@
   </div>
 </div>
 
-<!-- Sheet: Gerar Dieta -->
+<!-- Sheet: Gerar Dieta — Anamnese Completa -->
 
 <div id="dietaSheet" class="bottom-sheet" onclick="if(event.target===this)closeDietaSheet()">
   <div class="bs-box">
     <div class="bs-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="bs-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="utensils" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> GERAR DIETA</div>
-      <button onclick="closeDietaSheet()" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center">
-        <i data-lucide="x" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-      </button>
+      <div class="bs-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="clipboard-list" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> ANAMNESE — DIETA</div>
+      <button onclick="closeDietaSheet()" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center"><i data-lucide="x" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></button>
     </div>
-    <div class="bs-sub">Dieta personalizada com base no seu perfil e objetivo</div>
+    <div class="bs-sub">Preencha sua anamnese completa para uma dieta ultra-personalizada com IA</div>
+
+    <!-- ── 1. DADOS PESSOAIS ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="user" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 1. DADOS PESSOAIS</div>
+
     <label class="bs-label">Objetivo</label>
     <div class="bs-chips" id="dietaObjChips">
-      <div class="bs-chip" data-val="emagrecimento" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="chevron-down" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.75"></i> Emagrecer</div>
-      <div class="bs-chip active" data-val="hipertrofia" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="dumbbell" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Hipertrofia</div>
-      <div class="bs-chip" data-val="manutencao" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="scale" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Manutenção</div>
-      <div class="bs-chip" data-val="forca" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="dumbbell" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Força</div>
+      <div class="bs-chip" data-val="emagrecimento" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="chevron-down" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Emagrecer</div>
+      <div class="bs-chip active" data-val="hipertrofia" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="dumbbell" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Hipertrofia</div>
+      <div class="bs-chip" data-val="manutencao" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="scale" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Manutenção</div>
+      <div class="bs-chip" data-val="forca" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="zap" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Força</div>
+      <div class="bs-chip" data-val="recomposicao" onclick="selDietaObj(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="refresh-cw" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Recomposição</div>
     </div>
-    <label class="bs-label">Sexo</label>
+
+    <label class="bs-label">Sexo biológico</label>
     <div class="bs-chips" style="margin-bottom:14px">
       <div id="dietaSexoM" class="bs-chip active" onclick="selectDietaSexo('M')">♂ Masculino</div>
       <div id="dietaSexoF" class="bs-chip" onclick="selectDietaSexo('F')">♀ Feminino</div>
     </div>
+
     <div class="bs-row">
-      <div><label class="bs-label">Peso (kg)</label><input id="dietaPeso" type="number" class="bs-input" placeholder="75" inputmode="decimal"></div>
-      <div><label class="bs-label">Altura (cm)</label><input id="dietaAltura" type="number" class="bs-input" placeholder="175" inputmode="decimal"></div>
+      <div><label class="bs-label">Peso (kg)</label><input id="dietaPeso" type="number" class="bs-input" placeholder="75" inputmode="decimal" oninput="atualizarBasalDieta()"></div>
+      <div><label class="bs-label">Altura (cm)</label><input id="dietaAltura" type="number" class="bs-input" placeholder="175" inputmode="decimal" oninput="atualizarBasalDieta()"></div>
     </div>
     <div class="bs-row">
-      <div><label class="bs-label">Idade</label><input id="dietaIdade" type="number" class="bs-input" placeholder="25" inputmode="numeric"></div>
-      <div><label class="bs-label">Refeições / dia</label><input id="dietaRefeicoes" type="number" class="bs-input" placeholder="4" min="2" max="7" inputmode="numeric"></div>
+      <div><label class="bs-label">Idade</label><input id="dietaIdade" type="number" class="bs-input" placeholder="25" inputmode="numeric" oninput="atualizarBasalDieta()"></div>
+      <div><label class="bs-label">% Gordura <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.7rem">(opcional)</span></label><input id="dietaGordura" type="number" class="bs-input" placeholder="18" inputmode="decimal" min="3" max="60" oninput="atualizarBasalDieta()"></div>
     </div>
-    <label class="bs-label">Nível de Atividade</label>
+
+    <label class="bs-label">Biotipo</label>
+    <div class="bs-chips" id="dietaBioChips" style="margin-bottom:16px">
+      <div class="bs-chip active" data-val="mesomorfo" onclick="selDietaBio(this)">Mesomorfo</div>
+      <div class="bs-chip" data-val="ectomorfo" onclick="selDietaBio(this)">Ectomorfo</div>
+      <div class="bs-chip" data-val="endomorfo" onclick="selDietaBio(this)">Endomorfo</div>
+    </div>
+
+    <!-- ── CALCULADORA BASAL ULTRA-PROFISSIONAL ── -->
+    <div id="dietaBasalCard" style="display:none;margin-bottom:20px">
+      <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:5px"><i data-lucide="calculator" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> CALCULADORA BASAL</div>
+      <div style="background:var(--card);border:1.5px solid var(--accent);border-radius:14px;overflow:hidden">
+        <!-- TMB row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)">
+          <div style="padding:12px;border-right:1px solid var(--border)">
+            <div style="font-size:0.58rem;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">TMB · Mifflin-St Jeor</div>
+            <div id="dietaBasalTMB" style="font-size:1.2rem;font-weight:800;color:var(--text)">—</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:2px">Em repouso absoluto</div>
+          </div>
+          <div id="dietaBasalKatchDiv" style="padding:12px;display:none">
+            <div style="font-size:0.58rem;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">TMB · Katch-McArdle</div>
+            <div id="dietaBasalTMBKatch" style="font-size:1.2rem;font-weight:800;color:var(--accent)">—</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:2px">Com % gordura (mais preciso)</div>
+          </div>
+          <div id="dietaBasalMassaDiv" style="padding:12px">
+            <div style="font-size:0.58rem;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Massa Magra Est.</div>
+            <div id="dietaBasalMassaMagra" style="font-size:1.2rem;font-weight:800;color:var(--text-2)">—</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:2px">Informe % gordura acima</div>
+          </div>
+        </div>
+        <!-- TDEE table -->
+        <div style="padding:12px;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Gasto calórico diário (TDEE) por nível de atividade</div>
+          <div id="dietaBasalTDEERows" style="display:flex;flex-direction:column;gap:3px"></div>
+        </div>
+        <!-- Meta calórica -->
+        <div style="padding:12px;border-bottom:1px solid var(--border);background:rgba(255,107,0,0.05)">
+          <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Meta calórica · <span id="dietaBasalObjLabel" style="color:var(--accent)">—</span></div>
+          <div id="dietaBasalMeta" style="font-size:1.5rem;font-weight:800;color:var(--accent)">—</div>
+          <div id="dietaBasalDelta" style="font-size:0.68rem;color:var(--muted);margin-top:2px"></div>
+        </div>
+        <!-- Macros -->
+        <div style="padding:12px;border-bottom:1px solid var(--border)">
+          <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Distribuição de macros sugerida (ISSN)</div>
+          <div id="dietaBasalMacros" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"></div>
+        </div>
+        <!-- Extras -->
+        <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Hidratação/dia</div>
+            <div id="dietaBasalHidrat" style="font-size:0.95rem;font-weight:700;color:var(--text)">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Range de Proteína</div>
+            <div id="dietaBasalProtRange" style="font-size:0.95rem;font-weight:700;color:var(--text)">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 2. ATIVIDADE FÍSICA ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="activity" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 2. ATIVIDADE FÍSICA</div>
+
+    <label class="bs-label">Nível de Atividade Geral</label>
     <div class="bs-chips" id="dietaAtivChips">
-      <div class="bs-chip" data-val="sedentário" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="moon" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Sedentário</div>
-      <div class="bs-chip active" data-val="levemente ativo" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="activity" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Leve</div>
-      <div class="bs-chip" data-val="moderadamente ativo" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="activity" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Moderado</div>
-      <div class="bs-chip" data-val="muito ativo" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:5px"><i data-lucide="dumbbell" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> Intenso</div>
+      <div class="bs-chip" data-val="sedentário" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="moon" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Sedentário</div>
+      <div class="bs-chip active" data-val="levemente ativo" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="activity" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Leve</div>
+      <div class="bs-chip" data-val="moderadamente ativo" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="trending-up" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Moderado</div>
+      <div class="bs-chip" data-val="muito ativo" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="dumbbell" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Intenso</div>
+      <div class="bs-chip" data-val="atleta" onclick="selDietaAtiv(this)" style="display:flex;align-items:center;gap:4px"><i data-lucide="zap" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>Atleta</div>
     </div>
-    <div class="bs-full"><label class="bs-label">Restrições / Alergias</label><input id="dietaRestric" type="text" class="bs-input" placeholder="Ex: não como carne vermelha, alergia a lactose..."></div>
-    <div class="bs-full"><label class="bs-label">O que você gosta de comer?</label><input id="dietaPrefs" type="text" class="bs-input" placeholder="Ex: adoro frango, ovo e frutas — odeio brócolis e peixe..."></div>
+
+    <div class="bs-row">
+      <div>
+        <label class="bs-label">Treinos / semana</label>
+        <select id="dietaFreqTreino" class="bs-input">
+          <option value="não treino">Não treino</option>
+          <option value="1x por semana">1x / semana</option>
+          <option value="2x por semana">2x / semana</option>
+          <option value="3x por semana" selected>3x / semana</option>
+          <option value="4x por semana">4x / semana</option>
+          <option value="5x por semana">5x / semana</option>
+          <option value="6x por semana">6x / semana</option>
+          <option value="todos os dias">Todos os dias</option>
+        </select>
+      </div>
+      <div>
+        <label class="bs-label">Duração média</label>
+        <select id="dietaDuracaoTreino" class="bs-input">
+          <option value="~30 minutos">~30 min</option>
+          <option value="~45 minutos">~45 min</option>
+          <option value="~60 minutos" selected>~60 min</option>
+          <option value="~75 minutos">~75 min</option>
+          <option value="~90 minutos">~90 min</option>
+          <option value="mais de 2 horas">+2 horas</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="bs-label">Tipo de treino principal</label>
+    <div class="bs-chips" id="dietaTipoTreinoChips" style="margin-bottom:14px">
+      <div class="bs-chip active" data-val="musculação" onclick="selDietaTipoTreino(this)">Musculação</div>
+      <div class="bs-chip" data-val="cardio" onclick="selDietaTipoTreino(this)">Cardio</div>
+      <div class="bs-chip" data-val="crossfit/HIIT" onclick="selDietaTipoTreino(this)">CrossFit/HIIT</div>
+      <div class="bs-chip" data-val="esporte coletivo" onclick="selDietaTipoTreino(this)">Esporte</div>
+      <div class="bs-chip" data-val="funcional" onclick="selDietaTipoTreino(this)">Funcional</div>
+      <div class="bs-chip" data-val="misto (musculação + cardio)" onclick="selDietaTipoTreino(this)">Misto</div>
+    </div>
+
+    <div class="bs-row">
+      <div>
+        <label class="bs-label">Sono (horas/noite)</label>
+        <select id="dietaSono" class="bs-input">
+          <option value="menos de 5h">Menos de 5h</option>
+          <option value="5-6h">5–6h</option>
+          <option value="6-7h">6–7h</option>
+          <option value="7-8h" selected>7–8h ✓</option>
+          <option value="mais de 8h">Mais de 8h</option>
+        </select>
+      </div>
+      <div>
+        <label class="bs-label">Nível de estresse</label>
+        <select id="dietaEstresse" class="bs-input">
+          <option value="baixo">Baixo</option>
+          <option value="moderado" selected>Moderado</option>
+          <option value="alto">Alto</option>
+          <option value="muito alto">Muito alto</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── 3. SAÚDE ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="heart-pulse" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 3. SAÚDE</div>
+
+    <label class="bs-label">Patologia / condição de saúde</label>
+    <div class="bs-chips" id="dietaPatologiaChips" style="margin-bottom:14px">
+      <div class="bs-chip active" data-val="nenhuma" onclick="selDietaPatologia(this)">Nenhuma</div>
+      <div class="bs-chip" data-val="diabetes tipo 2" onclick="selDietaPatologia(this)">Diabetes</div>
+      <div class="bs-chip" data-val="hipertensão arterial" onclick="selDietaPatologia(this)">Hipertensão</div>
+      <div class="bs-chip" data-val="colesterol alto" onclick="selDietaPatologia(this)">Colesterol</div>
+      <div class="bs-chip" data-val="hipotireoidismo" onclick="selDietaPatologia(this)">Tireoide</div>
+      <div class="bs-chip" data-val="resistência à insulina" onclick="selDietaPatologia(this)">Res. Insulina</div>
+      <div class="bs-chip" data-val="SOP" onclick="selDietaPatologia(this)">SOP</div>
+      <div class="bs-chip" data-val="gastrite/refluxo" onclick="selDietaPatologia(this)">Gastrite</div>
+    </div>
+    <div class="bs-full"><label class="bs-label">Medicamentos em uso <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.7rem">(se houver)</span></label><input id="dietaMedicamentos" type="text" class="bs-input" placeholder="Ex: metformina, levotiroxina..."></div>
+
+    <!-- ── 4. ALIMENTAÇÃO ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="utensils" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 4. ALIMENTAÇÃO</div>
+
+    <div class="bs-row">
+      <div>
+        <label class="bs-label">Refeições / dia</label>
+        <input id="dietaRefeicoes" type="number" class="bs-input" placeholder="4" min="2" max="7" inputmode="numeric">
+      </div>
+      <div>
+        <label class="bs-label">Padrão alimentar</label>
+        <select id="dietaPadrao" class="bs-input">
+          <option value="onívoro">Onívoro</option>
+          <option value="flexitariano">Flexitariano</option>
+          <option value="vegetariano">Vegetariano</option>
+          <option value="vegano">Vegano</option>
+          <option value="low carb">Low Carb</option>
+          <option value="cetogênico">Cetogênico</option>
+          <option value="mediterrâneo">Mediterrâneo</option>
+        </select>
+      </div>
+    </div>
+    <div class="bs-full"><label class="bs-label">Restrições / Alergias / Intolerâncias</label><input id="dietaRestric" type="text" class="bs-input" placeholder="Ex: alergia a amendoim, intolerância à lactose..."></div>
+    <div class="bs-full"><label class="bs-label">Proteínas que gosta — serão usadas na dieta</label><input id="dietaPrefs" type="text" class="bs-input" placeholder="Ex: ovo, frango, patinho, atum, salmão..."></div>
+    <div class="bs-full"><label class="bs-label">Alimentos que não gosta / evita</label><input id="dietaDislikes" type="text" class="bs-input" placeholder="Ex: brócolis, fígado, peixe..."></div>
+
+    <!-- ── 5. SUPLEMENTOS ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="pill" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 5. SUPLEMENTOS EM USO</div>
+    <div class="bs-chips" id="dietaSuplChips" style="margin-bottom:10px">
+      <div class="bs-chip" data-val="whey protein" onclick="selDietaSupl(this)">Whey</div>
+      <div class="bs-chip" data-val="creatina" onclick="selDietaSupl(this)">Creatina</div>
+      <div class="bs-chip" data-val="caseína" onclick="selDietaSupl(this)">Caseína</div>
+      <div class="bs-chip" data-val="BCAA" onclick="selDietaSupl(this)">BCAA</div>
+      <div class="bs-chip" data-val="pré-treino" onclick="selDietaSupl(this)">Pré-treino</div>
+      <div class="bs-chip" data-val="glutamina" onclick="selDietaSupl(this)">Glutamina</div>
+      <div class="bs-chip" data-val="ômega-3" onclick="selDietaSupl(this)">Ômega-3</div>
+      <div class="bs-chip" data-val="vitamina D" onclick="selDietaSupl(this)">Vit. D</div>
+      <div class="bs-chip" data-val="multivitamínico" onclick="selDietaSupl(this)">Multi</div>
+      <div class="bs-chip" data-val="magnésio" onclick="selDietaSupl(this)">Magnésio</div>
+    </div>
+    <div class="bs-full"><label class="bs-label">Outros suplementos</label><input id="dietaOutrosSupl" type="text" class="bs-input" placeholder="Ex: ashwagandha 600mg, ZMA..."></div>
+
+    <!-- ── 6. ORÇAMENTO ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="wallet" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 6. ORÇAMENTO ALIMENTAR</div>
     <div class="bs-full">
-      <label class="bs-label">Perfil de investimento alimentar</label>
       <select id="dietaOrcamento" class="bs-input">
         <option value="">Sem restrição de orçamento</option>
         <option value="economico">Econômico — até R$ 300/mês</option>
@@ -2367,20 +2552,16 @@
         <option value="premium">Premium — acima de R$ 600/mês</option>
       </select>
     </div>
-    <button id="btnGerarDieta" onclick="gerarDieta()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px"><i data-lucide="utensils" class="lucide" width="16" height="16" stroke="#fff" fill="none" stroke-width="1.75"></i> Gerar Dieta com IA</button>
+
+    <button id="btnGerarDieta" onclick="gerarDieta()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:14px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent"><i data-lucide="utensils" class="lucide" width="16" height="16" stroke="#fff" fill="none" stroke-width="1.75"></i> Gerar Dieta com IA</button>
+
     <div id="dietaResultado" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Resultado</div>
-        <button id="btnCopiarDieta" onclick="copiarDieta()" style="padding:7px 14px;background:var(--card);border:1.5px solid var(--accent);border-radius:20px;color:var(--accent);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
-          <i data-lucide="copy" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-          Copiar
-        </button>
+        <button id="btnCopiarDieta" onclick="copiarDieta()" style="padding:7px 14px;background:var(--card);border:1.5px solid var(--accent);border-radius:20px;color:var(--accent);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><i data-lucide="copy" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="1.75"></i>Copiar</button>
       </div>
       <div id="dietaTexto" style="font-size:0.87rem;line-height:1.75;color:var(--text-2);background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;white-space:pre-wrap;"></div>
-      <button onclick="gerarDietaPDF()" style="width:100%;margin-top:10px;padding:12px;background:var(--accent);border:none;border-radius:var(--r-sm);color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent">
-        <i data-lucide="download" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-        Gerar PDF
-      </button>
+      <button onclick="gerarDietaPDF()" style="width:100%;margin-top:10px;padding:12px;background:var(--accent);border:none;border-radius:var(--r-sm);color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent"><i data-lucide="download" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="1.75"></i>Gerar PDF</button>
     </div>
     <div style="height:16px"></div>
   </div>
