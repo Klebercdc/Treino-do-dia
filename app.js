@@ -4677,12 +4677,23 @@ function selDietaBio(el) {
   el.classList.add("active");
 }
 function selDietaTipoTreino(el) {
-  document.querySelectorAll("#dietaTipoTreinoChips .bs-chip").forEach(c => c.classList.remove("active"));
-  el.classList.add("active");
+  // Múltipla seleção
+  el.classList.toggle("active");
 }
 function selDietaPatologia(el) {
-  document.querySelectorAll("#dietaPatologiaChips .bs-chip").forEach(c => c.classList.remove("active"));
-  el.classList.add("active");
+  const val = el.dataset.val;
+  if (val === "nenhuma") {
+    // "Nenhuma" é exclusivo — desseleciona todas as outras
+    document.querySelectorAll("#dietaPatologiaChips .bs-chip").forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+  } else {
+    // Selecionar outra → remove "nenhuma" e faz toggle
+    document.querySelector('#dietaPatologiaChips [data-val="nenhuma"]')?.classList.remove("active");
+    el.classList.toggle("active");
+    // Se nenhuma ficou ativa, volta "Nenhuma"
+    const anyActive = document.querySelectorAll("#dietaPatologiaChips .bs-chip.active").length > 0;
+    if (!anyActive) document.querySelector('#dietaPatologiaChips [data-val="nenhuma"]')?.classList.add("active");
+  }
 }
 function selDietaSupl(el) {
   // Toggle (múltipla seleção)
@@ -5064,10 +5075,10 @@ async function gerarDieta() {
   const ativ     = document.querySelector("#dietaAtivChips .bs-chip.active")?.dataset.val || "levemente ativo";
   const freqTreino    = document.getElementById("dietaFreqTreino")?.value || "3x por semana";
   const duracaoTreino = document.getElementById("dietaDuracaoTreino")?.value || "~60 minutos";
-  const tipoTreino    = document.querySelector("#dietaTipoTreinoChips .bs-chip.active")?.dataset.val || "musculação";
+  const tipoTreino    = Array.from(document.querySelectorAll("#dietaTipoTreinoChips .bs-chip.active")).map(e => e.dataset.val).join(", ") || "musculação";
   const sono          = document.getElementById("dietaSono")?.value || "7-8h";
   const estresse      = document.getElementById("dietaEstresse")?.value || "moderado";
-  const patologia     = document.querySelector("#dietaPatologiaChips .bs-chip.active")?.dataset.val || "nenhuma";
+  const patologia     = Array.from(document.querySelectorAll("#dietaPatologiaChips .bs-chip.active")).map(e => e.dataset.val).join(", ") || "nenhuma";
   const medicamentos  = document.getElementById("dietaMedicamentos")?.value.trim() || "";
   const padrao        = document.getElementById("dietaPadrao")?.value || "onívoro";
   const restric       = document.getElementById("dietaRestric").value.trim() || "nenhuma";
@@ -5275,10 +5286,10 @@ ${sono === "menos de 5h" || sono === "5-6h" ? "Sono|ATENÇÃO: sono insuficiente
 ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado aumenta cortisol — incluir adaptógenos naturais (ashwagandha), magnésio, ômega-3." : ""}`;
 
   try {
-    const _apiBase = (typeof location !== "undefined" && location.origin && location.origin !== "null")
-      ? location.origin
-      : "";
-    const resp = await apiFetch(_apiBase + "/api/chat", {
+    let _apiChatUrl;
+    try { _apiChatUrl = new URL("/api/chat", location.href).href; }
+    catch(_) { _apiChatUrl = "/api/chat"; }
+    const resp = await apiFetch(_apiChatUrl, {
       method: "POST",
       body: JSON.stringify({
         system: buildTrainingContext(),
