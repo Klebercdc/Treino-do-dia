@@ -13,6 +13,22 @@ function hasAny(text, patterns) {
 export function classifyIntent(message) {
   const msg = normalizeText(message);
 
+  const exerciseDiscoveryPatterns = [
+    "exercicio de",
+    "exercicio para",
+    "me mostre",
+    "troque esse exercicio",
+    "substitua esse exercicio",
+    "variacoes de",
+    "variações de",
+    "exercise for",
+    "replace this exercise",
+    "show me"
+  ];
+
+  const workoutBroadSignals = ["treino", "workout", "ficha"];
+  const explicitGenerateSignals = ["faz", "faca", "monte", "monta", "crie", "gera", "gere", "quero", "preciso", "me passa"];
+
   const workoutGeneratePatterns = [
     "faz um treino",
     "faca um treino",
@@ -88,6 +104,24 @@ export function classifyIntent(message) {
     "termogenico",
     "termogênico"
   ];
+
+  if (hasAny(msg, workoutBroadSignals) && hasAny(msg, explicitGenerateSignals) && hasAny(msg, ["treino", "workout", "ficha"])) {
+    return {
+      domain: "workout",
+      action: "generate_workout",
+      confidence: 0.98,
+      reason: "pedido explícito de geração de treino"
+    };
+  }
+
+  if (hasAny(msg, exerciseDiscoveryPatterns)) {
+    return {
+      domain: "exercise",
+      action: "discover_exercise",
+      confidence: 0.93,
+      reason: "pedido de busca/troca/variação de exercício"
+    };
+  }
 
   if (hasAny(msg, workoutGeneratePatterns)) {
     return {
