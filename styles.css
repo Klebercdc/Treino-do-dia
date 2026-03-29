@@ -748,13 +748,16 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 
 /* ═══ UPGRADE BANNER PREMIUM ═══ */
 .upgrade-banner-premium {
-  display: flex; align-items: center; gap: 14px;
-  margin: 0 16px 10px;
-  background: linear-gradient(135deg, rgba(93,63,211,0.2) 0%, rgba(255,107,0,0.15) 100%);
-  border: 1px solid rgba(255,107,0,0.35); border-radius: 16px; padding: 14px 16px;
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+  margin: 0 16px 14px;
+  background: linear-gradient(145deg,#140d20 0%,#1a0d2e 50%,#1c1009 100%);
+  border: 1px solid rgba(168,85,247,0.3); border-radius: 20px; padding: 16px 16px 16px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 8px 30px rgba(124,58,237,0.2), inset 0 1px 0 rgba(200,150,255,0.06);
+  transition: transform .15s, box-shadow .15s;
 }
-.upgrade-banner-premium:active { transform: scale(.98); }
+.upgrade-banner-premium:active { transform: scale(.98); box-shadow: 0 4px 16px rgba(124,58,237,0.2); }
 
 /* ═══ ACHIEVEMENT + RECOMMENDED CARDS ═══ */
 .achievement-card {
