@@ -174,29 +174,33 @@ window.KroniaDashboard = (function () {
   }
 
   // ── 4. RecommendationCard — Prescrição clínica esportiva ─────────────────
+  // Ícones Lucide inline (SVG) — sem dependência de emoji
+  const LUCIDE_ICONS = {
+    sem_historico: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+    destreino:    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+    otimo:        `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>`,
+    atencao:      `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.6 14.9A1 1 0 0 0 2.56 20h17.88a1 1 0 0 0 .87-1.24L12.7 3.86a1 1 0 0 0-1.74 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    perigo:       `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>`,
+  };
+
   const PRESCRICOES = {
     sem_historico: {
-      icon: '📊',
       titulo: 'Sem histórico ainda',
       corpo: 'Registre pelo menos 4 semanas de treino para ativar o motor de recomendação KRONIA TRANSFORMS.',
     },
     destreino: {
-      icon: '💤',
       titulo: 'Volume abaixo do mínimo',
       corpo: 'Carga crônica baixa. Aumente progressivamente o volume para construir base de condicionamento.',
     },
     otimo: {
-      icon: '✅',
       titulo: 'Recuperação ideal — zona de adaptação',
       corpo: 'Liberação total para progressão de carga e quebra de PR. Janela de adaptação fisiológica ótima.',
     },
     atencao: {
-      icon: '⚠️',
       titulo: 'Fadiga central acumulada',
       corpo: 'Mantenha as cargas atuais. Considere reduzir 1 série por exercício e priorizar sono e nutrição pós-treino.',
     },
     perigo: {
-      icon: '🚨',
       titulo: 'Risco ortopédico severo',
       corpo: 'Treino de hoje deve ser estritamente regenerativo (RPE máx: 4). Evite exercícios pesados e movimentos explosivos.',
     },
@@ -221,7 +225,7 @@ window.KroniaDashboard = (function () {
         align-items:flex-start;
         gap:12px;
       ">
-        <span style="font-size:1.5rem;line-height:1;flex-shrink:0;margin-top:1px">${presc.icon}</span>
+        <span style="display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${zona.cor};margin-top:1px">${LUCIDE_ICONS[chave] || LUCIDE_ICONS.sem_historico}</span>
         <div>
           <div style="
             font-family:'Barlow Condensed',Barlow,sans-serif;
