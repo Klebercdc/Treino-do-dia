@@ -4443,26 +4443,257 @@ function exportarDietaChatPDF() {
 }
 
 // ── Dieta Sheet ──────────────────────────────────────
-function openDietaSheet() {
+async function openDietaSheet() {
   preencherDietaDosPerfil();
   document.getElementById("dietaSheet").classList.add("show");
+  atualizarBasalDieta();
+  await _preencherDietaDoSupabase();
 }
 function closeDietaSheet() {
   document.getElementById("dietaSheet").classList.remove("show");
 }
+
+// ── Busca dados do perfil no Supabase e preenche o formulário ──
+async function _preencherDietaDoSupabase() {
+  try {
+    const { data: { session } } = await _sb.auth.getSession();
+    if (!session) return;
+    const userId = session.user.id;
+
+    const [profRes, metricRes, goalsRes, suplRes] = await Promise.all([
+      _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId).maybeSingle(),
+      _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+      _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+      _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true)
+    ]);
+
+    const p  = profRes.data;
+    const bm = metricRes.data;
+    const g  = goalsRes.data;
+    const sp = suplRes.data || [];
+
+    // Guarda goals para usar no prompt
+    if (g) window._dietaGoalsSupabase = g;
+
+    if (!p) return;
+
+    // Peso — prefere body_metrics mais recente
+    const peso = bm?.weight_kg || p.current_weight_kg;
+    if (peso) document.getElementById("dietaPeso").value = peso;
+    if (p.height_cm) document.getElementById("dietaAltura").value = p.height_cm;
+
+    // % gordura do body_metrics
+    if (bm?.body_fat_percent) document.getElementById("dietaGordura").value = bm.body_fat_percent;
+
+    // Idade a partir de birth_date
+    if (p.birth_date) {
+      const age = Math.floor((Date.now() - new Date(p.birth_date)) / (365.25*24*3600*1000));
+      if (age > 10 && age < 120) document.getElementById("dietaIdade").value = age;
+    }
+
+    // Sexo
+    if (p.sex) selectDietaSexo(p.sex === 'female' || p.sex === 'feminino' ? 'F' : 'M');
+
+    // Objetivo
+    if (p.objective) {
+      const oMap = { emagrecimento:'emagrecimento', manutencao:'manutencao', manutención:'manutencao', hipertrofia:'hipertrofia', recomposicao:'recomposicao', forca:'forca' };
+      const el = document.querySelector(`#dietaObjChips [data-val="${oMap[p.objective] || p.objective}"]`);
+      if (el) selDietaObj(el);
+    }
+
+    // Atividade
+    if (p.activity_level) {
+      const aMap = { sedentario:'sedentário', sedentário:'sedentário', leve:'levemente ativo', moderado:'moderadamente ativo', ativo:'muito ativo', muito_ativo:'muito ativo', atleta:'atleta' };
+      const el = document.querySelector(`#dietaAtivChips [data-val="${aMap[p.activity_level] || 'levemente ativo'}"]`);
+      if (el) selDietaAtiv(el);
+    }
+
+    // Padrão alimentar
+    if (p.dietary_pattern) {
+      const padSel = document.getElementById("dietaPadrao");
+      if (padSel) {
+        const pMap = { onivoro:'onívoro', vegetariano:'vegetariano', vegano:'vegano', low_carb:'low carb', cetogenico:'cetogênico', mediterraneo:'mediterrâneo' };
+        const pv = pMap[p.dietary_pattern] || p.dietary_pattern;
+        Array.from(padSel.options).forEach(o => { if (o.value === pv) o.selected = true; });
+      }
+    }
+
+    // Preferências alimentares (liked_foods)
+    if (p.liked_foods?.length && !document.getElementById("dietaPrefs").value) {
+      document.getElementById("dietaPrefs").value = p.liked_foods.join(", ");
+    }
+
+    // Alimentos que não gosta (disliked_foods)
+    if (p.disliked_foods?.length && !document.getElementById("dietaDislikes").value) {
+      document.getElementById("dietaDislikes").value = p.disliked_foods.join(", ");
+    }
+
+    // Restrições: allergies + intolerances + clinical_notes
+    const restParts = [...(p.allergies || []), ...(p.intolerances || [])];
+    if (restParts.length && !document.getElementById("dietaRestric").value) {
+      document.getElementById("dietaRestric").value = restParts.join(", ");
+    }
+
+    // Suplementos do banco
+    if (sp.length) {
+      sp.forEach(s => {
+        const el = document.querySelector(`#dietaSuplChips [data-val="${s.supplement_name}"]`);
+        if (el && !el.classList.contains("active")) el.classList.add("active");
+      });
+    }
+
+    atualizarBasalDieta();
+  } catch(e) {
+    console.warn('[dietaSheet] Supabase:', e.message);
+  }
+}
+
+// ── Calculadora Basal Ultra-Profissional ──────────────────────
+function atualizarBasalDieta() {
+  const peso   = parseFloat(document.getElementById("dietaPeso")?.value);
+  const altura = parseFloat(document.getElementById("dietaAltura")?.value);
+  const idade  = parseInt(document.getElementById("dietaIdade")?.value);
+  const gordPct = parseFloat(document.getElementById("dietaGordura")?.value);
+  const card   = document.getElementById("dietaBasalCard");
+  if (!card) return;
+  if (!peso || !altura || !idade || peso <= 0 || altura <= 0 || idade <= 0) { card.style.display = "none"; return; }
+
+  const sexoF = document.getElementById("dietaSexoF")?.classList.contains("active");
+
+  // Mifflin-St Jeor
+  const tmbMifflin = sexoF
+    ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
+    : Math.round(10*peso + 6.25*altura - 5*idade + 5);
+
+  // Katch-McArdle (requer % gordura)
+  let tmbKatch = null, massaMagra = null;
+  if (gordPct > 2 && gordPct < 60) {
+    massaMagra = Math.round(peso * (1 - gordPct/100) * 10) / 10;
+    tmbKatch   = Math.round(370 + 21.6 * massaMagra);
+  }
+
+  // TMB principal: Katch-McArdle se disponível (mais preciso)
+  const tmbPrincipal = tmbKatch || tmbMifflin;
+
+  // Níveis de atividade
+  const niveis = [
+    { label: "😴 Sedentário",          val: "sedentário",           mult: 1.2   },
+    { label: "🚶 Levemente ativo",     val: "levemente ativo",      mult: 1.375 },
+    { label: "🏃 Moderadamente ativo", val: "moderadamente ativo",  mult: 1.55  },
+    { label: "💪 Muito ativo",         val: "muito ativo",          mult: 1.725 },
+    { label: "🔥 Atleta",             val: "atleta",               mult: 1.9   }
+  ];
+  const ativEl  = document.querySelector("#dietaAtivChips .bs-chip.active");
+  const ativVal = ativEl?.dataset.val || "levemente ativo";
+  const fator   = niveis.find(n => n.val === ativVal)?.mult || 1.375;
+  const tdee    = Math.round(tmbPrincipal * fator);
+
+  // Objetivo e meta calórica
+  const objEl = document.querySelector("#dietaObjChips .bs-chip.active");
+  const obj   = objEl?.dataset.val || "hipertrofia";
+  const metaCfg = {
+    emagrecimento: { delta: -400, label: "Emagrecimento",  deltaTxt: "−400 kcal abaixo do TDEE (déficit moderado)" },
+    hipertrofia:   { delta:  300, label: "Hipertrofia",    deltaTxt: "+300 kcal acima do TDEE (superávit limpo)"  },
+    manutencao:    { delta:    0, label: "Manutenção",     deltaTxt: "= TDEE (equilíbrio calórico)"              },
+    forca:         { delta:  200, label: "Força",          deltaTxt: "+200 kcal acima do TDEE"                  },
+    recomposicao:  { delta:  -50, label: "Recomposição",   deltaTxt: "~TDEE com leve déficit + alta proteína"   }
+  };
+  const cfg  = metaCfg[obj] || metaCfg.hipertrofia;
+  const meta = tdee + cfg.delta;
+
+  // Macros por objetivo (ISSN)
+  const protFator = { emagrecimento: 2.3, hipertrofia: 2.0, manutencao: 1.8, forca: 2.0, recomposicao: 2.2 }[obj] || 2.0;
+  const protG   = Math.round(peso * protFator);
+  const gordG   = Math.round(meta * 0.25 / 9);
+  const carbG   = Math.max(0, Math.round((meta - protG*4 - gordG*9) / 4));
+  const pctProt = Math.round(protG*4 / meta * 100);
+  const pctCarb = Math.round(carbG*4 / meta * 100);
+  const pctGord = Math.round(gordG*9 / meta * 100);
+
+  // ── Atualiza DOM ──
+  document.getElementById("dietaBasalTMB").textContent = tmbMifflin.toLocaleString('pt-BR') + " kcal";
+
+  const katchDiv = document.getElementById("dietaBasalKatchDiv");
+  const massaDiv = document.getElementById("dietaBasalMassaDiv");
+  if (tmbKatch && massaMagra) {
+    document.getElementById("dietaBasalTMBKatch").textContent  = tmbKatch.toLocaleString('pt-BR') + " kcal";
+    document.getElementById("dietaBasalMassaMagra").textContent = massaMagra.toLocaleString('pt-BR') + " kg";
+    if (katchDiv) katchDiv.style.display = "";
+    if (massaDiv) massaDiv.style.display = "none";
+  } else {
+    document.getElementById("dietaBasalMassaMagra").textContent = "Informe % gordura";
+    if (katchDiv) katchDiv.style.display = "none";
+    if (massaDiv) massaDiv.style.display = "";
+  }
+
+  // TDEE table
+  document.getElementById("dietaBasalTDEERows").innerHTML = niveis.map(n => {
+    const v = Math.round(tmbPrincipal * n.mult);
+    const active = n.val === ativVal;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:0.75rem;color:${active ? 'var(--text)' : 'var(--text-2)'};font-weight:${active ? 700 : 400}">${n.label}</span>
+      <span style="font-size:0.8rem;font-weight:${active ? 800 : 500};color:${active ? 'var(--accent)' : 'var(--text-2)'}">${v.toLocaleString('pt-BR')} kcal${active ? ' ◀' : ''}</span>
+    </div>`;
+  }).join('');
+
+  // Meta
+  document.getElementById("dietaBasalObjLabel").textContent = cfg.label;
+  document.getElementById("dietaBasalMeta").textContent     = meta.toLocaleString('pt-BR') + " kcal/dia";
+  document.getElementById("dietaBasalDelta").textContent    = cfg.deltaTxt;
+
+  // Macros grid
+  document.getElementById("dietaBasalMacros").innerHTML = [
+    { nome: "Proteína",    g: protG, pct: pctProt, sub: `${protFator.toFixed(1)}g/kg · ${protG*4} kcal` },
+    { nome: "Carboidrato", g: carbG, pct: pctCarb, sub: `${carbG*4} kcal`   },
+    { nome: "Gordura",     g: gordG, pct: pctGord, sub: `${gordG*9} kcal`   }
+  ].map(m => `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+    <div style="font-size:0.57rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">${m.nome}</div>
+    <div style="font-size:0.95rem;font-weight:800;color:var(--text)">${m.g}g</div>
+    <div style="font-size:0.6rem;color:var(--muted)">${m.pct}%</div>
+    <div style="font-size:0.6rem;color:var(--muted)">${m.sub}</div>
+  </div>`).join('');
+
+  // Extras
+  const hidrat  = (peso * 0.035).toFixed(1);
+  const protMin = Math.round(peso * 1.6);
+  document.getElementById("dietaBasalHidrat").textContent   = hidrat + " L/dia";
+  document.getElementById("dietaBasalProtRange").textContent = `${protMin}–${protG}g/dia`;
+
+  card.style.display = "";
+}
+
 function selDietaObj(el) {
   document.querySelectorAll("#dietaObjChips .bs-chip").forEach(c => c.classList.remove("active"));
   el.classList.add("active");
+  atualizarBasalDieta();
 }
 function selDietaAtiv(el) {
   document.querySelectorAll("#dietaAtivChips .bs-chip").forEach(c => c.classList.remove("active"));
   el.classList.add("active");
+  atualizarBasalDieta();
+}
+function selDietaBio(el) {
+  document.querySelectorAll("#dietaBioChips .bs-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+}
+function selDietaTipoTreino(el) {
+  document.querySelectorAll("#dietaTipoTreinoChips .bs-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+}
+function selDietaPatologia(el) {
+  document.querySelectorAll("#dietaPatologiaChips .bs-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+}
+function selDietaSupl(el) {
+  // Toggle (múltipla seleção)
+  el.classList.toggle("active");
 }
 // aliases para retrocompatibilidade
 function selectDietaObj(el) { selDietaObj(el); }
 function selectDietaSexo(s) {
   document.getElementById("dietaSexoM").classList.toggle("active", s === "M");
   document.getElementById("dietaSexoF").classList.toggle("active", s === "F");
+  atualizarBasalDieta();
 }
 function selectDietaAtiv(el) { selDietaAtiv(el); }
 
@@ -4544,18 +4775,25 @@ function irGerarDieta() {
   setTimeout(() => openDietaSheet(), 320);
 }
 function preencherDietaDosPerfil() {
-  const cfg = safeJSON("kronia_config", {});
+  const cfg   = safeJSON("kronia_config", {});
   const prefs = safeJSON("kronia_calc_prefs", {});
-  document.getElementById("dietaPeso").value    = prefs.dietaPeso    || cfg.peso    || "";
-  document.getElementById("dietaAltura").value  = prefs.dietaAltura  || cfg.altura  || "";
-  document.getElementById("dietaIdade").value   = prefs.dietaIdade   || cfg.idade   || "";
-  if (prefs.dietaRefeicoes) document.getElementById("dietaRefeicoes").value = prefs.dietaRefeicoes;
-  if (prefs.dietaRestric)   document.getElementById("dietaRestric").value   = prefs.dietaRestric;
-  if (prefs.dietaPrefs)     document.getElementById("dietaPrefs").value     = prefs.dietaPrefs;
-  if (prefs.dietaOrcamento) document.getElementById("dietaOrcamento").value = prefs.dietaOrcamento;
-  if (prefs.dietaObj) { const el = document.querySelector(`#dietaObjChips [data-val="${prefs.dietaObj}"]`); if (el) selDietaObj(el); }
+  const setV  = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  setV("dietaPeso",    prefs.dietaPeso    || cfg.peso    || "");
+  setV("dietaAltura",  prefs.dietaAltura  || cfg.altura  || "");
+  setV("dietaIdade",   prefs.dietaIdade   || cfg.idade   || "");
+  setV("dietaGordura", prefs.dietaGordura || cfg.gordura || "");
+  setV("dietaRefeicoes", prefs.dietaRefeicoes || "");
+  setV("dietaRestric",   prefs.dietaRestric   || "");
+  setV("dietaPrefs",     prefs.dietaPrefs     || "");
+  setV("dietaDislikes",  prefs.dietaDislikes  || "");
+  setV("dietaMedicamentos", prefs.dietaMedicamentos || "");
+  setV("dietaOutrosSupl",   prefs.dietaOutrosSupl   || "");
+  if (prefs.dietaOrcamento) setV("dietaOrcamento", prefs.dietaOrcamento);
+  if (prefs.dietaPadrao)    setV("dietaPadrao",    prefs.dietaPadrao);
+  if (prefs.dietaObj)  { const el = document.querySelector(`#dietaObjChips [data-val="${prefs.dietaObj}"]`);   if (el) selDietaObj(el); }
   if (prefs.dietaSexo) selectDietaSexo(prefs.dietaSexo);
   if (prefs.dietaAtiv) { const el = document.querySelector(`#dietaAtivChips [data-val="${prefs.dietaAtiv}"]`); if (el) selDietaAtiv(el); }
+  if (prefs.dietaBio)  { const el = document.querySelector(`#dietaBioChips [data-val="${prefs.dietaBio}"]`);   if (el) selDietaBio(el); }
 }
 function copiarDieta() {
   const txt = document.getElementById("dietaTexto").textContent;
@@ -4814,16 +5052,53 @@ function gerarDietaPDF() {
 }
 
 async function gerarDieta() {
-  const obj    = document.querySelector("#dietaObjChips .bs-chip.active")?.dataset.val || "hipertrofia";
-  const sexo   = document.getElementById("dietaSexoF").classList.contains("active") ? "feminino" : "masculino";
-  const peso   = parseFloat(document.getElementById("dietaPeso").value) || 75;
-  const altura = parseFloat(document.getElementById("dietaAltura").value) || 175;
-  const idade  = parseInt(document.getElementById("dietaIdade").value) || 25;
-  const refs   = parseInt(document.getElementById("dietaRefeicoes").value) || 4;
-  const ativ   = document.querySelector("#dietaAtivChips .bs-chip.active")?.dataset.val || "levemente ativo";
-  const restric = document.getElementById("dietaRestric").value.trim() || "nenhuma";
-  const prefs  = document.getElementById("dietaPrefs").value.trim();
-  const orcamento = document.getElementById("dietaOrcamento").value;
+  // ── Coleta todos os dados da anamnese ─────────────────────────────
+  const obj      = document.querySelector("#dietaObjChips .bs-chip.active")?.dataset.val || "hipertrofia";
+  const sexo     = document.getElementById("dietaSexoF").classList.contains("active") ? "feminino" : "masculino";
+  const peso     = parseFloat(document.getElementById("dietaPeso").value) || 75;
+  const altura   = parseFloat(document.getElementById("dietaAltura").value) || 175;
+  const idade    = parseInt(document.getElementById("dietaIdade").value) || 25;
+  const gordPct  = parseFloat(document.getElementById("dietaGordura")?.value) || null;
+  const biotipo  = document.querySelector("#dietaBioChips .bs-chip.active")?.dataset.val || "mesomorfo";
+  const refs     = parseInt(document.getElementById("dietaRefeicoes").value) || 4;
+  const ativ     = document.querySelector("#dietaAtivChips .bs-chip.active")?.dataset.val || "levemente ativo";
+  const freqTreino    = document.getElementById("dietaFreqTreino")?.value || "3x por semana";
+  const duracaoTreino = document.getElementById("dietaDuracaoTreino")?.value || "~60 minutos";
+  const tipoTreino    = document.querySelector("#dietaTipoTreinoChips .bs-chip.active")?.dataset.val || "musculação";
+  const sono          = document.getElementById("dietaSono")?.value || "7-8h";
+  const estresse      = document.getElementById("dietaEstresse")?.value || "moderado";
+  const patologia     = document.querySelector("#dietaPatologiaChips .bs-chip.active")?.dataset.val || "nenhuma";
+  const medicamentos  = document.getElementById("dietaMedicamentos")?.value.trim() || "";
+  const padrao        = document.getElementById("dietaPadrao")?.value || "onívoro";
+  const restric       = document.getElementById("dietaRestric").value.trim() || "nenhuma";
+  const prefs         = document.getElementById("dietaPrefs").value.trim();
+  const dislikes      = document.getElementById("dietaDislikes")?.value.trim() || "";
+  const suplAtivos    = Array.from(document.querySelectorAll("#dietaSuplChips .bs-chip.active")).map(e => e.dataset.val);
+  const outrosSupl    = document.getElementById("dietaOutrosSupl")?.value.trim() || "";
+  const todosSupl     = [...suplAtivos, ...(outrosSupl ? [outrosSupl] : [])];
+  const orcamento     = document.getElementById("dietaOrcamento").value;
+
+  // Cálculos basais para o prompt
+  const tmbMifflin = sexo === "feminino"
+    ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
+    : Math.round(10*peso + 6.25*altura - 5*idade + 5);
+  let tmbKatch = null, massaMagra = null;
+  if (gordPct && gordPct > 2 && gordPct < 60) {
+    massaMagra = Math.round(peso * (1 - gordPct/100) * 10) / 10;
+    tmbKatch   = Math.round(370 + 21.6 * massaMagra);
+  }
+  const tmbUsar  = tmbKatch || tmbMifflin;
+  const fatorAtiv = { "sedentário":1.2,"levemente ativo":1.375,"moderadamente ativo":1.55,"muito ativo":1.725,"atleta":1.9 }[ativ] || 1.375;
+  const tdee = Math.round(tmbUsar * fatorAtiv);
+  const metaDelta = { emagrecimento:-400, hipertrofia:300, manutencao:0, forca:200, recomposicao:-50 }[obj] || 0;
+  const metaCal  = tdee + metaDelta;
+  const protFat  = { emagrecimento:2.3, hipertrofia:2.0, manutencao:1.8, forca:2.0, recomposicao:2.2 }[obj] || 2.0;
+  const protMeta = Math.round(peso * protFat);
+  const gordMeta = Math.round(metaCal * 0.25 / 9);
+  const carbMeta = Math.max(0, Math.round((metaCal - protMeta*4 - gordMeta*9) / 4));
+
+  // Goals do Supabase (se disponíveis)
+  const goalsDb = window._dietaGoalsSupabase;
 
   // ── Instrução de orçamento para o prompt ──────────────────────────
   const orcamentoInstrucao = {
@@ -4847,114 +5122,157 @@ PERFIL PREMIUM — DIRETRIZES:
 - Inclua substituições premium por refeição (1 opção equivalente para cada principal alimento), mantendo macros semelhantes.
 - Priorize variedade, biodisponibilidade, praticidade e aderência de longo prazo.`
   }[orcamento] || "";
+  // Salva preferências para re-uso
   localStorage.setItem("kronia_calc_prefs", JSON.stringify({
     ...safeJSON("kronia_calc_prefs", {}),
-    dietaObj: obj,
-    dietaSexo: document.getElementById("dietaSexoF").classList.contains("active") ? "F" : "M",
-    dietaPeso: document.getElementById("dietaPeso").value,
-    dietaAltura: document.getElementById("dietaAltura").value,
-    dietaIdade: document.getElementById("dietaIdade").value,
-    dietaRefeicoes: document.getElementById("dietaRefeicoes").value,
-    dietaAtiv: ativ,
-    dietaRestric: document.getElementById("dietaRestric").value.trim(),
-    dietaPrefs: document.getElementById("dietaPrefs").value.trim(),
-    dietaOrcamento: orcamento
+    dietaObj: obj, dietaSexo: sexo === "feminino" ? "F" : "M",
+    dietaPeso: String(peso), dietaAltura: String(altura), dietaIdade: String(idade),
+    dietaGordura: String(gordPct || ""), dietaBio: biotipo,
+    dietaRefeicoes: String(refs), dietaAtiv: ativ,
+    dietaRestric: restric, dietaPrefs: prefs, dietaDislikes: dislikes,
+    dietaMedicamentos: medicamentos, dietaOutrosSupl: outrosSupl,
+    dietaOrcamento: orcamento, dietaPadrao: padrao
   }));
-  const res    = document.getElementById("dietaResultado");
-  const txt    = document.getElementById("dietaTexto");
-  const btn    = document.getElementById("btnGerarDieta");
 
+  const res = document.getElementById("dietaResultado");
+  const txt = document.getElementById("dietaTexto");
+  const btn = document.getElementById("btnGerarDieta");
   res.style.display = "block";
-  txt.textContent = "Calculando TMB, TDEE e montando sua dieta personalizada...";
+  txt.textContent = "Analisando perfil e calculando TMB/TDEE — montando sua dieta personalizada…";
   btn.disabled = true;
 
-  // Calcula TMB pela fórmula de Mifflin-St Jeor para exibir ao modelo
-  const tmb = sexo === "feminino"
-    ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
-    : Math.round(10*peso + 6.25*altura - 5*idade + 5);
-
-  // Extrai proteínas específicas mencionadas pelo usuário para enforcê-las no prompt
+  // Bloco de proteínas obrigatórias
   const proteinsLine = prefs
-    ? `\nPROTEÍNAS OBRIGATÓRIAS — REGRA CRÍTICA:\nO usuário gosta de e quer usar: "${prefs}"\n→ Identifique os alimentos proteicos nessa lista (ex: ovo, frango, patinho, carne, peixe, atum, etc.).\n→ Use SOMENTE essas proteínas em TODAS as refeições que contêm proteína.\n→ NÃO inclua nenhuma outra fonte proteica animal que não esteja mencionada.\n→ Distribua essas proteínas de forma inteligente ao longo do dia (ex: ovo no café da manhã, frango no almoço, patinho no jantar).\n→ Se alguma proteína mencionada não fizer sentido em uma refeição específica, simplesmente não a use nessa refeição — mas não substitua por outra proteína não listada.\n→ Para os demais alimentos (carboidratos, legumes, frutas, gorduras), escolha o que melhor serve ao objetivo.`
+    ? `\nPROTEÍNAS OBRIGATÓRIAS — REGRA CRÍTICA:\nO usuário quer usar especificamente: "${prefs}"\n→ Identifique os alimentos proteicos dessa lista (ex: ovo, frango, patinho, atum, etc.).\n→ Use SOMENTE essas proteínas em TODAS as refeições que contêm fonte proteica animal.\n→ NÃO inclua nenhuma outra proteína animal não listada.\n→ Distribua inteligentemente: ovo no café, frango no almoço, patinho no jantar, etc.\n→ Se uma proteína não fizer sentido em determinada refeição, apenas não a use — nunca substitua por outra não listada.`
     : "";
 
-  let prompt = `Crie uma dieta 100% personalizada para ${obj}.
+  // Suplementos em uso (contexto para a IA)
+  const suplLine = todosSupl.length
+    ? `\n- Suplementos em uso: ${todosSupl.join(", ")} → considere na distribuição de proteína e timing de nutrientes.`
+    : "";
 
-DADOS DO USUÁRIO:
-- Sexo: ${sexo}
+  // Dados do Supabase (nutrition_goals)
+  const goalsLine = goalsDb
+    ? `\n- Meta calórica registrada no perfil: ${goalsDb.calories_target || "—"} kcal | Proteína: ${goalsDb.protein_g || "—"}g | Carbo: ${goalsDb.carbs_g || "—"}g | Gordura: ${goalsDb.fat_g || "—"}g`
+    : "";
+
+  // Ajustes específicos por patologia
+  const patologiaRules = {
+    "diabetes tipo 2":         "→ DIABETES: priorizar baixo índice glicêmico. Evitar açúcar, farinha branca refinada, sucos. Prefira batata-doce, arroz integral, feijão, aveia. Distribuir carboidratos uniformemente nas refeições.",
+    "hipertensão arterial":    "→ HIPERTENSÃO: limitar sódio a <2000mg/dia. Evitar embutidos, enlatados, sal em excesso. Incluir potássio (banana, batata-doce, abacate) e magnésio.",
+    "colesterol alto":         "→ COLESTEROL: limitar gordura saturada. Incluir aveia, azeite, oleaginosas, ômega-3. Evitar frituras e embutidos.",
+    "hipotireoidismo":         "→ HIPOTIREOIDISMO: evitar excesso de soja crua e crucíferas cruas (brócolis, couve) em grandes quantidades. Incluir selênio (castanha-do-pará) e zinco.",
+    "resistência à insulina":  "→ RESISTÊNCIA À INSULINA: priorizar baixo IG, alto teor de fibras. Evitar carboidratos simples. Distribuir refeições a cada 3-4h.",
+    "SOP":                     "→ SOP: dieta anti-inflamatória. Reduzir carboidratos simples, preferir low GI. Incluir ômega-3, zinco, magnésio. Controlar insulina.",
+    "gastrite/refluxo":        "→ GASTRITE/REFLUXO: evitar alimentos ácidos (tomate, laranja), café em excesso, frituras, pimenta. Preferir refeições menores e frequentes."
+  }[patologia] || "";
+
+  const prompt = `Você é KRONOS, especialista em nutrição esportiva e clínica. Crie uma dieta 100% personalizada com base na anamnese completa abaixo.
+
+════════════════════════════════════════
+ANAMNESE COMPLETA DO PACIENTE
+════════════════════════════════════════
+
+DADOS ANTROPOMÉTRICOS:
+- Objetivo: ${obj}
+- Sexo: ${sexo} | Biotipo: ${biotipo}
 - Peso: ${peso}kg | Altura: ${altura}cm | Idade: ${idade} anos
-- TMB estimada (Mifflin-St Jeor): ~${tmb} kcal
-- Nível de atividade: ${ativ}
-- Número de refeições por dia: ${refs}
-- Restrições/alergias/não gosta: ${restric}
-- Alimentos que gosta: ${prefs || "sem preferência específica"}
+${gordPct ? `- % Gordura corporal: ${gordPct}% | Massa magra estimada: ${massaMagra}kg` : "- % Gordura: não informado"}
+- Padrão alimentar: ${padrao}
+
+CÁLCULO ENERGÉTICO (pré-calculado):
+- TMB Mifflin-St Jeor: ~${tmbMifflin} kcal/dia
+${tmbKatch ? `- TMB Katch-McArdle (com massa magra): ~${tmbKatch} kcal/dia (use este — mais preciso)` : ""}
+- Nível de atividade: ${ativ} → Fator: ${fatorAtiv}
+- TDEE estimado: ~${tdee} kcal/dia
+- META CALÓRICA DEFINIDA: ${metaCal} kcal/dia
+- Meta proteína: ${protMeta}g/dia (${protFat.toFixed(1)}g/kg)
+- Meta carboidrato: ${carbMeta}g/dia | Meta gordura: ${gordMeta}g/dia${goalsLine}
+
+ATIVIDADE FÍSICA:
+- Frequência de treino: ${freqTreino}
+- Duração média: ${duracaoTreino}
+- Tipo de treino: ${tipoTreino}
+- Sono: ${sono} por noite
+- Nível de estresse: ${estresse}${suplLine}
+
+SAÚDE:
+- Patologia/condição: ${patologia}
+${medicamentos ? `- Medicamentos: ${medicamentos}` : "- Medicamentos: nenhum"}
+${patologiaRules}
+
+ALIMENTAÇÃO:
+- Refeições por dia: ${refs}
+- Restrições/alergias/intolerâncias: ${restric}
+- Alimentos que gosta / proteínas desejadas: ${prefs || "sem preferência específica"}
+${dislikes ? `- Alimentos que NÃO gosta / evita: ${dislikes}` : ""}
 ${orcamento ? `- Perfil de orçamento: ${orcamento}` : ""}
 ${proteinsLine}
 
-REGRAS PARA REFEIÇÕES:
-- A PRIMEIRA refeição do dia DEVE ser um café da manhã completo, típico brasileiro, incluindo obrigatoriamente: café com leite (ou café preto), e ao menos dois outros itens nutritivos como ovos (mexido, estrelado ou cozido), pão integral, tapioca, frutas, iogurte ou aveia. Monte o café da manhã como uma refeição real e satisfatória.
-- Distribuir as demais refeições ao longo do dia de forma prática (almoço, lanche, jantar e pré/pós-treino conforme o número de refeições solicitado).
-- Cada refeição deve ter alimentos reais, com quantidade em gramas/ml/unidades.
+════════════════════════════════════════
+DIRETRIZES CLÍNICAS (ISSN / ACSM)
+════════════════════════════════════════
+- Hipertrofia: ≥1.6g/kg proteína, superávit 200-300 kcal
+- Emagrecimento: ≥2.0g/kg proteína, déficit 300-500 kcal, preservar músculo
+- Recomposição: ≥2.2g/kg proteína, calorias = TDEE ±50 kcal
+- Manutenção: 1.6-1.8g/kg proteína, = TDEE
+- Distribuição proteica: 0.3-0.4g/kg por refeição, máx. 40g/refeição para síntese ideal
+- Carboidratos pré-treino: 30-60min antes, baixa fibra (banana, tapioca, arroz branco)
+- Carboidratos pós-treino: prioridade para reposição de glicogênio
+- Gorduras: evitar em pré/pós-treino imediato
+
 ${orcamentoInstrucao}
 
-RACIOCÍNIO CULINÁRIO OBRIGATÓRIO — pense no prato antes de prescrevê-lo:
-- Valide o método de preparo de cada alimento: frango, carne, peixe, ovo → podem ser grelhados, assados, cozidos. Arroz, feijão, lentilha, macarrão → cozidos em água. Salada, pepino, tomate → crus. NUNCA escreva preparações absurdas como "alface grelhada", "banana assada em gordura", "feijão cru".
-- Informe as quantidades no estado em que o alimento vai ser CONSUMIDO (cozido/grelhado/cru). Exemplo: "100g de frango grelhado" (não cru), "80g de arroz cozido" (não seco).
-- Seja coerente com a refeição: café da manhã tem ovos, frutas, pão, tapioca. Almoço tem proteína + carboidrato + legumes + salada. Lanche é mais leve. Jantar é prático.
-- Quantidades realistas e visuais: um filé médio de frango grelhado = ~100-120g; uma concha de arroz cozido = ~80-100g; uma concha de feijão = ~80-100g.
+RACIOCÍNIO CULINÁRIO — valide antes de prescrever:
+- Frango, carne, peixe, ovo → grelhados, assados ou cozidos
+- Arroz, feijão, lentilha, macarrão → cozidos em água
+- Salada, tomate, pepino → crus
+- NUNCA: "alface grelhada", "feijão cru", "banana frita em gordura"
+- Quantidades no estado consumido (cozido/grelhado/cru), não cru
+- Café da manhã: inclua sempre café + 2 itens nutritivos (ovo, fruta, tapioca, pão integral, aveia)
+- Almoço/jantar: proteína + carbo + legumes + salada
+- Lanche: mais leve, proteico
 
-MEDIDAS CASEIRAS (OBRIGATÓRIO — inclua para cada alimento junto com os gramas):
-Muitas pessoas não têm balança. Para cada alimento, inclua a equivalência em medida caseira entre parênteses após a quantidade em gramas.
-Referências:
-- 1 concha média = ~80-100g de arroz ou feijão cozido
-- 1 colher de sopa cheia = ~15-20g (depende do alimento: azeite ~12g, pasta de amendoim ~20g, farinha ~15g)
-- 1 xícara de chá = ~240ml de líquido ou ~150g de arroz cozido
-- 1 filé médio = ~100-120g de proteína grelhada (frango, peixe)
-- 1 fatia média = ~30-40g de queijo, pão, bolo
-- 1 unidade = ovo, banana média (~120g), maçã média (~150g)
-- 1 pegador = ~100g de macarrão cozido
-- 1 escumadeira = ~150-200g de legumes cozidos
+MEDIDAS CASEIRAS (inclua para cada alimento):
+- 1 concha = ~80-100g arroz/feijão cozido
+- 1 col. sopa = ~15-20g (azeite ~12g)
+- 1 filé médio = ~100-120g proteína
+- 1 unidade = ovo, banana média (~120g)
+- 1 xícara = ~240ml líquido
 
-FORMATO DE SAÍDA OBRIGATÓRIO — responda APENAS com os blocos abaixo, sem texto extra:
+════════════════════════════════════════
+FORMATO DE SAÍDA — RESPONDA APENAS COM OS BLOCOS ABAIXO
+════════════════════════════════════════
 
 ##META
-CALORIAS: [meta calórica]
-PROTEINA: [gramas proteína]
-CARB: [gramas carboidrato]
-GORDURA: [gramas gordura]
-TMB: [TMB]
-TDEE: [TDEE]
+CALORIAS: ${metaCal}
+PROTEINA: ${protMeta}
+CARB: ${carbMeta}
+GORDURA: ${gordMeta}
+TMB: ${tmbMifflin}
+TDEE: ${tdee}
 
 ##REFEICAO
 NOME: [nome da refeição]
 HORARIO: [ex: 07:00]
-TAG: [descrição curta, ex: Energia matinal]
-[Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
-[Alimento (preparo)]|[qtde em g ou ml (medida caseira)]|[kcal]|[prot g]|[carb g]|[gord g]
+TAG: [descrição curta — ex: Energia matinal · Pré-treino]
+[Alimento (preparo)]|[qtde + medida caseira]|[kcal]|[prot g]|[carb g]|[gord g]
 SUBTOTAL||[kcal]|[prot]|[carb]|[gord]
 
-Exemplo de linha correta (quando o usuário pediu ovo, frango e patinho):
-Ovo mexido|2 un (120g)|148|12|1|10
-Frango grelhado|120g (1 filé médio)|198|37|0|4
-Patinho grelhado|120g (1 bife médio)|192|30|0|7
-Arroz branco cozido|160g (2 conchas)|208|4|45|0
-Feijão carioca cozido|100g (1 concha)|77|5|14|0
-
-(repita o bloco ##REFEICAO para cada uma das ${refs} refeições)
+(repita ##REFEICAO para TODAS as ${refs} refeições do dia)
 
 ##RESUMO
 [Nome refeição]|[kcal]|[prot]|[carb]|[gord]
 TOTAL|[kcal total]|[prot total]|[carb total]|[gord total]
 
 ##ORIENTACOES
-Água|Mínimo 35 ml/kg de peso corporal ao dia (ex: ${peso}kg → ${Math.round(parseFloat(peso||70)*0.035*10)/10} L)
-Cafeína|Até 400 mg/dia. Evitar após 14h para não comprometer o sono.
-Sódio|Preferir sal rosa do Himalaia ou marinho. Limite: 2.300 mg/dia.
-Fibras|Meta de 25–35g/dia. Priorizar vegetais, leguminosas e grãos integrais.
-Janela Alimentar|Ideal: 10–12h entre primeira e última refeição.
-Refeições|Mastigar devagar. Comer sem telas. Parar ao sentir saciedade.
-
-IMPORTANTE: Use as diretrizes ISSN — ≥1.6g/kg proteína para hipertrofia, déficit 300-500kcal para emagrecimento, superávit 200-300kcal para ganho de massa. Seja preciso nos números.`;
+Água|${(peso*0.035).toFixed(1)} L/dia (35ml × ${peso}kg) — aumentar em dias de treino intenso
+Proteína|${protMeta}g/dia distribuídos em ${refs} refeições (~${Math.round(protMeta/refs)}g/refeição)
+Cafeína|Até 400mg/dia. Evitar após 14h para preservar qualidade do sono.
+Fibras|25–35g/dia via vegetais, leguminosas e grãos integrais
+Janela Alimentar|10–12h entre primeira e última refeição. Consistência > perfeição.
+${sono === "menos de 5h" || sono === "5-6h" ? "Sono|ATENÇÃO: sono insuficiente impacta síntese proteica e cortisol. Priorize 7-8h." : "Sono|Manter 7-8h para otimizar recuperação muscular e hormônios anabólicos."}
+${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado aumenta cortisol — incluir adaptógenos naturais (ashwagandha), magnésio, ômega-3." : ""}`;
 
   try {
     const _apiBase = (typeof location !== "undefined" && location.origin && location.origin !== "null")
