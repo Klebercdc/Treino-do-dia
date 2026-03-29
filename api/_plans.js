@@ -60,9 +60,12 @@ function getCurrentMonthStart() {
 }
 
 function createDefaultTrialPlan(userId) {
+  // Usa 'trial' (suportado pelo CHECK constraint desde a migration 006).
+  // Evita 'trial_ultra_7_days' que causava constraint violation em produção → 503.
+  // toCanonicalPlan('trial') === PLAN.TRIAL_ULTRA_7_DAYS, portanto semanticamente idêntico.
   return {
     user_id: userId,
-    plan: planRules.toDbPlan(PLAN.TRIAL_ULTRA_7_DAYS),
+    plan: 'trial',
     ai_requests_used: 0,
     period_start: getCurrentMonthStart(),
     trial_started_at: new Date().toISOString()
