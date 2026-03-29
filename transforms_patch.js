@@ -18,7 +18,7 @@ async function _classifyIntentRemote(message, history) {
     const token = session?.data?.session?.access_token;
     if (!token) return "chat";
 
-    const resp = await fetch("/api/kronia/intent", {
+    const resp = await fetch(location.origin + "/api/kronia/intent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

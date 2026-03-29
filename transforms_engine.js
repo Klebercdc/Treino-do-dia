@@ -504,7 +504,7 @@ async function teCallKronos(alerts, athleteData) {
     let headers = { 'Content-Type': 'application/json' };
     try { headers = await getAuthHeaders(); } catch {}
 
-    const resp = await fetch('/api/chat', {
+    const resp = await fetch(location.origin + '/api/chat', {
       method: 'POST',
       headers,
       body: JSON.stringify({

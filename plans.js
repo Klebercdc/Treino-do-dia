@@ -6,7 +6,7 @@ var HOTMART_CHECKOUT_URL_ULTRA = '';
 var FREE_AI_LIMIT = 5; // Free: 5/mês; sobrescrito após fetch do /api/config
 
 var _configPromise = (function fetchConfigWithRetry(attempt) {
-  return fetch('/api/config')
+  return fetch(location.origin + '/api/config')
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(cfg) {
       if (cfg.checkoutUrl)        HOTMART_CHECKOUT_URL = cfg.checkoutUrl;
