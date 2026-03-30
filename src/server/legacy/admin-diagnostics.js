@@ -352,7 +352,7 @@ module.exports = function(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   auth.requireAuth(req, res, function(user) {
-    var accessProfile = adminGuard.requireAdmin(user, res);
+    adminGuard.requireAdminAsync(user, res, function(accessProfile) {
     if (!accessProfile) return;
 
     var action = String((req.query && req.query.action) || '').toLowerCase();
@@ -496,5 +496,6 @@ module.exports = function(req, res) {
     }
 
     return sendError(res, 'METHOD_NOT_ALLOWED', 'Método não permitido.', 405);
+    });
   });
 };

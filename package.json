@@ -22,7 +22,8 @@
     "migrate": "tsx scripts/run-migrations.ts",
     "migrate:dry": "tsx scripts/run-migrations.ts --dry-run",
     "seed:exercises": "tsx scripts/seed-exercises.ts",
-    "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts"
+    "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts",
+    "audit:admin-scope": "node scripts/admin-scope-audit.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1"

@@ -22,7 +22,7 @@ function handleConfig(req, res) {
 function handlePlanFeatures(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   return auth.requireAuth(req, res, function(user) {
-    var accessProfile = access.buildAccessProfile(user);
+    return access.buildAccessProfileWithDb(user, function(_err, accessProfile) {
     return rl.rateLimit(req, res, function() {
       plans.getQuotaInfo(user.id, function(err, info) {
         if (err) return res.status(500).json({ error: String(err) });
@@ -46,13 +46,14 @@ function handlePlanFeatures(req, res) {
         });
       }, { accessProfile: accessProfile });
     }, { max: 10, windowMs: 60000 }, user.id);
+    });
   });
 }
 
 function handlePlanCurrent(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   return auth.requireAuth(req, res, function(user) {
-    var accessProfile = access.buildAccessProfile(user);
+    return access.buildAccessProfileWithDb(user, function(_err, accessProfile) {
     return rl.rateLimit(req, res, function() {
     plans.getTrialDays(function(tdErr, trialDays) {
       var safeTrialDays = tdErr ? 7 : trialDays;
@@ -132,6 +133,7 @@ function handlePlanCurrent(req, res) {
       });
     });
     }, { max: 10, windowMs: 60000 }, user.id);
+    });
   });
 }
 
