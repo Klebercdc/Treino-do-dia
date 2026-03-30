@@ -4,7 +4,7 @@ import { cleanText, normalizeEquipment, normalizeExerciseName, normalizeMuscle }
 import { ExerciseDbClient } from './exercisedbClient';
 import { ExerciseRepository } from './repository';
 import { PexelsClient, scorePexelsVideo } from './pexelsClient';
-import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput } from './types';
+import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseDetailsInput, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput, NormalizedExerciseDetails } from './types';
 
 const PLACEHOLDER_MEDIA_URL = 'https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg';
 
@@ -59,16 +59,17 @@ export class KroniaExerciseApplication {
     return this.saveExerciseToDatabase(normalized);
   }
 
-  async enrichWithMedia(exercise: ExerciseEntity, context: DetectedExerciseContext): Promise<{ primary: string; fallback: string; provider: string; thumbnailUrl: string | null; score: number; cacheHit: boolean }> {
+  async enrichWithMedia(exercise: ExerciseEntity, context: DetectedExerciseContext): Promise<{ primary: string; fallback: string; provider: string; thumbnailUrl: string | null; score: number; cacheHit: boolean; mediaType: 'video' | 'gif' | 'image' | 'none' }> {
     const cached = await this.repository.getApprovedMediaCache(exercise.id);
-    if (cached?.video_url) {
+    if (cached?.video_url || cached?.thumbnail_url) {
       return {
-        primary: cached.video_url,
+        primary: cached.video_url ?? cached.thumbnail_url ?? exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
         fallback: exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
         provider: cached.provider,
         thumbnailUrl: cached.thumbnail_url,
         score: cached.verified_score,
         cacheHit: true,
+        mediaType: cached.media_type ?? 'image',
       };
     }
 
@@ -106,17 +107,20 @@ export class KroniaExerciseApplication {
           thumbnailUrl: best.video.image,
           score: best.score,
           cacheHit: false,
+          mediaType: 'video',
         };
       }
     }
 
+    const baseMedia = exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL;
     return {
-      primary: exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
+      primary: baseMedia,
       fallback: exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
       provider: exercise.gif_url ? 'exercisedb' : 'internal',
       thumbnailUrl: exercise.image_url,
       score: 0.4,
       cacheHit: false,
+      mediaType: exercise.gif_url ? 'gif' : 'image',
     };
   }
 
@@ -133,7 +137,7 @@ export class KroniaExerciseApplication {
 
   buildExerciseResponse(params: {
     exercise: ExerciseEntity;
-    media: { primary: string; fallback: string; provider: string; thumbnailUrl: string | null; score: number; cacheHit: boolean };
+    media: { primary: string; fallback: string; provider: string; thumbnailUrl: string | null; score: number; cacheHit: boolean; mediaType: 'video' | 'gif' | 'image' | 'none' };
     context: DetectedExerciseContext;
     variations: ExerciseEntity[];
     responseTimeMs: number;
@@ -242,6 +246,90 @@ export class KroniaExerciseApplication {
     return ok(payload, {
       intent: context.intent,
       confidence: context.confidence,
+      responseTimeMs,
+      externalFetch,
+    });
+  }
+
+  normalizeExerciseLookupKey(name: string): string {
+    return cleanText(name).replace(/\s+/g, '-').trim();
+  }
+
+  normalizeExerciseDetails(params: {
+    exercise: ExerciseEntity;
+    media: { primary: string; provider: string; thumbnailUrl: string | null; cacheHit: boolean; mediaType: 'video' | 'gif' | 'image' | 'none' };
+    variations: ExerciseEntity[];
+    responseTimeMs: number;
+    externalFetch: boolean;
+    lookupKey: string;
+  }): NormalizedExerciseDetails {
+    const { exercise, media, variations, responseTimeMs, externalFetch, lookupKey } = params;
+    return {
+      id: exercise.id,
+      slug: exercise.slug,
+      names: { pt: exercise.name_pt, en: exercise.name_en },
+      media: {
+        primary: media.primary ?? null,
+        thumbnailUrl: media.thumbnailUrl,
+        type: media.mediaType,
+        provider: media.provider,
+      },
+      instructions: exercise.instructions,
+      target_muscle: exercise.target_muscle,
+      secondary_muscles: exercise.secondary_muscles,
+      body_part: exercise.body_part,
+      equipment: exercise.equipment,
+      variations: variations.map((item) => ({
+        id: item.id,
+        slug: item.slug,
+        names: { pt: item.name_pt, en: item.name_en },
+      })),
+      source: externalFetch ? 'hybrid' : (exercise.source === 'exercisedb' ? 'exercisedb' : 'internal'),
+      common_errors: [],
+      breathing_tip: null,
+      range_of_motion: null,
+      metadata: {
+        cacheHit: media.cacheHit,
+        externalFetch,
+        responseTimeMs,
+        normalizedLookupKey: lookupKey,
+      },
+    };
+  }
+
+  async getExerciseDetailsByName(input: ExerciseDetailsInput): Promise<AppResult<NormalizedExerciseDetails>> {
+    const start = Date.now();
+    const lookupName = String(input.exerciseName || '').trim();
+    if (!lookupName) {
+      return fail('VALIDATION_ERROR', 'exerciseName is required', {});
+    }
+
+    const lookupKey = this.normalizeExerciseLookupKey(lookupName);
+    const context = this.normalizeExerciseQuery(this.detectIntentFromMessage(lookupName));
+    context.mentionedExercise = normalizeExerciseName(lookupName);
+
+    let exercise = await this.repository.findExerciseByName(lookupName);
+    let externalFetch = false;
+
+    if (!exercise) {
+      exercise = await this.fetchExerciseFromExternalSource(context);
+      externalFetch = Boolean(exercise);
+    }
+
+    if (!exercise) {
+      return fail('EXERCISE_NOT_FOUND', 'Nenhum exercício encontrado para o nome informado.', {
+        normalizedLookupKey: lookupKey,
+        responseTimeMs: Date.now() - start,
+      });
+    }
+
+    const media = await this.enrichWithMedia(exercise, context);
+    const variations = await this.repository.findVariations(exercise, 4);
+    const responseTimeMs = Date.now() - start;
+    const payload = this.normalizeExerciseDetails({ exercise, media, variations, responseTimeMs, externalFetch, lookupKey });
+
+    return ok(payload, {
+      normalizedLookupKey: lookupKey,
       responseTimeMs,
       externalFetch,
     });

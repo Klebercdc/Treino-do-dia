@@ -146,3 +146,41 @@ export interface ExerciseSearchInput {
     goal?: string;
   };
 }
+
+export interface ExerciseDetailsInput {
+  userId: string;
+  exerciseName: string;
+  locale?: 'pt' | 'en';
+  context?: {
+    currentExerciseName?: string;
+    goal?: string;
+  };
+}
+
+export interface NormalizedExerciseDetails {
+  id: string;
+  slug: string;
+  names: { pt: string; en: string };
+  media: {
+    primary: string | null;
+    thumbnailUrl: string | null;
+    type: 'video' | 'gif' | 'image' | 'none';
+    provider: string;
+  };
+  instructions: string[];
+  target_muscle: string | null;
+  secondary_muscles: string[];
+  body_part: string | null;
+  equipment: string | null;
+  variations: Array<{ id: string; slug: string; names: { pt: string; en: string } }>;
+  source: ExerciseSource;
+  common_errors?: string[];
+  breathing_tip?: string | null;
+  range_of_motion?: string | null;
+  metadata: {
+    cacheHit: boolean;
+    externalFetch: boolean;
+    responseTimeMs: number;
+    normalizedLookupKey: string;
+  };
+}
