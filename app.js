@@ -2599,6 +2599,24 @@ function _isPedidoDeTreino(msg) {
   return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e)|quero|preciso)\b.{0,30}\b(treino|programa|plano|ficha)\b/i.test(msg);
 }
 
+// ── parseApiJsonSafely — BLOCO 1 ─────────────────────────────────────────────
+// Substitui response.json() nos fluxos de chat. Nunca quebra se o backend
+// devolver HTML de erro, timeout, stack trace ou resposta vazia.
+async function parseApiJsonSafely(resp) {
+  var text = '';
+  try { text = await resp.text(); } catch (e) {
+    return { success: false, type: 'error', action: null,
+      message: 'Falha ao ler resposta do servidor.', data: null,
+      error: 'READ_ERROR', meta: {}, content: null };
+  }
+  try { return JSON.parse(text); } catch (e) {
+    console.warn('[kronia] parse JSON falhou — preview:', text.substring(0, 200));
+    return { success: false, type: 'error', action: null,
+      message: 'Resposta inválida do servidor.', data: null,
+      error: 'INVALID_JSON', meta: { rawPreview: text.substring(0, 200) }, content: null };
+  }
+}
+
 async function sendAI(overrideText, isGerarTreino = false) {
   if (_aiTyping) return;
   const input = document.getElementById("aiInput");
@@ -2639,14 +2657,40 @@ async function sendAI(overrideText, isGerarTreino = false) {
       body: JSON.stringify(body)
     });
 
-    if (!response.ok) throw new Error("Erro " + response.status);
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
+    // BLOCO 1: parse seguro — nunca assume que o backend retornou JSON válido
+    const data = await parseApiJsonSafely(response);
+    // Erros do novo envelope (success: false)
+    if (data.success === false) throw new Error(data.message || data.error || 'Erro do servidor');
+    // Erros do envelope legado ({ error: '...' }) — ex: quota excedida
+    if (data.error && !data.success) throw new Error(data.message || data.error);
+
+    // BLOCO 1: action signals — resposta curta local, sem renderizar IA
+    if (data.action === 'open_workout_flow') {
+      removeThinking();
+      const wMsg = data.message || 'Beleza 💪 Vamos montar seu treino.';
+      _aiHistory.push({ role: 'assistant', content: wMsg });
+      addAIMessage('assistant', wMsg);
+      // TODO BLOCO 2: chamar fluxo completo de geração de treino
+      _aiTyping = false;
+      if (sendBtn) sendBtn.style.opacity = '1';
+      return;
+    }
+    if (data.action === 'open_diet_flow') {
+      removeThinking();
+      const dMsg = data.message || 'Perfeito 🍽️ Vamos montar sua dieta.';
+      _aiHistory.push({ role: 'assistant', content: dMsg });
+      addAIMessage('assistant', dMsg);
+      // TODO BLOCO 2: chamar fluxo completo de geração de dieta
+      _aiTyping = false;
+      if (sendBtn) sendBtn.style.opacity = '1';
+      return;
+    }
 
     // Resposta JSON estruturada de treino
-    if (data?.content?.[0]?.type === "workout_json") {
+    const _contentArr = (data && data.content) || (data && data.data && data.data.content) || [];
+    if (_contentArr[0] && _contentArr[0].type === "workout_json") {
       removeThinking();
-      const treino = data.content[0].data;
+      const treino = _contentArr[0].data;
       let grupos = [];
 
       // Processar treinos com fases MEV/MAV/MRV
@@ -2682,7 +2726,10 @@ async function sendAI(overrideText, isGerarTreino = false) {
       return;
     }
 
-    const reply = data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
+    // BLOCO 1: guard clauses — nunca assume que message ou content existem
+    const reply = (data && data.message)
+      || (_contentArr[0] && _contentArr[0].text)
+      || "Não consegui processar. Tente novamente.";
 
     removeThinking();
 
@@ -3982,9 +4029,9 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
       profile: cfg
     })
   })
-  .then(r => r.json())
+  .then(r => parseApiJsonSafely(r))
   .then(data => {
-    const text = data.content?.[0]?.text || "Sistemas online.";
+    const text = (data && data.message) || (data && data.content && data.content[0] && data.content[0].text) || "Sistemas online.";
     typing.innerHTML = renderMarkdown(text);
     // Botão "Ir para Treino" quando não há programa configurado
     if (!nextKey) {
@@ -4149,8 +4196,9 @@ async function _kronosCall(messages, userData, onChunk) {
       body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: false })
     });
     if (!resp.ok) return null;
-    const data = await resp.json();
-    const text = (data.content?.[0]?.text || '').trim();
+    const data = await parseApiJsonSafely(resp);
+    if (data && data.success === false) return null; // erro controlado
+    const text = ((data && data.message) || (data && data.content && data.content[0] && data.content[0].text) || '').trim();
     return text || null;
   }
 
@@ -5407,9 +5455,12 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
         isDietDirect: true
       })
     });
-    const data = await resp.json();
-    if (data.error) { txt.textContent = "Erro: " + data.error; return; }
-    txt.textContent = data.content?.[0]?.text || "Erro ao gerar dieta.";
+    const data = await parseApiJsonSafely(resp);
+    if ((data && data.success === false) || (data && data.error)) {
+      txt.textContent = "Erro: " + ((data && data.message) || (data && data.error) || 'falha ao gerar dieta');
+      return;
+    }
+    txt.textContent = (data && data.message) || (data && data.content && data.content[0] && data.content[0].text) || "Erro ao gerar dieta.";
   } catch(e) { txt.textContent = "Erro de conexão: " + e.message; }
   finally { btn.disabled = false; }
 }
