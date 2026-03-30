@@ -7,6 +7,7 @@ var rl       = require('./_ratelimit');
 var plans    = require('./_plans');
 var logger   = require('./_logger');
 var intent       = require('./_intent');
+var response     = require('./_response'); // BLOCO 1 — envelope padronizado
 var dietflow     = require('./_dietflow');
 var workoutflow  = require('./_workoutflow');
 var diet         = require('./_diet');
@@ -211,7 +212,16 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
   if (req.method!==`POST`){res.status(405).end();return;}
-  if (!process.env.GROQ_API_KEY){res.status(500).json({error:'GROQ_API_KEY não configurada'});return;}
+  if (!process.env.GROQ_API_KEY){
+    console.error('[chat] GROQ_API_KEY ausente');
+    return response.sendJson(res, 500, response.createApiEnvelope({
+      success: false, type: 'error', action: null,
+      message: 'Serviço de IA indisponível no momento.',
+      error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true },
+      // compat: content array para UI legada
+      data: { content: [{ type: 'text', text: 'Serviço de IA indisponível no momento.' }] }
+    }));
+  }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -324,6 +334,53 @@ module.exports = function(req, res) {
         return;
       }
 
+      // ── BLOCO 1: atalhos locais de intenção (sem chamar provider) ────────────
+      // Só dispara quando não há fluxo ativo (convState) e não é rota dedicada.
+      if (!b.isGerarTreino && !b.isDietDirect && !convState) {
+        var safeLastMsg = intent.safeExtractLastUserMessage(messages);
+        var bloco1Intent = intent.detectIntent(safeLastMsg || lastContent);
+        console.log('[chat] intent:', bloco1Intent, '| msg:', (safeLastMsg || lastContent).substring(0, 60));
+
+        if (bloco1Intent === 'greeting') {
+          var greetMsg = 'Oi \uD83D\uDC4B Como posso te ajudar hoje?';
+          console.log('[chat] greeting — resposta local, sem chamar provider');
+          return response.sendJson(res, 200, Object.assign(
+            response.createApiEnvelope({
+              success: true, type: 'greeting', action: null,
+              message: greetMsg, meta: { local: true, tokensSaved: true }
+            }),
+            // backward compat: UI legada lê data.content[0].text
+            { content: [{ type: 'text', text: greetMsg }] }
+          ));
+        }
+
+        if (bloco1Intent === 'workout') {
+          var workoutMsg = 'Beleza \uD83D\uDCAA Vamos montar seu treino.';
+          console.log('[chat] workout_intent — action: open_workout_flow');
+          return response.sendJson(res, 200, Object.assign(
+            response.createApiEnvelope({
+              success: true, type: 'workout_intent', action: 'open_workout_flow',
+              message: workoutMsg, meta: { local: true }
+            }),
+            { content: [{ type: 'text', text: workoutMsg }] }
+          ));
+        }
+
+        if (bloco1Intent === 'diet') {
+          var dietMsg = 'Perfeito \uD83C\uDF7D\uFE0F Vamos montar sua dieta.';
+          console.log('[chat] diet_intent — action: open_diet_flow');
+          return response.sendJson(res, 200, Object.assign(
+            response.createApiEnvelope({
+              success: true, type: 'diet_intent', action: 'open_diet_flow',
+              message: dietMsg, meta: { local: true }
+            }),
+            { content: [{ type: 'text', text: dietMsg }] }
+          ));
+        }
+        // 'general' → continua para o fluxo normal abaixo
+      }
+      // ── FIM BLOCO 1 ──────────────────────────────────────────────────────────
+
       // ── INTENT: exercise discovery ────────────────────────────────
       if (!b.isGerarTreino && !b.isDietDirect && intent.isExerciseDiscovery(lastContent)) {
         return res.status(200).json({
@@ -349,7 +406,7 @@ module.exports = function(req, res) {
       // ── INTENT: novo pedido de treino via flow ────────────────────
       // Mensagens simples como "quero um treino" ou "me monta um treino"
       // que não contêm os dados completos na mensagem
-      if (!b.isGerarTreino && !isPedidoDeTreino(messages) && intent.detectIntent(lastContent) === 'workout_request') {
+      if (!b.isGerarTreino && !isPedidoDeTreino(messages) && intent.detectIntent(lastContent) === 'workout') {
         var wfStart = workoutflow.startWorkoutFlow();
         return res.status(200).json({
           content: [{ type: 'text', text: wfStart.response }],
@@ -367,7 +424,17 @@ module.exports = function(req, res) {
       if (b.isDietDirect === true) {
         plans.checkAndIncrementQuota(user.id, res, function() {
           callChat(buildCoachSystem(b.system, b.context || {}), messages, 3000, 0.4, user.id, 'chat-diet-direct', function(err, text) {
-            if (err) return res.status(500).json({ error: err });
+            if (err) {
+              console.error('[chat] diet-direct provider error:', err);
+              return response.sendJson(res, 200, Object.assign(
+                response.createApiEnvelope({
+                  success: false, type: 'error', action: null,
+                  message: 'Não consegui gerar a dieta agora. Tente novamente.',
+                  error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true }
+                }),
+                { content: [{ type: 'text', text: 'Não consegui gerar a dieta agora. Tente novamente.' }] }
+              ));
+            }
             res.status(200).json({ content: [{ type: 'text', text: text }] });
           });
         });
@@ -379,6 +446,46 @@ module.exports = function(req, res) {
       var coachContext = b.context || {};
       var isGerarTreino = b.isGerarTreino === true || isPedidoDeTreino(messages);
 
+      // ── HANDOFF para BLOCO 2 — geração completa de treino/dieta via IA ───────
+      // Fluxo geral: chat ou geração de treino estruturado.
+      // Erros são capturados e retornam JSON controlado (nunca HTML/texto puro).
+
+      function _handleGeneralOrTreino(coachCtx) {
+        plans.checkAndIncrementQuota(user.id, res, function() {
+          if (isGerarTreino) {
+            gerarTreino(lastMsg, user.id, function(err, data) {
+              if (err) {
+                console.error('[chat] gerarTreino error:', err);
+                return response.sendJson(res, 200, Object.assign(
+                  response.createApiEnvelope({
+                    success: false, type: 'error', action: null,
+                    message: 'Não consegui montar o treino agora. Tente novamente.',
+                    error: 'TREINO_GEN_FAILED', meta: { fallback: true }
+                  }),
+                  { content: [{ type: 'text', text: 'Não consegui montar o treino agora. Tente novamente.' }] }
+                ));
+              }
+              res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+            });
+          } else {
+            callChat(buildCoachSystem(b.system, coachCtx), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
+              if (err) {
+                console.error('[chat] callChat error:', err);
+                return response.sendJson(res, 200, Object.assign(
+                  response.createApiEnvelope({
+                    success: false, type: 'error', action: null,
+                    message: 'Não consegui processar agora. Tente novamente em instantes.',
+                    error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true }
+                  }),
+                  { content: [{ type: 'text', text: 'Não consegui processar agora. Tente novamente em instantes.' }] }
+                ));
+              }
+              res.status(200).json({ content: [{ type: 'text', text: text }] });
+            });
+          }
+        });
+      }
+
       Promise.resolve()
         .then(function() {
           if (isGerarTreino) return null;
@@ -388,35 +495,11 @@ module.exports = function(req, res) {
           if (scienceContext) {
             coachContext = Object.assign({}, coachContext, { science_context: scienceContext });
           }
-
-          plans.checkAndIncrementQuota(user.id, res, function(planRow) {
-            if (isGerarTreino) {
-              gerarTreino(lastMsg, user.id, function(err, data) {
-                if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
-                res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
-              });
-            } else {
-              callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
-                if (err) return res.status(500).json({ error: err });
-                res.status(200).json({ content: [{ type: 'text', text: text }] });
-              });
-            }
-          });
+          _handleGeneralOrTreino(coachContext);
         })
         .catch(function() {
-          plans.checkAndIncrementQuota(user.id, res, function(planRow) {
-            if (isGerarTreino) {
-              gerarTreino(lastMsg, user.id, function(err, data) {
-                if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
-                res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
-              });
-            } else {
-              callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
-                if (err) return res.status(500).json({ error: err });
-                res.status(200).json({ content: [{ type: 'text', text: text }] });
-              });
-            }
-          });
+          // scienceInsight falhou — continua sem contexto científico
+          _handleGeneralOrTreino(coachContext);
         });
 
     }, { max: 40, windowMs: 60000 }, user.id);

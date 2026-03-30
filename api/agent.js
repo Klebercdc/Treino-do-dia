@@ -1,13 +1,14 @@
 var https = require('https');
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini  = require('./_gemini');
-var auth    = require('./_auth');
-var cors    = require('./_cors');
-var rl      = require('./_ratelimit');
-var plans   = require('./_plans');
-var logger  = require('./_logger');
-var prompts = require('./_systemPrompts');
-var diet    = require('./_diet');
+var gemini   = require('./_gemini');
+var auth     = require('./_auth');
+var cors     = require('./_cors');
+var rl       = require('./_ratelimit');
+var plans    = require('./_plans');
+var logger   = require('./_logger');
+var prompts  = require('./_systemPrompts');
+var diet     = require('./_diet');
+var response = require('./_response'); // BLOCO 1 — envelope padronizado
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -486,7 +487,17 @@ module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).end(); return; }
-  if (!process.env.GROQ_API_KEY) { res.status(500).json({ error: 'GROQ_API_KEY não configurada' }); return; }
+  if (!process.env.GROQ_API_KEY) {
+    console.error('[agent] GROQ_API_KEY ausente');
+    return response.sendJson(res, 500, Object.assign(
+      response.createApiEnvelope({
+        success: false, type: 'error', action: null,
+        message: 'Serviço de IA indisponível no momento.',
+        error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true }
+      }),
+      { content: [{ type: 'text', text: 'Serviço de IA indisponível no momento.' }] }
+    ));
+  }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -522,7 +533,17 @@ module.exports = function(req, res) {
 
       // Non-streaming JSON mode (backwards compatible)
       agentLoop(messages, userData, function(err, text) {
-        if (err) return res.status(500).json({ error: err });
+        if (err) {
+          console.error('[agent] agentLoop error:', err);
+          return response.sendJson(res, 200, Object.assign(
+            response.createApiEnvelope({
+              success: false, type: 'error', action: null,
+              message: 'Não consegui processar agora. Tente novamente em instantes.',
+              error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true }
+            }),
+            { content: [{ type: 'text', text: 'Não consegui processar agora. Tente novamente em instantes.' }] }
+          ));
+        }
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
         var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
