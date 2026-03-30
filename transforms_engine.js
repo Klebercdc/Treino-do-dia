@@ -222,14 +222,38 @@ async function teLoadAdminDiagnostics() {
   if (!overviewEl || !recentEl) return;
   overviewEl.innerHTML = '<div style="font-size:.75rem;color:rgba(255,255,255,.5)">Carregando…</div>';
   recentEl.innerHTML = '';
+  const warningMessages = [];
+
+  const overviewResp = await teFetchAdminDiagnostics('overview').catch(e => {
+    warningMessages.push('overview indisponível');
+    console.error('[transforms_engine] falha parcial overview:', e);
+    return {};
+  });
+  const recentResp = await teFetchAdminDiagnostics('recent').catch(e => {
+    warningMessages.push('recent indisponível');
+    console.error('[transforms_engine] falha parcial recent:', e);
+    return {};
+  });
+  const checklistResp = await teFetchAdminDiagnostics('checklist').catch(e => {
+    warningMessages.push('checklist indisponível');
+    console.error('[transforms_engine] falha parcial checklist:', e);
+    return {};
+  });
+
+  const partialErrors = Object.assign({},
+    overviewResp && overviewResp.errors ? overviewResp.errors : {},
+    recentResp && recentResp.errors ? recentResp.errors : {},
+    checklistResp && checklistResp.errors ? checklistResp.errors : {}
+  );
+  Object.keys(partialErrors).forEach(key => {
+    if (partialErrors[key]) warningMessages.push(key + ': ' + partialErrors[key]);
+  });
+
   try {
-    const [overview, recent, checklist] = await Promise.all([
-      teFetchAdminDiagnostics('overview'),
-      teFetchAdminDiagnostics('recent'),
-      teFetchAdminDiagnostics('checklist')
-    ]);
-    const items = Array.isArray(overview.items) ? overview.items : [];
-    _teDiagRecent = Array.isArray(recent.executions) ? recent.executions : [];
+    const items = Array.isArray(overviewResp.overview) ? overviewResp.overview : [];
+    _teDiagRecent = Array.isArray(recentResp.executions)
+      ? recentResp.executions
+      : (Array.isArray(overviewResp.recent) ? overviewResp.recent : []);
     overviewEl.innerHTML = items.map(item => `
       <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)">
         <div style="font-size:.65rem;color:rgba(255,255,255,.45);text-transform:uppercase">${item.component}</div>
@@ -255,11 +279,18 @@ async function teLoadAdminDiagnostics() {
       </button>
     `).join('');
     if (checklistEl) {
-      const items = Array.isArray(checklist.checklist) ? checklist.checklist : [];
+      const items = Array.isArray(checklistResp.checklist)
+        ? checklistResp.checklist
+        : (Array.isArray(overviewResp.checklist) ? overviewResp.checklist : []);
       checklistEl.innerHTML = items.map(item => `<div style=\"padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);font-size:.73rem\"><span style=\"color:${item.ok ? '#10B981' : '#EF4444'};font-weight:700\">${item.ok ? 'OK' : 'PENDENTE'}</span> · ${item.label}</div>`).join('');
     }
+
+    if (warningMessages.length > 0) {
+      overviewEl.insertAdjacentHTML('afterbegin', `<div style="margin-bottom:8px;padding:8px;border-radius:8px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);font-size:.72rem;color:#FCD34D">Alguns blocos estão com dados parciais: ${warningMessages.slice(0, 3).join(' · ')}</div>`);
+    }
   } catch (e) {
-    overviewEl.innerHTML = '<div style="font-size:.75rem;color:#EF4444">Falha ao carregar observabilidade admin.</div>';
+    console.error('[transforms_engine] fallback render admin observability:', e);
+    overviewEl.innerHTML = '<div style="font-size:.75rem;color:rgba(255,255,255,.6)">Observabilidade com dados indisponíveis no momento.</div>';
   }
 }
 

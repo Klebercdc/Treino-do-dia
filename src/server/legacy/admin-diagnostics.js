@@ -8,7 +8,7 @@ var decisionEngine = require('../apihelpers/_decisionEngine');
 var healthRules = require('../apihelpers/_diagnosticHealth');
 var constants = require('../apihelpers/_diagnosticConstants');
 
-var VALID_ACTIONS_GET = ['overview', 'recent', 'execution', 'health', 'alerts', 'node_stats', 'checklist', 'journey', 'export'];
+var VALID_ACTIONS_GET = ['overview', 'recent', 'execution', 'health', 'alerts', 'node_stats', 'checklist', 'journey', 'journeys', 'export'];
 var VALID_ACTIONS_POST = ['simulate', 'health'];
 
 function sendOk(res, data, statusCode) {
@@ -41,8 +41,34 @@ function query(path) {
   return new Promise(function(resolve, reject) {
     plans.supabaseRequest('GET', path, null, function(err, rows) {
       if (err) return reject(err);
-      return resolve(rows || []);
+      if (Array.isArray(rows)) return resolve(rows);
+      if (!rows) return resolve([]);
+      return resolve([rows]);
     });
+  });
+}
+
+function normalizeError(err) {
+  if (!err) return 'Erro desconhecido';
+  if (typeof err === 'string') return err;
+  if (err.message) return err.message;
+  try { return JSON.stringify(err); } catch (e) { return String(err); }
+}
+
+function safeParseJson(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return fallback;
+  try { return JSON.parse(value); } catch (e) { return fallback; }
+}
+
+function safeExec(actionName, runner, fallbackValue) {
+  return Promise.resolve().then(runner).then(function(result) {
+    return { value: result, error: null };
+  }).catch(function(err) {
+    var normalized = normalizeError(err);
+    console.error('[admin-diagnostics][' + actionName + '] erro parcial:', normalized);
+    return { value: fallbackValue, error: normalized };
   });
 }
 
@@ -137,8 +163,64 @@ function buildChecklist(executions) {
     { key: 'graph_reflects_execution', label: 'Grafo reflete execução real', ok: has(function(x) { return !!x.graph_path; }) },
     { key: 'replay_coherent', label: 'Replay técnico coerente', ok: has(function(x) { return !!x.decision_reason && !!x.raw_input_summary; }) },
     { key: 'quality_score_present', label: 'Score de qualidade presente', ok: has(function(x) { return x.diagnostic_quality_score != null; }) },
-    { key: 'cost_signal_present', label: 'Sinal de custo monitorado', ok: has(function(x) { return x.metadata && x.metadata.estimated_cost_band; }) }
+    { key: 'cost_signal_present', label: 'Sinal de custo monitorado', ok: has(function(x) { return safeParseJson(x.metadata, {}).estimated_cost_band; }) }
   ];
+}
+
+function buildObservabilityPayload(req) {
+  var recentCfg = buildRecentQuery(req.query || {});
+  var journeyTraceId = String((req.query && req.query.conversation_trace_id) || '').trim();
+
+  return Promise.all([
+    safeExec('overview', function() {
+      return query('diagnostic_execution_health?select=*').then(function(rows) {
+        return (rows || []).map(function(row) { return healthRules.evaluateComponentHealth(row || {}); });
+      });
+    }, null),
+    safeExec('recent', function() {
+      return query(recentCfg.query);
+    }, []),
+    safeExec('journeys', function() {
+      if (!journeyTraceId) return [];
+      return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(journeyTraceId) + '&select=execution_id,parent_execution_id,correlation_id,intent_detected,pipeline_selected,success,fallback_used,severity,diagnostic_quality_score,created_at&order=created_at.asc&limit=300');
+    }, []),
+    safeExec('node_stats', function() {
+      return query('diagnostic_steps?select=node_key,success,duration_ms,error_code,error_message,created_at&order=created_at.desc&limit=500').then(function(rows) {
+        return mapNodeStats(rows);
+      });
+    }, []),
+    safeExec('alerts', function() {
+      return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,diagnostic_quality_score,created_at&order=created_at.desc&limit=120').then(function(rows) {
+        return healthRules.buildAlerts(rows || []);
+      });
+    }, []),
+    safeExec('checklist', function() {
+      return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,diagnostic_quality_score,metadata&order=created_at.desc&limit=100').then(function(rows) {
+        return buildChecklist(rows);
+      });
+    }, [])
+  ]).then(function(result) {
+    return {
+      data: {
+        overview: result[0].value,
+        recent: result[1].value,
+        journeys: result[2].value,
+        node_stats: result[3].value,
+        alerts: result[4].value,
+        checklist: result[5].value
+      },
+      errors: {
+        overview: result[0].error,
+        recent: result[1].error,
+        journeys: result[2].error,
+        node_stats: result[3].error,
+        alerts: result[4].error,
+        checklist: result[5].error
+      },
+      page: recentCfg.page,
+      pageSize: recentCfg.pageSize
+    };
+  });
 }
 
 async function runSimulation(user, accessProfile, reqBody) {
@@ -284,27 +366,39 @@ module.exports = function(req, res) {
 
     if (req.method === 'GET') {
       if (action === 'overview') {
-        return query('diagnostic_execution_health?select=*').then(function(rows) {
-          var items = (rows || []).map(function(row) { return healthRules.evaluateComponentHealth(row); });
-          return sendOk(res, { items: items, thresholds: healthRules.DEFAULT_THRESHOLDS });
-        }).catch(function(err) { return sendError(res, 'OVERVIEW_FAILED', 'Falha ao carregar visão geral.', 500, String(err)); });
+        return buildObservabilityPayload(req).then(function(payload) {
+          return sendOk(res, {
+            overview: payload.data.overview,
+            recent: payload.data.recent,
+            journeys: payload.data.journeys,
+            node_stats: payload.data.node_stats,
+            alerts: payload.data.alerts,
+            checklist: payload.data.checklist,
+            errors: payload.errors,
+            page: payload.page,
+            pageSize: payload.pageSize,
+            thresholds: healthRules.DEFAULT_THRESHOLDS
+          });
+        }).catch(function(err) {
+          return sendError(res, 'OVERVIEW_UNAVAILABLE', 'Observabilidade indisponível.', 500, normalizeError(err));
+        });
       }
 
       if (action === 'recent') {
         var recentCfg = buildRecentQuery(req.query || {});
-        return query(recentCfg.query).then(function(rows) {
-          return sendOk(res, { executions: rows || [], page: recentCfg.page, pageSize: recentCfg.pageSize });
-        }).catch(function(err) { return sendError(res, 'RECENT_FAILED', 'Falha ao listar execuções.', 500, String(err)); });
+        return safeExec('recent', function() { return query(recentCfg.query); }, []).then(function(outcome) {
+          return sendOk(res, { executions: outcome.value, page: recentCfg.page, pageSize: recentCfg.pageSize, errors: { recent: outcome.error } });
+        });
       }
 
       if (action === 'execution') {
         var executionId = String((req.query && req.query.execution_id) || '').trim();
         if (!executionId) return sendError(res, 'EXECUTION_ID_REQUIRED', 'execution_id é obrigatório.', 400);
-        return fetchExecutionDetail(executionId).then(function(detail) {
-          if (!detail.execution) return sendError(res, 'NOT_FOUND', 'Execução não encontrada.', 404);
-          var nodeStats = mapNodeStats(detail.steps);
-          return sendOk(res, { execution: detail.execution, steps: detail.steps, nodeStats: nodeStats });
-        }).catch(function(err) { return sendError(res, 'EXECUTION_FAILED', 'Falha ao carregar execução.', 500, String(err)); });
+        return safeExec('execution', function() { return fetchExecutionDetail(executionId); }, { execution: null, steps: [] }).then(function(outcome) {
+          if (!outcome.value.execution) return sendError(res, 'NOT_FOUND', 'Execução não encontrada.', 404);
+          var nodeStats = mapNodeStats(outcome.value.steps);
+          return sendOk(res, { execution: outcome.value.execution, steps: outcome.value.steps, nodeStats: nodeStats, errors: { execution: outcome.error } });
+        });
       }
 
       if (action === 'health') {
@@ -330,29 +424,37 @@ module.exports = function(req, res) {
       }
 
       if (action === 'alerts') {
-        return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,diagnostic_quality_score,created_at&order=created_at.desc&limit=120').then(function(rows) {
-          return sendOk(res, { alerts: healthRules.buildAlerts(rows || []), impactRanking: buildImpactRanking(rows || []) });
-        }).catch(function(err) { return sendError(res, 'ALERTS_FAILED', 'Falha ao calcular alertas.', 500, String(err)); });
+        return safeExec('alerts', function() {
+          return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,diagnostic_quality_score,created_at&order=created_at.desc&limit=120');
+        }, []).then(function(outcome) {
+          return sendOk(res, { alerts: healthRules.buildAlerts(outcome.value || []), impactRanking: buildImpactRanking(outcome.value || []), errors: { alerts: outcome.error } });
+        });
       }
 
       if (action === 'node_stats') {
-        return query('diagnostic_steps?select=node_key,success,duration_ms,error_code,error_message,created_at&order=created_at.desc&limit=500').then(function(rows) {
-          return sendOk(res, { nodeStats: mapNodeStats(rows) });
-        }).catch(function(err) { return sendError(res, 'NODE_STATS_FAILED', 'Falha ao calcular métricas por nó.', 500, String(err)); });
+        return safeExec('node_stats', function() {
+          return query('diagnostic_steps?select=node_key,success,duration_ms,error_code,error_message,created_at&order=created_at.desc&limit=500');
+        }, []).then(function(outcome) {
+          return sendOk(res, { nodeStats: mapNodeStats(outcome.value), errors: { node_stats: outcome.error } });
+        });
       }
 
       if (action === 'checklist') {
-        return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,diagnostic_quality_score,metadata&order=created_at.desc&limit=100').then(function(rows) {
-          return sendOk(res, { checklist: buildChecklist(rows) });
-        }).catch(function(err) { return sendError(res, 'CHECKLIST_FAILED', 'Falha ao montar checklist.', 500, String(err)); });
+        return safeExec('checklist', function() {
+          return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,diagnostic_quality_score,metadata&order=created_at.desc&limit=100');
+        }, []).then(function(outcome) {
+          return sendOk(res, { checklist: buildChecklist(outcome.value), errors: { checklist: outcome.error } });
+        });
       }
 
-      if (action === 'journey') {
+      if (action === 'journey' || action === 'journeys') {
         var traceId = String((req.query && req.query.conversation_trace_id) || '').trim();
         if (!traceId) return sendError(res, 'TRACE_ID_REQUIRED', 'conversation_trace_id é obrigatório.', 400);
-        return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(traceId) + '&select=execution_id,parent_execution_id,correlation_id,intent_detected,pipeline_selected,success,fallback_used,severity,diagnostic_quality_score,created_at&order=created_at.asc&limit=300').then(function(rows) {
-          return sendOk(res, { journey: rows || [], conversationTraceId: traceId });
-        }).catch(function(err) { return sendError(res, 'JOURNEY_FAILED', 'Falha ao carregar jornada.', 500, String(err)); });
+        return safeExec('journeys', function() {
+          return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(traceId) + '&select=execution_id,parent_execution_id,correlation_id,intent_detected,pipeline_selected,success,fallback_used,severity,diagnostic_quality_score,created_at&order=created_at.asc&limit=300');
+        }, []).then(function(outcome) {
+          return sendOk(res, { journey: outcome.value, conversationTraceId: traceId, errors: { journeys: outcome.error } });
+        });
       }
 
       if (action === 'export') {
