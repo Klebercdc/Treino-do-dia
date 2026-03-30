@@ -69,7 +69,7 @@ function triageMessage(input) {
 
   if (!text) return 'noise';
   if (input.flags.isNoise || input.flags.isOnlyPunctuation || input.flags.isOnlyEmoji) return 'noise';
-  if (/^(oi|ola|opa|fala|e ai|salve)$/.test(text)) return 'greeting_short';
+  if (/^(oi|ola|olá|opa|fala|e ai|salve|bom dia|boa tarde|boa noite)$/.test(text)) return 'greeting_short';
   if (/^(oi\s+oi|oi\s+oi\s+oi|fala\s+fala|como ce ta(\s+como ce ta)?)$/.test(text) || input.flags.isRepeatedSurface) return 'greeting_repeated';
   if (/^(teste|1 2 3|funciona\??|alo|ta on\??|hmm+|hm+|\?)$/.test(text)) return 'test_surface';
   if (/^(ok|blz|beleza|entendi|fechou|show)$/.test(text)) return 'acknowledgment';
@@ -130,6 +130,12 @@ function classifyIntent(input, continuationContext) {
   if (/\b(exercicio|agachamento|supino|remada|dor)\b/.test(text)) scores.topic.exercise += 1.5;
   if (/\b(recuperacao|sono|fadiga|deload|cansado)\b/.test(text)) scores.topic.recovery += 1.5;
   if (/\b(progresso|evolui|plato|resultado|estagnado)\b/.test(text)) scores.topic.progress += 1.5;
+  if (scores.topic.supplement >= 2 && !/\b(monta|montar|cria|criar|gera|gerar)\b.*\b(treino|ficha|divisao)\b/.test(text)) {
+    scores.topic.workout = Math.max(0, scores.topic.workout - 1);
+  }
+  if (scores.topic.supplement >= 2 && /\b(qual|vale|funciona|evidencia|tomar|dose)\b/.test(text)) {
+    scores.topic.supplement += 1;
+  }
 
   if (continuationHit && inheritedTopic && !semanticSignals.topicShiftCue && scores.topic[inheritedTopic] < 1.5) {
     scores.topic[inheritedTopic] += 1.5;
