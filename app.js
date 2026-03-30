@@ -2599,6 +2599,25 @@ function _isPedidoDeTreino(msg) {
   return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e)|quero|preciso)\b.{0,30}\b(treino|programa|plano|ficha)\b/i.test(msg);
 }
 
+async function parseApiJsonSafely(response) {
+  const rawText = await response.text();
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch (err) {
+    console.warn("[app] json_parse_failed", err && err.message);
+  }
+  return {
+    success: false,
+    type: "error",
+    action: null,
+    message: "Resposta inválida do servidor.",
+    data: null,
+    error: "INVALID_JSON",
+    meta: { rawPreview: String(rawText || "").slice(0, 200) }
+  };
+}
+
 async function sendAI(overrideText, isGerarTreino = false) {
   if (_aiTyping) return;
   const input = document.getElementById("aiInput");
@@ -2639,9 +2658,16 @@ async function sendAI(overrideText, isGerarTreino = false) {
       body: JSON.stringify(body)
     });
 
-    if (!response.ok) throw new Error("Erro " + response.status);
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
+    const data = await parseApiJsonSafely(response);
+    if (!response.ok || data.success === false) throw new Error(data.message || data.error || ("Erro " + response.status));
+
+    if (data.action === "open_workout_flow" || data.action === "open_diet_flow") {
+      removeThinking();
+      addAIMessage("assistant", data.message || "Vamos continuar.");
+      _aiTyping = false;
+      if (sendBtn) sendBtn.style.opacity = "1";
+      return;
+    }
 
     // Resposta JSON estruturada de treino
     if (data?.content?.[0]?.type === "workout_json") {
@@ -2682,7 +2708,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       return;
     }
 
-    const reply = data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
+    const reply = data?.message || data?.data?.content?.[0]?.text || data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
 
     removeThinking();
 
@@ -3906,8 +3932,9 @@ function _kronosHealthCheck() {
     method: "POST",
     body: JSON.stringify({ messages: [{ role: "user", content: "ping" }], stream: false })
   })
-  .then(r => r.json())
-  .then(() => {
+  .then(async r => parseApiJsonSafely(r))
+  .then((data) => {
+    if (data.success === false) throw new Error(data.error || "healthcheck_fail");
     localStorage.setItem('_kronosHCDate', today);
     localStorage.setItem('_kronosHCStatus', 'ok');
     _kronosRemoveHealthBanner();
@@ -3982,9 +4009,9 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
       profile: cfg
     })
   })
-  .then(r => r.json())
+  .then(async r => parseApiJsonSafely(r))
   .then(data => {
-    const text = data.content?.[0]?.text || "Sistemas online.";
+    const text = data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || "Sistemas online.";
     typing.innerHTML = renderMarkdown(text);
     // Botão "Ir para Treino" quando não há programa configurado
     if (!nextKey) {
@@ -4149,8 +4176,8 @@ async function _kronosCall(messages, userData, onChunk) {
       body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: false })
     });
     if (!resp.ok) return null;
-    const data = await resp.json();
-    const text = (data.content?.[0]?.text || '').trim();
+    const data = await parseApiJsonSafely(resp);
+    const text = (data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || '').trim();
     return text || null;
   }
 
@@ -5407,9 +5434,9 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
         isDietDirect: true
       })
     });
-    const data = await resp.json();
-    if (data.error) { txt.textContent = "Erro: " + data.error; return; }
-    txt.textContent = data.content?.[0]?.text || "Erro ao gerar dieta.";
+    const data = await parseApiJsonSafely(resp);
+    if (!resp.ok || data.success === false) { txt.textContent = "Erro: " + (data.message || data.error); return; }
+    txt.textContent = data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || "Erro ao gerar dieta.";
   } catch(e) { txt.textContent = "Erro de conexão: " + e.message; }
   finally { btn.disabled = false; }
 }

@@ -1,67 +1,71 @@
-/**
- * Detecção de intenção — KRONOS
- * Analisa a mensagem e retorna o tipo de intent.
- */
-
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
-var DIET_KEYWORDS    = ['dieta', 'alimentacao', 'cardapio', 'plano alimentar', 'comer', 'refeicao', 'calorias', 'macros', 'kcal'];
-var WORKOUT_KEYWORDS = ['treino', 'treinar', 'academia', 'exercicio', 'periodizacao', 'hipertrofia', 'ficha'];
-var SUPPLEMENT_KEYWORDS = ['suplemento', 'creatina', 'whey', 'pre treino', 'cafeina', 'multivitaminico', 'bcaa', 'glutamina'];
+function safeExtractLastUserMessage(messages) {
+  if (!Array.isArray(messages) || !messages.length) return '';
 
-var EXERCISE_DISCOVERY_PATTERNS = [
-  'exercicio de ', 'exercicio para ', 'exercicios de ', 'exercicios para ',
-  'me mostra ', 'me mostre ', 'mostra um exercicio', 'mostre um exercicio',
-  'troque esse exercicio', 'substitua esse exercicio', 'trocar exercicio',
-  'variacoes de ', 'variações de ', 'variacao de ',
-  'como fazer ', 'como executar ',
-  'substituto para ', 'alternativa para '
-];
+  for (var i = messages.length - 1; i >= 0; i--) {
+    var msg = messages[i];
+    if (!msg || typeof msg !== 'object') continue;
+    if (String(msg.role || '').toLowerCase() !== 'user') continue;
 
-var DIET_START_PATTERNS = [
-  'faca uma dieta', 'monta uma dieta', 'monte uma dieta',
-  'crie uma dieta', 'quero dieta', 'quero uma dieta',
-  'plano alimentar', 'me manda uma dieta', 'me da uma dieta'
-];
+    var content = msg.content;
+    if (typeof content === 'string') return content.trim();
 
-var WORKOUT_START_PATTERNS = [
-  'faca um treino', 'monta um treino', 'monte um treino',
-  'crie um treino', 'quero um treino', 'ficha de treino',
-  'me manda um treino', 'me da um treino'
-];
+    if (Array.isArray(content)) {
+      var merged = content.map(function(part) {
+        if (typeof part === 'string') return part;
+        if (part && typeof part.text === 'string') return part.text;
+        if (part && part.content && typeof part.content === 'string') return part.content;
+        return '';
+      }).join(' ').trim();
+      if (merged) return merged;
+    }
+
+    if (content && typeof content === 'object') {
+      if (typeof content.text === 'string') return content.text.trim();
+      if (typeof content.content === 'string') return content.content.trim();
+    }
+  }
+  return '';
+}
+
+var GREETING_REGEX = /^(oi+|ola+|ol[áa]|opa|e ai|eae|hey|hello|bom dia|boa tarde|boa noite)(\b.*)?$/i;
+var WORKOUT_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|revis(e|a)|me passa|me manda|preciso)\b[\s\S]{0,45}\b(treino|ficha|divisao|rotina de treino|exercicio)\b/i;
+var DIET_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|calcule|calcula|me passa|me manda|preciso)\b[\s\S]{0,45}\b(dieta|plano alimentar|cardapio|alimentacao|refeicoes|macros?|calorias?)\b/i;
 
 function detectIntent(message) {
-  var msg = normalizeText(message);
-  var score = { diet_request: 0, workout_request: 0, supplement_request: 0 };
+  var raw = String(message || '');
+  var msg = normalizeText(raw);
+  if (!msg) return 'general';
 
-  DIET_KEYWORDS.forEach(function(k)       { if (msg.includes(k)) score.diet_request       += 2; });
-  WORKOUT_KEYWORDS.forEach(function(k)    { if (msg.includes(k)) score.workout_request    += 2; });
-  SUPPLEMENT_KEYWORDS.forEach(function(k) { if (msg.includes(k)) score.supplement_request += 2; });
+  var words = msg.split(' ').filter(Boolean);
+  if (words.length <= 4 && GREETING_REGEX.test(msg)) return 'greeting';
+  if (/^(oi|ola|olá)\s+tudo bem/.test(msg)) return 'greeting';
 
-  DIET_START_PATTERNS.forEach(function(k)    { if (msg.includes(k)) score.diet_request    += 5; });
-  WORKOUT_START_PATTERNS.forEach(function(k) { if (msg.includes(k)) score.workout_request += 5; });
-
-  var entries = Object.keys(score).map(function(k) { return [k, score[k]]; });
-  entries.sort(function(a, b) { return b[1] - a[1]; });
-
-  if (!entries[0] || entries[0][1] < 2) return 'general_chat';
-  return entries[0][0];
+  if (WORKOUT_REQUEST.test(msg)) return 'workout';
+  if (DIET_REQUEST.test(msg)) return 'diet';
+  return 'general';
 }
 
 function isDietStart(message) {
-  var msg = normalizeText(message);
-  return DIET_START_PATTERNS.some(function(p) { return msg.includes(p); });
+  return detectIntent(message) === 'diet';
 }
 
 function isExerciseDiscovery(message) {
   var msg = normalizeText(message);
-  return EXERCISE_DISCOVERY_PATTERNS.some(function(p) { return msg.includes(p); });
+  return /(exercicio|exercicios)\s+(de|para)\b|como (fazer|executar)\b|substitu(a|ir)\s+.*exercicio/.test(msg);
 }
 
-module.exports = { detectIntent: detectIntent, isDietStart: isDietStart, isExerciseDiscovery: isExerciseDiscovery };
+module.exports = {
+  safeExtractLastUserMessage: safeExtractLastUserMessage,
+  detectIntent: detectIntent,
+  isDietStart: isDietStart,
+  isExerciseDiscovery: isExerciseDiscovery
+};

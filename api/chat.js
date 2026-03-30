@@ -7,6 +7,7 @@ var rl       = require('./_ratelimit');
 var plans    = require('./_plans');
 var logger   = require('./_logger');
 var intent       = require('./_intent');
+var responseUtil = require('./_response');
 var dietflow     = require('./_dietflow');
 var workoutflow  = require('./_workoutflow');
 var diet         = require('./_diet');
@@ -210,8 +211,9 @@ function gerarTreino(userMsg, userId, callback) {
 module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method===`OPTIONS`){res.status(200).end();return;}
-  if (req.method!==`POST`){res.status(405).end();return;}
-  if (!process.env.GROQ_API_KEY){res.status(500).json({error:'GROQ_API_KEY não configurada'});return;}
+  if (req.method!==`POST`){
+    return responseUtil.sendJson(res, 405, { success: false, type: 'error', message: 'Método não permitido.', error: 'METHOD_NOT_ALLOWED', meta: { fallback: true } });
+  }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -219,8 +221,12 @@ module.exports = function(req, res) {
       var b = req.body || {};
 
       var messages = b.messages || [];
-      if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
-      if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
+      if (!Array.isArray(messages)) {
+        return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
+      }
+      if (messages.length > 50) {
+        return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'Número de mensagens excede o limite de 50', error: 'TOO_MANY_MESSAGES', meta: { fallback: true } });
+      }
       var ALLOWED_ROLES = ['user', 'assistant', 'system'];
       messages = messages.map(function(m) {
         if (!m || typeof m !== 'object') return { role: 'user', content: '' };
@@ -230,8 +236,47 @@ module.exports = function(req, res) {
       });
 
       var lastMsg        = messages.slice(-1)[0] || { role: 'user', content: '' };
-      var lastContent    = lastMsg.content || '';
+      var lastContent    = intent.safeExtractLastUserMessage(messages);
+      var detectedIntent = intent.detectIntent(lastContent);
       var convState      = b.conversationState || null;
+      console.log('[chat] intent_detected:', detectedIntent);
+
+      if (!convState && b.isDietDirect !== true && b.isGerarTreino !== true) {
+        if (detectedIntent === 'greeting') {
+          console.log('[chat] local_greeting_response');
+          return responseUtil.sendJson(res, 200, {
+            success: true,
+            type: 'greeting',
+            action: null,
+            message: 'Oi 👋 Como posso te ajudar hoje?',
+            data: null,
+            error: null,
+            meta: { local: true, tokensSaved: true }
+          });
+        }
+        if (detectedIntent === 'workout') {
+          return responseUtil.sendJson(res, 200, {
+            success: true,
+            type: 'workout_intent',
+            action: 'open_workout_flow',
+            message: 'Beleza 💪 Vamos montar seu treino.',
+            data: null,
+            error: null,
+            meta: { local: true, tokensSaved: true }
+          });
+        }
+        if (detectedIntent === 'diet') {
+          return responseUtil.sendJson(res, 200, {
+            success: true,
+            type: 'diet_intent',
+            action: 'open_diet_flow',
+            message: 'Perfeito 🍽️ Vamos montar sua dieta.',
+            data: null,
+            error: null,
+            meta: { local: true, tokensSaved: true }
+          });
+        }
+      }
 
       // ── FLUXO DE DIETA ──────────────────────────────────────────
       // Se há um fluxo ativo de coleta de dados
@@ -240,53 +285,70 @@ module.exports = function(req, res) {
 
         // Ainda coletando dados — sem consumir quota
         if (!stepResult.finished) {
-          return res.status(200).json({
-            content: [{ type: 'text', text: stepResult.response }],
-            conversationState: {
-              mode:      stepResult.mode,
-              stepIndex: stepResult.stepIndex,
-              collected: stepResult.collected
-            }
-          });
-        }
+            return responseUtil.sendJson(res, 200, {
+              success: true,
+              type: 'text',
+              message: stepResult.response,
+              data: { conversationState: {
+                mode:      stepResult.mode,
+                stepIndex: stepResult.stepIndex,
+                collected: stepResult.collected
+              } },
+              meta: { local: true, flow: 'diet' }
+            });
+          }
 
         // Dados completos — verifica quota antes de gerar
         plans.getQuotaInfo(user.id, function(qErr, quota) {
           if (qErr) {
             console.error('[chat] erro ao verificar quota para dieta (fail-closed):', qErr);
-            return res.status(503).json({
-              error: 'Não foi possível verificar seu plano. Tente novamente em instantes.',
-              code: 'QUOTA_CHECK_FAILED'
+            return responseUtil.sendJson(res, 503, {
+              success: false,
+              type: 'error',
+              action: null,
+              message: 'Não consegui processar agora.',
+              data: null,
+              error: 'PROVIDER_UNAVAILABLE',
+              meta: { fallback: true, reason: 'quota_check_failed' }
             });
           }
 
           if (!quota.allowed) {
             // Preview antes do paywall — mostra calorias e macros sem dar o plano completo
             var preview = diet.buildDietPlan(stepResult.collected);
-            return res.status(402).json({
-              error:   'QUOTA_EXCEEDED',
-              code:    'QUOTA_EXCEEDED',
-              used:    quota.used,
-              limit:   quota.limit,
-              plan:    quota.plan,
-              preview: {
+            return responseUtil.sendJson(res, 402, {
+              success: false,
+              type: 'error',
+              message: 'Sua dieta de ' + preview.meta.calorias + ' kcal está calculada. Faça upgrade para acessar o plano completo.',
+              error: 'QUOTA_EXCEEDED',
+              data: { quota: {
+                used: quota.used,
+                limit: quota.limit,
+                plan: quota.plan
+              }, preview: {
                 calorias:  preview.meta.calorias,
                 proteina:  preview.meta.proteina,
                 carbo:     preview.meta.carbo,
                 gordura:   preview.meta.gordura,
                 refeicoes: preview.refeicoes.length
-              },
-              message: 'Sua dieta de ' + preview.meta.calorias + ' kcal está calculada. Faça upgrade para acessar o plano completo.'
+              } },
+              meta: { fallback: true }
             });
           }
 
           // Quota ok — gera e incrementa
           plans.checkAndIncrementQuota(user.id, res, function() {
             var dietPlan = diet.buildDietPlan(stepResult.collected);
-            res.status(200).json({
-              content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
-              conversationState: null,
-              quota: { remaining: quota.remaining - 1 }
+            responseUtil.sendJson(res, 200, {
+              success: true,
+              type: 'diet_result',
+              message: formatDietSummary(dietPlan),
+              data: {
+                content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
+                conversationState: null,
+                quota: { remaining: quota.remaining - 1 }
+              },
+              meta: { local: true }
             });
           });
         });
@@ -326,10 +388,15 @@ module.exports = function(req, res) {
 
       // ── INTENT: exercise discovery ────────────────────────────────
       if (!b.isGerarTreino && !b.isDietDirect && intent.isExerciseDiscovery(lastContent)) {
-        return res.status(200).json({
-          content: [{ type: 'text', text: 'Buscando exercício...' }],
-          isExerciseDiscovery: true,
-          exerciseQuery: lastContent
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'text',
+          message: 'Buscando exercício...',
+          data: {
+            isExerciseDiscovery: true,
+            exerciseQuery: lastContent
+          },
+          meta: { local: true }
         });
       }
 
@@ -367,8 +434,11 @@ module.exports = function(req, res) {
       if (b.isDietDirect === true) {
         plans.checkAndIncrementQuota(user.id, res, function() {
           callChat(buildCoachSystem(b.system, b.context || {}), messages, 3000, 0.4, user.id, 'chat-diet-direct', function(err, text) {
-            if (err) return res.status(500).json({ error: err });
-            res.status(200).json({ content: [{ type: 'text', text: text }] });
+            if (err) {
+              console.error('[chat] provider_fallback:', err);
+              return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+            }
+            responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
           });
         });
         return;
@@ -392,13 +462,18 @@ module.exports = function(req, res) {
           plans.checkAndIncrementQuota(user.id, res, function(planRow) {
             if (isGerarTreino) {
               gerarTreino(lastMsg, user.id, function(err, data) {
-                if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
-                res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+                if (err) {
+                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+                }
+                responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }] }, meta: {} });
               });
             } else {
               callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
-                if (err) return res.status(500).json({ error: err });
-                res.status(200).json({ content: [{ type: 'text', text: text }] });
+                if (err) {
+                  console.error('[chat] provider_fallback:', err);
+                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+                }
+                responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
               });
             }
           });
@@ -407,13 +482,18 @@ module.exports = function(req, res) {
           plans.checkAndIncrementQuota(user.id, res, function(planRow) {
             if (isGerarTreino) {
               gerarTreino(lastMsg, user.id, function(err, data) {
-                if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
-                res.status(200).json({ content: [{ type: 'workout_json', data: data }] });
+                if (err) {
+                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+                }
+                responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }] }, meta: {} });
               });
             } else {
               callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
-                if (err) return res.status(500).json({ error: err });
-                res.status(200).json({ content: [{ type: 'text', text: text }] });
+                if (err) {
+                  console.error('[chat] provider_fallback:', err);
+                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+                }
+                responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
               });
             }
           });

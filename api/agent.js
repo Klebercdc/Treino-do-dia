@@ -8,6 +8,7 @@ var plans   = require('./_plans');
 var logger  = require('./_logger');
 var prompts = require('./_systemPrompts');
 var diet    = require('./_diet');
+var responseUtil = require('./_response');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -485,8 +486,9 @@ function agentLoopStream(userMessages, userData, res) {
 module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  if (req.method !== 'POST') { res.status(405).end(); return; }
-  if (!process.env.GROQ_API_KEY) { res.status(500).json({ error: 'GROQ_API_KEY não configurada' }); return; }
+  if (req.method !== 'POST') {
+    return responseUtil.sendJson(res, 405, { success: false, type: 'error', message: 'Método não permitido.', error: 'METHOD_NOT_ALLOWED', meta: { fallback: true } });
+  }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
@@ -494,8 +496,12 @@ module.exports = function(req, res) {
       var b = req.body || {};
 
       var messages = b.messages || [];
-      if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
-      if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
+      if (!Array.isArray(messages)) {
+        return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
+      }
+      if (messages.length > 50) {
+        return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'Número de mensagens excede o limite de 50', error: 'TOO_MANY_MESSAGES', meta: { fallback: true } });
+      }
       var ALLOWED_ROLES = ['user', 'assistant', 'system', 'tool'];
       messages = messages.map(function(m) {
         if (!m || typeof m !== 'object') return { role: 'user', content: '' };
@@ -522,12 +528,31 @@ module.exports = function(req, res) {
 
       // Non-streaming JSON mode (backwards compatible)
       agentLoop(messages, userData, function(err, text) {
-        if (err) return res.status(500).json({ error: err });
+        if (err) {
+          console.error('[agent] provider_fallback:', err);
+          return responseUtil.sendJson(res, 503, {
+            success: false,
+            type: 'error',
+            action: null,
+            message: 'Não consegui processar agora.',
+            data: null,
+            error: 'PROVIDER_UNAVAILABLE',
+            meta: { fallback: true }
+          });
+        }
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
         var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
         logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed, tools: TOOLS.map(function(t){ return t.function.name; }).join(',') });
-        res.status(200).json({ content: [{ type: 'text', text: text }] });
+        responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'text',
+          action: null,
+          message: text || 'Sem resposta.',
+          data: { content: [{ type: 'text', text: text || 'Sem resposta.' }] },
+          error: null,
+          meta: {}
+        });
       });
     });
     }, { max: 30, windowMs: 60000 }, user.id);
