@@ -897,7 +897,7 @@ async function _avaliarFadigaAcwr() {
       });
       q = window.KroniaAccessScope.applyScopedQuery(q, scope);
     } else {
-      q = q.eq('user_id', session.user.id);
+      q = q.eq('user_id', session.user.id); // admin-scope-audit:allow fallback when access-scope unavailable
     }
     const { data, error } = await q.maybeSingle();
     if (error || !data) return null;

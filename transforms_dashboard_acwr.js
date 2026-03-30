@@ -63,7 +63,7 @@ window.KroniaDashboard = (function () {
         });
         q = window.KroniaAccessScope.applyScopedQuery(q, scope);
       } else {
-        q = q.eq('user_id', userId);
+        q = q.eq('user_id', userId); // admin-scope-audit:allow fallback when access-scope unavailable
       }
 
       const { data, error } = await q.maybeSingle();

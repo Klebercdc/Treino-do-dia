@@ -51,8 +51,27 @@ function buildAccessProfile(userOrEmail, options) {
   var fromWhitelist = isPrivilegedEmail(email);
   var fromClaims = resolveClaimAdmin(userOrEmail);
   var fromProfile = !!(options && options.profileIsAdmin === true);
-  var isAdmin = fromProfile || fromClaims || fromWhitelist;
-  var source = fromProfile ? 'profiles_table' : (fromClaims ? 'jwt_claim' : (fromWhitelist ? 'env_whitelist' : (isAuthenticated ? 'authenticated_user' : 'anonymous')));
+  var hasProfileDecision = !!(options && options.profileLookupPerformed === true);
+  var allowFallbackAfterProfileLookup = !!(options && options.allowFallbackWhenProfileResolved === true);
+
+  var isAdmin;
+  var source;
+
+  if (hasProfileDecision) {
+    if (fromProfile) {
+      isAdmin = true;
+      source = 'profiles_table';
+    } else if (allowFallbackAfterProfileLookup && (fromClaims || fromWhitelist)) {
+      isAdmin = true;
+      source = fromClaims ? 'jwt_claim_fallback' : 'env_whitelist_fallback';
+    } else {
+      isAdmin = false;
+      source = 'profiles_table';
+    }
+  } else {
+    isAdmin = fromClaims || fromWhitelist;
+    source = fromClaims ? 'jwt_claim' : (fromWhitelist ? 'env_whitelist' : (isAuthenticated ? 'authenticated_user' : 'anonymous'));
+  }
 
   return {
     email: email,
@@ -65,7 +84,8 @@ function buildAccessProfile(userOrEmail, options) {
     canSeeTestFeatures: isAdmin,
     source: source,
     profileIsAdmin: fromProfile,
-    claimIsAdmin: fromClaims
+    claimIsAdmin: fromClaims,
+    profileLookupPerformed: hasProfileDecision
   };
 }
 
@@ -106,7 +126,7 @@ function supabaseProfileAdminLookup(userId, callback) {
 function buildAccessProfileWithDb(user, callback) {
   if (!user || !user.id) return callback(null, buildAccessProfile(user));
   supabaseProfileAdminLookup(user.id, function(_err, isAdminFromProfile) {
-    callback(null, buildAccessProfile(user, { profileIsAdmin: isAdminFromProfile === true }));
+    callback(null, buildAccessProfile(user, { profileIsAdmin: isAdminFromProfile === true, profileLookupPerformed: true }));
   });
 }
 

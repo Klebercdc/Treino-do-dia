@@ -158,8 +158,8 @@ const _dbSync = {
         window.KroniaAccessProfile.isAdmin = profile.is_admin;
         window.KroniaAccessProfile.canBypassQuota = !!profile.is_admin;
         window.KroniaAccessProfile.canSeeAdminUI = !!profile.is_admin;
-        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildCapabilities === 'function') {
-          window.currentUserCapabilities = window.KroniaAccessScope.buildCapabilities(window.KroniaAccessProfile);
+        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildUserCapabilities === 'function') {
+          window.currentUserCapabilities = window.KroniaAccessScope.buildUserCapabilities(window.KroniaAccessProfile);
           window.KroniaAccessScope.setupAdminDebug && window.KroniaAccessScope.setupAdminDebug();
         }
       }
@@ -484,15 +484,26 @@ document.addEventListener('click', function(e) {
 _sb.auth.onAuthStateChange((_event, session) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
-    const firstLoad = !_appUnlocked;
-    showApp();
-    if (firstLoad) { navTo('inicio'); openHome(); }
-    // Puxa dados da nuvem ao logar (fire & forget)
-    _dbSync.pullAll(session.user.id);
-    // Renderiza dashboard ACWR assim que o usuário estiver autenticado
-    if (typeof window.KroniaDashboard !== 'undefined') {
-      window.KroniaDashboard.render(session.user.id);
-    }
+    (async function bootstrapAuthenticatedSession() {
+      try {
+        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
+          await window.KroniaAccessScope.hydrateAccessContext(session);
+        }
+        await _dbSync.pullAll(session.user.id);
+      } catch (_) {}
+
+      const firstLoad = !_appUnlocked;
+      showApp();
+      if (firstLoad) { navTo('inicio'); openHome(); }
+
+      if (typeof fetchUserPlan === 'function') {
+        try { await fetchUserPlan(); } catch (_) {}
+      }
+
+      if (typeof window.KroniaDashboard !== 'undefined') {
+        window.KroniaDashboard.render(session.user.id);
+      }
+    })();
   } else if (_appUnlocked) {
     _appUnlocked = false;
     showLogin();
@@ -503,10 +514,20 @@ _sb.auth.onAuthStateChange((_event, session) => {
 Promise.all([
   _sb.auth.getSession(),
   new Promise(r => setTimeout(r, 4000))
-]).then(([{ data: { session } }]) => {
+]).then(async ([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
-  if (session?.user) { showApp(); navTo('inicio'); openHome(); }
-  else showLogin();
+  if (session?.user) {
+    try {
+      if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
+        await window.KroniaAccessScope.hydrateAccessContext(session);
+      }
+      await _dbSync.pullAll(session.user.id);
+      if (typeof fetchUserPlan === 'function') await fetchUserPlan();
+    } catch (_) {}
+    showApp();
+    navTo('inicio');
+    openHome();
+  } else showLogin();
 }).catch(() => {
   showLogin();
 });

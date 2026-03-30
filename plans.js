@@ -98,8 +98,8 @@ function hydrateAccessProfileFromPlan(planPayload) {
     source: data.accessMode || 'plan_current'
   };
 
-  if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildCapabilities === 'function') {
-    window.currentUserCapabilities = window.KroniaAccessScope.buildCapabilities(window.KroniaAccessProfile);
+  if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildUserCapabilities === 'function') {
+    window.currentUserCapabilities = window.KroniaAccessScope.buildUserCapabilities(window.KroniaAccessProfile);
     if (typeof window.KroniaAccessScope.setupAdminDebug === 'function') {
       window.KroniaAccessScope.setupAdminDebug();
     }
@@ -189,6 +189,15 @@ function updatePlanBadge() {
   var inTrial = trial && trial.active && !isPro;
   var trialDaysLeft = trial && Number.isFinite(Number(trial.daysLeft)) ? Math.max(0, Number(trial.daysLeft)) : null;
   var trialDaysLabel = trialDaysLeft === null ? '—' : String(trialDaysLeft);
+
+  renderAdminPlanInspection({
+    plan: plan,
+    isUltra: isUltra,
+    isPro: isPro,
+    inTrial: inTrial,
+    rem: Math.max(0, (Number.isFinite(Number(_userPlan.limit)) ? Number(_userPlan.limit) : FREE_AI_LIMIT) - Number(_userPlan.ai_requests_used || 0)),
+    activeLimit: Number.isFinite(Number(_userPlan.limit)) ? Number(_userPlan.limit) : FREE_AI_LIMIT
+  });
   var activeLimit = Number.isFinite(Number(_userPlan.limit))
     ? Number(_userPlan.limit)
     : (inTrial ? TRIAL_AI_LIMIT : FREE_AI_LIMIT);
@@ -312,6 +321,37 @@ function updatePlanBadge() {
     el.textContent = 'Ferramentas internas habilitadas';
     container.appendChild(el);
   });
+
+  renderAdminPlanInspection({
+    plan: plan,
+    isUltra: isUltra,
+    isPro: isPro,
+    inTrial: inTrial,
+    rem: rem,
+    activeLimit: activeLimit
+  });
+}
+
+function renderAdminPlanInspection(state) {
+  if (!isCurrentUserAdmin()) return;
+  var modal = document.getElementById('planModal');
+  if (!modal) return;
+  var container = document.getElementById('planAdminInspection');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'planAdminInspection';
+    container.style.cssText = 'margin:10px 14px 0;padding:10px 12px;border:1px dashed rgba(168,85,247,.45);border-radius:10px;font-size:.74rem;color:#d8b4fe;background:rgba(76,29,149,.18)';
+    modal.appendChild(container);
+  }
+  var trial = getTrialStatus();
+  container.innerHTML = [
+    '<div style="font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">Admin Plan Inspection</div>',
+    '<div>raw_plan=' + String((_userPlan.rawPlan || _userPlan.plan || 'n/a')) + '</div>',
+    '<div>effective_plan=' + String(_userPlan.plan || 'n/a') + ' · effective_access=' + String(_userPlan.effectiveAccess || 'standard') + '</div>',
+    '<div>trial_active=' + (!!(trial && trial.active)) + ' · trial_days_left=' + String(trial && trial.daysLeft != null ? trial.daysLeft : 'n/a') + '</div>',
+    '<div>quota_used=' + String(_userPlan.ai_requests_used || 0) + '/' + String(state && state.activeLimit != null ? state.activeLimit : 'n/a') + ' · remaining=' + String(state && state.rem != null ? state.rem : 'n/a') + '</div>',
+    '<div>gating_reason=' + (state && state.isPro ? 'paid_or_ultra' : (state && state.inTrial ? 'trial_window' : 'free_plan_limited')) + '</div>'
+  ].join('');
 }
 
 // ══════════════════════════════
@@ -691,10 +731,12 @@ document.getElementById('legalModal').addEventListener('click', function(e) {
   if (e.target === this) closeLegalModal();
 });
 
-// Carrega plano + inicia trial ao autenticar
+// Fallback de plano ao autenticar (bootstrap principal ocorre em auth.js)
 _sb.auth.onAuthStateChange(function(event, session) {
   if (session && session.user) {
-    setTimeout(fetchUserPlan, 800);
+    if (!_userPlan || !_userPlan.plan) {
+      fetchUserPlan().catch(function() {});
+    }
   } else {
     _userPlan = { plan: 'free', ai_requests_used: 0, trial_started_at: null, limit: FREE_AI_LIMIT };
     updatePlanBadge();
