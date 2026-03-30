@@ -2621,11 +2621,53 @@ function logUiEvent(eventName, payload) {
   try { console.info("[kronia.ui]", eventName, payload || {}); } catch (_) {}
 }
 
+function toSafeTitleCase(text) {
+  return String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(function(word) {
+      var lower = word.toLocaleLowerCase("pt-BR");
+      return lower.charAt(0).toLocaleUpperCase("pt-BR") + lower.slice(1);
+    })
+    .join(" ");
+}
+
+function buildApiErrorEnvelope(message, errorCode) {
+  return {
+    success: false,
+    type: "error",
+    action: null,
+    message: message || "Não consegui montar a dieta agora. Tente novamente em instantes.",
+    data: { content: [] },
+    error: errorCode || "INVALID_CONTRACT",
+    meta: { fallback: true }
+  };
+}
+
+function normalizeDietContentNode(payload) {
+  const directData = payload && payload.data && typeof payload.data === "object" ? payload.data : {};
+  const fromDataNode = Array.isArray(directData.content) ? directData.content.find(n => n && typeof n === "object" && n.type === "diet_result") : null;
+  const planData = fromDataNode?.data || directData.diet || directData.plan || payload?.diet || payload?.plan || null;
+  const text = String(fromDataNode?.text || payload?.message || "").trim();
+  if (!planData && !text) return null;
+  return { type: "diet_result", data: planData || {}, text };
+}
+
 function getApiContentNodes(payload) {
   if (!payload || typeof payload !== "object") return [];
-  if (Array.isArray(payload.content)) return payload.content;
-  if (payload.data && Array.isArray(payload.data.content)) return payload.data.content;
-  return [];
+  if (!payload.data || typeof payload.data !== "object") payload.data = {};
+  let nodes = [];
+  if (Array.isArray(payload.data.content)) {
+    nodes = payload.data.content;
+  } else if (Array.isArray(payload.content)) {
+    nodes = payload.content;
+  } else if (payload.type === "diet_result") {
+    const rebuilt = normalizeDietContentNode(payload);
+    nodes = rebuilt ? [rebuilt] : [];
+  }
+  payload.data.content = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+  return payload.data.content;
 }
 
 function ensureApiContract(payload, contextName) {
@@ -2638,18 +2680,17 @@ function ensureApiContract(payload, contextName) {
       context: contextName || "unknown",
       keys: payload && typeof payload === "object" ? Object.keys(payload) : null
     });
-    return {
-      success: false,
-      type: "error",
-      message: "Recebi uma resposta inesperada. Tente novamente em instantes.",
-      action: null,
-      data: { content: [{ type: "text", text: "Resposta inválida." }] },
-      error: "INVALID_CONTRACT",
-      meta: { fallback: true }
-    };
+    return buildApiErrorEnvelope("Não consegui montar a dieta agora. Tente novamente em instantes.", "INVALID_CONTRACT");
   }
-  if (!payload.data || typeof payload.data !== "object") payload.data = {};
-  if (!Array.isArray(payload.data.content)) payload.data.content = [{ type: payload.type || "text", text: payload.message || "" }];
+  if (!payload.data || typeof payload.data !== "object") payload.data = { content: [] };
+  const contentNodes = getApiContentNodes(payload);
+  if (payload.type === "diet_result") {
+    const normalizedDietNode = normalizeDietContentNode(payload);
+    payload.data.content = normalizedDietNode ? [normalizedDietNode] : [];
+  } else if (!Array.isArray(contentNodes)) {
+    payload.data.content = [];
+  }
+  if (!Array.isArray(payload.data.content)) payload.data.content = [];
   return payload;
 }
 
@@ -2667,15 +2708,7 @@ async function parseApiJsonSafely(response) {
       rawPreview: String(rawText || "").slice(0, 200)
     });
   }
-  return {
-    success: false,
-    type: "error",
-    action: null,
-    message: "Não consegui interpretar a resposta do servidor agora.",
-    data: null,
-    error: "INVALID_JSON",
-    meta: { rawPreview: String(rawText || "").slice(0, 200) }
-  };
+  return buildApiErrorEnvelope("Não consegui montar a dieta agora. Tente novamente em instantes.", "INVALID_JSON");
 }
 
 async function sendAI(overrideText, isGerarTreino = false) {
@@ -2966,18 +2999,21 @@ function sanitizeExerciseDisplayName(rawName, fallbackName) {
   let text = String(rawName || "").replace(/\s+/g, " ").trim();
   if (!text) return fallback;
 
-  // Remove prefixos comuns de instrução
-  text = text
-    .replace(/^(dica|observa[cç][aã]o|instru[cç][aã]o|cue|nota|descri[cç][aã]o)\s*[:\-]\s*/i, "")
-    .trim();
+  const original = text;
+  text = text.replace(/^(dica|observa[cç][aã]o|instru[cç][aã]o|cue|nota|descri[cç][aã]o)\s*[:\-]\s*/i, "").trim();
+  if (/[.!?]/.test(text)) text = text.split(/[.!?]/)[0].trim();
+  text = text.replace(/\s{2,}/g, " ").trim();
 
-  const instructionHints = /(mantenha|evite|durante|respire|controle|contraia|alinh|postura|lesionar|execute|faça|sem balançar|não arqueie|peito aberto|costas retas)/i;
-  const longSentenceLike = /[.!?]/.test(text) || text.length > 52 || text.split(/\s+/).length > 6;
+  const words = text.split(/\s+/).filter(Boolean);
+  const isInstructionSentence = words.length > 7 && /(mantenha|evite|durante|respire|controle|contraia|alinh|postura|execute|faça|não|sem)\b/i.test(text);
+  if (!text || isInstructionSentence) return fallback;
+  if (text.length > 70) text = words.slice(0, 6).join(" ").trim();
 
-  if (instructionHints.test(text) && longSentenceLike) return fallback;
-  if (longSentenceLike && !/^([A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9\s\-\/()]+)$/.test(text)) return fallback;
-
-  return text.slice(0, 52).trim();
+  const normalized = toSafeTitleCase(text);
+  if (normalized !== original && normalized) {
+    logUiEvent("exercise_title_unicode_fixed", { before: original, after: normalized });
+  }
+  return normalized || fallback;
 }
 
 function getExerciseCardTitle(ex, index) {
@@ -2985,41 +3021,22 @@ function getExerciseCardTitle(ex, index) {
   if (!ex) return fallback;
 
   const src = ex && typeof ex === "object" ? ex : { name: ex };
-  let raw = src.display_name || src.name || src.nome || "";
+  const rawCandidates = [src.display_name, src.name, src.nome].filter(v => v != null && String(v).trim().length > 0);
+  if (!rawCandidates.length) return fallback;
 
-  if (!raw) return fallback;
-
-  raw = String(raw).trim();
-
-  raw = raw
-    .replace(/mantenha.$/i, "")
-    .replace(/desta forma.$/i, "")
-    .replace(/evite.$/i, "")
-    .replace(/durante.$/i, "")
-    .replace(/.$/, "")
-    .trim();
-
-  let candidate = raw.split(/[.,-]/)[0].trim();
-
-  if (candidate.length < 3) {
-    candidate = raw;
+  for (let i = 0; i < rawCandidates.length; i++) {
+    const raw = String(rawCandidates[i] || "").trim();
+    if (!raw) continue;
+    const candidate = sanitizeExerciseDisplayName(raw, "");
+    if (!candidate) continue;
+    if (candidate === "Exercício") return "Exercício";
+    if (candidate.length >= 2) {
+      if (candidate !== raw) logUiEvent("exercise_title_unicode_fixed", { before: raw, after: candidate });
+      return candidate;
+    }
   }
 
-  const words = candidate.split(" ");
-
-  if (words.length > 5) {
-    candidate = words.slice(0, 2).join(" ");
-  }
-
-  candidate = candidate
-    .toLowerCase()
-    .replace(/\b\w/g, l => l.toUpperCase());
-
-  if (!candidate || candidate.length < 3) {
-    return fallback;
-  }
-
-  return candidate;
+  return fallback;
 }
 
 function normalizeExercisePayload(exercise, index) {

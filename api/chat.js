@@ -30,6 +30,48 @@ function formatDietSummary(plan) {
     + plan.hidratacao.litros + 'L água.';
 }
 
+function buildDietSuccessPayload(message, dietData, extraData, extraMeta) {
+  var safeMessage = String(message || '').trim();
+  var payloadData = Object.assign({}, extraData || {});
+  payloadData.content = [{
+    type: 'diet_result',
+    data: dietData && typeof dietData === 'object' ? dietData : {},
+    text: safeMessage
+  }];
+  return {
+    success: true,
+    type: 'diet_result',
+    message: safeMessage,
+    data: payloadData,
+    meta: Object.assign({}, extraMeta || {})
+  };
+}
+
+function buildDietErrorPayload() {
+  return {
+    success: false,
+    type: 'error',
+    message: 'Não consegui montar a dieta agora. Tente novamente em instantes.',
+    data: { content: [] },
+    error: 'DIET_PIPELINE_ERROR',
+    meta: { fallback: true }
+  };
+}
+
+function normalizeDietEnvelope(payload) {
+  if (!payload || typeof payload !== 'object') return buildDietErrorPayload();
+  if (payload.success === false) return buildDietErrorPayload();
+  if (payload.type === 'diet_result' && payload.data && Array.isArray(payload.data.content) && payload.data.content[0] && payload.data.content[0].type === 'diet_result') {
+    return payload;
+  }
+  var incomingData = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  var firstNode = Array.isArray(incomingData.content) ? incomingData.content.find(function(node) { return node && typeof node === 'object'; }) : null;
+  var planData = (firstNode && firstNode.data) || incomingData.plan || incomingData.diet || payload.plan || payload.diet || {};
+  var message = String(payload.message || (firstNode && firstNode.text) || '').trim();
+  if (!message && !Object.keys(planData || {}).length) return buildDietErrorPayload();
+  return buildDietSuccessPayload(message || 'Dieta montada com sucesso.', planData, incomingData, payload.meta);
+}
+
 function emitDecisionTelemetry(userId, classification, decision, usedLLM, openedFlow) {
   var payload = {
     event: 'chat_decision',
@@ -179,6 +221,19 @@ module.exports = function(req, res) {
 
       function sendTracked(statusCode, payload, outcome) {
         var normalizedPayload = payload && typeof payload === 'object' ? Object.assign({}, payload) : {};
+        var shouldForceDietContract = !!(b && b.isDietDirect) || !!(convState && convState.mode === 'diet') || normalizedPayload.type === 'diet_result';
+        if (shouldForceDietContract) {
+          normalizedPayload = normalizeDietEnvelope(normalizedPayload);
+          if (normalizedPayload.success === false) {
+            console.warn('[chat] diet_backend_payload_shape', JSON.stringify({
+              event: 'diet_backend_payload_shape',
+              statusCode: statusCode,
+              payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : null
+            }));
+            statusCode = 500;
+            outcome = 'failure';
+          }
+        }
         if (typeof normalizedPayload.success !== 'boolean' || typeof normalizedPayload.type !== 'string') {
           console.warn('[chat] diet_response_invalid_contract', JSON.stringify({
             event: 'diet_response_invalid_contract',
@@ -189,9 +244,9 @@ module.exports = function(req, res) {
             success: false,
             type: 'error',
             action: null,
-            message: 'Resposta interna inválida. Tente novamente em instantes.',
+            message: 'Não consegui montar a dieta agora. Tente novamente em instantes.',
             error: 'INVALID_INTERNAL_CONTRACT',
-            data: { content: [{ type: 'text', text: 'Resposta interna inválida.' }] },
+            data: { content: [] },
             meta: { fallback: true }
           };
           statusCode = 500;
@@ -240,11 +295,21 @@ module.exports = function(req, res) {
         var dietStep = dietflow.continueDietFlow(convState.stepIndex, convState.collected, lastContent);
         if (!dietStep.finished) {
           safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, inputSummary: lastContent, outputSummary: dietStep.response }); });
-          return sendTracked(200, { success: true, type: 'text', message: dietStep.response, data: { conversationState: { mode: dietStep.mode, stepIndex: dietStep.stepIndex, collected: dietStep.collected, memory: shortState } }, meta: { local: true, flow: 'diet' } });
+          return sendTracked(200, buildDietSuccessPayload(
+            dietStep.response,
+            { flow_state: 'collecting' },
+            { conversationState: { mode: dietStep.mode, stepIndex: dietStep.stepIndex, collected: dietStep.collected, memory: shortState } },
+            { local: true, flow: 'diet' }
+          ));
         }
         var dietPlan = diet.buildDietPlan(dietStep.collected);
         safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: formatDietSummary(dietPlan) }); });
-        return sendTracked(200, { success: true, type: 'diet_result', message: formatDietSummary(dietPlan), data: { content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }], conversationState: { memory: shortState } }, meta: { local: true, tokensSaved: true } });
+        return sendTracked(200, buildDietSuccessPayload(
+          formatDietSummary(dietPlan),
+          dietPlan,
+          { conversationState: { memory: shortState } },
+          { local: true, tokensSaved: true }
+        ));
       }
 
       if (convState && convState.mode === 'workout') {
@@ -278,6 +343,10 @@ module.exports = function(req, res) {
       var continuationContext = conversationStateUtil.applyContinuationContext(normalized, shortState);
       var classification = classifier.classifyIntent(normalized, continuationContext);
       var decision = decisionEngine.decideAction(classification, shortState, b.context || {});
+      if (classification.topic === 'diet' && decision.action !== 'open_diet_flow') {
+        decision.action = 'open_diet_flow';
+        decision.reason = 'Diet topic always uses diet pipeline.';
+      }
       safeTrack(function() { tracker.captureDecision({
         intentDetected: classification.kind || classification.topic || 'unknown',
         intentConfidence: classification.confidence,
@@ -324,14 +393,12 @@ module.exports = function(req, res) {
         var dietStart = dietflow.startDietFlow();
         emitDecisionTelemetry(user.id, classification, decision, false, true);
         safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, outputSummary: dietStart.response }); });
-        return sendTracked(200, {
-          success: true,
-          type: 'text',
-          action: 'open_diet_flow',
-          message: dietStart.response,
-          data: { conversationState: { mode: dietStart.mode, stepIndex: dietStart.stepIndex, collected: dietStart.collected, memory: nextShortState } },
-          meta: { local: true }
-        });
+        return sendTracked(200, buildDietSuccessPayload(
+          dietStart.response,
+          { flow_state: 'started' },
+          { conversationState: { mode: dietStart.mode, stepIndex: dietStart.stepIndex, collected: dietStart.collected, memory: nextShortState } },
+          { local: true }
+        ));
       }
 
       if (decision.action === 'open_workout_flow') {
