@@ -8,6 +8,7 @@ var plans    = require('./_plans');
 var logger   = require('./_logger');
 var intent       = require('./_intent');
 var responseUtil = require('./_response');
+var access       = require('./_access');
 var dietflow     = require('./_dietflow');
 var workoutflow  = require('./_workoutflow');
 var diet         = require('./_diet');
@@ -217,6 +218,41 @@ module.exports = function(req, res) {
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
+      var accessProfile = access.buildAccessProfile(user);
+      function runPaidAiCall(executor, done) {
+        plans.getQuotaInfo(user.id, function(qErr, quota) {
+          if (qErr) {
+            console.error('[chat] erro ao verificar quota (fail-closed):', qErr);
+            return responseUtil.sendJson(res, 503, {
+              success: false,
+              type: 'error',
+              action: null,
+              message: 'Não consegui processar agora.',
+              data: null,
+              error: 'PROVIDER_UNAVAILABLE',
+              meta: { fallback: true, reason: 'quota_check_failed' }
+            });
+          }
+
+          if (!quota.allowed) {
+            return responseUtil.sendJson(res, 402, {
+              success: false,
+              type: 'error',
+              message: 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
+              error: 'QUOTA_EXCEEDED',
+              data: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } },
+              meta: { fallback: true }
+            });
+          }
+
+          executor(function(err, payload) {
+            if (err) return done(err);
+            plans.checkAndIncrementQuota(user.id, res, function() {
+              done(null, payload, quota);
+            }, { accessProfile: accessProfile });
+          }, quota);
+        }, { accessProfile: accessProfile });
+      }
 
       var b = req.body || {};
 
@@ -298,59 +334,16 @@ module.exports = function(req, res) {
             });
           }
 
-        // Dados completos — verifica quota antes de gerar
-        plans.getQuotaInfo(user.id, function(qErr, quota) {
-          if (qErr) {
-            console.error('[chat] erro ao verificar quota para dieta (fail-closed):', qErr);
-            return responseUtil.sendJson(res, 503, {
-              success: false,
-              type: 'error',
-              action: null,
-              message: 'Não consegui processar agora.',
-              data: null,
-              error: 'PROVIDER_UNAVAILABLE',
-              meta: { fallback: true, reason: 'quota_check_failed' }
-            });
-          }
-
-          if (!quota.allowed) {
-            // Preview antes do paywall — mostra calorias e macros sem dar o plano completo
-            var preview = diet.buildDietPlan(stepResult.collected);
-            return responseUtil.sendJson(res, 402, {
-              success: false,
-              type: 'error',
-              message: 'Sua dieta de ' + preview.meta.calorias + ' kcal está calculada. Faça upgrade para acessar o plano completo.',
-              error: 'QUOTA_EXCEEDED',
-              data: { quota: {
-                used: quota.used,
-                limit: quota.limit,
-                plan: quota.plan
-              }, preview: {
-                calorias:  preview.meta.calorias,
-                proteina:  preview.meta.proteina,
-                carbo:     preview.meta.carbo,
-                gordura:   preview.meta.gordura,
-                refeicoes: preview.refeicoes.length
-              } },
-              meta: { fallback: true }
-            });
-          }
-
-          // Quota ok — gera e incrementa
-          plans.checkAndIncrementQuota(user.id, res, function() {
-            var dietPlan = diet.buildDietPlan(stepResult.collected);
-            responseUtil.sendJson(res, 200, {
-              success: true,
-              type: 'diet_result',
-              message: formatDietSummary(dietPlan),
-              data: {
-                content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
-                conversationState: null,
-                quota: { remaining: quota.remaining - 1 }
-              },
-              meta: { local: true }
-            });
-          });
+        var dietPlan = diet.buildDietPlan(stepResult.collected);
+        responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'diet_result',
+          message: formatDietSummary(dietPlan),
+          data: {
+            content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }],
+            conversationState: null
+          },
+          meta: { local: true, tokensSaved: true }
         });
 
         return; // async — não cai no resto
@@ -372,14 +365,17 @@ module.exports = function(req, res) {
         }
 
         // Perfil completo — gera treino com contexto rico
-        plans.checkAndIncrementQuota(user.id, res, function() {
+        runPaidAiCall(function(nextCall) {
           var richMsg = { role: 'user', content: workoutflow.buildWorkoutMessage(wfResult.collected) };
           gerarTreino(richMsg, user.id, function(err, data) {
-            if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
-            res.status(200).json({
-              content: [{ type: 'workout_json', data: data }],
-              conversationState: null
-            });
+            if (err) return nextCall(err);
+            nextCall(null, data);
+          });
+        }, function(err, data) {
+          if (err) return res.status(200).json({ content: [{ type: 'text', text: '⚠️ ' + err }] });
+          res.status(200).json({
+            content: [{ type: 'workout_json', data: data }],
+            conversationState: null
           });
         });
 
@@ -432,14 +428,17 @@ module.exports = function(req, res) {
       // O prompt já contém todos os dados do usuário incluindo proteínas preferidas.
       // Usa limite maior de tokens para garantir a dieta completa com todas as refeições.
       if (b.isDietDirect === true) {
-        plans.checkAndIncrementQuota(user.id, res, function() {
+        runPaidAiCall(function(nextCall) {
           callChat(buildCoachSystem(b.system, b.context || {}), messages, 3000, 0.4, user.id, 'chat-diet-direct', function(err, text) {
             if (err) {
               console.error('[chat] provider_fallback:', err);
-              return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+              return nextCall(err);
             }
-            responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
+            nextCall(null, text);
           });
+        }, function(err, text) {
+          if (err) return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+          responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
         });
         return;
       }
@@ -459,43 +458,55 @@ module.exports = function(req, res) {
             coachContext = Object.assign({}, coachContext, { science_context: scienceContext });
           }
 
-          plans.checkAndIncrementQuota(user.id, res, function(planRow) {
+          runPaidAiCall(function(nextCall) {
             if (isGerarTreino) {
               gerarTreino(lastMsg, user.id, function(err, data) {
-                if (err) {
-                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
-                }
-                responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }] }, meta: {} });
+                if (err) return nextCall(err);
+                nextCall(null, data);
               });
             } else {
               callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
                 if (err) {
                   console.error('[chat] provider_fallback:', err);
-                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+                  return nextCall(err);
                 }
-                responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
+                nextCall(null, text);
               });
             }
+          }, function(err, payload) {
+            if (err) {
+              return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+            }
+            if (isGerarTreino) {
+              return responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }] }, meta: {} });
+            }
+            responseUtil.sendJson(res, 200, { success: true, type: 'text', message: payload, data: { content: [{ type: 'text', text: payload }] }, meta: {} });
           });
         })
         .catch(function() {
-          plans.checkAndIncrementQuota(user.id, res, function(planRow) {
+          runPaidAiCall(function(nextCall) {
             if (isGerarTreino) {
               gerarTreino(lastMsg, user.id, function(err, data) {
-                if (err) {
-                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
-                }
-                responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }] }, meta: {} });
+                if (err) return nextCall(err);
+                nextCall(null, data);
               });
             } else {
               callChat(buildCoachSystem(b.system, coachContext), messages, 1200, 0.75, user.id, 'chat', function(err, text) {
                 if (err) {
                   console.error('[chat] provider_fallback:', err);
-                  return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+                  return nextCall(err);
                 }
-                responseUtil.sendJson(res, 200, { success: true, type: 'text', message: text, data: { content: [{ type: 'text', text: text }] }, meta: {} });
+                nextCall(null, text);
               });
             }
+          }, function(err, payload) {
+            if (err) {
+              return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+            }
+            if (isGerarTreino) {
+              return responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }] }, meta: {} });
+            }
+            responseUtil.sendJson(res, 200, { success: true, type: 'text', message: payload, data: { content: [{ type: 'text', text: payload }] }, meta: {} });
           });
         });
 

@@ -30,6 +30,74 @@ var _userPlan = {
   trial_expires_at: null,
   trial_status: null
 };
+window.KroniaAccessProfile = {
+  email: '',
+  isAuthenticated: false,
+  isAdmin: false,
+  isDeveloper: false,
+  canBypassQuota: false,
+  canSeeDevTools: false,
+  canSeeAdminUI: false,
+  canSeeTestFeatures: false,
+  source: 'unknown'
+};
+var INTERNAL_FEATURES = Object.freeze({
+  adminPanel: true,
+  devTools: true,
+  providerTest: true,
+  fakeDataTools: true,
+  experimentalWorkoutFlow: true,
+  experimentalDietFlow: true,
+  forceUnlimitedPlan: true,
+  viewRawApiResponses: true
+});
+
+function getCurrentAccessProfile() {
+  return window.KroniaAccessProfile || {};
+}
+function isCurrentUserAdmin() { return !!getCurrentAccessProfile().isAdmin; }
+function isCurrentUserDeveloper() { return !!getCurrentAccessProfile().isDeveloper; }
+function canShowDevFeatures() { return !!getCurrentAccessProfile().canSeeDevTools; }
+function canShowAdminFeatures() { return !!getCurrentAccessProfile().canSeeAdminUI; }
+function canShowTestFeatures() { return !!getCurrentAccessProfile().canSeeTestFeatures; }
+function isInternalFeatureEnabled(flagName, accessProfile) {
+  if (!INTERNAL_FEATURES[flagName]) return false;
+  var profile = accessProfile || getCurrentAccessProfile();
+  return !!(profile.canSeeDevTools || profile.canSeeAdminUI || profile.canSeeTestFeatures);
+}
+function showElementForAdmin(selector) {
+  if (!canShowAdminFeatures()) return;
+  document.querySelectorAll(selector).forEach(function(el) { el.style.display = ''; });
+}
+function showElementForDev(selector) {
+  if (!canShowDevFeatures()) return;
+  document.querySelectorAll(selector).forEach(function(el) { el.style.display = ''; });
+}
+function hideElementForNonAdmin(selector) {
+  if (canShowAdminFeatures()) return;
+  document.querySelectorAll(selector).forEach(function(el) { el.style.display = 'none'; });
+}
+function maybeRenderDevSection(container, renderer) {
+  if (!canShowDevFeatures()) return;
+  if (!container || typeof renderer !== 'function') return;
+  renderer(container, getCurrentAccessProfile());
+}
+
+function hydrateAccessProfileFromPlan(planPayload) {
+  var data = planPayload || {};
+  var email = String(data.email || '').trim().toLowerCase();
+  window.KroniaAccessProfile = {
+    email: email,
+    isAuthenticated: !!email,
+    isAdmin: !!data.isAdmin,
+    isDeveloper: !!data.isDeveloper,
+    canBypassQuota: !!data.canBypassQuota,
+    canSeeDevTools: !!(data.canSeeDevTools || data.isDeveloper || data.isAdmin),
+    canSeeAdminUI: !!(data.canSeeAdminUI || data.isAdmin),
+    canSeeTestFeatures: !!(data.canSeeTestFeatures || data.isDeveloper || data.isAdmin),
+    source: data.accessMode || 'plan_current'
+  };
+}
 
 function normalizePlanId(plan) {
   var normalized = String(plan || '').trim().toLowerCase();
@@ -65,6 +133,7 @@ async function fetchUserPlan() {
     var currentResp = await apiFetch('/api/plan-current');
     if (!currentResp.ok) throw new Error('plan-current');
     var current = await currentResp.json();
+    hydrateAccessProfileFromPlan(current);
 
     var featuresResp = await apiFetch('/api/plan-features');
     var features = null;
@@ -78,7 +147,10 @@ async function fetchUserPlan() {
       : (normalizePlanId(current.plan) === 'trial_ultra_7_days' ? TRIAL_AI_LIMIT : FREE_AI_LIMIT);
 
     _userPlan = {
-      plan: normalizePlanId(current.plan),
+      plan: normalizePlanId(current.effectivePlan || current.plan),
+      rawPlan: normalizePlanId(current.rawPlanCanonical || current.rawPlan),
+      effectiveAccess: current.effectiveAccess || 'standard',
+      canBypassQuota: !!current.canBypassQuota,
       ai_requests_used: usage,
       trial_started_at: current.trialStartedAt || null,
       trial_expires_at: current.trialExpiresAt || null,
@@ -93,6 +165,7 @@ async function fetchUserPlan() {
 // ATUALIZA BADGE DO PLANO (visível na home)
 // ══════════════════════════════
 function updatePlanBadge() {
+  var accessProfile = getCurrentAccessProfile();
   var plan    = _userPlan.plan;
   var isUltra = plan === 'ultra';
   var isPro   = plan === 'pro' || isUltra;
@@ -111,7 +184,10 @@ function updatePlanBadge() {
     homeBadge.className = '';
     var _zapIco = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
     var _crownIco = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>';
-    if (isUltra) {
+    if (isCurrentUserAdmin()) {
+      homeBadge.innerHTML = _crownIco + ' ADMIN';
+      homeBadge.className = 'badge-ultra';
+    } else if (isUltra) {
       homeBadge.innerHTML = _crownIco + ' ULTRA';
       homeBadge.className = 'badge-ultra';
     } else if (isPro) {
@@ -146,7 +222,7 @@ function updatePlanBadge() {
   var homeBanner  = document.getElementById('homeUpgradeBanner');
   var homeSubtext = document.getElementById('homeUpgradeSubtext');
   if (homeBanner) {
-    if (isPro) {
+    if (accessProfile.canBypassQuota || isPro) {
       homeBanner.style.display = 'none';
     } else if (inTrial) {
       homeBanner.style.display = 'none'; // trial strip já aparece
@@ -170,7 +246,7 @@ function updatePlanBadge() {
   var orientChip = document.getElementById('orientQuotaChip');
   var orientText = document.getElementById('orientQuotaText');
   if (orientChip) {
-    if (isPro) {
+    if (accessProfile.canBypassQuota || isPro) {
       orientChip.style.display = 'none';
     } else {
       orientChip.style.display = 'block';
@@ -184,7 +260,11 @@ function updatePlanBadge() {
   // ── Badge no menu de conta (settings) ──
   var badge = document.getElementById('authMenuPlanBadge');
   if (badge) {
-    if (isUltra) {
+    if (isCurrentUserAdmin()) {
+      badge.textContent = 'ADMIN';
+      badge.style.background = 'rgba(168,85,247,0.3)';
+      badge.style.color = '#c084fc';
+    } else if (isUltra) {
       badge.textContent = 'ULTRA';
       badge.style.background = 'rgba(168,85,247,0.3)';
       badge.style.color = '#c084fc';
@@ -208,6 +288,14 @@ function updatePlanBadge() {
   if (freeLimitTxt) freeLimitTxt.textContent = FREE_AI_LIMIT + ' consultas de IA por mês';
   var freeQueryLimitTxt = document.getElementById('freeQueryLimitTxt');
   if (freeQueryLimitTxt) freeQueryLimitTxt.textContent = FREE_AI_LIMIT + ' consultas IA/mês';
+  maybeRenderDevSection(document.getElementById('authMenuPlanBadge') && document.getElementById('authMenuPlanBadge').parentElement, function(container) {
+    if (container.querySelector('[data-internal-tools]')) return;
+    var el = document.createElement('div');
+    el.setAttribute('data-internal-tools', '1');
+    el.style.cssText = 'margin-top:8px;font-size:0.7rem;color:#a78bfa;opacity:0.9';
+    el.textContent = 'Ferramentas internas habilitadas';
+    container.appendChild(el);
+  });
 }
 
 // ══════════════════════════════
@@ -431,6 +519,7 @@ async function assinarUltra() {
 // PAYWALL
 // ══════════════════════════════
 function showPaywall(msg) {
+  if (canShowAdminFeatures() || canShowDevFeatures()) return;
   var modal = document.getElementById('paywallModal');
   if (!modal) return;
   var msgEl = document.getElementById('paywallMsg');
@@ -448,6 +537,7 @@ var _originalFetch = window.fetch;
 window.fetch = async function(url, opts) {
   var resp = await _originalFetch.apply(this, arguments);
   if (resp.status === 402 && typeof url === 'string' && url.startsWith('/api/')) {
+    if (canShowAdminFeatures() || canShowDevFeatures()) return resp;
     try {
       var json = await resp.clone().json();
       if (json.code === 'QUOTA_EXCEEDED') {
