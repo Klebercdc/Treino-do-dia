@@ -319,7 +319,7 @@ function gerarProtocolo() {
       sec.id = `sec${i}`; sec.className = `section ${i===0?"active":""}`;
       sec.setAttribute("data-treino-key", treino.nome);
       cont.appendChild(sec);
-      treino.exs.forEach(exNome => criarCard(exNome, sec.id, null, null, null, null));
+      treino.exs.forEach((exNome, exIdx) => criarCard(exNome, sec.id, null, null, null, null, exIdx));
     });
   } else {
     (divisoesGen[f] || ["A","B"]).forEach((nome, i) => {
@@ -328,7 +328,7 @@ function gerarProtocolo() {
       sec.id = `sec${i}`; sec.className = `section ${i===0?"active":""}`;
       sec.setAttribute("data-treino-key", `Treino ${nome}`);
       cont.appendChild(sec);
-      criarCard("Exercício Base", sec.id, null, null, null, null);
+      criarCard("Exercício Base", sec.id, null, null, null, null, 0);
     });
   }
   addPillControls(); scheduleDraftSave(); applyPrevGhostsToAll();
@@ -337,8 +337,8 @@ function gerarProtocolo() {
 /* ═══════════════════════════════════════════════════
    CARDS DE EXERCÍCIO
 ═══════════════════════════════════════════════════ */
-function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=null) {
-  const displayTitle = getExerciseCardTitle({ display_name: nome, name: nome }, 0);
+function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=null, cardIndex=0) {
+  const displayTitle = getExerciseCardTitle({ display_name: nome, name: nome }, cardIndex);
   const o = document.getElementById("obj")?.value || "hipertrofia";
   const meta = reps || (o==="forca" ? "3-5 Reps" : o==="hipertrofia" ? "8-12 Reps" : "15-20 Reps");
   const sets = series || (o==="forca" ? 5 : o==="definicao" ? 3 : 4);
@@ -706,11 +706,13 @@ function mostrarLib() {
   document.getElementById("modalLib").showModal();
 }
 function selecionar(n) {
-  const safeTitle = getExerciseCardTitle({ display_name: n, name: n }, 0);
   if (isAddingNew) {
     const active = document.querySelector(".section.active");
-    if (active) criarCard(safeTitle, active.id);
+    const cardIdx = active ? active.querySelectorAll(".exercise-card").length : 0;
+    const safeTitle = getExerciseCardTitle({ display_name: n, name: n }, cardIdx);
+    if (active) criarCard(safeTitle, active.id, null, null, null, null, cardIdx);
   } else {
+    const safeTitle = getExerciseCardTitle({ display_name: n, name: n }, 0);
     const el = document.getElementById(currentExId);
     if (el) {
       const oldName = el.innerText; el.innerText = safeTitle;
@@ -759,7 +761,7 @@ function buildTabsFromGrouped(grouped, order) {
     sec.id=`sec${idx}`; sec.className=`section ${idx===0?"active":""}`;
     sec.setAttribute("data-treino-key", key);
     cont.appendChild(sec);
-    (grouped[key]||[]).forEach(ex => criarCard(ex.exercicio, sec.id, ex.series, ex.reps));
+    (grouped[key]||[]).forEach((ex, exIdx) => criarCard(ex.exercicio, sec.id, ex.series, ex.reps, null, null, exIdx));
   });
   addPillControls();
 }
@@ -785,7 +787,7 @@ function serializeCurrentState() {
   const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")).map((p,i) => ({ idx:i, label: p.textContent.replace("×","").trim() }));
   const sections = Array.from(document.querySelectorAll("#container .section")).map((sec, secIdx) => {
     const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx+1}`;
-    const cards = Array.from(sec.querySelectorAll(".exercise-card")).map(card => {
+    const cards = Array.from(sec.querySelectorAll(".exercise-card")).map((card, cardIdx) => {
       const rows = Array.from(card.querySelectorAll(".series-grid")).filter(r => r.querySelectorAll("input").length===3);
       const values = rows.map(r => {
         const i = r.querySelectorAll("input");
@@ -794,7 +796,7 @@ function serializeCurrentState() {
         return { kg, reps, rpe, rm: rm ? rm : "" };
       });
       const rawName = card.querySelector(".ex-title")?.textContent || "";
-      const cleanName = getExerciseCardTitle({ display_name: rawName, name: rawName }, 0);
+      const cleanName = getExerciseCardTitle({ display_name: rawName, name: rawName }, cardIdx);
       return { name: cleanName, nome: cleanName, display_name: cleanName, sets: values.length, meta: card.querySelector(".ex-target")?.textContent||"", values };
     });
     return { treinoKey, cards };
@@ -816,11 +818,11 @@ function loadState(state) {
     sec.id=`sec${idx}`; sec.className=`section ${idx===0?"active":""}`;
     sec.setAttribute("data-treino-key", secData.treinoKey);
     cont.appendChild(sec);
-    (secData.cards||[]).forEach(c => {
+    (secData.cards||[]).forEach((c, cardIdx) => {
       const metaTxt = String(c.meta||"");
       const maybeReps = metaTxt.includes("Sets x") ? metaTxt.split("Sets x")[1]?.trim() : null;
-      const safeName = getExerciseCardTitle(c, idx);
-      criarCard(safeName, sec.id, c.sets, maybeReps, null, c.values);
+      const safeName = getExerciseCardTitle(c, cardIdx);
+      criarCard(safeName, sec.id, c.sets, maybeReps, null, c.values, cardIdx);
     });
   });
   addPillControls();
@@ -2503,7 +2505,7 @@ function carregarTemplateManual() {
     sec.id = `sec${idx}`; sec.className = `section ${idx===0?"active":""}`;
     sec.setAttribute("data-treino-key", d.nome);
     cont.appendChild(sec);
-    d.exs.forEach(exNome => criarCard(exNome, sec.id, null, null, null, null));
+    d.exs.forEach((exNome, exIdx) => criarCard(exNome, sec.id, null, null, null, null, exIdx));
   });
   addPillControls();
   scheduleDraftSave();
@@ -2978,37 +2980,46 @@ function sanitizeExerciseDisplayName(rawName, fallbackName) {
   return text.slice(0, 52).trim();
 }
 
-function looksLikeInstructionalTitle(text) {
-  const val = String(text || "").trim();
-  if (!val) return true;
-  const lowered = val.toLowerCase();
-  const words = lowered.split(/\s+/).filter(Boolean);
-  const imperative = /\b(mantenha|evite|respire|controle|contraia|execute|faça|nao|não|deixe|alinhe|apoie|suba|desca)\b/i;
-  const instructionalPattern = /(costas retas|peito aberto|evitar les|durante o movimento|ao executar|desta forma|sem balancar|não arquear|foco em)/i;
-  const punctuationCount = (val.match(/[,:;!?]/g) || []).length;
-  if (words.length >= 8) return true;
-  if (val.length > 58) return true;
-  if (imperative.test(lowered) && words.length >= 5) return true;
-  if (instructionalPattern.test(lowered)) return true;
-  if (punctuationCount >= 2) return true;
-  return false;
-}
-
-function getExerciseCardTitle(exercise, index) {
+function getExerciseCardTitle(ex, index) {
   const fallback = `Exercício ${Number(index || 0) + 1}`;
-  const src = exercise && typeof exercise === "object" ? exercise : { name: exercise };
-  const candidates = [src.display_name, src.nome, src.name, src.title];
-  for (let i = 0; i < candidates.length; i++) {
-    const cleaned = sanitizeExerciseDisplayName(candidates[i], "");
-    if (cleaned && !looksLikeInstructionalTitle(cleaned)) {
-      if (cleaned !== String(candidates[i] || "").trim()) {
-        logUiEvent("exercise_name_sanitized", { from: String(candidates[i] || ""), to: cleaned, index: Number(index || 0) });
-      }
-      return cleaned;
-    }
+  if (!ex) return fallback;
+
+  const src = ex && typeof ex === "object" ? ex : { name: ex };
+  let raw = src.display_name || src.name || src.nome || "";
+
+  if (!raw) return fallback;
+
+  raw = String(raw).trim();
+
+  raw = raw
+    .replace(/mantenha.$/i, "")
+    .replace(/desta forma.$/i, "")
+    .replace(/evite.$/i, "")
+    .replace(/durante.$/i, "")
+    .replace(/.$/, "")
+    .trim();
+
+  let candidate = raw.split(/[.,-]/)[0].trim();
+
+  if (candidate.length < 3) {
+    candidate = raw;
   }
-  logUiEvent("exercise_name_sanitized", { from: candidates.filter(Boolean)[0] || "", to: fallback, index: Number(index || 0), reason: "instructional_or_empty" });
-  return fallback;
+
+  const words = candidate.split(" ");
+
+  if (words.length > 5) {
+    candidate = words.slice(0, 2).join(" ");
+  }
+
+  candidate = candidate
+    .toLowerCase()
+    .replace(/\b\w/g, l => l.toUpperCase());
+
+  if (!candidate || candidate.length < 3) {
+    return fallback;
+  }
+
+  return candidate;
 }
 
 function normalizeExercisePayload(exercise, index) {
@@ -3141,7 +3152,7 @@ function applyAIWorkout(data) {
         normalized.nome = cardTitle;
         normalized.name = cardTitle;
         normalized.display_name = cardTitle;
-        const cardEl = criarCard(cardTitle, "sec" + idx, normalized.series || 3, normalized.reps || "8-12", null, []);
+        const cardEl = criarCard(cardTitle, "sec" + idx, normalized.series || 3, normalized.reps || "8-12", null, [], exIdx);
         if (normalized.fases && normalized.fases.length > 0 && cardEl) {
           const fasesDiv = document.createElement("div");
           fasesDiv.style.cssText = "padding:6px 12px 10px;border-top:1px solid var(--border-soft);margin-top:4px";
@@ -3570,7 +3581,8 @@ function _renderExercisePreviewList(cards) {
   if (!cards.length) { list.innerHTML = ""; return; }
   const muscleIcons = { peito:"💪", costas:"🔙", pernas:"🦵", ombros:"🙆", biceps:"💪", triceps:"💪", abdomen:"🧱", gluteos:"🍑" };
   list.innerHTML = cards.slice(0, 6).map((c, i) => {
-    const ex = getExerciseCardTitle({ display_name: c.exercicios?.[0]?.nome || c.nomeBloco || "" }, i);
+    const exSource = c?.exercicios?.[0] || c;
+    const ex = getExerciseCardTitle(exSource, i);
     return `<div class="exercise-preview-item">
       <div class="exercise-preview-thumb">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.6)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
