@@ -50,9 +50,12 @@ function verifyToken(token, callback) {
         try {
           var userObj = JSON.parse(data);
           callback(null, {
-            id:    userObj.id,
+            id: userObj.id,
             email: userObj.email,
-            role:  userObj.role
+            role: userObj.role,
+            app_metadata: userObj.app_metadata || {},
+            user_metadata: userObj.user_metadata || {},
+            raw_user: userObj
           });
         } catch (e) {
           callback('Erro ao processar resposta do Supabase', null);

@@ -886,11 +886,20 @@ async function _avaliarFadigaAcwr() {
   try {
     const { data: { session } } = await _sb.auth.getSession();
     if (!session?.user?.id) return null;
-    const { data, error } = await _sb
+    let q = _sb
       .from('v_fatigue_analysis')
-      .select('status, acwr_index')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
+      .select('status, acwr_index');
+    if (window.KroniaAccessScope && typeof window.KroniaAccessScope.resolveAccessScope === 'function') {
+      const scope = window.KroniaAccessScope.resolveAccessScope(session.user, {
+        ownershipColumn: 'user_id',
+        purpose: 'fatigue_analysis',
+        allowAdminGlobalRead: false
+      });
+      q = window.KroniaAccessScope.applyScopedQuery(q, scope);
+    } else {
+      q = q.eq('user_id', session.user.id);
+    }
+    const { data, error } = await q.maybeSingle();
     if (error || !data) return null;
     return data;
   } catch (_) {
@@ -4599,11 +4608,19 @@ async function _preencherDietaDoSupabase() {
     if (!session) return;
     const userId = session.user.id;
 
+    const scopeResolver = window.KroniaAccessScope && window.KroniaAccessScope.resolveAccessScope
+      ? window.KroniaAccessScope.resolveAccessScope(session.user, { ownershipColumn: 'user_id', purpose: 'diet_sheet', allowAdminGlobalRead: false })
+      : null;
+
+    const profileScope = window.KroniaAccessScope && window.KroniaAccessScope.resolveAccessScope
+      ? window.KroniaAccessScope.resolveAccessScope(session.user, { ownershipColumn: 'id', purpose: 'diet_sheet_profile', allowAdminGlobalRead: false })
+      : null;
+
     const [profRes, metricRes, goalsRes, suplRes] = await Promise.all([
-      _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId).maybeSingle(),
-      _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
-      _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-      _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true)
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes'), profileScope) : _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId)).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('body_metrics').select('weight_kg,body_fat_percent'), scopeResolver) : _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId)).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g'), scopeResolver) : _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId)).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('supplement_protocols').select('supplement_name').eq('active', true), scopeResolver) : _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true))
     ]);
 
     const p  = profRes.data;

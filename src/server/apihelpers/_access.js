@@ -1,3 +1,5 @@
+var https = require('https');
+
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -15,14 +17,10 @@ function getPrivilegedEmails() {
   var unique = {};
   fromAdmin.concat(fromDev).forEach(function(email) { unique[email] = true; });
   var emails = Object.keys(unique);
-
-  // Fallback local opcional apenas fora de produção.
   if (!emails.length && process.env.NODE_ENV !== 'production') {
-    var localFallback = parseEmailList(process.env.LOCAL_ADMIN_EMAILS);
-    localFallback.forEach(function(email) { unique[email] = true; });
+    parseEmailList(process.env.LOCAL_ADMIN_EMAILS).forEach(function(email) { unique[email] = true; });
     emails = Object.keys(unique);
   }
-
   return emails;
 }
 
@@ -32,49 +30,90 @@ function isPrivilegedEmail(email) {
   return getPrivilegedEmails().indexOf(normalized) >= 0;
 }
 
+function resolveClaimAdmin(userOrEmail) {
+  var user = userOrEmail && typeof userOrEmail === 'object' ? userOrEmail : null;
+  if (!user) return false;
+  var appRole = String((user.app_metadata && (user.app_metadata.role || user.app_metadata.app_role)) || '').toLowerCase();
+  var custom = user.app_metadata && user.app_metadata.is_admin;
+  return appRole === 'admin' || appRole === 'owner' || custom === true;
+}
+
 function getRequestUserEmail(req, userOrEmail) {
   if (typeof userOrEmail === 'string') return normalizeEmail(userOrEmail);
-  if (userOrEmail && typeof userOrEmail === 'object') {
-    return normalizeEmail(userOrEmail.email);
-  }
+  if (userOrEmail && typeof userOrEmail === 'object') return normalizeEmail(userOrEmail.email);
   if (req && req.authUser && req.authUser.email) return normalizeEmail(req.authUser.email);
   return '';
 }
 
-function buildAccessProfile(userOrEmail) {
+function buildAccessProfile(userOrEmail, options) {
   var email = getRequestUserEmail(null, userOrEmail);
   var isAuthenticated = !!email;
-  var isPrivileged = isPrivilegedEmail(email);
-  var source = isPrivileged ? 'env_whitelist' : (isAuthenticated ? 'authenticated_user' : 'anonymous');
+  var fromWhitelist = isPrivilegedEmail(email);
+  var fromClaims = resolveClaimAdmin(userOrEmail);
+  var fromProfile = !!(options && options.profileIsAdmin === true);
+  var isAdmin = fromProfile || fromClaims || fromWhitelist;
+  var source = fromProfile ? 'profiles_table' : (fromClaims ? 'jwt_claim' : (fromWhitelist ? 'env_whitelist' : (isAuthenticated ? 'authenticated_user' : 'anonymous')));
 
   return {
     email: email,
     isAuthenticated: isAuthenticated,
-    isAdmin: isPrivileged,
-    isDeveloper: isPrivileged,
-    canBypassQuota: isPrivileged,
-    canSeeDevTools: isPrivileged,
-    canSeeAdminUI: isPrivileged,
-    canSeeTestFeatures: isPrivileged,
-    source: source
+    isAdmin: isAdmin,
+    isDeveloper: isAdmin,
+    canBypassQuota: isAdmin,
+    canSeeDevTools: isAdmin,
+    canSeeAdminUI: isAdmin,
+    canSeeTestFeatures: isAdmin,
+    source: source,
+    profileIsAdmin: fromProfile,
+    claimIsAdmin: fromClaims
   };
 }
 
-function canBypassQuota(accessProfile) {
-  return !!(accessProfile && accessProfile.canBypassQuota);
+function supabaseProfileAdminLookup(userId, callback) {
+  var url = process.env.SUPABASE_URL;
+  var key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key || !userId) return callback(null, null);
+
+  var hostname = url.replace('https://', '').replace('http://', '').split('/')[0];
+  var path = '/rest/v1/profiles?id=eq.' + encodeURIComponent(userId) + '&select=is_admin&limit=1';
+  var req = https.request({
+    hostname: hostname,
+    path: path,
+    method: 'GET',
+    headers: {
+      apikey: key,
+      Authorization: 'Bearer ' + key,
+      'Content-Type': 'application/json'
+    }
+  }, function(res) {
+    var data = '';
+    res.on('data', function(c) { data += c; });
+    res.on('end', function() {
+      if (res.statusCode >= 400) return callback(null, null);
+      try {
+        var rows = JSON.parse(data || '[]');
+        var row = Array.isArray(rows) ? rows[0] : null;
+        callback(null, row ? row.is_admin === true : null);
+      } catch (_) {
+        callback(null, null);
+      }
+    });
+  });
+  req.on('error', function() { callback(null, null); });
+  req.end();
 }
 
-function canAccessAdminFeatures(accessProfile) {
-  return !!(accessProfile && accessProfile.canSeeAdminUI);
+function buildAccessProfileWithDb(user, callback) {
+  if (!user || !user.id) return callback(null, buildAccessProfile(user));
+  supabaseProfileAdminLookup(user.id, function(_err, isAdminFromProfile) {
+    callback(null, buildAccessProfile(user, { profileIsAdmin: isAdminFromProfile === true }));
+  });
 }
 
-function canAccessDevFeatures(accessProfile) {
-  return !!(accessProfile && accessProfile.canSeeDevTools);
-}
-
-function canAccessTestFeatures(accessProfile) {
-  return !!(accessProfile && accessProfile.canSeeTestFeatures);
-}
+function canBypassQuota(accessProfile) { return !!(accessProfile && accessProfile.canBypassQuota); }
+function canAccessAdminFeatures(accessProfile) { return !!(accessProfile && accessProfile.canSeeAdminUI); }
+function canAccessDevFeatures(accessProfile) { return !!(accessProfile && accessProfile.canSeeDevTools); }
+function canAccessTestFeatures(accessProfile) { return !!(accessProfile && accessProfile.canSeeTestFeatures); }
 
 module.exports = {
   getPrivilegedEmails: getPrivilegedEmails,
@@ -82,6 +121,7 @@ module.exports = {
   isPrivilegedEmail: isPrivilegedEmail,
   getRequestUserEmail: getRequestUserEmail,
   buildAccessProfile: buildAccessProfile,
+  buildAccessProfileWithDb: buildAccessProfileWithDb,
   canBypassQuota: canBypassQuota,
   canAccessAdminFeatures: canAccessAdminFeatures,
   canAccessDevFeatures: canAccessDevFeatures,

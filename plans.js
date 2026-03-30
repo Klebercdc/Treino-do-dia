@@ -97,7 +97,23 @@ function hydrateAccessProfileFromPlan(planPayload) {
     canSeeTestFeatures: !!(data.canSeeTestFeatures || data.isDeveloper || data.isAdmin),
     source: data.accessMode || 'plan_current'
   };
+
+  if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildCapabilities === 'function') {
+    window.currentUserCapabilities = window.KroniaAccessScope.buildCapabilities(window.KroniaAccessProfile);
+    if (typeof window.KroniaAccessScope.setupAdminDebug === 'function') {
+      window.KroniaAccessScope.setupAdminDebug();
+    }
+  }
+
+  if (window.KroniaObservability && typeof window.KroniaObservability.logAuthDecision === 'function') {
+    window.KroniaObservability.logAuthDecision('plan_hydration', {
+      user_email: email || null,
+      is_admin: !!window.KroniaAccessProfile.isAdmin,
+      source: window.KroniaAccessProfile.source
+    });
+  }
 }
+
 
 function normalizePlanId(plan) {
   var normalized = String(plan || '').trim().toLowerCase();

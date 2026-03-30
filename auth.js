@@ -144,7 +144,7 @@ const _dbSync = {
       // Puxa config/perfil
       const { data: profile } = await _sb
         .from('profiles')
-        .select('config')
+        .select('config,is_admin')
         .eq('id', userId)
         .single();
 
@@ -153,7 +153,18 @@ const _dbSync = {
         ? profile.config
         : {};
 
-      const mergedCfg = this.mergeConfig(localCfg, cloudCfg);
+
+      if (profile && typeof profile.is_admin === 'boolean' && window.KroniaAccessProfile) {
+        window.KroniaAccessProfile.isAdmin = profile.is_admin;
+        window.KroniaAccessProfile.canBypassQuota = !!profile.is_admin;
+        window.KroniaAccessProfile.canSeeAdminUI = !!profile.is_admin;
+        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildCapabilities === 'function') {
+          window.currentUserCapabilities = window.KroniaAccessScope.buildCapabilities(window.KroniaAccessProfile);
+          window.KroniaAccessScope.setupAdminDebug && window.KroniaAccessScope.setupAdminDebug();
+        }
+      }
+
+            const mergedCfg = this.mergeConfig(localCfg, cloudCfg);
       localStorage.setItem('kronia_config', JSON.stringify(mergedCfg));
 
       // Se nuvem estiver desatualizada/vazia, reenvia o merge para persistir
