@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '../../../lib/supabase/server';
-import { getSupabaseConfig } from '../../../lib/utils/env';
+import { getSupabaseConfig } from '../../../lib/utils/env.server';
 import { checkRateLimit } from '../../../lib/utils/serverRateLimit';
 
 export async function POST(req: Request) {

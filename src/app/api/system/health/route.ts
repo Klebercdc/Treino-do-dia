@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAIConfig, validateRuntimeEnv } from '../../../../lib/utils/env';
+import { getAIConfig, validateRuntimeEnv } from '../../../../lib/utils/env.server';
 
 export async function GET() {
   const envStatus = validateRuntimeEnv();

@@ -3,7 +3,7 @@
  * Encaminha cálculo e plano para o nutritionService mantendo formato legado.
  */
 
-var nutritionService = require('../src/lib/nutrition/nutritionService');
+var nutritionService = require('../../lib/nutrition/nutritionService');
 
 function round(v, decimals) {
   return nutritionService.round(v, decimals);

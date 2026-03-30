@@ -2713,6 +2713,9 @@
       <button class="transforms-tab" data-tab="defensive" onclick="switchTransformsTab('defensive',this)">
         <i data-lucide="shield" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="1.75" style="margin-right:5px"></i>Defensive
       </button>
+      <button class="transforms-tab" data-tab="observability" id="adminObservabilityTabBtn" style="display:none" onclick="switchTransformsTab('observability',this);teLoadAdminDiagnostics()">
+        <i data-lucide="activity" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="1.75" style="margin-right:5px"></i>Observabilidade
+      </button>
     </div>
 
     <!-- TAB: GRAFO -->
@@ -2768,6 +2771,28 @@
         </div>
         <p id="kronosAnalysisText" style="font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.7;margin:0"></p>
       </div>
+    </div>
+
+    <div class="transforms-panel" id="tab-observability" style="display:none">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px">
+        <div>
+          <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Admin Diagnóstico</h2>
+          <p style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin:0">Replay técnico, saúde e simulações internas.</p>
+        </div>
+        <button class="transforms-scan-btn" onclick="teRunAdminHealthCheck()">Rodar Health Check</button>
+      </div>
+      <div id="adminDiagOverview" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:6px;overflow:auto;margin-bottom:10px">
+        <button class="transforms-tab active" onclick="teRunScenario('greeting')">Simular Saudação</button>
+        <button class="transforms-tab" onclick="teRunScenario('workout')">Simular Treino</button>
+        <button class="transforms-tab" onclick="teRunScenario('diet')">Simular Dieta</button>
+        <button class="transforms-tab" onclick="teRunScenario('no_context')">Sem Contexto</button>
+        <button class="transforms-tab" onclick="teRunScenario('ia_failure')">Falha IA</button>
+      </div>
+      <div id="adminDiagHealth" class="transforms-log" style="display:none;margin-bottom:12px"></div>
+      <div id="adminDiagChecklist" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+      <div id="adminDiagRecent" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="adminDiagDetail" class="transforms-node-detail" style="display:none;margin-top:10px"></div>
     </div>
   </div>
 </div>

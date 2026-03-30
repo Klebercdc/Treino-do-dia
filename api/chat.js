@@ -1,21 +1,23 @@
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini = require('./_gemini');
-var auth = require('./_auth');
-var cors = require('./_cors');
-var rl = require('./_ratelimit');
-var plans = require('./_plans');
-var logger = require('./_logger');
-var responseUtil = require('./_response');
-var access = require('./_access');
-var dietflow = require('./_dietflow');
-var workoutflow = require('./_workoutflow');
-var diet = require('./_diet');
-var prompts = require('./_systemPrompts');
-var classifier = require('./_conversationClassifier');
-var decisionEngine = require('./_decisionEngine');
-var localReplies = require('./_localReplies');
-var conversationStateUtil = require('./_conversationState');
+var gemini = require('../src/server/apihelpers/_gemini');
+var auth = require('../src/server/apihelpers/_auth');
+var cors = require('../src/server/apihelpers/_cors');
+var rl = require('../src/server/apihelpers/_ratelimit');
+var plans = require('../src/server/apihelpers/_plans');
+var logger = require('../src/server/apihelpers/_logger');
+var responseUtil = require('../src/server/apihelpers/_response');
+var access = require('../src/server/apihelpers/_access');
+var dietflow = require('../src/server/apihelpers/_dietflow');
+var workoutflow = require('../src/server/apihelpers/_workoutflow');
+var diet = require('../src/server/apihelpers/_diet');
+var prompts = require('../src/server/apihelpers/_systemPrompts');
+var classifier = require('../src/server/apihelpers/_conversationClassifier');
+var decisionEngine = require('../src/server/apihelpers/_decisionEngine');
+var localReplies = require('../src/server/apihelpers/_localReplies');
+var conversationStateUtil = require('../src/server/apihelpers/_conversationState');
 var scienceInsight = require('../src/lib/science/scienceInsightService');
+var diagnostics = require('../src/server/apihelpers/_diagnosticTracker');
+var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;
@@ -143,28 +145,112 @@ module.exports = function(req, res) {
       var convState = b.conversationState || null;
       var shortState = conversationStateUtil.extractShortState(convState);
       var lastContent = classifier.extractLastUserMessage(messages);
+      var derivedConversationTrace = b.conversationTraceId || b.sessionId || user.id;
+      var tracker = new diagnostics.DiagnosticTracker({
+        userId: user.id,
+        isAdminMode: accessProfile.isAdmin,
+        source: b.testMode ? 'admin_test' : 'chat',
+        inputType: 'chat_message',
+        rawInput: lastContent,
+        correlationId: b.correlationId || b.requestId || null,
+        conversationTraceId: derivedConversationTrace,
+        parentExecutionId: b.parentExecutionId || null,
+        sessionId: b.sessionId || null,
+        metadata: {
+          traceLevel: process.env.ADMIN_DIAGNOSTIC_TRACE_LEVEL || 'standard',
+          hasConversationState: !!convState
+        }
+      });
+      tracker.startExecution();
+      function safeTrack(fn) {
+        try { fn(); } catch (e) { console.error('[diagnostics] tracker operation failed:', e && e.message ? e.message : e); }
+      }
+      safeTrack(function() {
+        tracker.addStep({
+          layer: 'input',
+          nodeKey: 'Usuario',
+          stepName: diagnosticConstants.STEP_NAMES.INPUT_RECEIVED,
+          status: 'success',
+          success: true,
+          inputSummary: lastContent
+        });
+      });
+
+      function sendTracked(statusCode, payload, outcome) {
+        var responseText = payload && payload.message ? String(payload.message) : '';
+        var responseSizeEstimate = responseText.length;
+        var localReplyEligible = !!(decision && (decision.action === 'local_reply' || decision.action === 'ask_clarifying' || decision.action === 'ask_rephrase'));
+        safeTrack(function() {
+          tracker.captureQualityFlags({
+            intent: classification ? classification.kind : null,
+            pipelineSelected: decision ? decision.action : null,
+            localReplyEligible: localReplyEligible,
+            llmCalled: !localReplyEligible,
+            fallbackUsed: !!(payload && payload.meta && payload.meta.fallback),
+            lowConfidence: !!(classification && classification.confidence < 0.62),
+            responseSizeEstimate: responseSizeEstimate,
+            promptSizeEstimate: String(lastContent || '').length,
+            durationMs: 0
+          });
+        });
+        if (outcome === 'failure') {
+          safeTrack(function() { tracker.markFailure({
+            errorCode: payload && payload.error ? payload.error : 'REQUEST_FAILED',
+            errorMessage: payload && payload.message ? payload.message : 'Falha na execução.'
+          }); });
+        } else {
+          safeTrack(function() { tracker.markSuccess({
+            finalStatus: payload && payload.success === false ? 'failed' : 'success',
+            responseSummary: payload && payload.message ? payload.message : ''
+          }); });
+        }
+        tracker.finishExecution(function(err) {
+          if (err) console.error('[diagnostics] failed to persist execution', err);
+          return responseUtil.sendJson(res, statusCode, payload);
+        });
+      }
 
       if (convState && convState.mode === 'diet') {
+        safeTrack(function() { tracker.captureDecision({
+          graphNode: 'Nutricao',
+          reason: 'Continuação de fluxo ativo de dieta.',
+          pipelineSelected: 'diet_flow',
+          fallbackUsed: true
+        }); });
         var dietStep = dietflow.continueDietFlow(convState.stepIndex, convState.collected, lastContent);
         if (!dietStep.finished) {
-          return responseUtil.sendJson(res, 200, { success: true, type: 'text', message: dietStep.response, data: { conversationState: { mode: dietStep.mode, stepIndex: dietStep.stepIndex, collected: dietStep.collected, memory: shortState } }, meta: { local: true, flow: 'diet' } });
+          safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, inputSummary: lastContent, outputSummary: dietStep.response }); });
+          return sendTracked(200, { success: true, type: 'text', message: dietStep.response, data: { conversationState: { mode: dietStep.mode, stepIndex: dietStep.stepIndex, collected: dietStep.collected, memory: shortState } }, meta: { local: true, flow: 'diet' } });
         }
         var dietPlan = diet.buildDietPlan(dietStep.collected);
-        return responseUtil.sendJson(res, 200, { success: true, type: 'diet_result', message: formatDietSummary(dietPlan), data: { content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }], conversationState: { memory: shortState } }, meta: { local: true, tokensSaved: true } });
+        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: formatDietSummary(dietPlan) }); });
+        return sendTracked(200, { success: true, type: 'diet_result', message: formatDietSummary(dietPlan), data: { content: [{ type: 'diet_result', data: dietPlan, text: formatDietSummary(dietPlan) }], conversationState: { memory: shortState } }, meta: { local: true, tokensSaved: true } });
       }
 
       if (convState && convState.mode === 'workout') {
+        safeTrack(function() { tracker.captureDecision({
+          graphNode: 'Treino',
+          reason: 'Continuação de fluxo ativo de treino.',
+          pipelineSelected: 'workout_flow',
+          fallbackUsed: true
+        }); });
         var workoutStep = workoutflow.continueWorkoutFlow(convState.stepIndex, convState.collected, lastContent);
         if (!workoutStep.finished) {
-          return responseUtil.sendJson(res, 200, { success: true, type: 'text', message: workoutStep.response, data: { conversationState: { mode: workoutStep.mode, stepIndex: workoutStep.stepIndex, collected: workoutStep.collected, memory: shortState } }, meta: { local: true, flow: 'workout' } });
+          safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.TRAINING_PIPELINE_SELECTED, status: 'success', success: true, inputSummary: lastContent, outputSummary: workoutStep.response }); });
+          return sendTracked(200, { success: true, type: 'text', message: workoutStep.response, data: { conversationState: { mode: workoutStep.mode, stepIndex: workoutStep.stepIndex, collected: workoutStep.collected, memory: shortState } }, meta: { local: true, flow: 'workout' } });
         }
 
+        safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { layer: 'ai', nodeKey: 'Treino' }); });
         return runPaidAiCall(function(nextCall) {
           var richMsg = { role: 'user', content: workoutflow.buildWorkoutMessage(workoutStep.collected) };
           gerarTreino(richMsg, user.id, nextCall);
         }, function(err, data) {
-          if (err) return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: err, error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
-          return responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }], conversationState: { memory: shortState } }, meta: {} });
+          if (err) {
+            safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
+            return sendTracked(503, { success: false, type: 'error', message: err, error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+          }
+          safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
+          return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }], conversationState: { memory: shortState } }, meta: {} });
         });
       }
 
@@ -172,12 +258,36 @@ module.exports = function(req, res) {
       var continuationContext = conversationStateUtil.applyContinuationContext(normalized, shortState);
       var classification = classifier.classifyIntent(normalized, continuationContext);
       var decision = decisionEngine.decideAction(classification, shortState, b.context || {});
+      safeTrack(function() { tracker.captureDecision({
+        intentDetected: classification.kind || classification.topic || 'unknown',
+        intentConfidence: classification.confidence,
+        pipelineSelected: decision.action,
+        reason: decision.reason || ('Ação selecionada: ' + decision.action),
+        fallbackUsed: decision.action !== 'call_llm_full',
+        graphNode: decision.action === 'open_diet_flow' ? 'Nutricao' : (classification.topic === 'workout' ? 'Treino' : 'Recomendacao'),
+        inputSummary: normalized,
+        outputSummary: decision.action
+      }); });
+      safeTrack(function() {
+        tracker.addStep({
+          layer: 'classification',
+          nodeKey: 'Recomendacao',
+          stepName: diagnosticConstants.STEP_NAMES.INTENT_CLASSIFIED,
+          status: 'success',
+          success: true,
+          inputSummary: normalized,
+          outputSummary: classification.kind + ' @' + Number(classification.confidence || 0).toFixed(2),
+          decisionReason: 'topic=' + classification.topic + ', triage=' + classification.triage
+        });
+      });
       var nextShortState = conversationStateUtil.updateShortState(shortState, classification, decision, lastContent);
 
       if (decision.action === 'local_reply' || decision.action === 'ask_clarifying' || decision.action === 'ask_rephrase') {
         var localMessage = localReplies.buildLocalReply(decision, classification);
         emitDecisionTelemetry(user.id, classification, decision, false, false);
-        return responseUtil.sendJson(res, 200, {
+        safeTrack(function() { tracker.addStep({ layer: 'response', nodeKey: 'Usuario', stepName: diagnosticConstants.STEP_NAMES.LOCAL_REPLY_SELECTED, status: 'success', success: true, outputSummary: localMessage, decisionReason: decision.action }); });
+        safeTrack(function() { tracker.captureMetric({ key: 'llmSkipped', value: true }); });
+        return sendTracked(200, {
           success: true,
           type: 'text',
           action: decision.action,
@@ -193,7 +303,8 @@ module.exports = function(req, res) {
       if (decision.action === 'open_diet_flow') {
         var dietStart = dietflow.startDietFlow();
         emitDecisionTelemetry(user.id, classification, decision, false, true);
-        return responseUtil.sendJson(res, 200, {
+        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, outputSummary: dietStart.response }); });
+        return sendTracked(200, {
           success: true,
           type: 'text',
           action: 'open_diet_flow',
@@ -206,7 +317,8 @@ module.exports = function(req, res) {
       if (decision.action === 'open_workout_flow') {
         var workoutStart = workoutflow.startWorkoutFlow();
         emitDecisionTelemetry(user.id, classification, decision, false, true);
-        return responseUtil.sendJson(res, 200, {
+        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.TRAINING_PIPELINE_SELECTED, status: 'success', success: true, outputSummary: workoutStart.response }); });
+        return sendTracked(200, {
           success: true,
           type: 'text',
           action: 'open_workout_flow',
@@ -218,7 +330,8 @@ module.exports = function(req, res) {
 
       if (decision.action === 'call_agent_tools') {
         emitDecisionTelemetry(user.id, classification, decision, false, false);
-        return responseUtil.sendJson(res, 200, {
+        safeTrack(function() { tracker.addStep({ layer: 'router', nodeKey: 'Recomendacao', stepName: 'agent_tools_routed', status: 'success', success: true, outputSummary: '/api/agent' }); });
+        return sendTracked(200, {
           success: true,
           type: 'text',
           action: 'call_agent_tools',
@@ -237,6 +350,8 @@ module.exports = function(req, res) {
           var context = Object.assign({}, b.context || {});
           if (scienceContext) context.science_context = scienceContext;
 
+          safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { layer: 'ai', nodeKey: 'Recomendacao', inputSummary: lastContent }); });
+          safeTrack(function() { tracker.captureMetric({ key: 'promptSizeEstimate', value: String(lastContent || '').length, unit: 'chars' }); });
           runPaidAiCall(function(nextCall) {
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && /\b(monta|cria|gera)\b/.test(classification.sanitizedText)) {
               return gerarTreino({ role: 'user', content: lastContent }, user.id, nextCall);
@@ -247,12 +362,19 @@ module.exports = function(req, res) {
             var system = prompts.buildCoachPrompt(mode, classification.topic, context, maxTokens);
             callChat(system, messages, maxTokens, 0.35, user.id, 'chat', nextCall);
           }, function(err, payload) {
-            if (err) return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+            if (err) {
+              safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
+              safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Alerta', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: false, errorCode: 'PROVIDER_UNAVAILABLE', decisionReason: 'LLM indisponível no endpoint principal.' }); });
+              return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+            }
+            safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: true, outputSummary: typeof payload === 'string' ? payload : 'workout_json_payload' }); });
+            safeTrack(function() { tracker.captureMetric({ key: 'llmCalled', value: true }); });
+            safeTrack(function() { tracker.captureMetric({ key: 'responseSizeEstimate', value: typeof payload === 'string' ? payload.length : JSON.stringify(payload || {}).length, unit: 'chars' }); });
             emitDecisionTelemetry(user.id, classification, decision, true, false);
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && typeof payload === 'object') {
-              return responseUtil.sendJson(res, 200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }], conversationState: { memory: nextShortState } }, meta: {} });
+              return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }], conversationState: { memory: nextShortState } }, meta: {} });
             }
-            return responseUtil.sendJson(res, 200, {
+            return sendTracked(200, {
               success: true,
               type: 'text',
               message: payload,
@@ -261,8 +383,9 @@ module.exports = function(req, res) {
             });
           });
         })
-        .catch(function() {
-          return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } });
+        .catch(function(err) {
+          safeTrack(function() { tracker.markFailure({ errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: (err && err.message) || 'Falha na camada Promise principal.' }); });
+          return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
         });
 
     }, { max: 40, windowMs: 60000 }, user.id);

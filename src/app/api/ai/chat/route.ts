@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { ChatRequest, ChatResponse } from '../../../../lib/ai/types';
 import { createServerSupabaseClient } from '../../../../lib/supabase/server';
-import { getAIConfig, getSupabaseConfig } from '../../../../lib/utils/env';
+import { getAIConfig, getSupabaseConfig } from '../../../../lib/utils/env.server';
 import { checkRateLimit } from '../../../../lib/utils/serverRateLimit';
 
 export async function POST(req: Request) {

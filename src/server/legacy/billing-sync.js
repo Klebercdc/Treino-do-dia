@@ -1,10 +1,10 @@
-var cors = require('./_cors');
-var auth = require('./_auth');
-var rl   = require('./_ratelimit');
-var plans = require('./_plans');
-var billingProviders = require('../src/lib/plans/billingProviders');
-var planRules = require('../src/lib/plans/planRules');
-var { PLAN } = require('../src/types/domain');
+var cors = require('../apihelpers/_cors');
+var auth = require('../apihelpers/_auth');
+var rl   = require('../apihelpers/_ratelimit');
+var plans = require('../apihelpers/_plans');
+var billingProviders = require('../../lib/plans/billingProviders');
+var planRules = require('../../lib/plans/planRules');
+var { PLAN } = require('../../types/domain');
 
 module.exports = function(req, res) {
   cors.setCors(req, res);

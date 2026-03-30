@@ -27,7 +27,7 @@
 
 var https  = require('https');
 var crypto = require('crypto');
-var cors   = require('./_cors');
+var cors   = require('../apihelpers/_cors');
 
 var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 var SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';

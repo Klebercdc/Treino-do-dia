@@ -28,6 +28,10 @@ const MIGRATION_ORDER = [
   '003_nutrition_schema.sql',
   '004_nutrition_rls.sql',
   '005_nutrition_functions.sql',
+  '020_exercise_discovery_module.sql',
+  '021_admin_diagnostics_observability.sql',
+  '022_admin_diagnostics_refinements.sql',
+  '023_admin_diagnostics_elite.sql',
 ];
 
 function getUrl(): string {
