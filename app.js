@@ -2687,12 +2687,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       // Processar treinos com fases MEV/MAV/MRV
       grupos = (treino.treinos || []).map(t => ({
         nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
-        exercicios: (t.exercicios || []).map(ex => ({
-          nome: ex.nome,
-          series: ex.fases ? ex.fases[0].series : (ex.series || 3),
-          reps: ex.fases ? ex.fases[0].reps : (ex.reps || "8-12"),
-          fases: ex.fases || null
-        }))
+        exercicios: (t.exercicios || []).map((ex, exIdx) => normalizeExercisePayload(ex, exIdx))
       }));
 
       const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
@@ -2914,6 +2909,47 @@ function gerarTreinoComRespostas() {
   _wqRespostas = {};
 }
 
+function sanitizeExerciseDisplayName(rawName, fallbackName) {
+  const fallback = String(fallbackName || "Exercício").trim();
+  let text = String(rawName || "").replace(/\s+/g, " ").trim();
+  if (!text) return fallback;
+
+  // Remove prefixos comuns de instrução
+  text = text
+    .replace(/^(dica|observa[cç][aã]o|instru[cç][aã]o|cue|nota|descri[cç][aã]o)\s*[:\-]\s*/i, "")
+    .trim();
+
+  const instructionHints = /(mantenha|evite|durante|respire|controle|contraia|alinh|postura|lesionar|execute|faça|sem balançar|não arqueie|peito aberto|costas retas)/i;
+  const longSentenceLike = /[.!?]/.test(text) || text.length > 52 || text.split(/\s+/).length > 6;
+
+  if (instructionHints.test(text) && longSentenceLike) return fallback;
+  if (longSentenceLike && !/^([A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9\s\-\/()]+)$/.test(text)) return fallback;
+
+  return text.slice(0, 52).trim();
+}
+
+function normalizeExercisePayload(exercise, index) {
+  const source = exercise || {};
+  const fallbackName = `Exercício ${Number(index || 0) + 1}`;
+  const candidateName = source.nome || source.name || source.title || "";
+  const normalizedName = sanitizeExerciseDisplayName(candidateName, fallbackName);
+  const instructionsCandidate = [
+    source.instructions,
+    source.observacoes,
+    source.notes,
+    source.cue,
+    source.description
+  ].find(v => v != null);
+
+  return {
+    nome: normalizedName,
+    series: source.fases ? source.fases[0].series : (source.series || source.sets || 3),
+    reps: source.fases ? source.fases[0].reps : (source.reps || source.repeticoes || "8-12"),
+    fases: source.fases || null,
+    instructions: Array.isArray(instructionsCandidate) ? instructionsCandidate : (instructionsCandidate ? [String(instructionsCandidate)] : [])
+  };
+}
+
 function extrairGruposDaResposta(reply) {
   const grupos = [];
   let grupoAtual = null;
@@ -2938,10 +2974,10 @@ function extrairGruposDaResposta(reply) {
     const isEx = /^(\d+[.)]\s+|[*•\-+]\s+)[A-Za-zÀ-ú]/.test(line);
     if (!isEx) return;
 
-    const nome = line
+    const nome = sanitizeExerciseDisplayName(line
       .replace(/^[\d.)*\-•+\s]+/, "")
       .split(/[:(]/)[0]
-      .trim();
+      .trim(), "");
     if (nome.length < 3) return;
 
     const sm = line.match(/(\d+)\s*s[eé]ries?/i);
@@ -3015,15 +3051,16 @@ function applyAIWorkout(data) {
       sec.setAttribute("data-treino-key", grupo.nome);
       cont.appendChild(sec);
 
-      grupo.exercicios.forEach(ex => {
-        const cardEl = criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
-        if (ex.fases && ex.fases.length > 0 && cardEl) {
+      grupo.exercicios.forEach((ex, exIdx) => {
+        const normalized = normalizeExercisePayload(ex, exIdx);
+        const cardEl = criarCard(normalized.nome, "sec" + idx, normalized.series || 3, normalized.reps || "8-12", null, []);
+        if (normalized.fases && normalized.fases.length > 0 && cardEl) {
           const fasesDiv = document.createElement("div");
           fasesDiv.style.cssText = "padding:6px 12px 10px;border-top:1px solid var(--border-soft);margin-top:4px";
           fasesDiv.innerHTML = `
             <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">PERIODIZAÇÃO MEV→MAV→MRV</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              ${ex.fases.map((f,fi) => `
+              ${normalized.fases.map((f,fi) => `
                 <div style="flex:1;min-width:80px;background:var(--card);border:1px solid ${fi===0?'var(--accent)':'var(--border)'};border-radius:8px;padding:6px 8px;text-align:center">
                   <div style="font-size:9px;color:var(--accent);font-weight:700">${f.label||f.fase}</div>
                   <div style="font-size:11px;color:var(--text);font-weight:600">${f.series}x${f.reps}</div>
@@ -3445,7 +3482,7 @@ function _renderExercisePreviewList(cards) {
   if (!cards.length) { list.innerHTML = ""; return; }
   const muscleIcons = { peito:"💪", costas:"🔙", pernas:"🦵", ombros:"🙆", biceps:"💪", triceps:"💪", abdomen:"🧱", gluteos:"🍑" };
   list.innerHTML = cards.slice(0, 6).map((c, i) => {
-    const ex = c.exercicios?.[0]?.nome || c.nomeBloco || `Exercício ${i+1}`;
+    const ex = sanitizeExerciseDisplayName(c.exercicios?.[0]?.nome || c.nomeBloco || "", `Exercício ${i+1}`);
     return `<div class="exercise-preview-item">
       <div class="exercise-preview-thumb">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.6)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>

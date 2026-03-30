@@ -94,10 +94,10 @@ function buildRecentQuery(queryObj) {
   if (queryObj.simulation_mode) filters.push('source=eq.admin_test');
   if (queryObj.success === 'true' || queryObj.success === 'false') filters.push('success=eq.' + queryObj.success);
   if (queryObj.fallback === 'true' || queryObj.fallback === 'false') filters.push('fallback_used=eq.' + queryObj.fallback);
-  if (queryObj.correlation_id) filters.push('correlation_id=eq.' + encodeURIComponent(String(queryObj.correlation_id)));
+  // correlation_id é opcional e pode não existir em instalações antigas.
   if (queryObj.conversation_trace_id) filters.push('conversation_trace_id=eq.' + encodeURIComponent(String(queryObj.conversation_trace_id)));
 
-  var base = 'diagnostic_executions?select=execution_id,correlation_id,conversation_trace_id,parent_execution_id,user_id,source,input_type,raw_input_summary,normalized_input_summary,intent_detected,intent_confidence,pipeline_selected,fallback_used,duration_ms,final_status,success,severity,diagnostic_quality_score,created_at,decision_reason,response_summary,graph_path&order=created_at.desc&limit=' + pageSize + '&offset=' + offset;
+  var base = 'diagnostic_executions?select=execution_id,conversation_trace_id,parent_execution_id,user_id,source,input_type,raw_input_summary,normalized_input_summary,intent_detected,intent_confidence,pipeline_selected,fallback_used,duration_ms,final_status,success,severity,created_at,decision_reason,response_summary,graph_path&order=created_at.desc&limit=' + pageSize + '&offset=' + offset;
   return {
     query: filters.length ? (base + '&' + filters.join('&')) : base,
     page: page,
@@ -162,7 +162,7 @@ function buildChecklist(executions) {
     { key: 'fallback_visible', label: 'Fallback visível quando há falha', ok: has(function(x) { return x.fallback_used === true; }) },
     { key: 'graph_reflects_execution', label: 'Grafo reflete execução real', ok: has(function(x) { return !!x.graph_path; }) },
     { key: 'replay_coherent', label: 'Replay técnico coerente', ok: has(function(x) { return !!x.decision_reason && !!x.raw_input_summary; }) },
-    { key: 'quality_score_present', label: 'Score de qualidade presente', ok: has(function(x) { return x.diagnostic_quality_score != null; }) },
+    { key: 'quality_score_present', label: 'Score de qualidade (opcional) presente', ok: has(function(x) { return x.diagnostic_quality_score != null; }) || !list.length },
     { key: 'cost_signal_present', label: 'Sinal de custo monitorado', ok: has(function(x) { return safeParseJson(x.metadata, {}).estimated_cost_band; }) }
   ];
 }
@@ -182,7 +182,7 @@ function buildObservabilityPayload(req) {
     }, []),
     safeExec('journeys', function() {
       if (!journeyTraceId) return [];
-      return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(journeyTraceId) + '&select=execution_id,parent_execution_id,correlation_id,intent_detected,pipeline_selected,success,fallback_used,severity,diagnostic_quality_score,created_at&order=created_at.asc&limit=300');
+      return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(journeyTraceId) + '&select=execution_id,parent_execution_id,intent_detected,pipeline_selected,success,fallback_used,severity,created_at&order=created_at.asc&limit=300');
     }, []),
     safeExec('node_stats', function() {
       return query('diagnostic_steps?select=node_key,success,duration_ms,error_code,error_message,created_at&order=created_at.desc&limit=500').then(function(rows) {
@@ -190,12 +190,12 @@ function buildObservabilityPayload(req) {
       });
     }, []),
     safeExec('alerts', function() {
-      return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,diagnostic_quality_score,created_at&order=created_at.desc&limit=120').then(function(rows) {
+      return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,created_at&order=created_at.desc&limit=120').then(function(rows) {
         return healthRules.buildAlerts(rows || []);
       });
     }, []),
     safeExec('checklist', function() {
-      return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,diagnostic_quality_score,metadata&order=created_at.desc&limit=100').then(function(rows) {
+      return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,metadata&order=created_at.desc&limit=100').then(function(rows) {
         return buildChecklist(rows);
       });
     }, [])
@@ -425,7 +425,7 @@ module.exports = function(req, res) {
 
       if (action === 'alerts') {
         return safeExec('alerts', function() {
-          return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,diagnostic_quality_score,created_at&order=created_at.desc&limit=120');
+          return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,created_at&order=created_at.desc&limit=120');
         }, []).then(function(outcome) {
           return sendOk(res, { alerts: healthRules.buildAlerts(outcome.value || []), impactRanking: buildImpactRanking(outcome.value || []), errors: { alerts: outcome.error } });
         });
@@ -441,7 +441,7 @@ module.exports = function(req, res) {
 
       if (action === 'checklist') {
         return safeExec('checklist', function() {
-          return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,diagnostic_quality_score,metadata&order=created_at.desc&limit=100');
+          return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,metadata&order=created_at.desc&limit=100');
         }, []).then(function(outcome) {
           return sendOk(res, { checklist: buildChecklist(outcome.value), errors: { checklist: outcome.error } });
         });
@@ -451,7 +451,7 @@ module.exports = function(req, res) {
         var traceId = String((req.query && req.query.conversation_trace_id) || '').trim();
         if (!traceId) return sendError(res, 'TRACE_ID_REQUIRED', 'conversation_trace_id é obrigatório.', 400);
         return safeExec('journeys', function() {
-          return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(traceId) + '&select=execution_id,parent_execution_id,correlation_id,intent_detected,pipeline_selected,success,fallback_used,severity,diagnostic_quality_score,created_at&order=created_at.asc&limit=300');
+          return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(traceId) + '&select=execution_id,parent_execution_id,intent_detected,pipeline_selected,success,fallback_used,severity,created_at&order=created_at.asc&limit=300');
         }, []).then(function(outcome) {
           return sendOk(res, { journey: outcome.value, conversationTraceId: traceId, errors: { journeys: outcome.error } });
         });

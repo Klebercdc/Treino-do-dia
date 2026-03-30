@@ -116,6 +116,21 @@ function safeSupabaseRequest(method, path, body, timeoutMs) {
   }), timeoutMs || WRITE_TIMEOUT_MS);
 }
 
+function parseMissingColumnName(errorText) {
+  var text = String(errorText || '');
+  var match = text.match(/column\s+"?([a-z_]+)"?\s+of relation\s+"diagnostic_executions"\s+does not exist/i)
+    || text.match(/column\s+diagnostic_executions\.([a-z_]+)\s+does not exist/i);
+  return match ? match[1] : null;
+}
+
+function buildPayloadWithoutMissingColumn(payload, errorText) {
+  var missing = parseMissingColumnName(errorText);
+  if (!missing || !Object.prototype.hasOwnProperty.call(payload, missing)) return null;
+  var clone = Object.assign({}, payload);
+  delete clone[missing];
+  return clone;
+}
+
 function buildExecutionSummary(execution, steps) {
   var failedSteps = steps.filter(function(s) { return s.success === false; }).length;
   return {
@@ -347,21 +362,33 @@ DiagnosticTracker.prototype.finishExecution = function(callback) {
   });
 
   safeSupabaseRequest('POST', 'diagnostic_executions', payload).then(function(execResult) {
-    var insertedRows = execResult && execResult.value;
-    if (!self._steps.length) {
-      if (callback) callback(execResult && execResult.error ? execResult.error : null, { execution: insertedRows && insertedRows[0], timeout: !!(execResult && execResult.timeout), summary: buildExecutionSummary(payload, self._steps) });
-      return;
+    if (execResult && execResult.error) {
+      var downgradedPayload = buildPayloadWithoutMissingColumn(payload, execResult.error);
+      if (downgradedPayload) {
+        return safeSupabaseRequest('POST', 'diagnostic_executions', downgradedPayload).then(function(retryExecResult) {
+          return persistSteps(retryExecResult, downgradedPayload);
+        });
+      }
     }
-
-    safeSupabaseRequest('POST', 'diagnostic_steps', self._steps).then(function(stepResult) {
-      var err = null;
-      if (execResult && execResult.error) err = execResult.error;
-      if (!err && stepResult && stepResult.error) err = stepResult.error;
-      if (callback) callback(err, { execution: insertedRows && insertedRows[0], timeout: !!((execResult && execResult.timeout) || (stepResult && stepResult.timeout)), summary: buildExecutionSummary(payload, self._steps) });
-    });
+    return persistSteps(execResult, payload);
   }).catch(function(unexpectedErr) {
     if (callback) callback(String(unexpectedErr && unexpectedErr.message ? unexpectedErr.message : unexpectedErr), { execution: null, summary: buildExecutionSummary(payload, self._steps) });
   });
+
+  function persistSteps(execResult, executionRow) {
+    var insertedRows = execResult && execResult.value;
+    if (!self._steps.length) {
+      if (callback) callback(execResult && execResult.error ? execResult.error : null, { execution: insertedRows && insertedRows[0], timeout: !!(execResult && execResult.timeout), summary: buildExecutionSummary(executionRow, self._steps) });
+      return Promise.resolve();
+    }
+
+    return safeSupabaseRequest('POST', 'diagnostic_steps', self._steps).then(function(stepResult) {
+      var err = null;
+      if (execResult && execResult.error) err = execResult.error;
+      if (!err && stepResult && stepResult.error) err = stepResult.error;
+      if (callback) callback(err, { execution: insertedRows && insertedRows[0], timeout: !!((execResult && execResult.timeout) || (stepResult && stepResult.timeout)), summary: buildExecutionSummary(executionRow, self._steps) });
+    });
+  }
 };
 
 DiagnosticTracker.prototype.exportExecutionReport = function(format) {
