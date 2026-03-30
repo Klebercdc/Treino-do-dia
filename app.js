@@ -90,6 +90,7 @@ const STORAGE = Object.freeze({
   draftKey:   "kronia_draft_v2",
   historyKey: "kronia_history_v2",
   prevKey:    "kronia_prev_v1",
+  exerciseDetailsCacheKey: "kronia_exercise_details_cache_v1",
   maxHistory: 80, maxTemplates: 20,
 });
 const divisoesGen = { "2":["A","B"],"3":["A","B","C"],"4":["A","B","C","D"],"5":["A","B","C","D","E"],"6":["A","B","C","D","E","F"] };
@@ -376,7 +377,7 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
   card.innerHTML = `
     <div class="card-header">
       <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${escapeHTML(displayTitle)}</span>
-      <button onclick="abrirGuia('${escapeHTML(displayTitle)}')" title="Ver como fazer" style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-family:var(--font);font-size:0.68rem;font-weight:700;-webkit-tap-highlight-color:transparent;flex-shrink:0" type="button">
+      <button onclick="openExerciseDetailsFromCard(this.closest('.exercise-card'))" title="Ver exercício" style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-family:var(--font);font-size:0.68rem;font-weight:700;-webkit-tap-highlight-color:transparent;flex-shrink:0" type="button">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
         VER
       </button>
@@ -719,8 +720,8 @@ function selecionar(n) {
       const card = el.closest(".exercise-card");
       if (card) {
         card.setAttribute("data-ex-name", safeTitle);
-        const guideBtn = card.querySelector(".card-header button[title='Ver como fazer']");
-        if (guideBtn) guideBtn.setAttribute("onclick", `abrirGuia('${String(safeTitle).replace(/'/g, "\\'")}')`);
+        const guideBtn = card.querySelector(".card-header button[title='Ver exercício']");
+        if (guideBtn) guideBtn.setAttribute("onclick", "openExerciseDetailsFromCard(this.closest('.exercise-card'))");
         const sec = card.closest(".section");
         const treinoKey = sec?.getAttribute("data-treino-key") || "";
         const oldKey = prevKeyOf(treinoKey, oldName), newKey = prevKeyOf(treinoKey, safeTitle);
@@ -4673,28 +4674,134 @@ function _exerciseDiscSetState(state) {
   document.getElementById('exerciseDiscError').style.display   = state === 'error'   ? 'block' : 'none';
 }
 
+function logExerciseDetailsEvent(eventName, payload = {}) {
+  try { console.info(`[kronia_exercise] ${eventName}`, payload); } catch {}
+}
+
+function normalizeExerciseLookupKey(name) {
+  return String(name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function _readExerciseDetailsCache() {
+  try { return JSON.parse(localStorage.getItem(STORAGE.exerciseDetailsCacheKey) || "{}"); }
+  catch { return {}; }
+}
+function _writeExerciseDetailsCache(cache) {
+  try { localStorage.setItem(STORAGE.exerciseDetailsCacheKey, JSON.stringify(cache)); } catch {}
+}
+
+function normalizeExerciseDetails(result) {
+  if (!result || typeof result !== "object") return null;
+  return {
+    id: result.id || result.slug || "",
+    slug: result.slug || normalizeExerciseLookupKey(result.names?.pt || result.names?.en || ""),
+    names: {
+      pt: result.names?.pt || result.names?.en || "Exercício",
+      en: result.names?.en || result.names?.pt || "Exercise",
+    },
+    media: {
+      primary: result.media?.primary || null,
+      thumbnailUrl: result.media?.thumbnailUrl || null,
+      type: result.media?.type || (/\.(mp4|webm)$/i.test(result.media?.primary || "") ? "video" : result.media?.primary ? "image" : "none"),
+      provider: result.media?.provider || "internal",
+    },
+    instructions: Array.isArray(result.instructions) ? result.instructions : [],
+    target_muscle: result.target_muscle || result.muscles?.target || null,
+    secondary_muscles: Array.isArray(result.secondary_muscles) ? result.secondary_muscles : (result.muscles?.secondary || []),
+    body_part: result.body_part || result.muscles?.bodyPart || null,
+    equipment: result.equipment || null,
+    variations: Array.isArray(result.variations) ? result.variations.map(v => ({
+      id: v.id || v.slug || "",
+      slug: v.slug || normalizeExerciseLookupKey(v.names?.pt || v.name_pt || ""),
+      names: {
+        pt: v.names?.pt || v.name_pt || v.name_en || "Variação",
+        en: v.names?.en || v.name_en || v.name_pt || "Variation",
+      },
+    })) : [],
+    source: result.source || "internal",
+    common_errors: Array.isArray(result.common_errors) ? result.common_errors : [],
+    breathing_tip: result.breathing_tip || null,
+    range_of_motion: result.range_of_motion || null,
+    metadata: result.metadata || {},
+  };
+}
+
+async function openExerciseDetailsFromCard(card) {
+  if (!card) return;
+  const exerciseName = card.getAttribute("data-ex-name") || card.querySelector(".ex-title")?.textContent || "";
+  if (!exerciseName) return;
+  await openExerciseDetailsByName(exerciseName, { origin: "card" });
+}
+
+async function openExerciseDetailsByName(exerciseName, options = {}) {
+  const lookupKey = normalizeExerciseLookupKey(exerciseName);
+  logExerciseDetailsEvent("exercise_details_opened", { exerciseName, lookupKey, origin: options.origin || "unknown" });
+  openExerciseDiscSheet();
+  _exerciseDiscSetState("loading");
+
+  const cache = _readExerciseDetailsCache();
+  const cached = cache[lookupKey];
+  const now = Date.now();
+  const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+  if (cached?.savedAt && (now - cached.savedAt) < maxAgeMs && cached.data) {
+    logExerciseDetailsEvent("exercise_details_cache_hit", { lookupKey });
+    _renderExerciseDiscResult(cached.data);
+    _exerciseDiscSetState("result");
+    logExerciseDetailsEvent("exercise_details_rendered", { lookupKey, source: cached.data.source || "cache" });
+    return;
+  }
+  logExerciseDetailsEvent("exercise_details_cache_miss", { lookupKey });
+
+  try {
+    const resp = await apiFetch("/api/kronia/exercises/details", {
+      method: "POST",
+      body: JSON.stringify({ exerciseName, locale: "pt" })
+    });
+    const json = await resp.json();
+    if (json.status !== "success" || !json.data) {
+      document.getElementById("exerciseDiscErrorMsg").textContent = "Não encontramos os detalhes deste exercício agora. Tente novamente em instantes.";
+      _exerciseDiscSetState("error");
+      logExerciseDetailsEvent("exercise_details_fetch_failed", { lookupKey, code: json.errors?.[0]?.code || "UNKNOWN" });
+      return;
+    }
+    const normalized = normalizeExerciseDetails(json.data);
+    cache[lookupKey] = { savedAt: now, data: normalized };
+    _writeExerciseDetailsCache(cache);
+    logExerciseDetailsEvent("exercise_details_fetch_success", { lookupKey, source: normalized.source });
+    _renderExerciseDiscResult(normalized);
+    _exerciseDiscSetState("result");
+    logExerciseDetailsEvent("exercise_details_rendered", { lookupKey, source: normalized.source });
+  } catch (e) {
+    document.getElementById("exerciseDiscErrorMsg").textContent = "Erro de conexão ao carregar exercício. Você pode tentar novamente.";
+    _exerciseDiscSetState("error");
+    logExerciseDetailsEvent("exercise_details_fetch_failed", { lookupKey, message: e?.message || String(e) });
+  }
+}
+
 async function openExerciseDiscovery(query) {
   openExerciseDiscSheet();
   _exerciseDiscSetState('loading');
-
   try {
-    const apiUrl = location.protocol + '//' + location.host + '/api/kronia/exercises/discovery';
-    const resp = await apiFetch(apiUrl, {
+    const resp = await apiFetch("/api/kronia/exercises/discovery", {
       method: 'POST',
       body: JSON.stringify({ message: query, locale: 'pt' })
     });
     const json = await resp.json();
-
     if (json.status !== 'success' || !json.data) {
       document.getElementById('exerciseDiscErrorMsg').textContent =
         json.errors?.[0]?.message || 'Exercício não encontrado. Tente descrever de outra forma.';
       _exerciseDiscSetState('error');
       return;
     }
-
-    _renderExerciseDiscResult(json.data);
+    _renderExerciseDiscResult(normalizeExerciseDetails(json.data));
     _exerciseDiscSetState('result');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch(e) {
     document.getElementById('exerciseDiscErrorMsg').textContent = 'Erro de conexão: ' + e.message;
     _exerciseDiscSetState('error');
@@ -4702,10 +4809,11 @@ async function openExerciseDiscovery(query) {
 }
 
 function _renderExerciseDiscResult(d) {
-  // ── Mídia ──────────────────────────────────────────────
+  d = normalizeExerciseDetails(d) || d;
   const mediaEl = document.getElementById('exerciseDiscMedia');
   const mediaSrc = d.media?.primary;
-  if (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc)) {
+  const mediaType = d.media?.type || (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc) ? "video" : "image");
+  if (mediaSrc && mediaType === "video") {
     mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:220px;object-fit:cover"></video>`;
   } else if (mediaSrc) {
     mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:220px;object-fit:cover">`;
@@ -4714,35 +4822,48 @@ function _renderExerciseDiscResult(d) {
   }
 
   // ── Info ───────────────────────────────────────────────
-  const muscles = [d.muscles?.target, ...(d.muscles?.secondary || [])].filter(Boolean).join(', ');
+  const muscles = [d.target_muscle, ...(d.secondary_muscles || [])].filter(Boolean).join(', ');
   document.getElementById('exerciseDiscInfo').innerHTML = `
     <div style="font-family:var(--display);font-size:1.1rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
     ${d.names?.en ? `<div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px">${d.names.en}</div>` : ''}
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-      ${d.muscles?.target ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:rgba(255,107,0,0.15);color:#FFB347;border-radius:99px;border:1px solid rgba(255,107,0,0.25)">${d.muscles.target}</span>` : ''}
+      ${d.target_muscle ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:rgba(255,107,0,0.15);color:#FFB347;border-radius:99px;border:1px solid rgba(255,107,0,0.25)">${d.target_muscle}</span>` : ''}
       ${d.equipment ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.equipment}</span>` : ''}
-      ${d.muscles?.bodyPart ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.muscles.bodyPart}</span>` : ''}
+      ${d.body_part ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.body_part}</span>` : ''}
     </div>`;
 
-  // ── Instruções ─────────────────────────────────────────
   const instrs = Array.isArray(d.instructions) ? d.instructions : [];
-  const instrHtml = instrs.length
-    ? `<div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Execução</div>
-       <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+  const commonErrors = Array.isArray(d.common_errors) ? d.common_errors : [];
+  const breathing = d.breathing_tip ? `<div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Respiração</div><div style="font-size:.8rem;line-height:1.5">${d.breathing_tip}</div></div>` : "";
+  const rom = d.range_of_motion ? `<div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Amplitude</div><div style="font-size:.8rem;line-height:1.5">${d.range_of_motion}</div></div>` : "";
+  const instrHtml = `
+    <div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div>
+    ${instrs.length
+      ? `<ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
          ${instrs.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}
        </ol>`
-    : '';
+      : `<div style="font-size:0.8rem;color:var(--text-2)">Sem instruções detalhadas no momento.</div>`
+    }
+    <div style="margin-top:12px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Músculos trabalhados</div>
+    <div style="font-size:0.8rem;line-height:1.45;color:var(--text)">${muscles || "Não informado"}</div>
+    <div style="margin-top:12px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Erros para evitar</div>
+    ${commonErrors.length
+      ? `<ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${commonErrors.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}</ul>`
+      : `<div style="font-size:0.8rem;color:var(--text-2)">Mantenha postura neutra, ritmo controlado e amplitude sem compensações.</div>`
+    }
+    ${breathing}
+    ${rom}`;
   document.getElementById('exerciseDiscInstructions').innerHTML = instrHtml;
 
-  // ── Variações ──────────────────────────────────────────
   const vars = d.variations || [];
   const varHtml = vars.length
     ? `<div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Variações</div>
        <div style="display:flex;flex-wrap:wrap;gap:6px">
-         ${vars.map(v => `<button onclick="openExerciseDiscovery('${(v.name_pt || v.name_en || '').replace(/'/g,"\\'")} ')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.name_pt || v.name_en}</button>`).join('')}
+         ${vars.map(v => `<button onclick="openExerciseDetailsByName('${(v.names?.pt || v.names?.en || '').replace(/'/g,"\\'")}')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.names?.pt || v.names?.en}</button>`).join('')}
        </div>`
     : '';
-  document.getElementById('exerciseDiscVariations').innerHTML = varHtml;
+  const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${d.names?.pt || d.names?.en} execução correta`)}`;
+  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">Abrir fonte externa</a></div>`;
 }
 
 async function openDietaSheet() {

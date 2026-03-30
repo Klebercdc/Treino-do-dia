@@ -8,6 +8,33 @@ function jsonArray(value: unknown): string[] {
 export class ExerciseRepository {
   constructor(private readonly db: SupabaseClient) {}
 
+  async findExerciseByName(exerciseName: string): Promise<ExerciseEntity | null> {
+    const lookup = String(exerciseName || '').trim();
+    if (!lookup) return null;
+
+    const safeLike = lookup.replace(/[%_]/g, ' ').trim();
+    const { data, error } = await this.db
+      .from('exercises')
+      .select('*')
+      .eq('is_active', true)
+      .or(`slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`)
+      .limit(8);
+    if (error) throw error;
+    const candidates = (data ?? []).map((item) => this.mapExercise(item));
+    if (!candidates.length) return null;
+
+    const normLookup = lookup.toLowerCase();
+    const score = (item: ExerciseEntity): number => {
+      const names = [item.name_pt, item.name_en, item.slug].map((v) => String(v || '').toLowerCase());
+      if (names.some((n) => n === normLookup)) return 100;
+      if (names.some((n) => n.startsWith(normLookup))) return 80;
+      if (names.some((n) => n.includes(normLookup))) return 60;
+      return 30;
+    };
+
+    return candidates.sort((a, b) => score(b) - score(a))[0] ?? null;
+  }
+
   async findExercise(context: DetectedExerciseContext): Promise<ExerciseEntity | null> {
     let query = this.db.from('exercises').select('*').eq('is_active', true).limit(1);
 
