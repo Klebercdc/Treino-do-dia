@@ -23,15 +23,5 @@
     "api/*.js": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/pastor-diagnostico",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron-scraper",
-      "schedule": "0 4 * * 1"
-    }
-  ]
+  }
 }
