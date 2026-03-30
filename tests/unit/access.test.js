@@ -3,13 +3,13 @@ const assert = require('node:assert/strict');
 
 const access = require('../../src/server/apihelpers/_access');
 
-test('buildAccessProfile marks admin from JWT app_metadata claim when profile was not loaded', () => {
+test('buildAccessProfile is fail-closed before profiles lookup', () => {
   const profile = access.buildAccessProfile({
     email: 'ops@kronia.com',
     app_metadata: { role: 'admin' }
   });
-  assert.equal(profile.isAdmin, true);
-  assert.equal(profile.source, 'jwt_claim');
+  assert.equal(profile.isAdmin, false);
+  assert.equal(profile.source, 'awaiting_profiles_resolution');
 });
 
 test('profiles.is_admin is canonical when profile lookup was performed', () => {
@@ -22,6 +22,7 @@ test('profiles.is_admin is canonical when profile lookup was performed', () => {
   });
   assert.equal(noAdmin.isAdmin, false);
   assert.equal(noAdmin.source, 'profiles_table');
+  assert.equal(noAdmin.claimIsAdmin, true);
 
   const yesAdmin = access.buildAccessProfile({
     email: 'admin@kronia.com',

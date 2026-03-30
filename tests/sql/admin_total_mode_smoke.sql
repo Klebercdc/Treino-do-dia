@@ -12,6 +12,10 @@ where pronamespace = 'public'::regnamespace
   and proname in ('is_admin', 'can_admin_read_all', 'can_admin_manage_notifications', 'can_admin_manage_plans')
 order by proname;
 
+select
+  position('app_metadata' in pg_get_functiondef('public.is_admin()'::regprocedure)) = 0 as is_admin_without_claim_fallback,
+  position('profiles' in pg_get_functiondef('public.is_admin()'::regprocedure)) > 0 as is_admin_uses_profiles;
+
 select schemaname, tablename, policyname, cmd
 from pg_policies
 where schemaname = 'public'
