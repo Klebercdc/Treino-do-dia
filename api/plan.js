@@ -1,9 +1,9 @@
-var cors = require('./_cors');
-var auth = require('./_auth');
-var rl   = require('./_ratelimit');
-var plans = require('./_plans');
+var cors = require('../src/server/apihelpers/_cors');
+var auth = require('../src/server/apihelpers/_auth');
+var rl   = require('../src/server/apihelpers/_ratelimit');
+var plans = require('../src/server/apihelpers/_plans');
 var planRules = require('../src/lib/plans/planRules');
-var access = require('./_access');
+var access = require('../src/server/apihelpers/_access');
 
 function handleConfig(req, res) {
   if (req.method !== 'GET') return res.status(405).end();

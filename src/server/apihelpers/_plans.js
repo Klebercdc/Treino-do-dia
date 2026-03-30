@@ -1,7 +1,7 @@
 var https = require('https');
 var crypto = require('crypto');
-var planRules = require('../src/lib/plans/planRules');
-var { PLAN } = require('../src/types/domain');
+var planRules = require('../../lib/plans/planRules');
+var { PLAN } = require('../../types/domain');
 var access = require('./_access');
 
 var SUPABASE_URL = process.env.SUPABASE_URL;

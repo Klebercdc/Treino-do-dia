@@ -1,23 +1,23 @@
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini = require('./_gemini');
-var auth = require('./_auth');
-var cors = require('./_cors');
-var rl = require('./_ratelimit');
-var plans = require('./_plans');
-var logger = require('./_logger');
-var responseUtil = require('./_response');
-var access = require('./_access');
-var dietflow = require('./_dietflow');
-var workoutflow = require('./_workoutflow');
-var diet = require('./_diet');
-var prompts = require('./_systemPrompts');
-var classifier = require('./_conversationClassifier');
-var decisionEngine = require('./_decisionEngine');
-var localReplies = require('./_localReplies');
-var conversationStateUtil = require('./_conversationState');
+var gemini = require('../src/server/apihelpers/_gemini');
+var auth = require('../src/server/apihelpers/_auth');
+var cors = require('../src/server/apihelpers/_cors');
+var rl = require('../src/server/apihelpers/_ratelimit');
+var plans = require('../src/server/apihelpers/_plans');
+var logger = require('../src/server/apihelpers/_logger');
+var responseUtil = require('../src/server/apihelpers/_response');
+var access = require('../src/server/apihelpers/_access');
+var dietflow = require('../src/server/apihelpers/_dietflow');
+var workoutflow = require('../src/server/apihelpers/_workoutflow');
+var diet = require('../src/server/apihelpers/_diet');
+var prompts = require('../src/server/apihelpers/_systemPrompts');
+var classifier = require('../src/server/apihelpers/_conversationClassifier');
+var decisionEngine = require('../src/server/apihelpers/_decisionEngine');
+var localReplies = require('../src/server/apihelpers/_localReplies');
+var conversationStateUtil = require('../src/server/apihelpers/_conversationState');
 var scienceInsight = require('../src/lib/science/scienceInsightService');
-var diagnostics = require('./_diagnosticTracker');
-var diagnosticConstants = require('./_diagnosticConstants');
+var diagnostics = require('../src/server/apihelpers/_diagnosticTracker');
+var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;

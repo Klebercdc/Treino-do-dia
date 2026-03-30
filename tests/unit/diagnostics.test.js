@@ -3,12 +3,12 @@ const assert = require('node:assert/strict');
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://example.supabase.co';
 process.env.SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'service-key-test';
 
-const trackerMod = require('../../api/_diagnosticTracker');
-const health = require('../../api/_diagnosticHealth');
-const adminGuard = require('../../api/_adminGuard');
-const classifier = require('../../api/_conversationClassifier');
-const decisionEngine = require('../../api/_decisionEngine');
-const constants = require('../../api/_diagnosticConstants');
+const trackerMod = require('../../src/server/apihelpers/_diagnosticTracker');
+const health = require('../../src/server/apihelpers/_diagnosticHealth');
+const adminGuard = require('../../src/server/apihelpers/_adminGuard');
+const classifier = require('../../src/server/apihelpers/_conversationClassifier');
+const decisionEngine = require('../../src/server/apihelpers/_decisionEngine');
+const constants = require('../../src/server/apihelpers/_diagnosticConstants');
 
 test('maskSensitiveData should redact keys and tokens', () => {
   const input = {

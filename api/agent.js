@@ -1,16 +1,16 @@
 var https = require('https');
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini  = require('./_gemini');
-var auth    = require('./_auth');
-var cors    = require('./_cors');
-var rl      = require('./_ratelimit');
-var plans   = require('./_plans');
-var logger  = require('./_logger');
-var prompts = require('./_systemPrompts');
-var diet    = require('./_diet');
-var responseUtil = require('./_response');
-var intent = require('./_intent');
-var access = require('./_access');
+var gemini  = require('../src/server/apihelpers/_gemini');
+var auth    = require('../src/server/apihelpers/_auth');
+var cors    = require('../src/server/apihelpers/_cors');
+var rl      = require('../src/server/apihelpers/_ratelimit');
+var plans   = require('../src/server/apihelpers/_plans');
+var logger  = require('../src/server/apihelpers/_logger');
+var prompts = require('../src/server/apihelpers/_systemPrompts');
+var diet    = require('../src/server/apihelpers/_diet');
+var responseUtil = require('../src/server/apihelpers/_response');
+var intent = require('../src/server/apihelpers/_intent');
+var access = require('../src/server/apihelpers/_access');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS

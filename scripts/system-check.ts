@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { config as loadEnv } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import { getAIConfig, getSupabaseConfig, maskSecret, validateRuntimeEnv } from '../src/lib/utils/env';
+import { getAIConfig, getSupabaseConfig, maskSecret, validateRuntimeEnv } from '../src/lib/utils/env.server';
 
 loadEnv({ path: '.env.local', override: false });
 loadEnv({ path: '.env', override: false });

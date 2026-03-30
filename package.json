@@ -23,9 +23,11 @@
     "seed:exercises": "tsx scripts/seed-exercises.ts",
     "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts"
   },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.100.1"
+  },
   "devDependencies": {
     "@playwright/test": "^1.43.0",
-    "@supabase/supabase-js": "^2.100.1",
     "@types/node": "^20.19.37",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",

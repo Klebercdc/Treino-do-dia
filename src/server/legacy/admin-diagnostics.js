@@ -1,12 +1,12 @@
-var cors = require('./_cors');
-var auth = require('./_auth');
-var plans = require('./_plans');
-var adminGuard = require('./_adminGuard');
-var diagnostics = require('./_diagnosticTracker');
-var classifier = require('./_conversationClassifier');
-var decisionEngine = require('./_decisionEngine');
-var healthRules = require('./_diagnosticHealth');
-var constants = require('./_diagnosticConstants');
+var cors = require('../apihelpers/_cors');
+var auth = require('../apihelpers/_auth');
+var plans = require('../apihelpers/_plans');
+var adminGuard = require('../apihelpers/_adminGuard');
+var diagnostics = require('../apihelpers/_diagnosticTracker');
+var classifier = require('../apihelpers/_conversationClassifier');
+var decisionEngine = require('../apihelpers/_decisionEngine');
+var healthRules = require('../apihelpers/_diagnosticHealth');
+var constants = require('../apihelpers/_diagnosticConstants');
 
 var VALID_ACTIONS_GET = ['overview', 'recent', 'execution', 'health', 'alerts', 'node_stats', 'checklist', 'journey', 'export'];
 var VALID_ACTIONS_POST = ['simulate', 'health'];
