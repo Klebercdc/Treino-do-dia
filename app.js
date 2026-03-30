@@ -3289,6 +3289,10 @@ function updateHomeScreen() {
     const pct = Math.min(streak / 30, 1);
     ringEl.setAttribute("stroke-dashoffset", Math.round(314 * (1 - pct)));
   }
+  const flame1 = document.getElementById("homeStreakFlame1");
+  const flame2 = document.getElementById("homeStreakFlame2");
+  if (flame1) flame1.style.display = streak > 0 ? "block" : "none";
+  if (flame2) flame2.style.display = streak >= 7 ? "block" : "none";
 
   // Banner turista
   const banner = document.getElementById("turistaBanner");
