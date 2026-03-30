@@ -24,7 +24,7 @@
 
 var https  = require('https');
 var crypto = require('crypto');
-var cors   = require('./_cors');
+var cors   = require('../apihelpers/_cors');
 
 // ══════════════════════════════════════════
 // HELPER: chamada direta ao Supabase REST

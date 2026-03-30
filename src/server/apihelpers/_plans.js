@@ -1,7 +1,8 @@
 var https = require('https');
 var crypto = require('crypto');
-var planRules = require('../src/lib/plans/planRules');
-var { PLAN } = require('../src/types/domain');
+var planRules = require('../../lib/plans/planRules');
+var { PLAN } = require('../../types/domain');
+var access = require('./_access');
 
 var SUPABASE_URL = process.env.SUPABASE_URL;
 var SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -128,10 +129,10 @@ function resolveEffectivePlan(userId, planRow, callback) {
     }
 
     return callback({
-      canonicalPlan: PLAN.FREE,
+      canonicalPlan: planRules.toCanonicalPlan((planRow && planRow.plan) || PLAN.FREE),
       patch: null,
       snapshot: snapshot || null,
-      source: 'degraded_free_without_snapshot',
+      source: 'plan_row_fallback_without_snapshot',
       degraded: true
     });
   });
@@ -168,7 +169,21 @@ function registerFeatureUsage(userId, featureKey, planAtUse, metadata) {
   });
 }
 
-function checkAndIncrementQuota(userId, res, next) {
+function checkAndIncrementQuota(userId, res, next, options) {
+  var accessProfile = (options && options.accessProfile) || null;
+  if (access.canBypassQuota(accessProfile)) {
+    if (accessProfile && accessProfile.email) {
+      console.log('[access] privileged bypass applied for', accessProfile.email);
+    }
+    registerFeatureUsage(userId, 'ai_chat', PLAN.ULTRA, { source: 'privileged_bypass' });
+    return next({
+      user_id: userId,
+      plan: planRules.toDbPlan(PLAN.ULTRA),
+      ai_requests_used: 0,
+      accessMode: 'admin_override'
+    });
+  }
+
   if (!SUPABASE_SERVICE_KEY) {
     console.error('[plans] SUPABASE_SERVICE_KEY ausente — quota guard bloqueando acesso por segurança.');
     return res.status(503).json({
@@ -215,7 +230,28 @@ function checkAndIncrementQuota(userId, res, next) {
   });
 }
 
-function getQuotaInfo(userId, callback) {
+function getQuotaInfo(userId, callback, options) {
+  var accessProfile = (options && options.accessProfile) || null;
+  if (access.canBypassQuota(accessProfile)) {
+    if (accessProfile && accessProfile.email) {
+      console.log('[access] privileged bypass applied for', accessProfile.email);
+    }
+    var adminFeatures = planRules.getPlanAccess(PLAN.ULTRA).features;
+    return callback(null, {
+      allowed: true,
+      used: 0,
+      limit: Infinity,
+      remaining: Infinity,
+      plan: PLAN.ULTRA,
+      rawPlan: PLAN.FREE,
+      features: adminFeatures,
+      effectivePlanSource: 'admin_override',
+      degradedMode: false,
+      accessMode: 'admin_override',
+      canBypassQuota: true
+    });
+  }
+
   if (!SUPABASE_SERVICE_KEY) {
     return callback('[_plans] quota guard indisponível: SUPABASE_SERVICE_KEY ausente.', null);
   }

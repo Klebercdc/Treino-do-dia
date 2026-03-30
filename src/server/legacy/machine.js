@@ -31,9 +31,9 @@
 'use strict';
 
 var https = require('https');
-var cors  = require('./_cors');
-var auth  = require('./_auth');
-var rl    = require('./_ratelimit');
+var cors  = require('../apihelpers/_cors');
+var auth  = require('../apihelpers/_auth');
+var rl    = require('../apihelpers/_ratelimit');
 
 var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 var SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';

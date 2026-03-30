@@ -17,21 +17,16 @@
     { "source": "/api/nutrition-selftest", "destination": "/api/science?__route=nutrition-selftest" },
     { "source": "/api/lgpd-export", "destination": "/api/system?__route=lgpd-export" },
     { "source": "/api/lgpd-delete", "destination": "/api/system?__route=lgpd-delete" },
+    { "source": "/api/machine", "destination": "/api/system?__route=machine" },
+    { "source": "/api/cron-scraper", "destination": "/api/system?__route=cron-scraper" },
+    { "source": "/api/pastor-diagnostico", "destination": "/api/system?__route=pastor-diagnostico" },
+    { "source": "/api/affiliate-sale", "destination": "/api/affiliate?__route=affiliate-sale" },
+    { "source": "/api/billing-sync", "destination": "/api/affiliate?__route=billing-sync" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "functions": {
     "api/*.js": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/pastor-diagnostico",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron-scraper",
-      "schedule": "0 4 * * 1"
-    }
-  ]
+  }
 }

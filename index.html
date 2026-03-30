@@ -1136,9 +1136,9 @@
           <circle cx="60" cy="60" r="50" fill="none" stroke="#FF8C00" stroke-width="10"
             stroke-dasharray="314" id="homeStreakRing" stroke-dashoffset="235"
             stroke-linecap="round" transform="rotate(-90 60 60)"/>
-          <!-- Flame icons -->
-          <text x="50" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.6)">🔥</text>
-          <text x="70" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.4)">🔥</text>
+          <!-- Flame icons (dinâmicos conforme streak) -->
+          <text id="homeStreakFlame1" x="50" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.6)" style="display:none">🔥</text>
+          <text id="homeStreakFlame2" x="70" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.4)" style="display:none">🔥</text>
         </svg>
         <div class="weekly-ring-inner">
           <div class="weekly-ring-num" id="homeStreak">0</div>
@@ -1172,39 +1172,31 @@
   <div class="home-section-title">Nutrição & Ferramentas</div>
 
   <!-- Banner de upgrade — ULTRA -->
-  <div id="homeUpgradeBanner" onclick="openPlanModal()" class="upgrade-banner-premium">
-    <!-- Glow decorativo -->
-    <div style="position:absolute;top:-30px;right:-20px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,0.35) 0%,transparent 70%);pointer-events:none"></div>
-    <div style="position:absolute;bottom:-20px;left:20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,0,0.2) 0%,transparent 70%);pointer-events:none"></div>
+  <div id="homeUpgradeBanner" onclick="openPlanModal()" class="upgrade-banner-premium" role="button" aria-label="Abrir planos e ativar Ultra">
+    <div class="upgrade-banner-glow upgrade-banner-glow-top"></div>
+    <div class="upgrade-banner-glow upgrade-banner-glow-bottom"></div>
 
-    <div style="position:relative;display:flex;flex-direction:column;gap:10px;width:100%">
-      <!-- Linha topo: badge + estrela -->
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(168,85,247,0.3),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.5);padding:3px 10px;border-radius:99px">
+    <div class="upgrade-banner-content">
+      <div class="upgrade-banner-top">
+        <div class="upgrade-banner-pill">
           <i data-lucide="zap" class="lucide" width="10" height="10" stroke="#c084fc" fill="none" stroke-width="2.5"></i>
-          <span style="font-size:0.58rem;font-weight:900;color:#c084fc;letter-spacing:.1em">PLANO ULTRA</span>
+          <span>PLANO ULTRA</span>
         </div>
-        <div style="display:flex;gap:3px">
+        <div class="upgrade-banner-stars" aria-hidden="true">
           <i data-lucide="star" class="lucide" width="11" height="11" stroke="#f59e0b" fill="#f59e0b" stroke-width="1.5"></i>
           <i data-lucide="star" class="lucide" width="11" height="11" stroke="#f59e0b" fill="#f59e0b" stroke-width="1.5"></i>
           <i data-lucide="star" class="lucide" width="11" height="11" stroke="#f59e0b" fill="#f59e0b" stroke-width="1.5"></i>
         </div>
       </div>
 
-      <!-- Headline -->
-      <div style="font-family:var(--display);font-size:1.15rem;font-weight:900;color:#fff;letter-spacing:.04em;line-height:1.15">
-        DESBLOQUEIE SEU<br><span style="background:linear-gradient(90deg,#c084fc,#f0abfc);-webkit-background-clip:text;-webkit-text-fill-color:transparent">POTENCIAL TOTAL</span>
+      <div class="upgrade-banner-title">
+        DESBLOQUEIE SEU <span>POTENCIAL TOTAL</span>
+      </div>
+      <div id="homeUpgradeSubtext" class="upgrade-banner-subtext">
+        ULTRA: Transforms + PDF premium + análise avançada · PRO como opção intermediária
       </div>
 
-      <!-- Features row -->
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <span style="font-size:0.61rem;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.07);padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1)">🥩 Dieta IA ilimitada</span>
-        <span style="font-size:0.61rem;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.07);padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1)">📄 PDF premium</span>
-        <span style="font-size:0.61rem;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.07);padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1)">📊 Análise avançada</span>
-      </div>
-
-      <!-- CTA button -->
-      <div style="background:linear-gradient(135deg,#9333ea,#7c3aed);color:#fff;font-family:var(--display);font-size:0.82rem;font-weight:900;letter-spacing:.06em;padding:11px 18px;border-radius:12px;text-align:center;box-shadow:0 4px 20px rgba(147,51,234,0.55);display:flex;align-items:center;justify-content:center;gap:8px">
+      <div class="upgrade-banner-cta">
         <i data-lucide="crown" class="lucide" width="15" height="15" stroke="#fff" fill="none" stroke-width="2"></i>
         ATIVAR ULTRA AGORA
         <i data-lucide="arrow-right" class="lucide" width="14" height="14" stroke="#fff" fill="none" stroke-width="2.5"></i>
@@ -2721,6 +2713,9 @@
       <button class="transforms-tab" data-tab="defensive" onclick="switchTransformsTab('defensive',this)">
         <i data-lucide="shield" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="1.75" style="margin-right:5px"></i>Defensive
       </button>
+      <button class="transforms-tab" data-tab="observability" id="adminObservabilityTabBtn" style="display:none" onclick="switchTransformsTab('observability',this);teLoadAdminDiagnostics()">
+        <i data-lucide="activity" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="1.75" style="margin-right:5px"></i>Observabilidade
+      </button>
     </div>
 
     <!-- TAB: GRAFO -->
@@ -2777,12 +2772,35 @@
         <p id="kronosAnalysisText" style="font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.7;margin:0"></p>
       </div>
     </div>
+
+    <div class="transforms-panel" id="tab-observability" style="display:none">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px">
+        <div>
+          <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Admin Diagnóstico</h2>
+          <p style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin:0">Replay técnico, saúde e simulações internas.</p>
+        </div>
+        <button class="transforms-scan-btn" onclick="teRunAdminHealthCheck()">Rodar Health Check</button>
+      </div>
+      <div id="adminDiagOverview" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:6px;overflow:auto;margin-bottom:10px">
+        <button class="transforms-tab active" onclick="teRunScenario('greeting')">Simular Saudação</button>
+        <button class="transforms-tab" onclick="teRunScenario('workout')">Simular Treino</button>
+        <button class="transforms-tab" onclick="teRunScenario('diet')">Simular Dieta</button>
+        <button class="transforms-tab" onclick="teRunScenario('no_context')">Sem Contexto</button>
+        <button class="transforms-tab" onclick="teRunScenario('ia_failure')">Falha IA</button>
+      </div>
+      <div id="adminDiagHealth" class="transforms-log" style="display:none;margin-bottom:12px"></div>
+      <div id="adminDiagChecklist" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+      <div id="adminDiagRecent" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="adminDiagDetail" class="transforms-node-detail" style="display:none;margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
 <script src="icons.js"></script>
 
 <script src="transform_kernel.js"></script>
+<script src="src/client/access-scope.js"></script>
 
 <script src="app.js"></script>
 

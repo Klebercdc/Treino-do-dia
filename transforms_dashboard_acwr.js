@@ -49,13 +49,24 @@ window.KroniaDashboard = (function () {
   async function fetchDashboardData(userId) {
     if (typeof _sb === 'undefined' || !userId) return null;
     try {
-      const { data, error } = await _sb
+      let q = _sb
         .from('acwr_diario')
         .select('acwr, zona_risco, carga_aguda_7d, carga_cronica_28d, dia')
-        .eq('user_id', userId)
         .order('dia', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      if (window.KroniaAccessScope && typeof window.KroniaAccessScope.resolveAccessScope === 'function') {
+        const scope = window.KroniaAccessScope.resolveAccessScope({ id: userId }, {
+          ownershipColumn: 'user_id',
+          purpose: 'transforms_dashboard_acwr',
+          allowAdminGlobalRead: true
+        });
+        q = window.KroniaAccessScope.applyScopedQuery(q, scope);
+      } else {
+        q = q.eq('user_id', userId); // admin-scope-audit:allow fallback when access-scope unavailable
+      }
+
+      const { data, error } = await q.maybeSingle();
 
       if (error) throw error;
       return data;

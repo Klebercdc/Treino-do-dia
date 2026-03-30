@@ -1,8 +1,12 @@
-var cors = require('./_cors');
-var auth = require('./_auth');
-var rl   = require('./_ratelimit');
-var plans = require('./_plans');
+var cors = require('../src/server/apihelpers/_cors');
+var auth = require('../src/server/apihelpers/_auth');
+var rl   = require('../src/server/apihelpers/_ratelimit');
+var plans = require('../src/server/apihelpers/_plans');
 var scienceSync = require('../src/lib/science/scienceSyncService');
+var adminDiagnosticsHandler = require('../src/server/legacy/admin-diagnostics');
+var machineHandler = require('../src/server/legacy/machine');
+var cronScraperHandler = require('../src/server/legacy/cron-scraper');
+var pastorDiagnosticoHandler = require('../src/server/legacy/pastor-diagnostico');
 var https = require('https');
 
 var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -160,6 +164,14 @@ module.exports = function(req, res) {
       return handleLgpdExport(req, res);
     case 'lgpd-delete':
       return handleLgpdDelete(req, res);
+    case 'admin-diagnostics':
+      return adminDiagnosticsHandler(req, res);
+    case 'machine':
+      return machineHandler(req, res);
+    case 'cron-scraper':
+      return cronScraperHandler(req, res);
+    case 'pastor-diagnostico':
+      return pastorDiagnosticoHandler(req, res);
     default:
       return res.status(404).json({ error: 'rota não encontrada' });
   }

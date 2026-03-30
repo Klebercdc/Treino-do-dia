@@ -1,14 +1,16 @@
 var https = require('https');
 // nvidia removido — usando apenas Groq (_gemini.js)
-var gemini   = require('./_gemini');
-var auth     = require('./_auth');
-var cors     = require('./_cors');
-var rl       = require('./_ratelimit');
-var plans    = require('./_plans');
-var logger   = require('./_logger');
-var prompts  = require('./_systemPrompts');
-var diet     = require('./_diet');
-var response = require('./_response'); // BLOCO 1 — envelope padronizado
+var gemini  = require('../src/server/apihelpers/_gemini');
+var auth    = require('../src/server/apihelpers/_auth');
+var cors    = require('../src/server/apihelpers/_cors');
+var rl      = require('../src/server/apihelpers/_ratelimit');
+var plans   = require('../src/server/apihelpers/_plans');
+var logger  = require('../src/server/apihelpers/_logger');
+var prompts = require('../src/server/apihelpers/_systemPrompts');
+var diet    = require('../src/server/apihelpers/_diet');
+var responseUtil = require('../src/server/apihelpers/_response');
+var intent = require('../src/server/apihelpers/_intent');
+var access = require('../src/server/apihelpers/_access');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -486,27 +488,23 @@ function agentLoopStream(userMessages, userData, res) {
 module.exports = function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  if (req.method !== 'POST') { res.status(405).end(); return; }
-  if (!process.env.GROQ_API_KEY) {
-    console.error('[agent] GROQ_API_KEY ausente');
-    return response.sendJson(res, 500, Object.assign(
-      response.createApiEnvelope({
-        success: false, type: 'error', action: null,
-        message: 'Serviço de IA indisponível no momento.',
-        error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true }
-      }),
-      { content: [{ type: 'text', text: 'Serviço de IA indisponível no momento.' }] }
-    ));
+  if (req.method !== 'POST') {
+    return responseUtil.sendJson(res, 405, { success: false, type: 'error', message: 'Método não permitido.', error: 'METHOD_NOT_ALLOWED', meta: { fallback: true } });
   }
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
-    plans.checkAndIncrementQuota(user.id, res, function() {
       var b = req.body || {};
+      access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
+      accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
 
       var messages = b.messages || [];
-      if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages deve ser um array' });
-      if (messages.length > 50) return res.status(400).json({ error: 'Número de mensagens excede o limite de 50' });
+      if (!Array.isArray(messages)) {
+        return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
+      }
+      if (messages.length > 50) {
+        return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'Número de mensagens excede o limite de 50', error: 'TOO_MANY_MESSAGES', meta: { fallback: true } });
+      }
       var ALLOWED_ROLES = ['user', 'assistant', 'system', 'tool'];
       messages = messages.map(function(m) {
         if (!m || typeof m !== 'object') return { role: 'user', content: '' };
@@ -519,6 +517,54 @@ module.exports = function(req, res) {
         history: (b.history || []).slice(-25),
         profile: b.profile || {}
       };
+      var lastContent = intent.safeExtractLastUserMessage(messages);
+      var detectedIntent = intent.detectIntent(lastContent);
+      if (detectedIntent === 'greeting') {
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'greeting',
+          action: null,
+          message: 'Oi 👋 Como posso te ajudar hoje?',
+          data: null,
+          error: null,
+          meta: { local: true, tokensSaved: true }
+        });
+      }
+      if (detectedIntent === 'workout') {
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'workout_intent',
+          action: 'open_workout_flow',
+          message: 'Beleza 💪 Vamos montar seu treino.',
+          data: null,
+          error: null,
+          meta: { local: true, tokensSaved: true }
+        });
+      }
+      if (detectedIntent === 'diet') {
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'diet_intent',
+          action: 'open_diet_flow',
+          message: 'Perfeito 🍽️ Vamos montar sua dieta.',
+          data: null,
+          error: null,
+          meta: { local: true, tokensSaved: true }
+        });
+      }
+
+      plans.getQuotaInfo(user.id, function(qErr, quota) {
+        if (qErr) return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'QUOTA_CHECK_FAILED', meta: { fallback: true } });
+        if (!quota.allowed) {
+          return responseUtil.sendJson(res, 402, {
+            success: false,
+            type: 'error',
+            message: 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
+            error: 'QUOTA_EXCEEDED',
+            data: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } },
+            meta: { fallback: true }
+          });
+        }
 
       // SSE streaming mode
       if (b.stream) {
@@ -527,30 +573,43 @@ module.exports = function(req, res) {
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Accel-Buffering', 'no');
         res.flushHeaders();
-        agentLoopStream(messages, userData, res);
-        return;
+        return plans.checkAndIncrementQuota(user.id, res, function() {
+          agentLoopStream(messages, userData, res);
+        }, { accessProfile: accessProfile });
       }
 
       // Non-streaming JSON mode (backwards compatible)
       agentLoop(messages, userData, function(err, text) {
         if (err) {
-          console.error('[agent] agentLoop error:', err);
-          return response.sendJson(res, 200, Object.assign(
-            response.createApiEnvelope({
-              success: false, type: 'error', action: null,
-              message: 'Não consegui processar agora. Tente novamente em instantes.',
-              error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true }
-            }),
-            { content: [{ type: 'text', text: 'Não consegui processar agora. Tente novamente em instantes.' }] }
-          ));
+          console.error('[agent] provider_fallback:', err);
+          return responseUtil.sendJson(res, 503, {
+            success: false,
+            type: 'error',
+            action: null,
+            message: 'Não consegui processar agora.',
+            data: null,
+            error: 'PROVIDER_UNAVAILABLE',
+            meta: { fallback: true }
+          });
         }
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
         var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
         logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed, tools: TOOLS.map(function(t){ return t.function.name; }).join(',') });
-        res.status(200).json({ content: [{ type: 'text', text: text }] });
+        plans.checkAndIncrementQuota(user.id, res, function() {
+          responseUtil.sendJson(res, 200, {
+            success: true,
+            type: 'text',
+            action: null,
+            message: text || 'Sem resposta.',
+            data: { content: [{ type: 'text', text: text || 'Sem resposta.' }] },
+            error: null,
+            meta: {}
+          });
+        }, { accessProfile: accessProfile });
       });
-    });
+      }, { accessProfile: accessProfile });
+      });
     }, { max: 30, windowMs: 60000 }, user.id);
   });
 };

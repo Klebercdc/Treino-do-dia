@@ -1,7 +1,7 @@
 var crypto = require('crypto');
-var cors = require('./_cors');
-var plans = require('./_plans');
-var { getMonthStartIso, buildCommissionBundle } = require('../src/lib/affiliate/affiliateService');
+var cors = require('../apihelpers/_cors');
+var plans = require('../apihelpers/_plans');
+var { getMonthStartIso, buildCommissionBundle } = require('../../lib/affiliate/affiliateService');
 
 // Endpoint restrito a service token — nunca acessível por usuários comuns.
 // Chamado apenas pelo webhook de pagamento (payment-webhook.js) ou serviço interno.

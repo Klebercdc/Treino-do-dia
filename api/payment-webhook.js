@@ -18,8 +18,8 @@
  */
 
 var crypto  = require('crypto');
-var cors    = require('./_cors');
-var plans   = require('./_plans');
+var cors    = require('../src/server/apihelpers/_cors');
+var plans   = require('../src/server/apihelpers/_plans');
 var planRules = require('../src/lib/plans/planRules');
 var billingProviders = require('../src/lib/plans/billingProviders');
 var { PLAN } = require('../src/types/domain');

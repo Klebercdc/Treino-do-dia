@@ -42,11 +42,22 @@ async function fetchDashboardData() {
   const { data: { session } } = await _sb.auth.getSession();
   if (!session) return null;
 
-  const { data, error } = await _sb
+  let q = _sb
     .from('acwr_diario')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .maybeSingle();
+    .select('*');
+
+  if (window.KroniaAccessScope && typeof window.KroniaAccessScope.ensureAdminAwareQuery === 'function') {
+    q = window.KroniaAccessScope.ensureAdminAwareQuery(q, session.user, {
+      ownershipColumn: 'user_id',
+      purpose: 'transforms_dashboard',
+      entity: 'acwr_diario',
+      allowAdminGlobalRead: true
+    });
+  } else {
+    q = q.eq('user_id', session.user.id); // admin-scope-audit:allow fallback when access-scope unavailable
+  }
+
+  const { data, error } = await q.maybeSingle();
 
   if (error) {
     console.error('[KRONIA Dashboard] Erro ao buscar ACWR:', error.message);

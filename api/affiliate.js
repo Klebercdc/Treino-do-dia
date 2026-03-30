@@ -1,8 +1,10 @@
-var cors = require('./_cors');
-var auth = require('./_auth');
-var rl   = require('./_ratelimit');
-var plans = require('./_plans');
+var cors = require('../src/server/apihelpers/_cors');
+var auth = require('../src/server/apihelpers/_auth');
+var rl   = require('../src/server/apihelpers/_ratelimit');
+var plans = require('../src/server/apihelpers/_plans');
 var { buildAffiliateReference } = require('../src/lib/affiliate/commission');
+var affiliateSaleHandler = require('../src/server/legacy/affiliate-sale');
+var billingSyncHandler = require('../src/server/legacy/billing-sync');
 
 function handleAffiliateReferral(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -48,6 +50,10 @@ module.exports = function(req, res) {
 
   var route = (req.query && req.query.__route) || 'affiliate-referral';
   switch (route) {
+    case 'affiliate-sale':
+      return affiliateSaleHandler(req, res);
+    case 'billing-sync':
+      return billingSyncHandler(req, res);
     case 'affiliate-commissions':
       return handleAffiliateCommissions(req, res);
     case 'affiliate-referral':

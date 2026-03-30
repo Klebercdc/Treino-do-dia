@@ -886,11 +886,20 @@ async function _avaliarFadigaAcwr() {
   try {
     const { data: { session } } = await _sb.auth.getSession();
     if (!session?.user?.id) return null;
-    const { data, error } = await _sb
+    let q = _sb
       .from('v_fatigue_analysis')
-      .select('status, acwr_index')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
+      .select('status, acwr_index');
+    if (window.KroniaAccessScope && typeof window.KroniaAccessScope.resolveAccessScope === 'function') {
+      const scope = window.KroniaAccessScope.resolveAccessScope(session.user, {
+        ownershipColumn: 'user_id',
+        purpose: 'fatigue_analysis',
+        allowAdminGlobalRead: false
+      });
+      q = window.KroniaAccessScope.applyScopedQuery(q, scope);
+    } else {
+      q = q.eq('user_id', session.user.id); // admin-scope-audit:allow fallback when access-scope unavailable
+    }
+    const { data, error } = await q.maybeSingle();
     if (error || !data) return null;
     return data;
   } catch (_) {
@@ -2599,22 +2608,23 @@ function _isPedidoDeTreino(msg) {
   return /\b(cri(e|a|ar)|ger(e|a|ar)|mont(e|a|ar)|elabor(e|a|ar)|faz(er?|a|e)|quero|preciso)\b.{0,30}\b(treino|programa|plano|ficha)\b/i.test(msg);
 }
 
-// ── parseApiJsonSafely — BLOCO 1 ─────────────────────────────────────────────
-// Substitui response.json() nos fluxos de chat. Nunca quebra se o backend
-// devolver HTML de erro, timeout, stack trace ou resposta vazia.
-async function parseApiJsonSafely(resp) {
-  var text = '';
-  try { text = await resp.text(); } catch (e) {
-    return { success: false, type: 'error', action: null,
-      message: 'Falha ao ler resposta do servidor.', data: null,
-      error: 'READ_ERROR', meta: {}, content: null };
+async function parseApiJsonSafely(response) {
+  const rawText = await response.text();
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch (err) {
+    console.warn("[app] json_parse_failed", err && err.message);
   }
-  try { return JSON.parse(text); } catch (e) {
-    console.warn('[kronia] parse JSON falhou — preview:', text.substring(0, 200));
-    return { success: false, type: 'error', action: null,
-      message: 'Resposta inválida do servidor.', data: null,
-      error: 'INVALID_JSON', meta: { rawPreview: text.substring(0, 200) }, content: null };
-  }
+  return {
+    success: false,
+    type: "error",
+    action: null,
+    message: "Resposta inválida do servidor.",
+    data: null,
+    error: "INVALID_JSON",
+    meta: { rawPreview: String(rawText || "").slice(0, 200) }
+  };
 }
 
 async function sendAI(overrideText, isGerarTreino = false) {
@@ -2657,32 +2667,14 @@ async function sendAI(overrideText, isGerarTreino = false) {
       body: JSON.stringify(body)
     });
 
-    // BLOCO 1: parse seguro — nunca assume que o backend retornou JSON válido
     const data = await parseApiJsonSafely(response);
-    // Erros do novo envelope (success: false)
-    if (data.success === false) throw new Error(data.message || data.error || 'Erro do servidor');
-    // Erros do envelope legado ({ error: '...' }) — ex: quota excedida
-    if (data.error && !data.success) throw new Error(data.message || data.error);
+    if (!response.ok || data.success === false) throw new Error(data.message || data.error || ("Erro " + response.status));
 
-    // BLOCO 1: action signals — resposta curta local, sem renderizar IA
-    if (data.action === 'open_workout_flow') {
+    if (data.action === "open_workout_flow" || data.action === "open_diet_flow") {
       removeThinking();
-      const wMsg = data.message || 'Beleza 💪 Vamos montar seu treino.';
-      _aiHistory.push({ role: 'assistant', content: wMsg });
-      addAIMessage('assistant', wMsg);
-      // TODO BLOCO 2: chamar fluxo completo de geração de treino
+      addAIMessage("assistant", data.message || "Vamos continuar.");
       _aiTyping = false;
-      if (sendBtn) sendBtn.style.opacity = '1';
-      return;
-    }
-    if (data.action === 'open_diet_flow') {
-      removeThinking();
-      const dMsg = data.message || 'Perfeito 🍽️ Vamos montar sua dieta.';
-      _aiHistory.push({ role: 'assistant', content: dMsg });
-      addAIMessage('assistant', dMsg);
-      // TODO BLOCO 2: chamar fluxo completo de geração de dieta
-      _aiTyping = false;
-      if (sendBtn) sendBtn.style.opacity = '1';
+      if (sendBtn) sendBtn.style.opacity = "1";
       return;
     }
 
@@ -2696,12 +2688,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       // Processar treinos com fases MEV/MAV/MRV
       grupos = (treino.treinos || []).map(t => ({
         nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
-        exercicios: (t.exercicios || []).map(ex => ({
-          nome: ex.nome,
-          series: ex.fases ? ex.fases[0].series : (ex.series || 3),
-          reps: ex.fases ? ex.fases[0].reps : (ex.reps || "8-12"),
-          fases: ex.fases || null
-        }))
+        exercicios: (t.exercicios || []).map((ex, exIdx) => normalizeExercisePayload(ex, exIdx))
       }));
 
       const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
@@ -2726,10 +2713,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       return;
     }
 
-    // BLOCO 1: guard clauses — nunca assume que message ou content existem
-    const reply = (data && data.message)
-      || (_contentArr[0] && _contentArr[0].text)
-      || "Não consegui processar. Tente novamente.";
+    const reply = data?.message || data?.data?.content?.[0]?.text || data?.content?.[0]?.text || "Não consegui processar. Tente novamente.";
 
     removeThinking();
 
@@ -2926,6 +2910,47 @@ function gerarTreinoComRespostas() {
   _wqRespostas = {};
 }
 
+function sanitizeExerciseDisplayName(rawName, fallbackName) {
+  const fallback = String(fallbackName || "Exercício").trim();
+  let text = String(rawName || "").replace(/\s+/g, " ").trim();
+  if (!text) return fallback;
+
+  // Remove prefixos comuns de instrução
+  text = text
+    .replace(/^(dica|observa[cç][aã]o|instru[cç][aã]o|cue|nota|descri[cç][aã]o)\s*[:\-]\s*/i, "")
+    .trim();
+
+  const instructionHints = /(mantenha|evite|durante|respire|controle|contraia|alinh|postura|lesionar|execute|faça|sem balançar|não arqueie|peito aberto|costas retas)/i;
+  const longSentenceLike = /[.!?]/.test(text) || text.length > 52 || text.split(/\s+/).length > 6;
+
+  if (instructionHints.test(text) && longSentenceLike) return fallback;
+  if (longSentenceLike && !/^([A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9\s\-\/()]+)$/.test(text)) return fallback;
+
+  return text.slice(0, 52).trim();
+}
+
+function normalizeExercisePayload(exercise, index) {
+  const source = exercise || {};
+  const fallbackName = `Exercício ${Number(index || 0) + 1}`;
+  const candidateName = source.nome || source.name || source.title || "";
+  const normalizedName = sanitizeExerciseDisplayName(candidateName, fallbackName);
+  const instructionsCandidate = [
+    source.instructions,
+    source.observacoes,
+    source.notes,
+    source.cue,
+    source.description
+  ].find(v => v != null);
+
+  return {
+    nome: normalizedName,
+    series: source.fases ? source.fases[0].series : (source.series || source.sets || 3),
+    reps: source.fases ? source.fases[0].reps : (source.reps || source.repeticoes || "8-12"),
+    fases: source.fases || null,
+    instructions: Array.isArray(instructionsCandidate) ? instructionsCandidate : (instructionsCandidate ? [String(instructionsCandidate)] : [])
+  };
+}
+
 function extrairGruposDaResposta(reply) {
   const grupos = [];
   let grupoAtual = null;
@@ -2950,10 +2975,10 @@ function extrairGruposDaResposta(reply) {
     const isEx = /^(\d+[.)]\s+|[*•\-+]\s+)[A-Za-zÀ-ú]/.test(line);
     if (!isEx) return;
 
-    const nome = line
+    const nome = sanitizeExerciseDisplayName(line
       .replace(/^[\d.)*\-•+\s]+/, "")
       .split(/[:(]/)[0]
-      .trim();
+      .trim(), "");
     if (nome.length < 3) return;
 
     const sm = line.match(/(\d+)\s*s[eé]ries?/i);
@@ -3027,15 +3052,16 @@ function applyAIWorkout(data) {
       sec.setAttribute("data-treino-key", grupo.nome);
       cont.appendChild(sec);
 
-      grupo.exercicios.forEach(ex => {
-        const cardEl = criarCard(ex.nome, "sec" + idx, ex.series || 3, ex.reps || "8-12", null, []);
-        if (ex.fases && ex.fases.length > 0 && cardEl) {
+      grupo.exercicios.forEach((ex, exIdx) => {
+        const normalized = normalizeExercisePayload(ex, exIdx);
+        const cardEl = criarCard(normalized.nome, "sec" + idx, normalized.series || 3, normalized.reps || "8-12", null, []);
+        if (normalized.fases && normalized.fases.length > 0 && cardEl) {
           const fasesDiv = document.createElement("div");
           fasesDiv.style.cssText = "padding:6px 12px 10px;border-top:1px solid var(--border-soft);margin-top:4px";
           fasesDiv.innerHTML = `
             <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:6px">PERIODIZAÇÃO MEV→MAV→MRV</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              ${ex.fases.map((f,fi) => `
+              ${normalized.fases.map((f,fi) => `
                 <div style="flex:1;min-width:80px;background:var(--card);border:1px solid ${fi===0?'var(--accent)':'var(--border)'};border-radius:8px;padding:6px 8px;text-align:center">
                   <div style="font-size:9px;color:var(--accent);font-weight:700">${f.label||f.fase}</div>
                   <div style="font-size:11px;color:var(--text);font-weight:600">${f.series}x${f.reps}</div>
@@ -3310,6 +3336,10 @@ function updateHomeScreen() {
     const pct = Math.min(streak / 30, 1);
     ringEl.setAttribute("stroke-dashoffset", Math.round(314 * (1 - pct)));
   }
+  const flame1 = document.getElementById("homeStreakFlame1");
+  const flame2 = document.getElementById("homeStreakFlame2");
+  if (flame1) flame1.style.display = streak > 0 ? "block" : "none";
+  if (flame2) flame2.style.display = streak >= 7 ? "block" : "none";
 
   // Banner turista
   const banner = document.getElementById("turistaBanner");
@@ -3453,7 +3483,7 @@ function _renderExercisePreviewList(cards) {
   if (!cards.length) { list.innerHTML = ""; return; }
   const muscleIcons = { peito:"💪", costas:"🔙", pernas:"🦵", ombros:"🙆", biceps:"💪", triceps:"💪", abdomen:"🧱", gluteos:"🍑" };
   list.innerHTML = cards.slice(0, 6).map((c, i) => {
-    const ex = c.exercicios?.[0]?.nome || c.nomeBloco || `Exercício ${i+1}`;
+    const ex = sanitizeExerciseDisplayName(c.exercicios?.[0]?.nome || c.nomeBloco || "", `Exercício ${i+1}`);
     return `<div class="exercise-preview-item">
       <div class="exercise-preview-thumb">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.6)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
@@ -3953,8 +3983,9 @@ function _kronosHealthCheck() {
     method: "POST",
     body: JSON.stringify({ messages: [{ role: "user", content: "ping" }], stream: false })
   })
-  .then(r => r.json())
-  .then(() => {
+  .then(async r => parseApiJsonSafely(r))
+  .then((data) => {
+    if (data.success === false) throw new Error(data.error || "healthcheck_fail");
     localStorage.setItem('_kronosHCDate', today);
     localStorage.setItem('_kronosHCStatus', 'ok');
     _kronosRemoveHealthBanner();
@@ -4029,9 +4060,9 @@ Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real
       profile: cfg
     })
   })
-  .then(r => parseApiJsonSafely(r))
+  .then(async r => parseApiJsonSafely(r))
   .then(data => {
-    const text = (data && data.message) || (data && data.content && data.content[0] && data.content[0].text) || "Sistemas online.";
+    const text = data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || "Sistemas online.";
     typing.innerHTML = renderMarkdown(text);
     // Botão "Ir para Treino" quando não há programa configurado
     if (!nextKey) {
@@ -4197,8 +4228,7 @@ async function _kronosCall(messages, userData, onChunk) {
     });
     if (!resp.ok) return null;
     const data = await parseApiJsonSafely(resp);
-    if (data && data.success === false) return null; // erro controlado
-    const text = ((data && data.message) || (data && data.content && data.content[0] && data.content[0].text) || '').trim();
+    const text = (data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || '').trim();
     return text || null;
   }
 
@@ -4616,11 +4646,19 @@ async function _preencherDietaDoSupabase() {
     if (!session) return;
     const userId = session.user.id;
 
+    const scopeResolver = window.KroniaAccessScope && window.KroniaAccessScope.resolveAccessScope
+      ? window.KroniaAccessScope.resolveAccessScope(session.user, { ownershipColumn: 'user_id', purpose: 'diet_sheet', allowAdminGlobalRead: false })
+      : null;
+
+    const profileScope = window.KroniaAccessScope && window.KroniaAccessScope.resolveAccessScope
+      ? window.KroniaAccessScope.resolveAccessScope(session.user, { ownershipColumn: 'id', purpose: 'diet_sheet_profile', allowAdminGlobalRead: false })
+      : null;
+
     const [profRes, metricRes, goalsRes, suplRes] = await Promise.all([
-      _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId).maybeSingle(),
-      _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
-      _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-      _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true)
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes'), profileScope) : _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId)).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('body_metrics').select('weight_kg,body_fat_percent'), scopeResolver) : _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId)).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g'), scopeResolver) : _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId)).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('supplement_protocols').select('supplement_name').eq('active', true), scopeResolver) : _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true))
     ]);
 
     const p  = profRes.data;
@@ -5456,11 +5494,8 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
       })
     });
     const data = await parseApiJsonSafely(resp);
-    if ((data && data.success === false) || (data && data.error)) {
-      txt.textContent = "Erro: " + ((data && data.message) || (data && data.error) || 'falha ao gerar dieta');
-      return;
-    }
-    txt.textContent = (data && data.message) || (data && data.content && data.content[0] && data.content[0].text) || "Erro ao gerar dieta.";
+    if (!resp.ok || data.success === false) { txt.textContent = "Erro: " + (data.message || data.error); return; }
+    txt.textContent = data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || "Erro ao gerar dieta.";
   } catch(e) { txt.textContent = "Erro de conexão: " + e.message; }
   finally { btn.disabled = false; }
 }

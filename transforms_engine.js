@@ -175,6 +175,9 @@ let _teActiveNode  = null;
 let _teAlerts      = [];
 let _teScanning    = false;
 let _teSim         = null;
+let _teDiagRecent  = [];
+let _teNodeStats   = {};
+let _teJourneyRows = [];
 
 /* ── OPEN / CLOSE ───────────────────────────────────────── */
 function openTransformsScreen() {
@@ -183,12 +186,165 @@ function openTransformsScreen() {
   document.body.classList.add('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
+  const adminTab = document.getElementById('adminObservabilityTabBtn');
+  if (adminTab && typeof canShowAdminFeatures === 'function' && canShowAdminFeatures()) {
+    adminTab.style.display = 'inline-flex';
+  } else if (adminTab) {
+    adminTab.style.display = 'none';
+  }
   requestAnimationFrame(() => {
     teRenderGraph();
     teRenderLegend();
     teRenderCatalog();
     teRenderDefensiveList([]);
   });
+}
+
+async function teFetchAdminDiagnostics(action, opts, extraQuery) {
+  const init = Object.assign({ method: 'GET' }, opts || {});
+  const qs = '/api/admin-diagnostics?action=' + encodeURIComponent(action) + (extraQuery ? '&' + extraQuery : '');
+  const resp = await apiFetch(qs, init);
+  if (!resp.ok) throw new Error('admin diagnostics ' + action + ' falhou');
+  const payload = await resp.json();
+  if (!payload || payload.success !== true) throw new Error((payload && payload.error && payload.error.message) || 'Falha de contrato API');
+  return payload.data || {};
+}
+
+function teFormatStatus(status) {
+  const map = { healthy: '#10B981', degraded: '#F59E0B', failing: '#EF4444', inactive: '#64748B' };
+  return map[status] || '#64748B';
+}
+
+async function teLoadAdminDiagnostics() {
+  const overviewEl = document.getElementById('adminDiagOverview');
+  const recentEl = document.getElementById('adminDiagRecent');
+  const checklistEl = document.getElementById('adminDiagChecklist');
+  if (!overviewEl || !recentEl) return;
+  overviewEl.innerHTML = '<div style="font-size:.75rem;color:rgba(255,255,255,.5)">Carregando…</div>';
+  recentEl.innerHTML = '';
+  const warningMessages = [];
+
+  const overviewResp = await teFetchAdminDiagnostics('overview').catch(e => {
+    warningMessages.push('overview indisponível');
+    console.error('[transforms_engine] falha parcial overview:', e);
+    return {};
+  });
+  const recentResp = await teFetchAdminDiagnostics('recent').catch(e => {
+    warningMessages.push('recent indisponível');
+    console.error('[transforms_engine] falha parcial recent:', e);
+    return {};
+  });
+  const checklistResp = await teFetchAdminDiagnostics('checklist').catch(e => {
+    warningMessages.push('checklist indisponível');
+    console.error('[transforms_engine] falha parcial checklist:', e);
+    return {};
+  });
+
+  const partialErrors = Object.assign({},
+    overviewResp && overviewResp.errors ? overviewResp.errors : {},
+    recentResp && recentResp.errors ? recentResp.errors : {},
+    checklistResp && checklistResp.errors ? checklistResp.errors : {}
+  );
+  Object.keys(partialErrors).forEach(key => {
+    if (partialErrors[key]) warningMessages.push(key + ': ' + partialErrors[key]);
+  });
+
+  try {
+    const items = Array.isArray(overviewResp.overview) ? overviewResp.overview : [];
+    _teDiagRecent = Array.isArray(recentResp.executions)
+      ? recentResp.executions
+      : (Array.isArray(overviewResp.recent) ? overviewResp.recent : []);
+    overviewEl.innerHTML = items.map(item => `
+      <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)">
+        <div style="font-size:.65rem;color:rgba(255,255,255,.45);text-transform:uppercase">${item.component}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          <strong style="font-size:.95rem">${item.total || 0}</strong>
+          <span style="font-size:.65rem;color:${teFormatStatus(item.status)}">${item.status}</span>
+        </div>
+        <div style="font-size:.68rem;color:rgba(255,255,255,.4);margin-top:4px">latência média ${item.avg_duration_ms || 0} ms · erro ${item.failure_total || 0}</div>
+      </div>
+    `).join('') || '<div style="font-size:.75rem;color:rgba(255,255,255,.5)">Sem dados recentes.</div>';
+
+    recentEl.innerHTML = _teDiagRecent.slice(0, 20).map(exec => `
+      <button onclick="teOpenExecutionDetail('${exec.execution_id}')" style="text-align:left;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px;color:inherit">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <span style="font-size:.68rem;color:rgba(255,255,255,.45)">${new Date(exec.created_at).toLocaleString()}</span>
+          <span style="font-size:.66rem;color:${exec.success ? '#10B981' : '#EF4444'}">${exec.final_status}</span>
+        </div>
+        <div style="font-size:.78rem;margin-top:4px;font-family:monospace">${exec.execution_id}</div>
+        <div style="font-size:.7rem;color:rgba(255,255,255,.45);margin-top:3px">corr ${exec.correlation_id || '—'} · trace ${exec.conversation_trace_id || '—'}</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:4px">${exec.intent_detected || '—'} · ${exec.pipeline_selected || '—'} · ${exec.duration_ms || 0}ms · quality ${exec.diagnostic_quality_score || '—'}</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px">${exec.raw_input_summary || ''}</div>
+        ${exec.conversation_trace_id ? `<div style="margin-top:6px;font-size:.68rem;color:#93c5fd;text-decoration:underline" onclick="event.stopPropagation();teLoadJourney('${exec.conversation_trace_id}')">Ver jornada</div>` : ''}
+      </button>
+    `).join('');
+    if (checklistEl) {
+      const items = Array.isArray(checklistResp.checklist)
+        ? checklistResp.checklist
+        : (Array.isArray(overviewResp.checklist) ? overviewResp.checklist : []);
+      checklistEl.innerHTML = items.map(item => `<div style=\"padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);font-size:.73rem\"><span style=\"color:${item.ok ? '#10B981' : '#EF4444'};font-weight:700\">${item.ok ? 'OK' : 'PENDENTE'}</span> · ${item.label}</div>`).join('');
+    }
+
+    if (warningMessages.length > 0) {
+      overviewEl.insertAdjacentHTML('afterbegin', `<div style="margin-bottom:8px;padding:8px;border-radius:8px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);font-size:.72rem;color:#FCD34D">Alguns blocos estão com dados parciais: ${warningMessages.slice(0, 3).join(' · ')}</div>`);
+    }
+  } catch (e) {
+    console.error('[transforms_engine] fallback render admin observability:', e);
+    overviewEl.innerHTML = '<div style="font-size:.75rem;color:rgba(255,255,255,.6)">Observabilidade com dados indisponíveis no momento.</div>';
+  }
+}
+
+async function teLoadJourney(traceId) {
+  const detailEl = document.getElementById('adminDiagDetail');
+  if (!detailEl) return;
+  detailEl.style.display = 'block';
+  detailEl.innerHTML = 'Carregando jornada...';
+  try {
+    const payload = await teFetchAdminDiagnostics('journey', null, 'conversation_trace_id=' + encodeURIComponent(traceId));
+    _teJourneyRows = payload.journey || [];
+    detailEl.innerHTML = `<div style="font-size:.68rem;color:rgba(255,255,255,.45);margin-bottom:8px">Jornada ${traceId}</div>` + _teJourneyRows.map(row => `<div style=\"padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px\"><div style=\"font-size:.72rem\">${new Date(row.created_at).toLocaleString()} · ${row.intent_detected || '-'} · ${row.pipeline_selected || '-'}</div><div style=\"font-size:.68rem;color:${row.success ? '#10B981' : '#EF4444'}\">${row.success ? 'success' : 'fail'} · fallback ${row.fallback_used ? 'sim' : 'não'} · severity ${row.severity || 'info'} · quality ${row.diagnostic_quality_score || '—'}</div></div>`).join('');
+  } catch (e) {
+    detailEl.innerHTML = '<span style=\"color:#EF4444\">Falha ao carregar jornada.</span>';
+  }
+}
+
+async function teOpenExecutionDetail(executionId) {
+  const detailEl = document.getElementById('adminDiagDetail');
+  if (!detailEl) return;
+  detailEl.style.display = 'block';
+  detailEl.innerHTML = '<div style="font-size:.75rem;color:rgba(255,255,255,.5)">Carregando replay…</div>';
+  try {
+    const payload = await teFetchAdminDiagnostics('execution', null, 'execution_id=' + encodeURIComponent(executionId));
+    const exec = payload.execution || {};
+    const steps = payload.steps || [];
+    _teNodeStats = {};
+    (payload.nodeStats || []).forEach(item => { _teNodeStats[item.node] = item; });
+    detailEl.innerHTML = `
+      <div style="font-size:.66rem;color:rgba(255,255,255,.45);text-transform:uppercase;margin-bottom:8px">Motivo da Decisão</div>
+      <div style="font-size:.8rem;line-height:1.5;margin-bottom:10px">${exec.decision_reason || 'Sem razão registrada.'}</div>
+      <div style="font-size:.66rem;color:rgba(255,255,255,.45);text-transform:uppercase;margin-bottom:8px">Antes e Depois da Decisão</div>
+      <div style="font-size:.75rem;color:rgba(255,255,255,.6);margin-bottom:10px"><b>Entrada:</b> ${exec.raw_input_summary || '—'}<br><b>Normalizado:</b> ${exec.normalized_input_summary || '—'}<br><b>Resposta:</b> ${exec.response_summary || '—'}</div>
+      <div style="font-size:.66rem;color:rgba(255,255,255,.45);text-transform:uppercase;margin-bottom:8px">Replay Técnico</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${steps.map(step => `<div style=\"padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)\"><div style=\"display:flex;justify-content:space-between\"><span style=\"font-size:.74rem;font-weight:700\">${step.step_order}. ${step.step_name}</span><span style=\"font-size:.66rem;color:${step.success ? '#10B981' : '#EF4444'}\">${step.status} · ${step.duration_ms || 0}ms</span></div><div style=\"font-size:.7rem;color:rgba(255,255,255,.45)\">${step.layer || '-'} · ${step.node_key || '-'}</div><div style=\"font-size:.72rem;color:rgba(255,255,255,.6);margin-top:4px\">${step.decision_reason || step.output_summary || ''}</div></div>`).join('')}
+      </div>
+    `;
+    _teActiveNode = null;
+    teRenderGraphWithExecution(steps);
+  } catch (e) {
+    detailEl.innerHTML = '<div style="font-size:.75rem;color:#EF4444">Falha ao carregar detalhes da execução.</div>';
+  }
+}
+
+function teRenderGraphWithExecution(steps) {
+  const okNodes = {};
+  const failNodes = {};
+  (steps || []).forEach(step => {
+    if (!step.node_key) return;
+    if (step.success === false) failNodes[step.node_key] = true;
+    else okNodes[step.node_key] = true;
+  });
+  teRenderGraph({ okNodes: okNodes, failNodes: failNodes });
 }
 
 function closeTransformsScreen() {
@@ -211,7 +367,7 @@ function switchTransformsTab(tab, btn) {
 }
 
 /* ── D3 FORCE GRAPH ─────────────────────────────────────── */
-function teRenderGraph() {
+function teRenderGraph(execState) {
   if (typeof d3 === 'undefined') return;
   const svgEl = document.getElementById('transformsGraphSvg');
   if (!svgEl) return;
@@ -267,10 +423,13 @@ function teRenderGraph() {
       .on('end',   (ev, d) => { if (!ev.active) _teSim.alphaTarget(0); d.fx = null; d.fy = null; })
     );
 
+  const okNodes = (execState && execState.okNodes) || {};
+  const failNodes = (execState && execState.failNodes) || {};
+
   node.append('circle')
     .attr('r', d => d.type === 'Usuario' ? 24 : 17)
-    .attr('fill', d => (TE_ENTITIES[d.type]?.color || '#fff') + '22')
-    .attr('stroke', d => d.type === _teActiveNode ? '#fff' : (TE_ENTITIES[d.type]?.color || '#fff'))
+    .attr('fill', d => failNodes[d.type] ? 'rgba(239,68,68,.26)' : (okNodes[d.type] ? (TE_ENTITIES[d.type]?.color || '#fff') + '33' : (TE_ENTITIES[d.type]?.color || '#fff') + '12'))
+    .attr('stroke', d => failNodes[d.type] ? '#EF4444' : (d.type === _teActiveNode ? '#fff' : (okNodes[d.type] ? '#22c55e' : (TE_ENTITIES[d.type]?.color || '#fff'))))
     .attr('stroke-width', d => d.type === _teActiveNode ? 3 : 1.5)
     .attr('filter', d => d.type === _teActiveNode ? 'url(#te-glow)' : 'none');
 
@@ -294,6 +453,40 @@ function teRenderGraph() {
   });
 }
 
+async function teRunAdminHealthCheck() {
+  const el = document.getElementById('adminDiagHealth');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = 'Executando…';
+  try {
+    const payload = await teFetchAdminDiagnostics('health');
+    const checks = payload.checks || [];
+    const alerts = payload.alerts || [];
+    el.innerHTML = checks.map(c => `<div style=\"padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)\"><b style=\"color:${c.status==='healthy'?'#10B981':(c.status==='warning'?'#F59E0B':'#EF4444')}\">${c.status}</b> · ${c.label}<div style=\"font-size:.72rem;color:rgba(255,255,255,.5)\">${c.message}</div></div>`).join('')
+      + (alerts.length ? `<div style=\"margin-top:8px;font-size:.72rem;color:#f59e0b\">Alertas: ${alerts.map(a => a.message).join(' | ')}</div>` : '');
+  } catch (e) {
+    el.innerHTML = '<span style=\"color:#EF4444\">Falha ao executar health check.</span>';
+  }
+}
+
+async function teRunScenario(type) {
+  const map = {
+    greeting: 'oi',
+    workout: 'quero um treino para hipertrofia sem equipamento',
+    diet: 'monte uma dieta para emagrecimento',
+    no_context: 'quero ajuda mas nao tenho historico',
+    ia_failure: 'simular falha de ia'
+  };
+  try {
+    await teFetchAdminDiagnostics('simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: type, text: map[type] || 'oi', dry_run: true, simulation_mode: 'pipeline_replay' })
+    });
+    teLoadAdminDiagnostics();
+  } catch (e) {}
+}
+
 /* ── NODE SELECTION ─────────────────────────────────────── */
 function teSelectNode(type) {
   _teActiveNode = _teActiveNode === type ? null : type;
@@ -304,6 +497,7 @@ function teSelectNode(type) {
 
   const cfg = TE_ENTITIES[_teActiveNode];
   const related = TE_TRANSFORMS.filter(t => t.from === _teActiveNode || t.to === _teActiveNode);
+  const stat = _teNodeStats[_teActiveNode] || null;
 
   detail.style.display = 'block';
   const confPct  = Math.round((cfg.confidence || 1) * 100);
@@ -320,6 +514,7 @@ function teSelectNode(type) {
         </div>
       </div>
     </div>
+    ${stat ? `<div style="margin:8px 0;padding:8px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);font-size:.72rem;color:rgba(255,255,255,.65)">latência média ${stat.avgDurationMs || 0} ms · sucesso ${Math.round((stat.successRate || 0) * 100)}% · falhas ${stat.failures || 0}${stat.lastError ? `<br>último erro: ${stat.lastError}` : ''}</div>` : ''}
     <div style="display:flex;flex-direction:column;gap:6px">
       ${related.map(t => `
         <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
