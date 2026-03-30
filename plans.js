@@ -83,23 +83,20 @@ function maybeRenderDevSection(container, renderer) {
   renderer(container, getCurrentAccessProfile());
 }
 
-async function fetchAccessProfile() {
-  try {
-    var resp = await apiFetch('/api/access');
-    if (!resp.ok) return;
-    var data = await resp.json();
-    window.KroniaAccessProfile = {
-      email: String(data.email || '').trim().toLowerCase(),
-      isAuthenticated: !!data.email,
-      isAdmin: !!data.isAdmin,
-      isDeveloper: !!data.isDeveloper,
-      canBypassQuota: !!data.canBypassQuota,
-      canSeeDevTools: !!data.canSeeDevTools,
-      canSeeAdminUI: !!data.canSeeAdminUI,
-      canSeeTestFeatures: !!data.canSeeTestFeatures,
-      source: data.source || 'api_access'
-    };
-  } catch (e) {}
+function hydrateAccessProfileFromPlan(planPayload) {
+  var data = planPayload || {};
+  var email = String(data.email || '').trim().toLowerCase();
+  window.KroniaAccessProfile = {
+    email: email,
+    isAuthenticated: !!email,
+    isAdmin: !!data.isAdmin,
+    isDeveloper: !!data.isDeveloper,
+    canBypassQuota: !!data.canBypassQuota,
+    canSeeDevTools: !!(data.canSeeDevTools || data.isDeveloper || data.isAdmin),
+    canSeeAdminUI: !!(data.canSeeAdminUI || data.isAdmin),
+    canSeeTestFeatures: !!(data.canSeeTestFeatures || data.isDeveloper || data.isAdmin),
+    source: data.accessMode || 'plan_current'
+  };
 }
 
 function normalizePlanId(plan) {
@@ -133,10 +130,10 @@ async function fetchUserPlan() {
   try {
     var session = (await _sb.auth.getSession()).data.session;
     if (!session) return;
-    await fetchAccessProfile();
     var currentResp = await apiFetch('/api/plan-current');
     if (!currentResp.ok) throw new Error('plan-current');
     var current = await currentResp.json();
+    hydrateAccessProfileFromPlan(current);
 
     var featuresResp = await apiFetch('/api/plan-features');
     var features = null;
