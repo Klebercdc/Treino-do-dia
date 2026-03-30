@@ -30,6 +30,22 @@ var _userPlan = {
   trial_expires_at: null,
   trial_status: null
 };
+window._userPlan = Object.assign({}, _userPlan);
+
+function syncPlanContext() {
+  window._userPlan = Object.assign({}, _userPlan);
+
+  if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildUserCapabilities === 'function') {
+    window.currentUserCapabilities = window.KroniaAccessScope.buildUserCapabilities({
+      accessProfile: getCurrentAccessProfile(),
+      planContext: window._userPlan
+    });
+
+    if (typeof window.KroniaAccessScope.setupAdminDebug === 'function') {
+      window.KroniaAccessScope.setupAdminDebug();
+    }
+  }
+}
 window.KroniaAccessProfile = {
   email: '',
   isAuthenticated: false,
@@ -122,6 +138,17 @@ function normalizePlanId(plan) {
   return 'free';
 }
 
+function getPlanDisplayLabel() {
+  var plan = normalizePlanId(_userPlan.plan);
+  var trial = getTrialStatus();
+  var inTrial = !!(trial && trial.active && plan !== 'pro' && plan !== 'ultra');
+
+  if (plan === 'ultra') return 'ULTRA';
+  if (plan === 'pro') return 'PRO';
+  if (inTrial) return 'TRIAL';
+  return 'FREE';
+}
+
 // ══════════════════════════════
 // SISTEMA DE TRIAL — 7 DIAS
 // ══════════════════════════════
@@ -173,6 +200,7 @@ async function fetchUserPlan() {
       trial_status: current.trialStatus && typeof current.trialStatus === 'object' ? current.trialStatus : null,
       limit: quotaLimit
     };
+    syncPlanContext();
     updatePlanBadge();
   } catch(e) { /* silencioso */ }
 }
@@ -210,7 +238,7 @@ function updatePlanBadge() {
     var _zapIco = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
     var _crownIco = '<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>';
     if (isCurrentUserAdmin()) {
-      homeBadge.innerHTML = _crownIco + ' ADMIN';
+      homeBadge.innerHTML = _crownIco + ' ADMIN · ' + getPlanDisplayLabel();
       homeBadge.className = 'badge-ultra';
     } else if (isUltra) {
       homeBadge.innerHTML = _crownIco + ' ULTRA';
@@ -286,7 +314,7 @@ function updatePlanBadge() {
   var badge = document.getElementById('authMenuPlanBadge');
   if (badge) {
     if (isCurrentUserAdmin()) {
-      badge.textContent = 'ADMIN';
+      badge.textContent = 'ADMIN · ' + getPlanDisplayLabel();
       badge.style.background = 'rgba(168,85,247,0.3)';
       badge.style.color = '#c084fc';
     } else if (isUltra) {
@@ -598,6 +626,7 @@ window.fetch = async function(url, opts) {
       var json = await resp.clone().json();
       if (json.code === 'QUOTA_EXCEEDED') {
         _userPlan.ai_requests_used = json.used || FREE_AI_LIMIT;
+        syncPlanContext();
         updatePlanBadge();
         showPaywall(json.error || 'Limite do plano gratuito atingido. Faça upgrade para continuar.');
       }

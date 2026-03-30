@@ -129,10 +129,10 @@ function resolveEffectivePlan(userId, planRow, callback) {
     }
 
     return callback({
-      canonicalPlan: PLAN.FREE,
+      canonicalPlan: planRules.toCanonicalPlan((planRow && planRow.plan) || PLAN.FREE),
       patch: null,
       snapshot: snapshot || null,
-      source: 'degraded_free_without_snapshot',
+      source: 'plan_row_fallback_without_snapshot',
       degraded: true
     });
   });
