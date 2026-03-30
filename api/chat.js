@@ -39,6 +39,9 @@ function emitDecisionTelemetry(userId, classification, decision, usedLLM, opened
     depth: decision.depth,
     confidence: classification.confidence,
     complexityScore: decision.complexity ? decision.complexity.score : null,
+    complexityLevel: decision.complexity ? decision.complexity.level : null,
+    complexitySignals: decision.complexity ? decision.complexity.signals : null,
+    semanticSignals: classification.semanticSignals || null,
     tokenLimit: decision.tokenLimit,
     usedLLM: !!usedLLM,
     openedFlow: !!openedFlow,
@@ -172,14 +175,15 @@ module.exports = function(req, res) {
       var nextShortState = conversationStateUtil.updateShortState(shortState, classification, decision, lastContent);
 
       if (decision.action === 'local_reply' || decision.action === 'ask_clarifying' || decision.action === 'ask_rephrase') {
+        var localMessage = localReplies.buildLocalReply(decision, classification);
         emitDecisionTelemetry(user.id, classification, decision, false, false);
         return responseUtil.sendJson(res, 200, {
           success: true,
           type: 'text',
           action: decision.action,
-          message: localReplies.buildLocalReply(decision, classification),
+          message: localMessage,
           data: {
-            content: [{ type: 'text', text: localReplies.buildLocalReply(decision, classification) }],
+            content: [{ type: 'text', text: localMessage }],
             conversationState: { memory: nextShortState }
           },
           meta: { local: true, decision: process.env.NODE_ENV === 'development' ? decision : undefined }

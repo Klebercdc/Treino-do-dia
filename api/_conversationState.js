@@ -28,7 +28,7 @@ function extractShortState(conversationState) {
 
 function inferNeed(text, classification) {
   var t = String(text || '').toLowerCase();
-  if (/montar|criar|gerar/.test(t)) return 'create';
+  if (/montar|criar|gerar|planejar/.test(t)) return 'create';
   if (/ajustar|corrigir|revisar|mudar/.test(t)) return 'adjust';
   if (/duvida|pergunta|entender|explica/.test(t)) return 'question';
   if (/secar|emagrecer|cutting/.test(t)) return 'fat_loss';
@@ -36,14 +36,23 @@ function inferNeed(text, classification) {
   return classification.kind || 'general';
 }
 
+function isLikelyContinuation(normalizedInput, current) {
+  var text = String((normalizedInput && normalizedInput.reducedText) || '');
+  var tokenCount = ((normalizedInput && normalizedInput.tokenCount) || 0);
+  var semantic = normalizedInput && normalizedInput.semanticSignals;
+  var explicitShift = /\b(agora|mudando de assunto|outro assunto|deixa isso|na verdade)\b/.test(text) || (semantic && semantic.topicShiftCue);
+
+  if (explicitShift) return false;
+  if (current.awaitingClarification) {
+    return /^(sim|nao|montar|o atual|secar|o de treino|mais pra dieta|dieta|treino|ajustar|duvida)$/.test(text) || tokenCount <= 4;
+  }
+
+  return tokenCount <= 2 && /^(isso|esse|essa|sim|nao|ajusta|monta|continua)$/.test(text);
+}
+
 function applyContinuationContext(normalizedInput, state) {
   var current = normalizeState(state);
-  var text = String((normalizedInput && normalizedInput.reducedText) || '');
-  var continuationHit = false;
-
-  if (current.awaitingClarification) {
-    continuationHit = /^(sim|nao|montar|o atual|secar|o de treino|mais pra dieta|dieta|treino|ajustar|duvida)$/.test(text) || ((normalizedInput && normalizedInput.tokenCount) || 0) <= 3;
-  }
+  var continuationHit = isLikelyContinuation(normalizedInput, current);
 
   return {
     continuationHit: continuationHit,

@@ -11,6 +11,7 @@ function hasAny(text, patterns) {
 
 function evaluateComplexity(classification) {
   var text = String(classification.sanitizedText || '');
+  var semantic = classification.semanticSignals || {};
   var score = 0;
   var signals = {
     mixedIntent: false,
@@ -39,8 +40,8 @@ function evaluateComplexity(classification) {
   signals.analysisRequest = hasAny(text, [/\b(analisa|avaliar|diagnosticar|revisar|auditar)\b/]);
   signals.ambiguity = classification.triage === 'unknown' || classification.triage === 'vague_single_word';
   signals.shortDenseDecision = hasAny(text, [/\b(vale a pena|compensa|devo|sera que|e hora de|ta na hora de|continuo ou mudo)\b/]);
-  signals.stagnationSignal = hasAny(text, [/\b(travado|estagnado|nao evoluo|nao cresco|nao respondo mais)\b/]);
-  signals.adjustmentDecision = hasAny(text, [/\b(troco|corto|subo|desco|mudar volume|mudar frequencia)\b/]);
+  signals.stagnationSignal = hasAny(text, [/\b(travado|estagnado|nao evoluo|nao cresco|nao respondo mais)\b/]) || !!semantic.progressSignal;
+  signals.adjustmentDecision = hasAny(text, [/\b(troco|corto|subo|desco|mudar volume|mudar frequencia)\b/]) || !!semantic.asksForAdjustment;
 
   var weights = {
     mixedIntent: 1,
@@ -100,10 +101,21 @@ function isStrongContext(state, classification) {
   return (state.lastTopic && state.lastTopic === classification.topic) || classification.confidence >= 0.72;
 }
 
+function isFlowRequest(classification, topic) {
+  if (classification.kind !== 'request' || classification.topic !== topic) return false;
+  if (classification.confidence <= FLOW_CONFIDENCE_THRESHOLD) return false;
+
+  var text = classification.sanitizedText;
+  if (topic === 'workout') return /\b(monta|montar|cria|criar|gera|gerar|treino\s*\d+x|divisao|ficha)\b/.test(text);
+  if (topic === 'diet') return /\b(monta|montar|cria|criar|gera|gerar|dieta|plano alimentar)\b/.test(text);
+  return false;
+}
+
 function decideAction(classification, conversationState) {
   var complexity = evaluateComplexity(classification);
   var state = conversationState || {};
   var strongContext = isStrongContext(state, classification);
+  var semantic = classification.semanticSignals || {};
   var decision = {
     depth: decideDepth(classification, complexity),
     action: 'call_llm_short',
@@ -159,7 +171,6 @@ function decideAction(classification, conversationState) {
     }
   }
 
-
   if (strongContext && classification.kind === 'request' && state.lastTopic === 'workout' && /montar|criar|gerar/.test(classification.sanitizedText)) {
     decision.action = 'open_workout_flow';
     decision.depth = 'normal';
@@ -196,14 +207,14 @@ function decideAction(classification, conversationState) {
     return decision;
   }
 
-  if (classification.kind === 'request' && classification.topic === 'workout' && classification.confidence > FLOW_CONFIDENCE_THRESHOLD && /\b(monta|cria|gera|treino\s*\d+x|divisao|ficha)\b/.test(classification.sanitizedText)) {
+  if (isFlowRequest(classification, 'workout')) {
     decision.action = 'open_workout_flow';
     decision.depth = 'normal';
     decision.tokenLimit = resolveTokenLimit(decision);
     return decision;
   }
 
-  if (classification.kind === 'request' && classification.topic === 'diet' && classification.confidence > FLOW_CONFIDENCE_THRESHOLD && /\b(monta|cria|gera|dieta|plano alimentar)\b/.test(classification.sanitizedText)) {
+  if (isFlowRequest(classification, 'diet')) {
     decision.action = 'open_diet_flow';
     decision.depth = 'normal';
     decision.tokenLimit = resolveTokenLimit(decision);
@@ -215,6 +226,10 @@ function decideAction(classification, conversationState) {
     decision.depth = decision.action === 'ask_clarifying' ? 'micro' : 'short';
     decision.tokenLimit = resolveTokenLimit(decision);
     return decision;
+  }
+
+  if (semantic.asksForExplanation && complexity.signals.shortDenseDecision && decision.depth === 'short') {
+    decision.depth = 'normal';
   }
 
   decision.action = decision.depth === 'full' ? 'call_llm_full' : 'call_llm_short';
