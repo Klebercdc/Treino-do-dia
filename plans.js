@@ -368,17 +368,22 @@ function renderAdminPlanInspection(state) {
   if (!container) {
     container = document.createElement('div');
     container.id = 'planAdminInspection';
-    container.style.cssText = 'margin:10px 14px 0;padding:10px 12px;border:1px dashed rgba(168,85,247,.45);border-radius:10px;font-size:.74rem;color:#d8b4fe;background:rgba(76,29,149,.18)';
-    modal.appendChild(container);
+    container.className = 'plan-admin-inspection';
+    var parent = document.getElementById('planCarousel') || modal.querySelector('.plan-modal-card') || modal;
+    parent.appendChild(container);
   }
   var trial = getTrialStatus();
   container.innerHTML = [
-    '<div style="font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">Admin Plan Inspection</div>',
+    '<details class="plan-admin-inspection-details">',
+    '<summary>Admin Plan Inspection</summary>',
+    '<div class="plan-admin-inspection-grid">',
     '<div>raw_plan=' + String((_userPlan.rawPlan || _userPlan.plan || 'n/a')) + '</div>',
     '<div>effective_plan=' + String(_userPlan.plan || 'n/a') + ' · effective_access=' + String(_userPlan.effectiveAccess || 'standard') + '</div>',
     '<div>trial_active=' + (!!(trial && trial.active)) + ' · trial_days_left=' + String(trial && trial.daysLeft != null ? trial.daysLeft : 'n/a') + '</div>',
     '<div>quota_used=' + String(_userPlan.ai_requests_used || 0) + '/' + String(state && state.activeLimit != null ? state.activeLimit : 'n/a') + ' · remaining=' + String(state && state.rem != null ? state.rem : 'n/a') + '</div>',
-    '<div>gating_reason=' + (state && state.isPro ? 'paid_or_ultra' : (state && state.inTrial ? 'trial_window' : 'free_plan_limited')) + '</div>'
+    '<div>gating_reason=' + (state && state.isPro ? 'paid_or_ultra' : (state && state.inTrial ? 'trial_window' : 'free_plan_limited')) + '</div>',
+    '</div>',
+    '</details>'
   ].join('');
 }
 
