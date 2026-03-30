@@ -84,11 +84,13 @@
     var access = getAccessProfile();
     var localHost = /(^localhost$)|(^127\.0\.0\.1$)|(^0\.0\.0\.0$)/.test(String(location.hostname || ''));
     var enabledByQuery = /(?:\?|&)admin_debug=1(?:&|$)/.test(String(location.search || ''));
-    var enabled = !!access.isAdmin && (localHost || enabledByQuery);
+    var secureContext = !!(global.isSecureContext || location.protocol === 'https:' || localHost);
+    var enabled = !!access.isAdmin && secureContext && (localHost || enabledByQuery);
 
     global.KroniaAdmin = global.KroniaAdmin || {};
-    global.KroniaAdmin.state = Object.assign(getAdminDebugState(), { enabled: enabled });
+    global.KroniaAdmin.state = Object.assign(getAdminDebugState(), { enabled: enabled, secureContext: secureContext });
     global.KroniaAdmin.capabilities = buildUserCapabilities({ accessProfile: access });
+    global.KroniaAdmin.diagnostics = global.KroniaAdmin.state.diagnostics;
 
     global.KroniaAdmin.setPreviewUser = function setPreviewUser(userId) {
       if (!global.KroniaAdmin.state.enabled) return false;
@@ -106,6 +108,14 @@
       if (!global.KroniaAdmin.state.enabled) return false;
       global.KroniaAdmin.state.previewUser = null;
       return true;
+    };
+
+    global.KroniaAdmin.getStateSnapshot = function getStateSnapshot() {
+      return {
+        state: Object.assign({}, global.KroniaAdmin.state),
+        capabilities: Object.assign({}, global.KroniaAdmin.capabilities),
+        diagnostics: Object.assign({}, global.KroniaAdmin.state.diagnostics)
+      };
     };
 
     return global.KroniaAdmin;

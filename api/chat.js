@@ -109,7 +109,8 @@ module.exports = function(req, res) {
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
-      var accessProfile = access.buildAccessProfile(user);
+      access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
+      accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
 
       function runPaidAiCall(executor, done) {
         plans.getQuotaInfo(user.id, function(qErr, quota) {
@@ -388,6 +389,7 @@ module.exports = function(req, res) {
           return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
         });
 
+      });
     }, { max: 40, windowMs: 60000 }, user.id);
   });
 };

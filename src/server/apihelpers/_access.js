@@ -52,7 +52,6 @@ function buildAccessProfile(userOrEmail, options) {
   var fromClaims = resolveClaimAdmin(userOrEmail);
   var fromProfile = !!(options && options.profileIsAdmin === true);
   var hasProfileDecision = !!(options && options.profileLookupPerformed === true);
-  var allowFallbackAfterProfileLookup = !!(options && options.allowFallbackWhenProfileResolved === true);
 
   var isAdmin;
   var source;
@@ -61,19 +60,16 @@ function buildAccessProfile(userOrEmail, options) {
     if (fromProfile) {
       isAdmin = true;
       source = 'profiles_table';
-    } else if (allowFallbackAfterProfileLookup && (fromClaims || fromWhitelist)) {
-      isAdmin = true;
-      source = fromClaims ? 'jwt_claim_fallback' : 'env_whitelist_fallback';
     } else {
       isAdmin = false;
       source = 'profiles_table';
     }
   } else {
-    isAdmin = fromClaims || fromWhitelist;
-    source = fromClaims ? 'jwt_claim' : (fromWhitelist ? 'env_whitelist' : (isAuthenticated ? 'authenticated_user' : 'anonymous'));
+    isAdmin = false;
+    source = isAuthenticated ? 'awaiting_profiles_resolution' : 'anonymous';
   }
 
-  return {
+  var profile = {
     email: email,
     isAuthenticated: isAuthenticated,
     isAdmin: isAdmin,
@@ -85,8 +81,32 @@ function buildAccessProfile(userOrEmail, options) {
     source: source,
     profileIsAdmin: fromProfile,
     claimIsAdmin: fromClaims,
+    envWhitelistIsAdmin: fromWhitelist,
     profileLookupPerformed: hasProfileDecision
   };
+
+  logAccessDecision('access_profile_resolved', {
+    user_email: email || null,
+    is_admin: profile.isAdmin,
+    source_of_admin_resolution: source,
+    profile_lookup_performed: hasProfileDecision,
+    profile_is_admin: fromProfile,
+    claim_is_admin: fromClaims,
+    env_whitelist_is_admin: fromWhitelist,
+    reason: hasProfileDecision ? 'profiles_lookup_completed' : 'profiles_lookup_pending'
+  });
+
+  return profile;
+}
+
+function logAccessDecision(event, payload) {
+  try {
+    var body = Object.assign({
+      at: new Date().toISOString(),
+      event: event || 'access_decision'
+    }, payload || {});
+    console.info('[kronia.access]', JSON.stringify(body));
+  } catch (_) {}
 }
 
 function supabaseProfileAdminLookup(userId, callback) {
@@ -124,9 +144,12 @@ function supabaseProfileAdminLookup(userId, callback) {
 }
 
 function buildAccessProfileWithDb(user, callback) {
-  if (!user || !user.id) return callback(null, buildAccessProfile(user));
+  if (!user || !user.id) return callback(null, buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false }));
   supabaseProfileAdminLookup(user.id, function(_err, isAdminFromProfile) {
-    callback(null, buildAccessProfile(user, { profileIsAdmin: isAdminFromProfile === true, profileLookupPerformed: true }));
+    callback(null, buildAccessProfile(user, {
+      profileIsAdmin: isAdminFromProfile === true,
+      profileLookupPerformed: true
+    }));
   });
 }
 

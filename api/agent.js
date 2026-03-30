@@ -495,7 +495,8 @@ module.exports = function(req, res) {
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
       var b = req.body || {};
-      var accessProfile = access.buildAccessProfile(user);
+      access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
+      accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
 
       var messages = b.messages || [];
       if (!Array.isArray(messages)) {
@@ -608,6 +609,7 @@ module.exports = function(req, res) {
         }, { accessProfile: accessProfile });
       });
       }, { accessProfile: accessProfile });
+      });
     }, { max: 30, windowMs: 60000 }, user.id);
   });
 };

@@ -490,15 +490,14 @@ _sb.auth.onAuthStateChange((_event, session) => {
           await window.KroniaAccessScope.hydrateAccessContext(session);
         }
         await _dbSync.pullAll(session.user.id);
+        if (typeof fetchUserPlan === 'function') {
+          try { await fetchUserPlan(); } catch (_) {}
+        }
       } catch (_) {}
 
       const firstLoad = !_appUnlocked;
       showApp();
       if (firstLoad) { navTo('inicio'); openHome(); }
-
-      if (typeof fetchUserPlan === 'function') {
-        try { await fetchUserPlan(); } catch (_) {}
-      }
 
       if (typeof window.KroniaDashboard !== 'undefined') {
         window.KroniaDashboard.render(session.user.id);
