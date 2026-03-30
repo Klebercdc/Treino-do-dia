@@ -7,6 +7,7 @@
     "test:e2e": "npm run db:push:test && playwright test",
     "test:sanity": "playwright test tests/e2e/sanity.spec.ts --reporter=list",
     "test:workout": "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
+    "test:diagnostics": "node --test tests/unit/diagnostics.test.js",
     "db:pull": "supabase db pull",
     "db:push:test": "dotenv -e .env.test -- supabase db push --db-url \"$VITE_SUPABASE_DB_URL_TEST\"",
     "serve": "npx serve . -p 3000 --no-clipboard",
