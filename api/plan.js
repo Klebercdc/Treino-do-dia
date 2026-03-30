@@ -3,6 +3,7 @@ var auth = require('./_auth');
 var rl   = require('./_ratelimit');
 var plans = require('./_plans');
 var planRules = require('../src/lib/plans/planRules');
+var access = require('./_access');
 
 function handleConfig(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -21,19 +22,29 @@ function handleConfig(req, res) {
 function handlePlanFeatures(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   return auth.requireAuth(req, res, function(user) {
+    var accessProfile = access.buildAccessProfile(user);
     return rl.rateLimit(req, res, function() {
       plans.getQuotaInfo(user.id, function(err, info) {
         if (err) return res.status(500).json({ error: String(err) });
         return res.status(200).json({
           plan: info.plan,
           features: info.features,
+          access: {
+            isAdmin: accessProfile.isAdmin,
+            isDeveloper: accessProfile.isDeveloper,
+            canBypassQuota: accessProfile.canBypassQuota,
+            canSeeDevTools: accessProfile.canSeeDevTools,
+            canSeeAdminUI: accessProfile.canSeeAdminUI,
+            canSeeTestFeatures: accessProfile.canSeeTestFeatures,
+            accessMode: info.accessMode || 'standard'
+          },
           quota: {
             used: info.used,
             limit: info.limit,
             remaining: info.remaining
           }
         });
-      });
+      }, { accessProfile: accessProfile });
     }, { max: 10, windowMs: 60000 }, user.id);
   });
 }
@@ -41,6 +52,7 @@ function handlePlanFeatures(req, res) {
 function handlePlanCurrent(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   return auth.requireAuth(req, res, function(user) {
+    var accessProfile = access.buildAccessProfile(user);
     return rl.rateLimit(req, res, function() {
     plans.getTrialDays(function(tdErr, trialDays) {
       var safeTrialDays = tdErr ? 7 : trialDays;
@@ -73,10 +85,18 @@ function handlePlanCurrent(req, res) {
             }
 
             if (sErr) {
+              var isPrivileged = accessProfile.canBypassQuota;
               return res.status(200).json({
                 plan: info.plan,
                 rawPlan: rawPlanDb,
                 rawPlanCanonical: planRules.toCanonicalPlan(rawPlanDb),
+                effectivePlan: isPrivileged ? 'ultra' : info.plan,
+                effectiveAccess: isPrivileged ? 'admin_unlimited' : 'standard',
+                accessMode: isPrivileged ? 'admin_override' : 'standard',
+                overridePlan: isPrivileged ? 'ultra' : null,
+                canBypassQuota: accessProfile.canBypassQuota,
+                isAdmin: accessProfile.isAdmin,
+                isDeveloper: accessProfile.isDeveloper,
                 aiRequestsUsed: planRow.ai_requests_used || 0,
                 trialStartedAt: planRow.trial_started_at || null,
                 expiresAt: planRow.expires_at || null,
@@ -85,10 +105,18 @@ function handlePlanCurrent(req, res) {
               });
             }
 
+            var isPrivileged = accessProfile.canBypassQuota;
             return res.status(200).json({
               plan: info.plan,
               rawPlan: rawPlanDb,
               rawPlanCanonical: planRules.toCanonicalPlan(rawPlanDb),
+              effectivePlan: isPrivileged ? 'ultra' : info.plan,
+              effectiveAccess: isPrivileged ? 'admin_unlimited' : 'standard',
+              accessMode: isPrivileged ? 'admin_override' : 'standard',
+              overridePlan: isPrivileged ? 'ultra' : null,
+              canBypassQuota: accessProfile.canBypassQuota,
+              isAdmin: accessProfile.isAdmin,
+              isDeveloper: accessProfile.isDeveloper,
               effectivePlanDb: effectivePlanDb,
               effectivePlanCanonical: effectivePlanDb ? planRules.toCanonicalPlan(effectivePlanDb) : null,
               aiRequestsUsed: planRow.ai_requests_used || 0,
@@ -100,7 +128,7 @@ function handlePlanCurrent(req, res) {
               trialStatus: trialStatus
             });
           });
-        });
+        }, { accessProfile: accessProfile });
       });
     });
     }, { max: 10, windowMs: 60000 }, user.id);

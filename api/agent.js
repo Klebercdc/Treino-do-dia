@@ -9,6 +9,8 @@ var logger  = require('./_logger');
 var prompts = require('./_systemPrompts');
 var diet    = require('./_diet');
 var responseUtil = require('./_response');
+var intent = require('./_intent');
+var access = require('./_access');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -492,8 +494,8 @@ module.exports = function(req, res) {
 
   auth.requireAuth(req, res, function(user) {
     rl.rateLimit(req, res, function() {
-    plans.checkAndIncrementQuota(user.id, res, function() {
       var b = req.body || {};
+      var accessProfile = access.buildAccessProfile(user);
 
       var messages = b.messages || [];
       if (!Array.isArray(messages)) {
@@ -514,6 +516,54 @@ module.exports = function(req, res) {
         history: (b.history || []).slice(-25),
         profile: b.profile || {}
       };
+      var lastContent = intent.safeExtractLastUserMessage(messages);
+      var detectedIntent = intent.detectIntent(lastContent);
+      if (detectedIntent === 'greeting') {
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'greeting',
+          action: null,
+          message: 'Oi 👋 Como posso te ajudar hoje?',
+          data: null,
+          error: null,
+          meta: { local: true, tokensSaved: true }
+        });
+      }
+      if (detectedIntent === 'workout') {
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'workout_intent',
+          action: 'open_workout_flow',
+          message: 'Beleza 💪 Vamos montar seu treino.',
+          data: null,
+          error: null,
+          meta: { local: true, tokensSaved: true }
+        });
+      }
+      if (detectedIntent === 'diet') {
+        return responseUtil.sendJson(res, 200, {
+          success: true,
+          type: 'diet_intent',
+          action: 'open_diet_flow',
+          message: 'Perfeito 🍽️ Vamos montar sua dieta.',
+          data: null,
+          error: null,
+          meta: { local: true, tokensSaved: true }
+        });
+      }
+
+      plans.getQuotaInfo(user.id, function(qErr, quota) {
+        if (qErr) return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'QUOTA_CHECK_FAILED', meta: { fallback: true } });
+        if (!quota.allowed) {
+          return responseUtil.sendJson(res, 402, {
+            success: false,
+            type: 'error',
+            message: 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
+            error: 'QUOTA_EXCEEDED',
+            data: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } },
+            meta: { fallback: true }
+          });
+        }
 
       // SSE streaming mode
       if (b.stream) {
@@ -522,8 +572,9 @@ module.exports = function(req, res) {
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Accel-Buffering', 'no');
         res.flushHeaders();
-        agentLoopStream(messages, userData, res);
-        return;
+        return plans.checkAndIncrementQuota(user.id, res, function() {
+          agentLoopStream(messages, userData, res);
+        }, { accessProfile: accessProfile });
       }
 
       // Non-streaming JSON mode (backwards compatible)
@@ -544,17 +595,19 @@ module.exports = function(req, res) {
         var estimatedCompletion = (text || '').length / 4;
         var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
         logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed, tools: TOOLS.map(function(t){ return t.function.name; }).join(',') });
-        responseUtil.sendJson(res, 200, {
-          success: true,
-          type: 'text',
-          action: null,
-          message: text || 'Sem resposta.',
-          data: { content: [{ type: 'text', text: text || 'Sem resposta.' }] },
-          error: null,
-          meta: {}
-        });
+        plans.checkAndIncrementQuota(user.id, res, function() {
+          responseUtil.sendJson(res, 200, {
+            success: true,
+            type: 'text',
+            action: null,
+            message: text || 'Sem resposta.',
+            data: { content: [{ type: 'text', text: text || 'Sem resposta.' }] },
+            error: null,
+            meta: {}
+          });
+        }, { accessProfile: accessProfile });
       });
-    });
+      }, { accessProfile: accessProfile });
     }, { max: 30, windowMs: 60000 }, user.id);
   });
 };
