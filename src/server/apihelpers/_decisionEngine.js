@@ -106,6 +106,7 @@ function isFlowRequest(classification, topic) {
   if (classification.confidence <= FLOW_CONFIDENCE_THRESHOLD) return false;
 
   var text = classification.sanitizedText;
+  if (/\b(creatina|whey|suplement|cafeina|pre treino)\b/.test(text) && !/\b(dieta|cardapio|treino|ficha)\b/.test(text)) return false;
   if (topic === 'workout') return /\b(monta|montar|cria|criar|gera|gerar|treino\s*\d+x|divisao|ficha)\b/.test(text);
   if (topic === 'diet') return /\b(monta|montar|cria|criar|gera|gerar|dieta|plano alimentar)\b/.test(text);
   return false;
@@ -223,6 +224,13 @@ function decideAction(classification, conversationState) {
 
   if (classification.topic === 'progress' || /\b(progresso|plato|deload|recuperacao|volume)\b/.test(classification.sanitizedText)) {
     decision.action = classification.confidence >= 0.7 ? 'call_agent_tools' : 'ask_clarifying';
+    decision.depth = decision.action === 'ask_clarifying' ? 'micro' : 'short';
+    decision.tokenLimit = resolveTokenLimit(decision);
+    return decision;
+  }
+
+  if (classification.topic === 'supplement' && /\b(suplement|creatina|whey|cafeina)\b/.test(classification.sanitizedText)) {
+    decision.action = semantic.asksForExplanation ? 'call_llm_short' : 'ask_clarifying';
     decision.depth = decision.action === 'ask_clarifying' ? 'micro' : 'short';
     decision.tokenLimit = resolveTokenLimit(decision);
     return decision;

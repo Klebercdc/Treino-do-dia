@@ -48,6 +48,74 @@ function query(path) {
   });
 }
 
+var EXECUTION_BASE_FIELDS = [
+  'execution_id',
+  'parent_execution_id',
+  'user_id',
+  'source',
+  'input_type',
+  'raw_input_summary',
+  'normalized_input_summary',
+  'intent_detected',
+  'intent_confidence',
+  'pipeline_selected',
+  'fallback_used',
+  'duration_ms',
+  'final_status',
+  'success',
+  'severity',
+  'created_at',
+  'decision_reason',
+  'response_summary',
+  'graph_path'
+];
+var EXECUTION_OPTIONAL_FIELDS = ['conversation_trace_id', 'correlation_id', 'diagnostic_quality_score', 'metadata'];
+
+function isMissingColumn42703(err) {
+  var text = normalizeError(err);
+  return text.indexOf('42703') >= 0 || /does not exist/i.test(text);
+}
+
+function parseMissingColumn(err) {
+  var text = normalizeError(err);
+  var match = text.match(/column\s+"?([a-z_]+)"?\s+(?:of relation\s+"diagnostic_executions"\s+)?does not exist/i)
+    || text.match(/diagnostic_executions\.([a-z_]+)\s+does not exist/i);
+  return match ? match[1] : null;
+}
+
+function buildExecutionSelect(includeOptional) {
+  return (includeOptional ? EXECUTION_BASE_FIELDS.concat(EXECUTION_OPTIONAL_FIELDS) : EXECUTION_BASE_FIELDS).join(',');
+}
+
+function logQueryDegraded(blockName, missingColumn, fallbackSelect) {
+  console.warn('[admin-diagnostics] observability_query_degraded', JSON.stringify({
+    event: 'observability_query_degraded',
+    block: blockName,
+    missing_column: missingColumn || null,
+    fallback_applied: true,
+    fallback_select: fallbackSelect
+  }));
+}
+
+function queryDiagnosticExecutions(blockName, queryBuilder, options) {
+  var cfg = options || {};
+  var allowBaseFallback = cfg.allowBaseFallback !== false;
+  var optionalDisabled = !!cfg.forceBaseOnly;
+  var selectPreferred = buildExecutionSelect(!optionalDisabled);
+  var selectBase = buildExecutionSelect(false);
+  var firstPath = queryBuilder(selectPreferred);
+  return query(firstPath).catch(function(err) {
+    if (!allowBaseFallback || optionalDisabled || !isMissingColumn42703(err)) throw err;
+    var missingColumn = parseMissingColumn(err);
+    logQueryDegraded(blockName, missingColumn, selectBase);
+    return query(queryBuilder(selectBase)).then(function(rows) {
+      return (rows || []).map(function(row) {
+        return Object.assign({ conversation_trace_id: null, correlation_id: null, diagnostic_quality_score: null, metadata: null }, row || {});
+      });
+    });
+  });
+}
+
 function normalizeError(err) {
   if (!err) return 'Erro desconhecido';
   if (typeof err === 'string') return err;
@@ -97,7 +165,7 @@ function buildRecentQuery(queryObj) {
   // correlation_id é opcional e pode não existir em instalações antigas.
   if (queryObj.conversation_trace_id) filters.push('conversation_trace_id=eq.' + encodeURIComponent(String(queryObj.conversation_trace_id)));
 
-  var base = 'diagnostic_executions?select=execution_id,conversation_trace_id,parent_execution_id,user_id,source,input_type,raw_input_summary,normalized_input_summary,intent_detected,intent_confidence,pipeline_selected,fallback_used,duration_ms,final_status,success,severity,created_at,decision_reason,response_summary,graph_path&order=created_at.desc&limit=' + pageSize + '&offset=' + offset;
+  var base = 'diagnostic_executions?select={SELECT_FIELDS}&order=created_at.desc&limit=' + pageSize + '&offset=' + offset;
   return {
     query: filters.length ? (base + '&' + filters.join('&')) : base,
     page: page,
@@ -125,7 +193,9 @@ function buildImpactRanking(executions) {
 function fetchExecutionDetail(executionId) {
   var encodedId = encodeURIComponent(executionId);
   return Promise.all([
-    query('diagnostic_executions?execution_id=eq.' + encodedId + '&select=*'),
+    queryDiagnosticExecutions('execution_detail', function(selectFields) {
+      return 'diagnostic_executions?execution_id=eq.' + encodedId + '&select=' + selectFields;
+    }),
     query('diagnostic_steps?execution_id=eq.' + encodedId + '&select=*&order=step_order.asc')
   ]).then(function(result) {
     return { execution: result[0] && result[0][0] ? result[0][0] : null, steps: result[1] || [] };
@@ -178,11 +248,15 @@ function buildObservabilityPayload(req) {
       });
     }, null),
     safeExec('recent', function() {
-      return query(recentCfg.query);
+      return queryDiagnosticExecutions('overview_recent', function(selectFields) {
+        return recentCfg.query.replace('{SELECT_FIELDS}', selectFields);
+      });
     }, []),
     safeExec('journeys', function() {
       if (!journeyTraceId) return [];
-      return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(journeyTraceId) + '&select=execution_id,parent_execution_id,intent_detected,pipeline_selected,success,fallback_used,severity,created_at&order=created_at.asc&limit=300');
+      return queryDiagnosticExecutions('overview_journeys', function(selectFields) {
+        return 'diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(journeyTraceId) + '&select=' + selectFields + '&order=created_at.asc&limit=300';
+      });
     }, []),
     safeExec('node_stats', function() {
       return query('diagnostic_steps?select=node_key,success,duration_ms,error_code,error_message,created_at&order=created_at.desc&limit=500').then(function(rows) {
@@ -190,12 +264,16 @@ function buildObservabilityPayload(req) {
       });
     }, []),
     safeExec('alerts', function() {
-      return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,created_at&order=created_at.desc&limit=120').then(function(rows) {
+      return queryDiagnosticExecutions('overview_alerts', function(selectFields) {
+        return 'diagnostic_executions?select=' + selectFields + '&order=created_at.desc&limit=120';
+      }).then(function(rows) {
         return healthRules.buildAlerts(rows || []);
       });
     }, []),
     safeExec('checklist', function() {
-      return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,metadata&order=created_at.desc&limit=100').then(function(rows) {
+      return queryDiagnosticExecutions('overview_checklist', function(selectFields) {
+        return 'diagnostic_executions?select=' + selectFields + '&order=created_at.desc&limit=100';
+      }).then(function(rows) {
         return buildChecklist(rows);
       });
     }, [])
@@ -386,7 +464,11 @@ module.exports = function(req, res) {
 
       if (action === 'recent') {
         var recentCfg = buildRecentQuery(req.query || {});
-        return safeExec('recent', function() { return query(recentCfg.query); }, []).then(function(outcome) {
+        return safeExec('recent', function() {
+          return queryDiagnosticExecutions('recent', function(selectFields) {
+            return recentCfg.query.replace('{SELECT_FIELDS}', selectFields);
+          });
+        }, []).then(function(outcome) {
           return sendOk(res, { executions: outcome.value, page: recentCfg.page, pageSize: recentCfg.pageSize, errors: { recent: outcome.error } });
         });
       }
@@ -403,7 +485,7 @@ module.exports = function(req, res) {
 
       if (action === 'health') {
         return Promise.all([
-          query('diagnostic_executions?select=duration_ms,success,fallback_used,created_at&order=created_at.desc&limit=200'),
+          queryDiagnosticExecutions('health_recent', function(selectFields) { return 'diagnostic_executions?select=' + selectFields + '&order=created_at.desc&limit=200'; }),
           query('diagnostic_execution_health?select=*')
         ]).then(function(result) {
           var recentRows = result[0] || [];
@@ -425,7 +507,9 @@ module.exports = function(req, res) {
 
       if (action === 'alerts') {
         return safeExec('alerts', function() {
-          return query('diagnostic_executions?select=execution_id,success,fallback_used,duration_ms,pipeline_selected,created_at&order=created_at.desc&limit=120');
+          return queryDiagnosticExecutions('alerts', function(selectFields) {
+            return 'diagnostic_executions?select=' + selectFields + '&order=created_at.desc&limit=120';
+          });
         }, []).then(function(outcome) {
           return sendOk(res, { alerts: healthRules.buildAlerts(outcome.value || []), impactRanking: buildImpactRanking(outcome.value || []), errors: { alerts: outcome.error } });
         });
@@ -441,7 +525,9 @@ module.exports = function(req, res) {
 
       if (action === 'checklist') {
         return safeExec('checklist', function() {
-          return query('diagnostic_executions?select=intent_detected,pipeline_selected,fallback_used,graph_path,decision_reason,raw_input_summary,metadata&order=created_at.desc&limit=100');
+          return queryDiagnosticExecutions('checklist', function(selectFields) {
+            return 'diagnostic_executions?select=' + selectFields + '&order=created_at.desc&limit=100';
+          });
         }, []).then(function(outcome) {
           return sendOk(res, { checklist: buildChecklist(outcome.value), errors: { checklist: outcome.error } });
         });
@@ -451,7 +537,9 @@ module.exports = function(req, res) {
         var traceId = String((req.query && req.query.conversation_trace_id) || '').trim();
         if (!traceId) return sendError(res, 'TRACE_ID_REQUIRED', 'conversation_trace_id é obrigatório.', 400);
         return safeExec('journeys', function() {
-          return query('diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(traceId) + '&select=execution_id,parent_execution_id,intent_detected,pipeline_selected,success,fallback_used,severity,created_at&order=created_at.asc&limit=300');
+          return queryDiagnosticExecutions('journeys', function(selectFields) {
+            return 'diagnostic_executions?conversation_trace_id=eq.' + encodeURIComponent(traceId) + '&select=' + selectFields + '&order=created_at.asc&limit=300';
+          });
         }, []).then(function(outcome) {
           return sendOk(res, { journey: outcome.value, conversationTraceId: traceId, errors: { journeys: outcome.error } });
         });
@@ -475,7 +563,7 @@ module.exports = function(req, res) {
     if (req.method === 'POST') {
       if (action === 'health') {
         return Promise.all([
-          query('diagnostic_executions?select=duration_ms,success,fallback_used,created_at&order=created_at.desc&limit=200'),
+          queryDiagnosticExecutions('health_post_recent', function(selectFields) { return 'diagnostic_executions?select=' + selectFields + '&order=created_at.desc&limit=200'; }),
           query('diagnostic_execution_health?select=*')
         ]).then(function(result) {
           var recentRows = result[0] || [];

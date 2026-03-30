@@ -178,7 +178,26 @@ module.exports = function(req, res) {
       });
 
       function sendTracked(statusCode, payload, outcome) {
-        var responseText = payload && payload.message ? String(payload.message) : '';
+        var normalizedPayload = payload && typeof payload === 'object' ? Object.assign({}, payload) : {};
+        if (typeof normalizedPayload.success !== 'boolean' || typeof normalizedPayload.type !== 'string') {
+          console.warn('[chat] diet_response_invalid_contract', JSON.stringify({
+            event: 'diet_response_invalid_contract',
+            statusCode: statusCode,
+            payloadKeys: normalizedPayload ? Object.keys(normalizedPayload) : null
+          }));
+          normalizedPayload = {
+            success: false,
+            type: 'error',
+            action: null,
+            message: 'Resposta interna inválida. Tente novamente em instantes.',
+            error: 'INVALID_INTERNAL_CONTRACT',
+            data: { content: [{ type: 'text', text: 'Resposta interna inválida.' }] },
+            meta: { fallback: true }
+          };
+          statusCode = 500;
+          outcome = 'failure';
+        }
+        var responseText = normalizedPayload && normalizedPayload.message ? String(normalizedPayload.message) : '';
         var responseSizeEstimate = responseText.length;
         var localReplyEligible = !!(decision && (decision.action === 'local_reply' || decision.action === 'ask_clarifying' || decision.action === 'ask_rephrase'));
         safeTrack(function() {
@@ -187,7 +206,7 @@ module.exports = function(req, res) {
             pipelineSelected: decision ? decision.action : null,
             localReplyEligible: localReplyEligible,
             llmCalled: !localReplyEligible,
-            fallbackUsed: !!(payload && payload.meta && payload.meta.fallback),
+            fallbackUsed: !!(normalizedPayload && normalizedPayload.meta && normalizedPayload.meta.fallback),
             lowConfidence: !!(classification && classification.confidence < 0.62),
             responseSizeEstimate: responseSizeEstimate,
             promptSizeEstimate: String(lastContent || '').length,
@@ -197,17 +216,17 @@ module.exports = function(req, res) {
         if (outcome === 'failure') {
           safeTrack(function() { tracker.markFailure({
             errorCode: payload && payload.error ? payload.error : 'REQUEST_FAILED',
-            errorMessage: payload && payload.message ? payload.message : 'Falha na execução.'
+            errorMessage: normalizedPayload && normalizedPayload.message ? normalizedPayload.message : 'Falha na execução.'
           }); });
         } else {
           safeTrack(function() { tracker.markSuccess({
-            finalStatus: payload && payload.success === false ? 'failed' : 'success',
-            responseSummary: payload && payload.message ? payload.message : ''
+            finalStatus: normalizedPayload && normalizedPayload.success === false ? 'failed' : 'success',
+            responseSummary: normalizedPayload && normalizedPayload.message ? normalizedPayload.message : ''
           }); });
         }
         tracker.finishExecution(function(err) {
           if (err) console.error('[diagnostics] failed to persist execution', err);
-          return responseUtil.sendJson(res, statusCode, payload);
+          return responseUtil.sendJson(res, statusCode, normalizedPayload);
         });
       }
 
