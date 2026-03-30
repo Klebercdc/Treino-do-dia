@@ -34,10 +34,10 @@ function buildLocalReply(decision, classification) {
       exercise: 'Você quer ajustar técnica, trocar exercício ou aliviar dor?',
       general: 'Te ajudo sim. É treino, dieta ou suplemento?'
     },
-    vague_single_word: 'Te ajudo sim. É treino, dieta ou suplemento?',
+    vague_single_word: 'Te ajudo sim. Qual é seu foco agora: treino, dieta ou suplemento?',
     complaint: 'Beleza, vamos ajustar do jeito certo. O que ficou ruim exatamente?',
     vent: 'Entendi. Hoje dá para ajustar sem forçar. Seu cansaço é muscular, sono ruim ou estresse?',
-    ask_rephrase: 'Manda em uma frase o que você quer resolver.'
+    ask_rephrase: 'Manda em uma frase objetiva o que você quer resolver agora.'
   };
 
   if (triage === 'topic_mention') {
@@ -54,6 +54,7 @@ function buildLocalReply(decision, classification) {
     if (/creatina/.test(text)) return catalog.topic_mention.supplement;
     if (/treino/.test(text)) return catalog.topic_mention.workout;
     if (/dieta|secar|massa/.test(text)) return catalog.topic_mention.diet;
+    if (/isso|essa|esse/.test(text)) return 'Perfeito. Quando você diz "isso", é sobre treino, dieta ou suplemento?';
     return catalog.vague_single_word;
   }
   if (triage === 'complaint') {

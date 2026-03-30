@@ -77,13 +77,27 @@ function triageMessage(input) {
   if (/^(hmm|hm|tipo|sei la)$/.test(text)) return 'filler';
   if (/(ruim|nao gostei|ficou ruim|nao entendi|confuso)/.test(text)) return 'complaint';
   if (/(to cansado|travado|estagnado|nao evoluo|nao cresco|nao respondo mais|perdido|dificil|desmotivado)/.test(text)) return 'vent';
-  if (/\b(como|o que|qual|quando|por que|porque|funciona|vale|compensa|devo|sera que|e hora de|ta na hora de|continuo ou mudo)\b/.test(text) && /\?/.test(text)) return 'direct_question';
-  if (/\b(quero|monta|cria|gere|ajusta|revisa|preciso|me ajuda|troco|corto|subo|desco)\b/.test(text)) return 'direct_request';
+
+  var hasQuestionMarker = /\?|\b(como|o que|qual|quando|por que|porque|funciona|vale|compensa|devo|sera que|e hora de|ta na hora de|continuo ou mudo|pode|devo)\b/.test(text);
+  if (hasQuestionMarker) return 'direct_question';
+
+  if (/\b(quero|monta|montar|cria|criar|gere|gera|ajusta|revisa|preciso|me ajuda|troco|corto|subo|desco|planeja|estruture|organiza)\b/.test(text)) return 'direct_request';
   if (/\b(esse treino|essa dieta|ajusta|mudar|corrigir|mudar volume|mudar frequencia)\b/.test(text)) return 'adjustment_request';
   if (/\b(progresso|evolui|evolucao|plato|travei|resultado|deload agora)\b/.test(text)) return 'progress_question';
   if (/\b(treino|dieta|creatina|suplemento|cutting|bulking|dor)\b/.test(text) && tokens.length <= 3 && !/\?/.test(text)) return 'topic_mention';
   if (/\b(exercicio|fisiologia|periodizacao|macros|tdee|dosagem)\b/.test(text)) return 'technical_question';
   return 'unknown';
+}
+
+function buildSemanticSignals(text) {
+  return {
+    asksForPlan: /\b(monta|montar|cria|criar|gera|gerar|planeja|estruture|organiza)\b/.test(text),
+    asksForAdjustment: /\b(ajusta|ajustar|corrigir|mudar|troco|corto|subo|desco|revisa|revisar)\b/.test(text),
+    asksForExplanation: /\b(como|por que|porque|explica|funciona|qual|quando|vale|compensa|devo|sera que)\b/.test(text),
+    topicShiftCue: /\b(agora|mudando de assunto|outro assunto|deixa isso|falando nisso)\b/.test(text),
+    vagueReference: /\b(isso|essa|esse|aquilo|assim)\b/.test(text),
+    progressSignal: /\b(travado|estagnado|nao evoluo|plato|deload|progresso|recuperacao)\b/.test(text)
+  };
 }
 
 function classifyIntent(input, continuationContext) {
@@ -92,6 +106,7 @@ function classifyIntent(input, continuationContext) {
   var inheritedTopic = continuationContext && continuationContext.inheritedTopic;
   var inheritedNeed = continuationContext && continuationContext.inheritedNeed;
   var continuationHit = !!(continuationContext && continuationContext.continuationHit);
+  var semanticSignals = buildSemanticSignals(text);
 
   var scores = {
     action: { request: 0, question: 0, adjust: 0, vent: 0, complaint: 0 },
@@ -100,9 +115,9 @@ function classifyIntent(input, continuationContext) {
     clarity: Math.max(0, Math.min(1, (input.tokenCount || 0) / 8))
   };
 
-  if (/\b(quero|monta|cria|gere|ajusta|revisa|preciso|me ajuda|troco|corto|subo|desco)\b/.test(text)) scores.action.request += 2;
-  if (/\?/.test(text) || /\b(como|qual|vale|funciona|dose|compensa|devo|sera que)\b/.test(text)) scores.action.question += 1.5;
-  if (/\b(ruim|nao gostei|ajusta|corrigir|mudar|troco|corto|subo|desco)\b/.test(text)) scores.action.adjust += 2;
+  if (semanticSignals.asksForPlan) scores.action.request += 2;
+  if (semanticSignals.asksForExplanation || /\?/.test(text)) scores.action.question += 1.5;
+  if (semanticSignals.asksForAdjustment) scores.action.adjust += 2;
   if (/\b(cansado|travado|estagnado|nao evoluo|nao cresco|nao respondo mais|perdido|desmotivado|dificil)\b/.test(text)) {
     scores.action.vent += 1.5;
     scores.emotion += 2;
@@ -116,11 +131,11 @@ function classifyIntent(input, continuationContext) {
   if (/\b(recuperacao|sono|fadiga|deload|cansado)\b/.test(text)) scores.topic.recovery += 1.5;
   if (/\b(progresso|evolui|plato|resultado|estagnado)\b/.test(text)) scores.topic.progress += 1.5;
 
-  if (continuationHit && inheritedTopic && scores.topic[inheritedTopic] < 1.5) {
+  if (continuationHit && inheritedTopic && !semanticSignals.topicShiftCue && scores.topic[inheritedTopic] < 1.5) {
     scores.topic[inheritedTopic] += 1.5;
   }
   if (continuationHit && inheritedNeed === 'create') scores.action.request += 1;
-  if (continuationHit && /^montar$/.test(text)) scores.action.request += 2;
+  if (continuationHit && /^(montar|ajustar|revisar)$/.test(text)) scores.action.request += 2;
 
   var topTopic = 'general';
   Object.keys(scores.topic).forEach(function(k) {
@@ -137,11 +152,13 @@ function classifyIntent(input, continuationContext) {
   else if (triage === 'acknowledgment') kind = 'confirmation';
   else if (triage === 'unknown' || triage === 'noise' || triage === 'test_surface') kind = 'unknown';
 
-  if (continuationHit && /^montar$/.test(text)) kind = 'request';
+  if (continuationHit && /^(montar|ajustar|revisar)$/.test(text)) kind = 'request';
 
   var confidence = Math.min(0.98, 0.35 + scores.clarity + (scores.topic[topTopic] / 6));
-  if (continuationHit) confidence = Math.min(0.98, confidence + 0.12);
+  if (semanticSignals.asksForExplanation || semanticSignals.asksForPlan) confidence = Math.min(0.98, confidence + 0.05);
+  if (continuationHit && !semanticSignals.topicShiftCue) confidence = Math.min(0.98, confidence + 0.12);
   if (triage === 'unknown') confidence = Math.max(0.4, confidence - 0.2);
+  if (semanticSignals.topicShiftCue && continuationHit) confidence = Math.max(0.45, confidence - 0.12);
 
   return {
     triage: triage,
@@ -151,6 +168,7 @@ function classifyIntent(input, continuationContext) {
     action: 'ask_clarifying',
     confidence: confidence,
     flags: input.flags,
+    semanticSignals: semanticSignals,
     continuation: {
       hit: continuationHit,
       inheritedTopic: inheritedTopic || null,
