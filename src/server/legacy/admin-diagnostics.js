@@ -156,6 +156,8 @@ function buildExerciseCatalogSummary(rows) {
     low_content_value_count: 0,
     low_completeness_count: 0,
     low_media_confidence_count: 0,
+    known_exercises_without_instructions: 0,
+    known_exercises_without_common_errors: 0,
     with_instructions_count: 0,
     with_common_errors_count: 0,
     with_breathing_tip_count: 0
@@ -170,6 +172,9 @@ function buildExerciseCatalogSummary(rows) {
     if (Array.isArray(item.instructions) && item.instructions.length) summary.with_instructions += 1;
     if (Array.isArray(item.common_errors) && item.common_errors.length) summary.with_common_errors += 1;
     if (item.breathing_tip) summary.with_breathing_tip += 1;
+    var isKnown = Boolean(item.normalized_lookup_key || item.target_muscle);
+    if (isKnown && !(Array.isArray(item.instructions) && item.instructions.length)) summary.known_exercises_without_instructions += 1;
+    if (isKnown && !(Array.isArray(item.common_errors) && item.common_errors.length)) summary.known_exercises_without_common_errors += 1;
     if (Number(item.completeness_score || 0) < 55) summary.low_completeness += 1;
     if (Number(item.media_confidence_score || 0) < 0.5) summary.low_media_confidence += 1;
     if ((Array.isArray(item.quality_flags) && item.quality_flags.indexOf('low_content_value') >= 0) || Number(item.completeness_score || 0) < 55) summary.low_content_value_count += 1;
@@ -320,7 +325,7 @@ function buildObservabilityPayload(req) {
       });
     }, []),
     safeExec('exercise_catalog', function() {
-      return query('exercises?select=id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags,is_active&is_active=eq.true&limit=2000').then(function(rows) {
+      return query('exercises?select=id,normalized_lookup_key,target_muscle,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags,is_active&is_active=eq.true&limit=2000').then(function(rows) {
         return buildExerciseCatalogSummary(rows);
       });
     }, null)
@@ -597,7 +602,7 @@ module.exports = function(req, res) {
 
 
       if (action === 'exercise_catalog') {
-        return query('exercises?select=id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags,is_active&is_active=eq.true&limit=2000')
+        return query('exercises?select=id,normalized_lookup_key,target_muscle,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags,is_active&is_active=eq.true&limit=2000')
           .then(function(rows) {
             var summary = buildExerciseCatalogSummary(rows);
             console.info('[admin-diagnostics] exercise_catalog_admin_summary_loaded', summary);

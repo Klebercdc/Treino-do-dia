@@ -4950,7 +4950,8 @@ function _renderExerciseDiscResult(d, renderMode = "enriched") {
 
   const primaryMuscle = formatMuscleLabel(d.target_muscle);
   const secondaryMuscles = Array.isArray(d.secondary_muscles) ? d.secondary_muscles.map(formatMuscleLabel).filter(Boolean) : [];
-  const musclesText = [primaryMuscle, ...secondaryMuscles].filter(Boolean).join(', ');
+  const muscleList = [primaryMuscle, ...secondaryMuscles].filter(Boolean);
+  const musclesText = muscleList.length <= 1 ? (muscleList[0] || '') : `${muscleList.slice(0, -1).join(', ')} e ${muscleList[muscleList.length - 1]}`;
 
   document.getElementById('exerciseDiscInfo').innerHTML = `
     <div style="font-family:var(--display);font-size:1.14rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
@@ -5002,7 +5003,9 @@ function formatMuscleLabel(value) {
   const dict = {
     gluteos: 'Glúteos', posteriores_de_coxa: 'Posteriores de coxa', core: 'Core',
     peito: 'Peito', triceps: 'Tríceps', ombros: 'Ombros', quadriceps: 'Quadríceps',
-    dorsais: 'Dorsais', biceps: 'Bíceps', antebracos: 'Antebraços', panturrilhas: 'Panturrilhas'
+    dorsais: 'Dorsais', biceps: 'Bíceps', antebracos: 'Antebraços', panturrilhas: 'Panturrilhas',
+    trapezio: 'Trapézio', peito_superior: 'Peito superior', deltoides_posteriores: 'Deltoides posteriores',
+    flexores_do_quadril: 'Flexores do quadril', abdomen: 'Abdômen', lombar: 'Lombar'
   };
   const key = String(value || '').trim().toLowerCase();
   if (!key) return '';

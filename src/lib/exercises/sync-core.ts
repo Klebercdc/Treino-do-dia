@@ -216,9 +216,10 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
         .from('exercises')
         .select('source_id,source,name,name_en,name_pt,slug,normalized_lookup_key,body_part,target_muscle,secondary_muscles,equipment,instructions,common_errors,breathing_tip,range_of_motion,media_url,media_thumbnail_url,media_type,media_provider,media_confidence_score,completeness_score,content_source,last_enriched_at,quality_flags,gif_url')
         .eq('is_active', true)
-        .or('completeness_score.lt.72,media_type.neq.video,instructions.eq.[],media_confidence_score.lt.0.62,quality_flags.cs.{missing_instructions}')
+        .or('quality_flags.cs.{low_content_value},quality_flags.cs.{missing_instructions},quality_flags.cs.{missing_common_errors},quality_flags.cs.{missing_breathing_tip},quality_flags.cs.{missing_range_of_motion},quality_flags.cs.{low_media_confidence},completeness_score.lt.78,media_confidence_score.lt.65')
         .order('completeness_score', { ascending: true })
         .order('media_confidence_score', { ascending: true })
+        .order('updated_at', { ascending: true })
         .range(mediaOffset, mediaOffset + mediaBatchSize - 1);
       if (error || !data?.length) break;
 

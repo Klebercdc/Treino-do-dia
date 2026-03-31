@@ -28,22 +28,23 @@ export function computeMediaConfidenceScore(exercise: Partial<ExerciseEntity>, m
     ...tokenize(exercise.target_muscle || ''),
   ]));
 
-  let score = mediaCandidate.type === 'video' ? 0.12 : mediaCandidate.type === 'gif' ? 0.3 : 0.08;
+  let score = mediaCandidate.type === 'video' ? 0.08 : mediaCandidate.type === 'gif' ? 0.34 : 0.06;
   const overlap = tokens.filter((token) => blob.includes(token)).length;
-  if (tokens.length) score += Math.min(0.35, (overlap / tokens.length) * 0.35);
+  if (tokens.length) score += Math.min(0.32, (overlap / tokens.length) * 0.32);
 
   const duration = Number(mediaCandidate.metadata?.duration || 0);
   if (mediaCandidate.type === 'video') {
-    if (duration >= 6 && duration <= 50) score += 0.08;
-    else if (duration > 90 || duration < 3) score -= 0.12;
+    if (duration >= 8 && duration <= 45) score += 0.06;
+    else if (duration > 75 || duration < 4) score -= 0.18;
   }
 
   const width = Number(mediaCandidate.metadata?.width || 0);
   const height = Number(mediaCandidate.metadata?.height || 0);
-  if (width >= 640 && height >= 360) score += 0.06;
+  if (width >= 640 && height >= 360) score += 0.04;
 
-  if (/motivation|compilation|random|stock|meme|edit|broll|gym tour|workout music/i.test(blob)) score -= 0.28;
-  if (overlap <= 1) score -= 0.18;
+  if (/motivation|compilation|random|stock|meme|edit|broll|gym tour|workout music|vlog|challenge/i.test(blob)) score -= 0.34;
+  if (/full body|fat burn|hiit|follow along|playlist/i.test(blob)) score -= 0.2;
+  if (overlap <= 1) score -= 0.22;
   return Number(Math.max(0, Math.min(1, score)).toFixed(4));
 }
 
@@ -93,7 +94,7 @@ export function pickBestExerciseMedia(
     .sort((a, b) => b.score - a.score);
 
   const best = ranked[0];
-  const threshold = 0.72;
+  const threshold = 0.79;
   if (!best || best.score < threshold) {
     return {
       media_url: gifFallback || currentMedia.media_url || null,
