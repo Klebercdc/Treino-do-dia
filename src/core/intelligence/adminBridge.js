@@ -4,15 +4,36 @@
   var BRIDGE_NAME = 'KroniaIntelligenceAdmin';
   var PANEL_ID = 'kronia-intelligence-admin-panel';
   var FAB_ID = 'kronia-intelligence-admin-fab';
-  var POLL_MS = 1500;
+  var POLL_MS = 15000;
+  var fallbackPollTimer = null;
+
+  function getAccessProfile() {
+    var profile = window.KroniaAccessProfile;
+    if (!profile || typeof profile !== 'object') {
+      return {
+        isAdmin: false,
+        canSeeAdminUI: false,
+      };
+    }
+    return {
+      isAdmin: !!profile.isAdmin,
+      canSeeAdminUI: !!profile.canSeeAdminUI,
+    };
+  }
+
+  function isAdminAllowed() {
+    var profile = getAccessProfile();
+    return !!(profile.isAdmin || profile.canSeeAdminUI);
+  }
+
+  function getIntelligenceFacade() {
+    return window.KroniaIntelligence && typeof window.KroniaIntelligence === 'object'
+      ? window.KroniaIntelligence
+      : null;
+  }
 
   function safeJsonParse(raw, fallback) {
     try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
-  }
-
-  function isAdminUser() {
-    var profile = window.KroniaAccessProfile || {};
-    return !!(profile.isAdmin || profile.canSeeAdminUI);
   }
 
   function iconBrain() {
@@ -28,7 +49,13 @@
     node.className = 'kronia-intelligence-admin-fab';
     node.innerHTML = iconBrain() + '<span>INTELLIGENCE</span>';
     node.addEventListener('click', function () {
-      window[BRIDGE_NAME] && window[BRIDGE_NAME].openPanel();
+      // Caminho visual oficial: fachada KroniaIntelligence.openAdminPanel().
+      var facade = getIntelligenceFacade();
+      if (facade && typeof facade.openAdminPanel === 'function') {
+        facade.openAdminPanel();
+        return;
+      }
+      window[BRIDGE_NAME] && window[BRIDGE_NAME].togglePanel && window[BRIDGE_NAME].togglePanel();
     });
     document.body.appendChild(node);
     return node;
@@ -176,8 +203,9 @@
 
   function generateTaskFromInsight(title) {
     try {
-      if (window.KroniaIntelligence && typeof window.KroniaIntelligence.track === 'function') {
-        window.KroniaIntelligence.track({
+      var facade = getIntelligenceFacade();
+      if (facade && typeof facade.track === 'function') {
+        facade.track({
           module: 'intelligence',
           action: 'insight_task_generate',
           status: 'success',
@@ -192,7 +220,7 @@
   var bridge = {
     openPanel: async function () {
       try {
-        if (!isAdminUser()) return { success: false, error: { code: 'FORBIDDEN' } };
+        if (!isAdminAllowed()) return { success: false, error: { code: 'FORBIDDEN' } };
         var panel = ensurePanel();
         panel.classList.add('is-open');
         renderError('Carregando inteligência...');
@@ -272,8 +300,8 @@
     refreshAccess: function () {
       try {
         var fab = ensureFab();
-        fab.style.display = isAdminUser() ? 'inline-flex' : 'none';
-        if (!isAdminUser()) this.closePanel();
+        fab.style.display = isAdminAllowed() ? 'inline-flex' : 'none';
+        if (!isAdminAllowed()) this.closePanel();
       } catch (_) {}
     },
     generateTask: function (title) {
@@ -284,9 +312,35 @@
 
   window[BRIDGE_NAME] = window[BRIDGE_NAME] || bridge;
 
+  async function hasAuthenticatedSession() {
+    try {
+      var session = await window._sb?.auth?.getSession?.();
+      return !!session?.data?.session?.access_token;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function startFallbackPolling() {
+    if (fallbackPollTimer) return;
+    // Polling leve apenas como fallback quando auth ainda não hidratou.
+    fallbackPollTimer = window.setInterval(async function () {
+      bridge.refreshAccess();
+      var hasSession = await hasAuthenticatedSession();
+      if (hasSession && fallbackPollTimer) {
+        clearInterval(fallbackPollTimer);
+        fallbackPollTimer = null;
+      }
+    }, POLL_MS);
+  }
+
   function boot() {
     bridge.refreshAccess();
-    window.setInterval(function () { bridge.refreshAccess(); }, POLL_MS);
+    hasAuthenticatedSession().then(function (hasSession) {
+      if (!hasSession) startFallbackPolling();
+    }).catch(function () {
+      startFallbackPolling();
+    });
     window.generateTask = window.generateTask || function (title) {
       try { return bridge.generateTask(title); } catch (_) { return { success: false }; }
     };
