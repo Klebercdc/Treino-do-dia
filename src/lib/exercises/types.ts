@@ -48,6 +48,8 @@ export interface ExerciseEntity {
   media_thumbnail_url?: string | null;
   media_type?: 'video' | 'gif' | 'image' | null;
   media_provider?: string | null;
+  completeness_score?: number;
+  media_confidence_score?: number;
   youtube_fallback_url?: string | null;
   common_errors?: string[];
   breathing_tip?: string | null;
@@ -102,6 +104,7 @@ export interface ExerciseResponsePayload {
     provider: string;
     thumbnailUrl: string | null;
     score: number;
+    confidenceScore?: number;
   };
   variations: Array<{ id: string; slug: string; name_pt: string; name_en: string; equipment: string | null }>;
   metadata: {
@@ -178,6 +181,7 @@ export interface NormalizedExerciseDetails {
     thumbnailUrl: string | null;
     type: 'video' | 'gif' | 'image' | 'none';
     provider: string;
+    confidenceScore?: number;
   };
   instructions: string[];
   target_muscle: string | null;
@@ -189,6 +193,8 @@ export interface NormalizedExerciseDetails {
   common_errors?: string[];
   breathing_tip?: string | null;
   range_of_motion?: string | null;
+  completeness_score?: number;
+  media_confidence_score?: number;
   metadata: {
     cacheHit: boolean;
     externalFetch: boolean;

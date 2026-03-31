@@ -2,6 +2,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger';
+import { computeExerciseCompletenessScore, getCuratedExerciseContent, mergeCuratedExerciseContent } from './catalog-curation';
+import { CURATED_PT_ALIASES } from './aliases';
+import { selectBestVideo } from './media-ranking';
 
 export type SyncMode = 'import' | 'sync';
 
@@ -40,6 +43,8 @@ type ExercisePayload = Record<string, unknown> & {
   media_thumbnail_url: string | null;
   media_type: 'video' | 'gif' | null;
   media_provider: 'Pexels' | 'ExerciseDB' | null;
+  media_confidence_score: number;
+  completeness_score: number;
 };
 
 type SyncState = {
@@ -58,6 +63,10 @@ export type SyncSummary = {
   aliasesSeeded: number;
   importOffset: number;
   mediaOffset: number;
+  completenessImproved: number;
+  gainedVideo: number;
+  remainedGifOnly: number;
+  noMedia: number;
 };
 
 const REQUIRED_ENVS = ['EXERCISEDB_BASE_URL', 'EXERCISEDB_API_KEY', 'PEXELS_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
@@ -147,7 +156,7 @@ function toExercisePayload(item: ExerciseDbItem): ExercisePayload {
   const instructions = toStringArray(item.instructions);
   const now = new Date().toISOString();
 
-  return {
+  const base = {
     source_id: String(item.id || normalized),
     source: 'ExerciseDB',
     name,
@@ -159,7 +168,7 @@ function toExercisePayload(item: ExerciseDbItem): ExercisePayload {
     target_muscle: item.target ? String(item.target).toLowerCase() : null,
     secondary_muscles: toStringArray(item.secondaryMuscles).map((x) => x.toLowerCase()),
     equipment: item.equipment ? String(item.equipment).toLowerCase() : null,
-    instructions: instructions.length ? instructions : ['Mantenha técnica controlada e ajuste a carga ao seu nível.'],
+    instructions: instructions.length ? instructions : [],
     common_errors: [],
     breathing_tip: null,
     range_of_motion: null,
@@ -167,8 +176,15 @@ function toExercisePayload(item: ExerciseDbItem): ExercisePayload {
     media_thumbnail_url: gif || null,
     media_type: gif ? 'gif' : null,
     media_provider: gif ? 'ExerciseDB' : null,
+    media_confidence_score: gif ? 0.42 : 0.1,
     youtube_fallback_url: youtubeFallbackUrl(name),
     updated_at: now,
+  } as any;
+
+  const merged = mergeCuratedExerciseContent(base, getCuratedExerciseContent(base.normalized_lookup_key));
+  return {
+    ...(merged as ExercisePayload),
+    completeness_score: computeExerciseCompletenessScore(merged as any),
   };
 }
 
@@ -183,83 +199,90 @@ async function upsertExercises(supabase: any, rows: ExercisePayload[], mode: Syn
     const { error } = await supabase.from('exercises').upsert(chunk, { onConflict: 'slug' });
     if (!error) {
       upserted += chunk.length;
-      for (const row of chunk) emit(mode, 'exercise_upsert_success', { key: row.normalized_lookup_key });
-      if (mode === 'import') emit(mode, 'import_exercise_batch_completed', { batch_start: i, batch_size: chunk.length });
       continue;
     }
-
-    if (mode === 'import') emit(mode, 'import_exercise_batch_failed', { batch_start: i, reason: error.message });
-    if (mode === 'sync') emit(mode, 'batch_failed', { batch_start: i, reason: error.message });
 
     for (const row of chunk) {
       try {
         const { error: singleError } = await supabase.from('exercises').upsert(row, { onConflict: 'slug' });
         if (singleError) {
           failed += 1;
-          emit(mode, 'exercise_upsert_failed', { key: row.normalized_lookup_key, reason: singleError.message });
         } else {
           upserted += 1;
-          emit(mode, 'exercise_upsert_success', { key: row.normalized_lookup_key });
         }
-      } catch (singleError) {
+      } catch {
         failed += 1;
-        emit(mode, 'exercise_upsert_failed', { key: row.normalized_lookup_key, reason: singleError instanceof Error ? singleError.message : String(singleError) });
       }
     }
-
-    if (mode === 'import') emit(mode, 'import_exercise_batch_completed', { batch_start: i, batch_size: chunk.length, fallback_item_retry: true });
   }
 
   return { upserted, failed };
 }
 
-async function enrichWithPexels(rows: ExercisePayload[], mode: SyncMode, requestDelayMs: number): Promise<{ ok: number; failed: number }> {
+async function enrichWithPexels(rows: ExercisePayload[], mode: SyncMode, requestDelayMs: number): Promise<{ ok: number; failed: number; gainedVideo: number; remainedGifOnly: number; noMedia: number }> {
   let ok = 0;
   let failed = 0;
+  let gainedVideo = 0;
+  let remainedGifOnly = 0;
+  let noMedia = 0;
 
   for (const row of rows) {
-    if (row.media_type === 'video' && row.media_url) continue;
-    emit(mode, mode === 'sync' ? 'media_enrich_started' : 'exercise_media_enrich_started', { key: row.normalized_lookup_key });
+    const hadVideo = row.media_type === 'video' && !!row.media_url;
+    const hadGif = row.media_type === 'gif' && !!row.media_url;
+    if (hadVideo) continue;
+
     try {
-      const query = encodeURIComponent(`${row.name_en} exercise`);
-      const url = `https://api.pexels.com/videos/search?query=${query}&per_page=8`;
+      const query = encodeURIComponent(`${row.name_en} exercise proper form`);
+      const url = `https://api.pexels.com/videos/search?query=${query}&per_page=10`;
       const response = await fetch(url, { headers: { Authorization: process.env.PEXELS_API_KEY! } });
       if (!response.ok) throw new Error(`Pexels HTTP ${response.status}`);
       const payload = await response.json().catch(() => ({}));
       const videos = Array.isArray(payload?.videos) ? payload.videos : [];
-      const candidate = videos.find((video: any) => Array.isArray(video.video_files) && video.video_files.length > 0);
 
-      if (!candidate) {
+      const selection = selectBestVideo(videos, {
+        exerciseName: row.name_en,
+        query: `${row.name_en} ${String(row.target_muscle || '')}`,
+        targetMuscle: String(row.target_muscle || ''),
+        equipment: String(row.equipment || ''),
+      });
+
+      if (!selection.accepted || !selection.best) {
+        row.media_confidence_score = Number(Math.min(row.media_confidence_score || 0.42, selection.confidence || 0.4).toFixed(4));
         failed += 1;
-        emit(mode, mode === 'sync' ? 'media_enrich_failed' : 'exercise_media_enrich_failed', { key: row.normalized_lookup_key, reason: 'no_video_found' });
+        emit(mode, 'exercise_media_confidence_low', { key: row.normalized_lookup_key, score: row.media_confidence_score });
+        if (hadGif || row.media_type === 'gif') remainedGifOnly += 1;
+        else if (!row.media_url) noMedia += 1;
         await sleep(requestDelayMs);
         continue;
       }
 
-      const preferred = candidate.video_files.find((file: any) => file.quality === 'sd') || candidate.video_files[0];
+      const preferred = selection.best.video.video_files.find((file: any) => file.quality === 'sd') || selection.best.video.video_files[0];
       if (!preferred?.link) {
         failed += 1;
-        emit(mode, mode === 'sync' ? 'media_enrich_failed' : 'exercise_media_enrich_failed', { key: row.normalized_lookup_key, reason: 'invalid_video_file' });
+        if (hadGif || row.media_type === 'gif') remainedGifOnly += 1;
+        else if (!row.media_url) noMedia += 1;
         await sleep(requestDelayMs);
         continue;
       }
 
       row.media_url = String(preferred.link);
-      row.media_thumbnail_url = typeof candidate.image === 'string' ? candidate.image : row.media_thumbnail_url;
+      row.media_thumbnail_url = typeof selection.best.video.image === 'string' ? selection.best.video.image : row.media_thumbnail_url;
       row.media_type = 'video';
       row.media_provider = 'Pexels';
-
+      row.media_confidence_score = selection.best.score;
       ok += 1;
-      emit(mode, mode === 'sync' ? 'media_enrich_ok' : 'exercise_media_enrich_success', { key: row.normalized_lookup_key, provider: 'Pexels' });
+      if (!hadVideo) gainedVideo += 1;
     } catch (error) {
       failed += 1;
       emit(mode, mode === 'sync' ? 'media_enrich_failed' : 'exercise_media_enrich_failed', { key: row.normalized_lookup_key, reason: error instanceof Error ? error.message : String(error) });
+      if (hadGif || row.media_type === 'gif') remainedGifOnly += 1;
+      else if (!row.media_url) noMedia += 1;
     }
 
     await sleep(requestDelayMs);
   }
 
-  return { ok, failed };
+  return { ok, failed, gainedVideo, remainedGifOnly, noMedia };
 }
 
 async function tableExists(supabase: any, tableName: string): Promise<boolean> {
@@ -271,24 +294,12 @@ async function seedAliases(supabase: any): Promise<number> {
   const exists = await tableExists(supabase, 'exercise_aliases');
   if (!exists) return 0;
 
-  const aliases = [
-    ['supino_reto_barra', 'barbell_bench_press'],
-    ['supino_inclinado_halteres', 'incline_dumbbell_press'],
-    ['rosca_direta', 'barbell_curl'],
-    ['puxada_frontal', 'lat_pulldown'],
-    ['barra_fixa', 'pull_up'],
-    ['levantamento_terra', 'deadlift'],
-    ['agachamento', 'squat'],
-    ['leg_press', 'leg_press'],
-    ['desenvolvimento', 'shoulder_press'],
-  ] as const;
-
   let seeded = 0;
-  for (const [aliasKey, canonicalKey] of aliases) {
+  for (const alias of CURATED_PT_ALIASES) {
     const { data: exercise } = await supabase
       .from('exercises')
       .select('id, normalized_lookup_key')
-      .eq('normalized_lookup_key', canonicalKey)
+      .eq('normalized_lookup_key', alias.canonical_lookup_key)
       .limit(1)
       .maybeSingle();
 
@@ -296,12 +307,12 @@ async function seedAliases(supabase: any): Promise<number> {
 
     const payload = {
       exercise_id: exercise.id,
-      alias: aliasKey,
-      alias_key: aliasKey,
-      canonical_lookup_key: canonicalKey,
-      locale: 'pt_BR',
-      language: 'pt',
-      alias_type: 'synonym',
+      alias: alias.alias,
+      alias_key: alias.alias_key,
+      canonical_lookup_key: alias.canonical_lookup_key,
+      locale: alias.locale,
+      language: alias.language,
+      alias_type: alias.alias_type,
     };
 
     const { error } = await supabase.from('exercise_aliases').upsert(payload, { onConflict: 'alias_key' });
@@ -309,6 +320,19 @@ async function seedAliases(supabase: any): Promise<number> {
   }
 
   return seeded;
+}
+
+async function loadPrioritizedRows(supabase: any, offset: number, mediaBatchSize: number) {
+  const { data, error } = await supabase
+    .from('exercises')
+    .select('source_id,source,name,name_en,name_pt,slug,normalized_lookup_key,body_part,target_muscle,secondary_muscles,equipment,instructions,common_errors,breathing_tip,range_of_motion,media_url,media_thumbnail_url,media_type,media_provider,media_confidence_score,completeness_score,youtube_fallback_url,updated_at')
+    .eq('is_active', true)
+    .or('completeness_score.lt.0.7,media_type.neq.video,media_confidence_score.lt.0.6')
+    .order('completeness_score', { ascending: true })
+    .order('media_confidence_score', { ascending: true })
+    .range(offset, offset + mediaBatchSize - 1);
+
+  return { data: (data ?? []) as ExercisePayload[], error };
 }
 
 export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<SyncSummary> {
@@ -336,6 +360,10 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
     aliasesSeeded: 0,
     importOffset: state.importOffset,
     mediaOffset: state.mediaOffset,
+    completenessImproved: 0,
+    gainedVideo: 0,
+    remainedGifOnly: 0,
+    noMedia: 0,
   };
 
   emit(mode, mode === 'sync' ? 'started' : 'sync_exercises_started', { state_file: useStateFile ? stateFilePath : null });
@@ -345,9 +373,8 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
     let batch: ExerciseDbItem[] = [];
     try {
       batch = await fetchExerciseDbBatch(importBatchSize, offset);
-    } catch (error) {
+    } catch {
       summary.failed += importBatchSize;
-      emit(mode, mode === 'sync' ? 'batch_failed' : 'import_exercise_batch_failed', { offset, reason: error instanceof Error ? error.message : String(error) });
       offset += importBatchSize;
       if (useStateFile) writeState(stateFilePath, { importOffset: offset });
       continue;
@@ -372,27 +399,36 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
   if (enrichMediaEnabled) {
     let mediaOffset = state.mediaOffset;
     while (true) {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('source_id,source,name,name_en,name_pt,slug,normalized_lookup_key,body_part,target_muscle,secondary_muscles,equipment,instructions,common_errors,breathing_tip,range_of_motion,media_url,media_thumbnail_url,media_type,media_provider,youtube_fallback_url,updated_at')
-        .order('updated_at', { ascending: true })
-        .range(mediaOffset, mediaOffset + mediaBatchSize - 1);
+      const { data, error } = await loadPrioritizedRows(supabase, mediaOffset, mediaBatchSize);
 
       if (error) {
         summary.mediaFailed += mediaBatchSize;
-        emit(mode, mode === 'sync' ? 'media_enrich_failed' : 'exercise_media_enrich_failed', { offset: mediaOffset, reason: error.message });
         mediaOffset += mediaBatchSize;
         if (useStateFile) writeState(stateFilePath, { mediaOffset });
         continue;
       }
-      if (!data?.length) break;
+      if (!data.length) break;
 
-      const rows = data as ExercisePayload[];
-      const media = await enrichWithPexels(rows, mode, requestDelayMs);
+      const beforeCompleteness = data.reduce((acc, row) => acc + Number(row.completeness_score || 0), 0);
+      const qualityEnrichedRows = data.map((row) => {
+        const merged = mergeCuratedExerciseContent(row as any, getCuratedExerciseContent(row.normalized_lookup_key));
+        const score = computeExerciseCompletenessScore(merged as any);
+        return { ...(merged as ExercisePayload), completeness_score: score };
+      });
+      const afterCompleteness = qualityEnrichedRows.reduce((acc, row) => acc + Number(row.completeness_score || 0), 0);
+      if (afterCompleteness > beforeCompleteness) {
+        summary.completenessImproved += qualityEnrichedRows.filter((r, i) => Number(r.completeness_score || 0) > Number(data[i].completeness_score || 0)).length;
+        emit(mode, 'exercise_catalog_quality_enriched', { improved: summary.completenessImproved });
+      }
+
+      const media = await enrichWithPexels(qualityEnrichedRows, mode, requestDelayMs);
       summary.mediaEnriched += media.ok;
       summary.mediaFailed += media.failed;
+      summary.gainedVideo += media.gainedVideo;
+      summary.remainedGifOnly += media.remainedGifOnly;
+      summary.noMedia += media.noMedia;
 
-      const upsert = await upsertExercises(supabase, rows, mode, upsertBatchSize);
+      const upsert = await upsertExercises(supabase, qualityEnrichedRows, mode, upsertBatchSize);
       summary.upserted += upsert.upserted;
       summary.failed += upsert.failed;
 
@@ -407,6 +443,7 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
     if (useStateFile) writeState(stateFilePath, { aliasCompleted: true });
   }
 
+  emit(mode, 'exercise_catalog_resync_triggered', { mode });
   emit(mode, mode === 'sync' ? 'completed' : 'sync_exercises_completed', summary as unknown as Record<string, unknown>);
   return summary;
 }
