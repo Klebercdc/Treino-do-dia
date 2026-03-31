@@ -57,6 +57,54 @@ export class ExerciseRepository {
     }
 
     const exerciseName = String(input.exerciseName || '').trim();
+    const sourceId = String(input.exerciseId || '').trim();
+    if (sourceId) {
+      const { data, error } = await this.db
+        .from('exercises')
+        .select('*')
+        .eq('source_id', sourceId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.95 };
+    }
+
+    const aliasLookupCandidates = [key, this.normalizeLookup(exerciseName).replace(/\s+/g, '_'), slug]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+    if (aliasLookupCandidates.length) {
+      try {
+        const { data: aliasRowsByKey, error: aliasKeyError } = await this.db
+          .from('exercise_aliases')
+          .select('exercise_id,alias,alias_key,canonical_lookup_key')
+          .in('alias_key', aliasLookupCandidates)
+          .limit(5);
+        const { data: aliasRowsByAlias, error: aliasError } = await this.db
+          .from('exercise_aliases')
+          .select('exercise_id,alias,alias_key,canonical_lookup_key')
+          .in('alias', aliasLookupCandidates)
+          .limit(5);
+        const aliasRows = [...(aliasRowsByKey ?? []), ...(aliasRowsByAlias ?? [])];
+        if (!aliasKeyError && !aliasError && aliasRows.length) {
+          const exerciseIds = Array.from(new Set(aliasRows.map((row: any) => row.exercise_id).filter(Boolean)));
+          if (exerciseIds.length) {
+            const { data: exercisesByAlias, error: exercisesByAliasError } = await this.db
+              .from('exercises')
+              .select('*')
+              .in('id', exerciseIds)
+              .eq('is_active', true)
+              .limit(5);
+            if (!exercisesByAliasError && exercisesByAlias?.length) {
+              return { exercise: this.mapExercise(exercisesByAlias[0]), confidenceScore: 0.93 };
+            }
+          }
+        }
+      } catch {
+        // no-op: alias table may not be fully migrated yet
+      }
+    }
+
     const lookup = key || exerciseName;
     if (!lookup) return { exercise: null, confidenceScore: 0 };
 
@@ -195,6 +243,9 @@ export class ExerciseRepository {
       media_type: raw.media_type ?? (raw.gif_url ? 'gif' : (raw.image_url ? 'image' : null)),
       media_provider: raw.media_provider ?? (raw.gif_url ? 'ExerciseDB' : null),
       youtube_fallback_url: raw.youtube_fallback_url ?? null,
+      common_errors: jsonArray(raw.common_errors),
+      breathing_tip: raw.breathing_tip ?? null,
+      range_of_motion: raw.range_of_motion ?? null,
       image_url: raw.image_url,
       search_terms: jsonArray(raw.search_terms),
       difficulty: raw.difficulty ?? raw.level,

@@ -28,5 +28,11 @@
     "api/*.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/sync-exercises",
+      "schedule": "0 4 * * 1"
+    }
+  ]
 }

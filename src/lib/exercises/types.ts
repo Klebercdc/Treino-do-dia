@@ -49,6 +49,9 @@ export interface ExerciseEntity {
   media_type?: 'video' | 'gif' | 'image' | null;
   media_provider?: string | null;
   youtube_fallback_url?: string | null;
+  common_errors?: string[];
+  breathing_tip?: string | null;
+  range_of_motion?: string | null;
   image_url: string | null;
   search_terms: string[];
   difficulty: string | null;
@@ -191,7 +194,7 @@ export interface NormalizedExerciseDetails {
     externalFetch: boolean;
     responseTimeMs: number;
     normalizedLookupKey: string;
-    completenessScore?: number;
-    confidenceScore?: number;
+    completenessScore: number;
+    confidenceScore: number;
   };
 }

@@ -274,8 +274,9 @@ export class KroniaExerciseApplication {
     responseTimeMs: number;
     externalFetch: boolean;
     lookupKey: string;
+    confidenceScore?: number;
   }): NormalizedExerciseDetails {
-    const { exercise, media, variations, responseTimeMs, externalFetch, lookupKey } = params;
+    const { exercise, media, variations, responseTimeMs, externalFetch, lookupKey, confidenceScore } = params;
     const safeInstructions = exercise.instructions?.length
       ? exercise.instructions
       : ['Mantenha execução controlada, postura neutra e ajuste a carga para técnica consistente.'];
@@ -300,15 +301,16 @@ export class KroniaExerciseApplication {
         names: { pt: item.name_pt, en: item.name_en },
       })),
       source: externalFetch ? 'hybrid' : (exercise.source === 'exercisedb' ? 'exercisedb' : 'internal'),
-      common_errors: [],
-      breathing_tip: null,
-      range_of_motion: null,
+      common_errors: exercise.common_errors ?? [],
+      breathing_tip: exercise.breathing_tip ?? null,
+      range_of_motion: exercise.range_of_motion ?? null,
       metadata: {
         cacheHit: media.cacheHit,
         externalFetch,
         responseTimeMs,
         normalizedLookupKey: lookupKey,
-        completenessScore: media.primary ? 0.85 : 0.55,
+        completenessScore: media.primary ? 0.9 : 0.6,
+        confidenceScore: Number((confidenceScore ?? 0.85).toFixed(4)),
       },
     };
   }
@@ -347,7 +349,15 @@ export class KroniaExerciseApplication {
     const media = await this.enrichWithMedia(exercise, context);
     const variations = await this.repository.findVariations(exercise, 4);
     const responseTimeMs = Date.now() - start;
-    const payload = this.normalizeExerciseDetails({ exercise, media, variations, responseTimeMs, externalFetch, lookupKey });
+    const payload = this.normalizeExerciseDetails({
+      exercise,
+      media,
+      variations,
+      responseTimeMs,
+      externalFetch,
+      lookupKey,
+      confidenceScore: lookupResult.confidenceScore,
+    });
 
     return ok(payload, {
       normalizedLookupKey: lookupKey,

@@ -23,6 +23,7 @@
     "migrate:dry": "tsx scripts/run-migrations.ts --dry-run",
     "seed:exercises": "tsx scripts/seed-exercises.ts",
     "import:exercises:catalog": "tsx scripts/import-exercises-catalog.ts",
+    "sync:exercises": "tsx scripts/sync-exercises-weekly.ts",
     "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts",
     "audit:admin-scope": "node scripts/admin-scope-audit.js"
   },

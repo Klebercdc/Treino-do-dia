@@ -39,6 +39,14 @@ function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error';
   if (result.status === 'success' && result.data) {
     return buildExerciseDetailsSuccessPayload(result.data, result.meta ?? {});
   }
+  if (!result.data) {
+    return buildExerciseDetailsErrorPayload(
+      result.errors?.[0]?.message || 'Não foi possível carregar os detalhes do exercício.',
+      result.errors?.[0]?.code || 'EXERCISE_ERROR',
+      result.meta ?? {},
+      null,
+    );
+  }
   return buildExerciseDetailsPartialPayload(
     result.errors?.[0]?.message || 'Não foi possível enriquecer os detalhes do exercício agora.',
     result.data,
@@ -50,7 +58,7 @@ export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ status: 'error', data: null, errors: [{ code: 'UNAUTHORIZED', message: 'Unauthorized' }], meta: {} }, { status: 401 });
+      return NextResponse.json(buildExerciseDetailsErrorPayload('Não autorizado.', 'UNAUTHORIZED'), { status: 401 });
     }
 
     const accessToken = authHeader.replace('Bearer ', '').trim();
@@ -58,13 +66,13 @@ export async function POST(req: Request) {
     const { data: userData, error: authError } = await userClient.auth.getUser();
 
     if (authError || !userData.user) {
-      return NextResponse.json({ status: 'error', data: null, errors: [{ code: 'UNAUTHORIZED', message: 'Unauthorized' }], meta: {} }, { status: 401 });
+      return NextResponse.json(buildExerciseDetailsErrorPayload('Não autorizado.', 'UNAUTHORIZED'), { status: 401 });
     }
 
     const userId = userData.user.id;
     const rateLimit = checkRateLimit(userId, { max: 40, windowMs: 60000 });
     if (!rateLimit.allowed) {
-      return NextResponse.json({ status: 'error', data: null, errors: [{ code: 'RATE_LIMIT', message: 'Too many requests' }], meta: {} }, { status: 429 });
+      return NextResponse.json(buildExerciseDetailsErrorPayload('Muitas requisições. Tente novamente em instantes.', 'RATE_LIMIT'), { status: 429 });
     }
 
     const body = await req.json().catch(() => null);
@@ -78,7 +86,9 @@ export async function POST(req: Request) {
       userId,
       exerciseId: typeof body.exerciseId === 'string' ? body.exerciseId.slice(0, 120) : undefined,
       slug: typeof body.slug === 'string' ? body.slug.slice(0, 240) : undefined,
-      normalizedLookupKey: typeof body.normalized_lookup_key === 'string' ? body.normalized_lookup_key.slice(0, 240) : undefined,
+      normalizedLookupKey: typeof body.normalized_lookup_key === 'string'
+        ? body.normalized_lookup_key.slice(0, 240)
+        : (typeof body.normalizedLookupKey === 'string' ? body.normalizedLookupKey.slice(0, 240) : undefined),
       exerciseName: typeof body.exerciseName === 'string' ? body.exerciseName.slice(0, 240) : undefined,
       locale: body.locale === 'en' ? 'en' : 'pt',
       context: body.context,
