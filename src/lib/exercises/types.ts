@@ -210,5 +210,6 @@ export interface NormalizedExerciseDetails {
     normalizedLookupKey: string;
     completenessScore: number;
     confidenceScore: number;
+    knownResolution?: boolean;
   };
 }

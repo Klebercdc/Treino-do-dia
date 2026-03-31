@@ -37,7 +37,7 @@ function buildExerciseDetailsErrorPayload(message: string, code: string, meta: R
 
 function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error'; data: unknown; meta: Record<string, unknown>; errors: Array<{ code: string; message: string }> }) {
   if (result.status === 'success' && result.data) {
-    return buildExerciseDetailsSuccessPayload(result.data, result.meta ?? {});
+    return buildExerciseDetailsSuccessPayload(result.data, { ...(result.meta ?? {}), knownResolution: Number(result.meta?.confidenceScore ?? 0) >= 0.9 });
   }
   if (!result.data) {
     return buildExerciseDetailsErrorPayload(
@@ -50,7 +50,7 @@ function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error';
   return buildExerciseDetailsPartialPayload(
     result.errors?.[0]?.message || 'Não foi possível enriquecer os detalhes do exercício agora.',
     result.data,
-    { ...(result.meta ?? {}), code: result.errors?.[0]?.code || 'EXERCISE_PARTIAL' },
+    { ...(result.meta ?? {}), code: result.errors?.[0]?.code || 'EXERCISE_PARTIAL', knownResolution: Number(result.meta?.confidenceScore ?? 0) >= 0.9 },
   );
 }
 

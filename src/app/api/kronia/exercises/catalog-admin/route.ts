@@ -42,6 +42,8 @@ export async function GET(req: Request) {
         { key: 'low_completeness', label: 'Baixa completude', value: summary.lowCompleteness, tone: summary.lowCompleteness > 0 ? 'warning' : 'ok' },
         { key: 'low_media_confidence', label: 'Mídia baixa confiança', value: summary.lowMediaConfidence, tone: summary.lowMediaConfidence > 0 ? 'warning' : 'ok' },
         { key: 'low_content_value', label: 'Baixo valor didático', value: summary.lowContentValue, tone: summary.lowContentValue > 0 ? 'warning' : 'ok' },
+        { key: 'known_without_instructions', label: 'Conhecidos sem instruções', value: summary.known_exercises_without_instructions, tone: summary.known_exercises_without_instructions > 0 ? 'warning' : 'ok' },
+        { key: 'known_without_common_errors', label: 'Conhecidos sem erros', value: summary.known_exercises_without_common_errors, tone: summary.known_exercises_without_common_errors > 0 ? 'warning' : 'ok' },
       ],
       ...summary,
     },

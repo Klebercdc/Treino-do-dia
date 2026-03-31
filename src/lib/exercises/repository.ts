@@ -20,7 +20,7 @@ export class ExerciseRepository {
     const ranked = candidates
       .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, { exerciseName: lookup }) }))
       .sort((a, b) => b.score - a.score);
-    return ranked[0]?.score >= 0.58 ? ranked[0].candidate : null;
+    return ranked[0]?.score >= 0.66 ? ranked[0].candidate : null;
   }
 
   async findExerciseByIdentity(input: IdentityInput): Promise<{ exercise: ExerciseEntity | null; confidenceScore: number }> {
@@ -49,7 +49,7 @@ export class ExerciseRepository {
     const aliasMatch = await this.findByAliases(aliasCandidates, input);
     if (aliasMatch?.exercise) {
       console.info('[kronia_exercise] exercise_alias_match_used', { lookup: aliasCandidates[0], matched: aliasMatch.exercise.normalized_lookup_key || aliasMatch.exercise.slug, confidence: aliasMatch.confidenceScore });
-      if (aliasMatch.confidenceScore >= 0.62) return aliasMatch;
+      if (aliasMatch.confidenceScore >= 0.9) return aliasMatch;
     }
 
     const lookup = normalizedKey || this.normalizeLookup(String(input.exerciseName || '')) || normalizedSlug;
@@ -63,7 +63,7 @@ export class ExerciseRepository {
       .sort((a, b) => b.score - a.score);
 
     const winner = ranked[0];
-    if (!winner || winner.score < 0.58) return { exercise: null, confidenceScore: Number((winner?.score || 0).toFixed(4)) };
+    if (!winner || winner.score < 0.66) return { exercise: null, confidenceScore: Number((winner?.score || 0).toFixed(4)) };
     return { exercise: winner.candidate, confidenceScore: Number(winner.score.toFixed(4)) };
   }
 
@@ -205,7 +205,7 @@ export class ExerciseRepository {
   async getCatalogAdminSummary() {
     const { data, error } = await this.db
       .from('exercises')
-      .select('id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags')
+      .select('id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,range_of_motion,target_muscle,normalized_lookup_key,completeness_score,media_confidence_score,quality_flags')
       .eq('is_active', true);
     if (error) throw error;
     const rows = data ?? [];
@@ -223,6 +223,8 @@ export class ExerciseRepository {
       low_content_value_count: 0,
       low_completeness_count: 0,
       low_media_confidence_count: 0,
+      known_exercises_without_instructions: 0,
+      known_exercises_without_common_errors: 0,
       with_instructions_count: 0,
       with_common_errors_count: 0,
       with_breathing_tip_count: 0,
@@ -238,6 +240,9 @@ export class ExerciseRepository {
       summary.withInstructions += jsonArray(row.instructions).length ? 1 : 0;
       summary.withCommonErrors += jsonArray(row.common_errors).length ? 1 : 0;
       summary.withBreathingTip += row.breathing_tip ? 1 : 0;
+      const isKnown = Boolean(row.normalized_lookup_key || row.target_muscle);
+      if (isKnown && !jsonArray(row.instructions).length) summary.known_exercises_without_instructions += 1;
+      if (isKnown && !jsonArray(row.common_errors).length) summary.known_exercises_without_common_errors += 1;
       summary.lowCompleteness += Number(row.completeness_score ?? 0) < 55 ? 1 : 0;
       summary.lowMediaConfidence += Number(row.media_confidence_score ?? 0) < 0.5 ? 1 : 0;
       const flags = jsonArray(row.quality_flags);
@@ -276,7 +281,7 @@ export class ExerciseRepository {
 
       const ranked = exercises
         .map((row: any) => this.mapExercise(row))
-        .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input, aliasCandidates) + 0.08 }))
+        .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input, aliasCandidates) }))
         .sort((a, b) => b.score - a.score);
 
       return { exercise: ranked[0]?.candidate ?? null, confidenceScore: Number(Math.min(1, ranked[0]?.score ?? 0).toFixed(4)) };
@@ -381,21 +386,24 @@ export class ExerciseRepository {
     const slug = this.normalizeLookup(item.slug || '');
     const namePt = this.normalizeLookup(item.name_pt || '');
     const nameEn = this.normalizeLookup(item.name_en || '');
-    const searchable = [normalizedLookupKey, slug, namePt, nameEn, ...(item.search_terms || []).map((v) => this.normalizeLookup(v)), ...aliasCandidates].filter(Boolean);
+    const aliasExact = aliasCandidates.includes(lookupRaw) && aliasCandidates.some((a) => a && [normalizedLookupKey, slug, namePt, nameEn].includes(a));
 
-    if (normalizedLookupKey === lookupRaw) return 0.995;
-    if (aliasCandidates.includes(lookupRaw) && searchable.includes(lookupRaw)) return 0.985;
-    if (slug === lookupRaw) return 0.97;
-    if (namePt === lookupRaw) return 0.955;
-    if (nameEn === lookupRaw) return 0.945;
+    if (normalizedLookupKey && normalizedLookupKey === lookupRaw) return 0.995;
+    if (aliasExact) return 0.985;
+    if (slug && slug === lookupRaw) return 0.97;
+    if (namePt && namePt === lookupRaw) return 0.955;
+    if (nameEn && nameEn === lookupRaw) return 0.945;
 
     const queryTokens = new Set(this.tokenize(lookupRaw));
     const ptTokens = new Set(this.tokenize(`${namePt}_${normalizedLookupKey}`));
     const enTokens = new Set(this.tokenize(`${nameEn}_${slug}`));
     const ptOverlap = queryTokens.size ? Array.from(queryTokens).filter((token) => ptTokens.has(token)).length / queryTokens.size : 0;
     const enOverlap = queryTokens.size ? Array.from(queryTokens).filter((token) => enTokens.has(token)).length / queryTokens.size : 0;
-    const overlapScore = Math.max(ptOverlap * 0.78, enOverlap * 0.62);
 
-    return Number(Math.max(0, Math.min(0.94, 0.34 + overlapScore)).toFixed(4));
+    const weighted = (ptOverlap * 0.7) + (enOverlap * 0.45);
+    const rawScore = 0.22 + weighted;
+    const capped = Math.min(0.9, rawScore);
+    return Number(Math.max(0, capped).toFixed(4));
   }
 }
+

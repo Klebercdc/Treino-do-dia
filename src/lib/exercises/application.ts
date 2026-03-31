@@ -5,18 +5,66 @@ import { ExerciseDbClient } from './exercisedbClient';
 import { ExerciseRepository } from './repository';
 import { PexelsClient } from './pexelsClient';
 import { applyCuratedExerciseContent, computeExerciseCompletenessScore, computeQualityFlags, getCuratedExerciseContent, mergeCuratedExerciseContent } from './catalog-curation';
+import { resolveFallbackKey } from './fallback-map';
 import { pickBestExerciseMedia } from './media-ranking';
 import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseDetailsInput, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput, NormalizedExerciseDetails } from './types';
 
 const PLACEHOLDER_MEDIA_URL = 'https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg';
 
 
-async function applyCuratedContentIfNeeded(exercise: ExerciseEntity, repository: ExerciseRepository, logger: Console) {
-  const curated = getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug || '');
-  if (!curated) return exercise;
+const MIN_KNOWN_INSTRUCTIONS = [
+  'Execute o movimento com controle total',
+  'Mantenha estabilidade corporal durante toda a execução',
+  'Contraia o músculo alvo no ponto mais forte do movimento',
+  'Retorne lentamente à posição inicial',
+];
 
+const MIN_KNOWN_COMMON_ERRORS = [
+  'Usar impulso em vez de controle',
+  'Reduzir demais a amplitude do movimento',
+];
+
+function resolveCuratedKeyCandidates(exercise: ExerciseEntity): string[] {
+  const rawCandidates = [
+    exercise.normalized_lookup_key,
+    exercise.slug,
+    exercise.name_pt,
+    exercise.name_en,
+    resolveFallbackKey(exercise.normalized_lookup_key || exercise.slug || exercise.name_pt || exercise.name_en || ''),
+  ].filter(Boolean) as string[];
+
+  return Array.from(new Set(rawCandidates.map((key) => String(key || '').trim()).filter(Boolean)));
+}
+
+function hasKnownResolution(exercise: ExerciseEntity, lookupResult: { confidenceScore: number }, lookupKey: string): boolean {
+  if (lookupResult.confidenceScore >= 0.9) return true;
+  const key = String(lookupKey || '').trim();
+  if (!key) return false;
+  const normalizedPool = [exercise.id, exercise.slug, exercise.normalized_lookup_key, exercise.name_pt, exercise.name_en]
+    .map((value) => String(value || '').toLowerCase())
+    .filter(Boolean);
+  return normalizedPool.some((value) => value.includes(key.toLowerCase()) || key.toLowerCase().includes(value));
+}
+
+async function applyCuratedContentIfNeeded(exercise: ExerciseEntity, repository: ExerciseRepository, logger: Console, lookupResult: { confidenceScore: number }, lookupKey: string) {
   const beforeScore = Number(exercise.completeness_score || 0);
+
+  let curated = null as ReturnType<typeof getCuratedExerciseContent>;
+  for (const candidate of resolveCuratedKeyCandidates(exercise)) {
+    curated = getCuratedExerciseContent(candidate);
+    if (curated) break;
+  }
+
   const merged = mergeCuratedExerciseContent(exercise, curated);
+  const knownExercise = hasKnownResolution(exercise, lookupResult, lookupKey) || Boolean(curated);
+
+  if (knownExercise && (!Array.isArray(merged.instructions) || !merged.instructions.length)) {
+    merged.instructions = [...MIN_KNOWN_INSTRUCTIONS];
+  }
+  if (knownExercise && (!Array.isArray(merged.common_errors) || !merged.common_errors.length)) {
+    merged.common_errors = [...MIN_KNOWN_COMMON_ERRORS];
+  }
+
   const afterScore = computeExerciseCompletenessScore(merged);
   const flags = computeQualityFlags({ ...merged, completeness_score: afterScore });
 
@@ -27,13 +75,15 @@ async function applyCuratedContentIfNeeded(exercise: ExerciseEntity, repository:
     String(merged.range_of_motion || '') !== String(exercise.range_of_motion || '') ||
     String(merged.target_muscle || '') !== String(exercise.target_muscle || '') ||
     JSON.stringify(merged.secondary_muscles || []) !== JSON.stringify(exercise.secondary_muscles || []) ||
-    String(merged.name_pt || '') !== String(exercise.name_pt || '');
+    String(merged.name_pt || '') !== String(exercise.name_pt || '') ||
+    afterScore > beforeScore;
 
   if (changed) {
     logger?.info?.('[kronia_exercise] exercise_curated_content_applied', {
       key: merged.normalized_lookup_key || merged.slug,
       beforeScore,
       afterScore,
+      knownExercise,
     });
 
     await repository.updateExerciseEnrichmentById(merged.id, {
@@ -53,6 +103,15 @@ async function applyCuratedContentIfNeeded(exercise: ExerciseEntity, repository:
     logger?.info?.('[kronia_exercise] exercise_curated_content_persisted', {
       key: merged.normalized_lookup_key || merged.slug,
       afterScore,
+      knownExercise,
+    });
+  }
+
+  if (knownExercise && afterScore < 50) {
+    logger?.info?.('[kronia_exercise] exercise_detail_low_value_detected', {
+      lookupKey: merged.normalized_lookup_key || merged.slug,
+      completeness: afterScore,
+      flags,
     });
   }
 
@@ -64,6 +123,7 @@ async function applyCuratedContentIfNeeded(exercise: ExerciseEntity, repository:
     last_enriched_at: changed ? new Date().toISOString() : merged.last_enriched_at,
   };
 }
+
 
 function ok<T>(data: T, meta: Record<string, unknown>): AppResult<T> {
   return { status: 'success', data, errors: [], meta };
@@ -398,6 +458,7 @@ export class KroniaExerciseApplication {
         normalizedLookupKey: lookupKey,
         completenessScore: exercise.completeness_score ?? computeExerciseCompletenessScore(exercise),
         confidenceScore: Number((confidenceScore ?? 0.85).toFixed(4)),
+        knownResolution: Number((confidenceScore ?? 0)) >= 0.9,
       },
     };
   }
@@ -433,26 +494,7 @@ export class KroniaExerciseApplication {
       });
     }
 
-    exercise = await applyCuratedContentIfNeeded(exercise, this.repository, console);
-
-    const hasCurated = Boolean(getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug || exercise.name_en));
-    if (hasCurated && (!exercise.instructions?.length || !exercise.common_errors?.length)) {
-      const forcedMerge = mergeCuratedExerciseContent(exercise, getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug || exercise.name_en));
-      exercise = {
-        ...exercise,
-        ...forcedMerge,
-        completeness_score: computeExerciseCompletenessScore(forcedMerge),
-        quality_flags: computeQualityFlags(forcedMerge),
-      };
-    }
-
-    if (Number(exercise.completeness_score ?? 0) < 55) {
-      console.info('[kronia_exercise] exercise_detail_low_value_detected', {
-        lookupKey: exercise.normalized_lookup_key,
-        completeness: exercise.completeness_score,
-        flags: exercise.quality_flags,
-      });
-    }
+    exercise = await applyCuratedContentIfNeeded(exercise, this.repository, console, lookupResult, lookupKey);
 
     const media = await this.enrichWithMedia(exercise, context);
     const variations = await this.repository.findVariations(exercise, 4);
