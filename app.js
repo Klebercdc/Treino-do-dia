@@ -4828,88 +4828,60 @@ async function openExerciseDetailsFromCard(card) {
 }
 
 async function openExerciseDetailsByName(exerciseName, options = {}) {
-  const now = Date.now();
   const exerciseRef = ensureExerciseRef(options.exerciseRef || { display_name: exerciseName }, exerciseName, options.origin || "direct_open");
   const lookupKey = exerciseRef.normalized_lookup_key || normalizeExerciseLookupKey(exerciseName);
-  logExerciseDetailsEvent("exercise_details_opened", { exerciseName, lookupKey, origin: options.origin || "unknown" });
+  const exerciseId = exerciseRef.exercise_id || exerciseRef.id || "";
+  const exerciseSlug = exerciseRef.slug || "";
+
+  logExerciseDetailsEvent("exercise_details_opened", { exerciseName, lookupKey, exerciseId, origin: options.origin || "unknown" });
   openExerciseDiscSheet();
   _exerciseDiscSetState("loading");
 
-  const localStub = normalizeExerciseDetails(exerciseRef.stub || { names: { pt: exerciseRef.display_name }, ...exerciseRef });
-  if (localStub) {
-    _renderExerciseDiscResult(localStub, "minimal");
-    _exerciseDiscSetState("result");
-    logExerciseDetailsEvent("exercise_details_opened_with_local_stub", { lookupKey });
-    logExerciseDetailsEvent("exercise_details_rendered_minimal", { lookupKey, source: "card_stub" });
-  }
-
-  const cache = _readExerciseDetailsCache();
-  const cached = cache[lookupKey];
-  const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
-  if (cached?.savedAt && (now - cached.savedAt) < maxAgeMs && cached.normalized) {
-    logExerciseDetailsEvent("exercise_details_cache_hit", { lookupKey });
-    _renderExerciseDiscResult(cached.normalized, "enriched");
-    _exerciseDiscSetState("result");
-    logExerciseDetailsEvent("exercise_details_rendered_enriched", { lookupKey, source: cached.source || "cache" });
-  } else if (cached?.savedAt && cached.normalized) {
-    logExerciseDetailsEvent("exercise_details_cache_stale", { lookupKey });
-    _renderExerciseDiscResult(cached.normalized, "enriched");
-    _exerciseDiscSetState("result");
-  }
-
   try {
-    logExerciseDetailsEvent("exercise_details_external_fetch_started", { lookupKey });
-    const resp = await apiFetch("/api/kronia/exercises/details", {
-      method: "POST",
-      body: JSON.stringify({
-        exerciseId: exerciseRef.exercise_id,
-        slug: exerciseRef.slug,
-        normalized_lookup_key: lookupKey,
-        exerciseName,
-        locale: "pt",
-      })
-    });
-    const json = await resp.json();
-    if (!json?.success || !json?.data) {
-      const partial = normalizeExerciseDetails(json?.data || exerciseRef.stub || { names: { pt: exerciseName }, normalized_lookup_key: lookupKey });
-      if (partial) {
-        _renderExerciseDiscResult(partial, "minimal");
-        _exerciseDiscSetState("result");
-        logExerciseDetailsEvent("exercise_details_rendered_minimal", { lookupKey, reason: json?.message || "api_partial" });
-      } else {
-        document.getElementById("exerciseDiscErrorMsg").textContent = "Detalhes indisponíveis no momento. Exibindo versão resumida do exercício.";
-        _exerciseDiscSetState("error");
-      }
-      logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, code: json?.error?.code || "UNKNOWN" });
-      return;
-    }
-    const normalized = normalizeExerciseDetails(json.data);
-    cache[lookupKey] = {
-      savedAt: now,
-      source: normalized?.source || "api",
-      completeness_score: Number(json.meta?.completenessScore ?? normalized?.metadata?.completenessScore ?? 0.5),
-      schema_version: 2,
-      normalized_lookup_key: lookupKey,
-      normalized,
-    };
-    _writeExerciseDetailsCache(cache);
-    logExerciseDetailsEvent("exercise_details_external_fetch_success", { lookupKey, source: normalized?.source || "api" });
-    _renderExerciseDiscResult(normalized, "enriched");
-    _exerciseDiscSetState("result");
-    logExerciseDetailsEvent("exercise_details_rendered_enriched", { lookupKey, source: normalized?.source || "api" });
-  } catch (e) {
-    const fallback = normalizeExerciseDetails(exerciseRef.stub || { names: { pt: exerciseName }, normalized_lookup_key: lookupKey });
-    if (fallback) {
-      _renderExerciseDiscResult(fallback, "minimal");
-      _exerciseDiscSetState("result");
-      logExerciseDetailsEvent("exercise_details_fallback_used", { lookupKey, reason: "network_error" });
-      logExerciseDetailsEvent("exercise_details_rendered_minimal", { lookupKey, reason: "network_error" });
+    const params = new URLSearchParams();
+    if (exerciseId) {
+      params.set("id", exerciseId);
+    } else if (exerciseSlug) {
+      params.set("slug", exerciseSlug);
     } else {
-      document.getElementById("exerciseDiscErrorMsg").textContent = "Erro de rede. Tente novamente.";
-      _exerciseDiscSetState("error");
+      params.set("lookupKey", lookupKey);
     }
+
+    const resp = await fetch(`/api/kronia/exercises/details?${params.toString()}`);
+    const json = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(json?.message || "Falha ao carregar detalhes do exercício.");
+    }
+
+    renderExercise(json);
+    logExerciseDetailsEvent("exercise_detail_loaded_from_api", {
+      lookupKey,
+      exerciseId,
+      slug: exerciseSlug,
+    });
+  } catch (e) {
+    document.getElementById("exerciseDiscErrorMsg").textContent = e?.message || "Erro ao carregar detalhes do exercício.";
+    _exerciseDiscSetState("error");
     logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, message: e?.message || String(e) });
   }
+}
+
+function renderExercise(data) {
+  const normalized = normalizeExerciseDetails(data);
+  if (!normalized) {
+    document.getElementById("exerciseDiscErrorMsg").textContent = "Resposta inválida do endpoint de exercício.";
+    _exerciseDiscSetState("error");
+    return;
+  }
+
+  normalized.instructions = Array.isArray(data?.instructions) ? data.instructions : [];
+  normalized.common_errors = Array.isArray(data?.common_errors) ? data.common_errors : [];
+  normalized.breathing_tip = data?.breathing_tip ?? null;
+
+  _renderExerciseDiscResult(normalized, "enriched");
+  _exerciseDiscSetState("result");
+}
 
 async function openExerciseDiscovery(query) {
   openExerciseDiscSheet();
@@ -5012,7 +4984,6 @@ function formatMuscleLabel(value) {
   return dict[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-}
 
 async function openDietaSheet() {
   preencherDietaDosPerfil();

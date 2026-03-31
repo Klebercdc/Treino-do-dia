@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '../../../../../lib/supabase/server';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { checkRateLimit } from '../../../../../lib/utils/serverRateLimit';
-import { KroniaExerciseApplication } from '../../../../../lib/exercises/application';
+import { buildExerciseDetails, KroniaExerciseApplication } from '../../../../../lib/exercises/application';
+import { ExerciseRepository } from '../../../../../lib/exercises/repository';
 
 function buildExerciseDetailsSuccessPayload(data: unknown, meta: Record<string, unknown> = {}) {
   return {
@@ -52,6 +53,47 @@ function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error';
     result.data,
     { ...(result.meta ?? {}), code: result.errors?.[0]?.code || 'EXERCISE_PARTIAL', knownResolution: Number(result.meta?.confidenceScore ?? 0) >= 0.9 },
   );
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const exerciseId = searchParams.get('id')?.trim() || '';
+    const slug = searchParams.get('slug')?.trim() || '';
+    const lookupKey = (searchParams.get('lookupKey') || searchParams.get('normalized_lookup_key') || '').trim();
+
+    if (!exerciseId && !slug && !lookupKey) {
+      return NextResponse.json(buildExerciseDetailsErrorPayload('Informe id, slug ou lookupKey.', 'VALIDATION_ERROR'), { status: 400 });
+    }
+
+    const adminClient = createAdminSupabaseClient();
+    const repository = new ExerciseRepository(adminClient);
+
+    const exercise = (exerciseId && await repository.findById(exerciseId))
+      || (slug && await repository.findBySlug(slug))
+      || (lookupKey && await repository.findByLookupKey(lookupKey));
+
+    if (!exercise) {
+      return NextResponse.json(buildExerciseDetailsErrorPayload('Exercício não encontrado.', 'EXERCISE_NOT_FOUND'), { status: 404 });
+    }
+
+    const enriched = await buildExerciseDetails(exercise);
+    console.info('[kronia_exercise] exercise_details_enriched_returned', {
+      id: enriched.id,
+      slug: enriched.slug,
+      normalizedLookupKey: enriched.metadata?.normalizedLookupKey,
+    });
+
+    return NextResponse.json(enriched, { status: 200 });
+  } catch (error) {
+    console.error('[kronia/exercises/details][GET] erro interno:', error instanceof Error ? error.message : error);
+    return NextResponse.json(
+      buildExerciseDetailsErrorPayload('Falha ao buscar detalhes do exercício.', 'INTERNAL_ERROR', {
+        cause: error instanceof Error ? error.message : 'unknown',
+      }),
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(req: Request) {
