@@ -95,6 +95,9 @@ export async function POST(req: Request) {
     });
 
     const envelope = normalizeExerciseDetailsEnvelope(result);
+    if (envelope.success && Number((envelope as any)?.data?.completeness_score ?? 0) < 55) {
+      console.info('[kronia_exercise] exercise_detail_low_value_detected', { key: (envelope as any)?.data?.slug, completeness: (envelope as any)?.data?.completeness_score });
+    }
     const statusCode = envelope.success ? 200 : (envelope.type === 'exercise_partial' ? 206 : 422);
     return NextResponse.json(envelope, { status: statusCode });
   } catch (error) {

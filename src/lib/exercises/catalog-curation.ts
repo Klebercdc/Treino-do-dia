@@ -2,21 +2,13 @@ import type { ExerciseEntity } from './types';
 
 export type CuratedExerciseContent = {
   name_pt?: string;
-  instructions: string[];
-  common_errors: string[];
-  breathing_tip: string;
-  range_of_motion: string;
+  target_muscle?: string;
+  secondary_muscles?: string[];
+  instructions?: string[];
+  common_errors?: string[];
+  breathing_tip?: string;
+  range_of_motion?: string;
 };
-
-const REQUIRED_FLAGS = {
-  missingInstructions: 'missing_instructions',
-  missingCommonErrors: 'missing_common_errors',
-  missingBreathingTip: 'missing_breathing_tip',
-  missingRangeOfMotion: 'missing_range_of_motion',
-  missingMedia: 'missing_media',
-  lowMediaConfidence: 'low_media_confidence',
-  missingNamePt: 'missing_name_pt',
-} as const;
 
 function normalizeKey(value: string): string {
   return String(value || '')
@@ -28,210 +20,226 @@ function normalizeKey(value: string): string {
     .replace(/^_|_$/g, '');
 }
 
-const CURATED: Record<string, CuratedExerciseContent> = {
+function isStrongList(value: unknown, minItems: number): boolean {
+  return Array.isArray(value) && value.map((v) => String(v || '').trim()).filter(Boolean).length >= minItems;
+}
+
+function toList(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((v) => String(v || '').trim()).filter(Boolean) : [];
+}
+
+function fallbackContent(name_pt: string, target_muscle: string, secondary_muscles: string[]): CuratedExerciseContent {
+  return {
+    name_pt,
+    target_muscle,
+    secondary_muscles,
+    instructions: [
+      'Ajuste postura e base antes de iniciar o movimento.',
+      'Execute a fase principal com controle e foco no músculo-alvo.',
+      'Retorne de forma lenta sem perder alinhamento articular.',
+    ],
+    common_errors: [
+      'Usar impulso e perder o controle da técnica.',
+      'Reduzir demais a amplitude sem necessidade.',
+    ],
+    breathing_tip: 'Expire na fase de esforço e inspire no retorno.',
+    range_of_motion: 'Use amplitude segura e consistente, sem compensar com a lombar.',
+  };
+}
+
+const CURATED_EXERCISES: Record<string, CuratedExerciseContent> = {
+  hip_thrust: fallbackContent('Hip Thrust', 'gluteos', ['posteriores_de_coxa', 'core']),
+  barbell_hip_thrust: {
+    name_pt: 'Hip Thrust com Barra',
+    target_muscle: 'gluteos',
+    secondary_muscles: ['posteriores_de_coxa', 'core'],
+    instructions: [
+      'Apoie a parte superior das costas em um banco firme.',
+      'Posicione a barra sobre o quadril e mantenha os pés firmes no chão.',
+      'Eleve o quadril contraindo os glúteos até alinhar joelhos, quadril e tronco.',
+      'Desça de forma controlada sem relaxar totalmente no final.',
+    ],
+    common_errors: [
+      'Subir com a lombar em vez de contrair os glúteos.',
+      'Não completar a extensão do quadril.',
+      'Deixar os joelhos abrirem ou fecharem demais.',
+    ],
+    breathing_tip: 'Expire ao subir e inspire ao descer.',
+    range_of_motion: 'Eleve até alinhar joelhos, quadril e tronco, sem hiperestender a lombar.',
+  },
+  smith_machine_hip_thrust: fallbackContent('Hip Thrust na Smith', 'gluteos', ['posteriores_de_coxa', 'core']),
+  glute_bridge: fallbackContent('Ponte de Glúteo', 'gluteos', ['core']),
   barbell_bench_press: {
-    name_pt: 'Supino reto com barra',
-    instructions: ['Apoie pés e escápulas firmes no banco.', 'Desça a barra até a linha média do peito.', 'Empurre para cima mantendo punhos e cotovelos alinhados.'],
-    common_errors: ['Cotovelos muito abertos.', 'Quadril sair do banco.', 'Perder controle na descida.'],
-    breathing_tip: 'Inspire na descida e expire ao subir.',
-    range_of_motion: 'Desça até tocar levemente o peito e suba quase até estender os cotovelos.',
+    name_pt: 'Supino Reto com Barra',
+    target_muscle: 'peito',
+    secondary_muscles: ['triceps', 'ombros'],
+    instructions: [
+      'Deite no banco com os pés firmes no chão.',
+      'Segure a barra com pegada estável e alinhada ao peito.',
+      'Desça a barra de forma controlada até a linha média do peito.',
+      'Empurre a barra para cima sem perder a estabilidade dos ombros.',
+    ],
+    common_errors: ['Tirar os pés do chão.', 'Deixar os cotovelos abrirem excessivamente.', 'Quicar a barra no peito.'],
+    breathing_tip: 'Inspire na descida e expire na subida.',
+    range_of_motion: 'Desça até perto do peito com controle e suba sem perder a tensão.',
   },
-  incline_dumbbell_press: {
-    name_pt: 'Supino inclinado com halteres',
-    instructions: ['Ajuste banco entre 30° e 45°.', 'Desça halteres ao lado do peitoral superior.', 'Suba em arco controlado sem fechar ombros.'],
-    common_errors: ['Inclinação muito alta.', 'Descer sem controle.', 'Bater halteres no topo.'],
-    breathing_tip: 'Inspire descendo, expire subindo.',
-    range_of_motion: 'Desça até alongar o peitoral sem dor e suba mantendo estabilidade.',
-  },
-  dumbbell_bench_press: {
-    name_pt: 'Supino reto com halteres',
-    instructions: ['Fixe escápulas e pés no chão.', 'Desça os halteres até a linha do peito.', 'Empurre para cima com trajetória estável.'],
-    common_errors: ['Punhos quebrados.', 'Perder estabilidade do ombro.', 'Amplitude curta.'],
-    breathing_tip: 'Inspire para descer e expire para subir.',
-    range_of_motion: 'Use descida controlada até alongamento confortável e suba completo.',
-  },
+  dumbbell_bench_press: fallbackContent('Supino Reto com Halteres', 'peito', ['triceps', 'ombros']),
+  incline_dumbbell_press: fallbackContent('Supino Inclinado com Halteres', 'peito', ['triceps', 'ombros']),
+  decline_bench_press: fallbackContent('Supino Declinado', 'peito', ['triceps', 'ombros']),
   squat: {
-    name_pt: 'Agachamento livre',
-    instructions: ['Pés na largura dos ombros e tronco firme.', 'Desça quadril para trás e para baixo.', 'Suba empurrando o chão com o pé inteiro.'],
-    common_errors: ['Joelho colapsar para dentro.', 'Lombar arredondar no fundo.', 'Perder equilíbrio no pé.'],
-    breathing_tip: 'Faça brace antes de descer e solte o ar ao subir.',
-    range_of_motion: 'Desça até manter coluna neutra e suba em extensão completa.',
+    name_pt: 'Agachamento',
+    target_muscle: 'quadriceps',
+    secondary_muscles: ['gluteos', 'posteriores_de_coxa', 'core'],
+    instructions: [
+      'Posicione os pés em largura confortável e mantenha o peito aberto.',
+      'Inicie o movimento flexionando quadris e joelhos ao mesmo tempo.',
+      'Desça com controle mantendo o tronco estável.',
+      'Suba empurrando o chão e mantendo o alinhamento dos joelhos.',
+    ],
+    common_errors: ['Deixar os joelhos colapsarem para dentro.', 'Perder a estabilidade da coluna lombar.', 'Subir o quadril antes do tronco.'],
+    breathing_tip: 'Inspire antes da descida e expire ao subir.',
+    range_of_motion: 'Desça até a maior amplitude que consiga sem perder alinhamento.',
   },
-  leg_press: {
-    name_pt: 'Leg press',
-    instructions: ['Apoie lombar no banco e pés firmes na plataforma.', 'Desça o trenó com joelhos alinhados.', 'Empurre sem travar totalmente os joelhos.'],
-    common_errors: ['Quadril descolar do encosto.', 'Joelhos colapsarem para dentro.', 'Amplitude curta demais.'],
-    breathing_tip: 'Inspire descendo e expire empurrando.',
-    range_of_motion: 'Desça até limite seguro da mobilidade e retorne quase à extensão total.',
-  },
-  deadlift: {
-    name_pt: 'Levantamento terra',
-    instructions: ['Posicione a barra próxima da canela.', 'Ative tronco e inicie com pernas e quadril juntos.', 'Suba com a barra rente ao corpo até ficar ereto.'],
-    common_errors: ['Arredondar lombar.', 'Barra afastar do corpo.', 'Puxar com braços.'],
-    breathing_tip: 'Inspire e trave o tronco antes de puxar.',
-    range_of_motion: 'Suba da barra no chão até postura ereta sem hiperextender lombar.',
-  },
-  romanian_deadlift: {
-    name_pt: 'Stiff / Terra romeno',
-    instructions: ['Mantenha joelhos semi-flexionados.', 'Leve quadril para trás com coluna neutra.', 'Retorne contraindo posteriores e glúteos.'],
-    common_errors: ['Arredondar costas.', 'Dobrar joelhos em excesso.', 'Descer além da mobilidade.'],
-    breathing_tip: 'Inspire descendo e expire subindo.',
-    range_of_motion: 'Desça até alongar posteriores sem perder neutralidade lombar.',
-  },
+  smith_machine_squat: fallbackContent('Agachamento na Smith', 'quadriceps', ['gluteos', 'core']),
+  leg_press: fallbackContent('Leg Press', 'quadriceps', ['gluteos', 'posteriores_de_coxa']),
+  deadlift: fallbackContent('Levantamento Terra', 'posteriores_de_coxa', ['gluteos', 'dorsais', 'core']),
+  romanian_deadlift: fallbackContent('Levantamento Terra Romeno', 'posteriores_de_coxa', ['gluteos', 'core']),
+  stiff_leg_deadlift: fallbackContent('Stiff', 'posteriores_de_coxa', ['gluteos', 'core']),
+  shoulder_press: fallbackContent('Desenvolvimento', 'ombros', ['triceps', 'core']),
+  military_press: fallbackContent('Desenvolvimento Militar', 'ombros', ['triceps', 'core']),
+  lateral_raise: fallbackContent('Elevação Lateral', 'ombros', ['trapezio']),
   lat_pulldown: {
-    name_pt: 'Puxada frontal',
-    instructions: ['Mantenha peito aberto e escápulas ativas.', 'Puxe a barra ao alto do peito.', 'Retorne com controle sem soltar tensão.'],
-    common_errors: ['Puxar atrás da nuca.', 'Balançar o tronco.', 'Elevar ombros na puxada.'],
-    breathing_tip: 'Expire puxando e inspire voltando.',
-    range_of_motion: 'Desça até contração máxima das costas e retorne com alongamento controlado.',
-  },
-  pull_up: {
-    name_pt: 'Barra fixa',
-    instructions: ['Comece pendurado com escápulas ativas.', 'Puxe até o queixo passar da barra.', 'Desça controlado até extensão total.'],
-    common_errors: ['Usar impulso excessivo.', 'Encolher ombros.', 'Não completar a descida.'],
-    breathing_tip: 'Expire na subida e inspire na descida.',
-    range_of_motion: 'Use amplitude completa em todas as repetições.',
-  },
-  barbell_curl: {
-    name_pt: 'Rosca direta',
-    instructions: ['Cotovelos fixos ao lado do tronco.', 'Flexione os cotovelos elevando a barra.', 'Desça lentamente sem relaxar total.'],
-    common_errors: ['Roubar com balanço.', 'Avançar cotovelos.', 'Descer muito rápido.'],
-    breathing_tip: 'Expire subindo, inspire descendo.',
-    range_of_motion: 'Suba até contrair bíceps e desça quase à extensão total com controle.',
-  },
-  hammer_curl: {
-    name_pt: 'Rosca martelo',
-    instructions: ['Segure halteres com pegada neutra.', 'Eleve mantendo cotovelos perto do tronco.', 'Desça de forma controlada.'],
-    common_errors: ['Girar o punho durante a subida.', 'Balançar o tronco.', 'Amplitude parcial.'],
-    breathing_tip: 'Expire na subida e inspire na descida.',
-    range_of_motion: 'Suba até contração forte e desça mantendo tensão.',
-  },
-  shoulder_press: {
-    name_pt: 'Desenvolvimento',
-    instructions: ['Ative abdômen e glúteos.', 'Empurre a carga acima da cabeça.', 'Desça até altura do queixo com controle.'],
-    common_errors: ['Hiperextensão lombar.', 'Cotovelos fora da linha.', 'Trajetória instável.'],
-    breathing_tip: 'Inspire descendo e expire ao pressionar.',
-    range_of_motion: 'Desça até amplitude confortável e suba em extensão controlada.',
-  },
-  lateral_raise: {
-    name_pt: 'Elevação lateral',
-    instructions: ['Inicie com cotovelos semi-flexionados.', 'Eleve até linha dos ombros.', 'Desça lentamente mantendo tensão.'],
-    common_errors: ['Subir acima dos ombros.', 'Usar impulso.', 'Rodar ombros para frente.'],
-    breathing_tip: 'Expire na subida e inspire na descida.',
-    range_of_motion: 'Vá de halteres ao lado do corpo até a linha dos ombros.',
-  },
-  triceps_pushdown: {
-    name_pt: 'Tríceps pulley',
-    instructions: ['Cotovelos fixos ao lado do tronco.', 'Empurre o cabo até estender os cotovelos.', 'Retorne sem perder postura.'],
-    common_errors: ['Mover os ombros.', 'Abrir os cotovelos.', 'Perder controle na volta.'],
-    breathing_tip: 'Expire empurrando e inspire retornando.',
-    range_of_motion: 'Estenda quase total e retorne até cerca de 90°.',
-  },
-  bent_over_row: {
-    name_pt: 'Remada curvada',
-    instructions: ['Incline o tronco com coluna neutra.', 'Puxe a barra em direção ao abdômen.', 'Desça mantendo estabilidade lombar.'],
-    common_errors: ['Arredondar costas.', 'Excesso de impulso.', 'Encolher ombros.'],
-    breathing_tip: 'Expire puxando e inspire descendo.',
-    range_of_motion: 'Puxe até contração dorsal e retorne com alongamento controlado.',
-  },
-  seated_row: {
-    name_pt: 'Remada baixa',
-    instructions: ['Sente com peito aberto e tronco firme.', 'Puxe o cabo para a linha do abdômen.', 'Retorne sem projetar ombros para frente.'],
-    common_errors: ['Balançar o tronco.', 'Encostar ombros nas orelhas.', 'Amplitude incompleta.'],
+    name_pt: 'Puxada Frontal',
+    target_muscle: 'dorsais',
+    secondary_muscles: ['biceps', 'deltoides_posteriores'],
+    instructions: [
+      'Segure a barra com pegada estável e sente-se com apoio firme.',
+      'Mantenha o peito aberto e as escápulas organizadas.',
+      'Puxe a barra em direção à parte superior do peito com controle.',
+      'Retorne lentamente sem perder a tensão nas costas.',
+    ],
+    common_errors: ['Puxar com excesso de balanço do tronco.', 'Levar a barra atrás da cabeça.', 'Encurtar demais a fase de retorno.'],
     breathing_tip: 'Expire na puxada e inspire na volta.',
-    range_of_motion: 'Vá do alongamento dorsal até contração máxima das costas.',
+    range_of_motion: 'Puxe até perto do peito e retorne controlando a subida.',
   },
-  pec_deck_fly: {
-    name_pt: 'Crucifixo máquina',
-    instructions: ['Ajuste o banco para alinhar cotovelos ao peitoral.', 'Feche os braços em arco até contrair o peito.', 'Retorne devagar até alongar.'],
-    common_errors: ['Cotovelos muito baixos.', 'Movimento rápido demais.', 'Perder contato das costas com o encosto.'],
-    breathing_tip: 'Expire ao fechar e inspire ao abrir.',
-    range_of_motion: 'Feche até contração forte e abra até alongamento confortável.',
+  pull_up: fallbackContent('Barra Fixa', 'dorsais', ['biceps', 'core']),
+  seated_row: fallbackContent('Remada Baixa', 'dorsais', ['biceps', 'deltoides_posteriores']),
+  bent_over_row: fallbackContent('Remada Curvada', 'dorsais', ['biceps', 'lombar']),
+  barbell_curl: {
+    name_pt: 'Rosca Direta com Barra',
+    target_muscle: 'biceps',
+    secondary_muscles: ['antebracos'],
+    instructions: [
+      'Fique em pé com a barra nas mãos e cotovelos próximos ao tronco.',
+      'Flexione os cotovelos levando a barra para cima com controle.',
+      'Evite balançar o corpo para ajudar o movimento.',
+      'Desça lentamente até quase estender os braços.',
+    ],
+    common_errors: ['Usar impulso do tronco.', 'Abrir os cotovelos para os lados.', 'Descer rápido demais.'],
+    breathing_tip: 'Expire ao subir e inspire ao descer.',
+    range_of_motion: 'Suba até a contração do bíceps e desça controlando até quase estender.',
   },
-  crunch: {
-    name_pt: 'Abdominal crunch',
-    instructions: ['Mantenha lombar apoiada no solo.', 'Eleve o tronco curto contraindo o abdômen.', 'Retorne lentamente sem relaxar totalmente.'],
-    common_errors: ['Puxar pescoço com as mãos.', 'Usar impulso.', 'Subir com flexão de quadril.'],
-    breathing_tip: 'Expire na contração e inspire no retorno.',
-    range_of_motion: 'Use flexão curta focando na contração abdominal.',
-  },
-  calf_raise: {
-    name_pt: 'Panturrilha em pé',
-    instructions: ['Apoie a ponta dos pés com estabilidade.', 'Eleve os calcanhares ao máximo.', 'Desça até alongamento total controlado.'],
-    common_errors: ['Repetições muito rápidas.', 'Amplitude curta.', 'Dobrar joelhos para compensar.'],
-    breathing_tip: 'Expire subindo e inspire descendo.',
-    range_of_motion: 'Vá do alongamento máximo ao pico de contração em cada repetição.',
-  },
-  lunge: {
-    name_pt: 'Passada / avanço',
-    instructions: ['Dê um passo à frente mantendo tronco ereto.', 'Desça até ambos joelhos ficarem alinhados.', 'Empurre o chão para retornar.'],
-    common_errors: ['Passo curto demais.', 'Joelho da frente colapsar.', 'Inclinar tronco excessivamente.'],
-    breathing_tip: 'Inspire descendo e expire subindo.',
-    range_of_motion: 'Desça até quase tocar o joelho de trás no solo mantendo alinhamento.',
-  },
+  hammer_curl: fallbackContent('Rosca Martelo', 'biceps', ['antebracos']),
+  triceps_pushdown: fallbackContent('Tríceps Pulley', 'triceps', ['antebracos']),
+  overhead_triceps_extension: fallbackContent('Tríceps Francês', 'triceps', ['ombros']),
+  pec_deck_fly: fallbackContent('Crucifixo na Máquina', 'peito', ['ombros']),
+  dumbbell_fly: fallbackContent('Crucifixo com Halteres', 'peito', ['ombros']),
+  lunge: fallbackContent('Avanço', 'quadriceps', ['gluteos', 'posteriores_de_coxa']),
+  walking_lunge: fallbackContent('Passada Caminhando', 'quadriceps', ['gluteos', 'core']),
+  calf_raise: fallbackContent('Elevação de Panturrilha', 'panturrilhas', []),
+  seated_calf_raise: fallbackContent('Panturrilha Sentado', 'panturrilhas', []),
+  crunch: fallbackContent('Abdominal Crunch', 'abdomen', ['core']),
+  leg_raise: fallbackContent('Elevação de Pernas', 'abdomen', ['flexores_do_quadril']),
 };
 
 const ALIASES: Record<string, string> = {
+  elevacao_pelvica: 'hip_thrust',
+  elevacao_pelvica_com_barra: 'barbell_hip_thrust',
+  ponte_de_gluteo: 'glute_bridge',
   supino_reto: 'barbell_bench_press',
   supino_reto_barra: 'barbell_bench_press',
+  supino_reto_com_barra: 'barbell_bench_press',
   supino_com_halteres: 'dumbbell_bench_press',
-  supino_inclinado_halteres: 'incline_dumbbell_press',
-  agachamento_livre: 'squat',
-  stiff: 'romanian_deadlift',
+  supino_inclinado: 'incline_dumbbell_press',
+  supino_inclinado_com_halteres: 'incline_dumbbell_press',
   puxada_frontal: 'lat_pulldown',
-  remada_baixa: 'seated_row',
+  puxada_frente: 'lat_pulldown',
+  barra_fixa: 'pull_up',
+  desenvolvimento_militar: 'military_press',
+  remada_curvada: 'bent_over_row',
+  remada_curvada_com_barra: 'bent_over_row',
+  rosca_direta: 'barbell_curl',
+  rosca_direta_barra: 'barbell_curl',
+  rosca_martelo: 'hammer_curl',
   triceps_pulley: 'triceps_pushdown',
-  abdominal_crunch: 'crunch',
+  triceps_corda: 'triceps_pushdown',
+  crucifixo: 'dumbbell_fly',
+  stiff: 'romanian_deadlift',
+  agachamento_livre: 'squat',
+  leg_press_45: 'leg_press',
 };
-
-function hasArray(value: unknown): boolean {
-  return Array.isArray(value) && value.length > 0;
-}
 
 export function getCuratedExerciseContent(normalizedLookupKey: string): CuratedExerciseContent | null {
   const normalized = normalizeKey(normalizedLookupKey);
   if (!normalized) return null;
   const resolved = ALIASES[normalized] || normalized;
-  return CURATED[resolved] ?? null;
+  return CURATED_EXERCISES[resolved] ?? null;
+}
+
+export function mergeCuratedExerciseContent<T extends Record<string, any>>(baseExercise: T, curated: CuratedExerciseContent | null): T {
+  if (!curated) return baseExercise;
+  const baseNamePt = String(baseExercise.name_pt || '').trim();
+  const baseNameEn = String(baseExercise.name_en || '').trim();
+  const instructions = toList(baseExercise.instructions);
+  const commonErrors = toList(baseExercise.common_errors);
+  const secondaryMuscles = toList(baseExercise.secondary_muscles);
+
+  return {
+    ...baseExercise,
+    name_pt: (!baseNamePt || normalizeKey(baseNamePt) === normalizeKey(baseNameEn)) ? (curated.name_pt || baseNamePt || baseNameEn || null) : baseNamePt,
+    target_muscle: String(baseExercise.target_muscle || '').trim() || curated.target_muscle || null,
+    secondary_muscles: secondaryMuscles.length ? secondaryMuscles : (curated.secondary_muscles || []),
+    instructions: isStrongList(instructions, 2) ? instructions : (curated.instructions || instructions),
+    common_errors: commonErrors.length ? commonErrors : (curated.common_errors || commonErrors),
+    breathing_tip: String(baseExercise.breathing_tip || '').trim() || curated.breathing_tip || null,
+    range_of_motion: String(baseExercise.range_of_motion || '').trim() || curated.range_of_motion || null,
+  } as T;
 }
 
 export function applyCuratedExerciseContent(exercise: Partial<ExerciseEntity>): Partial<ExerciseEntity> {
   const curated = getCuratedExerciseContent(String(exercise.normalized_lookup_key || exercise.slug || ''));
-  if (!curated) return exercise;
-  return {
-    ...exercise,
-    name_pt: exercise.name_pt || curated.name_pt || exercise.name_en || 'Exercício',
-    instructions: hasArray(exercise.instructions) ? exercise.instructions : curated.instructions,
-    common_errors: hasArray(exercise.common_errors) ? exercise.common_errors : curated.common_errors,
-    breathing_tip: exercise.breathing_tip || curated.breathing_tip,
-    range_of_motion: exercise.range_of_motion || curated.range_of_motion,
-    content_source: exercise.content_source || 'curated_v1',
-    last_enriched_at: exercise.last_enriched_at || new Date().toISOString(),
-  };
+  return mergeCuratedExerciseContent(exercise, curated);
 }
 
-export function computeExerciseCompletenessScore(exercise: Partial<ExerciseEntity>): number {
-  const checks = [
-    Boolean(exercise.name_pt),
-    hasArray(exercise.instructions),
-    hasArray(exercise.common_errors),
-    Boolean(exercise.breathing_tip),
-    Boolean(exercise.range_of_motion),
-    Boolean(exercise.target_muscle),
-    Boolean(exercise.media_url),
-  ];
-  const done = checks.filter(Boolean).length;
-  return Number((done / checks.length).toFixed(4));
+export function computeExerciseCompletenessScore(exercise: Record<string, any>): number {
+  let score = 0;
+  if (String(exercise.name_pt || '').trim()) score += 10;
+  if (String(exercise.target_muscle || '').trim()) score += 10;
+  if (toList(exercise.secondary_muscles).length) score += 5;
+  if (toList(exercise.instructions).length >= 3) score += 25;
+  if (toList(exercise.common_errors).length >= 2) score += 15;
+  if (String(exercise.breathing_tip || '').trim()) score += 10;
+  if (String(exercise.range_of_motion || '').trim()) score += 10;
+  if (String(exercise.media_url || '').trim()) score += 10;
+  if (String(exercise.media_type || '').toLowerCase() === 'video' && Number(exercise.media_confidence_score || 0) >= 0.7) score += 5;
+  return Math.max(0, Math.min(100, score));
 }
 
-export function computeQualityFlags(exercise: Partial<ExerciseEntity>): string[] {
+export function computeQualityFlags(exercise: Record<string, any>): string[] {
   const flags: string[] = [];
-  if (!hasArray(exercise.instructions)) flags.push(REQUIRED_FLAGS.missingInstructions);
-  if (!hasArray(exercise.common_errors)) flags.push(REQUIRED_FLAGS.missingCommonErrors);
-  if (!exercise.breathing_tip) flags.push(REQUIRED_FLAGS.missingBreathingTip);
-  if (!exercise.range_of_motion) flags.push(REQUIRED_FLAGS.missingRangeOfMotion);
-  if (!exercise.media_url) flags.push(REQUIRED_FLAGS.missingMedia);
-  if (Number(exercise.media_confidence_score ?? 0) < 0.5) flags.push(REQUIRED_FLAGS.lowMediaConfidence);
-  if (!exercise.name_pt) flags.push(REQUIRED_FLAGS.missingNamePt);
+  if (!String(exercise.name_pt || '').trim()) flags.push('missing_name_pt');
+  if (!String(exercise.target_muscle || '').trim()) flags.push('missing_target_muscle');
+
+  const instructions = toList(exercise.instructions);
+  if (!instructions.length) flags.push('missing_instructions');
+  else if (instructions.length < 2) flags.push('weak_instructions');
+
+  if (!toList(exercise.common_errors).length) flags.push('missing_common_errors');
+  if (!String(exercise.breathing_tip || '').trim()) flags.push('missing_breathing_tip');
+  if (!String(exercise.range_of_motion || '').trim()) flags.push('missing_range_of_motion');
+  if (!String(exercise.media_url || '').trim()) flags.push('missing_media');
+  if (Number(exercise.media_confidence_score || 0) < 0.5) flags.push('low_media_confidence');
+  if (computeExerciseCompletenessScore(exercise) < 55) flags.push('low_content_value');
+
   return Array.from(new Set(flags));
 }

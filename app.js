@@ -4939,47 +4939,42 @@ function _renderExerciseDiscResult(d, renderMode = "enriched") {
   const mediaEl = document.getElementById('exerciseDiscMedia');
   const mediaSrc = d.media?.primary;
   const mediaType = d.media?.type || (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc) ? "video" : mediaSrc ? "image" : "none");
+  const usingPlaceholder = !mediaSrc;
   if (mediaSrc && mediaType === "video") {
     mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:240px;object-fit:cover"></video>`;
   } else if (mediaSrc) {
     mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover">`;
   } else {
-    mediaEl.innerHTML = `<div style="min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));color:var(--text-2);font-size:0.82rem;text-align:center;padding:18px">Demonstração visual indisponível no momento</div>`;
+    mediaEl.innerHTML = `<div style="min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));color:var(--text-2);font-size:0.82rem;text-align:center;padding:18px">Sem demonstração visual</div>`;
   }
 
-  const muscles = [d.target_muscle, ...(d.secondary_muscles || [])].filter(Boolean);
+  const primaryMuscle = formatMuscleLabel(d.target_muscle);
+  const secondaryMuscles = Array.isArray(d.secondary_muscles) ? d.secondary_muscles.map(formatMuscleLabel).filter(Boolean) : [];
+  const musclesText = [primaryMuscle, ...secondaryMuscles].filter(Boolean).join(', ');
+
   document.getElementById('exerciseDiscInfo').innerHTML = `
     <div style="font-family:var(--display);font-size:1.14rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
     ${d.names?.en ? `<div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px">${d.names.en}</div>` : ''}
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-      ${d.target_muscle ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:rgba(255,107,0,0.15);color:#FFB347;border-radius:99px;border:1px solid rgba(255,107,0,0.25)">${d.target_muscle}</span>` : ''}
-      ${d.equipment ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.equipment}</span>` : ''}
-      ${d.body_part ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.body_part}</span>` : ''}
-    </div>`;
+  `;
 
   const instrs = Array.isArray(d.instructions) ? d.instructions.filter(Boolean) : [];
   const commonErrors = Array.isArray(d.common_errors) ? d.common_errors.filter(Boolean) : [];
   const blocks = [];
 
   if (instrs.length) {
-    blocks.push(`<div style="margin-bottom:12px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div><ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${instrs.map(s => `<li style="font-size:0.82rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}</ol></div>`);
+    blocks.push(`<section style="margin-bottom:14px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div><ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">${instrs.map((step, idx) => `<li style="font-size:0.84rem;color:var(--text);line-height:1.5"><strong style="color:#FFB347">${idx + 1}.</strong> ${step}</li>`).join('')}</ol></section>`);
   }
 
-  if (muscles.length) {
-    blocks.push(`<div style="margin-bottom:12px"><div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Músculos trabalhados</div><div style="font-size:0.8rem;line-height:1.45;color:var(--text)">${muscles.join(', ')}</div></div>`);
+  if (musclesText) {
+    blocks.push(`<section style="margin-bottom:14px"><div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Músculos trabalhados</div><div style="font-size:0.82rem;line-height:1.45;color:var(--text)">${musclesText}</div></section>`);
   }
 
   if (commonErrors.length) {
-    blocks.push(`<div style="margin-bottom:12px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Erros para evitar</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${commonErrors.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}</ul></div>`);
+    blocks.push(`<section style="margin-bottom:14px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Erros para evitar</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${commonErrors.map((err) => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${err}</li>`).join('')}</ul></section>`);
   }
 
-  if (d.breathing_tip || d.range_of_motion) {
-    const tipLabel = d.breathing_tip ? 'Respiração' : 'Dica rápida';
-    blocks.push(`<div style="margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">${tipLabel}</div><div style="font-size:.8rem;line-height:1.5">${d.breathing_tip || d.range_of_motion}</div>${d.range_of_motion && d.breathing_tip ? `<div style="margin-top:8px;font-size:.78rem;color:var(--text-2)"><strong>Amplitude:</strong> ${d.range_of_motion}</div>` : ''}</div>`);
-  }
-
-  if (!blocks.length) {
-    blocks.push('<div style="font-size:0.8rem;color:var(--text-2)">Conteúdo técnico em atualização para este exercício.</div>');
+  if (d.breathing_tip) {
+    blocks.push(`<section style="margin-bottom:14px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Respiração</div><div style="font-size:.82rem;line-height:1.45;color:var(--text)">${d.breathing_tip}</div>${d.range_of_motion ? `<div style="margin-top:8px;font-size:.78rem;color:var(--text-2)"><strong>Amplitude:</strong> ${d.range_of_motion}</div>` : ''}</section>`);
   }
 
   document.getElementById('exerciseDiscInstructions').innerHTML = blocks.join('');
@@ -4993,8 +4988,27 @@ function _renderExerciseDiscResult(d, renderMode = "enriched") {
     : '';
   const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${d.names?.pt || d.names?.en} execução correta`)}`;
   const fallbackLabel = renderMode === "minimal" ? "Ver referência complementar" : "Fonte externa complementar";
-  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}${varHtml ? '' : '<div style="height:4px"></div>'}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">${fallbackLabel}</a></div>`;
+  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}${varHtml ? '' : ''}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">${fallbackLabel}</a></div>`;
+
+  if (usingPlaceholder && !blocks.length) {
+    logExerciseDetailsEvent('exercise_detail_rendered_with_placeholder_only', { lookupKey: d.normalized_lookup_key || d.slug || '' });
+  }
+  if (blocks.length) {
+    logExerciseDetailsEvent('exercise_detail_rendered_with_curated_content', { lookupKey: d.normalized_lookup_key || d.slug || '', sections: blocks.length });
+  }
 }
+
+function formatMuscleLabel(value) {
+  const dict = {
+    gluteos: 'Glúteos', posteriores_de_coxa: 'Posteriores de coxa', core: 'Core',
+    peito: 'Peito', triceps: 'Tríceps', ombros: 'Ombros', quadriceps: 'Quadríceps',
+    dorsais: 'Dorsais', biceps: 'Bíceps', antebracos: 'Antebraços', panturrilhas: 'Panturrilhas'
+  };
+  const key = String(value || '').trim().toLowerCase();
+  if (!key) return '';
+  return dict[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 }
 
 async function openDietaSheet() {

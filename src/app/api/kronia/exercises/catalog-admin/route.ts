@@ -41,6 +41,7 @@ export async function GET(req: Request) {
         { key: 'text_only', label: 'Apenas texto', value: summary.textOnly },
         { key: 'low_completeness', label: 'Baixa completude', value: summary.lowCompleteness, tone: summary.lowCompleteness > 0 ? 'warning' : 'ok' },
         { key: 'low_media_confidence', label: 'Mídia baixa confiança', value: summary.lowMediaConfidence, tone: summary.lowMediaConfidence > 0 ? 'warning' : 'ok' },
+        { key: 'low_content_value', label: 'Baixo valor didático', value: summary.lowContentValue, tone: summary.lowContentValue > 0 ? 'warning' : 'ok' },
       ],
       ...summary,
     },

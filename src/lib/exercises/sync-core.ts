@@ -216,7 +216,7 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
         .from('exercises')
         .select('source_id,source,name,name_en,name_pt,slug,normalized_lookup_key,body_part,target_muscle,secondary_muscles,equipment,instructions,common_errors,breathing_tip,range_of_motion,media_url,media_thumbnail_url,media_type,media_provider,media_confidence_score,completeness_score,content_source,last_enriched_at,quality_flags,gif_url')
         .eq('is_active', true)
-        .or('completeness_score.lt.0.72,media_type.neq.video,instructions.eq.[],media_confidence_score.lt.0.62,quality_flags.cs.{missing_instructions}')
+        .or('completeness_score.lt.72,media_type.neq.video,instructions.eq.[],media_confidence_score.lt.0.62,quality_flags.cs.{missing_instructions}')
         .order('completeness_score', { ascending: true })
         .order('media_confidence_score', { ascending: true })
         .range(mediaOffset, mediaOffset + mediaBatchSize - 1);
@@ -226,8 +226,8 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
         const enriched = applyCuratedExerciseContent(row);
         const completeness = computeExerciseCompletenessScore(enriched);
         const quality_flags = computeQualityFlags({ ...enriched, completeness_score: completeness });
-        if (completeness < 0.6) emit(mode, 'exercise_catalog_low_completeness_detected', { key: row.normalized_lookup_key, completeness });
-        return { ...enriched, completeness_score: completeness, quality_flags, content_source: enriched.content_source || 'curated_v1', last_enriched_at: new Date().toISOString() };
+        if (completeness < 60) emit(mode, 'exercise_catalog_low_completeness_detected', { key: row.normalized_lookup_key, completeness });
+        return { ...enriched, completeness_score: completeness, quality_flags, content_source: enriched.content_source || 'curated_layer', last_enriched_at: new Date().toISOString() };
       });
 
       summary.improved_completeness_count += enrichedRows.filter((row, i) => Number(row.completeness_score || 0) > Number((data as any[])[i].completeness_score || 0)).length;
