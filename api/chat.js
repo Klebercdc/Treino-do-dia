@@ -47,6 +47,23 @@ function buildDietSuccessPayload(message, dietData, extraData, extraMeta) {
   };
 }
 
+function buildDietCollectingPayload(message, collectingData, extraData, extraMeta) {
+  var safeMessage = String(message || '').trim() || 'Vamos continuar montando sua dieta.';
+  var payloadData = Object.assign({}, extraData || {});
+  payloadData.content = [{
+    type: 'diet_result',
+    data: Object.assign({ flow_state: 'collecting' }, collectingData || {}),
+    text: safeMessage
+  }];
+  return {
+    success: true,
+    type: 'diet_result',
+    message: safeMessage,
+    data: payloadData,
+    meta: Object.assign({ flow: 'diet_collecting' }, extraMeta || {})
+  };
+}
+
 function buildDietErrorPayload() {
   return {
     success: false,
@@ -55,6 +72,22 @@ function buildDietErrorPayload() {
     data: { content: [] },
     error: 'DIET_PIPELINE_ERROR',
     meta: { fallback: true }
+  };
+}
+
+function sanitizeDietShape(payload) {
+  if (!payload || typeof payload !== 'object') return { payloadType: typeof payload };
+  var data = payload.data && typeof payload.data === 'object' ? payload.data : null;
+  var content = data && Array.isArray(data.content) ? data.content : [];
+  var first = content[0] && typeof content[0] === 'object' ? content[0] : null;
+  return {
+    success: payload.success,
+    type: payload.type,
+    messageChars: String(payload.message || '').length,
+    dataKeys: data ? Object.keys(data) : [],
+    contentLen: content.length,
+    firstNodeType: first ? first.type : null,
+    firstNodeKeys: first ? Object.keys(first) : []
   };
 }
 
@@ -223,13 +256,21 @@ module.exports = function(req, res) {
         var normalizedPayload = payload && typeof payload === 'object' ? Object.assign({}, payload) : {};
         var shouldForceDietContract = !!(b && b.isDietDirect) || !!(convState && convState.mode === 'diet') || normalizedPayload.type === 'diet_result';
         if (shouldForceDietContract) {
+          console.log('[chat] diet_backend_payload_shape', JSON.stringify({
+            event: 'diet_backend_payload_shape',
+            stage: 'before_normalize',
+            statusCode: statusCode,
+            shape: sanitizeDietShape(normalizedPayload)
+          }));
           normalizedPayload = normalizeDietEnvelope(normalizedPayload);
+          console.log('[chat] diet_backend_payload_shape', JSON.stringify({
+            event: 'diet_backend_payload_shape',
+            stage: 'after_normalize',
+            statusCode: statusCode,
+            shape: sanitizeDietShape(normalizedPayload)
+          }));
           if (normalizedPayload.success === false) {
-            console.warn('[chat] diet_backend_payload_shape', JSON.stringify({
-              event: 'diet_backend_payload_shape',
-              statusCode: statusCode,
-              payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : null
-            }));
+            console.warn('[chat] diet_pipeline_failed', JSON.stringify({ event: 'diet_pipeline_failed', statusCode: statusCode, reason: 'diet_contract_normalization_failed' }));
             statusCode = 500;
             outcome = 'failure';
           }
@@ -286,6 +327,7 @@ module.exports = function(req, res) {
       }
 
       if (convState && convState.mode === 'diet') {
+        console.log('[chat] diet_pipeline_selected', JSON.stringify({ event: 'diet_pipeline_selected', source: 'conversation_state' }));
         safeTrack(function() { tracker.captureDecision({
           graphNode: 'Nutricao',
           reason: 'Continuação de fluxo ativo de dieta.',
@@ -295,15 +337,16 @@ module.exports = function(req, res) {
         var dietStep = dietflow.continueDietFlow(convState.stepIndex, convState.collected, lastContent);
         if (!dietStep.finished) {
           safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, inputSummary: lastContent, outputSummary: dietStep.response }); });
-          return sendTracked(200, buildDietSuccessPayload(
+          return sendTracked(200, buildDietCollectingPayload(
             dietStep.response,
-            { flow_state: 'collecting' },
+            { next_step: dietStep.stepIndex },
             { conversationState: { mode: dietStep.mode, stepIndex: dietStep.stepIndex, collected: dietStep.collected, memory: shortState } },
             { local: true, flow: 'diet' }
           ));
         }
         var dietPlan = diet.buildDietPlan(dietStep.collected);
         safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: formatDietSummary(dietPlan) }); });
+        console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'conversation_state' }));
         return sendTracked(200, buildDietSuccessPayload(
           formatDietSummary(dietPlan),
           dietPlan,
@@ -343,6 +386,12 @@ module.exports = function(req, res) {
       var continuationContext = conversationStateUtil.applyContinuationContext(normalized, shortState);
       var classification = classifier.classifyIntent(normalized, continuationContext);
       var decision = decisionEngine.decideAction(classification, shortState, b.context || {});
+      if (b && b.isDietDirect) {
+        classification.topic = 'diet';
+        classification.kind = 'request';
+        decision.action = 'open_diet_flow';
+        decision.reason = 'isDietDirect flag forces diet pipeline.';
+      }
       if (classification.topic === 'diet' && decision.action !== 'open_diet_flow') {
         decision.action = 'open_diet_flow';
         decision.reason = 'Diet topic always uses diet pipeline.';
@@ -390,12 +439,28 @@ module.exports = function(req, res) {
       }
 
       if (decision.action === 'open_diet_flow') {
+        console.log('[chat] diet_pipeline_selected', JSON.stringify({ event: 'diet_pipeline_selected', source: b && b.isDietDirect ? 'isDietDirect' : 'intent_classifier' }));
+        if (b && b.isDietDirect && b.dietProfile && typeof b.dietProfile === 'object') {
+          try {
+            var directPlan = diet.buildDietPlan(b.dietProfile);
+            console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile' }));
+            return sendTracked(200, buildDietSuccessPayload(
+              formatDietSummary(directPlan),
+              directPlan,
+              { conversationState: { memory: nextShortState } },
+              { local: true, flow: 'diet_direct' }
+            ));
+          } catch (dietErr) {
+            console.warn('[chat] diet_pipeline_failed', JSON.stringify({ event: 'diet_pipeline_failed', source: 'direct_profile', error: dietErr && dietErr.message ? dietErr.message : 'unknown' }));
+            return sendTracked(500, buildDietErrorPayload(), 'failure');
+          }
+        }
         var dietStart = dietflow.startDietFlow();
         emitDecisionTelemetry(user.id, classification, decision, false, true);
         safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, outputSummary: dietStart.response }); });
-        return sendTracked(200, buildDietSuccessPayload(
+        return sendTracked(200, buildDietCollectingPayload(
           dietStart.response,
-          { flow_state: 'started' },
+          { flow_state: 'started', next_step: dietStart.stepIndex },
           { conversationState: { mode: dietStart.mode, stepIndex: dietStart.stepIndex, collected: dietStart.collected, memory: nextShortState } },
           { local: true }
         ));
