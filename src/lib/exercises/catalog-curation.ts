@@ -28,6 +28,17 @@ function toList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((v) => String(v || '').trim()).filter(Boolean) : [];
 }
 
+function resolveFallbackKey(key: string): string {
+  if (!key) return '';
+  if (key.includes('supino') && key.includes('inclinado')) return 'incline_bench_press';
+  if (key.includes('supino')) return 'barbell_bench_press';
+  if (key.includes('agachamento')) return 'squat';
+  if (key.includes('puxada')) return 'lat_pulldown';
+  if (key.includes('rosca')) return 'barbell_curl';
+  if (key.includes('elevacao') || key.includes('pelvica')) return 'barbell_hip_thrust';
+  return key;
+}
+
 function fallbackContent(name_pt: string, target_muscle: string, secondary_muscles: string[]): CuratedExerciseContent {
   return {
     name_pt,
@@ -84,6 +95,20 @@ const CURATED_EXERCISES: Record<string, CuratedExerciseContent> = {
     range_of_motion: 'Desça até perto do peito com controle e suba sem perder a tensão.',
   },
   dumbbell_bench_press: fallbackContent('Supino Reto com Halteres', 'peito', ['triceps', 'ombros']),
+  incline_bench_press: {
+    name_pt: 'Supino Inclinado com Barra',
+    target_muscle: 'peito_superior',
+    secondary_muscles: ['triceps', 'ombros'],
+    instructions: [
+      'Ajuste o banco entre 30° e 45° e firme os pés no chão.',
+      'Desça a barra de forma controlada até a região superior do peito.',
+      'Empurre mantendo estabilidade de tronco e ombros.',
+      'Finalize a subida sem relaxar totalmente a tensão muscular.',
+    ],
+    common_errors: ['Inclinar o banco em excesso.', 'Descer a barra na linha média do peito.', 'Perder tensão no topo do movimento.'],
+    breathing_tip: 'Inspire ao descer e expire ao subir.',
+    range_of_motion: 'Desça até próximo ao peito superior com controle e suba sem perder alinhamento.',
+  },
   incline_dumbbell_press: fallbackContent('Supino Inclinado com Halteres', 'peito', ['triceps', 'ombros']),
   decline_bench_press: fallbackContent('Supino Declinado', 'peito', ['triceps', 'ombros']),
   squat: {
@@ -161,6 +186,8 @@ const ALIASES: Record<string, string> = {
   supino_reto_com_barra: 'barbell_bench_press',
   supino_com_halteres: 'dumbbell_bench_press',
   supino_inclinado: 'incline_dumbbell_press',
+  supino_inclinado_com_barra: 'incline_bench_press',
+  supino_inclinado_barra: 'incline_bench_press',
   supino_inclinado_com_halteres: 'incline_dumbbell_press',
   puxada_frontal: 'lat_pulldown',
   puxada_frente: 'lat_pulldown',
@@ -183,7 +210,10 @@ export function getCuratedExerciseContent(normalizedLookupKey: string): CuratedE
   const normalized = normalizeKey(normalizedLookupKey);
   if (!normalized) return null;
   const resolved = ALIASES[normalized] || normalized;
-  return CURATED_EXERCISES[resolved] ?? null;
+  const curated = CURATED_EXERCISES[resolved];
+  if (curated) return curated;
+  const fallback = resolveFallbackKey(resolved);
+  return CURATED_EXERCISES[fallback] ?? null;
 }
 
 export function mergeCuratedExerciseContent<T extends Record<string, any>>(baseExercise: T, curated: CuratedExerciseContent | null): T {
