@@ -8,7 +8,7 @@ var decisionEngine = require('../apihelpers/_decisionEngine');
 var healthRules = require('../apihelpers/_diagnosticHealth');
 var constants = require('../apihelpers/_diagnosticConstants');
 
-var VALID_ACTIONS_GET = ['overview', 'recent', 'execution', 'health', 'alerts', 'node_stats', 'checklist', 'journey', 'journeys', 'export'];
+var VALID_ACTIONS_GET = ['overview', 'recent', 'execution', 'health', 'alerts', 'node_stats', 'checklist', 'journey', 'journeys', 'export', 'exercise_catalog'];
 var VALID_ACTIONS_POST = ['simulate', 'health'];
 
 function sendOk(res, data, statusCode) {
@@ -138,6 +138,36 @@ function safeExec(actionName, runner, fallbackValue) {
     console.error('[admin-diagnostics][' + actionName + '] erro parcial:', normalized);
     return { value: fallbackValue, error: normalized };
   });
+}
+
+
+function buildExerciseCatalogSummary(rows) {
+  var list = rows || [];
+  var summary = {
+    total: list.length,
+    with_video: 0,
+    with_gif: 0,
+    text_only: 0,
+    with_instructions: 0,
+    with_common_errors: 0,
+    with_breathing_tip: 0,
+    low_completeness: 0,
+    low_media_confidence: 0
+  };
+  list.forEach(function(item) {
+    var mediaType = String(item.media_type || '').toLowerCase();
+    var hasVideo = mediaType === 'video' && !!item.media_url;
+    var hasGif = mediaType === 'gif' || (!hasVideo && !!item.gif_url);
+    if (hasVideo) summary.with_video += 1;
+    if (hasGif) summary.with_gif += 1;
+    if (!hasVideo && !hasGif) summary.text_only += 1;
+    if (Array.isArray(item.instructions) && item.instructions.length) summary.with_instructions += 1;
+    if (Array.isArray(item.common_errors) && item.common_errors.length) summary.with_common_errors += 1;
+    if (item.breathing_tip) summary.with_breathing_tip += 1;
+    if (Number(item.completeness_score || 0) < 0.55) summary.low_completeness += 1;
+    if (Number(item.media_confidence_score || 0) < 0.5) summary.low_media_confidence += 1;
+  });
+  return summary;
 }
 
 function num(value, fallback, min, max) {
@@ -276,7 +306,12 @@ function buildObservabilityPayload(req) {
       }).then(function(rows) {
         return buildChecklist(rows);
       });
-    }, [])
+    }, []),
+    safeExec('exercise_catalog', function() {
+      return query('exercises?select=id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,is_active&is_active=eq.true&limit=2000').then(function(rows) {
+        return buildExerciseCatalogSummary(rows);
+      });
+    }, null)
   ]).then(function(result) {
     return {
       data: {
@@ -285,7 +320,8 @@ function buildObservabilityPayload(req) {
         journeys: result[2].value,
         node_stats: result[3].value,
         alerts: result[4].value,
-        checklist: result[5].value
+        checklist: result[5].value,
+        exercise_catalog: result[6].value
       },
       errors: {
         overview: result[0].error,
@@ -293,7 +329,8 @@ function buildObservabilityPayload(req) {
         journeys: result[2].error,
         node_stats: result[3].error,
         alerts: result[4].error,
-        checklist: result[5].error
+        checklist: result[5].error,
+        exercise_catalog: result[6].error
       },
       page: recentCfg.page,
       pageSize: recentCfg.pageSize
@@ -452,6 +489,7 @@ module.exports = function(req, res) {
             node_stats: payload.data.node_stats,
             alerts: payload.data.alerts,
             checklist: payload.data.checklist,
+            exercise_catalog: payload.data.exercise_catalog,
             errors: payload.errors,
             page: payload.page,
             pageSize: payload.pageSize,
@@ -543,6 +581,19 @@ module.exports = function(req, res) {
         }, []).then(function(outcome) {
           return sendOk(res, { journey: outcome.value, conversationTraceId: traceId, errors: { journeys: outcome.error } });
         });
+      }
+
+
+      if (action === 'exercise_catalog') {
+        return query('exercises?select=id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,is_active&is_active=eq.true&limit=2000')
+          .then(function(rows) {
+            var summary = buildExerciseCatalogSummary(rows);
+            console.info('[admin-diagnostics] exercise_catalog_admin_summary_loaded', summary);
+            return sendOk(res, { summary: summary });
+          })
+          .catch(function(err) {
+            return sendError(res, 'EXERCISE_CATALOG_ERROR', normalizeError(err), 500);
+          });
       }
 
       if (action === 'export') {

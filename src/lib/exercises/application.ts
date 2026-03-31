@@ -3,7 +3,9 @@ import { detectIntentFromMessage } from './intent';
 import { cleanText, normalizeEquipment, normalizeExerciseName, normalizeMuscle } from './normalizer';
 import { ExerciseDbClient } from './exercisedbClient';
 import { ExerciseRepository } from './repository';
-import { PexelsClient, scorePexelsVideo } from './pexelsClient';
+import { PexelsClient } from './pexelsClient';
+import { applyCuratedExerciseContent, computeExerciseCompletenessScore, computeQualityFlags, getCuratedExerciseContent } from './catalog-curation';
+import { pickBestExerciseMedia } from './media-ranking';
 import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseDetailsInput, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput, NormalizedExerciseDetails } from './types';
 
 const PLACEHOLDER_MEDIA_URL = 'https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg';
@@ -66,7 +68,7 @@ export class KroniaExerciseApplication {
         fallback: exercise.media_thumbnail_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
         provider: exercise.media_provider ?? 'catalog',
         thumbnailUrl: exercise.media_thumbnail_url ?? null,
-        score: 0.94,
+        score: Number(exercise.media_confidence_score ?? 0.9),
         cacheHit: true,
         mediaType: exercise.media_type ?? (exercise.media_url.includes('.gif') ? 'gif' : 'image'),
       };
@@ -89,39 +91,42 @@ export class KroniaExerciseApplication {
 
     if (this.pexelsClient) {
       const videos = await this.pexelsClient.searchVideos(query);
-      const scored = videos
-        .map((video) => ({ video, score: scorePexelsVideo(video, { query, muscle: exercise.target_muscle ?? undefined, equipment: exercise.equipment ?? undefined }) }))
-        .sort((a, b) => b.score - a.score);
+      const picked = pickBestExerciseMedia(exercise, videos, {
+        media_url: exercise.media_url,
+        media_type: exercise.media_type,
+        media_confidence_score: exercise.media_confidence_score,
+        gif_url: exercise.gif_url,
+      });
 
-      const best = scored[0];
-      if (best && best.score >= 0.64) {
-        const preferredFile = best.video.video_files.find((file) => file.quality === 'sd') ?? best.video.video_files[0];
-        await this.saveMediaCache({
-          exercise_id: exercise.id,
-          provider: 'pexels',
-          provider_media_id: String(best.video.id),
+      if (picked.media_type === 'video' && picked.media_url) {
+        await this.saveExerciseToDatabase({
+          ...exercise,
+          slug: exercise.slug,
+          name_en: exercise.name_en,
+          name_pt: exercise.name_pt,
+          media_url: picked.media_url,
+          media_thumbnail_url: picked.media_thumbnail_url,
           media_type: 'video',
-          video_url: preferredFile?.link ?? null,
-          thumbnail_url: best.video.image,
-          width: preferredFile?.width ?? best.video.width,
-          height: preferredFile?.height ?? best.video.height,
-          duration: best.video.duration,
-          search_query: query,
-          verified_score: best.score,
-          approved: true,
-          metadata: { pexelsUrl: best.video.url, selectedBy: 'kronia_exercise_media_ranker_v1' },
+          media_provider: 'Pexels',
+          media_confidence_score: picked.media_confidence_score,
         });
 
         return {
-          primary: preferredFile?.link ?? best.video.image,
+          primary: picked.media_url,
           fallback: exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
           provider: 'pexels',
-          thumbnailUrl: best.video.image,
-          score: best.score,
+          thumbnailUrl: picked.media_thumbnail_url,
+          score: picked.media_confidence_score,
           cacheHit: false,
           mediaType: 'video',
         };
       }
+
+      console.info('[kronia_exercise] exercise_media_confidence_low', {
+        exercise: exercise.normalized_lookup_key,
+        score: picked.media_confidence_score,
+        reason: picked.reason,
+      });
     }
 
     const baseMedia = exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL;
@@ -130,14 +135,28 @@ export class KroniaExerciseApplication {
       fallback: exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
       provider: exercise.gif_url ? 'exercisedb' : 'internal',
       thumbnailUrl: exercise.image_url,
-      score: 0.4,
+      score: Number(exercise.gif_url ? 0.42 : 0.2),
       cacheHit: false,
       mediaType: exercise.gif_url ? 'gif' : 'image',
     };
   }
 
   async saveExerciseToDatabase(exercise: Partial<ExerciseEntity> & { slug: string; name_en: string; name_pt: string }): Promise<ExerciseEntity> {
-    const saved = await this.repository.upsertExercise(exercise);
+    const merged = applyCuratedExerciseContent(exercise);
+    const completeScore = computeExerciseCompletenessScore(merged);
+    const mediaScore = Number(merged.media_confidence_score ?? (merged.media_type === 'video' ? 0.78 : merged.gif_url ? 0.42 : 0.2));
+    const qualityFlags = computeQualityFlags({ ...merged, media_confidence_score: mediaScore, completeness_score: completeScore });
+
+    const saved = await this.repository.upsertExercise({
+      ...merged,
+      slug: String(exercise.slug || merged.slug || cleanText(exercise.name_en || exercise.name_pt || 'exercise')).replace(/\s+/g, '-'),
+      name_en: String(exercise.name_en || merged.name_en || exercise.name_pt || 'Exercise'),
+      name_pt: String(exercise.name_pt || merged.name_pt || exercise.name_en || 'Exercício'),
+      completeness_score: completeScore,
+      media_confidence_score: mediaScore,
+      quality_flags: qualityFlags,
+    });
+
     await this.repository.saveAlias(saved.id, saved.name_pt, 'pt', 'name');
     await this.repository.saveAlias(saved.id, saved.name_en, 'en', 'name');
     return saved;
@@ -145,6 +164,12 @@ export class KroniaExerciseApplication {
 
   async saveMediaCache(input: Parameters<ExerciseRepository['saveMediaCache']>[0]) {
     return this.repository.saveMediaCache(input);
+  }
+
+  async getCatalogAdminSummary() {
+    const summary = await this.repository.getCatalogAdminSummary();
+    console.info('[kronia_exercise] exercise_catalog_admin_summary_loaded', summary);
+    return summary;
   }
 
   buildExerciseResponse(params: {
@@ -177,6 +202,7 @@ export class KroniaExerciseApplication {
         provider: media.provider,
         thumbnailUrl: media.thumbnailUrl,
         score: media.score,
+        confidenceScore: exercise.media_confidence_score,
       },
       variations: variations.map((item) => ({
         id: item.id,
@@ -289,6 +315,7 @@ export class KroniaExerciseApplication {
         thumbnailUrl: media.thumbnailUrl,
         type: media.mediaType,
         provider: media.provider,
+        confidenceScore: exercise.media_confidence_score,
       },
       instructions: safeInstructions,
       target_muscle: exercise.target_muscle,
@@ -304,12 +331,17 @@ export class KroniaExerciseApplication {
       common_errors: exercise.common_errors ?? [],
       breathing_tip: exercise.breathing_tip ?? null,
       range_of_motion: exercise.range_of_motion ?? null,
+      completeness_score: exercise.completeness_score ?? computeExerciseCompletenessScore(exercise),
+      media_confidence_score: exercise.media_confidence_score ?? (media.mediaType === 'video' ? 0.8 : 0.4),
+      content_source: exercise.content_source ?? null,
+      last_enriched_at: exercise.last_enriched_at ?? null,
+      quality_flags: exercise.quality_flags ?? computeQualityFlags(exercise),
       metadata: {
         cacheHit: media.cacheHit,
         externalFetch,
         responseTimeMs,
         normalizedLookupKey: lookupKey,
-        completenessScore: media.primary ? 0.9 : 0.6,
+        completenessScore: exercise.completeness_score ?? computeExerciseCompletenessScore(exercise),
         confidenceScore: Number((confidenceScore ?? 0.85).toFixed(4)),
       },
     };
@@ -344,6 +376,23 @@ export class KroniaExerciseApplication {
         normalizedLookupKey: lookupKey,
         responseTimeMs: Date.now() - start,
       });
+    }
+
+    const curated = getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug || exercise.name_en);
+    const curatedMerged = applyCuratedExerciseContent(exercise);
+    const enrichedCompleteness = computeExerciseCompletenessScore(curatedMerged);
+    if (enrichedCompleteness > Number(exercise.completeness_score ?? 0)) {
+      exercise = await this.saveExerciseToDatabase({
+        ...exercise,
+        ...curatedMerged,
+        slug: exercise.slug,
+        name_en: exercise.name_en,
+        name_pt: exercise.name_pt,
+        completeness_score: enrichedCompleteness,
+      });
+      console.info('[kronia_exercise] exercise_catalog_quality_enriched', { lookupKey: exercise.normalized_lookup_key, completeness: enrichedCompleteness });
+    } else if ((exercise.completeness_score ?? 0) < 0.55) {
+      console.info('[kronia_exercise] exercise_catalog_low_completeness_detected', { lookupKey: exercise.normalized_lookup_key, completeness: exercise.completeness_score });
     }
 
     const media = await this.enrichWithMedia(exercise, context);
@@ -385,6 +434,7 @@ export class KroniaExerciseApplication {
       source_id: item.id,
       name_en: nameEn,
       name_pt: nameEn,
+      normalized_lookup_key: cleanText(nameEn).replace(/\s+/g, '_'),
       body_part: String(item.bodyPart ?? '').toLowerCase() || null,
       target_muscle: normalizeMuscle(String(item.target ?? '').toLowerCase()) ?? null,
       secondary_muscles: Array.isArray(item.secondaryMuscles) ? item.secondaryMuscles.map((s) => cleanText(String(s))) : [],

@@ -4910,7 +4910,6 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
     }
     logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, message: e?.message || String(e) });
   }
-}
 
 async function openExerciseDiscovery(query) {
   openExerciseDiscSheet();
@@ -4939,19 +4938,18 @@ function _renderExerciseDiscResult(d, renderMode = "enriched") {
   d = normalizeExerciseDetails(d) || d;
   const mediaEl = document.getElementById('exerciseDiscMedia');
   const mediaSrc = d.media?.primary;
-  const mediaType = d.media?.type || (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc) ? "video" : "image");
+  const mediaType = d.media?.type || (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc) ? "video" : mediaSrc ? "image" : "none");
   if (mediaSrc && mediaType === "video") {
-    mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:220px;object-fit:cover"></video>`;
+    mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:240px;object-fit:cover"></video>`;
   } else if (mediaSrc) {
-    mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:220px;object-fit:cover">`;
+    mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover">`;
   } else {
-    mediaEl.innerHTML = `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:0.78rem">Mídia indisponível no momento</div>`;
+    mediaEl.innerHTML = `<div style="min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));color:var(--text-2);font-size:0.82rem;text-align:center;padding:18px">Demonstração visual indisponível no momento</div>`;
   }
 
-  // ── Info ───────────────────────────────────────────────
-  const muscles = [d.target_muscle, ...(d.secondary_muscles || [])].filter(Boolean).join(', ');
+  const muscles = [d.target_muscle, ...(d.secondary_muscles || [])].filter(Boolean);
   document.getElementById('exerciseDiscInfo').innerHTML = `
-    <div style="font-family:var(--display);font-size:1.1rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
+    <div style="font-family:var(--display);font-size:1.14rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
     ${d.names?.en ? `<div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px">${d.names.en}</div>` : ''}
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
       ${d.target_muscle ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:rgba(255,107,0,0.15);color:#FFB347;border-radius:99px;border:1px solid rgba(255,107,0,0.25)">${d.target_muscle}</span>` : ''}
@@ -4959,39 +4957,44 @@ function _renderExerciseDiscResult(d, renderMode = "enriched") {
       ${d.body_part ? `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;background:var(--card);color:var(--text-2);border-radius:99px;border:1px solid var(--border)">${d.body_part}</span>` : ''}
     </div>`;
 
-  const instrs = Array.isArray(d.instructions) ? d.instructions : [];
-  const commonErrors = Array.isArray(d.common_errors) ? d.common_errors : [];
-  const breathing = d.breathing_tip ? `<div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Respiração</div><div style="font-size:.8rem;line-height:1.5">${d.breathing_tip}</div></div>` : "";
-  const rom = d.range_of_motion ? `<div style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Amplitude</div><div style="font-size:.8rem;line-height:1.5">${d.range_of_motion}</div></div>` : "";
-  const instrHtml = `
-    <div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div>
-    ${instrs.length
-      ? `<ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
-         ${instrs.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}
-       </ol>`
-      : `<div style="font-size:0.8rem;color:var(--text-2)">Sem instruções detalhadas no momento.</div>`
-    }
-    <div style="margin-top:12px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Músculos trabalhados</div>
-    <div style="font-size:0.8rem;line-height:1.45;color:var(--text)">${muscles || "Não informado"}</div>
-    <div style="margin-top:12px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Erros para evitar</div>
-    ${commonErrors.length
-      ? `<ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${commonErrors.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}</ul>`
-      : `<div style="font-size:0.8rem;color:var(--text-2)">Mantenha postura neutra, ritmo controlado e amplitude sem compensações.</div>`
-    }
-    ${breathing}
-    ${rom}`;
-  document.getElementById('exerciseDiscInstructions').innerHTML = instrHtml;
+  const instrs = Array.isArray(d.instructions) ? d.instructions.filter(Boolean) : [];
+  const commonErrors = Array.isArray(d.common_errors) ? d.common_errors.filter(Boolean) : [];
+  const blocks = [];
+
+  if (instrs.length) {
+    blocks.push(`<div style="margin-bottom:12px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div><ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${instrs.map(s => `<li style="font-size:0.82rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}</ol></div>`);
+  }
+
+  if (muscles.length) {
+    blocks.push(`<div style="margin-bottom:12px"><div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Músculos trabalhados</div><div style="font-size:0.8rem;line-height:1.45;color:var(--text)">${muscles.join(', ')}</div></div>`);
+  }
+
+  if (commonErrors.length) {
+    blocks.push(`<div style="margin-bottom:12px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Erros para evitar</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${commonErrors.map(s => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${s}</li>`).join('')}</ul></div>`);
+  }
+
+  if (d.breathing_tip || d.range_of_motion) {
+    const tipLabel = d.breathing_tip ? 'Respiração' : 'Dica rápida';
+    blocks.push(`<div style="margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">${tipLabel}</div><div style="font-size:.8rem;line-height:1.5">${d.breathing_tip || d.range_of_motion}</div>${d.range_of_motion && d.breathing_tip ? `<div style="margin-top:8px;font-size:.78rem;color:var(--text-2)"><strong>Amplitude:</strong> ${d.range_of_motion}</div>` : ''}</div>`);
+  }
+
+  if (!blocks.length) {
+    blocks.push('<div style="font-size:0.8rem;color:var(--text-2)">Conteúdo técnico em atualização para este exercício.</div>');
+  }
+
+  document.getElementById('exerciseDiscInstructions').innerHTML = blocks.join('');
 
   const vars = d.variations || [];
   const varHtml = vars.length
     ? `<div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Variações</div>
        <div style="display:flex;flex-wrap:wrap;gap:6px">
-         ${vars.map(v => `<button onclick="openExerciseDetailsByName('${(v.names?.pt || v.names?.en || '').replace(/'/g,"\\'")}')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.names?.pt || v.names?.en}</button>`).join('')}
+         ${vars.map(v => `<button onclick="openExerciseDetailsByName('${(v.names?.pt || v.names?.en || '').replace(/'/g,"\'")}')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.names?.pt || v.names?.en}</button>`).join('')}
        </div>`
     : '';
   const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${d.names?.pt || d.names?.en} execução correta`)}`;
-  const fallbackLabel = renderMode === "minimal" ? "Buscar vídeo complementar" : "Fonte externa complementar";
-  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">${fallbackLabel}</a></div>`;
+  const fallbackLabel = renderMode === "minimal" ? "Ver referência complementar" : "Fonte externa complementar";
+  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}${varHtml ? '' : '<div style="height:4px"></div>'}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">${fallbackLabel}</a></div>`;
+}
 }
 
 async function openDietaSheet() {

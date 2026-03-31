@@ -5,6 +5,8 @@ function jsonArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+type IdentityInput = { exerciseId?: string | null; slug?: string | null; normalizedLookupKey?: string | null; exerciseName?: string | null };
+
 export class ExerciseRepository {
   constructor(private readonly db: SupabaseClient) {}
 
@@ -12,15 +14,7 @@ export class ExerciseRepository {
     const lookup = String(exerciseName || '').trim();
     if (!lookup) return null;
 
-    const safeLike = lookup.replace(/[%_]/g, ' ').trim();
-    const { data, error } = await this.db
-      .from('exercises')
-      .select('*')
-      .eq('is_active', true)
-      .or(`slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`)
-      .limit(8);
-    if (error) throw error;
-    const candidates = (data ?? []).map((item) => this.mapExercise(item));
+    const candidates = await this.searchCandidates(lookup, 8);
     if (!candidates.length) return null;
 
     const ranked = candidates
@@ -29,7 +23,7 @@ export class ExerciseRepository {
     return ranked[0]?.candidate ?? null;
   }
 
-  async findExerciseByIdentity(input: { exerciseId?: string | null; slug?: string | null; normalizedLookupKey?: string | null; exerciseName?: string | null }): Promise<{ exercise: ExerciseEntity | null; confidenceScore: number }> {
+  async findExerciseByIdentity(input: IdentityInput): Promise<{ exercise: ExerciseEntity | null; confidenceScore: number }> {
     const exerciseId = String(input.exerciseId || '').trim();
     if (exerciseId) {
       const { data, error } = await this.db.from('exercises').select('*').eq('id', exerciseId).eq('is_active', true).maybeSingle();
@@ -41,82 +35,24 @@ export class ExerciseRepository {
     if (slug) {
       const { data, error } = await this.db.from('exercises').select('*').eq('slug', slug).eq('is_active', true).maybeSingle();
       if (error) throw error;
-      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.96 };
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.97 };
     }
 
-    const key = String(input.normalizedLookupKey || '').trim();
-    if (key) {
-      const { data, error } = await this.db
-        .from('exercises')
-        .select('*')
-        .eq('normalized_lookup_key', key)
-        .eq('is_active', true)
-        .maybeSingle();
+    const normalizedKey = this.normalizeLookup(String(input.normalizedLookupKey || ''));
+    if (normalizedKey) {
+      const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', normalizedKey).eq('is_active', true).maybeSingle();
       if (error) throw error;
-      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.99 };
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.995 };
     }
 
-    const exerciseName = String(input.exerciseName || '').trim();
-    const sourceId = String(input.exerciseId || '').trim();
-    if (sourceId) {
-      const { data, error } = await this.db
-        .from('exercises')
-        .select('*')
-        .eq('source_id', sourceId)
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.95 };
-    }
+    const aliasCandidates = [normalizedKey, this.normalizeLookup(input.exerciseName || ''), this.normalizeLookup(slug)].filter(Boolean);
+    const aliasMatch = await this.findByAliases(aliasCandidates, input);
+    if (aliasMatch) return aliasMatch;
 
-    const aliasLookupCandidates = [key, this.normalizeLookup(exerciseName).replace(/\s+/g, '_'), slug]
-      .map((value) => String(value || '').trim())
-      .filter(Boolean);
-    if (aliasLookupCandidates.length) {
-      try {
-        const { data: aliasRowsByKey, error: aliasKeyError } = await this.db
-          .from('exercise_aliases')
-          .select('exercise_id,alias,alias_key,canonical_lookup_key')
-          .in('alias_key', aliasLookupCandidates)
-          .limit(5);
-        const { data: aliasRowsByAlias, error: aliasError } = await this.db
-          .from('exercise_aliases')
-          .select('exercise_id,alias,alias_key,canonical_lookup_key')
-          .in('alias', aliasLookupCandidates)
-          .limit(5);
-        const aliasRows = [...(aliasRowsByKey ?? []), ...(aliasRowsByAlias ?? [])];
-        if (!aliasKeyError && !aliasError && aliasRows.length) {
-          const exerciseIds = Array.from(new Set(aliasRows.map((row: any) => row.exercise_id).filter(Boolean)));
-          if (exerciseIds.length) {
-            const { data: exercisesByAlias, error: exercisesByAliasError } = await this.db
-              .from('exercises')
-              .select('*')
-              .in('id', exerciseIds)
-              .eq('is_active', true)
-              .limit(5);
-            if (!exercisesByAliasError && exercisesByAlias?.length) {
-              return { exercise: this.mapExercise(exercisesByAlias[0]), confidenceScore: 0.93 };
-            }
-          }
-        }
-      } catch {
-        // no-op: alias table may not be fully migrated yet
-      }
-    }
-
-    const lookup = key || exerciseName;
+    const lookup = normalizedKey || String(input.exerciseName || '').trim();
     if (!lookup) return { exercise: null, confidenceScore: 0 };
 
-    const safeLike = lookup.replace(/[%_]/g, ' ').trim();
-    const { data, error } = await this.db
-      .from('exercises')
-      .select('*')
-      .eq('is_active', true)
-      .or(`slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`)
-      .limit(12);
-    if (error) throw error;
-    const candidates = (data ?? []).map((item) => this.mapExercise(item));
+    const candidates = await this.searchCandidates(lookup, 12);
     if (!candidates.length) return { exercise: null, confidenceScore: 0 };
 
     const ranked = candidates
@@ -168,6 +104,18 @@ export class ExerciseRepository {
       category: input.category ?? null,
       instructions: input.instructions ?? [],
       gif_url: input.gif_url ?? null,
+      media_url: input.media_url ?? null,
+      media_thumbnail_url: input.media_thumbnail_url ?? null,
+      media_type: input.media_type ?? null,
+      media_provider: input.media_provider ?? null,
+      common_errors: input.common_errors ?? [],
+      breathing_tip: input.breathing_tip ?? null,
+      range_of_motion: input.range_of_motion ?? null,
+      completeness_score: Number(input.completeness_score ?? 0),
+      media_confidence_score: Number(input.media_confidence_score ?? 0),
+      content_source: input.content_source ?? null,
+      last_enriched_at: input.last_enriched_at ?? null,
+      quality_flags: input.quality_flags ?? [],
       image_url: input.image_url ?? null,
       search_terms: input.search_terms ?? [],
       difficulty: input.difficulty ?? null,
@@ -208,18 +156,104 @@ export class ExerciseRepository {
   }
 
   async saveAlias(exerciseId: string, alias: string, language: string, aliasType: string): Promise<void> {
+    const aliasKey = this.normalizeLookup(alias).replace(/\s+/g, '_');
+    const { data: exercise } = await this.db.from('exercises').select('normalized_lookup_key').eq('id', exerciseId).maybeSingle();
+
     const { error } = await this.db.from('exercise_aliases').upsert({
       exercise_id: exerciseId,
       alias,
+      alias_key: aliasKey,
+      canonical_lookup_key: exercise?.normalized_lookup_key ?? null,
+      locale: language === 'pt' ? 'pt_BR' : 'en_US',
       language,
       alias_type: aliasType,
-    }, { onConflict: 'exercise_id,alias,language' });
+    }, { onConflict: 'alias_key' });
     if (error) throw error;
   }
 
   async logSearch(entry: Record<string, unknown>): Promise<void> {
     const { error } = await this.db.from('exercise_search_logs').insert(entry);
     if (error) throw error;
+  }
+
+  async getCatalogAdminSummary() {
+    const { data, error } = await this.db
+      .from('exercises')
+      .select('id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags')
+      .eq('is_active', true);
+    if (error) throw error;
+    const rows = data ?? [];
+    const summary = {
+      total: rows.length,
+      withVideo: 0,
+      withGif: 0,
+      textOnly: 0,
+      withInstructions: 0,
+      withCommonErrors: 0,
+      withBreathingTip: 0,
+      lowCompleteness: 0,
+      lowMediaConfidence: 0,
+    };
+
+    for (const row of rows) {
+      const mediaType = String(row.media_type || '').toLowerCase();
+      const hasGif = mediaType === 'gif' || (!!row.gif_url && mediaType !== 'video');
+      const hasVideo = mediaType === 'video' && !!row.media_url;
+      summary.withVideo += hasVideo ? 1 : 0;
+      summary.withGif += hasGif ? 1 : 0;
+      summary.textOnly += !hasVideo && !hasGif ? 1 : 0;
+      summary.withInstructions += jsonArray(row.instructions).length ? 1 : 0;
+      summary.withCommonErrors += jsonArray(row.common_errors).length ? 1 : 0;
+      summary.withBreathingTip += row.breathing_tip ? 1 : 0;
+      summary.lowCompleteness += Number(row.completeness_score ?? 0) < 0.55 ? 1 : 0;
+      summary.lowMediaConfidence += Number(row.media_confidence_score ?? 0) < 0.5 ? 1 : 0;
+    }
+
+    return summary;
+  }
+
+  private async findByAliases(aliasCandidates: string[], input: IdentityInput): Promise<{ exercise: ExerciseEntity | null; confidenceScore: number } | null> {
+    if (!aliasCandidates.length) return null;
+    try {
+      const { data: aliasRowsByKey, error: keyError } = await this.db
+        .from('exercise_aliases')
+        .select('exercise_id,alias,alias_key')
+        .in('alias_key', aliasCandidates)
+        .limit(30);
+      const { data: aliasRowsByAlias, error: aliasError } = await this.db
+        .from('exercise_aliases')
+        .select('exercise_id,alias,alias_key')
+        .in('alias', aliasCandidates)
+        .limit(30);
+      const aliasRows = [...(aliasRowsByKey ?? []), ...(aliasRowsByAlias ?? [])];
+      if (keyError || aliasError || !aliasRows.length) return null;
+      const exerciseIds = Array.from(new Set(aliasRows.map((row: any) => row.exercise_id).filter(Boolean)));
+      if (!exerciseIds.length) return null;
+
+      const { data: exercises, error: exercisesError } = await this.db.from('exercises').select('*').in('id', exerciseIds).eq('is_active', true).limit(12);
+      if (exercisesError || !exercises?.length) return null;
+
+      const ranked = exercises
+        .map((row: any) => this.mapExercise(row))
+        .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input, aliasCandidates) + 0.06 }))
+        .sort((a, b) => b.score - a.score);
+
+      return { exercise: ranked[0]?.candidate ?? null, confidenceScore: Number(Math.min(1, ranked[0]?.score ?? 0).toFixed(4)) };
+    } catch {
+      return null;
+    }
+  }
+
+  private async searchCandidates(lookup: string, limit: number): Promise<ExerciseEntity[]> {
+    const safeLike = lookup.replace(/[%_]/g, ' ').trim();
+    const { data, error } = await this.db
+      .from('exercises')
+      .select('*')
+      .eq('is_active', true)
+      .or(`normalized_lookup_key.ilike.%${safeLike}%,slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`)
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map((item) => this.mapExercise(item));
   }
 
   private mapExercise(raw: any): ExerciseEntity {
@@ -242,6 +276,11 @@ export class ExerciseRepository {
       media_thumbnail_url: raw.media_thumbnail_url ?? raw.image_url ?? raw.gif_url ?? null,
       media_type: raw.media_type ?? (raw.gif_url ? 'gif' : (raw.image_url ? 'image' : null)),
       media_provider: raw.media_provider ?? (raw.gif_url ? 'ExerciseDB' : null),
+      completeness_score: Number(raw.completeness_score ?? 0),
+      media_confidence_score: Number(raw.media_confidence_score ?? 0),
+      content_source: raw.content_source ?? null,
+      last_enriched_at: raw.last_enriched_at ?? null,
+      quality_flags: jsonArray(raw.quality_flags),
       youtube_fallback_url: raw.youtube_fallback_url ?? null,
       common_errors: jsonArray(raw.common_errors),
       breathing_tip: raw.breathing_tip ?? null,
@@ -290,21 +329,39 @@ export class ExerciseRepository {
     return this.normalizeLookup(value).split(' ').filter(Boolean);
   }
 
-  private computeConfidenceScore(item: ExerciseEntity, input: { exerciseId?: string | null; slug?: string | null; normalizedLookupKey?: string | null; exerciseName?: string | null }): number {
+  private computeConfidenceScore(item: ExerciseEntity, input: IdentityInput, aliasCandidates: string[] = []): number {
     if (input.exerciseId && item.id === input.exerciseId) return 1;
     const normalizedName = this.normalizeLookup(String(input.exerciseName || ''));
     const normalizedKey = this.normalizeLookup(String(input.normalizedLookupKey || ''));
-    const lookup = normalizedKey || normalizedName;
-    const aliases = [item.slug, item.name_pt, item.name_en, ...(item.search_terms || [])].map((v) => this.normalizeLookup(String(v || ''))).filter(Boolean);
+    const normalizedSlug = this.normalizeLookup(String(input.slug || ''));
+    const lookup = normalizedKey || normalizedName || normalizedSlug;
     if (!lookup) return 0;
-    if (aliases.some((alias) => alias === lookup)) return 0.97;
+
+    const normalizedLookupKey = this.normalizeLookup(item.normalized_lookup_key || '');
+    const slug = this.normalizeLookup(item.slug || '');
+    const namePt = this.normalizeLookup(item.name_pt || '');
+    const nameEn = this.normalizeLookup(item.name_en || '');
+    const searchTerms = (item.search_terms || []).map((v) => this.normalizeLookup(v));
+    const aliases = [normalizedLookupKey, slug, namePt, nameEn, ...searchTerms, ...aliasCandidates].filter(Boolean);
+
+    if (normalizedLookupKey && normalizedLookupKey === lookup) return 0.995;
+    if (slug && slug === lookup) return 0.98;
+    if (namePt === lookup) return 0.965;
+    if (nameEn === lookup) return 0.955;
+    if (aliases.some((alias) => alias === lookup)) return 0.945;
     if (aliases.some((alias) => alias.startsWith(lookup) || lookup.startsWith(alias))) return 0.86;
-    if (aliases.some((alias) => alias.includes(lookup) || lookup.includes(alias))) return 0.74;
 
     const queryTokens = new Set(this.tokenize(lookup));
-    const aliasTokens = new Set(aliases.flatMap((v) => this.tokenize(v)));
-    const overlap = [...queryTokens].filter((token) => aliasTokens.has(token)).length;
+    const aliasTokenArrays = aliases.map((v) => this.tokenize(v));
+    const aliasTokens = new Set(aliasTokenArrays.flat());
+    const overlap = Array.from(queryTokens).filter((token) => aliasTokens.has(token)).length;
     const tokenScore = queryTokens.size ? overlap / queryTokens.size : 0;
-    return Number((tokenScore * 0.68).toFixed(4));
+    const ambiguityCount = aliasTokenArrays.filter((tokens) => {
+      const local = new Set(tokens);
+      const m = Array.from(queryTokens).filter((token) => local.has(token)).length;
+      return queryTokens.size ? (m / queryTokens.size) >= 0.66 : false;
+    }).length;
+    const ambiguityPenalty = ambiguityCount > 1 ? Math.min(0.2, (ambiguityCount - 1) * 0.05) : 0;
+    return Number(Math.max(0, Math.min(0.95, 0.5 + (tokenScore * 0.4) - ambiguityPenalty)).toFixed(4));
   }
 }
