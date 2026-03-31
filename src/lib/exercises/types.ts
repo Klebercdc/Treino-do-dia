@@ -53,6 +53,7 @@ export interface ExerciseEntity {
   content_source?: string | null;
   last_enriched_at?: string | null;
   quality_flags?: string[];
+  // curated value layer
   youtube_fallback_url?: string | null;
   common_errors?: string[];
   breathing_tip?: string | null;
@@ -201,6 +202,7 @@ export interface NormalizedExerciseDetails {
   content_source?: string | null;
   last_enriched_at?: string | null;
   quality_flags?: string[];
+  // curated value layer
   metadata: {
     cacheHit: boolean;
     externalFetch: boolean;

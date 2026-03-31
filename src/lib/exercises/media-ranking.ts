@@ -20,32 +20,30 @@ function tokenize(value: string): string[] {
 
 export function computeMediaConfidenceScore(exercise: Partial<ExerciseEntity>, mediaCandidate: MediaCandidate): number {
   if (!mediaCandidate?.url) return 0;
-  let score = 0.2;
-
-  const baseTokens = new Set([
-    ...tokenize(exercise.name_en || ''),
-    ...tokenize(exercise.name_pt || ''),
+  const blob = `${mediaCandidate.url} ${mediaCandidate.thumbnailUrl || ''} ${JSON.stringify(mediaCandidate.metadata || {})}`.toLowerCase();
+  const tokens = Array.from(new Set([
     ...tokenize(exercise.normalized_lookup_key || ''),
+    ...tokenize(exercise.name_pt || ''),
+    ...tokenize(exercise.name_en || ''),
     ...tokenize(exercise.target_muscle || ''),
-  ]);
+  ]));
 
-  const metadataBlob = `${mediaCandidate.url} ${mediaCandidate.thumbnailUrl || ''} ${JSON.stringify(mediaCandidate.metadata || {})}`.toLowerCase();
-  const overlap = Array.from(baseTokens).filter((token) => metadataBlob.includes(token)).length;
-  if (baseTokens.size > 0) score += Math.min(0.28, (overlap / baseTokens.size) * 0.28);
+  let score = mediaCandidate.type === 'video' ? 0.12 : mediaCandidate.type === 'gif' ? 0.3 : 0.08;
+  const overlap = tokens.filter((token) => blob.includes(token)).length;
+  if (tokens.length) score += Math.min(0.35, (overlap / tokens.length) * 0.35);
 
-  if (mediaCandidate.thumbnailUrl) score += 0.1;
-  if (mediaCandidate.type === 'video') score += 0.16;
-  if (mediaCandidate.type === 'gif') score += 0.08;
+  const duration = Number(mediaCandidate.metadata?.duration || 0);
+  if (mediaCandidate.type === 'video') {
+    if (duration >= 6 && duration <= 50) score += 0.08;
+    else if (duration > 90 || duration < 3) score -= 0.12;
+  }
 
-  const duration = Number((mediaCandidate.metadata?.duration as number) || 0);
-  if (duration >= 8 && duration <= 90) score += 0.12;
-  else if (duration > 90) score -= 0.05;
+  const width = Number(mediaCandidate.metadata?.width || 0);
+  const height = Number(mediaCandidate.metadata?.height || 0);
+  if (width >= 640 && height >= 360) score += 0.06;
 
-  const width = Number((mediaCandidate.metadata?.width as number) || 0);
-  const height = Number((mediaCandidate.metadata?.height as number) || 0);
-  if (width >= 640 && height >= 360) score += 0.1;
-
-  if (/motivation|compilation|meme|edit|random|stock/i.test(metadataBlob)) score -= 0.2;
+  if (/motivation|compilation|random|stock|meme|edit|broll|gym tour|workout music/i.test(blob)) score -= 0.28;
+  if (overlap <= 1) score -= 0.18;
   return Number(Math.max(0, Math.min(1, score)).toFixed(4));
 }
 
@@ -55,7 +53,21 @@ export function pickBestExerciseMedia(
   currentMedia: { media_url?: string | null; media_type?: string | null; media_confidence_score?: number | null; gif_url?: string | null },
 ) {
   const currentScore = Number(currentMedia.media_confidence_score ?? 0);
-  if (currentMedia.media_type === 'video' && currentMedia.media_url && currentScore >= 0.75) {
+  const currentType = String(currentMedia.media_type || '').toLowerCase();
+  const gifFallback = currentMedia.gif_url || exercise.gif_url || (currentType === 'gif' ? currentMedia.media_url : null);
+
+  if (currentType === 'gif' && gifFallback && currentScore >= 0.45) {
+    return {
+      media_url: gifFallback,
+      media_thumbnail_url: gifFallback,
+      media_type: 'gif' as const,
+      media_provider: exercise.media_provider || 'ExerciseDB',
+      media_confidence_score: Number(Math.max(0.45, currentScore).toFixed(4)),
+      reason: 'kept_existing_gif',
+    };
+  }
+
+  if (currentType === 'video' && currentMedia.media_url && currentScore >= 0.8) {
     return {
       media_url: currentMedia.media_url,
       media_thumbnail_url: exercise.media_thumbnail_url || null,
@@ -74,31 +86,21 @@ export function pickBestExerciseMedia(
         thumbnailUrl: video.image || null,
         provider: 'Pexels',
         type: 'video',
-        metadata: { duration: video.duration, width: file?.width || video.width, height: file?.height || video.height, url: video.url },
+        metadata: { duration: video.duration, width: file?.width || video.width, height: file?.height || video.height, url: video.url, creator: video.user?.name || '' },
       };
-      return { video, candidate, score: computeMediaConfidenceScore(exercise, candidate) };
+      return { candidate, score: computeMediaConfidenceScore(exercise, candidate) };
     })
     .sort((a, b) => b.score - a.score);
 
   const best = ranked[0];
-  const gifFallback = currentMedia.gif_url || exercise.gif_url || null;
-  if (!best || best.score < 0.67) {
-    if (gifFallback) {
-      return {
-        media_url: gifFallback,
-        media_thumbnail_url: gifFallback,
-        media_type: 'gif' as const,
-        media_provider: 'ExerciseDB',
-        media_confidence_score: Number(Math.max(currentScore, 0.45).toFixed(4)),
-        reason: 'kept_gif_fallback',
-      };
-    }
+  const threshold = 0.72;
+  if (!best || best.score < threshold) {
     return {
-      media_url: currentMedia.media_url || null,
-      media_thumbnail_url: exercise.media_thumbnail_url || null,
-      media_type: (currentMedia.media_type as any) || null,
-      media_provider: exercise.media_provider || null,
-      media_confidence_score: Number(Math.max(currentScore, 0.2).toFixed(4)),
+      media_url: gifFallback || currentMedia.media_url || null,
+      media_thumbnail_url: gifFallback || exercise.media_thumbnail_url || null,
+      media_type: gifFallback ? 'gif' as const : ((currentType || null) as any),
+      media_provider: gifFallback ? 'ExerciseDB' : (exercise.media_provider || null),
+      media_confidence_score: Number(Math.max(gifFallback ? 0.45 : 0.2, currentScore).toFixed(4)),
       reason: 'low_confidence_external_video',
     };
   }

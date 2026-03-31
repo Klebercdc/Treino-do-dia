@@ -20,7 +20,7 @@ export class ExerciseRepository {
     const ranked = candidates
       .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, { exerciseName: lookup }) }))
       .sort((a, b) => b.score - a.score);
-    return ranked[0]?.candidate ?? null;
+    return ranked[0]?.score >= 0.58 ? ranked[0].candidate : null;
   }
 
   async findExerciseByIdentity(input: IdentityInput): Promise<{ exercise: ExerciseEntity | null; confidenceScore: number }> {
@@ -31,13 +31,6 @@ export class ExerciseRepository {
       if (data) return { exercise: this.mapExercise(data), confidenceScore: 1 };
     }
 
-    const slug = String(input.slug || '').trim();
-    if (slug) {
-      const { data, error } = await this.db.from('exercises').select('*').eq('slug', slug).eq('is_active', true).maybeSingle();
-      if (error) throw error;
-      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.97 };
-    }
-
     const normalizedKey = this.normalizeLookup(String(input.normalizedLookupKey || ''));
     if (normalizedKey) {
       const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', normalizedKey).eq('is_active', true).maybeSingle();
@@ -45,11 +38,21 @@ export class ExerciseRepository {
       if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.995 };
     }
 
-    const aliasCandidates = [normalizedKey, this.normalizeLookup(input.exerciseName || ''), this.normalizeLookup(slug)].filter(Boolean);
-    const aliasMatch = await this.findByAliases(aliasCandidates, input);
-    if (aliasMatch) return aliasMatch;
+    const normalizedSlug = this.normalizeLookup(String(input.slug || ''));
+    if (normalizedSlug) {
+      const { data, error } = await this.db.from('exercises').select('*').eq('slug', normalizedSlug.replace(/\s+/g, '-')).eq('is_active', true).maybeSingle();
+      if (error) throw error;
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.97 };
+    }
 
-    const lookup = normalizedKey || String(input.exerciseName || '').trim();
+    const aliasCandidates = [normalizedKey, this.normalizeLookup(input.exerciseName || ''), normalizedSlug].filter(Boolean);
+    const aliasMatch = await this.findByAliases(aliasCandidates, input);
+    if (aliasMatch?.exercise) {
+      console.info('[kronia_exercise] exercise_alias_match_used', { lookup: aliasCandidates[0], matched: aliasMatch.exercise.normalized_lookup_key || aliasMatch.exercise.slug, confidence: aliasMatch.confidenceScore });
+      if (aliasMatch.confidenceScore >= 0.62) return aliasMatch;
+    }
+
+    const lookup = normalizedKey || this.normalizeLookup(String(input.exerciseName || '')) || normalizedSlug;
     if (!lookup) return { exercise: null, confidenceScore: 0 };
 
     const candidates = await this.searchCandidates(lookup, 12);
@@ -58,8 +61,10 @@ export class ExerciseRepository {
     const ranked = candidates
       .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input) }))
       .sort((a, b) => b.score - a.score);
+
     const winner = ranked[0];
-    return { exercise: winner?.candidate ?? null, confidenceScore: winner?.score ?? 0 };
+    if (!winner || winner.score < 0.58) return { exercise: null, confidenceScore: Number((winner?.score || 0).toFixed(4)) };
+    return { exercise: winner.candidate, confidenceScore: Number(winner.score.toFixed(4)) };
   }
 
   async findExercise(context: DetectedExerciseContext): Promise<ExerciseEntity | null> {
@@ -132,6 +137,27 @@ export class ExerciseRepository {
     return this.mapExercise(data);
   }
 
+  async updateExerciseEnrichmentById(id: string, patch: Partial<ExerciseEntity>): Promise<ExerciseEntity> {
+    const payload = {
+      name_pt: patch.name_pt ?? null,
+      target_muscle: patch.target_muscle ?? null,
+      secondary_muscles: patch.secondary_muscles ?? [],
+      instructions: patch.instructions ?? [],
+      common_errors: patch.common_errors ?? [],
+      breathing_tip: patch.breathing_tip ?? null,
+      range_of_motion: patch.range_of_motion ?? null,
+      completeness_score: Number(patch.completeness_score ?? 0),
+      quality_flags: patch.quality_flags ?? [],
+      content_source: patch.content_source ?? null,
+      last_enriched_at: patch.last_enriched_at ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await this.db.from('exercises').update(payload).eq('id', id).select('*').single();
+    if (error) throw error;
+    return this.mapExercise(data);
+  }
+
   async getApprovedMediaCache(exerciseId: string): Promise<ExerciseMediaCacheEntity | null> {
     const { data, error } = await this.db
       .from('exercise_media_cache')
@@ -193,6 +219,13 @@ export class ExerciseRepository {
       withBreathingTip: 0,
       lowCompleteness: 0,
       lowMediaConfidence: 0,
+      lowContentValue: 0,
+      low_content_value_count: 0,
+      low_completeness_count: 0,
+      low_media_confidence_count: 0,
+      with_instructions_count: 0,
+      with_common_errors_count: 0,
+      with_breathing_tip_count: 0,
     };
 
     for (const row of rows) {
@@ -205,10 +238,18 @@ export class ExerciseRepository {
       summary.withInstructions += jsonArray(row.instructions).length ? 1 : 0;
       summary.withCommonErrors += jsonArray(row.common_errors).length ? 1 : 0;
       summary.withBreathingTip += row.breathing_tip ? 1 : 0;
-      summary.lowCompleteness += Number(row.completeness_score ?? 0) < 0.55 ? 1 : 0;
+      summary.lowCompleteness += Number(row.completeness_score ?? 0) < 55 ? 1 : 0;
       summary.lowMediaConfidence += Number(row.media_confidence_score ?? 0) < 0.5 ? 1 : 0;
+      const flags = jsonArray(row.quality_flags);
+      if (flags.includes('low_content_value') || Number(row.completeness_score ?? 0) < 55) summary.lowContentValue += 1;
     }
 
+    summary.low_content_value_count = summary.lowContentValue;
+    summary.low_completeness_count = summary.lowCompleteness;
+    summary.low_media_confidence_count = summary.lowMediaConfidence;
+    summary.with_instructions_count = summary.withInstructions;
+    summary.with_common_errors_count = summary.withCommonErrors;
+    summary.with_breathing_tip_count = summary.withBreathingTip;
     return summary;
   }
 
@@ -217,12 +258,12 @@ export class ExerciseRepository {
     try {
       const { data: aliasRowsByKey, error: keyError } = await this.db
         .from('exercise_aliases')
-        .select('exercise_id,alias,alias_key')
+        .select('exercise_id,alias,alias_key,canonical_lookup_key')
         .in('alias_key', aliasCandidates)
         .limit(30);
       const { data: aliasRowsByAlias, error: aliasError } = await this.db
         .from('exercise_aliases')
-        .select('exercise_id,alias,alias_key')
+        .select('exercise_id,alias,alias_key,canonical_lookup_key')
         .in('alias', aliasCandidates)
         .limit(30);
       const aliasRows = [...(aliasRowsByKey ?? []), ...(aliasRowsByAlias ?? [])];
@@ -235,7 +276,7 @@ export class ExerciseRepository {
 
       const ranked = exercises
         .map((row: any) => this.mapExercise(row))
-        .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input, aliasCandidates) + 0.06 }))
+        .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input, aliasCandidates) + 0.08 }))
         .sort((a, b) => b.score - a.score);
 
       return { exercise: ranked[0]?.candidate ?? null, confidenceScore: Number(Math.min(1, ranked[0]?.score ?? 0).toFixed(4)) };
@@ -320,48 +361,41 @@ export class ExerciseRepository {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+      .replace(/[^a-z0-9\s_-]/g, ' ')
+      .replace(/[-\s]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
   }
 
   private tokenize(value: string): string[] {
-    return this.normalizeLookup(value).split(' ').filter(Boolean);
+    return this.normalizeLookup(value).split('_').filter(Boolean);
   }
 
   private computeConfidenceScore(item: ExerciseEntity, input: IdentityInput, aliasCandidates: string[] = []): number {
     if (input.exerciseId && item.id === input.exerciseId) return 1;
-    const normalizedName = this.normalizeLookup(String(input.exerciseName || ''));
-    const normalizedKey = this.normalizeLookup(String(input.normalizedLookupKey || ''));
-    const normalizedSlug = this.normalizeLookup(String(input.slug || ''));
-    const lookup = normalizedKey || normalizedName || normalizedSlug;
-    if (!lookup) return 0;
+
+    const lookupRaw = this.normalizeLookup(String(input.normalizedLookupKey || input.exerciseName || input.slug || ''));
+    if (!lookupRaw) return 0;
 
     const normalizedLookupKey = this.normalizeLookup(item.normalized_lookup_key || '');
     const slug = this.normalizeLookup(item.slug || '');
     const namePt = this.normalizeLookup(item.name_pt || '');
     const nameEn = this.normalizeLookup(item.name_en || '');
-    const searchTerms = (item.search_terms || []).map((v) => this.normalizeLookup(v));
-    const aliases = [normalizedLookupKey, slug, namePt, nameEn, ...searchTerms, ...aliasCandidates].filter(Boolean);
+    const searchable = [normalizedLookupKey, slug, namePt, nameEn, ...(item.search_terms || []).map((v) => this.normalizeLookup(v)), ...aliasCandidates].filter(Boolean);
 
-    if (normalizedLookupKey && normalizedLookupKey === lookup) return 0.995;
-    if (slug && slug === lookup) return 0.98;
-    if (namePt === lookup) return 0.965;
-    if (nameEn === lookup) return 0.955;
-    if (aliases.some((alias) => alias === lookup)) return 0.945;
-    if (aliases.some((alias) => alias.startsWith(lookup) || lookup.startsWith(alias))) return 0.86;
+    if (normalizedLookupKey === lookupRaw) return 0.995;
+    if (aliasCandidates.includes(lookupRaw) && searchable.includes(lookupRaw)) return 0.985;
+    if (slug === lookupRaw) return 0.97;
+    if (namePt === lookupRaw) return 0.955;
+    if (nameEn === lookupRaw) return 0.945;
 
-    const queryTokens = new Set(this.tokenize(lookup));
-    const aliasTokenArrays = aliases.map((v) => this.tokenize(v));
-    const aliasTokens = new Set(aliasTokenArrays.flat());
-    const overlap = Array.from(queryTokens).filter((token) => aliasTokens.has(token)).length;
-    const tokenScore = queryTokens.size ? overlap / queryTokens.size : 0;
-    const ambiguityCount = aliasTokenArrays.filter((tokens) => {
-      const local = new Set(tokens);
-      const m = Array.from(queryTokens).filter((token) => local.has(token)).length;
-      return queryTokens.size ? (m / queryTokens.size) >= 0.66 : false;
-    }).length;
-    const ambiguityPenalty = ambiguityCount > 1 ? Math.min(0.2, (ambiguityCount - 1) * 0.05) : 0;
-    return Number(Math.max(0, Math.min(0.95, 0.5 + (tokenScore * 0.4) - ambiguityPenalty)).toFixed(4));
+    const queryTokens = new Set(this.tokenize(lookupRaw));
+    const ptTokens = new Set(this.tokenize(`${namePt}_${normalizedLookupKey}`));
+    const enTokens = new Set(this.tokenize(`${nameEn}_${slug}`));
+    const ptOverlap = queryTokens.size ? Array.from(queryTokens).filter((token) => ptTokens.has(token)).length / queryTokens.size : 0;
+    const enOverlap = queryTokens.size ? Array.from(queryTokens).filter((token) => enTokens.has(token)).length / queryTokens.size : 0;
+    const overlapScore = Math.max(ptOverlap * 0.78, enOverlap * 0.62);
+
+    return Number(Math.max(0, Math.min(0.94, 0.34 + overlapScore)).toFixed(4));
   }
 }
