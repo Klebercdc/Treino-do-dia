@@ -90,7 +90,7 @@ const STORAGE = Object.freeze({
   draftKey:   "kronia_draft_v2",
   historyKey: "kronia_history_v2",
   prevKey:    "kronia_prev_v1",
-  exerciseDetailsCacheKey: "kronia_exercise_details_cache_v1",
+  exerciseDetailsCacheKey: "kronia_exercise_details_cache_v2",
   maxHistory: 80, maxTemplates: 20,
 });
 const divisoesGen = { "2":["A","B"],"3":["A","B","C"],"4":["A","B","C","D"],"5":["A","B","C","D","E"],"6":["A","B","C","D","E","F"] };
@@ -338,7 +338,7 @@ function gerarProtocolo() {
 /* ═══════════════════════════════════════════════════
    CARDS DE EXERCÍCIO
 ═══════════════════════════════════════════════════ */
-function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=null, cardIndex=0) {
+function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=null, cardIndex=0, exerciseRefInput=null) {
   const displayTitle = getExerciseCardTitle({ display_name: nome, name: nome }, cardIndex);
   const o = document.getElementById("obj")?.value || "hipertrofia";
   const meta = reps || (o==="forca" ? "3-5 Reps" : o==="hipertrofia" ? "8-12 Reps" : "15-20 Reps");
@@ -349,9 +349,16 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
   const pKey = prevKeyOf(treinoKey, displayTitle);
   const prev = prevMap[pKey] || null;
   const card = document.createElement("div");
+  const exerciseRef = ensureExerciseRef(
+    { ...(exerciseRefInput || {}), display_name: displayTitle, name: displayTitle },
+    displayTitle,
+    (exerciseRefInput && exerciseRefInput.source) || "card_build",
+  );
   card.className = "exercise-card";
   card.setAttribute("data-ex-id", id);
   card.setAttribute("data-ex-name", displayTitle);
+  card.setAttribute("data-ex-lookup-key", exerciseRef.normalized_lookup_key || normalizeExerciseLookupKey(displayTitle));
+  card.setAttribute("data-ex-ref", JSON.stringify(exerciseRef));
   card.setAttribute("data-ex-sets", String(sets));
   card.setAttribute("data-ex-meta", meta);
   const rows = Array.from({length: sets}, (_, s) => {
@@ -711,7 +718,7 @@ function selecionar(n) {
     const active = document.querySelector(".section.active");
     const cardIdx = active ? active.querySelectorAll(".exercise-card").length : 0;
     const safeTitle = getExerciseCardTitle({ display_name: n, name: n }, cardIdx);
-    if (active) criarCard(safeTitle, active.id, null, null, null, null, cardIdx);
+    if (active) criarCard(safeTitle, active.id, null, null, null, null, cardIdx, ensureExerciseRef({ display_name: safeTitle, source: "library_manual_add" }, safeTitle, "library_manual_add"));
   } else {
     const safeTitle = getExerciseCardTitle({ display_name: n, name: n }, 0);
     const el = document.getElementById(currentExId);
@@ -720,6 +727,9 @@ function selecionar(n) {
       const card = el.closest(".exercise-card");
       if (card) {
         card.setAttribute("data-ex-name", safeTitle);
+        const nextRef = ensureExerciseRef({ display_name: safeTitle, source: "library_replace" }, safeTitle, "library_replace");
+        card.setAttribute("data-ex-lookup-key", nextRef.normalized_lookup_key);
+        card.setAttribute("data-ex-ref", JSON.stringify(nextRef));
         const guideBtn = card.querySelector(".card-header button[title='Ver exercício']");
         if (guideBtn) guideBtn.setAttribute("onclick", "openExerciseDetailsFromCard(this.closest('.exercise-card'))");
         const sec = card.closest(".section");
@@ -762,7 +772,7 @@ function buildTabsFromGrouped(grouped, order) {
     sec.id=`sec${idx}`; sec.className=`section ${idx===0?"active":""}`;
     sec.setAttribute("data-treino-key", key);
     cont.appendChild(sec);
-    (grouped[key]||[]).forEach((ex, exIdx) => criarCard(ex.exercicio, sec.id, ex.series, ex.reps, null, null, exIdx));
+    (grouped[key]||[]).forEach((ex, exIdx) => criarCard(ex.exercicio, sec.id, ex.series, ex.reps, null, null, exIdx, ensureExerciseRef(ex, ex.exercicio, "grouped_builder")));
   });
   addPillControls();
 }
@@ -798,7 +808,10 @@ function serializeCurrentState() {
       });
       const rawName = card.querySelector(".ex-title")?.textContent || "";
       const cleanName = getExerciseCardTitle({ display_name: rawName, name: rawName }, cardIdx);
-      return { name: cleanName, nome: cleanName, display_name: cleanName, sets: values.length, meta: card.querySelector(".ex-target")?.textContent||"", values };
+      let parsedRef = null;
+      try { parsedRef = JSON.parse(card.getAttribute("data-ex-ref") || "null"); } catch {}
+      const exerciseRef = ensureExerciseRef(parsedRef || { display_name: cleanName, normalized_lookup_key: card.getAttribute("data-ex-lookup-key") || normalizeExerciseLookupKey(cleanName) }, cleanName, "serialized_state");
+      return { name: cleanName, nome: cleanName, display_name: cleanName, exerciseRef, sets: values.length, meta: card.querySelector(".ex-target")?.textContent||"", values };
     });
     return { treinoKey, cards };
   });
@@ -823,7 +836,7 @@ function loadState(state) {
       const metaTxt = String(c.meta||"");
       const maybeReps = metaTxt.includes("Sets x") ? metaTxt.split("Sets x")[1]?.trim() : null;
       const safeName = getExerciseCardTitle(c, cardIdx);
-      criarCard(safeName, sec.id, c.sets, maybeReps, null, c.values, cardIdx);
+      criarCard(safeName, sec.id, c.sets, maybeReps, null, c.values, cardIdx, ensureExerciseRef(c.exerciseRef || c, safeName, "load_state"));
     });
   });
   addPillControls();
@@ -3040,25 +3053,92 @@ function getExerciseCardTitle(ex, index) {
   return fallback;
 }
 
-function normalizeExercisePayload(exercise, index) {
-  const source = exercise || {};
-  const normalizedName = getExerciseCardTitle(source, index);
+function buildExerciseStubFromPayload(source = {}, fallbackName = "Exercício") {
+  const displayName = getExerciseCardTitle(source, 0) || fallbackName;
   const instructionsCandidate = [
     source.instructions,
     source.observacoes,
     source.notes,
     source.cue,
-    source.description
+    source.description,
   ].find(v => v != null);
+  const instructions = Array.isArray(instructionsCandidate)
+    ? instructionsCandidate.map(v => String(v)).filter(Boolean).slice(0, 4)
+    : (instructionsCandidate ? [String(instructionsCandidate)] : []);
+  const targetMuscle = source.target_muscle || source.targetMuscle || source.muscles?.target || null;
+  const secondaryMuscles = Array.isArray(source.secondary_muscles)
+    ? source.secondary_muscles
+    : (Array.isArray(source.muscles?.secondary) ? source.muscles.secondary : []);
+  const mediaPrimary = source.media_url || source.media?.primary || source.media?.videoUrl || source.media?.imageUrl || null;
+  const mediaThumbnail = source.media_thumbnail_url || source.media?.thumbnailUrl || null;
+  const mediaType = source.media_type || source.media?.type || (mediaPrimary && /\.(mp4|webm)$/i.test(mediaPrimary) ? "video" : mediaPrimary ? "image" : "none");
+
+  return {
+    id: source.exercise_id || source.id || null,
+    slug: source.slug || null,
+    normalized_lookup_key: source.normalized_lookup_key || normalizeExerciseLookupKey(displayName),
+    names: {
+      pt: source.display_name || source.name_pt || source.nome || displayName,
+      en: source.name_en || source.display_name || source.nome || displayName,
+    },
+    instructions,
+    target_muscle: targetMuscle,
+    secondary_muscles: secondaryMuscles,
+    common_errors: Array.isArray(source.common_errors) ? source.common_errors.slice(0, 4) : [],
+    breathing_tip: source.breathing_tip || null,
+    variations: Array.isArray(source.variations) ? source.variations : [],
+    source: source.source || "workout_card",
+    media: {
+      primary: mediaPrimary,
+      thumbnailUrl: mediaThumbnail,
+      type: mediaType,
+      provider: source.media_provider || source.media?.provider || "workout_card",
+    },
+    metadata: {
+      fromCardStub: true,
+      completenessScore: mediaPrimary ? 0.62 : 0.45,
+    },
+  };
+}
+
+function ensureExerciseRef(source = {}, fallbackName = "Exercício", origin = "workout_builder") {
+  const displayName = getExerciseCardTitle(source, 0) || fallbackName;
+  const lookupKey = source.normalized_lookup_key || normalizeExerciseLookupKey(displayName);
+  const stub = buildExerciseStubFromPayload({ ...source, display_name: displayName, normalized_lookup_key: lookupKey }, displayName);
+  return {
+    exercise_id: source.exercise_id || source.id || null,
+    slug: source.slug || lookupKey,
+    normalized_lookup_key: lookupKey,
+    display_name: displayName,
+    source: source.source || origin,
+    target_muscle: source.target_muscle || source.targetMuscle || stub.target_muscle || null,
+    secondary_muscles: Array.isArray(source.secondary_muscles) ? source.secondary_muscles : (stub.secondary_muscles || []),
+    instructions: Array.isArray(stub.instructions) ? stub.instructions : [],
+    stub,
+  };
+}
+
+function normalizeExercisePayload(exercise, index) {
+  const source = exercise || {};
+  const normalizedName = getExerciseCardTitle(source, index);
+  const exerciseRef = ensureExerciseRef(source, normalizedName, source.source || "workout_payload");
 
   return {
     nome: normalizedName,
     name: normalizedName,
     display_name: normalizedName,
+    exercise_id: exerciseRef.exercise_id,
+    slug: exerciseRef.slug,
+    normalized_lookup_key: exerciseRef.normalized_lookup_key,
+    source: exerciseRef.source,
+    target_muscle: exerciseRef.target_muscle,
+    secondary_muscles: exerciseRef.secondary_muscles,
+    exercise_ref: exerciseRef,
+    exercise_stub: exerciseRef.stub,
     series: source.fases ? source.fases[0].series : (source.series || source.sets || 3),
     reps: source.fases ? source.fases[0].reps : (source.reps || source.repeticoes || "8-12"),
     fases: source.fases || null,
-    instructions: Array.isArray(instructionsCandidate) ? instructionsCandidate : (instructionsCandidate ? [String(instructionsCandidate)] : [])
+    instructions: Array.isArray(exerciseRef.instructions) ? exerciseRef.instructions : [],
   };
 }
 
@@ -3170,7 +3250,7 @@ function applyAIWorkout(data) {
         normalized.nome = cardTitle;
         normalized.name = cardTitle;
         normalized.display_name = cardTitle;
-        const cardEl = criarCard(cardTitle, "sec" + idx, normalized.series || 3, normalized.reps || "8-12", null, [], exIdx);
+        const cardEl = criarCard(cardTitle, "sec" + idx, normalized.series || 3, normalized.reps || "8-12", null, [], exIdx, normalized.exercise_ref || normalized);
         if (normalized.fases && normalized.fases.length > 0 && cardEl) {
           const fasesDiv = document.createElement("div");
           fasesDiv.style.cssText = "padding:6px 12px 10px;border-top:1px solid var(--border-soft);margin-top:4px";
@@ -4699,12 +4779,15 @@ function _writeExerciseDetailsCache(cache) {
 
 function normalizeExerciseDetails(result) {
   if (!result || typeof result !== "object") return null;
+  const namePt = result.names?.pt || result.name_pt || result.display_name || result.exerciseName || result.names?.en || "Exercício";
+  const lookupKey = result.normalized_lookup_key || result.metadata?.normalizedLookupKey || normalizeExerciseLookupKey(namePt);
   return {
     id: result.id || result.slug || "",
-    slug: result.slug || normalizeExerciseLookupKey(result.names?.pt || result.names?.en || ""),
+    slug: result.slug || lookupKey,
+    normalized_lookup_key: lookupKey,
     names: {
-      pt: result.names?.pt || result.names?.en || "Exercício",
-      en: result.names?.en || result.names?.pt || "Exercise",
+      pt: namePt,
+      en: result.names?.en || result.name_en || namePt || "Exercise",
     },
     media: {
       primary: result.media?.primary || null,
@@ -4735,53 +4818,97 @@ function normalizeExerciseDetails(result) {
 
 async function openExerciseDetailsFromCard(card) {
   if (!card) return;
-  const exerciseName = card.getAttribute("data-ex-name") || card.querySelector(".ex-title")?.textContent || "";
-  if (!exerciseName) return;
-  await openExerciseDetailsByName(exerciseName, { origin: "card" });
+  const exerciseName = card.getAttribute("data-ex-name") || card.querySelector(".ex-title")?.textContent || "Exercício";
+  let exerciseRef = null;
+  try { exerciseRef = JSON.parse(card.getAttribute("data-ex-ref") || "null"); } catch {}
+  const fallbackRef = ensureExerciseRef(exerciseRef || { display_name: exerciseName, normalized_lookup_key: card.getAttribute("data-ex-lookup-key") }, exerciseName, "card_open");
+  card.setAttribute("data-ex-ref", JSON.stringify(fallbackRef));
+  card.setAttribute("data-ex-lookup-key", fallbackRef.normalized_lookup_key);
+  await openExerciseDetailsByName(fallbackRef.display_name || exerciseName, { origin: "card", exerciseRef: fallbackRef });
 }
 
 async function openExerciseDetailsByName(exerciseName, options = {}) {
-  const lookupKey = normalizeExerciseLookupKey(exerciseName);
+  const now = Date.now();
+  const exerciseRef = ensureExerciseRef(options.exerciseRef || { display_name: exerciseName }, exerciseName, options.origin || "direct_open");
+  const lookupKey = exerciseRef.normalized_lookup_key || normalizeExerciseLookupKey(exerciseName);
   logExerciseDetailsEvent("exercise_details_opened", { exerciseName, lookupKey, origin: options.origin || "unknown" });
   openExerciseDiscSheet();
   _exerciseDiscSetState("loading");
 
+  const localStub = normalizeExerciseDetails(exerciseRef.stub || { names: { pt: exerciseRef.display_name }, ...exerciseRef });
+  if (localStub) {
+    _renderExerciseDiscResult(localStub, "minimal");
+    _exerciseDiscSetState("result");
+    logExerciseDetailsEvent("exercise_details_opened_with_local_stub", { lookupKey });
+    logExerciseDetailsEvent("exercise_details_rendered_minimal", { lookupKey, source: "card_stub" });
+  }
+
   const cache = _readExerciseDetailsCache();
   const cached = cache[lookupKey];
-  const now = Date.now();
   const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
-  if (cached?.savedAt && (now - cached.savedAt) < maxAgeMs && cached.data) {
+  if (cached?.savedAt && (now - cached.savedAt) < maxAgeMs && cached.normalized) {
     logExerciseDetailsEvent("exercise_details_cache_hit", { lookupKey });
-    _renderExerciseDiscResult(cached.data);
+    _renderExerciseDiscResult(cached.normalized, "enriched");
     _exerciseDiscSetState("result");
-    logExerciseDetailsEvent("exercise_details_rendered", { lookupKey, source: cached.data.source || "cache" });
-    return;
+    logExerciseDetailsEvent("exercise_details_rendered_enriched", { lookupKey, source: cached.source || "cache" });
+  } else if (cached?.savedAt && cached.normalized) {
+    logExerciseDetailsEvent("exercise_details_cache_stale", { lookupKey });
+    _renderExerciseDiscResult(cached.normalized, "enriched");
+    _exerciseDiscSetState("result");
   }
-  logExerciseDetailsEvent("exercise_details_cache_miss", { lookupKey });
 
   try {
+    logExerciseDetailsEvent("exercise_details_external_fetch_started", { lookupKey });
     const resp = await apiFetch("/api/kronia/exercises/details", {
       method: "POST",
-      body: JSON.stringify({ exerciseName, locale: "pt" })
+      body: JSON.stringify({
+        exerciseId: exerciseRef.exercise_id,
+        slug: exerciseRef.slug,
+        normalized_lookup_key: lookupKey,
+        exerciseName,
+        locale: "pt",
+      })
     });
     const json = await resp.json();
-    if (json.status !== "success" || !json.data) {
-      document.getElementById("exerciseDiscErrorMsg").textContent = "Não encontramos os detalhes deste exercício agora. Tente novamente em instantes.";
-      _exerciseDiscSetState("error");
-      logExerciseDetailsEvent("exercise_details_fetch_failed", { lookupKey, code: json.errors?.[0]?.code || "UNKNOWN" });
+    if (!json?.success || !json?.data) {
+      const partial = normalizeExerciseDetails(json?.data || exerciseRef.stub || { names: { pt: exerciseName }, normalized_lookup_key: lookupKey });
+      if (partial) {
+        _renderExerciseDiscResult(partial, "minimal");
+        _exerciseDiscSetState("result");
+        logExerciseDetailsEvent("exercise_details_rendered_minimal", { lookupKey, reason: json?.message || "api_partial" });
+      } else {
+        document.getElementById("exerciseDiscErrorMsg").textContent = "Detalhes indisponíveis no momento. Exibindo versão resumida do exercício.";
+        _exerciseDiscSetState("error");
+      }
+      logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, code: json?.error?.code || "UNKNOWN" });
       return;
     }
     const normalized = normalizeExerciseDetails(json.data);
-    cache[lookupKey] = { savedAt: now, data: normalized };
+    cache[lookupKey] = {
+      savedAt: now,
+      source: normalized?.source || "api",
+      completeness_score: Number(json.meta?.completenessScore ?? normalized?.metadata?.completenessScore ?? 0.5),
+      schema_version: 2,
+      normalized_lookup_key: lookupKey,
+      normalized,
+    };
     _writeExerciseDetailsCache(cache);
-    logExerciseDetailsEvent("exercise_details_fetch_success", { lookupKey, source: normalized.source });
-    _renderExerciseDiscResult(normalized);
+    logExerciseDetailsEvent("exercise_details_external_fetch_success", { lookupKey, source: normalized?.source || "api" });
+    _renderExerciseDiscResult(normalized, "enriched");
     _exerciseDiscSetState("result");
-    logExerciseDetailsEvent("exercise_details_rendered", { lookupKey, source: normalized.source });
+    logExerciseDetailsEvent("exercise_details_rendered_enriched", { lookupKey, source: normalized?.source || "api" });
   } catch (e) {
-    document.getElementById("exerciseDiscErrorMsg").textContent = "Erro de conexão ao carregar exercício. Você pode tentar novamente.";
-    _exerciseDiscSetState("error");
-    logExerciseDetailsEvent("exercise_details_fetch_failed", { lookupKey, message: e?.message || String(e) });
+    const fallback = normalizeExerciseDetails(exerciseRef.stub || { names: { pt: exerciseName }, normalized_lookup_key: lookupKey });
+    if (fallback) {
+      _renderExerciseDiscResult(fallback, "minimal");
+      _exerciseDiscSetState("result");
+      logExerciseDetailsEvent("exercise_details_fallback_used", { lookupKey, reason: "network_error" });
+      logExerciseDetailsEvent("exercise_details_rendered_minimal", { lookupKey, reason: "network_error" });
+    } else {
+      document.getElementById("exerciseDiscErrorMsg").textContent = "Erro de rede. Tente novamente.";
+      _exerciseDiscSetState("error");
+    }
+    logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, message: e?.message || String(e) });
   }
 }
 
@@ -4808,7 +4935,7 @@ async function openExerciseDiscovery(query) {
   }
 }
 
-function _renderExerciseDiscResult(d) {
+function _renderExerciseDiscResult(d, renderMode = "enriched") {
   d = normalizeExerciseDetails(d) || d;
   const mediaEl = document.getElementById('exerciseDiscMedia');
   const mediaSrc = d.media?.primary;
@@ -4818,7 +4945,7 @@ function _renderExerciseDiscResult(d) {
   } else if (mediaSrc) {
     mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:220px;object-fit:cover">`;
   } else {
-    mediaEl.innerHTML = `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:0.78rem">Sem mídia disponível</div>`;
+    mediaEl.innerHTML = `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:0.78rem">Mídia indisponível no momento</div>`;
   }
 
   // ── Info ───────────────────────────────────────────────
@@ -4863,7 +4990,8 @@ function _renderExerciseDiscResult(d) {
        </div>`
     : '';
   const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${d.names?.pt || d.names?.en} execução correta`)}`;
-  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">Abrir fonte externa</a></div>`;
+  const fallbackLabel = renderMode === "minimal" ? "Buscar vídeo complementar" : "Fonte externa complementar";
+  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">${fallbackLabel}</a></div>`;
 }
 
 async function openDietaSheet() {
@@ -6046,15 +6174,11 @@ let _guiaStepIdx = 0;
 let _guiaStepTimer = null;
 
 function abrirGuia(nome) {
-  const db = GUIA_DB[nome];
-  const muscles = db ? db.m : "Músculos principais";
-
-  _guiaExNome = nome;
-
-  document.getElementById("guiaNome").textContent = nome;
-  document.getElementById("guiaMusculos").textContent = muscles;
-  document.getElementById("guiaModal").classList.add("show");
-  document.body.style.overflow = "hidden";
+  logExerciseDetailsEvent("exercise_details_fallback_used", { origin: "legacy_abrirGuia_redirect", exerciseName: nome });
+  return openExerciseDetailsByName(nome, {
+    origin: "legacy_guide_redirect",
+    exerciseRef: ensureExerciseRef({ display_name: nome, source: "legacy_guide" }, nome, "legacy_guide"),
+  });
 }
 
 function fecharGuia() {

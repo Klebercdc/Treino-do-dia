@@ -149,7 +149,10 @@ export interface ExerciseSearchInput {
 
 export interface ExerciseDetailsInput {
   userId: string;
-  exerciseName: string;
+  exerciseId?: string;
+  slug?: string;
+  normalizedLookupKey?: string;
+  exerciseName?: string;
   locale?: 'pt' | 'en';
   context?: {
     currentExerciseName?: string;
@@ -182,5 +185,7 @@ export interface NormalizedExerciseDetails {
     externalFetch: boolean;
     responseTimeMs: number;
     normalizedLookupKey: string;
+    completenessScore?: number;
+    confidenceScore?: number;
   };
 }

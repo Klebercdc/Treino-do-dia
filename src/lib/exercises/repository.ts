@@ -23,16 +23,48 @@ export class ExerciseRepository {
     const candidates = (data ?? []).map((item) => this.mapExercise(item));
     if (!candidates.length) return null;
 
-    const normLookup = lookup.toLowerCase();
-    const score = (item: ExerciseEntity): number => {
-      const names = [item.name_pt, item.name_en, item.slug].map((v) => String(v || '').toLowerCase());
-      if (names.some((n) => n === normLookup)) return 100;
-      if (names.some((n) => n.startsWith(normLookup))) return 80;
-      if (names.some((n) => n.includes(normLookup))) return 60;
-      return 30;
-    };
+    const ranked = candidates
+      .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, { exerciseName: lookup }) }))
+      .sort((a, b) => b.score - a.score);
+    return ranked[0]?.candidate ?? null;
+  }
 
-    return candidates.sort((a, b) => score(b) - score(a))[0] ?? null;
+  async findExerciseByIdentity(input: { exerciseId?: string | null; slug?: string | null; normalizedLookupKey?: string | null; exerciseName?: string | null }): Promise<{ exercise: ExerciseEntity | null; confidenceScore: number }> {
+    const exerciseId = String(input.exerciseId || '').trim();
+    if (exerciseId) {
+      const { data, error } = await this.db.from('exercises').select('*').eq('id', exerciseId).eq('is_active', true).maybeSingle();
+      if (error) throw error;
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 1 };
+    }
+
+    const slug = String(input.slug || '').trim();
+    if (slug) {
+      const { data, error } = await this.db.from('exercises').select('*').eq('slug', slug).eq('is_active', true).maybeSingle();
+      if (error) throw error;
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.96 };
+    }
+
+    const key = String(input.normalizedLookupKey || '').trim();
+    const exerciseName = String(input.exerciseName || '').trim();
+    const lookup = key || exerciseName;
+    if (!lookup) return { exercise: null, confidenceScore: 0 };
+
+    const safeLike = lookup.replace(/[%_]/g, ' ').trim();
+    const { data, error } = await this.db
+      .from('exercises')
+      .select('*')
+      .eq('is_active', true)
+      .or(`slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`)
+      .limit(12);
+    if (error) throw error;
+    const candidates = (data ?? []).map((item) => this.mapExercise(item));
+    if (!candidates.length) return { exercise: null, confidenceScore: 0 };
+
+    const ranked = candidates
+      .map((candidate) => ({ candidate, score: this.computeConfidenceScore(candidate, input) }))
+      .sort((a, b) => b.score - a.score);
+    const winner = ranked[0];
+    return { exercise: winner?.candidate ?? null, confidenceScore: winner?.score ?? 0 };
   }
 
   async findExercise(context: DetectedExerciseContext): Promise<ExerciseEntity | null> {
@@ -174,5 +206,37 @@ export class ExerciseRepository {
       created_at: raw.created_at,
       updated_at: raw.updated_at,
     };
+  }
+
+  private normalizeLookup(value: string): string {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private tokenize(value: string): string[] {
+    return this.normalizeLookup(value).split(' ').filter(Boolean);
+  }
+
+  private computeConfidenceScore(item: ExerciseEntity, input: { exerciseId?: string | null; slug?: string | null; normalizedLookupKey?: string | null; exerciseName?: string | null }): number {
+    if (input.exerciseId && item.id === input.exerciseId) return 1;
+    const normalizedName = this.normalizeLookup(String(input.exerciseName || ''));
+    const normalizedKey = this.normalizeLookup(String(input.normalizedLookupKey || ''));
+    const lookup = normalizedKey || normalizedName;
+    const aliases = [item.slug, item.name_pt, item.name_en, ...(item.search_terms || [])].map((v) => this.normalizeLookup(String(v || ''))).filter(Boolean);
+    if (!lookup) return 0;
+    if (aliases.some((alias) => alias === lookup)) return 0.97;
+    if (aliases.some((alias) => alias.startsWith(lookup) || lookup.startsWith(alias))) return 0.86;
+    if (aliases.some((alias) => alias.includes(lookup) || lookup.includes(alias))) return 0.74;
+
+    const queryTokens = new Set(this.tokenize(lookup));
+    const aliasTokens = new Set(aliases.flatMap((v) => this.tokenize(v)));
+    const overlap = [...queryTokens].filter((token) => aliasTokens.has(token)).length;
+    const tokenScore = queryTokens.size ? overlap / queryTokens.size : 0;
+    return Number((tokenScore * 0.68).toFixed(4));
   }
 }
