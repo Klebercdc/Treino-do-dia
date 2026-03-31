@@ -4,8 +4,8 @@ import { cleanText, normalizeEquipment, normalizeExerciseName, normalizeMuscle }
 import { ExerciseDbClient } from './exercisedbClient';
 import { ExerciseRepository } from './repository';
 import { PexelsClient } from './pexelsClient';
-import { computeExerciseCompletenessScore, getCuratedExerciseContent, mergeCuratedExerciseContent } from './catalog-curation';
-import { selectBestVideo } from './media-ranking';
+import { applyCuratedExerciseContent, computeExerciseCompletenessScore, computeQualityFlags, getCuratedExerciseContent } from './catalog-curation';
+import { pickBestExerciseMedia } from './media-ranking';
 import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseDetailsInput, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput, NormalizedExerciseDetails } from './types';
 
 const PLACEHOLDER_MEDIA_URL = 'https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg';
@@ -91,58 +91,44 @@ export class KroniaExerciseApplication {
 
     if (this.pexelsClient) {
       const videos = await this.pexelsClient.searchVideos(query);
-      const selection = selectBestVideo(videos, {
-        exerciseName: exercise.name_en || exercise.name_pt,
-        query,
-        targetMuscle: exercise.target_muscle,
-        equipment: exercise.equipment,
+      const picked = pickBestExerciseMedia(exercise, videos, {
+        media_url: exercise.media_url,
+        media_type: exercise.media_type,
+        media_confidence_score: exercise.media_confidence_score,
+        gif_url: exercise.gif_url,
       });
 
-      if (selection.accepted && selection.best) {
-        const best = selection.best;
-        const preferredFile = best.video.video_files.find((file) => file.quality === 'sd') ?? best.video.video_files[0];
-
-        await this.saveMediaCache({
-          exercise_id: exercise.id,
-          provider: 'pexels',
-          provider_media_id: String(best.video.id),
-          media_type: 'video',
-          video_url: preferredFile?.link ?? null,
-          thumbnail_url: best.video.image,
-          width: preferredFile?.width ?? best.video.width,
-          height: preferredFile?.height ?? best.video.height,
-          duration: best.video.duration,
-          search_query: query,
-          verified_score: best.score,
-          approved: true,
-          metadata: { pexelsUrl: best.video.url, selectedBy: 'kronia_exercise_media_ranker_v2' },
-        });
-
+      if (picked.media_type === 'video' && picked.media_url) {
         await this.saveExerciseToDatabase({
           ...exercise,
           slug: exercise.slug,
           name_en: exercise.name_en,
           name_pt: exercise.name_pt,
-          media_url: preferredFile?.link ?? best.video.image,
-          media_thumbnail_url: best.video.image,
+          media_url: picked.media_url,
+          media_thumbnail_url: picked.media_thumbnail_url,
           media_type: 'video',
           media_provider: 'Pexels',
-          media_confidence_score: best.score,
+          media_confidence_score: picked.media_confidence_score,
         });
 
         return {
-          primary: preferredFile?.link ?? best.video.image,
+          primary: picked.media_url,
           fallback: exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL,
           provider: 'pexels',
-          thumbnailUrl: best.video.image,
-          score: best.score,
+          thumbnailUrl: picked.media_thumbnail_url,
+          score: picked.media_confidence_score,
           cacheHit: false,
           mediaType: 'video',
         };
       }
+
+      console.info('[kronia_exercise] exercise_media_confidence_low', {
+        exercise: exercise.normalized_lookup_key,
+        score: picked.media_confidence_score,
+        reason: picked.reason,
+      });
     }
 
-    console.info('[kronia_exercise] exercise_media_confidence_low', { exercise: exercise.normalized_lookup_key, score: 0.34 });
     const baseMedia = exercise.gif_url ?? exercise.image_url ?? PLACEHOLDER_MEDIA_URL;
     return {
       primary: baseMedia,
@@ -156,10 +142,10 @@ export class KroniaExerciseApplication {
   }
 
   async saveExerciseToDatabase(exercise: Partial<ExerciseEntity> & { slug: string; name_en: string; name_pt: string }): Promise<ExerciseEntity> {
-    const curated = getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug || exercise.name_en);
-    const merged = mergeCuratedExerciseContent(exercise, curated);
+    const merged = applyCuratedExerciseContent(exercise);
     const completeScore = computeExerciseCompletenessScore(merged);
     const mediaScore = Number(merged.media_confidence_score ?? (merged.media_type === 'video' ? 0.78 : merged.gif_url ? 0.42 : 0.2));
+    const qualityFlags = computeQualityFlags({ ...merged, media_confidence_score: mediaScore, completeness_score: completeScore });
 
     const saved = await this.repository.upsertExercise({
       ...merged,
@@ -168,6 +154,7 @@ export class KroniaExerciseApplication {
       name_pt: String(exercise.name_pt || merged.name_pt || exercise.name_en || 'Exercício'),
       completeness_score: completeScore,
       media_confidence_score: mediaScore,
+      quality_flags: qualityFlags,
     });
 
     await this.repository.saveAlias(saved.id, saved.name_pt, 'pt', 'name');
@@ -346,6 +333,9 @@ export class KroniaExerciseApplication {
       range_of_motion: exercise.range_of_motion ?? null,
       completeness_score: exercise.completeness_score ?? computeExerciseCompletenessScore(exercise),
       media_confidence_score: exercise.media_confidence_score ?? (media.mediaType === 'video' ? 0.8 : 0.4),
+      content_source: exercise.content_source ?? null,
+      last_enriched_at: exercise.last_enriched_at ?? null,
+      quality_flags: exercise.quality_flags ?? computeQualityFlags(exercise),
       metadata: {
         cacheHit: media.cacheHit,
         externalFetch,
@@ -388,7 +378,8 @@ export class KroniaExerciseApplication {
       });
     }
 
-    const curatedMerged = mergeCuratedExerciseContent(exercise, getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug));
+    const curated = getCuratedExerciseContent(exercise.normalized_lookup_key || exercise.slug || exercise.name_en);
+    const curatedMerged = applyCuratedExerciseContent(exercise);
     const enrichedCompleteness = computeExerciseCompletenessScore(curatedMerged);
     if (enrichedCompleteness > Number(exercise.completeness_score ?? 0)) {
       exercise = await this.saveExerciseToDatabase({

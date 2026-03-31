@@ -50,6 +50,9 @@ export interface ExerciseEntity {
   media_provider?: string | null;
   completeness_score?: number;
   media_confidence_score?: number;
+  content_source?: string | null;
+  last_enriched_at?: string | null;
+  quality_flags?: string[];
   youtube_fallback_url?: string | null;
   common_errors?: string[];
   breathing_tip?: string | null;
@@ -195,6 +198,9 @@ export interface NormalizedExerciseDetails {
   range_of_motion?: string | null;
   completeness_score?: number;
   media_confidence_score?: number;
+  content_source?: string | null;
+  last_enriched_at?: string | null;
+  quality_flags?: string[];
   metadata: {
     cacheHit: boolean;
     externalFetch: boolean;

@@ -28,6 +28,7 @@ export async function GET(req: Request) {
 
   const app = new KroniaExerciseApplication(createAdminSupabaseClient());
   const summary = await app.getCatalogAdminSummary();
+  console.info('[kronia_exercise] exercise_catalog_admin_summary_loaded', summary);
 
   return NextResponse.json({
     success: true,
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: 'Não autorizado.', error: { code: 'UNAUTHORIZED' } }, { status: 401 });
   }
 
+  console.info('[kronia_exercise] exercise_catalog_resync_triggered', { source: 'admin_manual' });
   const summary = await syncExercisesWeekly({ mode: 'sync', useStateFile: false, seedAliases: true, enrichMedia: true });
   return NextResponse.json({
     success: true,

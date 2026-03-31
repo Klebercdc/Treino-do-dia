@@ -1,4 +1,12 @@
-import type { PexelsVideoItem } from './types';
+import type { ExerciseEntity, PexelsVideoItem } from './types';
+
+export type MediaCandidate = {
+  url: string | null;
+  thumbnailUrl: string | null;
+  provider: string;
+  type: 'video' | 'gif' | 'image' | 'none';
+  metadata?: Record<string, unknown>;
+};
 
 function tokenize(value: string): string[] {
   return String(value || '')
@@ -10,39 +18,97 @@ function tokenize(value: string): string[] {
     .filter((token) => token.length > 2);
 }
 
-const NEGATIVE_TOKENS = ['motivation', 'compilation', 'edit', 'meme', 'funny', 'fail'];
+export function computeMediaConfidenceScore(exercise: Partial<ExerciseEntity>, mediaCandidate: MediaCandidate): number {
+  if (!mediaCandidate?.url) return 0;
+  let score = 0.2;
 
-export function rankPexelsVideo(
-  video: PexelsVideoItem,
-  context: { exerciseName: string; query: string; targetMuscle?: string | null; equipment?: string | null },
-): number {
-  const tokens = new Set([...tokenize(context.exerciseName), ...tokenize(context.query), ...tokenize(context.targetMuscle || ''), ...tokenize(context.equipment || '')]);
-  const metadataBlob = `${video.url || ''} ${video.user?.name || ''}`.toLowerCase();
-  let score = 0.32;
+  const baseTokens = new Set([
+    ...tokenize(exercise.name_en || ''),
+    ...tokenize(exercise.name_pt || ''),
+    ...tokenize(exercise.normalized_lookup_key || ''),
+    ...tokenize(exercise.target_muscle || ''),
+  ]);
 
-  const overlap = Array.from(tokens).filter((t) => metadataBlob.includes(t)).length;
-  if (tokens.size) score += Math.min(0.28, (overlap / tokens.size) * 0.28);
+  const metadataBlob = `${mediaCandidate.url} ${mediaCandidate.thumbnailUrl || ''} ${JSON.stringify(mediaCandidate.metadata || {})}`.toLowerCase();
+  const overlap = Array.from(baseTokens).filter((token) => metadataBlob.includes(token)).length;
+  if (baseTokens.size > 0) score += Math.min(0.28, (overlap / baseTokens.size) * 0.28);
 
-  if (video.duration >= 8 && video.duration <= 70) score += 0.2;
-  else if (video.duration <= 120) score += 0.08;
+  if (mediaCandidate.thumbnailUrl) score += 0.1;
+  if (mediaCandidate.type === 'video') score += 0.16;
+  if (mediaCandidate.type === 'gif') score += 0.08;
 
-  if (video.width >= 720 && video.height >= 960) score += 0.16;
-  if (video.width >= 1080 || video.height >= 1080) score += 0.08;
+  const duration = Number((mediaCandidate.metadata?.duration as number) || 0);
+  if (duration >= 8 && duration <= 90) score += 0.12;
+  else if (duration > 90) score -= 0.05;
 
-  if (NEGATIVE_TOKENS.some((token) => metadataBlob.includes(token))) score -= 0.22;
+  const width = Number((mediaCandidate.metadata?.width as number) || 0);
+  const height = Number((mediaCandidate.metadata?.height as number) || 0);
+  if (width >= 640 && height >= 360) score += 0.1;
 
+  if (/motivation|compilation|meme|edit|random|stock/i.test(metadataBlob)) score -= 0.2;
   return Number(Math.max(0, Math.min(1, score)).toFixed(4));
 }
 
-export function selectBestVideo(videos: PexelsVideoItem[], context: Parameters<typeof rankPexelsVideo>[1]) {
-  const ranked = videos
-    .map((video) => ({ video, score: rankPexelsVideo(video, context) }))
+export function pickBestExerciseMedia(
+  exercise: Partial<ExerciseEntity>,
+  pexelsCandidates: PexelsVideoItem[],
+  currentMedia: { media_url?: string | null; media_type?: string | null; media_confidence_score?: number | null; gif_url?: string | null },
+) {
+  const currentScore = Number(currentMedia.media_confidence_score ?? 0);
+  if (currentMedia.media_type === 'video' && currentMedia.media_url && currentScore >= 0.75) {
+    return {
+      media_url: currentMedia.media_url,
+      media_thumbnail_url: exercise.media_thumbnail_url || null,
+      media_type: 'video' as const,
+      media_provider: exercise.media_provider || 'catalog',
+      media_confidence_score: currentScore,
+      reason: 'kept_existing_video',
+    };
+  }
+
+  const ranked = pexelsCandidates
+    .map((video) => {
+      const file = video.video_files?.find((v) => v.quality === 'sd') || video.video_files?.[0];
+      const candidate: MediaCandidate = {
+        url: file?.link || null,
+        thumbnailUrl: video.image || null,
+        provider: 'Pexels',
+        type: 'video',
+        metadata: { duration: video.duration, width: file?.width || video.width, height: file?.height || video.height, url: video.url },
+      };
+      return { video, candidate, score: computeMediaConfidenceScore(exercise, candidate) };
+    })
     .sort((a, b) => b.score - a.score);
 
-  const best = ranked[0] ?? null;
+  const best = ranked[0];
+  const gifFallback = currentMedia.gif_url || exercise.gif_url || null;
+  if (!best || best.score < 0.67) {
+    if (gifFallback) {
+      return {
+        media_url: gifFallback,
+        media_thumbnail_url: gifFallback,
+        media_type: 'gif' as const,
+        media_provider: 'ExerciseDB',
+        media_confidence_score: Number(Math.max(currentScore, 0.45).toFixed(4)),
+        reason: 'kept_gif_fallback',
+      };
+    }
+    return {
+      media_url: currentMedia.media_url || null,
+      media_thumbnail_url: exercise.media_thumbnail_url || null,
+      media_type: (currentMedia.media_type as any) || null,
+      media_provider: exercise.media_provider || null,
+      media_confidence_score: Number(Math.max(currentScore, 0.2).toFixed(4)),
+      reason: 'low_confidence_external_video',
+    };
+  }
+
   return {
-    best,
-    confidence: best?.score ?? 0,
-    accepted: Boolean(best && best.score >= 0.67),
+    media_url: best.candidate.url,
+    media_thumbnail_url: best.candidate.thumbnailUrl,
+    media_type: 'video' as const,
+    media_provider: 'Pexels',
+    media_confidence_score: best.score,
+    reason: 'selected_pexels_video',
   };
 }

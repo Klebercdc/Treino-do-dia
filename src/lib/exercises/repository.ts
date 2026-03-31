@@ -113,6 +113,9 @@ export class ExerciseRepository {
       range_of_motion: input.range_of_motion ?? null,
       completeness_score: Number(input.completeness_score ?? 0),
       media_confidence_score: Number(input.media_confidence_score ?? 0),
+      content_source: input.content_source ?? null,
+      last_enriched_at: input.last_enriched_at ?? null,
+      quality_flags: input.quality_flags ?? [],
       image_url: input.image_url ?? null,
       search_terms: input.search_terms ?? [],
       difficulty: input.difficulty ?? null,
@@ -176,7 +179,7 @@ export class ExerciseRepository {
   async getCatalogAdminSummary() {
     const { data, error } = await this.db
       .from('exercises')
-      .select('id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score')
+      .select('id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,completeness_score,media_confidence_score,quality_flags')
       .eq('is_active', true);
     if (error) throw error;
     const rows = data ?? [];
@@ -275,6 +278,9 @@ export class ExerciseRepository {
       media_provider: raw.media_provider ?? (raw.gif_url ? 'ExerciseDB' : null),
       completeness_score: Number(raw.completeness_score ?? 0),
       media_confidence_score: Number(raw.media_confidence_score ?? 0),
+      content_source: raw.content_source ?? null,
+      last_enriched_at: raw.last_enriched_at ?? null,
+      quality_flags: jsonArray(raw.quality_flags),
       youtube_fallback_url: raw.youtube_fallback_url ?? null,
       common_errors: jsonArray(raw.common_errors),
       breathing_tip: raw.breathing_tip ?? null,
@@ -346,9 +352,16 @@ export class ExerciseRepository {
     if (aliases.some((alias) => alias.startsWith(lookup) || lookup.startsWith(alias))) return 0.86;
 
     const queryTokens = new Set(this.tokenize(lookup));
-    const aliasTokens = new Set(aliases.flatMap((v) => this.tokenize(v)));
+    const aliasTokenArrays = aliases.map((v) => this.tokenize(v));
+    const aliasTokens = new Set(aliasTokenArrays.flat());
     const overlap = Array.from(queryTokens).filter((token) => aliasTokens.has(token)).length;
     const tokenScore = queryTokens.size ? overlap / queryTokens.size : 0;
-    return Number(Math.min(0.9, 0.5 + (tokenScore * 0.4)).toFixed(4));
+    const ambiguityCount = aliasTokenArrays.filter((tokens) => {
+      const local = new Set(tokens);
+      const m = Array.from(queryTokens).filter((token) => local.has(token)).length;
+      return queryTokens.size ? (m / queryTokens.size) >= 0.66 : false;
+    }).length;
+    const ambiguityPenalty = ambiguityCount > 1 ? Math.min(0.2, (ambiguityCount - 1) * 0.05) : 0;
+    return Number(Math.max(0, Math.min(0.95, 0.5 + (tokenScore * 0.4) - ambiguityPenalty)).toFixed(4));
   }
 }
