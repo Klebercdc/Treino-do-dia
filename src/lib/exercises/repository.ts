@@ -10,6 +10,30 @@ type IdentityInput = { exerciseId?: string | null; slug?: string | null; normali
 export class ExerciseRepository {
   constructor(private readonly db: SupabaseClient) {}
 
+  async findById(exerciseId: string): Promise<ExerciseEntity | null> {
+    const id = String(exerciseId || '').trim();
+    if (!id) return null;
+    const { data, error } = await this.db.from('exercises').select('*').eq('id', id).eq('is_active', true).maybeSingle();
+    if (error) throw error;
+    return data ? this.mapExercise(data) : null;
+  }
+
+  async findBySlug(slug: string): Promise<ExerciseEntity | null> {
+    const normalizedSlug = this.normalizeLookup(String(slug || '')).replace(/\s+/g, '-');
+    if (!normalizedSlug) return null;
+    const { data, error } = await this.db.from('exercises').select('*').eq('slug', normalizedSlug).eq('is_active', true).maybeSingle();
+    if (error) throw error;
+    return data ? this.mapExercise(data) : null;
+  }
+
+  async findByLookupKey(normalizedLookupKey: string): Promise<ExerciseEntity | null> {
+    const key = this.normalizeLookup(String(normalizedLookupKey || ''));
+    if (!key) return null;
+    const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', key).eq('is_active', true).maybeSingle();
+    if (error) throw error;
+    return data ? this.mapExercise(data) : null;
+  }
+
   async findExerciseByName(exerciseName: string): Promise<ExerciseEntity | null> {
     const lookup = String(exerciseName || '').trim();
     if (!lookup) return null;

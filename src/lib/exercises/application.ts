@@ -133,6 +133,48 @@ function fail<T>(code: string, message: string, meta: Record<string, unknown>, d
   return { status: 'error', data: null, errors: [{ code, message, details }], meta };
 }
 
+export async function buildExerciseDetails(exercise: ExerciseEntity): Promise<NormalizedExerciseDetails> {
+  return {
+    id: exercise.id,
+    slug: exercise.slug,
+    names: {
+      pt: exercise.name_pt,
+      en: exercise.name_en,
+    },
+    media: {
+      primary: exercise.media_url ?? exercise.gif_url ?? exercise.image_url ?? null,
+      thumbnailUrl: exercise.media_thumbnail_url ?? exercise.image_url ?? null,
+      type: exercise.media_type ?? (exercise.media_url ? 'video' : exercise.gif_url ? 'gif' : exercise.image_url ? 'image' : 'none'),
+      provider: exercise.media_provider ?? (exercise.media_url ? 'catalog' : exercise.gif_url ? 'exercisedb' : 'internal'),
+      confidenceScore: Number(exercise.media_confidence_score ?? 0),
+    },
+    instructions: Array.isArray(exercise.instructions) ? exercise.instructions : [],
+    target_muscle: exercise.target_muscle ?? null,
+    secondary_muscles: Array.isArray(exercise.secondary_muscles) ? exercise.secondary_muscles : [],
+    body_part: exercise.body_part ?? null,
+    equipment: exercise.equipment ?? null,
+    variations: [],
+    source: exercise.source ?? 'internal',
+    common_errors: Array.isArray(exercise.common_errors) ? exercise.common_errors : [],
+    breathing_tip: exercise.breathing_tip ?? null,
+    range_of_motion: exercise.range_of_motion ?? null,
+    completeness_score: exercise.completeness_score ?? computeExerciseCompletenessScore(exercise),
+    media_confidence_score: exercise.media_confidence_score ?? 0,
+    content_source: exercise.content_source ?? null,
+    last_enriched_at: exercise.last_enriched_at ?? null,
+    quality_flags: exercise.quality_flags ?? computeQualityFlags(exercise),
+    metadata: {
+      cacheHit: true,
+      externalFetch: false,
+      responseTimeMs: 0,
+      normalizedLookupKey: exercise.normalized_lookup_key ?? exercise.slug,
+      completenessScore: exercise.completeness_score ?? computeExerciseCompletenessScore(exercise),
+      confidenceScore: 1,
+      knownResolution: true,
+    },
+  };
+}
+
 export class KroniaExerciseApplication {
   private readonly repository: ExerciseRepository;
   private readonly exerciseDbClient: ExerciseDbClient | null;
