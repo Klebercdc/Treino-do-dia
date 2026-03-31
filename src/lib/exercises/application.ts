@@ -293,6 +293,7 @@ export class KroniaExerciseApplication {
         externalFetch,
         responseTimeMs,
         normalizedLookupKey: lookupKey,
+        completenessScore: media.primary ? 0.85 : 0.55,
       },
     };
   }
@@ -300,15 +301,25 @@ export class KroniaExerciseApplication {
   async getExerciseDetailsByName(input: ExerciseDetailsInput): Promise<AppResult<NormalizedExerciseDetails>> {
     const start = Date.now();
     const lookupName = String(input.exerciseName || '').trim();
-    if (!lookupName) {
-      return fail('VALIDATION_ERROR', 'exerciseName is required', {});
+    const lookupSlug = String(input.slug || '').trim();
+    const lookupId = String(input.exerciseId || '').trim();
+    const lookupNormalizedKey = String(input.normalizedLookupKey || '').trim();
+    if (!lookupName && !lookupSlug && !lookupId && !lookupNormalizedKey) {
+      return fail('VALIDATION_ERROR', 'At least one identifier is required.', {});
     }
 
-    const lookupKey = this.normalizeExerciseLookupKey(lookupName);
-    const context = this.normalizeExerciseQuery(this.detectIntentFromMessage(lookupName));
-    context.mentionedExercise = normalizeExerciseName(lookupName);
+    const preferredName = lookupName || lookupSlug || lookupNormalizedKey || 'Exercício';
+    const lookupKey = lookupNormalizedKey || this.normalizeExerciseLookupKey(preferredName);
+    const context = this.normalizeExerciseQuery(this.detectIntentFromMessage(preferredName));
+    context.mentionedExercise = normalizeExerciseName(preferredName);
 
-    let exercise = await this.repository.findExerciseByName(lookupName);
+    let lookupResult = await this.repository.findExerciseByIdentity({
+      exerciseId: lookupId || null,
+      slug: lookupSlug || null,
+      normalizedLookupKey: lookupKey || null,
+      exerciseName: lookupName || null,
+    });
+    let exercise = lookupResult.exercise;
     let externalFetch = false;
 
     if (!exercise) {
@@ -317,7 +328,7 @@ export class KroniaExerciseApplication {
     }
 
     if (!exercise) {
-      return fail('EXERCISE_NOT_FOUND', 'Nenhum exercício encontrado para o nome informado.', {
+      return fail('EXERCISE_NOT_FOUND', 'Nenhum exercício encontrado para os identificadores informados.', {
         normalizedLookupKey: lookupKey,
         responseTimeMs: Date.now() - start,
       });
@@ -332,6 +343,7 @@ export class KroniaExerciseApplication {
       normalizedLookupKey: lookupKey,
       responseTimeMs,
       externalFetch,
+      confidenceScore: lookupResult.confidenceScore,
     });
   }
 
