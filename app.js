@@ -3334,7 +3334,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=2026-03-31-1', { updateViaCache: 'none' }).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════

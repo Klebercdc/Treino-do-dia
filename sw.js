@@ -1,4 +1,4 @@
-const CACHE = 'kronia-v2';
+const CACHE = 'kronia-v3-2026-03-31';
 const STATIC = [
   '/',
   '/index.html',
