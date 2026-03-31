@@ -102,6 +102,23 @@
     return '<div class="kronia-intelligence-admin-list">' + items.slice(0, 10).map(mapper).join('') + '</div>';
   }
 
+  function renderInsights(insights) {
+    if (!Array.isArray(insights) || !insights.length) {
+      return '<div class="kronia-intelligence-admin-empty">Nenhum insight operacional identificado.</div>';
+    }
+    return '<div class="kronia-intelligence-admin-list">' + insights.slice(0, 10).map(function (insight) {
+      var safeTitle = String(insight.title || 'Insight operacional').replace(/"/g, '&quot;');
+      return [
+        '<article class="kronia-intelligence-insight-card">',
+        '  <strong>' + (insight.title || 'Insight operacional') + '</strong>',
+        '  <span>' + (insight.description || 'Sem descrição') + '</span>',
+        '  <span><b>Impacto:</b> ' + (insight.impact || 'medium') + ' · <b>Domínio:</b> ' + (insight.domain || 'sistema') + '</span>',
+        '  <button type="button" onclick="window.KroniaIntelligenceAdmin?.generateTask?.(\'' + safeTitle + '\')">Gerar Task</button>',
+        '</article>'
+      ].join('');
+    }).join('') + '</div>';
+  }
+
   function renderPanel(overviewPayload, recentPayload) {
     var container = document.getElementById('kronia-intelligence-admin-content');
     if (!container) return;
@@ -110,6 +127,7 @@
     var diagnostics = recentEvents.filter(function (event) { return !!event.problem_code; });
     var recommendations = (overview.recommendations || []).filter(Boolean);
     var tasks = (overview.tasks || []).filter(Boolean);
+    var insights = (overview.insights || recentPayload?.data?.insights || []).filter(Boolean);
     var health = {
       dietHealthScore: getHealthValue(overview, 'diet'),
       exerciseHealthScore: getHealthValue(overview, 'exercise'),
@@ -128,6 +146,7 @@
       '<section><h4>Recomendações</h4>' + renderList(recommendations, function (item) {
         return '<article><strong>' + (item.area || 'sistema') + '</strong><span>' + (item.text || 'Sem recomendação') + '</span></article>';
       }, 'Nenhuma recomendação disponível.') + '</section>',
+      '<section><h4>Insights Operacionais</h4>' + renderInsights(insights) + '</section>',
       '<section><h4>Tarefas Geradas</h4>' + renderList(tasks, function (item) {
         return '<article><strong>' + (item.title || 'Tarefa técnica') + '</strong><span>' + (item.priority || 'P2') + ' · ' + (item.summary || 'Sem resumo') + '</span></article>';
       }, 'Nenhuma tarefa gerada.') + '</section>',
@@ -144,6 +163,21 @@
     var container = document.getElementById('kronia-intelligence-admin-content');
     if (!container) return;
     container.innerHTML = '<div class="kronia-intelligence-admin-empty">' + message + '</div>';
+  }
+
+  function generateTaskFromInsight(title) {
+    try {
+      if (window.KroniaIntelligence && typeof window.KroniaIntelligence.track === 'function') {
+        window.KroniaIntelligence.track({
+          module: 'intelligence',
+          action: 'insight_task_generate',
+          status: 'success',
+          source: 'kronia_intelligence_admin_panel',
+          metadata: { title: String(title || 'Sem título').slice(0, 180) }
+        });
+      }
+    } catch (_) {}
+    try { console.log('Task gerada:', title); } catch (_) {}
   }
 
   var bridge = {
@@ -232,6 +266,10 @@
         fab.style.display = isAdminUser() ? 'inline-flex' : 'none';
         if (!isAdminUser()) this.closePanel();
       } catch (_) {}
+    },
+    generateTask: function (title) {
+      generateTaskFromInsight(title);
+      return { success: true };
     }
   };
 
@@ -240,6 +278,9 @@
   function boot() {
     bridge.refreshAccess();
     window.setInterval(function () { bridge.refreshAccess(); }, POLL_MS);
+    window.generateTask = window.generateTask || function (title) {
+      try { return bridge.generateTask(title); } catch (_) { return { success: false }; }
+    };
   }
 
   if (document.readyState === 'loading') {

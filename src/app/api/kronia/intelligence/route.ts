@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { createServerSupabaseClient } from '../../../../../lib/supabase/server';
+import { analyzeEvents } from '../../../../core/intelligence/analysisEngine';
 
 function isAdminEmail(email?: string | null): boolean {
   const allowlist = String(process.env.KRONIA_ADMIN_EMAILS || '').split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
@@ -80,7 +81,13 @@ export async function GET(req: Request) {
 
   const rows = data || [];
   if (action === 'recent') {
-    return NextResponse.json({ success: true, data: { recent: rows.slice(0, 120) } });
+    return NextResponse.json({
+      success: true,
+      data: {
+        recent: rows.slice(0, 120),
+        insights: analyzeEvents(rows.slice(0, 120)),
+      },
+    });
   }
 
   const byCode = (code: string) => rows.filter((x: any) => x.problem_code === code).length;
@@ -113,6 +120,7 @@ export async function GET(req: Request) {
       exerciseHealthScore: scoreByModule.exercise ?? 100,
       trainingHealthScore: scoreByModule.training ?? 100,
       monetizationHealthScore: scoreByModule.monetization ?? 100,
+      insights: analyzeEvents(rows),
       recentEvents: rows.slice(0, 80),
       recommendations: rows.map((x: any) => x.recommendation).filter(Boolean).slice(0, 30),
       tasks: rows.map((x: any) => x.task).filter(Boolean).slice(0, 30),
