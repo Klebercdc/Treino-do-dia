@@ -2665,7 +2665,7 @@ function normalizeDietContentNode(payload) {
   const planData = fromDataNode?.data || directData.diet || directData.plan || payload?.diet || payload?.plan || null;
   const text = String(fromDataNode?.text || payload?.message || "").trim();
   if (!planData && !text) return null;
-  return { type: "diet_result", data: planData || {}, text };
+  return { type: "diet_result", data: planData && typeof planData === "object" ? planData : {}, text };
 }
 
 function getApiContentNodes(payload) {
@@ -2725,6 +2725,61 @@ async function parseApiJsonSafely(response) {
     });
   }
   return buildApiErrorEnvelope("Não consegui montar a dieta agora. Tente novamente em instantes.", "INVALID_JSON");
+}
+
+function extractDietRenderModel(payload) {
+  const safePayload = ensureApiContract(payload, "extractDietRenderModel");
+  const nodes = getApiContentNodes(safePayload);
+  const node = nodes.find(n => n && n.type === "diet_result") || normalizeDietContentNode(safePayload);
+  if (!node || !node.data || typeof node.data !== "object") return null;
+  const plan = node.data;
+  const meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
+  if (!meals.length && !plan.flow_state) return null;
+  return {
+    text: String(node.text || safePayload.message || "").trim(),
+    flowState: plan.flow_state || null,
+    meta: plan.meta && typeof plan.meta === "object" ? plan.meta : {},
+    refeicoes: meals,
+    hidratacao: plan.hidratacao && typeof plan.hidratacao === "object" ? plan.hidratacao : {},
+    observacoes: Array.isArray(plan.observacoes) ? plan.observacoes : []
+  };
+}
+
+function renderDietModelAsText(model) {
+  if (!model) return "";
+  if (model.flowState) return model.text || "Vamos continuar montando sua dieta.";
+  const meta = model.meta || {};
+  const meals = Array.isArray(model.refeicoes) ? model.refeicoes : [];
+  const orientacoes = Array.isArray(model.observacoes) ? model.observacoes : [];
+  const metaBlock = [
+    "##META",
+    "CALORIAS: " + (meta.calorias ?? "—"),
+    "PROTEINA: " + (meta.proteina ?? "—"),
+    "CARB: " + (meta.carbo ?? "—"),
+    "GORDURA: " + (meta.gordura ?? "—"),
+    "TMB: " + (meta.tmb ?? "—"),
+    "TDEE: " + (meta.get ?? "—")
+  ].join("\n");
+  const mealBlocks = meals.map(function(ref) {
+    const prot = Array.isArray(ref.proteinas) && ref.proteinas.length ? ref.proteinas.join(", ") : "—";
+    const carb = Array.isArray(ref.carbos) && ref.carbos.length ? ref.carbos.join(", ") : "—";
+    const extra = Array.isArray(ref.extras) && ref.extras.length ? ref.extras.join(", ") : "—";
+    return [
+      "##REFEICAO",
+      "NOME: " + (ref.nome || "Refeição"),
+      "HORARIO: " + (ref.horario || "—"),
+      "TAG: " + (ref.foco || "Plano KRONIA"),
+      "Proteínas|" + prot + "|—|—|—|—",
+      "Carboidratos|" + carb + "|—|—|—|—",
+      "Complementos|" + extra + "|—|—|—|—",
+      "SUBTOTAL||—|—|—|—"
+    ].join("\n");
+  }).join("\n\n");
+  const orientBlock = [
+    "##ORIENTACOES",
+    "Água|" + ((model.hidratacao && model.hidratacao.litros) ? (model.hidratacao.litros + " L/dia") : "Hidrate-se ao longo do dia.")
+  ].concat(orientacoes.map(function(obs) { return "Nota|" + obs; })).join("\n");
+  return [metaBlock, mealBlocks, orientBlock].filter(Boolean).join("\n\n");
 }
 
 async function sendAI(overrideText, isGerarTreino = false) {
@@ -5868,13 +5923,42 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
         system: buildTrainingContext(),
         messages: [{ role: "user", content: prompt }],
         isGerarTreino: false,
-        isDietDirect: true
+        isDietDirect: true,
+        dietProfile: {
+          objetivo: obj,
+          sexo: sexo,
+          peso: peso,
+          altura: altura,
+          idade: idade,
+          rotina: ativ,
+          restricoes: restric,
+          biotipo: biotipo,
+          preferencias: prefs,
+          alimentosEvitar: dislikes,
+          suplementos: todosSupl,
+          refeicoesPorDia: refs,
+          contextoTreino: { frequencia: freqTreino, duracao: duracaoTreino, tipo: tipoTreino },
+          saude: { patologia: patologia, medicamentos: medicamentos, sono: sono, estresse: estresse }
+        }
       })
     });
     const data = await parseApiJsonSafely(resp);
-    if (!resp.ok || data.success === false) { txt.textContent = "Erro: " + (data.message || data.error); return; }
-    txt.textContent = data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || "Erro ao gerar dieta.";
-  } catch(e) { txt.textContent = "Erro de conexão: " + e.message; }
+    if (!resp.ok || data.success === false) {
+      logUiEvent("diet_pipeline_failed", { status: resp.status, error: data.error || "unknown_error" });
+      txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
+      return;
+    }
+    const renderModel = extractDietRenderModel(data);
+    if (!renderModel) {
+      logUiEvent("diet_response_invalid_contract", { context: "gerarDieta.extractDietRenderModel", keys: Object.keys(data || {}) });
+      txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
+      return;
+    }
+    txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || "Não consegui montar a dieta agora. Tente novamente em instantes.";
+  } catch(e) {
+    logUiEvent("diet_pipeline_failed", { context: "gerarDieta.catch", error: e && e.message ? e.message : "unknown" });
+    txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
+  }
   finally { btn.disabled = false; }
 }
 
