@@ -3053,7 +3053,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
+      navigator.serviceWorker.register('/sw.js?v=2026-03-31-1', { updateViaCache: 'none' })
         .then(() => console.log('KRONIA PWA ativo ✅'))
         .catch(err => console.log('SW erro:', err));
     });
