@@ -23,9 +23,18 @@ async function getAuthHeaders() {
  * Se ainda 401 após retry (sessão expirada), faz logout e exibe aviso.
  */
 async function apiFetch(url, opts = {}) {
-  // iOS Safari PWA fix — relative URLs throw "The string did not match the expected pattern"
-  if (typeof url === 'string' && url.startsWith('/')) {
-    url = (location.origin || (location.protocol + '//' + location.host)) + url;
+  // iOS Safari PWA fix — sempre converte para URL absoluta para evitar
+  // "The string did not match the expected pattern" em PWAs.
+  if (typeof url === 'string') {
+    try {
+      url = new URL(url, window.location.href).toString();
+    } catch {
+      const base = (window.location && window.location.protocol && window.location.host)
+        ? (window.location.protocol + '//' + window.location.host)
+        : 'https://kronia.app.br';
+      const path = url.startsWith('/') ? url : ('/' + url);
+      url = base + path;
+    }
   }
   opts.headers = opts.headers || await getAuthHeaders();
   let resp = await fetch(url, opts);
