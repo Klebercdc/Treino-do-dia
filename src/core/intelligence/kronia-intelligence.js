@@ -274,6 +274,9 @@
   };
 
   KroniaIntelligence.prototype.bridgeToAdminPanel = async function (filters) {
+    if (window.KroniaIntelligenceAdmin && typeof window.KroniaIntelligenceAdmin.fetchOverview === 'function') {
+      return window.KroniaIntelligenceAdmin.fetchOverview(filters || {});
+    }
     try {
       var token = await this._token();
       if (!token) return { success: false, error: { code: 'UNAUTHORIZED' } };
@@ -284,6 +287,13 @@
     } catch (_) {
       return { success: false, error: { code: 'BRIDGE_FAILURE' } };
     }
+  };
+
+  KroniaIntelligence.prototype.openAdminPanel = function () {
+    if (window.KroniaIntelligenceAdmin && typeof window.KroniaIntelligenceAdmin.openPanel === 'function') {
+      return window.KroniaIntelligenceAdmin.openPanel();
+    }
+    return Promise.resolve({ success: false, error: { code: 'ADMIN_BRIDGE_UNAVAILABLE' } });
   };
 
   window.KroniaIntelligence = window.KroniaIntelligence || new KroniaIntelligence();

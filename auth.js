@@ -158,6 +158,7 @@ const _dbSync = {
         window.KroniaAccessProfile.isAdmin = profile.is_admin;
         window.KroniaAccessProfile.canBypassQuota = !!profile.is_admin;
         window.KroniaAccessProfile.canSeeAdminUI = !!profile.is_admin;
+        try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildUserCapabilities === 'function') {
           window.currentUserCapabilities = window.KroniaAccessScope.buildUserCapabilities(window.KroniaAccessProfile);
           window.KroniaAccessScope.setupAdminDebug && window.KroniaAccessScope.setupAdminDebug();
@@ -521,9 +522,11 @@ _sb.auth.onAuthStateChange((_event, session) => {
       if (typeof window.KroniaDashboard !== 'undefined') {
         window.KroniaDashboard.render(session.user.id);
       }
+      try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
     })();
   } else if (_appUnlocked) {
     _appUnlocked = false;
+    try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
     showLogin();
   }
 });

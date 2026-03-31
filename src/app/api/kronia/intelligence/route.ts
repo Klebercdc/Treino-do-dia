@@ -94,6 +94,10 @@ export async function GET(req: Request) {
     ...item,
     healthScore: Math.max(0, 100 - Math.round((item.errors / Math.max(item.total, 1)) * 100)),
   }));
+  const scoreByModule = moduleHealth.reduce((acc: Record<string, number>, item: any) => {
+    acc[item.module] = Number(item.healthScore || 0);
+    return acc;
+  }, {});
 
   return NextResponse.json({
     success: true,
@@ -105,6 +109,10 @@ export async function GET(req: Request) {
       monetizationFriction: byCode('premium_cta_friction'),
       onboardingDropoff: byCode('onboarding_dropoff'),
       healthByModule: moduleHealth,
+      dietHealthScore: scoreByModule.diet ?? 100,
+      exerciseHealthScore: scoreByModule.exercise ?? 100,
+      trainingHealthScore: scoreByModule.training ?? 100,
+      monetizationHealthScore: scoreByModule.monetization ?? 100,
       recentEvents: rows.slice(0, 80),
       recommendations: rows.map((x: any) => x.recommendation).filter(Boolean).slice(0, 30),
       tasks: rows.map((x: any) => x.task).filter(Boolean).slice(0, 30),
