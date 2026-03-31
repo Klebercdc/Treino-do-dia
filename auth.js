@@ -26,14 +26,25 @@ async function apiFetch(url, opts = {}) {
   // iOS Safari PWA fix — sempre converte para URL absoluta para evitar
   // "The string did not match the expected pattern" em PWAs.
   if (typeof url === 'string') {
+    const fallbackBase = 'https://kronia.app.br';
+    const normalizeRelativePath = function(raw) {
+      const value = String(raw || '').trim() || '/';
+      return value.startsWith('/') ? value : ('/' + value);
+    };
     try {
-      url = new URL(url, window.location.href).toString();
+      const resolved = new URL(url, window.location.href);
+      const isHttp = /^https?:$/i.test(String(resolved.protocol || ''));
+      const hasHost = Boolean(String(resolved.host || '').trim());
+      if (!isHttp || !hasHost) {
+        url = fallbackBase + normalizeRelativePath(url);
+      } else {
+        url = resolved.toString();
+      }
     } catch {
-      const base = (window.location && window.location.protocol && window.location.host)
+      const currentOrigin = (window.location && /^https?:$/i.test(String(window.location.protocol || '')) && window.location.host)
         ? (window.location.protocol + '//' + window.location.host)
-        : 'https://kronia.app.br';
-      const path = url.startsWith('/') ? url : ('/' + url);
-      url = base + path;
+        : fallbackBase;
+      url = currentOrigin + normalizeRelativePath(url);
     }
   }
   opts.headers = opts.headers || await getAuthHeaders();
