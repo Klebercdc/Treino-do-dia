@@ -4938,9 +4938,13 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
       slug: exerciseSlug,
     });
   } catch (e) {
-    document.getElementById("exerciseDiscErrorMsg").textContent = e?.message || "Erro ao carregar detalhes do exercício.";
+    const rawMessage = e?.message || "";
+    const normalizedMessage = /string did not match the expected pattern/i.test(rawMessage)
+      ? "Não consegui abrir os detalhes do exercício nesse modo do app. Feche e abra novamente para sincronizar."
+      : (rawMessage || "Erro ao carregar detalhes do exercício.");
+    document.getElementById("exerciseDiscErrorMsg").textContent = normalizedMessage;
     _exerciseDiscSetState("error");
-    logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, message: e?.message || String(e) });
+    logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, message: rawMessage || String(e) });
   }
 }
 
@@ -5914,7 +5918,7 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
 
   try {
     // URL absoluta — evita "The string did not match the expected pattern" no iOS Safari
-    const _apiChatUrl = (location.protocol && location.host)
+    const _apiChatUrl = (/^https?:$/i.test(String(location.protocol || '')) && location.host)
       ? location.protocol + '//' + location.host + '/api/chat'
       : 'https://kronia.app.br/api/chat';
     const resp = await apiFetch(_apiChatUrl, {
