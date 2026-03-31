@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { createServerSupabaseClient } from '../../../../../lib/supabase/server';
+import { analyzeEvents } from '../../../../core/intelligence/analysisEngine';
+import { buildOperationalBacklog } from '../../../../core/intelligence/decisionEngine';
 
 function isAdminEmail(email?: string | null): boolean {
   const allowlist = String(process.env.KRONIA_ADMIN_EMAILS || '').split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
@@ -80,7 +82,19 @@ export async function GET(req: Request) {
 
   const rows = data || [];
   if (action === 'recent') {
-    return NextResponse.json({ success: true, data: { recent: rows.slice(0, 120) } });
+    const recentRows = rows.slice(0, 120);
+    const insights = analyzeEvents(recentRows);
+    const operational = buildOperationalBacklog(insights);
+    return NextResponse.json({
+      success: true,
+      data: {
+        recent: recentRows,
+        insights,
+        issues: operational.issues,
+        tasks: operational.tasks,
+        recommendations: operational.recommendations,
+      },
+    });
   }
 
   const byCode = (code: string) => rows.filter((x: any) => x.problem_code === code).length;
@@ -94,6 +108,13 @@ export async function GET(req: Request) {
     ...item,
     healthScore: Math.max(0, 100 - Math.round((item.errors / Math.max(item.total, 1)) * 100)),
   }));
+  const scoreByModule = moduleHealth.reduce((acc: Record<string, number>, item: any) => {
+    acc[item.module] = Number(item.healthScore || 0);
+    return acc;
+  }, {});
+
+  const insights = analyzeEvents(rows);
+  const operational = buildOperationalBacklog(insights);
 
   return NextResponse.json({
     success: true,
@@ -105,6 +126,14 @@ export async function GET(req: Request) {
       monetizationFriction: byCode('premium_cta_friction'),
       onboardingDropoff: byCode('onboarding_dropoff'),
       healthByModule: moduleHealth,
+      dietHealthScore: scoreByModule.diet ?? 100,
+      exerciseHealthScore: scoreByModule.exercise ?? 100,
+      trainingHealthScore: scoreByModule.training ?? 100,
+      monetizationHealthScore: scoreByModule.monetization ?? 100,
+      insights,
+      issues: operational.issues,
+      generatedTasks: operational.tasks,
+      generatedRecommendations: operational.recommendations,
       recentEvents: rows.slice(0, 80),
       recommendations: rows.map((x: any) => x.recommendation).filter(Boolean).slice(0, 30),
       tasks: rows.map((x: any) => x.task).filter(Boolean).slice(0, 30),

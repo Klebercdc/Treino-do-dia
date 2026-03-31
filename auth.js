@@ -158,6 +158,7 @@ const _dbSync = {
         window.KroniaAccessProfile.isAdmin = profile.is_admin;
         window.KroniaAccessProfile.canBypassQuota = !!profile.is_admin;
         window.KroniaAccessProfile.canSeeAdminUI = !!profile.is_admin;
+        refreshIntelligenceAdminAccessSafe();
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildUserCapabilities === 'function') {
           window.currentUserCapabilities = window.KroniaAccessScope.buildUserCapabilities(window.KroniaAccessProfile);
           window.KroniaAccessScope.setupAdminDebug && window.KroniaAccessScope.setupAdminDebug();
@@ -208,6 +209,10 @@ function resolveOAuthOptions() {
     redirectTo,
     skipBrowserRedirect: isDeepLink
   };
+}
+
+function refreshIntelligenceAdminAccessSafe() {
+  try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
 }
 
 function hideSplash() {
@@ -521,9 +526,11 @@ _sb.auth.onAuthStateChange((_event, session) => {
       if (typeof window.KroniaDashboard !== 'undefined') {
         window.KroniaDashboard.render(session.user.id);
       }
+      refreshIntelligenceAdminAccessSafe();
     })();
   } else if (_appUnlocked) {
     _appUnlocked = false;
+    refreshIntelligenceAdminAccessSafe();
     showLogin();
   }
 });
@@ -545,8 +552,13 @@ Promise.all([
     showApp();
     navTo('inicio');
     openHome();
-  } else showLogin();
+    refreshIntelligenceAdminAccessSafe();
+  } else {
+    refreshIntelligenceAdminAccessSafe();
+    showLogin();
+  }
 }).catch(() => {
+  refreshIntelligenceAdminAccessSafe();
   showLogin();
 });
 

@@ -274,6 +274,11 @@
   };
 
   KroniaIntelligence.prototype.bridgeToAdminPanel = async function (filters) {
+    // Compatibilidade: consulta de overview via bridge, sem abertura visual.
+    var bridge = window.KroniaIntelligenceAdmin;
+    if (bridge && typeof bridge.fetchOverview === 'function') {
+      return bridge.fetchOverview(filters || {});
+    }
     try {
       var token = await this._token();
       if (!token) return { success: false, error: { code: 'UNAUTHORIZED' } };
@@ -284,6 +289,15 @@
     } catch (_) {
       return { success: false, error: { code: 'BRIDGE_FAILURE' } };
     }
+  };
+
+  KroniaIntelligence.prototype.openAdminPanel = function () {
+    // Caminho oficial para abertura visual do painel administrativo.
+    var bridge = window.KroniaIntelligenceAdmin;
+    if (bridge && typeof bridge.openPanel === 'function') {
+      return bridge.openPanel();
+    }
+    return Promise.resolve({ success: false, error: { code: 'ADMIN_BRIDGE_UNAVAILABLE' } });
   };
 
   window.KroniaIntelligence = window.KroniaIntelligence || new KroniaIntelligence();
