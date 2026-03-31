@@ -2755,6 +2755,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
   try {
     try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'processChatMessage', status: 'start', correlationId, source: 'app_send_ai', metadata: { isGerarTreino: !!isGerarTreino } }); } catch (_) {}
+    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'training' : 'diet', action: isGerarTreino ? 'gerarTreino' : 'gerarDieta', status: 'start', correlationId, source: 'app_send_ai' }); } catch (_) {}
     const messages = _aiHistory.slice(-12);
     const userData = buildUserData();
 
@@ -2817,7 +2818,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
       _aiTyping = false;
       if (sendBtn) sendBtn.style.opacity = "1";
-      try { window.KroniaIntelligence?.track?.({ module: 'workout', action: 'workout_generation', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
+      try { window.KroniaIntelligence?.track?.({ module: 'training', action: 'gerarTreino', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
       return;
     }
 
@@ -2842,7 +2843,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
     }
 
     addAIMessage("assistant", reply);
-    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'workout' : 'chat', action: isGerarTreino ? 'workout_generation' : 'processChatMessage', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
+    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'training' : 'diet', action: isGerarTreino ? 'gerarTreino' : 'gerarDieta', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
 
     // Mostrar botão se tiver exercícios
     if (hasExercicios) {
@@ -2861,7 +2862,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
     }
 
   } catch (err) {
-    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'workout' : 'chat', action: isGerarTreino ? 'workout_generation' : 'processChatMessage', status: 'error', severity: 'high', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai', metadata: { message: err && err.message ? err.message : 'unknown' } }); } catch (_) {}
+    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'training' : 'diet', action: isGerarTreino ? 'gerarTreino' : 'gerarDieta', status: 'error', severity: 'high', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai', metadata: { message: err && err.message ? err.message : 'unknown' } }); } catch (_) {}
     removeThinking();
     addAIMessage("assistant", `${_ico('alert-triangle', 16)} ${err.message || "Não consegui processar sua solicitação agora."}`);
   } finally {

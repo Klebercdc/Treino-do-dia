@@ -503,7 +503,7 @@ _sb.auth.onAuthStateChange((_event, session) => {
           window.KroniaIntelligence?.init?.({ source: 'auth_bootstrap', appVersion: 'web' });
           window.KroniaIntelligence?.identifyUser?.({ userId: session.user.id, sessionId: session.access_token ? String(session.access_token).slice(0, 16) : undefined });
           window.KroniaIntelligence?.setContext?.({ route: 'inicio', currentJourney: 'authenticated_session' });
-          window.KroniaIntelligence?.track?.({ module: 'auth', action: 'login', status: 'success', correlationId: 'login_' + Date.now(), source: 'auth_state_change' });
+          window.KroniaIntelligence?.track?.({ module: 'auth', action: 'loginSuccess', status: 'success', correlationId: 'login_' + Date.now(), source: 'auth_state_change' });
         } catch (_) {}
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
           await window.KroniaAccessScope.hydrateAccessContext(session);
