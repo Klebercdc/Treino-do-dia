@@ -548,8 +548,13 @@ Promise.all([
     showApp();
     navTo('inicio');
     openHome();
-  } else showLogin();
+    try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
+  } else {
+    try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
+    showLogin();
+  }
 }).catch(() => {
+  try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
   showLogin();
 });
 

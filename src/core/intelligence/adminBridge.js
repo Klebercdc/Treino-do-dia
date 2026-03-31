@@ -76,6 +76,10 @@
   }
 
   function getHealthValue(overview, module) {
+    if (module === 'diet' && Number.isFinite(Number(overview.dietHealthScore))) return Number(overview.dietHealthScore);
+    if (module === 'exercise' && Number.isFinite(Number(overview.exerciseHealthScore))) return Number(overview.exerciseHealthScore);
+    if (module === 'training' && Number.isFinite(Number(overview.trainingHealthScore))) return Number(overview.trainingHealthScore);
+    if (module === 'monetization' && Number.isFinite(Number(overview.monetizationHealthScore))) return Number(overview.monetizationHealthScore);
     var found = (overview.healthByModule || []).find(function (item) { return item.module === module; });
     return found ? Number(found.healthScore || 0) : 100;
   }
@@ -144,47 +148,90 @@
 
   var bridge = {
     openPanel: async function () {
-      if (!isAdminUser()) return { success: false, error: { code: 'FORBIDDEN' } };
-      var panel = ensurePanel();
-      panel.classList.add('is-open');
-      renderError('Carregando inteligência...');
-      var overview = await this.fetchOverview();
-      var recent = await this.fetchRecentEvents();
-      if (!overview?.success) {
-        renderError('Falha ao carregar overview da inteligência.');
-        return overview;
+      try {
+        if (!isAdminUser()) return { success: false, error: { code: 'FORBIDDEN' } };
+        var panel = ensurePanel();
+        panel.classList.add('is-open');
+        renderError('Carregando inteligência...');
+        var overview = await this.fetchOverview();
+        var recent = await this.fetchRecentEvents();
+        if (!overview?.success) {
+          renderError('Falha ao carregar overview da inteligência.');
+          return overview;
+        }
+        renderPanel(overview, recent);
+        return { success: true, data: { overview: overview.data, recent: recent?.data || null } };
+      } catch (_) {
+        return { success: false, error: { code: 'OPEN_PANEL_FAILED' } };
       }
-      renderPanel(overview, recent);
-      return { success: true, data: { overview: overview.data, recent: recent?.data || null } };
     },
     closePanel: function () {
-      var panel = document.getElementById(PANEL_ID);
-      if (panel) panel.classList.remove('is-open');
+      try {
+        var panel = document.getElementById(PANEL_ID);
+        if (panel) panel.classList.remove('is-open');
+      } catch (_) {}
+    },
+    togglePanel: function () {
+      try {
+        var panel = ensurePanel();
+        if (panel.classList.contains('is-open')) {
+          this.closePanel();
+          return Promise.resolve({ success: true, open: false });
+        }
+        return this.openPanel().then(function (res) {
+          return { success: !!res?.success, open: !!res?.success, data: res?.data || null, error: res?.error || null };
+        });
+      } catch (_) {
+        return Promise.resolve({ success: false, open: false, error: { code: 'TOGGLE_PANEL_FAILED' } });
+      }
     },
     fetchOverview: function (filters) {
-      return fetchIntelligence('overview', filters);
+      try {
+        return fetchIntelligence('overview', filters);
+      } catch (_) {
+        return Promise.resolve({ success: false, error: { code: 'OVERVIEW_FETCH_FAILED' } });
+      }
     },
     fetchRecentEvents: function (filters) {
-      return fetchIntelligence('recent', filters);
+      try {
+        return fetchIntelligence('recent', filters);
+      } catch (_) {
+        return Promise.resolve({ success: false, error: { code: 'RECENT_FETCH_FAILED' } });
+      }
     },
     getIntelligenceSummary: function () {
-      var local = safeJsonParse(localStorage.getItem('kronia_intelligence_state_v1'), {});
-      var operational = local && local.operational ? local.operational : {};
-      return {
-        initialized: !!local.initialized,
-        localEvents: Array.isArray(local.events) ? local.events.length : 0,
-        queueSize: Array.isArray(local.queue) ? local.queue.length : 0,
-        frictionScore: Number(operational.frictionScore || 0),
-        dietHealthScore: Number(operational.dietHealthScore || 100),
-        exerciseHealthScore: Number(operational.exerciseHealthScore || 100),
-        trainingHealthScore: Number(operational.trainingHealthScore || 100),
-        monetizationHealthScore: Number(operational.monetizationHealthScore || 100)
-      };
+      try {
+        var local = safeJsonParse(localStorage.getItem('kronia_intelligence_state_v1'), {});
+        var operational = local && local.operational ? local.operational : {};
+        return {
+          initialized: !!local.initialized,
+          localEvents: Array.isArray(local.events) ? local.events.length : 0,
+          queueSize: Array.isArray(local.queue) ? local.queue.length : 0,
+          frictionScore: Number(operational.frictionScore || 0),
+          dietHealthScore: Number(operational.dietHealthScore || 100),
+          exerciseHealthScore: Number(operational.exerciseHealthScore || 100),
+          trainingHealthScore: Number(operational.trainingHealthScore || 100),
+          monetizationHealthScore: Number(operational.monetizationHealthScore || 100)
+        };
+      } catch (_) {
+        return {
+          initialized: false,
+          localEvents: 0,
+          queueSize: 0,
+          frictionScore: 0,
+          dietHealthScore: 100,
+          exerciseHealthScore: 100,
+          trainingHealthScore: 100,
+          monetizationHealthScore: 100
+        };
+      }
     },
     refreshAccess: function () {
-      var fab = ensureFab();
-      fab.style.display = isAdminUser() ? 'inline-flex' : 'none';
-      if (!isAdminUser()) this.closePanel();
+      try {
+        var fab = ensureFab();
+        fab.style.display = isAdminUser() ? 'inline-flex' : 'none';
+        if (!isAdminUser()) this.closePanel();
+      } catch (_) {}
     }
   };
 
