@@ -45,6 +45,17 @@ export class ExerciseRepository {
     }
 
     const key = String(input.normalizedLookupKey || '').trim();
+    if (key) {
+      const { data, error } = await this.db
+        .from('exercises')
+        .select('*')
+        .eq('normalized_lookup_key', key)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.99 };
+    }
+
     const exerciseName = String(input.exerciseName || '').trim();
     const lookup = key || exerciseName;
     if (!lookup) return { exercise: null, confidenceScore: 0 };
@@ -167,6 +178,7 @@ export class ExerciseRepository {
     return {
       id: raw.id,
       slug: raw.slug,
+      normalized_lookup_key: raw.normalized_lookup_key ?? null,
       source: raw.source,
       source_id: raw.source_id,
       name_pt: raw.name_pt ?? raw.name,
@@ -178,6 +190,11 @@ export class ExerciseRepository {
       category: raw.category,
       instructions: jsonArray(raw.instructions),
       gif_url: raw.gif_url,
+      media_url: raw.media_url ?? raw.gif_url ?? raw.image_url ?? null,
+      media_thumbnail_url: raw.media_thumbnail_url ?? raw.image_url ?? raw.gif_url ?? null,
+      media_type: raw.media_type ?? (raw.gif_url ? 'gif' : (raw.image_url ? 'image' : null)),
+      media_provider: raw.media_provider ?? (raw.gif_url ? 'ExerciseDB' : null),
+      youtube_fallback_url: raw.youtube_fallback_url ?? null,
       image_url: raw.image_url,
       search_terms: jsonArray(raw.search_terms),
       difficulty: raw.difficulty ?? raw.level,

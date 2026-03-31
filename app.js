@@ -4766,7 +4766,7 @@ function normalizeExerciseLookupKey(name) {
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/\s+/g, "-");
+    .replace(/\s+/g, "_");
 }
 
 function _readExerciseDetailsCache() {
