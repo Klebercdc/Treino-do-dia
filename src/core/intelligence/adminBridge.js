@@ -113,7 +113,7 @@
         '  <strong>' + (insight.title || 'Insight operacional') + '</strong>',
         '  <span>' + (insight.description || 'Sem descrição') + '</span>',
         '  <span><b>Impacto:</b> ' + (insight.impact || 'medium') + ' · <b>Domínio:</b> ' + (insight.domain || 'sistema') + '</span>',
-        '  <button type="button" onclick="window.KroniaIntelligenceAdmin?.generateTask?.(\'' + safeTitle + '\')">Gerar Task</button>',
+        '  <button type="button" data-insight-task="' + safeTitle + '">Gerar Task</button>',
         '</article>'
       ].join('');
     }).join('') + '</div>';
@@ -125,8 +125,8 @@
     var overview = overviewPayload?.data || {};
     var recentEvents = (recentPayload?.data?.recent || overview.recentEvents || []).slice(0, 15);
     var diagnostics = recentEvents.filter(function (event) { return !!event.problem_code; });
-    var recommendations = (overview.recommendations || []).filter(Boolean);
-    var tasks = (overview.tasks || []).filter(Boolean);
+    var recommendations = (overview.generatedRecommendations || overview.recommendations || []).filter(Boolean);
+    var tasks = (overview.generatedTasks || overview.tasks || []).filter(Boolean);
     var insights = (overview.insights || recentPayload?.data?.insights || []).filter(Boolean);
     var health = {
       dietHealthScore: getHealthValue(overview, 'diet'),
@@ -157,6 +157,15 @@
       '<div class="kronia-intelligence-admin-card"><span>monetizationHealthScore</span><strong>' + health.monetizationHealthScore + '</strong></div>',
       '</div></section>'
     ].join('');
+
+    try {
+      container.querySelectorAll('[data-insight-task]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var title = button.getAttribute('data-insight-task') || 'Insight operacional';
+          generateTaskFromInsight(title);
+        });
+      });
+    } catch (_) {}
   }
 
   function renderError(message) {
