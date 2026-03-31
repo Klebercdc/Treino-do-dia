@@ -1,47 +1,23 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "../../../../../lib/supabase/server"
-import { IntentAgent } from "../../../../../ai/intentAgent"
-import { GroqClient } from "../../../../../ai/modelClient"
-import type { ChatMessage } from "../../../../../ai/types"
+import { classifyIntent, normalizeMessage } from "../../../../core/intent/intentClassifier"
 
-// Endpoint leve: apenas classifica a intenção semanticamente via IntentAgent.
-// Chamado pelo transforms_patch.js em paralelo com a resposta do KRONOS,
-// para que os Transforms usem intenção real em vez de keywords.
-
+// Endpoint leve e determinístico: normaliza e classifica intenção
+// com contrato fixo para o decision engine.
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get("authorization")
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ intent: "chat" }, { status: 200 })
-    }
-
-    const accessToken = authHeader.replace("Bearer ", "").trim()
-    const db = createServerSupabaseClient(accessToken)
-    const { data: userData, error } = await db.auth.getUser()
-    if (error || !userData.user) {
-      return NextResponse.json({ intent: "chat" }, { status: 200 })
-    }
-
     const body = await req.json().catch(() => null)
-    if (!body?.message || typeof body.message !== "string") {
-      return NextResponse.json({ intent: "chat" }, { status: 200 })
-    }
+    const message = typeof body?.message === "string" ? body.message : ""
 
-    const history: ChatMessage[] = Array.isArray(body.history) ? body.history.slice(-4) : []
+    const normalized = normalizeMessage(message)
+    const result = classifyIntent(normalized)
 
-    const agent = new IntentAgent(new GroqClient())
-    const result = await agent.classify({
-      userMessage: body.message.slice(0, 500),
-      history,
-    })
-
-    return NextResponse.json({
-      intent: result.intent,
-      needsPayload: result.needsPayload,
-      requiresClarification: result.requiresClarification,
-    })
+    return NextResponse.json(result)
   } catch {
-    // Falha silenciosa — o cliente usa fallback por keywords
-    return NextResponse.json({ intent: "chat" })
+    return NextResponse.json({
+      intent: "OTHER",
+      confidence: 0.3,
+      needs_clarification: true,
+      domain: "general",
+    })
   }
 }
