@@ -2690,6 +2690,7 @@ function ensureApiContract(payload, contextName) {
     && typeof payload.type === "string"
     && typeof payload.message === "string";
   if (!valid) {
+    try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'contract_failure', status: 'error', severity: 'high', problemCode: 'INVALID_CONTRACT', source: 'app_ensure_api_contract', metadata: { context: contextName || 'unknown' } }); } catch (_) {}
     logUiEvent("diet_response_invalid_contract", {
       context: contextName || "unknown",
       keys: payload && typeof payload === "object" ? Object.keys(payload) : null
@@ -2714,6 +2715,7 @@ async function parseApiJsonSafely(response) {
     const parsed = JSON.parse(rawText);
     if (parsed && typeof parsed === "object") return ensureApiContract(parsed, "parseApiJsonSafely");
   } catch (err) {
+    try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'contract_failure', status: 'error', severity: 'high', problemCode: 'INVALID_JSON', source: 'app_parse_api_json', metadata: { httpStatus: response && response.status } }); } catch (_) {}
     console.warn("[app] json_parse_failed", err && err.message);
     logUiEvent("diet_response_invalid_contract", {
       context: "json_parse_failed",
@@ -2748,8 +2750,11 @@ async function sendAI(overrideText, isGerarTreino = false) {
   const sendBtn = document.getElementById("aiSendBtn");
   if (sendBtn) sendBtn.style.opacity = "0.4";
   addAIMessage("assistant", "", true); // dots animados
+  const correlationId = 'chat_' + Date.now();
+  const startedAt = Date.now();
 
   try {
+    try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'processChatMessage', status: 'start', correlationId, source: 'app_send_ai', metadata: { isGerarTreino: !!isGerarTreino } }); } catch (_) {}
     const messages = _aiHistory.slice(-12);
     const userData = buildUserData();
 
@@ -2764,6 +2769,9 @@ async function sendAI(overrideText, isGerarTreino = false) {
       method: "POST",
       body: JSON.stringify(body)
     });
+    if (!response.ok) {
+      try { window.KroniaIntelligence?.track?.({ module: 'api', action: 'api_failure', status: 'error', severity: 'medium', correlationId, source: 'app_send_ai', metadata: { endpoint, status: response.status } }); } catch (_) {}
+    }
 
     const data = await parseApiJsonSafely(response);
     if (!response.ok || data.success === false) throw new Error(data.message || data.error || ("Erro " + response.status));
@@ -2773,6 +2781,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       addAIMessage("assistant", data.message || "Vamos continuar.");
       _aiTyping = false;
       if (sendBtn) sendBtn.style.opacity = "1";
+      try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'processChatMessage', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai', metadata: { action: data.action } }); } catch (_) {}
       return;
     }
 
@@ -2808,6 +2817,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
       setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
       _aiTyping = false;
       if (sendBtn) sendBtn.style.opacity = "1";
+      try { window.KroniaIntelligence?.track?.({ module: 'workout', action: 'workout_generation', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
       return;
     }
 
@@ -2832,6 +2842,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
     }
 
     addAIMessage("assistant", reply);
+    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'workout' : 'chat', action: isGerarTreino ? 'workout_generation' : 'processChatMessage', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
 
     // Mostrar botão se tiver exercícios
     if (hasExercicios) {
@@ -2850,6 +2861,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
     }
 
   } catch (err) {
+    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'workout' : 'chat', action: isGerarTreino ? 'workout_generation' : 'processChatMessage', status: 'error', severity: 'high', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai', metadata: { message: err && err.message ? err.message : 'unknown' } }); } catch (_) {}
     removeThinking();
     addAIMessage("assistant", `${_ico('alert-triangle', 16)} ${err.message || "Não consegui processar sua solicitação agora."}`);
   } finally {
@@ -4756,6 +4768,15 @@ function _exerciseDiscSetState(state) {
 
 function logExerciseDetailsEvent(eventName, payload = {}) {
   try { console.info(`[kronia_exercise] ${eventName}`, payload); } catch {}
+  try {
+    window.KroniaIntelligence?.track?.({
+      module: 'exercise',
+      action: eventName === 'exercise_details_opened' ? 'exercise_click' : 'exercise_detail',
+      status: /failed|error/.test(eventName) ? 'error' : 'success',
+      source: 'exercise_details',
+      metadata: { eventName, payload }
+    });
+  } catch (_) {}
 }
 
 function normalizeExerciseLookupKey(name) {

@@ -272,6 +272,15 @@ function checkFirstTimeFlow() {
     planExpired: false,
     blocked: false,
   });
+  try {
+    window.KroniaIntelligence?.track?.({
+      module: 'auth',
+      action: 'resolveInitialRoute',
+      status: 'success',
+      source: 'auth_check_first_time_flow',
+      route: routeResolution && routeResolution.nextAction ? routeResolution.nextAction.route : 'inicio'
+    });
+  } catch (_) {}
 
   handleBusinessRoute(routeResolution && routeResolution.nextAction ? routeResolution.nextAction.route : 'inicio');
 }
@@ -385,6 +394,9 @@ async function authForgotPassword() {
 }
 
 async function authSignInEmail() {
+  const loginStart = Date.now();
+  const correlationId = 'login_' + loginStart;
+  try { window.KroniaIntelligence?.track?.({ module: 'auth', action: 'login', status: 'start', correlationId, source: 'auth_email' }); } catch (_) {}
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
@@ -410,6 +422,7 @@ async function authSignInEmail() {
       if (result.error) throw result.error;
     }
   } catch (e) {
+    try { window.KroniaIntelligence?.track?.({ module: 'auth', action: 'login', status: 'error', correlationId, durationMs: Date.now() - loginStart, severity: 'medium', source: 'auth_email', metadata: { reason: e?.message || 'unknown' } }); } catch (_) {}
     errEl.style.color = '#f87171';
     errEl.textContent = e.message === 'Invalid login credentials'
       ? 'E-mail ou senha incorretos.'
@@ -486,6 +499,12 @@ _sb.auth.onAuthStateChange((_event, session) => {
   if (session?.user) {
     (async function bootstrapAuthenticatedSession() {
       try {
+        try {
+          window.KroniaIntelligence?.init?.({ source: 'auth_bootstrap', appVersion: 'web' });
+          window.KroniaIntelligence?.identifyUser?.({ userId: session.user.id, sessionId: session.access_token ? String(session.access_token).slice(0, 16) : undefined });
+          window.KroniaIntelligence?.setContext?.({ route: 'inicio', currentJourney: 'authenticated_session' });
+          window.KroniaIntelligence?.track?.({ module: 'auth', action: 'login', status: 'success', correlationId: 'login_' + Date.now(), source: 'auth_state_change' });
+        } catch (_) {}
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
           await window.KroniaAccessScope.hydrateAccessContext(session);
         }

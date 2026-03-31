@@ -51,6 +51,14 @@
   });
 
   function nowISO() { return new Date().toISOString(); }
+  function nowMs() { return Date.now(); }
+  function safeIntelligenceTrack(payload) {
+    try {
+      if (window.KroniaIntelligence && typeof window.KroniaIntelligence.track === 'function') {
+        window.KroniaIntelligence.track(payload || {});
+      }
+    } catch (_) {}
+  }
 
   function makeResult(status, data, errors, nextAction) {
     return {
@@ -190,6 +198,9 @@
 
   var application = {
     resolveInitialRoute: function (input) {
+      var startedAt = nowMs();
+      var correlationId = 'resolve_initial_route_' + startedAt;
+      safeIntelligenceTrack({ module: 'application', action: 'resolveInitialRoute', status: 'start', correlationId: correlationId, route: (input && input.route) || null, source: 'kronia_application' });
       var ctx = input || {};
       var state = domain.userState.derive(ctx);
       var route = ROUTES.LOGIN;
@@ -199,7 +210,9 @@
       else if (state === USER_STATES.ONBOARDING_IN_PROGRESS) route = ROUTES.ONBOARDING;
       else if (state === USER_STATES.PLAN_NOT_CREATED || state === USER_STATES.PLAN_EXPIRED) route = ROUTES.PLAN;
       else route = ROUTES.HOME;
-      return makeResult('success', { state: state, route: route }, [], { route: route });
+      var result = makeResult('success', { state: state, route: route }, [], { route: route });
+      safeIntelligenceTrack({ module: 'application', action: 'resolveInitialRoute', status: 'success', correlationId: correlationId, durationMs: nowMs() - startedAt, route: route, source: 'kronia_application', metadata: { state: state } });
+      return result;
     },
 
     resolvePostLoginRoute: function (input) {
@@ -232,8 +245,14 @@
     },
 
     saveUserProfile: function (input) {
+      var startedAt = nowMs();
+      var correlationId = 'save_user_profile_' + startedAt;
+      safeIntelligenceTrack({ module: 'application', action: 'saveUserProfile', status: 'start', correlationId: correlationId, source: 'kronia_application' });
       var missing = domain.validators.profile(input || {});
-      if (missing.length) return handleBusinessError({ code: BUSINESS_ERROR_CODES.VALIDATION_ERROR, message: 'Perfil inválido: ' + missing.join(', '), userId: input && input.userId });
+      if (missing.length) {
+        safeIntelligenceTrack({ module: 'application', action: 'saveUserProfile', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, severity: 'medium', source: 'kronia_application', metadata: { missing: missing } });
+        return handleBusinessError({ code: BUSINESS_ERROR_CODES.VALIDATION_ERROR, message: 'Perfil inválido: ' + missing.join(', '), userId: input && input.userId });
+      }
 
       var current = infrastructure.storage.getProfile();
       var next = Object.assign({}, current, input.profile);
@@ -243,6 +262,7 @@
 
       var result = makeResult('success', { profile: next }, [], { route: ROUTES.ONBOARDING });
       infrastructure.logger.log({ userId: input.userId, action: 'saveUserProfile', input: input, result: result });
+      safeIntelligenceTrack({ module: 'application', action: 'saveUserProfile', status: 'success', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application' });
       return result;
     },
 
@@ -268,8 +288,14 @@
     },
 
     processChatMessage: function (input) {
+      var startedAt = nowMs();
+      var correlationId = 'process_chat_message_' + startedAt;
+      safeIntelligenceTrack({ module: 'application', action: 'processChatMessage', status: 'start', correlationId: correlationId, source: 'kronia_application' });
       var intentResult = this.classifyChatIntent(input);
-      if (intentResult.status === 'error') return intentResult;
+      if (intentResult.status === 'error') {
+        safeIntelligenceTrack({ module: 'application', action: 'processChatMessage', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, severity: 'medium', source: 'kronia_application', metadata: { reason: 'intent_error' } });
+        return intentResult;
+      }
       var flow = intentResult.data.intent;
       var response = {
         intent: flow,
@@ -279,6 +305,7 @@
       var result = makeResult('success', response, [], { action: 'render_chat_reply' });
       infrastructure.events.emit('ai_interaction', { userId: input.userId, intent: flow });
       infrastructure.logger.log({ userId: input.userId, action: 'processChatMessage', input: { intent: flow }, result: result });
+      safeIntelligenceTrack({ module: 'application', action: 'processChatMessage', status: 'success', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application', metadata: { intent: flow } });
       return result;
     },
 
@@ -310,12 +337,29 @@
     },
 
     validateAccess: function (input) {
+      var startedAt = nowMs();
+      var correlationId = 'validate_access_' + startedAt;
+      safeIntelligenceTrack({ module: 'application', action: 'validateAccess', status: 'start', correlationId: correlationId, source: 'kronia_application' });
       var ctx = input || {};
-      if (!ctx.isAuthenticated) return handleBusinessError({ code: BUSINESS_ERROR_CODES.UNAUTHORIZED, message: 'Login obrigatório', userId: ctx.userId, nextAction: { route: ROUTES.LOGIN } });
-      if (ctx.requireProfile && !ctx.profileSetupDone) return handleBusinessError({ code: BUSINESS_ERROR_CODES.PROFILE_INCOMPLETE, message: 'Perfil incompleto', userId: ctx.userId, nextAction: { route: ROUTES.KRONA_SETUP } });
-      if (ctx.requireOnboarding && !ctx.onboardingDone) return handleBusinessError({ code: BUSINESS_ERROR_CODES.INVALID_STATE, message: 'Onboarding pendente', userId: ctx.userId, nextAction: { route: ROUTES.ONBOARDING } });
-      if (ctx.requirePlan && !ctx.hasPlan) return handleBusinessError({ code: BUSINESS_ERROR_CODES.PLAN_NOT_FOUND, message: 'Plano não encontrado', userId: ctx.userId, nextAction: { route: ROUTES.PLAN } });
-      return makeResult('success', { allowed: true }, [], { route: ROUTES.HOME });
+      if (!ctx.isAuthenticated) {
+        safeIntelligenceTrack({ module: 'application', action: 'validateAccess', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application', metadata: { reason: BUSINESS_ERROR_CODES.UNAUTHORIZED } });
+        return handleBusinessError({ code: BUSINESS_ERROR_CODES.UNAUTHORIZED, message: 'Login obrigatório', userId: ctx.userId, nextAction: { route: ROUTES.LOGIN } });
+      }
+      if (ctx.requireProfile && !ctx.profileSetupDone) {
+        safeIntelligenceTrack({ module: 'application', action: 'validateAccess', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application', metadata: { reason: BUSINESS_ERROR_CODES.PROFILE_INCOMPLETE } });
+        return handleBusinessError({ code: BUSINESS_ERROR_CODES.PROFILE_INCOMPLETE, message: 'Perfil incompleto', userId: ctx.userId, nextAction: { route: ROUTES.KRONA_SETUP } });
+      }
+      if (ctx.requireOnboarding && !ctx.onboardingDone) {
+        safeIntelligenceTrack({ module: 'application', action: 'validateAccess', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application', metadata: { reason: BUSINESS_ERROR_CODES.INVALID_STATE } });
+        return handleBusinessError({ code: BUSINESS_ERROR_CODES.INVALID_STATE, message: 'Onboarding pendente', userId: ctx.userId, nextAction: { route: ROUTES.ONBOARDING } });
+      }
+      if (ctx.requirePlan && !ctx.hasPlan) {
+        safeIntelligenceTrack({ module: 'application', action: 'validateAccess', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application', metadata: { reason: BUSINESS_ERROR_CODES.PLAN_NOT_FOUND } });
+        return handleBusinessError({ code: BUSINESS_ERROR_CODES.PLAN_NOT_FOUND, message: 'Plano não encontrado', userId: ctx.userId, nextAction: { route: ROUTES.PLAN } });
+      }
+      var result = makeResult('success', { allowed: true }, [], { route: ROUTES.HOME });
+      safeIntelligenceTrack({ module: 'application', action: 'validateAccess', status: 'success', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application' });
+      return result;
     },
 
     resolveNextAction: function (input) {
@@ -328,6 +372,9 @@
     },
 
     _runPlanOrchestration: function (kind, input) {
+      var startedAt = nowMs();
+      var correlationId = 'plan_orchestration_' + kind + '_' + startedAt;
+      safeIntelligenceTrack({ module: 'application', action: kind === 'diet' ? 'diet_generation' : 'workout_generation', status: 'start', correlationId: correlationId, source: 'kronia_application' });
       var access = this.validateAccess({
         userId: input && input.userId,
         isAuthenticated: !!(input && input.isAuthenticated),
@@ -336,13 +383,17 @@
         requireOnboarding: true,
         onboardingDone: !!(input && input.onboardingDone),
       });
-      if (access.status === 'error') return access;
+      if (access.status === 'error') {
+        safeIntelligenceTrack({ module: 'application', action: kind === 'diet' ? 'diet_generation' : 'workout_generation', status: 'error', correlationId: correlationId, durationMs: nowMs() - startedAt, severity: 'medium', source: 'kronia_application', metadata: { reason: 'access_denied' } });
+        return access;
+      }
 
       var payload = input && input.payload ? input.payload : {};
       var normalized = { planType: kind, payload: payload };
       var result = makeResult('success', { generated: true, planType: kind, normalized: normalized }, [], { route: ROUTES.DASHBOARD });
       infrastructure.events.emit('plan_generated', { userId: input.userId, planType: kind });
       infrastructure.logger.log({ userId: input.userId, action: 'generate' + kind + 'Plan', input: input, result: result });
+      safeIntelligenceTrack({ module: 'application', action: kind === 'diet' ? 'diet_generation' : 'workout_generation', status: 'success', correlationId: correlationId, durationMs: nowMs() - startedAt, source: 'kronia_application' });
       return result;
     },
 
@@ -370,4 +421,14 @@
     infrastructure: infrastructure,
     handleBusinessError: handleBusinessError,
   };
+
+  try {
+    if (window.KroniaIntelligence && typeof window.KroniaIntelligence.init === 'function') {
+      window.KroniaIntelligence.init({
+        module: 'application',
+        source: 'bootstrap',
+        appVersion: 'kronia-application-v1',
+      });
+    }
+  } catch (_) {}
 })();

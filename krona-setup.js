@@ -123,6 +123,9 @@
 
   /* ── Finalizar e salvar ── */
   function ksFinish() {
+    var startedAt = Date.now();
+    var correlationId = 'profile_save_' + startedAt;
+    try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'saveUserProfile', status: 'start', correlationId: correlationId, source: 'krona_setup' }); } catch (_) {}
     var nome   = (document.getElementById('ksNomeInput')?.value   || '').trim();
     var peso   = document.getElementById('ksPesoInput')?.value    || '';
     var altura = document.getElementById('ksAlturaInput')?.value  || '';
@@ -158,9 +161,11 @@
     }
 
     if (saveResult && saveResult.status === 'error') {
+      try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'saveUserProfile', status: 'error', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'krona_setup' }); } catch (_) {}
       if (typeof showToast === 'function') showToast('Erro ao salvar perfil. Revise seus dados.', 'error');
       return;
     }
+    try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'saveUserProfile', status: 'success', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'krona_setup' }); } catch (_) {}
 
     if (typeof _dbSync !== 'undefined' && typeof _dbSync.pushConfig === 'function') {
       _dbSync.pushConfig();
