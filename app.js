@@ -4847,7 +4847,7 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
       params.set("lookupKey", lookupKey);
     }
 
-    const resp = await fetch(`/api/kronia/exercises/details?${params.toString()}`);
+    const resp = await apiFetch(`/api/kronia/exercises/details?${params.toString()}`);
     const json = await resp.json();
 
     if (!resp.ok) {
