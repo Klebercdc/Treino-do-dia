@@ -84,6 +84,9 @@
   };
 
   window.ffObFinish = function () {
+    var startedAt = Date.now();
+    var correlationId = 'onboarding_finish_' + startedAt;
+    try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'onboardingComplete', status: 'start', correlationId: correlationId, source: 'fitflow_layout' }); } catch (_) {}
     var appLayer = window.KroniaApplication && window.KroniaApplication.application;
     var userId = ffSafeGetStorage('kronia_user_id') || 'anonymous';
     var hasPlan = !!ffSafeGetStorage('kronia_plan');
@@ -95,9 +98,11 @@
       : { status: 'success', nextAction: { route: 'plans' } };
 
     if (completion.status === 'error') {
+      try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'onboardingComplete', status: 'error', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'fitflow_layout' }); } catch (_) {}
       if (typeof showToast === 'function') showToast('Erro ao concluir onboarding.', 'error');
       return;
     }
+    try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'onboardingComplete', status: 'success', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'fitflow_layout' }); } catch (_) {}
 
     var ob = document.getElementById('onboarding');
     if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }

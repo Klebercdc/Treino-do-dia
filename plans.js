@@ -394,6 +394,7 @@ var _planCarouselIdx = 2; // começa no ULTRA
 var _planBilling = 'mensal';
 
 function openPlanModal() {
+  try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'premium_modal_open', status: 'success', source: 'plans_modal' }); } catch (_) {}
   var modal = document.getElementById('planModal');
   if (!modal) return;
   modal.style.display = 'flex';
@@ -578,8 +579,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // CHECKOUT
 // ══════════════════════════════
 async function assinarPro() {
+  var startedAt = Date.now();
+  var correlationId = 'upgrade_pro_' + startedAt;
+  try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'upgrade_attempt', status: 'start', correlationId: correlationId, source: 'plans_checkout', metadata: { plan: 'pro' } }); } catch (_) {}
   await _configPromise;
   if (!HOTMART_CHECKOUT_URL) {
+    try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'upgrade_attempt', status: 'error', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'plans_checkout', metadata: { plan: 'pro', reason: 'checkout_url_missing' } }); } catch (_) {}
     if (typeof showToast === 'function') showToast('Checkout em breve. Fale com o suporte.', 'warning');
     return;
   }
@@ -587,13 +592,18 @@ async function assinarPro() {
     var session = (await _sb.auth.getSession()).data.session;
     var email = session && session.user && session.user.email ? '?email=' + encodeURIComponent(session.user.email) : '';
     window.open(HOTMART_CHECKOUT_URL + email, '_blank');
+    try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'upgrade_attempt', status: 'success', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'plans_checkout', metadata: { plan: 'pro' } }); } catch (_) {}
   } catch(e) { window.open(HOTMART_CHECKOUT_URL, '_blank'); }
 }
 
 async function assinarUltra() {
+  var startedAt = Date.now();
+  var correlationId = 'upgrade_ultra_' + startedAt;
+  try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'upgrade_attempt', status: 'start', correlationId: correlationId, source: 'plans_checkout', metadata: { plan: 'ultra' } }); } catch (_) {}
   await _configPromise;
   var url = HOTMART_CHECKOUT_URL_ULTRA || HOTMART_CHECKOUT_URL;
   if (!url) {
+    try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'upgrade_attempt', status: 'error', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'plans_checkout', metadata: { plan: 'ultra', reason: 'checkout_url_missing' } }); } catch (_) {}
     if (typeof showToast === 'function') showToast('Checkout Ultra em breve. Fale com o suporte.', 'warning');
     return;
   }
@@ -601,6 +611,7 @@ async function assinarUltra() {
     var session = (await _sb.auth.getSession()).data.session;
     var email = session && session.user && session.user.email ? '?email=' + encodeURIComponent(session.user.email) : '';
     window.open(url + email + (email ? '&plan=ultra' : '?plan=ultra'), '_blank');
+    try { window.KroniaIntelligence?.track?.({ module: 'monetization', action: 'upgrade_attempt', status: 'success', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'plans_checkout', metadata: { plan: 'ultra' } }); } catch (_) {}
   } catch(e) { window.open(url, '_blank'); }
 }
 
