@@ -1,0 +1,43 @@
+const FEATURE_MATRIX = {
+  FREE: {
+    GENERATE_WORKOUT: true,
+    ADJUST_WORKOUT: true,
+    ANALYZE_WORKOUT: false,
+    GENERATE_DIET: false,
+    ADJUST_DIET: false,
+    ANALYZE_DIET: false,
+    GENERATE_SUPPLEMENT_PROTOCOL: false,
+    REVIEW_PROGRESS: false,
+    GENERATE_RECOVERY_SUPPORT: true,
+    ORGANIZE_ROUTINE: true,
+  },
+  PRO: {
+    GENERATE_WORKOUT: true,
+    ADJUST_WORKOUT: true,
+    ANALYZE_WORKOUT: true,
+    GENERATE_DIET: true,
+    ADJUST_DIET: true,
+    ANALYZE_DIET: true,
+    GENERATE_SUPPLEMENT_PROTOCOL: true,
+    REVIEW_PROGRESS: true,
+    GENERATE_RECOVERY_SUPPORT: true,
+    ORGANIZE_ROUTINE: true,
+  },
+  ULTRA: {
+    GENERATE_WORKOUT: true,
+    ADJUST_WORKOUT: true,
+    ANALYZE_WORKOUT: true,
+    GENERATE_DIET: true,
+    ADJUST_DIET: true,
+    ANALYZE_DIET: true,
+    GENERATE_SUPPLEMENT_PROTOCOL: true,
+    REVIEW_PROGRESS: true,
+    GENERATE_RECOVERY_SUPPORT: true,
+    ORGANIZE_ROUTINE: true,
+    ADAPTIVE_PERIODIZATION: true,
+    ADAPTIVE_DIET: true,
+    AUTO_ADJUSTMENTS: true,
+  },
+};
+
+module.exports = { FEATURE_MATRIX };
