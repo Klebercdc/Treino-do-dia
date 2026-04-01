@@ -55,10 +55,15 @@ async function runExerciseImport(options) {
   var batchSize = opts.batchSize || 200;
   var batchDelayMs = opts.batchDelayMs == null ? 200 : opts.batchDelayMs;
   var exercisesFile = opts.exercisesFile || getExercisesFile();
+  var limit = opts.limit;
+  var dryRun = opts.dryRun === true;
   var logger = typeof opts.logger === 'function' ? opts.logger : function() {};
 
   if (!Number.isInteger(batchSize) || batchSize <= 0) {
     throw new Error('batchSize inválido. Use um inteiro positivo.');
+  }
+  if (limit != null && (!Number.isInteger(limit) || limit <= 0)) {
+    throw new Error('limit inválido. Use um inteiro positivo.');
   }
 
   var env = validateRequiredEnv();
@@ -67,10 +72,13 @@ async function runExerciseImport(options) {
   });
 
   var exercises = await loadExercisesFromFile(exercisesFile);
-  var batches = chunk(exercises, batchSize);
+  var sourceExercises = limit == null ? exercises : exercises.slice(0, limit);
+  var batches = chunk(sourceExercises, batchSize);
   var batchLogs = [];
+  var processed = 0;
+  var failedBatch = null;
 
-  logger('Iniciando importação: total=' + exercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + '.');
+  logger('Iniciando importação: total=' + sourceExercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + ', dryRun=' + dryRun + '.');
 
   for (var index = 0; index < batches.length; index += 1) {
     var batch = batches[index];
@@ -79,9 +87,22 @@ async function runExerciseImport(options) {
     logger('Processando lote ' + batchNumber + '/' + batches.length + ' (' + batch.length + ' exercícios).');
 
     var startedAt = new Date();
+    if (dryRun) {
+      batchLogs.push({
+        batch: batchNumber,
+        totalBatches: batches.length,
+        size: batch.length,
+        durationMs: 0,
+        status: 'dry_run'
+      });
+      processed += batch.length;
+      continue;
+    }
+
     var rpc = await supabase.rpc('import_exercises_json', { payload: batch });
 
     if (rpc.error) {
+      failedBatch = batchNumber;
       throw new Error('Erro no lote ' + batchNumber + '/' + batches.length + ': ' + rpc.error.message);
     }
 
@@ -96,6 +117,7 @@ async function runExerciseImport(options) {
     };
 
     batchLogs.push(logEntry);
+    processed += batch.length;
     logger('Lote ' + batchNumber + '/' + batches.length + ' concluído em ' + durationMs + 'ms.');
 
     if (batchNumber < batches.length && batchDelayMs > 0) {
@@ -103,18 +125,26 @@ async function runExerciseImport(options) {
     }
   }
 
-  var countResult = await supabase.from('exercises').select('*', { count: 'exact', head: true });
-  if (countResult.error) {
-    throw new Error('Falha ao consultar total da tabela exercises: ' + countResult.error.message);
+  var finalExercisesCount = null;
+  if (!dryRun) {
+    var countResult = await supabase.from('exercises').select('*', { count: 'exact', head: true });
+    if (countResult.error) {
+      throw new Error('Falha ao consultar total da tabela exercises: ' + countResult.error.message);
+    }
+    finalExercisesCount = countResult.count || 0;
   }
 
   return {
     exercisesFile: exercisesFile,
-    totalInputExercises: exercises.length,
+    totalInputExercises: sourceExercises.length,
     batchSize: batchSize,
     totalBatches: batches.length,
     batchLogs: batchLogs,
-    finalExercisesCount: countResult.count || 0
+    finalExercisesCount: finalExercisesCount,
+    processed: processed,
+    failedBatch: failedBatch,
+    dryRun: dryRun,
+    limit: limit == null ? null : limit
   };
 }
 
