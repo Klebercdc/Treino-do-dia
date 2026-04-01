@@ -13,6 +13,7 @@ function buildResponse(payload) {
     currentTotalBefore: data.currentTotalBefore == null ? null : data.currentTotalBefore,
     targetTotal: data.targetTotal == null ? null : data.targetTotal,
     missing: data.missing == null ? null : data.missing,
+    availableInDataset: data.availableInDataset == null ? null : data.availableInDataset,
     importedOrUpdated: data.importedOrUpdated == null ? null : data.importedOrUpdated,
     totalInTable: data.totalInTable == null ? null : data.totalInTable,
     processedBatches: data.processedBatches == null ? null : data.processedBatches,
@@ -101,7 +102,8 @@ module.exports = async function handler(req, res) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json(buildResponse({
       ok: false,
-      status: 'method_not_allowed',
+      status: 'failed',
+      targetTotal: TARGET_TOTAL,
       message: 'method not allowed; use POST'
     }));
   }
@@ -109,7 +111,8 @@ module.exports = async function handler(req, res) {
   if (!isAuthorized(req)) {
     return res.status(401).json(buildResponse({
       ok: false,
-      status: 'unauthorized',
+      status: 'failed',
+      targetTotal: TARGET_TOTAL,
       message: 'unauthorized'
     }));
   }
@@ -127,11 +130,14 @@ module.exports = async function handler(req, res) {
   var lockAcquired = false;
   var currentTotalBefore = null;
   var missing = null;
+  var availableInDataset = null;
 
   try {
     supabase = createSupabaseAdminClient();
     currentTotalBefore = await getExercisesCount(supabase);
     missing = TARGET_TOTAL - currentTotalBefore;
+    var datasetItems = await exerciseImport.loadExercisesFromFile(exerciseImport.DEFAULT_EXERCISES_FILE);
+    availableInDataset = Array.isArray(datasetItems) ? datasetItems.length : 0;
 
     if (missing <= 0) {
       return res.status(200).json(buildResponse({
@@ -140,6 +146,7 @@ module.exports = async function handler(req, res) {
         currentTotalBefore: currentTotalBefore,
         targetTotal: TARGET_TOTAL,
         missing: 0,
+        availableInDataset: availableInDataset,
         totalInTable: currentTotalBefore,
         message: 'exercise catalog already has 1300 or more records'
       }));
@@ -154,6 +161,7 @@ module.exports = async function handler(req, res) {
         currentTotalBefore: currentTotalBefore,
         targetTotal: TARGET_TOTAL,
         missing: missing,
+        availableInDataset: availableInDataset,
         processedBatches: runningJobA && runningJobA.processed_batches,
         totalBatches: runningJobA && runningJobA.total_batches,
         message: 'exercise import already running'
@@ -170,22 +178,26 @@ module.exports = async function handler(req, res) {
         currentTotalBefore: currentTotalBefore,
         targetTotal: TARGET_TOTAL,
         missing: missing,
+        availableInDataset: availableInDataset,
         processedBatches: runningJobB && runningJobB.processed_batches,
         totalBatches: runningJobB && runningJobB.total_batches,
         message: 'exercise import already running'
       }));
     }
+    var importLimit = missing > availableInDataset ? availableInDataset : missing;
 
     console.info('[admin-import-exercises-auto] Início import automático', {
       currentTotalBefore: currentTotalBefore,
       targetTotal: TARGET_TOTAL,
       missing: missing,
+      availableInDataset: availableInDataset,
+      importLimit: importLimit,
       batchSize: AUTO_BATCH_SIZE
     });
 
     var summary = await exerciseImport.runExerciseImport({
       dryRun: false,
-      limit: missing,
+      limit: importLimit,
       batchSize: AUTO_BATCH_SIZE,
       batchDelayMs: 200,
       requestedBy: 'auto-endpoint',
@@ -203,6 +215,7 @@ module.exports = async function handler(req, res) {
       currentTotalBefore: currentTotalBefore,
       targetTotal: TARGET_TOTAL,
       missing: missing,
+      availableInDataset: availableInDataset,
       importedOrUpdated: summary.importedOrUpdated,
       totalInTable: summary.totalInTable,
       processedBatches: summary.processedBatches,
@@ -219,6 +232,7 @@ module.exports = async function handler(req, res) {
       currentTotalBefore: currentTotalBefore,
       targetTotal: TARGET_TOTAL,
       missing: missing,
+      availableInDataset: availableInDataset,
       message: 'exercise auto import failed'
     }));
   } finally {
