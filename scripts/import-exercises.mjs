@@ -10,7 +10,10 @@ function getBatchSize() {
   const parsed = Number.parseInt(rawBatchSize, 10);
 
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`BATCH_SIZE inválido: "${rawBatchSize}". Use um inteiro positivo.`);
+    console.warn(
+      `[import-exercises CLI] BATCH_SIZE inválido: "${rawBatchSize}". Usando fallback seguro: 200.`,
+    );
+    return 200;
   }
 
   return parsed;
