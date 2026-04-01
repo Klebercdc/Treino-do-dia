@@ -77,6 +77,8 @@ async function runExerciseImport(options) {
   var batchLogs = [];
   var processed = 0;
   var failedBatch = null;
+  var processedBatches = 0;
+  var importedOrUpdated = 0;
 
   logger('Iniciando importação: total=' + sourceExercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + ', dryRun=' + dryRun + '.');
 
@@ -96,6 +98,7 @@ async function runExerciseImport(options) {
         status: 'dry_run'
       });
       processed += batch.length;
+      processedBatches += 1;
       continue;
     }
 
@@ -118,6 +121,8 @@ async function runExerciseImport(options) {
 
     batchLogs.push(logEntry);
     processed += batch.length;
+    processedBatches += 1;
+    importedOrUpdated += batch.length;
     logger('Lote ' + batchNumber + '/' + batches.length + ' concluído em ' + durationMs + 'ms.');
 
     if (batchNumber < batches.length && batchDelayMs > 0) {
@@ -142,6 +147,8 @@ async function runExerciseImport(options) {
     batchLogs: batchLogs,
     finalExercisesCount: finalExercisesCount,
     processed: processed,
+    processedBatches: processedBatches,
+    importedOrUpdated: dryRun ? 0 : importedOrUpdated,
     failedBatch: failedBatch,
     dryRun: dryRun,
     limit: limit == null ? null : limit
