@@ -41,6 +41,13 @@ function sanitizeErrorMessage(error) {
   return message.slice(0, 300);
 }
 
+function logImportJobUpdateError(context, error) {
+  console.error('[exercise-import:update-job] Falha ao atualizar admin_import_jobs', {
+    context: context,
+    message: sanitizeErrorMessage(error)
+  });
+}
+
 function validateDuplicates(exercises) {
   var seen = Object.create(null);
   for (var i = 0; i < exercises.length; i += 1) {
@@ -80,7 +87,10 @@ async function createImportJob(supabase, payload) {
 
 async function updateImportJob(supabase, jobId, patch) {
   if (!jobId) return;
-  await supabase.from('admin_import_jobs').update(patch).eq('id', jobId);
+  var result = await supabase.from('admin_import_jobs').update(patch).eq('id', jobId);
+  if (result.error) {
+    logImportJobUpdateError({ jobId: jobId, fields: Object.keys(patch || {}) }, result.error);
+  }
 }
 
 function sleep(ms) {
