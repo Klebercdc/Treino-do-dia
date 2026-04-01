@@ -72,6 +72,21 @@ async function releaseAdvisoryLock(supabase, lockKey) {
   } catch (error) {}
 }
 
+async function hasRunningImport(supabase) {
+  var attempts = [
+    { p_job_type: 'exercise_import' },
+    { p_type: 'exercise_import' },
+    { job_type: 'exercise_import' }
+  ];
+  for (var i = 0; i < attempts.length; i += 1) {
+    var result = await supabase.rpc('admin_has_running_import', attempts[i]);
+    if (!result.error) {
+      return result.data === true;
+    }
+  }
+  throw new Error('Falha ao verificar importação em andamento.');
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -101,11 +116,7 @@ module.exports = async function handler(req, res) {
 
   try {
     supabase = createSupabaseAdminClient();
-    var running = await supabase.rpc('admin_has_running_import', { p_type: 'exercise_import' });
-    if (running.error) {
-      throw new Error('Falha ao verificar importação em andamento.');
-    }
-    if (running.data === true) {
+    if (await hasRunningImport(supabase)) {
       return res.status(200).json({ status: 'already_running' });
     }
 
@@ -113,6 +124,12 @@ module.exports = async function handler(req, res) {
     if (!lockAcquired) {
       return res.status(200).json({ status: 'already_running' });
     }
+
+    console.info('[admin-import-exercises] Início import', {
+      dryRun: dryRun,
+      limit: limit,
+      batchSize: batchSize
+    });
 
     var summary = await exerciseImport.runExerciseImport({
       batchSize: batchSize,
@@ -140,6 +157,7 @@ module.exports = async function handler(req, res) {
       error: 'Falha interna na importação.'
     });
   } finally {
+    console.info('[admin-import-exercises] Finalização import');
     if (lockAcquired && supabase) {
       await releaseAdvisoryLock(supabase, exerciseImport.IMPORT_LOCK_KEY);
     }

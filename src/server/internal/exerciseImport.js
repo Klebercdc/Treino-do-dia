@@ -37,6 +37,7 @@ function chunk(array, size) {
 
 function sanitizeErrorMessage(error) {
   var message = error instanceof Error ? error.message : String(error);
+  message = message.replace(/([A-Za-z]:)?[\\/][^ ]+/g, '[path]');
   return message.slice(0, 300);
 }
 
@@ -94,7 +95,7 @@ async function loadExercisesFromFile(exercisesFile) {
   var exercises = Array.isArray(parsed) ? parsed : parsed && parsed.exercises;
 
   if (!Array.isArray(exercises)) {
-    throw new Error('Formato inválido em ' + exercisesFile + '. Esperado array ou objeto com chave "exercises".');
+    throw new Error('Formato inválido do JSON de exercícios. Esperado array ou objeto com chave "exercises".');
   }
 
   return exercises;
@@ -134,6 +135,7 @@ async function runExerciseImport(options) {
   var importedOrUpdated = 0;
   var failedBatch = null;
   var finalExercisesCount = null;
+  var finalStatus = 'running';
 
   try {
     if (!lockAlreadyHeld) {
@@ -157,9 +159,10 @@ async function runExerciseImport(options) {
     }
 
     jobId = await createImportJob(supabase, {
-      type: JOB_TYPE,
+      job_type: JOB_TYPE,
       status: 'running',
-      started_at: started,
+      lock_key: IMPORT_LOCK_KEY,
+      requested_by: requestedBy,
       total_exercises: sourceExercises.length,
       total_batches: batches.length,
       processed_batches: 0,
@@ -168,7 +171,7 @@ async function runExerciseImport(options) {
       dry_run: dryRun,
       limit_count: limit == null ? null : limit,
       batch_size: batchSize,
-      metadata: { requestedBy: requestedBy, source: 'data/exercises.json' }
+      metadata: { source: 'data/exercises.json', started: started }
     });
 
     logger('Iniciando importação: total=' + sourceExercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + ', dryRun=' + dryRun + '.');
@@ -188,6 +191,7 @@ async function runExerciseImport(options) {
       }
 
       processedBatches += 1;
+      logger('Lote ' + batchNumber + '/' + batches.length + ' concluído com sucesso.');
       await updateImportJob(supabase, jobId, {
         processed_batches: processedBatches,
         imported_or_updated: dryRun ? 0 : importedOrUpdated
@@ -227,6 +231,8 @@ async function runExerciseImport(options) {
       failedBatch: null
     };
   } catch (error) {
+    finalStatus = 'failed';
+    logger('Erro resumido: ' + sanitizeErrorMessage(error));
     await updateImportJob(supabase, jobId, {
       status: 'failed',
       finished_at: new Date().toISOString(),
@@ -237,6 +243,10 @@ async function runExerciseImport(options) {
     });
     throw error;
   } finally {
+    if (finalStatus === 'running') {
+      finalStatus = 'completed';
+    }
+    logger('Finalização do import. status=' + finalStatus);
     if (!lockAlreadyHeld && lockAcquired) {
       await releaseImportLock(supabase);
     }

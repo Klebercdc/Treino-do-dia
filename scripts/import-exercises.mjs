@@ -20,6 +20,7 @@ async function run() {
   const rawLimit = process.env.IMPORT_LIMIT;
   const limit = rawLimit ? Number.parseInt(rawLimit, 10) : null;
   const dryRun = ['1', 'true', 'yes', 'on'].includes(String(process.env.DRY_RUN || '').toLowerCase());
+  console.log(`Iniciando CLI import. dryRun=${dryRun} limit=${limit ?? 'null'} batchSize=${getBatchSize()}`);
 
   const summary = await exerciseImport.runExerciseImport({
     batchSize: getBatchSize(),

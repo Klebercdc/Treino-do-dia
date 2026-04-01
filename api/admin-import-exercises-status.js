@@ -18,7 +18,7 @@ function safeJob(job) {
   if (!job) return null;
   return {
     jobId: job.id,
-    type: job.type,
+    jobType: job.job_type,
     status: job.status,
     started: job.started_at,
     finished: job.finished_at,
@@ -49,12 +49,12 @@ module.exports = async function handler(req, res) {
   try {
     var query = supabase
       .from('admin_import_jobs')
-      .select('id,type,status,started_at,finished_at,dry_run,limit_count,batch_size,total_exercises,total_batches,processed_batches,imported_or_updated,failed_batch');
+      .select('id,job_type,status,started_at,finished_at,dry_run,limit_count,batch_size,total_exercises,total_batches,processed_batches,imported_or_updated,failed_batch');
 
     if (jobId) {
-      query = query.eq('id', jobId).eq('type', 'exercise_import').limit(1);
+      query = query.eq('id', jobId).eq('job_type', 'exercise_import').limit(1);
     } else {
-      query = query.eq('type', 'exercise_import').order('started_at', { ascending: false }).limit(1);
+      query = query.eq('job_type', 'exercise_import').order('started_at', { ascending: false }).limit(1);
     }
 
     var result = await query;
@@ -63,6 +63,9 @@ module.exports = async function handler(req, res) {
     }
 
     var job = Array.isArray(result.data) ? result.data[0] : result.data;
+    if (!job) {
+      return res.status(404).json({ ok: false, error: 'Job não encontrado.' });
+    }
     return res.status(200).json({ ok: true, job: safeJob(job) });
   } catch (error) {
     return res.status(500).json({ ok: false, error: 'Falha interna ao consultar status.' });
