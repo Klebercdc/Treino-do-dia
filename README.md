@@ -288,3 +288,22 @@ Requer `rclone` configurado com credenciais do Google Drive.
 ## Licença
 
 Propriedade do autor. Todos os direitos reservados.
+
+## Endpoint interno: importação de exercícios
+
+Para rodar a importação no servidor (sem expor `SUPABASE_SERVICE_ROLE_KEY` no frontend), use o endpoint:
+
+- `POST /api/admin-import-exercises`
+- Header obrigatório: `x-admin-key: <IMPORT_ADMIN_KEY>`
+
+Exemplo com `curl`:
+
+```bash
+curl -X POST "https://<seu-dominio>/api/admin-import-exercises" \
+  -H "x-admin-key: $IMPORT_ADMIN_KEY"
+```
+
+Comportamento:
+- carrega `data/exercises.json`
+- importa em lotes de 200 (`import_exercises_json`)
+- retorna resumo por lote e total final em `exercises`
