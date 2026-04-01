@@ -3,6 +3,9 @@ var path = require('node:path');
 var supabaseJs = require('@supabase/supabase-js');
 
 var DEFAULT_EXERCISES_FILE = path.resolve(process.cwd(), 'data/exercises.json');
+var DEFAULT_BATCH_SIZE = 200;
+var IMPORT_LOCK_KEY = 948221;
+var JOB_TYPE = 'exercise_import';
 
 function validateRequiredEnv() {
   var missing = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(function(name) {
@@ -32,6 +35,53 @@ function chunk(array, size) {
   return chunks;
 }
 
+function sanitizeErrorMessage(error) {
+  var message = error instanceof Error ? error.message : String(error);
+  return message.slice(0, 300);
+}
+
+function validateDuplicates(exercises) {
+  var seen = Object.create(null);
+  for (var i = 0; i < exercises.length; i += 1) {
+    var item = exercises[i] || {};
+    var key = [item.exercise_id, item.name, item.slug].filter(Boolean).join('|');
+    if (!key) {
+      continue;
+    }
+    if (seen[key]) {
+      throw new Error('Exercícios duplicados detectados no payload.');
+    }
+    seen[key] = true;
+  }
+}
+
+async function acquireImportLock(supabase) {
+  var lockResult = await supabase.rpc('admin_acquire_import_lock', { p_lock_key: IMPORT_LOCK_KEY });
+  if (lockResult.error) {
+    throw new Error('Falha ao adquirir lock de importação.');
+  }
+  return lockResult.data === true;
+}
+
+async function releaseImportLock(supabase) {
+  try {
+    await supabase.rpc('admin_release_import_lock', { p_lock_key: IMPORT_LOCK_KEY });
+  } catch (error) {}
+}
+
+async function createImportJob(supabase, payload) {
+  var result = await supabase.from('admin_import_jobs').insert(payload).select('id').single();
+  if (result.error) {
+    throw new Error('Falha ao criar job de importação.');
+  }
+  return result.data.id;
+}
+
+async function updateImportJob(supabase, jobId, patch) {
+  if (!jobId) return;
+  await supabase.from('admin_import_jobs').update(patch).eq('id', jobId);
+}
+
 function sleep(ms) {
   return new Promise(function(resolvePromise) {
     setTimeout(resolvePromise, ms);
@@ -52,16 +102,18 @@ async function loadExercisesFromFile(exercisesFile) {
 
 async function runExerciseImport(options) {
   var opts = options || {};
-  var batchSize = opts.batchSize || 200;
+  var batchSize = opts.batchSize;
+  if (!Number.isInteger(batchSize) || batchSize <= 0) {
+    batchSize = DEFAULT_BATCH_SIZE;
+  }
   var batchDelayMs = opts.batchDelayMs == null ? 200 : opts.batchDelayMs;
   var exercisesFile = opts.exercisesFile || getExercisesFile();
   var limit = opts.limit;
   var dryRun = opts.dryRun === true;
+  var requestedBy = opts.requestedBy || 'unknown';
+  var lockAlreadyHeld = opts.lockAlreadyHeld === true;
   var logger = typeof opts.logger === 'function' ? opts.logger : function() {};
 
-  if (!Number.isInteger(batchSize) || batchSize <= 0) {
-    throw new Error('batchSize inválido. Use um inteiro positivo.');
-  }
   if (limit != null && (!Number.isInteger(limit) || limit <= 0)) {
     throw new Error('limit inválido. Use um inteiro positivo.');
   }
@@ -71,91 +123,128 @@ async function runExerciseImport(options) {
     auth: { persistSession: false }
   });
 
+  var lockAcquired = false;
+  var jobId = null;
+  var started = new Date().toISOString();
   var exercises = await loadExercisesFromFile(exercisesFile);
+  validateDuplicates(exercises);
   var sourceExercises = limit == null ? exercises : exercises.slice(0, limit);
   var batches = chunk(sourceExercises, batchSize);
-  var batchLogs = [];
-  var processed = 0;
-  var failedBatch = null;
   var processedBatches = 0;
   var importedOrUpdated = 0;
-
-  logger('Iniciando importação: total=' + sourceExercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + ', dryRun=' + dryRun + '.');
-
-  for (var index = 0; index < batches.length; index += 1) {
-    var batch = batches[index];
-    var batchNumber = index + 1;
-
-    logger('Processando lote ' + batchNumber + '/' + batches.length + ' (' + batch.length + ' exercícios).');
-
-    var startedAt = new Date();
-    if (dryRun) {
-      batchLogs.push({
-        batch: batchNumber,
-        totalBatches: batches.length,
-        size: batch.length,
-        durationMs: 0,
-        status: 'dry_run'
-      });
-      processed += batch.length;
-      processedBatches += 1;
-      continue;
-    }
-
-    var rpc = await supabase.rpc('import_exercises_json', { payload: batch });
-
-    if (rpc.error) {
-      failedBatch = batchNumber;
-      throw new Error('Erro no lote ' + batchNumber + '/' + batches.length + ': ' + rpc.error.message);
-    }
-
-    var finishedAt = new Date();
-    var durationMs = finishedAt.getTime() - startedAt.getTime();
-    var logEntry = {
-      batch: batchNumber,
-      totalBatches: batches.length,
-      size: batch.length,
-      durationMs: durationMs,
-      status: 'ok'
-    };
-
-    batchLogs.push(logEntry);
-    processed += batch.length;
-    processedBatches += 1;
-    importedOrUpdated += batch.length;
-    logger('Lote ' + batchNumber + '/' + batches.length + ' concluído em ' + durationMs + 'ms.');
-
-    if (batchNumber < batches.length && batchDelayMs > 0) {
-      await sleep(batchDelayMs);
-    }
-  }
-
+  var failedBatch = null;
   var finalExercisesCount = null;
-  if (!dryRun) {
-    var countResult = await supabase.from('exercises').select('*', { count: 'exact', head: true });
-    if (countResult.error) {
-      throw new Error('Falha ao consultar total da tabela exercises: ' + countResult.error.message);
-    }
-    finalExercisesCount = countResult.count || 0;
-  }
 
-  return {
-    exercisesFile: exercisesFile,
-    totalInputExercises: sourceExercises.length,
-    batchSize: batchSize,
-    totalBatches: batches.length,
-    batchLogs: batchLogs,
-    finalExercisesCount: finalExercisesCount,
-    processed: processed,
-    processedBatches: processedBatches,
-    importedOrUpdated: dryRun ? 0 : importedOrUpdated,
-    failedBatch: failedBatch,
-    dryRun: dryRun,
-    limit: limit == null ? null : limit
-  };
+  try {
+    if (!lockAlreadyHeld) {
+      lockAcquired = await acquireImportLock(supabase);
+      if (!lockAcquired) {
+        return {
+          jobId: null,
+          started: started,
+          dryRun: dryRun,
+          totalExercises: sourceExercises.length,
+          batchSize: batchSize,
+          totalBatches: batches.length,
+          processedBatches: 0,
+          importedOrUpdated: 0,
+          totalInTable: null,
+          status: 'already_running',
+          failedBatch: null,
+          alreadyRunning: true
+        };
+      }
+    }
+
+    jobId = await createImportJob(supabase, {
+      type: JOB_TYPE,
+      status: 'running',
+      started_at: started,
+      total_exercises: sourceExercises.length,
+      total_batches: batches.length,
+      processed_batches: 0,
+      imported_or_updated: 0,
+      failed_batch: null,
+      dry_run: dryRun,
+      limit_count: limit == null ? null : limit,
+      batch_size: batchSize,
+      metadata: { requestedBy: requestedBy, source: 'data/exercises.json' }
+    });
+
+    logger('Iniciando importação: total=' + sourceExercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + ', dryRun=' + dryRun + '.');
+
+    for (var index = 0; index < batches.length; index += 1) {
+      var batch = batches[index];
+      var batchNumber = index + 1;
+      logger('Processando lote ' + batchNumber + '/' + batches.length + ' (' + batch.length + ' exercícios).');
+
+      if (!dryRun) {
+        var rpc = await supabase.rpc('import_exercises_json', { payload: batch });
+        if (rpc.error) {
+          failedBatch = batchNumber;
+          throw new Error('Erro no lote ' + batchNumber + '/' + batches.length + ': ' + rpc.error.message);
+        }
+        importedOrUpdated += batch.length;
+      }
+
+      processedBatches += 1;
+      await updateImportJob(supabase, jobId, {
+        processed_batches: processedBatches,
+        imported_or_updated: dryRun ? 0 : importedOrUpdated
+      });
+
+      if (batchNumber < batches.length && batchDelayMs > 0) {
+        await sleep(batchDelayMs);
+      }
+    }
+
+    if (!dryRun) {
+      var countResult = await supabase.from('exercises').select('*', { count: 'exact', head: true });
+      if (countResult.error) {
+        throw new Error('Falha ao consultar total da tabela exercises: ' + countResult.error.message);
+      }
+      finalExercisesCount = countResult.count || 0;
+    }
+
+    await updateImportJob(supabase, jobId, {
+      status: 'completed',
+      finished_at: new Date().toISOString(),
+      processed_batches: processedBatches,
+      imported_or_updated: dryRun ? 0 : importedOrUpdated
+    });
+
+    return {
+      jobId: jobId,
+      started: started,
+      dryRun: dryRun,
+      totalExercises: sourceExercises.length,
+      batchSize: batchSize,
+      totalBatches: batches.length,
+      processedBatches: processedBatches,
+      importedOrUpdated: dryRun ? 0 : importedOrUpdated,
+      totalInTable: finalExercisesCount,
+      status: 'completed',
+      failedBatch: null
+    };
+  } catch (error) {
+    await updateImportJob(supabase, jobId, {
+      status: 'failed',
+      finished_at: new Date().toISOString(),
+      failed_batch: failedBatch,
+      error_message: sanitizeErrorMessage(error),
+      processed_batches: processedBatches,
+      imported_or_updated: dryRun ? 0 : importedOrUpdated
+    });
+    throw error;
+  } finally {
+    if (!lockAlreadyHeld && lockAcquired) {
+      await releaseImportLock(supabase);
+    }
+  }
 }
 
 module.exports = {
+  IMPORT_LOCK_KEY: IMPORT_LOCK_KEY,
   DEFAULT_EXERCISES_FILE: DEFAULT_EXERCISES_FILE,
   chunk: chunk,
   getExercisesFile: getExercisesFile,

@@ -291,19 +291,38 @@ Propriedade do autor. Todos os direitos reservados.
 
 ## Endpoint interno: importação de exercícios
 
-Para rodar a importação no servidor (sem expor `SUPABASE_SERVICE_ROLE_KEY` no frontend), use o endpoint:
+Para rodar a importação no servidor (sem expor `SUPABASE_SERVICE_ROLE_KEY` no frontend), use:
 
 - `POST /api/admin-import-exercises`
+- `GET /api/admin-import-exercises-status`
 - Header obrigatório: `x-admin-key: <IMPORT_ADMIN_KEY>`
 
-Exemplo com `curl`:
+> Em produção (Vercel), `IMPORT_ADMIN_KEY` deve estar configurada no ambiente.
+
+Exemplo `POST` com dry-run parcial:
 
 ```bash
-curl -X POST "https://<seu-dominio>/api/admin-import-exercises" \
+curl -X POST "https://<seu-dominio>/api/admin-import-exercises?dryRun=1&limit=50" \
+  -H "x-admin-key: $IMPORT_ADMIN_KEY" \
+  -H "x-requested-by: ops-manual"
+```
+
+Exemplo `GET` de status (job específico):
+
+```bash
+curl -X GET "https://<seu-dominio>/api/admin-import-exercises-status?jobId=<job_id>" \
+  -H "x-admin-key: $IMPORT_ADMIN_KEY"
+```
+
+Exemplo `GET` do último job:
+
+```bash
+curl -X GET "https://<seu-dominio>/api/admin-import-exercises-status" \
   -H "x-admin-key: $IMPORT_ADMIN_KEY"
 ```
 
 Comportamento:
 - carrega `data/exercises.json`
-- importa em lotes de 200 (`import_exercises_json`)
-- retorna resumo por lote e total final em `exercises`
+- suporta `dryRun`, `limit`, `batchSize` opcionais
+- persiste progresso em `admin_import_jobs`
+- evita concorrência com advisory lock + verificação de execução em andamento

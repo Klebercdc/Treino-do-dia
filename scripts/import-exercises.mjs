@@ -17,15 +17,22 @@ function getBatchSize() {
 }
 
 async function run() {
+  const rawLimit = process.env.IMPORT_LIMIT;
+  const limit = rawLimit ? Number.parseInt(rawLimit, 10) : null;
+  const dryRun = ['1', 'true', 'yes', 'on'].includes(String(process.env.DRY_RUN || '').toLowerCase());
+
   const summary = await exerciseImport.runExerciseImport({
     batchSize: getBatchSize(),
     batchDelayMs: BATCH_DELAY_MS,
     exercisesFile: exerciseImport.getExercisesFile(),
+    limit: limit,
+    dryRun: dryRun,
+    requestedBy: 'cli',
     logger: (message) => console.log(message),
   });
 
   console.log(
-    `Importação concluída com sucesso. Total atual na tabela exercises: ${summary.finalExercisesCount}.`,
+    `Importação finalizada com status=${summary.status}, jobId=${summary.jobId}, totalInTable=${summary.totalInTable}.`,
   );
 }
 

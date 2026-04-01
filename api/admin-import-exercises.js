@@ -1,9 +1,7 @@
 var exerciseImport = require('../src/server/internal/exerciseImport');
 var supabaseJs = require('@supabase/supabase-js');
 
-var IMPORT_LOCK_KEY = 948221;
 var DEFAULT_BATCH_SIZE = 200;
-var DEFAULT_EXERCISES_LABEL = 'data/exercises.json';
 
 function parseBoolean(value) {
   if (typeof value !== 'string') {
@@ -26,6 +24,16 @@ function parsePositiveInt(value) {
 function parseBatchSizeWithFallback(value, fallback) {
   var parsed = parsePositiveInt(value);
   return parsed == null ? fallback : parsed;
+}
+
+function getParam(req, key) {
+  if (req.query && req.query[key] != null) {
+    return req.query[key];
+  }
+  if (req.body && req.body[key] != null) {
+    return req.body[key];
+  }
+  return null;
 }
 
 function createSupabaseAdminClient() {
@@ -51,41 +59,17 @@ function isAuthorized(req) {
 }
 
 async function tryAcquireAdvisoryLock(supabase, lockKey) {
-  var attempts = [
-    { fn: 'pg_try_advisory_lock', args: { key: lockKey } },
-    { fn: 'pg_try_advisory_lock', args: { p_key: lockKey } },
-    { fn: 'admin_acquire_import_lock', args: { p_lock_key: lockKey } }
-  ];
-
-  for (var i = 0; i < attempts.length; i += 1) {
-    var attempt = attempts[i];
-    var response = await supabase.rpc(attempt.fn, attempt.args);
-    if (!response.error) {
-      return response.data === true;
-    }
+  var response = await supabase.rpc('admin_acquire_import_lock', { p_lock_key: lockKey });
+  if (response.error) {
+    throw new Error('Falha ao adquirir lock de importação.');
   }
-
-  throw new Error('Não foi possível adquirir lock de importação.');
+  return response.data === true;
 }
 
 async function releaseAdvisoryLock(supabase, lockKey) {
-  var attempts = [
-    { fn: 'pg_advisory_unlock', args: { key: lockKey } },
-    { fn: 'pg_advisory_unlock', args: { p_key: lockKey } },
-    { fn: 'admin_release_import_lock', args: { p_lock_key: lockKey } }
-  ];
-
-  for (var i = 0; i < attempts.length; i += 1) {
-    try {
-      var attempt = attempts[i];
-      var response = await supabase.rpc(attempt.fn, attempt.args);
-      if (!response.error) {
-        return true;
-      }
-    } catch (error) {}
-  }
-
-  return false;
+  try {
+    await supabase.rpc('admin_release_import_lock', { p_lock_key: lockKey });
+  } catch (error) {}
 }
 
 module.exports = async function handler(req, res) {
@@ -99,44 +83,36 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'Não autorizado.' });
   }
 
-  var started = new Date().toISOString();
-  var dryRun = parseBoolean(req.query && req.query.dry_run);
-  var limit = parsePositiveInt(req.query && req.query.limit);
-  var batchSize = parseBatchSizeWithFallback(req.query && req.query.batchSize, DEFAULT_BATCH_SIZE);
-  if (req.query && req.query.limit != null && limit == null) {
+  var dryRunRaw = getParam(req, 'dryRun');
+  if (dryRunRaw == null) {
+    dryRunRaw = getParam(req, 'dry_run');
+  }
+  var dryRun = parseBoolean(String(dryRunRaw == null ? '' : dryRunRaw));
+
+  var limitRaw = getParam(req, 'limit');
+  var limit = parsePositiveInt(limitRaw);
+  if (limitRaw != null && limit == null) {
     return res.status(400).json({ ok: false, error: 'Parâmetro "limit" inválido. Use inteiro positivo.' });
   }
+  var batchSize = parseBatchSizeWithFallback(getParam(req, 'batchSize'), DEFAULT_BATCH_SIZE);
 
   var supabase = null;
   var lockAcquired = false;
 
   try {
     supabase = createSupabaseAdminClient();
-    lockAcquired = await tryAcquireAdvisoryLock(supabase, IMPORT_LOCK_KEY);
-    if (!lockAcquired) {
-      return res.status(200).json({
-        ok: true,
-        summary: {
-          started: started,
-          dryRun: dryRun,
-          totalExercises: 0,
-          batchSize: batchSize,
-          totalBatches: 0,
-          processedBatches: 0,
-          importedOrUpdated: 0,
-          totalInTable: null,
-          alreadyRunning: true
-        }
-      });
+    var running = await supabase.rpc('admin_has_running_import', { p_type: 'exercise_import' });
+    if (running.error) {
+      throw new Error('Falha ao verificar importação em andamento.');
+    }
+    if (running.data === true) {
+      return res.status(200).json({ status: 'already_running' });
     }
 
-    console.info('[admin-import-exercises] Início importação', {
-      started: started,
-      dryRun: dryRun,
-      limit: limit,
-      batchSize: batchSize,
-      source: DEFAULT_EXERCISES_LABEL
-    });
+    lockAcquired = await tryAcquireAdvisoryLock(supabase, exerciseImport.IMPORT_LOCK_KEY);
+    if (!lockAcquired) {
+      return res.status(200).json({ status: 'already_running' });
+    }
 
     var summary = await exerciseImport.runExerciseImport({
       batchSize: batchSize,
@@ -144,55 +120,28 @@ module.exports = async function handler(req, res) {
       batchDelayMs: 200,
       dryRun: dryRun,
       limit: limit,
+      requestedBy: req.headers['x-requested-by'] || 'admin-endpoint',
+      lockAlreadyHeld: true,
       logger: function(message) {
         console.info('[admin-import-exercises]', message);
       }
     });
 
-    console.info('[admin-import-exercises] Finalizado', {
-      started: started,
-      processedBatches: summary.processedBatches,
-      importedOrUpdated: summary.importedOrUpdated,
-      totalInTable: summary.finalExercisesCount
-    });
-
     return res.status(200).json({
       ok: true,
-      summary: {
-        started: started,
-        dryRun: summary.dryRun,
-        totalExercises: summary.totalInputExercises,
-        batchSize: summary.batchSize,
-        totalBatches: summary.totalBatches,
-        processedBatches: summary.processedBatches,
-        importedOrUpdated: summary.importedOrUpdated,
-        totalInTable: summary.finalExercisesCount,
-        alreadyRunning: false
-      }
+      summary: summary
     });
   } catch (error) {
     console.error('[admin-import-exercises] Erro resumido', {
-      started: started,
       message: error instanceof Error ? error.message : String(error)
     });
     return res.status(500).json({
       ok: false,
-      error: 'Falha na importação de exercícios.',
-      summary: {
-        started: started,
-        dryRun: dryRun,
-        totalExercises: 0,
-        batchSize: batchSize,
-        totalBatches: 0,
-        processedBatches: 0,
-        importedOrUpdated: 0,
-        totalInTable: null,
-        alreadyRunning: false
-      }
+      error: 'Falha interna na importação.'
     });
   } finally {
     if (lockAcquired && supabase) {
-      await releaseAdvisoryLock(supabase, IMPORT_LOCK_KEY);
+      await releaseAdvisoryLock(supabase, exerciseImport.IMPORT_LOCK_KEY);
     }
   }
 };
