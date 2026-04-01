@@ -4904,6 +4904,16 @@ async function openExerciseDetailsFromCard(card) {
   await openExerciseDetailsByName(fallbackRef.display_name || exerciseName, { origin: "card", exerciseRef: fallbackRef });
 }
 
+function resolveAppApiUrl(path) {
+  const safePath = String(path || "").trim();
+  const normalizedPath = safePath.startsWith("/") ? safePath : ("/" + safePath);
+  if (/^https?:\/\//i.test(safePath)) return safePath;
+  if (/^https?:$/i.test(String(location.protocol || "")) && location.host) {
+    return location.protocol + "//" + location.host + normalizedPath;
+  }
+  return "https://kronia.app.br" + normalizedPath;
+}
+
 async function openExerciseDetailsByName(exerciseName, options = {}) {
   const exerciseRef = ensureExerciseRef(options.exerciseRef || { display_name: exerciseName }, exerciseName, options.origin || "direct_open");
   const lookupKey = exerciseRef.normalized_lookup_key || normalizeExerciseLookupKey(exerciseName);
@@ -4924,7 +4934,8 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
       params.set("lookupKey", lookupKey);
     }
 
-    const resp = await apiFetch(`/api/kronia/exercises/details?${params.toString()}`);
+    const endpoint = resolveAppApiUrl(`/api/kronia/exercises/details?${params.toString()}`);
+    const resp = await apiFetch(endpoint);
     const json = await resp.json();
 
     if (!resp.ok) {
@@ -4968,7 +4979,7 @@ async function openExerciseDiscovery(query) {
   openExerciseDiscSheet();
   _exerciseDiscSetState('loading');
   try {
-    const resp = await apiFetch("/api/kronia/exercises/discovery", {
+    const resp = await apiFetch(resolveAppApiUrl("/api/kronia/exercises/discovery"), {
       method: 'POST',
       body: JSON.stringify({ message: query, locale: 'pt' })
     });
