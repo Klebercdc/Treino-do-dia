@@ -19,14 +19,29 @@ function getBatchSize() {
   return parsed;
 }
 
-async function run() {
+function getImportLimit() {
   const rawLimit = process.env.IMPORT_LIMIT;
-  const limit = rawLimit ? Number.parseInt(rawLimit, 10) : null;
+  if (rawLimit == null || rawLimit === '') return null;
+
+  const parsed = Number.parseInt(rawLimit, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    console.error(
+      `[import-exercises CLI] IMPORT_LIMIT inválido: "${rawLimit}". Use um inteiro positivo.`,
+    );
+    process.exit(1);
+  }
+
+  return parsed;
+}
+
+async function run() {
+  const limit = getImportLimit();
   const dryRun = ['1', 'true', 'yes', 'on'].includes(String(process.env.DRY_RUN || '').toLowerCase());
-  console.log(`Iniciando CLI import. dryRun=${dryRun} limit=${limit ?? 'null'} batchSize=${getBatchSize()}`);
+  const batchSize = getBatchSize();
+  console.log(`Iniciando CLI import. dryRun=${dryRun} limit=${limit ?? 'null'} batchSize=${batchSize}`);
 
   const summary = await exerciseImport.runExerciseImport({
-    batchSize: getBatchSize(),
+    batchSize,
     batchDelayMs: BATCH_DELAY_MS,
     exercisesFile: exerciseImport.getExercisesFile(),
     limit: limit,
