@@ -8,7 +8,10 @@
   function safeTrack(payload) {
     try {
       window.KroniaIntelligence?.track?.(payload || {});
-    } catch (_) {}
+    } catch (_err) {
+      return null;
+    }
+    return null;
   }
 
   function normalizeText(v) {
@@ -29,14 +32,16 @@
     var text = normalizeText(input?.message);
 
     var workout =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta)\b/]) &&
-      hasAny(text, [/\b(treino|ficha|programa)\b/]);
+      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar)\b/]) &&
+      hasAny(text, [/\b(treino|ficha|programa|periodizacao)\b/]);
 
     var diet =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta)\b/]) &&
-      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao)\b/]);
+      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar)\b/]) &&
+      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao)\b/]);
 
-    var analysis = hasAny(text, [/\b(evolucao|progresso|funcionando|resultado|melhorei|plato|aderencia|consistencia)\b/]);
+    var analysis = hasAny(text, [
+      /\b(evolucao|progresso|funcionando|resultado|melhorei|plato|aderencia|consistencia|desempenho|carga|frequencia)\b/
+    ]);
 
     var supplement = hasAny(text, [/\b(creatina|whey|cafeina|pre treino|beta alanina|suplement)\b/]);
 
@@ -52,9 +57,19 @@
     try {
       var raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : fallback;
-    } catch (_) {
+    } catch (_err) {
       return fallback;
     }
+  }
+
+  function numberFrom(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function parseLoadFromValue(value) {
+    var n = Number(String(value || '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
   }
 
   function buildProgressAnalysisContext() {
@@ -63,36 +78,109 @@
     var transforms = readJson('kronia_transforms_snapshot', null);
 
     var sessions = Array.isArray(history) ? history : [];
-    var hasStructuredHistory = sessions.length >= 2;
+    var recentSessions = sessions.slice(0, 12);
     var hasDraft = !!(draft && Array.isArray(draft.sections));
     var hasTransforms = !!(transforms && typeof transforms === 'object');
 
-    if (!hasStructuredHistory) {
+    var totalExercises = 0;
+    var totalSeries = 0;
+    var totalLoad = 0;
+    var weightedLoadSamples = 0;
+
+    recentSessions.forEach(function (session) {
+      var sections = Array.isArray(session?.state?.sections) ? session.state.sections : [];
+      sections.forEach(function (section) {
+        var cards = Array.isArray(section?.cards) ? section.cards : [];
+        totalExercises += cards.length;
+        cards.forEach(function (card) {
+          var values = Array.isArray(card?.values) ? card.values : [];
+          totalSeries += values.length;
+          values.forEach(function (v) {
+            var kg = parseLoadFromValue(v?.kg);
+            var reps = parseLoadFromValue(v?.reps);
+            if (kg > 0 && reps > 0) {
+              totalLoad += kg * reps;
+              weightedLoadSamples += 1;
+            }
+          });
+        });
+      });
+    });
+
+    var averageSeriesPerSession = recentSessions.length ? (totalSeries / recentSessions.length) : 0;
+    var sessionDates = recentSessions
+      .map(function (s) { return s?.createdAt || s?.trained_at || null; })
+      .filter(Boolean)
+      .map(function (d) { return new Date(d).getTime(); })
+      .filter(function (t) { return Number.isFinite(t); })
+      .sort(function (a, b) { return a - b; });
+
+    var avgIntervalDays = 0;
+    if (sessionDates.length >= 2) {
+      var totalGap = 0;
+      for (var i = 1; i < sessionDates.length; i += 1) {
+        totalGap += (sessionDates[i] - sessionDates[i - 1]) / (1000 * 60 * 60 * 24);
+      }
+      avgIntervalDays = totalGap / (sessionDates.length - 1);
+    }
+
+    var sufficientData = recentSessions.length >= 3 && totalSeries >= 12;
+    if (!sufficientData) {
       return {
         sufficientData: false,
         validationStatus: 'insufficient_data',
-        blockedReason: 'history_below_minimum',
-        message: 'Ainda nao ha dados suficientes para uma analise segura da sua evolucao.',
-        sourceOfTruth: 'user_structured_data',
-        usedStructuredUserData: true,
-        usedTransforms: hasTransforms,
+        blockedReason: 'progress_history_below_minimum',
+        message: 'Ainda nao ha base suficiente para uma analise robusta. Registre mais sessoes e series completas.',
+        sourceOfTruth: hasTransforms ? 'transform_snapshot' : 'user_structured_data',
+        usedStructuredUserData: recentSessions.length > 0,
+        usedTransforms: hasTransforms || hasDraft,
+        payload: {
+          sessionsConsidered: recentSessions.length,
+          totalSeries: totalSeries,
+          hasDraft: hasDraft,
+          hasTransforms: hasTransforms,
+        },
       };
     }
+
+    var consistencyLabel = avgIntervalDays > 0 && avgIntervalDays <= 3.5
+      ? 'consistencia alta'
+      : avgIntervalDays > 0 && avgIntervalDays <= 5.5
+        ? 'consistencia moderada'
+        : 'consistencia irregular';
+
+    var averageLoadPerSet = weightedLoadSamples ? (totalLoad / weightedLoadSamples) : 0;
+    var message = [
+      'Diagnostico de progresso:',
+      'foram analisadas ' + recentSessions.length + ' sessoes recentes, com ' + totalSeries + ' series registradas.',
+      'A frequencia indica ' + consistencyLabel + (avgIntervalDays ? ' (intervalo medio de ' + avgIntervalDays.toFixed(1) + ' dias).' : '.'),
+      'Volume medio aproximado de ' + averageSeriesPerSession.toFixed(1) + ' series por sessao.',
+      averageLoadPerSet > 0
+        ? 'Carga media por serie valida em torno de ' + averageLoadPerSet.toFixed(1) + ' kg-reps.'
+        : 'Nao houve amostra de carga/repeticao suficiente para calcular tendencia de carga.'
+    ].join(' ');
 
     return {
       sufficientData: true,
       validationStatus: 'validated',
       blockedReason: null,
-      message: 'Analise pronta: dados estruturados suficientes para avaliar sua evolucao com seguranca.',
-      sourceOfTruth: hasTransforms ? 'transform_snapshot' : 'user_structured_data',
+      message: message,
+      sourceOfTruth: hasTransforms ? 'combined_scientific_engine' : 'user_structured_data',
       usedStructuredUserData: true,
       usedTransforms: hasTransforms || hasDraft,
+      payload: {
+        sessionsConsidered: recentSessions.length,
+        totalExercises: totalExercises,
+        totalSeries: totalSeries,
+        averageSeriesPerSession: Number(averageSeriesPerSession.toFixed(2)),
+        averageLoadPerSet: Number(averageLoadPerSet.toFixed(2)),
+        avgIntervalDays: Number(avgIntervalDays.toFixed(2)),
+      },
     };
   }
 
-  function buildDecision(input) {
-    var intent = classifyConversationIntent(input);
-    var base = {
+  function decisionBase(intent) {
+    return {
       intent: intent,
       targetModule: 'chat',
       ctaAction: null,
@@ -108,13 +196,18 @@
       usedFallback: false,
       timestamp: nowISO(),
     };
+  }
+
+  function buildDecision(input) {
+    var intent = classifyConversationIntent(input);
+    var base = decisionBase(intent);
 
     if (intent === 'workout_creation_request') {
       return Object.assign({}, base, {
         type: 'answer_with_cta',
         targetModule: 'programa',
         ctaAction: 'open_training_builder',
-        message: 'Perfeito. Vou te levar para montar seu treino no modulo oficial.',
+        message: 'Perfeito. Posso abrir o modulo oficial de treino quando voce clicar no botao abaixo.',
       });
     }
 
@@ -123,7 +216,7 @@
         type: 'answer_with_cta',
         targetModule: 'dieta',
         ctaAction: 'open_diet_generator',
-        message: 'Perfeito. Vou te levar para montar sua dieta no modulo oficial.',
+        message: 'Perfeito. Posso abrir o modulo oficial de dieta quando voce clicar no botao abaixo.',
       });
     }
 
@@ -138,9 +231,7 @@
         usedTransforms: !!context.usedTransforms,
         validationStatus: context.validationStatus,
         blockedReason: context.blockedReason,
-        payload: {
-          sufficientData: context.sufficientData,
-        },
+        payload: context.payload,
       });
     }
 
@@ -148,16 +239,25 @@
       return Object.assign({}, base, {
         type: 'answer_only',
         targetModule: 'supplement',
-        message: 'Posso te orientar sobre suplementos com base em evidencia cientifica e no seu contexto.',
+        message: 'Creatina funciona para ganho de forca e massa quando o treino e a dieta estao consistentes.',
       });
     }
 
     return Object.assign({}, base, {
       type: 'answer_only',
-      message: 'Entendi. Posso te ajudar com evolucao, suplementos e direcionamento para treino ou dieta.',
+      message: 'Entendi. Posso ajudar com evolucao, suplementos e direcionamento para treino ou dieta.',
       usedFallback: true,
       validationStatus: 'fallback_local',
     });
+  }
+
+  function setAuditTrace(tracePayload) {
+    try {
+      window.KroniaIntelligence?.setAdminAuditTrace?.(tracePayload || {});
+    } catch (_err) {
+      return null;
+    }
+    return null;
   }
 
   async function resolveConversationFlow(input) {
@@ -175,15 +275,30 @@
           decision.sourceOfTruth = science?.sourceOfTruth || decision.sourceOfTruth;
           decision.scienceTopicsUsed = Array.isArray(science?.scienceTopicsUsed) ? science.scienceTopicsUsed : [];
           decision.payload.scientificConstraints = science?.constraints || {};
+          decision.payload.scienceValidation = science?.validationStatus || (science?.ok ? 'validated' : 'blocked');
+
+          setAuditTrace({
+            science: {
+              sourceOfTruth: decision.sourceOfTruth,
+              usedScientificEvidence: decision.usedScientificEvidence,
+              evidenceCount: decision.evidenceCount,
+              scienceTopicsUsed: decision.scienceTopicsUsed,
+              usedFallback: !!science?.usedFallback,
+              blockedReason: science?.blockedReason || null,
+              validationStatus: science?.validationStatus || (science?.ok ? 'validated' : 'blocked'),
+              timestamp: nowISO(),
+            },
+          });
+
           if (!science?.ok) {
             decision.type = 'answer_only';
             decision.ctaAction = null;
             decision.message = 'Ainda nao encontrei evidencia cientifica suficiente para direcionar com seguranca agora.';
-            decision.validationStatus = 'blocked_missing_science';
+            decision.validationStatus = science?.validationStatus || 'blocked_missing_science';
             decision.blockedReason = science?.blockedReason || 'missing_science_evidence';
           }
         }
-      } catch (_) {
+      } catch (_err) {
         decision.usedFallback = true;
         decision.validationStatus = 'science_builder_error';
         decision.blockedReason = 'science_builder_error';
@@ -199,6 +314,7 @@
         action: decision.ctaAction,
       } : null,
       targetModule: decision.targetModule,
+      ctaAction: decision.ctaAction,
       sourceOfTruth: decision.sourceOfTruth,
       evidenceCount: decision.evidenceCount,
       scienceTopicsUsed: decision.scienceTopicsUsed,
@@ -229,11 +345,15 @@
       },
     });
 
-    window.KroniaIntelligence?.setAdminAuditTrace?.({
+    setAuditTrace({
       conversation: {
         intent: result.intent,
         type: result.type,
+        message: result.message,
         targetModule: result.targetModule,
+        ctaRendered: false,
+        ctaClicked: false,
+        ctaLabel: result.cta?.label || null,
         ctaAction: result.cta?.action || null,
         sourceOfTruth: result.sourceOfTruth,
         usedScientificEvidence: result.usedScientificEvidence,

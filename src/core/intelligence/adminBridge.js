@@ -147,29 +147,83 @@
   }
 
 
-  function renderConversationAuditTrace() {
+  function renderAuditCard(data, fields, emptyLabel) {
+    if (!data || !Object.keys(data).length) {
+      return '<div class="kronia-intelligence-admin-empty">' + emptyLabel + '</div>';
+    }
+    return [
+      '<article class="kronia-intelligence-admin-card" style="display:block">',
+      fields.map(function (field) {
+        var key = field[0];
+        var label = field[1];
+        var value = data[key];
+        if (Array.isArray(value)) value = value.length ? value.join(', ') : '-';
+        if (typeof value === 'boolean') value = String(value);
+        if (value === null || typeof value === 'undefined' || value === '') value = '-';
+        return '<span><b>' + label + ':</b> ' + value + '</span>';
+      }).join(''),
+      '</article>'
+    ].join('');
+  }
+
+  function renderConversationAuditTrace(trace) {
     try {
-      var trace = window.KroniaIntelligence?.getAdminAuditTrace?.() || {};
-      var conv = trace.conversation || {};
-      if (!conv || !Object.keys(conv).length) {
-        return '<div class="kronia-intelligence-admin-empty">Sem trilha conversacional registrada.</div>';
-      }
-      return [
-        '<article class="kronia-intelligence-admin-card" style="display:block">',
-        '<span><b>intent:</b> ' + (conv.intent || '-') + '</span>',
-        '<span><b>type:</b> ' + (conv.type || '-') + '</span>',
-        '<span><b>targetModule:</b> ' + (conv.targetModule || '-') + '</span>',
-        '<span><b>ctaAction:</b> ' + (conv.ctaAction || '-') + '</span>',
-        '<span><b>sourceOfTruth:</b> ' + (conv.sourceOfTruth || '-') + '</span>',
-        '<span><b>usedScientificEvidence:</b> ' + String(!!conv.usedScientificEvidence) + '</span>',
-        '<span><b>evidenceCount:</b> ' + (Number(conv.evidenceCount || 0)) + '</span>',
-        '<span><b>validationStatus:</b> ' + (conv.validationStatus || '-') + '</span>',
-        '<span><b>blockedReason:</b> ' + (conv.blockedReason || '-') + '</span>',
-        '<span><b>timestamp:</b> ' + (conv.timestamp || '-') + '</span>',
-        '</article>'
-      ].join('');
+      var conv = trace?.conversation || {};
+      return renderAuditCard(conv, [
+        ['intent', 'intent'],
+        ['type', 'type'],
+        ['targetModule', 'targetModule'],
+        ['ctaAction', 'ctaAction'],
+        ['ctaRendered', 'ctaRendered'],
+        ['ctaClicked', 'ctaClicked'],
+        ['sourceOfTruth', 'sourceOfTruth'],
+        ['usedScientificEvidence', 'usedScientificEvidence'],
+        ['evidenceCount', 'evidenceCount'],
+        ['validationStatus', 'validationStatus'],
+        ['blockedReason', 'blockedReason'],
+        ['timestamp', 'timestamp']
+      ], 'Sem trilha conversacional registrada.');
     } catch (_) {
       return '<div class="kronia-intelligence-admin-empty">Falha ao carregar trilha conversacional.</div>';
+    }
+  }
+
+  function renderScienceAuditTrace(trace) {
+    try {
+      var science = trace?.science || {};
+      return renderAuditCard(science, [
+        ['sourceOfTruth', 'sourceOfTruth'],
+        ['usedScientificEvidence', 'usedScientificEvidence'],
+        ['evidenceCount', 'evidenceCount'],
+        ['scienceTopicsUsed', 'scienceTopicsUsed'],
+        ['usedFallback', 'usedFallback'],
+        ['blockedReason', 'blockedReason'],
+        ['validationStatus', 'validationStatus'],
+        ['timestamp', 'timestamp']
+      ], 'Sem rastreio de evidencias cientificas.');
+    } catch (_) {
+      return '<div class="kronia-intelligence-admin-empty">Falha ao carregar rastreio cientifico.</div>';
+    }
+  }
+
+  function renderGenerationAuditTrace(trace) {
+    try {
+      var generation = trace?.generation || {};
+      return renderAuditCard(generation, [
+        ['type', 'type'],
+        ['constraintsUsed', 'constraintsUsed'],
+        ['sourceOfTruth', 'sourceOfTruth'],
+        ['evidenceCount', 'evidenceCount'],
+        ['scienceTopicsUsed', 'scienceTopicsUsed'],
+        ['validationStatus', 'validationStatus'],
+        ['blockedReason', 'blockedReason'],
+        ['respectedCardContext', 'respectedCardContext'],
+        ['respectedAnamnesisContext', 'respectedAnamnesisContext'],
+        ['userInputsUsed', 'userInputsUsed'],
+        ['timestamp', 'timestamp']
+      ], 'Sem trilha de geracao real registrada.');
+    } catch (_) {
+      return '<div class="kronia-intelligence-admin-empty">Falha ao carregar trilha de geracao.</div>';
     }
   }
 
@@ -182,6 +236,7 @@
     var recommendations = (overview.generatedRecommendations || overview.recommendations || []).filter(Boolean);
     var tasks = (overview.generatedTasks || overview.tasks || []).filter(Boolean);
     var insights = (overview.insights || recentPayload?.data?.insights || []).filter(Boolean);
+    var trace = window.KroniaIntelligence?.getAdminAuditTrace?.() || {};
     var health = {
       dietHealthScore: getHealthValue(overview, 'diet'),
       exerciseHealthScore: getHealthValue(overview, 'exercise'),
@@ -201,7 +256,9 @@
         return '<article><strong>' + (item.area || 'sistema') + '</strong><span>' + (item.text || 'Sem recomendação') + '</span></article>';
       }, 'Nenhuma recomendação disponível.') + '</section>',
       '<section><h4>Insights Operacionais</h4>' + renderInsights(insights) + '</section>',
-      '<section><h4>Fluxo Conversacional</h4>' + renderConversationAuditTrace() + '</section>',
+      '<section><h4>Fluxo Conversacional</h4>' + renderConversationAuditTrace(trace) + '</section>',
+      '<section><h4>Evidence Source</h4>' + renderScienceAuditTrace(trace) + '</section>',
+      '<section><h4>Geracao Real</h4>' + renderGenerationAuditTrace(trace) + '</section>',
       '<section><h4>Tarefas Geradas</h4>' + renderList(tasks, function (item) {
         return '<article><strong>' + (item.title || 'Tarefa técnica') + '</strong><span>' + (item.priority || 'P2') + ' · ' + (item.summary || 'Sem resumo') + '</span></article>';
       }, 'Nenhuma tarefa gerada.') + '</section>',

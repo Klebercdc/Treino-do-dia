@@ -306,8 +306,20 @@ function getPrevMap() {
 /* ═══════════════════════════════════════════════════
    GERAR PROTOCOLO
 ═══════════════════════════════════════════════════ */
-function gerarProtocolo() {
+async function gerarProtocolo() {
   const f = document.getElementById("freq")?.value || "3";
+  const objective = document.getElementById("obj")?.value || 'hipertrofia';
+  const guard = await validateScientificGenerationGuard(
+    'workout',
+    objective,
+    { freq: f, objective: objective },
+    { respectedCardContext: true, respectedAnamnesisContext: false }
+  );
+  if (!guard.ok) {
+    dlgAlert('Nao foi possivel gerar treino sem evidencia cientifica valida. Tente novamente em instantes.');
+    return;
+  }
+
   const nav = document.getElementById("nav");
   const cont = document.getElementById("container");
   nav.innerHTML = ""; cont.innerHTML = "";
@@ -1827,8 +1839,11 @@ function gerarTreinoDoPrograma() {
   dlgAlert(msg);
 }
 
-function openConfig() {
+function openConfig(context) {
   document.getElementById("configWarning").style.display="none";
+  if (context && typeof context === 'object') {
+    window._kroniaLastTrainingContext = context;
+  }
   const configBox = document.getElementById("configBox");
   if (configBox) configBox.scrollTop = 0;
   // Sync persona chip from saved config
@@ -1852,7 +1867,7 @@ async function applyConfig() {
   if (warning.style.display!=="none") {
     if (!await dlgConfirm("Gerar novo protocolo? O treino atual será substituído.")) return;
   }
-  gerarProtocolo(); closeConfig();
+  await gerarProtocolo(); closeConfig();
 }
 document.getElementById("configSheet")?.addEventListener("click", function(e) { if(e.target===this) closeConfig(); });
 
@@ -2809,12 +2824,12 @@ async function sendAI(overrideText, isGerarTreino = false) {
     removeThinking();
 
     if (flow.type === 'answer_with_cta') {
-      addAIMessage('assistant', flow.message || 'Vou te direcionar.');
-      executeConversationCta(flow);
+      addAIMessage('assistant', flow.message || 'Posso te direcionar pelo botao abaixo.');
+      renderConversationCta('aiMessages', flow.cta, flow.payload || {});
       try {
         window.KroniaIntelligence?.track?.({
           module: 'conversation',
-          action: 'chat_redirect_cta',
+          action: 'chat_cta_rendered',
           status: 'success',
           correlationId: correlationId,
           source: 'app_send_ai',
@@ -4449,12 +4464,32 @@ if (window.KroniaIntelligence && typeof window.KroniaIntelligence.getAdminAuditT
 }
 
 function extractObjectiveFromInput(input) {
-  var text = String(input?.message || '').toLowerCase();
+  var text = String(input?.message || input?.objective || '').toLowerCase();
   if (/hipertrof|massa/.test(text)) return 'hipertrofia';
   if (/emagrec|defini/.test(text)) return 'emagrecimento';
   if (/forca/.test(text)) return 'forca';
   if (/manuten/.test(text)) return 'manutencao';
+  if (/recompos/.test(text)) return 'recomposicao';
   return 'hipertrofia';
+}
+
+function writeAuditTracePatch(patch) {
+  try {
+    var current = window.KroniaIntelligence?.getAdminAuditTrace?.() || {};
+    var next = Object.assign({}, current, patch || {});
+    if (patch?.conversation) {
+      next.conversation = Object.assign({}, current.conversation || {}, patch.conversation || {});
+    }
+    if (patch?.science) {
+      next.science = Object.assign({}, current.science || {}, patch.science || {});
+    }
+    if (patch?.generation) {
+      next.generation = Object.assign({}, current.generation || {}, patch.generation || {});
+    }
+    window.KroniaIntelligence?.setAdminAuditTrace?.(next);
+  } catch (_err) {
+    return;
+  }
 }
 
 async function buildScientificConstraintsByObjective(objective) {
@@ -4476,33 +4511,47 @@ async function buildScientificConstraintsByObjective(objective) {
     var topics = evidence.map(function (item) {
       return item?.topic?.topic || item?.topic || null;
     }).filter(Boolean);
+    var constraints = {
+      objective: objective,
+      evidenceTopics: topics,
+      evidenceReferences: evidence.slice(0, 5).map(function (item) {
+        return {
+          topic: item?.topic?.topic || item?.topic || null,
+          recommendation: item?.recommendation || item?.summary || null,
+          level: item?.evidence_level || item?.level || null,
+        };
+      }).filter(function (item) { return !!item.topic || !!item.recommendation; }),
+    };
 
-    if (!response.ok || payload?.ok === false || evidence.length < 1) {
-      return {
-        ok: false,
-        blockedReason: 'missing_science_evidence',
-        sourceOfTruth: 'supabase_scientific_evidence',
-        usedScientificEvidence: false,
-        evidenceCount: evidence.length,
-        scienceTopicsUsed: topics,
-        constraints: {},
-      };
-    }
-
-    return {
-      ok: true,
-      blockedReason: null,
+    var blocked = !response.ok || payload?.ok === false || evidence.length < 1;
+    var result = {
+      ok: !blocked,
+      blockedReason: blocked ? (response.ok ? 'missing_science_evidence' : 'science_unavailable') : null,
       sourceOfTruth: 'supabase_scientific_evidence',
-      usedScientificEvidence: true,
+      usedScientificEvidence: !blocked,
       evidenceCount: evidence.length,
       scienceTopicsUsed: topics,
-      constraints: {
-        objective: objective,
-        minimumEvidence: 1,
-      },
+      constraints: blocked ? {} : constraints,
+      validationStatus: blocked ? 'blocked' : 'validated',
+      usedFallback: false,
+      timestamp: new Date().toISOString(),
     };
-  } catch (_) {
-    return {
+
+    writeAuditTracePatch({
+      science: {
+        sourceOfTruth: result.sourceOfTruth,
+        usedScientificEvidence: result.usedScientificEvidence,
+        evidenceCount: result.evidenceCount,
+        scienceTopicsUsed: result.scienceTopicsUsed,
+        usedFallback: result.usedFallback,
+        blockedReason: result.blockedReason,
+        validationStatus: result.validationStatus,
+        timestamp: result.timestamp,
+      },
+    });
+    return result;
+  } catch (_err) {
+    var failure = {
       ok: false,
       blockedReason: 'science_unavailable',
       sourceOfTruth: 'supabase_scientific_evidence',
@@ -4510,7 +4559,23 @@ async function buildScientificConstraintsByObjective(objective) {
       evidenceCount: 0,
       scienceTopicsUsed: [],
       constraints: {},
+      validationStatus: 'blocked',
+      usedFallback: false,
+      timestamp: new Date().toISOString(),
     };
+    writeAuditTracePatch({
+      science: {
+        sourceOfTruth: failure.sourceOfTruth,
+        usedScientificEvidence: false,
+        evidenceCount: 0,
+        scienceTopicsUsed: [],
+        usedFallback: false,
+        blockedReason: failure.blockedReason,
+        validationStatus: failure.validationStatus,
+        timestamp: failure.timestamp,
+      },
+    });
+    return failure;
   }
 }
 
@@ -4523,6 +4588,35 @@ window.buildScientificConstraintsForWorkout = async function buildScientificCons
   var objective = extractObjectiveFromInput(input);
   return buildScientificConstraintsByObjective(objective);
 };
+
+async function validateScientificGenerationGuard(kind, objective, userInputsUsed, contextFlags) {
+  var scienceBuilder = kind === 'diet' ? window.buildScientificConstraintsForDiet : window.buildScientificConstraintsForWorkout;
+  var science = typeof scienceBuilder === 'function'
+    ? await scienceBuilder({ objective: objective, message: String(objective || '') })
+    : { ok: false, blockedReason: 'science_builder_missing', evidenceCount: 0, sourceOfTruth: 'supabase_scientific_evidence', scienceTopicsUsed: [], constraints: {} };
+
+  var blocked = !science?.ok || Number(science?.evidenceCount || 0) <= 0;
+  var generationTrace = {
+    type: kind,
+    constraintsUsed: blocked ? {} : (science?.constraints || {}),
+    sourceOfTruth: science?.sourceOfTruth || 'supabase_scientific_evidence',
+    evidenceCount: Number(science?.evidenceCount || 0),
+    scienceTopicsUsed: Array.isArray(science?.scienceTopicsUsed) ? science.scienceTopicsUsed : [],
+    validationStatus: blocked ? 'blocked' : 'validated',
+    blockedReason: blocked ? (science?.blockedReason || 'missing_science_evidence') : null,
+    userInputsUsed: userInputsUsed,
+    respectedCardContext: !!contextFlags?.respectedCardContext,
+    respectedAnamnesisContext: !!contextFlags?.respectedAnamnesisContext,
+    usedFallback: !!science?.usedFallback,
+    timestamp: new Date().toISOString(),
+  };
+  writeAuditTracePatch({ generation: generationTrace });
+
+  if (blocked) {
+    return { ok: false, blockedReason: generationTrace.blockedReason, science: science, generationTrace: generationTrace };
+  }
+  return { ok: true, blockedReason: null, science: science, generationTrace: generationTrace };
+}
 
 async function resolveKronosConversation(inputText) {
   var appLayer = window.KroniaApplication && window.KroniaApplication.application;
@@ -4537,17 +4631,67 @@ async function resolveKronosConversation(inputText) {
   return appLayer.resolveConversationFlow({ message: String(inputText || '') });
 }
 
-function executeConversationCta(result) {
-  if (result?.cta?.action === 'open_training_builder') {
-    window.KroniaActions.openTrainingBuilder(result?.payload || {});
+function renderConversationCta(containerId, cta, payload) {
+  var container = document.getElementById(containerId);
+  if (!container || !cta || !cta.action) return null;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'ai-msg assistant';
+  wrap.setAttribute('data-role', 'assistant');
+
+  var button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ai-suggest-btn';
+  button.textContent = cta.label || 'Continuar';
+  button.addEventListener('click', function () {
+    var executed = window.executeConversationCta({ action: cta.action, payload: payload || {}, label: cta.label || '' });
+    writeAuditTracePatch({
+      conversation: {
+        ctaClicked: !!executed,
+        ctaAction: cta.action,
+        ctaLabel: cta.label || null,
+        payload: payload || {},
+        timestamp: new Date().toISOString(),
+      },
+    });
+  });
+
+  var inner = document.createElement('div');
+  inner.className = 'ai-avatar-inner';
+  var bubble = document.createElement('div');
+  bubble.className = 'ai-bubble';
+  bubble.appendChild(button);
+  inner.appendChild(bubble);
+  wrap.appendChild(inner);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+
+  writeAuditTracePatch({
+    conversation: {
+      ctaRendered: true,
+      ctaClicked: false,
+      ctaAction: cta.action,
+      ctaLabel: cta.label || null,
+      payload: payload || {},
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  return wrap;
+}
+
+window.executeConversationCta = function executeConversationCta(data) {
+  if (!data || !data.action) return false;
+  if (data.action === 'open_training_builder') {
+    window.KroniaActions?.openTrainingBuilder?.(data.payload || {});
     return true;
   }
-  if (result?.cta?.action === 'open_diet_generator') {
-    window.KroniaActions.openDietGenerator(result?.payload || {});
+  if (data.action === 'open_diet_generator') {
+    window.KroniaActions?.openDietGenerator?.(data.payload || {});
     return true;
   }
   return false;
-}
+};
 
 function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
@@ -4651,7 +4795,7 @@ async function sendOrientExpert() {
 
   if (result.type === 'answer_with_cta') {
     renderAI(result.message);
-    executeConversationCta(result);
+    renderConversationCta('orientExpertMessages', result.cta, result.payload || {});
     return;
   }
 
@@ -5159,7 +5303,10 @@ function formatMuscleLabel(value) {
 }
 
 
-async function openDietaSheet() {
+async function openDietaSheet(context) {
+  if (context && typeof context === 'object') {
+    window._kroniaLastDietContext = context;
+  }
   preencherDietaDosPerfil();
   document.getElementById("dietaSheet").classList.add("show");
   atualizarBasalDieta();
@@ -5813,6 +5960,29 @@ async function gerarDieta() {
   const todosSupl     = [...suplAtivos, ...(outrosSupl ? [outrosSupl] : [])];
   const orcamento     = document.getElementById("dietaOrcamento").value;
 
+  const guard = await validateScientificGenerationGuard(
+    'diet',
+    obj,
+    {
+      objetivo: obj,
+      sexo: sexo,
+      peso: peso,
+      altura: altura,
+      idade: idade,
+      restricoes: restric,
+      preferencias: prefs,
+      suplementos: todosSupl,
+    },
+    { respectedCardContext: false, respectedAnamnesisContext: true }
+  );
+  if (!guard.ok) {
+    const txtBlocked = document.getElementById("dietaTexto");
+    const resBlocked = document.getElementById("dietaResultado");
+    if (resBlocked) resBlocked.style.display = "block";
+    if (txtBlocked) txtBlocked.textContent = "Geracao bloqueada: evidencia cientifica indisponivel para este objetivo agora.";
+    return;
+  }
+
   // Cálculos basais para o prompt
   const tmbMifflin = sexo === "feminino"
     ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
@@ -5892,6 +6062,10 @@ PERFIL PREMIUM — DIRETRIZES:
     : "";
 
   // Ajustes específicos por patologia
+  const scienceConstraintLines = (guard.science?.constraints?.evidenceReferences || []).map(function (entry) {
+    return '- ' + (entry.topic || 'topico') + ': ' + (entry.recommendation || 'usar recomendacao cientifica validada');
+  });
+
   const patologiaRules = {
     "diabetes tipo 2":         "→ DIABETES: priorizar baixo índice glicêmico. Evitar açúcar, farinha branca refinada, sucos. Prefira batata-doce, arroz integral, feijão, aveia. Distribuir carboidratos uniformemente nas refeições.",
     "hipertensão arterial":    "→ HIPERTENSÃO: limitar sódio a <2000mg/dia. Evitar embutidos, enlatados, sal em excesso. Incluir potássio (banana, batata-doce, abacate) e magnésio.",
@@ -5945,7 +6119,7 @@ ${orcamento ? `- Perfil de orçamento: ${orcamento}` : ""}
 ${proteinsLine}
 
 ════════════════════════════════════════
-DIRETRIZES CLÍNICAS (ISSN / ACSM)
+DIRETRIZES CLINICAS (ISSN / ACSM)
 ════════════════════════════════════════
 - Hipertrofia: ≥1.6g/kg proteína, superávit 200-300 kcal
 - Emagrecimento: ≥2.0g/kg proteína, déficit 300-500 kcal, preservar músculo
@@ -5955,6 +6129,9 @@ DIRETRIZES CLÍNICAS (ISSN / ACSM)
 - Carboidratos pré-treino: 30-60min antes, baixa fibra (banana, tapioca, arroz branco)
 - Carboidratos pós-treino: prioridade para reposição de glicogênio
 - Gorduras: evitar em pré/pós-treino imediato
+
+EVIDENCIAS CIENTIFICAS OBRIGATORIAS (SUPABASE):
+${scienceConstraintLines.length ? scienceConstraintLines.join('\n') : '- Sem evidencias adicionais.'}
 
 ${orcamentoInstrucao}
 
