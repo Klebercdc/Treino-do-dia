@@ -187,6 +187,8 @@
         ['type', 'type'],
         ['targetModule', 'targetModule'],
         ['ctaAction', 'ctaAction'],
+        ['ctaLabel', 'ctaLabel'],
+        ['payload', 'payload'],
         ['ctaRendered', 'ctaRendered'],
         ['ctaClicked', 'ctaClicked'],
         ['sourceOfTruth', 'sourceOfTruth'],
@@ -224,6 +226,7 @@
       var generation = trace?.generation || {};
       return renderAuditCard(generation, [
         ['type', 'type'],
+        ['usedScientificEvidence', 'usedScientificEvidence'],
         ['constraintsUsed', 'constraintsUsed'],
         ['sourceOfTruth', 'sourceOfTruth'],
         ['evidenceCount', 'evidenceCount'],
@@ -233,6 +236,7 @@
         ['respectedCardContext', 'respectedCardContext'],
         ['respectedAnamnesisContext', 'respectedAnamnesisContext'],
         ['userInputsUsed', 'userInputsUsed'],
+        ['usedFallback', 'usedFallback'],
         ['timestamp', 'timestamp']
       ], 'Sem trilha de geracao real registrada.');
     } catch (_) {

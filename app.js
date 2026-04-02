@@ -345,6 +345,23 @@ async function gerarProtocolo() {
     });
   }
   addPillControls(); scheduleDraftSave(); applyPrevGhostsToAll();
+
+  writeAuditTracePatch({
+    generation: buildGenerationEnvelope({
+      type: "workout",
+      sourceOfTruth: guard.generationTrace?.sourceOfTruth || "supabase_scientific_evidence",
+      usedScientificEvidence: guard.generationTrace?.usedScientificEvidence,
+      scienceTopicsUsed: guard.generationTrace?.scienceTopicsUsed || [],
+      evidenceCount: guard.generationTrace?.evidenceCount || 0,
+      validationStatus: "generated",
+      blockedReason: null,
+      constraintsUsed: guard.generationTrace?.constraintsUsed || {},
+      userInputsUsed: guard.generationTrace?.userInputsUsed || { freq: f, objective: objective },
+      respectedCardContext: true,
+      respectedAnamnesisContext: false,
+      usedFallback: false,
+    }),
+  });
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2825,7 +2842,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
 
     if (flow.type === 'answer_with_cta') {
       addAIMessage('assistant', flow.message || 'Posso te direcionar pelo botao abaixo.');
-      renderConversationCta('aiMessages', flow.cta, flow.payload || {});
+      renderConversationCta('aiMessages', flow.cta, Object.assign({}, flow.payload || {}, { _targetModule: flow.targetModule || null }));
       try {
         window.KroniaIntelligence?.track?.({
           module: 'conversation',
@@ -4492,7 +4509,59 @@ function writeAuditTracePatch(patch) {
   }
 }
 
-async function buildScientificConstraintsByObjective(objective) {
+
+function buildGenerationEnvelope(input) {
+  var evidenceCount = Number(input?.evidenceCount || 0);
+  var usedScientificEvidence = !!input?.usedScientificEvidence && evidenceCount > 0;
+  return {
+    type: input?.type || null,
+    sourceOfTruth: input?.sourceOfTruth || 'none',
+    usedScientificEvidence: usedScientificEvidence,
+    scienceTopicsUsed: Array.isArray(input?.scienceTopicsUsed) ? input.scienceTopicsUsed : [],
+    evidenceCount: evidenceCount,
+    validationStatus: input?.validationStatus || 'unknown',
+    blockedReason: input?.blockedReason || null,
+    constraintsUsed: input?.constraintsUsed || {},
+    userInputsUsed: input?.userInputsUsed || {},
+    respectedCardContext: !!input?.respectedCardContext,
+    respectedAnamnesisContext: !!input?.respectedAnamnesisContext,
+    usedFallback: !!input?.usedFallback,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function deriveOperationalScienceConstraints(kind, objective, evidenceRows) {
+  var refs = (Array.isArray(evidenceRows) ? evidenceRows : []).map(function (item) {
+    return {
+      topic: item?.topic?.topic || item?.topic || null,
+      recommendation: item?.recommendation || item?.summary || null,
+      level: item?.evidence_level || item?.level || null,
+    };
+  }).filter(function (item) { return !!item.topic || !!item.recommendation; });
+
+  var text = refs.map(function (r) { return String(r.recommendation || '').toLowerCase(); }).join(' ');
+  if (kind === 'workout') {
+    return {
+      objective: objective,
+      evidenceReferences: refs.slice(0, 8),
+      volumeGuidance: /volume|series|sets/.test(text) ? refs.find(function (r) { return /volume|series|sets/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+      progressionModel: /progress|progressao|sobrecarga/.test(text) ? refs.find(function (r) { return /progress|progressao|sobrecarga/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+      effortModel: /rpe|esforco|falha/.test(text) ? refs.find(function (r) { return /rpe|esforco|falha/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+      frequencyGuidance: /frequenc|semana|weekly/.test(text) ? refs.find(function (r) { return /frequenc|semana|weekly/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+    };
+  }
+
+  return {
+    objective: objective,
+    evidenceReferences: refs.slice(0, 8),
+    proteinRange: /protein|proteina|g\/kg/.test(text) ? refs.find(function (r) { return /protein|proteina|g\/kg/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+    calorieStrategy: /kcal|caloria|deficit|superavit/.test(text) ? refs.find(function (r) { return /kcal|caloria|deficit|superavit/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+    macroBias: /carb|gordura|macro/.test(text) ? refs.find(function (r) { return /carb|gordura|macro/.test(String(r.recommendation || '').toLowerCase()); })?.recommendation || null : null,
+    clinicalNotes: /clin|saude|patolog|insulina|pressao/.test(text) ? refs.filter(function (r) { return /clin|saude|patolog|insulina|pressao/.test(String(r.recommendation || '').toLowerCase()); }).slice(0, 3).map(function (r) { return r.recommendation; }) : [],
+  };
+}
+
+async function buildScientificConstraintsByObjective(objective, kind) {
   var profile = safeJSON('kronia_config', {});
   try {
     var response = await apiFetch('/api/science', {
@@ -4511,17 +4580,7 @@ async function buildScientificConstraintsByObjective(objective) {
     var topics = evidence.map(function (item) {
       return item?.topic?.topic || item?.topic || null;
     }).filter(Boolean);
-    var constraints = {
-      objective: objective,
-      evidenceTopics: topics,
-      evidenceReferences: evidence.slice(0, 5).map(function (item) {
-        return {
-          topic: item?.topic?.topic || item?.topic || null,
-          recommendation: item?.recommendation || item?.summary || null,
-          level: item?.evidence_level || item?.level || null,
-        };
-      }).filter(function (item) { return !!item.topic || !!item.recommendation; }),
-    };
+    var constraints = deriveOperationalScienceConstraints(kind || "diet", objective, evidence);
 
     var blocked = !response.ok || payload?.ok === false || evidence.length < 1;
     var result = {
@@ -4581,41 +4640,69 @@ async function buildScientificConstraintsByObjective(objective) {
 
 window.buildScientificConstraintsForDiet = async function buildScientificConstraintsForDiet(input) {
   var objective = extractObjectiveFromInput(input);
-  return buildScientificConstraintsByObjective(objective);
+  return buildScientificConstraintsByObjective(objective, 'diet');
 };
 
 window.buildScientificConstraintsForWorkout = async function buildScientificConstraintsForWorkout(input) {
   var objective = extractObjectiveFromInput(input);
-  return buildScientificConstraintsByObjective(objective);
+  return buildScientificConstraintsByObjective(objective, 'workout');
 };
 
 async function validateScientificGenerationGuard(kind, objective, userInputsUsed, contextFlags) {
-  var scienceBuilder = kind === 'diet' ? window.buildScientificConstraintsForDiet : window.buildScientificConstraintsForWorkout;
+  var scienceBuilder = kind === 'diet'
+    ? window.buildScientificConstraintsForDiet
+    : window.buildScientificConstraintsForWorkout;
+
   var science = typeof scienceBuilder === 'function'
     ? await scienceBuilder({ objective: objective, message: String(objective || '') })
-    : { ok: false, blockedReason: 'science_builder_missing', evidenceCount: 0, sourceOfTruth: 'supabase_scientific_evidence', scienceTopicsUsed: [], constraints: {} };
+    : {
+      ok: false,
+      blockedReason: 'science_builder_missing',
+      sourceOfTruth: 'supabase_scientific_evidence',
+      usedScientificEvidence: false,
+      evidenceCount: 0,
+      scienceTopicsUsed: [],
+      constraints: {},
+      validationStatus: 'blocked',
+      usedFallback: false,
+    };
 
   var blocked = !science?.ok || Number(science?.evidenceCount || 0) <= 0;
-  var generationTrace = {
+  var envelope = buildGenerationEnvelope({
     type: kind,
-    constraintsUsed: blocked ? {} : (science?.constraints || {}),
     sourceOfTruth: science?.sourceOfTruth || 'supabase_scientific_evidence',
+    usedScientificEvidence: !!science?.usedScientificEvidence && !blocked,
+    scienceTopicsUsed: science?.scienceTopicsUsed || [],
     evidenceCount: Number(science?.evidenceCount || 0),
-    scienceTopicsUsed: Array.isArray(science?.scienceTopicsUsed) ? science.scienceTopicsUsed : [],
     validationStatus: blocked ? 'blocked' : 'validated',
     blockedReason: blocked ? (science?.blockedReason || 'missing_science_evidence') : null,
+    constraintsUsed: blocked ? {} : (science?.constraints || {}),
     userInputsUsed: userInputsUsed,
     respectedCardContext: !!contextFlags?.respectedCardContext,
     respectedAnamnesisContext: !!contextFlags?.respectedAnamnesisContext,
     usedFallback: !!science?.usedFallback,
-    timestamp: new Date().toISOString(),
-  };
-  writeAuditTracePatch({ generation: generationTrace });
+  });
 
-  if (blocked) {
-    return { ok: false, blockedReason: generationTrace.blockedReason, science: science, generationTrace: generationTrace };
-  }
-  return { ok: true, blockedReason: null, science: science, generationTrace: generationTrace };
+  writeAuditTracePatch({
+    science: {
+      sourceOfTruth: envelope.sourceOfTruth,
+      usedScientificEvidence: envelope.usedScientificEvidence,
+      scienceTopicsUsed: envelope.scienceTopicsUsed,
+      evidenceCount: envelope.evidenceCount,
+      validationStatus: envelope.validationStatus,
+      blockedReason: envelope.blockedReason,
+      usedFallback: envelope.usedFallback,
+      timestamp: envelope.timestamp,
+    },
+    generation: envelope,
+  });
+
+  return {
+    ok: !blocked,
+    blockedReason: envelope.blockedReason,
+    science: science,
+    generationTrace: envelope,
+  };
 }
 
 async function resolveKronosConversation(inputText) {
@@ -4644,13 +4731,18 @@ function renderConversationCta(containerId, cta, payload) {
   button.className = 'ai-suggest-btn';
   button.textContent = cta.label || 'Continuar';
   button.addEventListener('click', function () {
-    var executed = window.executeConversationCta({ action: cta.action, payload: payload || {}, label: cta.label || '' });
+    var actionPayload = Object.assign({}, payload || {});
+    delete actionPayload._targetModule;
+    var executed = window.executeConversationCta({ action: cta.action, payload: actionPayload, label: cta.label || '' });
+    var safePayload = Object.assign({}, payload || {});
+    delete safePayload._targetModule;
     writeAuditTracePatch({
       conversation: {
         ctaClicked: !!executed,
         ctaAction: cta.action,
         ctaLabel: cta.label || null,
-        payload: payload || {},
+        targetModule: payload?._targetModule || null,
+        payload: safePayload,
         timestamp: new Date().toISOString(),
       },
     });
@@ -4666,13 +4758,16 @@ function renderConversationCta(containerId, cta, payload) {
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
 
+  var safePayloadRender = Object.assign({}, payload || {});
+  delete safePayloadRender._targetModule;
   writeAuditTracePatch({
     conversation: {
       ctaRendered: true,
       ctaClicked: false,
       ctaAction: cta.action,
       ctaLabel: cta.label || null,
-      payload: payload || {},
+      targetModule: payload?._targetModule || null,
+      payload: safePayloadRender,
       timestamp: new Date().toISOString(),
     },
   });
@@ -4795,7 +4890,7 @@ async function sendOrientExpert() {
 
   if (result.type === 'answer_with_cta') {
     renderAI(result.message);
-    renderConversationCta('orientExpertMessages', result.cta, result.payload || {});
+    renderConversationCta('orientExpertMessages', result.cta, Object.assign({}, result.payload || {}, { _targetModule: result.targetModule || null }));
     return;
   }
 
@@ -6229,6 +6324,22 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
       return;
     }
     txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || "Não consegui montar a dieta agora. Tente novamente em instantes.";
+    writeAuditTracePatch({
+      generation: buildGenerationEnvelope({
+        type: 'diet',
+        sourceOfTruth: guard.generationTrace?.sourceOfTruth || 'supabase_scientific_evidence',
+        usedScientificEvidence: guard.generationTrace?.usedScientificEvidence,
+        scienceTopicsUsed: guard.generationTrace?.scienceTopicsUsed || [],
+        evidenceCount: guard.generationTrace?.evidenceCount || 0,
+        validationStatus: 'generated',
+        blockedReason: null,
+        constraintsUsed: guard.generationTrace?.constraintsUsed || {},
+        userInputsUsed: guard.generationTrace?.userInputsUsed || { objetivo: obj, sexo: sexo, peso: peso, altura: altura, idade: idade },
+        respectedCardContext: false,
+        respectedAnamnesisContext: true,
+        usedFallback: false,
+      }),
+    });
   } catch(e) {
     logUiEvent("diet_pipeline_failed", { context: "gerarDieta.catch", error: e && e.message ? e.message : "unknown" });
     txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
