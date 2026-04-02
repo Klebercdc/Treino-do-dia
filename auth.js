@@ -5,6 +5,9 @@ const _sb = supabase.createClient(
   'https://twxoddzogbmaysebhour.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E'
 );
+if (typeof window !== 'undefined') {
+  window._sb = _sb;
+}
 
 // ══════════════════════════════════════════════════════
 // TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
@@ -174,8 +177,9 @@ const _dbSync = {
         : {};
 
 
-      if (profile && typeof profile.is_admin === 'boolean' && window.KroniaAccessProfile) {
-        window.KroniaAccessProfile.isAdmin = profile.is_admin;
+      if (profile && typeof profile.is_admin === 'boolean') {
+        window.KroniaAccessProfile = window.KroniaAccessProfile || {};
+        window.KroniaAccessProfile.isAdmin = !!profile.is_admin;
         window.KroniaAccessProfile.canBypassQuota = !!profile.is_admin;
         window.KroniaAccessProfile.canSeeAdminUI = !!profile.is_admin;
         refreshIntelligenceAdminAccessSafe();
@@ -284,6 +288,11 @@ function handleBusinessRoute(route) {
 function checkFirstTimeFlow() {
   const appLayer = window.KroniaApplication && window.KroniaApplication.application;
   if (!appLayer) {
+    handleBusinessRoute(!localStorage.getItem('kronia_profile_setup_done') ? 'krona-setup' : (!localStorage.getItem('kronia_onboarded') ? 'onboarding' : 'inicio'));
+    return;
+  }
+
+  if (typeof appLayer.resolveInitialRoute !== 'function') {
     handleBusinessRoute(!localStorage.getItem('kronia_profile_setup_done') ? 'krona-setup' : (!localStorage.getItem('kronia_onboarded') ? 'onboarding' : 'inicio'));
     return;
   }
@@ -533,6 +542,7 @@ _sb.auth.onAuthStateChange((_event, session) => {
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
           await window.KroniaAccessScope.hydrateAccessContext(session);
         }
+        window.KroniaIntelligenceAdmin?.refreshAccess?.();
         await _dbSync.pullAll(session.user.id);
         if (typeof fetchUserPlan === 'function') {
           try { await fetchUserPlan(); } catch (_) {}
@@ -566,6 +576,7 @@ Promise.all([
       if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
         await window.KroniaAccessScope.hydrateAccessContext(session);
       }
+      window.KroniaIntelligenceAdmin?.refreshAccess?.();
       await _dbSync.pullAll(session.user.id);
       if (typeof fetchUserPlan === 'function') await fetchUserPlan();
     } catch (_) {}

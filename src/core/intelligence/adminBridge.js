@@ -146,6 +146,33 @@
     }).join('') + '</div>';
   }
 
+
+  function renderConversationAuditTrace() {
+    try {
+      var trace = window.KroniaIntelligence?.getAdminAuditTrace?.() || {};
+      var conv = trace.conversation || {};
+      if (!conv || !Object.keys(conv).length) {
+        return '<div class="kronia-intelligence-admin-empty">Sem trilha conversacional registrada.</div>';
+      }
+      return [
+        '<article class="kronia-intelligence-admin-card" style="display:block">',
+        '<span><b>intent:</b> ' + (conv.intent || '-') + '</span>',
+        '<span><b>type:</b> ' + (conv.type || '-') + '</span>',
+        '<span><b>targetModule:</b> ' + (conv.targetModule || '-') + '</span>',
+        '<span><b>ctaAction:</b> ' + (conv.ctaAction || '-') + '</span>',
+        '<span><b>sourceOfTruth:</b> ' + (conv.sourceOfTruth || '-') + '</span>',
+        '<span><b>usedScientificEvidence:</b> ' + String(!!conv.usedScientificEvidence) + '</span>',
+        '<span><b>evidenceCount:</b> ' + (Number(conv.evidenceCount || 0)) + '</span>',
+        '<span><b>validationStatus:</b> ' + (conv.validationStatus || '-') + '</span>',
+        '<span><b>blockedReason:</b> ' + (conv.blockedReason || '-') + '</span>',
+        '<span><b>timestamp:</b> ' + (conv.timestamp || '-') + '</span>',
+        '</article>'
+      ].join('');
+    } catch (_) {
+      return '<div class="kronia-intelligence-admin-empty">Falha ao carregar trilha conversacional.</div>';
+    }
+  }
+
   function renderPanel(overviewPayload, recentPayload) {
     var container = document.getElementById('kronia-intelligence-admin-content');
     if (!container) return;
@@ -174,6 +201,7 @@
         return '<article><strong>' + (item.area || 'sistema') + '</strong><span>' + (item.text || 'Sem recomendação') + '</span></article>';
       }, 'Nenhuma recomendação disponível.') + '</section>',
       '<section><h4>Insights Operacionais</h4>' + renderInsights(insights) + '</section>',
+      '<section><h4>Fluxo Conversacional</h4>' + renderConversationAuditTrace() + '</section>',
       '<section><h4>Tarefas Geradas</h4>' + renderList(tasks, function (item) {
         return '<article><strong>' + (item.title || 'Tarefa técnica') + '</strong><span>' + (item.priority || 'P2') + ' · ' + (item.summary || 'Sem resumo') + '</span></article>';
       }, 'Nenhuma tarefa gerada.') + '</section>',

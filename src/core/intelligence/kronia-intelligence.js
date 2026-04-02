@@ -41,6 +41,7 @@
       userId: null,
       counters: { fallbackCount: 0, contractViolationsCount: 0, latencies: [] },
       operational: {},
+      adminAuditTrace: {},
     };
     this._flushing = false;
     this._retryInMs = 0;
@@ -271,6 +272,22 @@
 
   KroniaIntelligence.prototype.getPendingTasks = function () {
     return this._state.tasks.slice(0, 20);
+  };
+
+
+  KroniaIntelligence.prototype.setAdminAuditTrace = function (data) {
+    try {
+      var merged = Object.assign({}, this._state.adminAuditTrace || {}, sanitize(data || {}, 0));
+      this._state.adminAuditTrace = merged;
+      this._persist();
+      return merged;
+    } catch (_) {
+      return this._state.adminAuditTrace || {};
+    }
+  };
+
+  KroniaIntelligence.prototype.getAdminAuditTrace = function () {
+    return sanitize(this._state.adminAuditTrace || {}, 0);
   };
 
   KroniaIntelligence.prototype.bridgeToAdminPanel = async function (filters) {
