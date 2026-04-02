@@ -15,13 +15,13 @@
     return String(v || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .trim();
   }
 
   function hasAny(text, patterns) {
-    return patterns.some(function (p) {
-      return p.test(text);
+    return patterns.some(function (pattern) {
+      return pattern.test(text);
     });
   }
 
@@ -29,16 +29,16 @@
     var text = normalizeText(input?.message);
 
     var workout =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar)\b/]) &&
+      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta)\b/]) &&
       hasAny(text, [/\b(treino|ficha|programa)\b/]);
 
     var diet =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar)\b/]) &&
-      hasAny(text, [/\b(dieta|alimentacao|plano)\b/]);
+      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta)\b/]) &&
+      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao)\b/]);
 
-    var analysis = hasAny(text, [/\b(evolucao|progresso|funcionando|resultado|melhorei)\b/]);
+    var analysis = hasAny(text, [/\b(evolucao|progresso|funcionando|resultado|melhorei|plato|aderencia|consistencia)\b/]);
 
-    var supplement = hasAny(text, [/\b(creatina|whey|cafeina|pre treino|beta alanina)\b/]);
+    var supplement = hasAny(text, [/\b(creatina|whey|cafeina|pre treino|beta alanina|suplement)\b/]);
 
     if (workout) return 'workout_creation_request';
     if (diet) return 'diet_creation_request';
@@ -48,88 +48,203 @@
     return 'unknown';
   }
 
-  function buildProgressAnalysisContext() {
-    var history;
+  function readJson(key, fallback) {
     try {
-      history = JSON.parse(localStorage.getItem('kronia_history_v2') || '[]');
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
     } catch (_) {
-      history = [];
+      return fallback;
     }
+  }
 
-    if (!Array.isArray(history) || history.length < 2) {
+  function buildProgressAnalysisContext() {
+    var history = readJson('kronia_history_v2', []);
+    var draft = readJson('kronia_draft_v2', null) || readJson('kronia_draft', null);
+    var transforms = readJson('kronia_transforms_snapshot', null);
+
+    var sessions = Array.isArray(history) ? history : [];
+    var hasStructuredHistory = sessions.length >= 2;
+    var hasDraft = !!(draft && Array.isArray(draft.sections));
+    var hasTransforms = !!(transforms && typeof transforms === 'object');
+
+    if (!hasStructuredHistory) {
       return {
         sufficientData: false,
-        message: 'Ainda nao ha dados suficientes para analise.',
+        validationStatus: 'insufficient_data',
+        blockedReason: 'history_below_minimum',
+        message: 'Ainda nao ha dados suficientes para uma analise segura da sua evolucao.',
         sourceOfTruth: 'user_structured_data',
         usedStructuredUserData: true,
+        usedTransforms: hasTransforms,
       };
     }
 
     return {
       sufficientData: true,
-      message: 'Dados suficientes encontrados para analise.',
-      sourceOfTruth: 'transform_snapshot',
+      validationStatus: 'validated',
+      blockedReason: null,
+      message: 'Analise pronta: dados estruturados suficientes para avaliar sua evolucao com seguranca.',
+      sourceOfTruth: hasTransforms ? 'transform_snapshot' : 'user_structured_data',
       usedStructuredUserData: true,
-      usedTransforms: true,
+      usedTransforms: hasTransforms || hasDraft,
     };
   }
 
   function buildDecision(input) {
     var intent = classifyConversationIntent(input);
+    var base = {
+      intent: intent,
+      targetModule: 'chat',
+      ctaAction: null,
+      payload: {},
+      validationStatus: 'validated',
+      blockedReason: null,
+      sourceOfTruth: 'conversation_input',
+      usedStructuredUserData: false,
+      usedTransforms: false,
+      usedScientificEvidence: false,
+      evidenceCount: 0,
+      scienceTopicsUsed: [],
+      usedFallback: false,
+      timestamp: nowISO(),
+    };
 
     if (intent === 'workout_creation_request') {
-      return {
+      return Object.assign({}, base, {
         type: 'answer_with_cta',
-        intent: intent,
-        message: 'Vou te levar para o treino.',
-        cta: { label: 'Abrir treino', action: 'open_training_builder' },
-      };
+        targetModule: 'programa',
+        ctaAction: 'open_training_builder',
+        message: 'Perfeito. Vou te levar para montar seu treino no modulo oficial.',
+      });
     }
 
     if (intent === 'diet_creation_request') {
-      return {
+      return Object.assign({}, base, {
         type: 'answer_with_cta',
-        intent: intent,
-        message: 'Vou te levar para dieta.',
-        cta: { label: 'Abrir dieta', action: 'open_diet_generator' },
-      };
+        targetModule: 'dieta',
+        ctaAction: 'open_diet_generator',
+        message: 'Perfeito. Vou te levar para montar sua dieta no modulo oficial.',
+      });
     }
 
     if (intent === 'progress_analysis') {
-      var analysisContext = buildProgressAnalysisContext();
-      return {
+      var context = buildProgressAnalysisContext();
+      return Object.assign({}, base, {
         type: 'analysis_answer',
-        intent: intent,
-        message: analysisContext.message,
-        sourceOfTruth: analysisContext.sourceOfTruth,
-      };
+        targetModule: 'analysis',
+        message: context.message,
+        sourceOfTruth: context.sourceOfTruth,
+        usedStructuredUserData: !!context.usedStructuredUserData,
+        usedTransforms: !!context.usedTransforms,
+        validationStatus: context.validationStatus,
+        blockedReason: context.blockedReason,
+        payload: {
+          sufficientData: context.sufficientData,
+        },
+      });
     }
 
     if (intent === 'supplement_question') {
-      return {
+      return Object.assign({}, base, {
         type: 'answer_only',
-        intent: intent,
-        message: 'Posso te orientar sobre suplementos com base em evidencia cientifica atual.',
-      };
+        targetModule: 'supplement',
+        message: 'Posso te orientar sobre suplementos com base em evidencia cientifica e no seu contexto.',
+      });
     }
 
-    return {
+    return Object.assign({}, base, {
       type: 'answer_only',
-      intent: intent,
-      message: 'Entendi. Posso te ajudar com treino, dieta, evolucao ou suplementos.',
-    };
+      message: 'Entendi. Posso te ajudar com evolucao, suplementos e direcionamento para treino ou dieta.',
+      usedFallback: true,
+      validationStatus: 'fallback_local',
+    });
   }
 
-  function resolveConversationFlow(input) {
-    var result = buildDecision(input);
+  async function resolveConversationFlow(input) {
+    var decision = buildDecision(input || {});
 
-    safeTrack({ module: 'conversation', intent: result.intent, type: result.type });
+    if (decision.type === 'answer_with_cta') {
+      try {
+        var scienceBuilder = decision.ctaAction === 'open_training_builder'
+          ? window.buildScientificConstraintsForWorkout
+          : window.buildScientificConstraintsForDiet;
+        if (typeof scienceBuilder === 'function') {
+          var science = await scienceBuilder(input || {});
+          decision.usedScientificEvidence = !!science?.usedScientificEvidence;
+          decision.evidenceCount = Number(science?.evidenceCount || 0);
+          decision.sourceOfTruth = science?.sourceOfTruth || decision.sourceOfTruth;
+          decision.scienceTopicsUsed = Array.isArray(science?.scienceTopicsUsed) ? science.scienceTopicsUsed : [];
+          decision.payload.scientificConstraints = science?.constraints || {};
+          if (!science?.ok) {
+            decision.type = 'answer_only';
+            decision.ctaAction = null;
+            decision.message = 'Ainda nao encontrei evidencia cientifica suficiente para direcionar com seguranca agora.';
+            decision.validationStatus = 'blocked_missing_science';
+            decision.blockedReason = science?.blockedReason || 'missing_science_evidence';
+          }
+        }
+      } catch (_) {
+        decision.usedFallback = true;
+        decision.validationStatus = 'science_builder_error';
+        decision.blockedReason = 'science_builder_error';
+      }
+    }
+
+    var result = {
+      type: decision.type,
+      intent: decision.intent,
+      message: decision.message,
+      cta: decision.ctaAction ? {
+        label: decision.ctaAction === 'open_training_builder' ? 'Abrir treino' : 'Abrir dieta',
+        action: decision.ctaAction,
+      } : null,
+      targetModule: decision.targetModule,
+      sourceOfTruth: decision.sourceOfTruth,
+      evidenceCount: decision.evidenceCount,
+      scienceTopicsUsed: decision.scienceTopicsUsed,
+      usedScientificEvidence: decision.usedScientificEvidence,
+      usedFallback: decision.usedFallback,
+      usedTransforms: decision.usedTransforms,
+      usedStructuredUserData: decision.usedStructuredUserData,
+      validationStatus: decision.validationStatus,
+      blockedReason: decision.blockedReason,
+      payload: decision.payload,
+      timestamp: decision.timestamp,
+    };
+
+    safeTrack({
+      module: 'conversation',
+      action: 'resolve_conversation_flow',
+      status: 'success',
+      intent: result.intent,
+      type: result.type,
+      source: 'kronia_application',
+      metadata: {
+        targetModule: result.targetModule,
+        ctaAction: result.cta?.action || null,
+        validationStatus: result.validationStatus,
+        blockedReason: result.blockedReason,
+        sourceOfTruth: result.sourceOfTruth,
+        evidenceCount: result.evidenceCount,
+      },
+    });
 
     window.KroniaIntelligence?.setAdminAuditTrace?.({
       conversation: {
         intent: result.intent,
         type: result.type,
-        cta: result.cta || null,
+        targetModule: result.targetModule,
+        ctaAction: result.cta?.action || null,
+        sourceOfTruth: result.sourceOfTruth,
+        usedScientificEvidence: result.usedScientificEvidence,
+        evidenceCount: result.evidenceCount,
+        scienceTopicsUsed: result.scienceTopicsUsed,
+        usedFallback: result.usedFallback,
+        usedTransforms: result.usedTransforms,
+        usedStructuredUserData: result.usedStructuredUserData,
+        validationStatus: result.validationStatus,
+        blockedReason: result.blockedReason,
+        payload: result.payload,
         timestamp: nowISO(),
       },
     });

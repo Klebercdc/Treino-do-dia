@@ -2784,147 +2784,102 @@ function renderDietModelAsText(model) {
 
 async function sendAI(overrideText, isGerarTreino = false) {
   if (_aiTyping) return;
-  const input = document.getElementById("aiInput");
-  const text  = overrideText || input?.value?.trim();
+  var input = document.getElementById('aiInput');
+  var text = overrideText || input?.value?.trim();
   if (!text) return;
 
-  // Detectar automaticamente pedido de treino quando o usuário digita
-  if (!isGerarTreino && !overrideText) {
-    isGerarTreino = _isPedidoDeTreino(text);
+  if (input && !overrideText) {
+    input.value = '';
+    input.style.height = 'auto';
   }
+  document.getElementById('aiSuggestions')?.remove();
 
-  if (input && !overrideText) { input.value = ""; input.style.height = "auto"; }
-  document.getElementById("aiSuggestions")?.remove();
-
-  // Se for gerar treino, mostrar mensagem amigável em vez do prompt técnico
-  const displayText = isGerarTreino ? `${_ico('zap', 16)} Gerar treino para hoje` : text;
-  addAIMessage("user", displayText);
-  _aiHistory.push({ role: "user", content: text });
+  addAIMessage('user', text);
+  _aiHistory.push({ role: 'user', content: text });
 
   _aiTyping = true;
-  const sendBtn = document.getElementById("aiSendBtn");
-  if (sendBtn) sendBtn.style.opacity = "0.4";
-  addAIMessage("assistant", "", true); // dots animados
-  const correlationId = 'chat_' + Date.now();
-  const startedAt = Date.now();
+  var sendBtn = document.getElementById('aiSendBtn');
+  if (sendBtn) sendBtn.style.opacity = '0.4';
+  addAIMessage('assistant', '', true);
+  var correlationId = 'chat_' + Date.now();
+  var startedAt = Date.now();
 
   try {
-    try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'processChatMessage', status: 'start', correlationId, source: 'app_send_ai', metadata: { isGerarTreino: !!isGerarTreino } }); } catch (_) {}
-    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'training' : 'diet', action: isGerarTreino ? 'gerarTreino' : 'gerarDieta', status: 'start', correlationId, source: 'app_send_ai' }); } catch (_) {}
-    const messages = _aiHistory.slice(-12);
-    const userData = buildUserData();
+    var flow = await resolveKronosConversation(text);
+    removeThinking();
 
-    // Gerar treino → /api/chat (especializado em JSON estruturado)
-    // Chat normal → /api/agent (tem acesso a ferramentas e dados reais)
-    const endpoint = isGerarTreino ? "/api/chat" : "/api/agent";
-    const body = isGerarTreino
-      ? { system: buildTrainingContext(), messages, isGerarTreino, model: "meta/llama-3.1-70b-instruct", max_tokens: 1000 }
-      : { messages, history: userData.history, profile: userData.profile };
+    if (flow.type === 'answer_with_cta') {
+      addAIMessage('assistant', flow.message || 'Vou te direcionar.');
+      executeConversationCta(flow);
+      try {
+        window.KroniaIntelligence?.track?.({
+          module: 'conversation',
+          action: 'chat_redirect_cta',
+          status: 'success',
+          correlationId: correlationId,
+          source: 'app_send_ai',
+          metadata: {
+            ctaAction: flow?.cta?.action || null,
+            targetModule: flow?.targetModule || null,
+            sourceOfTruth: flow?.sourceOfTruth || null,
+            evidenceCount: flow?.evidenceCount || 0,
+          },
+        });
+      } catch (_) {}
+      return;
+    }
 
-    const response = await apiFetch(endpoint, {
-      method: "POST",
-      body: JSON.stringify(body)
+    if (flow.type === 'analysis_answer' || flow.intent === 'supplement_question') {
+      addAIMessage('assistant', flow.message || 'Analise concluida.');
+      return;
+    }
+
+    var userData = buildUserData();
+    var messages = _aiHistory.slice(-12);
+    var response = await apiFetch('/api/agent', {
+      method: 'POST',
+      body: JSON.stringify({ messages: messages, history: userData.history, profile: userData.profile }),
     });
     if (!response.ok) {
-      try { window.KroniaIntelligence?.track?.({ module: 'api', action: 'api_failure', status: 'error', severity: 'medium', correlationId, source: 'app_send_ai', metadata: { endpoint, status: response.status } }); } catch (_) {}
+      throw new Error('Erro ' + response.status);
     }
+    var data = await parseApiJsonSafely(response);
+    var contentNodes = getApiContentNodes(data);
+    var reply = data?.message || contentNodes?.[0]?.text || 'Nao consegui processar. Tente novamente.';
 
-    const data = await parseApiJsonSafely(response);
-    if (!response.ok || data.success === false) throw new Error(data.message || data.error || ("Erro " + response.status));
-
-    if (data.action === "open_workout_flow" || data.action === "open_diet_flow") {
-      removeThinking();
-      addAIMessage("assistant", data.message || "Vamos continuar.");
-      _aiTyping = false;
-      if (sendBtn) sendBtn.style.opacity = "1";
-      try { window.KroniaIntelligence?.track?.({ module: 'chat', action: 'processChatMessage', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai', metadata: { action: data.action } }); } catch (_) {}
-      return;
-    }
-
-    // Resposta JSON estruturada de treino
-    const contentNodes = getApiContentNodes(data);
-    if (contentNodes?.[0]?.type === "workout_json") {
-      removeThinking();
-      const treino = contentNodes[0].data;
-      let grupos = [];
-
-      // Processar treinos com fases MEV/MAV/MRV
-      grupos = (treino.treinos || []).map(t => ({
-        nome: t.nome + (t.grupo ? " - " + t.grupo : ""),
-        exercicios: (t.exercicios || []).map((ex, exIdx) => normalizeExercisePayload(ex, exIdx))
-      }));
-
-      const total = grupos.reduce((a,g) => a + g.exercicios.length, 0);
-      addAIMessage("assistant", `${_ico('check-circle', 14)} Treino gerado: ` + grupos.map(g => g.nome).join(", ") + " — " + total + " exercícios.");
-      const container = document.getElementById("aiMessages");
-      const btnDiv = document.createElement("div");
-      btnDiv.className = "ai-msg assistant";
-      const btnId = "btnAplicar_" + Date.now();
-      // Capturar grupos no closure — cada botão tem seus próprios dados
-      const gruposCapturados = JSON.parse(JSON.stringify(grupos));
-      window[btnId] = function() { applyAIWorkout({ treino: { grupos: gruposCapturados } }); };
-      btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
-        <button onclick="window['${btnId}']()"
-          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent">
-          ${_ico('zap', 16)} Aplicar este treino na tela
-        </button>
-      </div>`;
-      container.appendChild(btnDiv);
-      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
-      _aiTyping = false;
-      if (sendBtn) sendBtn.style.opacity = "1";
-      try { window.KroniaIntelligence?.track?.({ module: 'training', action: 'gerarTreino', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
-      return;
-    }
-
-    const reply = data?.message || contentNodes?.[0]?.text || "Não consegui processar. Tente novamente.";
-
-    removeThinking();
-
-    // Guardar resposta para aplicar treino — sempre a mais recente
-    window._lastWorkoutReply = reply;
-    window._lastWorkoutJson  = null;
-    window._lastWorkoutGrupos = null; // reset cache de grupos
-
-    // Detectar se resposta contém exercícios — JSON ou texto
-    let hasExercicios = false;
+    addAIMessage('assistant', reply);
+    _aiHistory.push({ role: 'assistant', content: reply });
     try {
-      const jm = reply.match(/\{[\s\S]*"treinos"[\s\S]*\}/);
-      if (jm) { const d = JSON.parse(jm[0]); hasExercicios = d.treinos?.length > 0; }
-    } catch(e) {}
-    if (!hasExercicios) {
-      const gruposDetect = extrairGruposDaResposta(reply);
-      hasExercicios = gruposDetect.length > 0 && gruposDetect.reduce((a,g) => a + g.exercicios.length, 0) >= 2;
-    }
-
-    addAIMessage("assistant", reply);
-    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'training' : 'diet', action: isGerarTreino ? 'gerarTreino' : 'gerarDieta', status: 'success', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai' }); } catch (_) {}
-
-    // Mostrar botão se tiver exercícios
-    if (hasExercicios) {
-      const container = document.getElementById("aiMessages");
-      const btnDiv = document.createElement("div");
-      btnDiv.className = "ai-msg assistant";
-      const label = `${_ico('zap', 16)} Aplicar este treino na tela`;
-      btnDiv.innerHTML = `<div class="ai-bubble" style="padding:6px 4px">
-        <button onclick="applyAIWorkoutFromText()"
-          style="padding:14px 18px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">
-          ${label}
-        </button>
-      </div>`;
-      container.appendChild(btnDiv);
-      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
-    }
-
+      window.KroniaIntelligence?.track?.({
+        module: 'chat',
+        action: 'processChatMessage',
+        status: 'success',
+        correlationId: correlationId,
+        durationMs: Date.now() - startedAt,
+        source: 'app_send_ai',
+      });
+    } catch (_) {}
   } catch (err) {
-    try { window.KroniaIntelligence?.track?.({ module: isGerarTreino ? 'training' : 'diet', action: isGerarTreino ? 'gerarTreino' : 'gerarDieta', status: 'error', severity: 'high', correlationId, durationMs: Date.now() - startedAt, source: 'app_send_ai', metadata: { message: err && err.message ? err.message : 'unknown' } }); } catch (_) {}
     removeThinking();
-    addAIMessage("assistant", `${_ico('alert-triangle', 16)} ${err.message || "Não consegui processar sua solicitação agora."}`);
+    addAIMessage('assistant', `${_ico('alert-triangle', 16)} ${(err && err.message) || 'Nao consegui processar sua solicitacao agora.'}`);
+    try {
+      window.KroniaIntelligence?.track?.({
+        module: 'chat',
+        action: 'processChatMessage',
+        status: 'error',
+        severity: 'high',
+        correlationId: correlationId,
+        durationMs: Date.now() - startedAt,
+        source: 'app_send_ai',
+        metadata: { message: err && err.message ? err.message : 'unknown' },
+      });
+    } catch (_) {}
   } finally {
     _aiTyping = false;
-    if (sendBtn) sendBtn.style.opacity = "1";
+    if (sendBtn) sendBtn.style.opacity = '1';
   }
 }
+
 
 function aiQuick(tipo) {
   const prompts = {
@@ -2934,7 +2889,7 @@ function aiQuick(tipo) {
     rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
   };
   if (tipo === 'gerar') {
-    iniciarFluxoGeradorTreino();
+    window.KroniaActions.openTrainingBuilder({ source: 'ai_quick_gerar' });
     return;
   }
   const text = prompts[tipo];
@@ -3072,7 +3027,12 @@ function gerarTreinoComRespostas() {
     '{"treinos":[{"nome":"A","grupo":"Peito/Tríceps","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12","mev":3,"mav":4,"mrv":5}]}]}'
   ].join('\n');
 
-  sendAI(prompt, true);
+  addAIMessage('assistant', 'Perfeito. Vou abrir o modulo oficial de treino com esse contexto.');
+  window.KroniaActions.openTrainingBuilder({
+    source: 'wq_questionnaire',
+    questionnaire: Object.assign({}, r, { lesao: lesao }),
+    originalPrompt: prompt,
+  });
   _wqRespostas = {};
 }
 
@@ -4434,6 +4394,7 @@ function autoResizeOrientInput(el) {
 }
 
 
+
 window.KroniaActions = {
   openTrainingBuilder: function (context) {
     try { closeOrientacao?.(); } catch (_) {}
@@ -4453,32 +4414,139 @@ window.KroniaActions = {
   },
 };
 
-window.KroniaIntelligence = window.KroniaIntelligence || {};
-window.KroniaIntelligence.setAdminAuditTrace = function (data) {
-  this._trace = Object.assign({}, this._trace || {}, data);
-};
-window.KroniaIntelligence.getAdminAuditTrace = function () {
-  return this._trace || {};
-};
-
-async function buildScientificConstraintsForDiet(input) {
-  return {
-    ok: true,
-    sourceOfTruth: 'supabase_scientific_evidence',
-    usedScientificEvidence: true,
-    evidenceCount: 3,
-    constraints: { protein: 1.8 },
+if (window.KroniaIntelligence && typeof window.KroniaIntelligence.setAdminAuditTrace !== 'function') {
+  window.KroniaIntelligence.setAdminAuditTrace = function (data) {
+    try {
+      var nextTrace = Object.assign({}, this._trace || {}, data || {});
+      this._trace = nextTrace;
+      localStorage.setItem('kronia_admin_audit_trace_v1', JSON.stringify(nextTrace));
+      if (typeof this.track === 'function') {
+        this.track({
+          module: 'conversation',
+          action: 'admin_audit_trace_updated',
+          status: 'success',
+          source: 'app_admin_trace',
+          metadata: {
+            keys: Object.keys(data || {}),
+          },
+        });
+      }
+    } catch (_) {}
+  };
+}
+if (window.KroniaIntelligence && typeof window.KroniaIntelligence.getAdminAuditTrace !== 'function') {
+  window.KroniaIntelligence.getAdminAuditTrace = function () {
+    if (this._trace && typeof this._trace === 'object') return this._trace;
+    try {
+      var raw = localStorage.getItem('kronia_admin_audit_trace_v1');
+      var parsed = raw ? JSON.parse(raw) : {};
+      this._trace = parsed;
+      return parsed;
+    } catch (_) {
+      return {};
+    }
   };
 }
 
-async function buildScientificConstraintsForWorkout(input) {
-  return {
-    ok: true,
-    sourceOfTruth: 'supabase_scientific_evidence',
-    usedScientificEvidence: true,
-    evidenceCount: 3,
-    constraints: { frequency: 2 },
-  };
+function extractObjectiveFromInput(input) {
+  var text = String(input?.message || '').toLowerCase();
+  if (/hipertrof|massa/.test(text)) return 'hipertrofia';
+  if (/emagrec|defini/.test(text)) return 'emagrecimento';
+  if (/forca/.test(text)) return 'forca';
+  if (/manuten/.test(text)) return 'manutencao';
+  return 'hipertrofia';
+}
+
+async function buildScientificConstraintsByObjective(objective) {
+  var profile = safeJSON('kronia_config', {});
+  try {
+    var response = await apiFetch('/api/science', {
+      method: 'POST',
+      body: JSON.stringify({
+        objetivo: objective,
+        sexo: profile.sexo || undefined,
+        idade: profile.idade || undefined,
+        peso: profile.peso || undefined,
+        altura: profile.altura || undefined,
+        nivelAtividade: profile.atividade || undefined,
+      }),
+    });
+    var payload = await response.json();
+    var evidence = Array.isArray(payload?.science) ? payload.science : [];
+    var topics = evidence.map(function (item) {
+      return item?.topic?.topic || item?.topic || null;
+    }).filter(Boolean);
+
+    if (!response.ok || payload?.ok === false || evidence.length < 1) {
+      return {
+        ok: false,
+        blockedReason: 'missing_science_evidence',
+        sourceOfTruth: 'supabase_scientific_evidence',
+        usedScientificEvidence: false,
+        evidenceCount: evidence.length,
+        scienceTopicsUsed: topics,
+        constraints: {},
+      };
+    }
+
+    return {
+      ok: true,
+      blockedReason: null,
+      sourceOfTruth: 'supabase_scientific_evidence',
+      usedScientificEvidence: true,
+      evidenceCount: evidence.length,
+      scienceTopicsUsed: topics,
+      constraints: {
+        objective: objective,
+        minimumEvidence: 1,
+      },
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      blockedReason: 'science_unavailable',
+      sourceOfTruth: 'supabase_scientific_evidence',
+      usedScientificEvidence: false,
+      evidenceCount: 0,
+      scienceTopicsUsed: [],
+      constraints: {},
+    };
+  }
+}
+
+window.buildScientificConstraintsForDiet = async function buildScientificConstraintsForDiet(input) {
+  var objective = extractObjectiveFromInput(input);
+  return buildScientificConstraintsByObjective(objective);
+};
+
+window.buildScientificConstraintsForWorkout = async function buildScientificConstraintsForWorkout(input) {
+  var objective = extractObjectiveFromInput(input);
+  return buildScientificConstraintsByObjective(objective);
+};
+
+async function resolveKronosConversation(inputText) {
+  var appLayer = window.KroniaApplication && window.KroniaApplication.application;
+  if (!appLayer || typeof appLayer.resolveConversationFlow !== 'function') {
+    return {
+      type: 'answer_only',
+      intent: 'general_question',
+      message: 'Nao consegui inicializar o motor conversacional agora.',
+      cta: null,
+    };
+  }
+  return appLayer.resolveConversationFlow({ message: String(inputText || '') });
+}
+
+function executeConversationCta(result) {
+  if (result?.cta?.action === 'open_training_builder') {
+    window.KroniaActions.openTrainingBuilder(result?.payload || {});
+    return true;
+  }
+  if (result?.cta?.action === 'open_diet_generator') {
+    window.KroniaActions.openDietGenerator(result?.payload || {});
+    return true;
+  }
+  return false;
 }
 
 function addOrientMsg(containerId, role, text) {
@@ -4574,10 +4642,7 @@ async function sendOrientExpert() {
   }
 
   addOrientMsg('orientExpertMessages', 'user', text);
-
-  var result = window.KroniaApplication.application.resolveConversationFlow({
-    message: text,
-  });
+  var result = await resolveKronosConversation(text);
 
   if (result.type === 'analysis_answer') {
     renderAI(result.message);
@@ -4586,18 +4651,13 @@ async function sendOrientExpert() {
 
   if (result.type === 'answer_with_cta') {
     renderAI(result.message);
-
-    if (result.cta?.action === 'open_training_builder') {
-      window.KroniaActions.openTrainingBuilder();
-    }
-    if (result.cta?.action === 'open_diet_generator') {
-      window.KroniaActions.openDietGenerator();
-    }
+    executeConversationCta(result);
     return;
   }
 
   renderAI(result.message || 'Ok');
 }
+
 
 function orientExpertQuick(tipo) {
   if (tipo === 'basal') {
@@ -4619,7 +4679,7 @@ function orientExpertQuick(tipo) {
     return;
   }
   if (tipo === 'dieta') {
-    iniciarFluxoDietaNutri();
+    window.KroniaActions.openDietGenerator({ source: 'orient_quick_dieta' });
     return;
   }
   const msgs = {
