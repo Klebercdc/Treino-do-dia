@@ -182,10 +182,12 @@ const _dbSync = {
         window.KroniaAccessProfile.isAdmin = !!profile.is_admin;
         window.KroniaAccessProfile.canBypassQuota = !!profile.is_admin;
         window.KroniaAccessProfile.canSeeAdminUI = !!profile.is_admin;
+        trackAdminHydrationDebug('profile_loaded_from_supabase', { profileIsAdmin: !!profile.is_admin });
         refreshIntelligenceAdminAccessSafe();
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.buildUserCapabilities === 'function') {
           window.currentUserCapabilities = window.KroniaAccessScope.buildUserCapabilities(window.KroniaAccessProfile);
           window.KroniaAccessScope.setupAdminDebug && window.KroniaAccessScope.setupAdminDebug();
+          trackAdminHydrationDebug('access_capabilities_hydrated');
         }
       }
 
@@ -237,6 +239,32 @@ function resolveOAuthOptions() {
 
 function refreshIntelligenceAdminAccessSafe() {
   try { window.KroniaIntelligenceAdmin?.refreshAccess?.(); } catch (_) {}
+  trackAdminHydrationDebug('refresh_access_called');
+}
+
+
+function trackAdminHydrationDebug(stage, extra) {
+  try {
+    var profile = window.KroniaAccessProfile || {};
+    if (!profile.isAdmin) return;
+    var payload = Object.assign({
+      stage: stage,
+      isAdmin: !!profile.isAdmin,
+      canSeeAdminUI: !!profile.canSeeAdminUI,
+      canBypassQuota: !!profile.canBypassQuota,
+      timestamp: new Date().toISOString(),
+    }, extra || {});
+    window.KroniaIntelligence?.setAdminAuditTrace?.({ adminHydration: payload });
+    window.KroniaIntelligence?.track?.({
+      module: 'auth',
+      action: 'admin_hydration_debug',
+      status: 'success',
+      source: 'auth',
+      metadata: payload,
+    });
+  } catch (_err) {
+    return;
+  }
 }
 
 function hideSplash() {
@@ -541,6 +569,7 @@ _sb.auth.onAuthStateChange((_event, session) => {
         } catch (_) {}
         if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
           await window.KroniaAccessScope.hydrateAccessContext(session);
+          trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'on_auth_state_change' });
         }
         window.KroniaIntelligenceAdmin?.refreshAccess?.();
         await _dbSync.pullAll(session.user.id);
@@ -575,6 +604,7 @@ Promise.all([
     try {
       if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
         await window.KroniaAccessScope.hydrateAccessContext(session);
+        trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'initial_session_check' });
       }
       window.KroniaIntelligenceAdmin?.refreshAccess?.();
       await _dbSync.pullAll(session.user.id);

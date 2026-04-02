@@ -60,10 +60,22 @@ function buildAccessProfile(userOrEmail, options) {
     if (fromProfile) {
       isAdmin = true;
       source = 'profiles_table';
+    } else if (fromClaims) {
+      isAdmin = true;
+      source = 'auth_claims';
+    } else if (fromWhitelist) {
+      isAdmin = true;
+      source = 'env_whitelist';
     } else {
       isAdmin = false;
       source = 'profiles_table';
     }
+  } else if (fromClaims) {
+    isAdmin = true;
+    source = 'auth_claims';
+  } else if (fromWhitelist) {
+    isAdmin = true;
+    source = 'env_whitelist';
   } else {
     isAdmin = false;
     source = isAuthenticated ? 'awaiting_profiles_resolution' : 'anonymous';
