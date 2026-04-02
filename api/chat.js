@@ -18,6 +18,7 @@ var conversationStateUtil = require('../src/server/apihelpers/_conversationState
 var scienceInsight = require('../src/lib/science/scienceInsightService');
 var diagnostics = require('../src/server/apihelpers/_diagnosticTracker');
 var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants');
+var aiContracts = require('../src/server/apihelpers/_aiContracts');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;
@@ -132,6 +133,27 @@ function emitDecisionTelemetry(userId, classification, decision, usedLLM, opened
   }
 }
 
+
+function isTransientProviderError(err) {
+  var text = String(err || '').toLowerCase();
+  return /timeout|429|502|503|504|econnreset|socket hang up|temporar/.test(text);
+}
+
+function toProviderErrorContract(err, requestMeta) {
+  var transient = isTransientProviderError(err);
+  return aiContracts.buildAiErrorContract({
+    status: transient ? 503 : 500,
+    code: transient ? 'PROVIDER_UNAVAILABLE' : 'INVALID_REQUEST',
+    state: transient ? 'provider_unavailable' : 'invalid_request',
+    message: transient
+      ? 'Serviço de IA temporariamente indisponível. Tente novamente em instantes.'
+      : 'Não consegui processar esta solicitação no formato enviado.',
+    retryable: transient,
+    suggestion: transient ? 'Aguarde alguns segundos e tente novamente.' : 'Revise a solicitação e tente novamente.',
+    meta: Object.assign({ provider: 'groq', lastError: String(err || 'unknown') }, requestMeta || {})
+  });
+}
+
 function callChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
   var GROQ_KEY = process.env.GROQ_API_KEY;
   var m = [];
@@ -190,17 +212,12 @@ module.exports = function(req, res) {
       function runPaidAiCall(executor, done) {
         plans.getQuotaInfo(user.id, function(qErr, quota) {
           if (qErr) {
-            return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true, reason: 'quota_check_failed' } });
+            var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed' } });
+            return responseUtil.sendJson(res, quotaErr.status, quotaErr.body);
           }
           if (!quota.allowed) {
-            return responseUtil.sendJson(res, 402, {
-              success: false,
-              type: 'error',
-              message: 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
-              error: 'QUOTA_EXCEEDED',
-              data: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } },
-              meta: { fallback: true }
-            });
+            var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } } });
+            return responseUtil.sendJson(res, planLimit.status, planLimit.body);
           }
 
           executor(function(err, payload) {
@@ -320,6 +337,8 @@ module.exports = function(req, res) {
             responseSummary: normalizedPayload && normalizedPayload.message ? normalizedPayload.message : ''
           }); });
         }
+        normalizedPayload.requestId = normalizedPayload.requestId || (b.requestId || b.correlationId || null);
+        if (user && user.id && !normalizedPayload.userId) normalizedPayload.userId = user.id;
         tracker.finishExecution(function(err) {
           if (err) console.error('[diagnostics] failed to persist execution', err);
           return responseUtil.sendJson(res, statusCode, normalizedPayload);
@@ -375,7 +394,8 @@ module.exports = function(req, res) {
         }, function(err, data) {
           if (err) {
             safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
-            return sendTracked(503, { success: false, type: 'error', message: err, error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+            var providerError = toProviderErrorContract(err, { operation: 'workout_generation' });
+            return sendTracked(providerError.status, providerError.body, 'failure');
           }
           safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
           return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }], conversationState: { memory: shortState } }, meta: {} });
@@ -517,7 +537,8 @@ module.exports = function(req, res) {
             if (err) {
               safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
               safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Alerta', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: false, errorCode: 'PROVIDER_UNAVAILABLE', decisionReason: 'LLM indisponível no endpoint principal.' }); });
-              return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+              var providerError = toProviderErrorContract(err, { operation: 'chat_llm' });
+              return sendTracked(providerError.status, providerError.body, 'failure');
             }
             safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: true, outputSummary: typeof payload === 'string' ? payload : 'workout_json_payload' }); });
             safeTrack(function() { tracker.captureMetric({ key: 'llmCalled', value: true }); });
@@ -537,10 +558,11 @@ module.exports = function(req, res) {
         })
         .catch(function(err) {
           safeTrack(function() { tracker.markFailure({ errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: (err && err.message) || 'Falha na camada Promise principal.' }); });
-          return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+          var providerError = toProviderErrorContract(err, { operation: 'chat_promise' });
+          return sendTracked(providerError.status, providerError.body, 'failure');
         });
 
       });
-    }, { max: 40, windowMs: 60000 }, user.id);
+    }, { max: 24, windowMs: 60000, category: b && b.isDietDirect ? 'ai_heavy_operation' : 'chat_light' }, user.id);
   });
 };

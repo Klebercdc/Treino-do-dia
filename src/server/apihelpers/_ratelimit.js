@@ -1,15 +1,10 @@
 /**
  * Rate limiter em memória por usuário (userId) ou IP como fallback.
- * Limita requisições por janela de tempo para proteger APIs de IA (custo).
- *
- * Uso: rateLimit(req, res, next, { max: 30, windowMs: 60000 })
- *      rateLimit(req, res, next, { max: 30, windowMs: 60000 }, 'user-uuid')
  */
 
 var store = Object.create(null);
-var MAX_STORE_SIZE = 10000; // evita crescimento ilimitado de memória
+var MAX_STORE_SIZE = 10000;
 
-// Limpa entradas expiradas a cada 5 minutos
 setInterval(function() {
   var now = Date.now();
   Object.keys(store).forEach(function(key) {
@@ -25,23 +20,9 @@ function getIp(req) {
   ).toString().split(',')[0].trim();
 }
 
-/**
- * @param {object}   req
- * @param {object}   res
- * @param {function} next
- * @param {object}   opts    { max: number, windowMs: number }
- * @param {string}   [userId] - quando fornecido, usa userId como chave ao invés do IP
- */
-function rateLimit(req, res, next, opts, userId) {
-  var max      = (opts && opts.max)      || 60;
-  var windowMs = (opts && opts.windowMs) || 60 * 1000;
-
-  // Chave por usuário autenticado tem precedência sobre IP
-  var key = userId ? 'u:' + userId : 'ip:' + getIp(req);
+function ensureBucket(key, windowMs) {
   var now = Date.now();
-
   if (!store[key] || store[key].resetAt < now) {
-    // Evicta a entrada mais antiga se o store atingiu o limite
     if (!store[key] && Object.keys(store).length >= MAX_STORE_SIZE) {
       var oldest = Object.keys(store).reduce(function(a, b) {
         return store[a].resetAt < store[b].resetAt ? a : b;
@@ -50,19 +31,56 @@ function rateLimit(req, res, next, opts, userId) {
     }
     store[key] = { count: 0, resetAt: now + windowMs };
   }
-
-  store[key].count += 1;
-
-  res.setHeader('X-RateLimit-Limit',     String(max));
-  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, max - store[key].count)));
-  res.setHeader('X-RateLimit-Reset',     String(Math.ceil(store[key].resetAt / 1000)));
-
-  if (store[key].count > max) {
-    res.status(429).json({ error: 'Muitas requisições. Tente novamente em instantes.' });
-    return;
-  }
-
-  next();
+  return store[key];
 }
 
-module.exports = { rateLimit: rateLimit };
+function checkRateLimit(req, opts, userId) {
+  var max = (opts && opts.max) || 60;
+  var windowMs = (opts && opts.windowMs) || 60 * 1000;
+  var category = (opts && opts.category) || 'default';
+  var now = Date.now();
+  var identity = userId ? ('u:' + userId) : ('ip:' + getIp(req));
+  var key = identity + ':c:' + category;
+  var bucket = ensureBucket(key, windowMs);
+  bucket.count += 1;
+
+  return {
+    allowed: bucket.count <= max,
+    limit: max,
+    remaining: Math.max(0, max - bucket.count),
+    resetAt: bucket.resetAt,
+    retryAfterSec: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
+    category: category,
+    key: key
+  };
+}
+
+function applyRateLimitHeaders(res, result) {
+  res.setHeader('X-RateLimit-Limit', String(result.limit));
+  res.setHeader('X-RateLimit-Remaining', String(result.remaining));
+  res.setHeader('X-RateLimit-Reset', String(Math.ceil(result.resetAt / 1000)));
+}
+
+function rateLimit(req, res, next, opts, userId) {
+  var result = checkRateLimit(req, opts, userId);
+  applyRateLimitHeaders(res, result);
+  if (!result.allowed) {
+    res.setHeader('Retry-After', String(result.retryAfterSec));
+    res.status(429).json({
+      ok: false,
+      success: false,
+      type: 'error',
+      state: 'rate_limited_temporary',
+      error: 'RATE_LIMITED_TEMPORARY',
+      errorCode: 'RATE_LIMITED_TEMPORARY',
+      retryable: true,
+      message: 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente novamente.',
+      suggestion: 'Aguarde alguns segundos antes de enviar outra mensagem.',
+      meta: { category: result.category, retryAfterSec: result.retryAfterSec }
+    });
+    return;
+  }
+  next(result);
+}
+
+module.exports = { rateLimit: rateLimit, checkRateLimit: checkRateLimit, applyRateLimitHeaders: applyRateLimitHeaders };

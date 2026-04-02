@@ -11,6 +11,7 @@ var diet    = require('../src/server/apihelpers/_diet');
 var responseUtil = require('../src/server/apihelpers/_response');
 var intent = require('../src/server/apihelpers/_intent');
 var access = require('../src/server/apihelpers/_access');
+var aiContracts = require('../src/server/apihelpers/_aiContracts');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -306,6 +307,25 @@ function executeTool(name, args, userData) {
   }
 }
 
+
+function isTransientProviderError(err) {
+  var text = String(err || '').toLowerCase();
+  return /timeout|429|502|503|504|econnreset|socket hang up|temporar/.test(text);
+}
+
+function toProviderErrorContract(err, requestMeta) {
+  var transient = isTransientProviderError(err);
+  return aiContracts.buildAiErrorContract({
+    status: transient ? 503 : 500,
+    code: transient ? 'PROVIDER_UNAVAILABLE' : 'INVALID_REQUEST',
+    state: transient ? 'provider_unavailable' : 'invalid_request',
+    message: transient ? 'Serviço de IA temporariamente indisponível. Tente novamente em instantes.' : 'Não consegui processar esta solicitação.',
+    retryable: transient,
+    suggestion: transient ? 'Aguarde alguns segundos e tente novamente.' : 'Revise a solicitação e tente novamente.',
+    meta: Object.assign({ provider: 'groq', lastError: String(err || 'unknown') }, requestMeta || {})
+  });
+}
+
 // ══════════════════════════════════════════
 // CHAMADA GROQ COM SUPORTE A TOOLS
 // ══════════════════════════════════════════
@@ -554,16 +574,10 @@ module.exports = function(req, res) {
       }
 
       plans.getQuotaInfo(user.id, function(qErr, quota) {
-        if (qErr) return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'QUOTA_CHECK_FAILED', meta: { fallback: true } });
+        if (qErr) { var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed' } }); return responseUtil.sendJson(res, quotaErr.status, quotaErr.body); }
         if (!quota.allowed) {
-          return responseUtil.sendJson(res, 402, {
-            success: false,
-            type: 'error',
-            message: 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
-            error: 'QUOTA_EXCEEDED',
-            data: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } },
-            meta: { fallback: true }
-          });
+          var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } } });
+          return responseUtil.sendJson(res, planLimit.status, planLimit.body);
         }
 
       // SSE streaming mode
@@ -582,15 +596,8 @@ module.exports = function(req, res) {
       agentLoop(messages, userData, function(err, text) {
         if (err) {
           console.error('[agent] provider_fallback:', err);
-          return responseUtil.sendJson(res, 503, {
-            success: false,
-            type: 'error',
-            action: null,
-            message: 'Não consegui processar agora.',
-            data: null,
-            error: 'PROVIDER_UNAVAILABLE',
-            meta: { fallback: true }
-          });
+          var providerError = toProviderErrorContract(err, { operation: 'agent_loop' });
+          return responseUtil.sendJson(res, providerError.status, providerError.body);
         }
         var estimatedPrompt = JSON.stringify(messages).length / 4;
         var estimatedCompletion = (text || '').length / 4;
@@ -610,6 +617,6 @@ module.exports = function(req, res) {
       });
       }, { accessProfile: accessProfile });
       });
-    }, { max: 30, windowMs: 60000 }, user.id);
+    }, { max: 45, windowMs: 60000, category: b && b.stream ? 'chat_light_stream' : 'chat_light' }, user.id);
   });
 };
