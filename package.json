@@ -26,7 +26,9 @@
     "sync:exercises": "tsx scripts/sync-exercises-weekly.ts",
     "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts",
     "audit:admin-scope": "node scripts/admin-scope-audit.js",
-    "import:exercises": "node scripts/import-exercises.mjs"
+    "import:exercises": "node scripts/import-exercises.mjs",
+    "import:exercises:500": "IMPORT_LIMIT=500 node scripts/import-exercises.mjs",
+    "import:exercises:1300": "IMPORT_LIMIT=1300 BATCH_SIZE=100 node scripts/import-exercises.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1"
