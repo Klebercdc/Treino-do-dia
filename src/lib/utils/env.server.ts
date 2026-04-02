@@ -91,6 +91,7 @@ export function validateRuntimeEnv(): RuntimeEnvValidation {
     'SUPABASE_ANON_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
     'GROQ_API_KEY',
+    'NEXT_PUBLIC_APP_URL',
   ].map((key) => {
     const value = getOptionalEnv(key);
     return {

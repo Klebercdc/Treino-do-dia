@@ -3,17 +3,17 @@ import { CheckContext, CheckResult } from './types';
 
 export function runEnvCheck(): { context?: CheckContext; result: CheckResult } {
   const runtime = validateRuntimeEnv();
-  const missing = runtime.vars.filter((item) => ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'].includes(item.key) && !item.found);
+  const missing = runtime.vars.filter((item) => ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_APP_URL'].includes(item.key) && !item.found);
 
   if (missing.length) {
     return {
       result: {
         name: 'ambiente',
         status: 'ERROR',
-        summary: 'Variáveis Supabase ausentes no runtime.',
+        summary: 'Variáveis críticas de runtime ausentes (Supabase/App URL).',
         error: `Missing: ${missing.map((m) => m.key).join(', ')}`,
         suggestion: runtime.runtime === 'local'
-          ? 'As envs podem estar apenas na Vercel. Para check local, replique em .env.local.'
+          ? 'As envs podem estar apenas na Vercel. Para check local, replique em .env.local incluindo NEXT_PUBLIC_APP_URL.'
           : 'Revise variáveis no runtime atual.',
       },
     };

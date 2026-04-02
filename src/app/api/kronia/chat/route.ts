@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { checkRateLimit } from "../../../../lib/utils/serverRateLimit"
-import { createServerSupabaseClient } from "../../../../lib/supabase/server"
+import { requireBearerAuth } from "../../_shared/requireBearerAuth"
 import { KroniaChatService } from "../../../../ai/chatService"
 import { SupabasePlanRepository } from "../../../../ai/supabasePlanRepository"
 import { SupabaseMemoryRepository } from "../../../../ai/supabaseMemoryRepository"
@@ -13,20 +13,12 @@ import type { ChatMessage, UserProfile } from "../../../../ai/types"
 export async function POST(req: Request) {
   try {
     // 1. Autenticação
-    const authHeader = req.headers.get("authorization")
-    if (!authHeader?.startsWith("Bearer ")) {
+    const auth = await requireBearerAuth(req)
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const accessToken = authHeader.replace("Bearer ", "").trim()
-    const db = createServerSupabaseClient(accessToken)
-    const { data: userData, error: authError } = await db.auth.getUser()
-
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const userId = userData.user.id
+    const userId = auth.user.id
 
     // 1b. Rate limit
     const rl = checkRateLimit(userId, { max: 20, windowMs: 60000 })

@@ -226,6 +226,15 @@
     return event;
   };
 
+  KroniaIntelligence.prototype._httpClient = function () {
+    if (window.KroniaHttpClient && typeof window.KroniaHttpClient.request === 'function') return window.KroniaHttpClient;
+    if (typeof window.KroniaCreateHttpClient === 'function') {
+      window.KroniaHttpClient = window.KroniaCreateHttpClient();
+      return window.KroniaHttpClient;
+    }
+    return null;
+  };
+
   KroniaIntelligence.prototype._token = async function () {
     try {
       var sess = await window._sb?.auth?.getSession?.();
@@ -243,13 +252,16 @@
     try {
       var token = await this._token();
       if (!token) { this._flushing = false; return { ok: false, reason: 'no_auth' }; }
-      var resp = await fetch('/api/kronia/intelligence', {
+      var http = this._httpClient();
+      if (!http) throw new Error('http_client_unavailable');
+      var resp = await http.request('/api/kronia/intelligence', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
-        body: JSON.stringify({ events: batch, context: this._state.context }),
+        body: { events: batch, context: this._state.context },
+        headers: { authorization: 'Bearer ' + token },
+        timeoutMs: 12000,
         keepalive: true,
       });
-      if (!resp.ok) throw new Error('ingest_failed');
+      if (!resp || !resp.data || resp.data.success !== true) throw new Error('ingest_failed');
       this._state.queue = this._state.queue.slice(batch.length);
       this._persist();
       this._retryInMs = 0;
@@ -301,8 +313,14 @@
       if (!token) return { success: false, error: { code: 'UNAUTHORIZED' } };
       var qs = new URLSearchParams(filters || {});
       qs.set('action', 'overview');
-      var resp = await fetch('/api/kronia/intelligence?' + qs.toString(), { headers: { authorization: 'Bearer ' + token } });
-      return resp.json().catch(function () { return { success: false, error: { code: 'INVALID_RESPONSE' } }; });
+      var http = this._httpClient();
+      if (!http) return { success: false, error: { code: 'HTTP_CLIENT_UNAVAILABLE' } };
+      var resp = await http.request('/api/kronia/intelligence?' + qs.toString(), {
+        method: 'GET',
+        headers: { authorization: 'Bearer ' + token },
+        timeoutMs: 10000,
+      });
+      return resp && resp.data ? resp.data : { success: false, error: { code: 'INVALID_RESPONSE' } };
     } catch (_) {
       return { success: false, error: { code: 'BRIDGE_FAILURE' } };
     }

@@ -74,107 +74,79 @@
 
   function buildProgressAnalysisContext() {
     var history = readJson('kronia_history_v2', []);
-    var draft = readJson('kronia_draft_v2', null) || readJson('kronia_draft', null);
     var transforms = readJson('kronia_transforms_snapshot', null);
-
     var sessions = Array.isArray(history) ? history : [];
-    var recentSessions = sessions.slice(0, 12);
-    var hasDraft = !!(draft && Array.isArray(draft.sections));
-    var hasTransforms = !!(transforms && typeof transforms === 'object');
 
-    var totalExercises = 0;
-    var totalSeries = 0;
-    var totalLoad = 0;
-    var weightedLoadSamples = 0;
+    if (sessions.length < 2) {
+      return {
+        sufficientData: false,
+        sourceOfTruth: 'user_structured_data',
+        validationStatus: 'insufficient_data',
+        blockedReason: 'history_below_minimum',
+        usedStructuredUserData: true,
+        usedTransforms: !!transforms,
+        summary: 'Ainda não há dados suficientes para uma análise segura da sua evolução.',
+      };
+    }
 
-    recentSessions.forEach(function (session) {
-      var sections = Array.isArray(session?.state?.sections) ? session.state.sections : [];
-      sections.forEach(function (section) {
-        var cards = Array.isArray(section?.cards) ? section.cards : [];
-        totalExercises += cards.length;
-        cards.forEach(function (card) {
-          var values = Array.isArray(card?.values) ? card.values : [];
-          totalSeries += values.length;
-          values.forEach(function (v) {
-            var kg = parseLoadFromValue(v?.kg);
-            var reps = parseLoadFromValue(v?.reps);
-            if (kg > 0 && reps > 0) {
-              totalLoad += kg * reps;
-              weightedLoadSamples += 1;
-            }
+    var recent = sessions.slice(-8);
+    var totalVolume = 0;
+    var totalSets = 0;
+    var datedSessions = 0;
+    var progressionSamples = [];
+
+    recent.forEach(function (session) {
+      var dateValue = session?.createdAt || session?.trained_at || session?.date || null;
+      if (dateValue) datedSessions += 1;
+
+      var blocks = Array.isArray(session?.exercises) ? session.exercises : [];
+      if (!blocks.length) {
+        var sections = Array.isArray(session?.state?.sections) ? session.state.sections : [];
+        sections.forEach(function (section) {
+          (Array.isArray(section?.cards) ? section.cards : []).forEach(function (card) {
+            blocks.push({ sets: Array.isArray(card?.values) ? card.values.map(function (v) { return { reps: v?.reps, weight: v?.kg }; }) : [] });
           });
+        });
+      }
+
+      blocks.forEach(function (exercise) {
+        var sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+        sets.forEach(function (set) {
+          var reps = numberFrom(set?.reps);
+          var load = numberFrom(set?.weight || set?.carga || set?.kg);
+          if (reps > 0 && load > 0) {
+            totalVolume += reps * load;
+            progressionSamples.push(load);
+          }
+          if (reps > 0) totalSets += 1;
         });
       });
     });
 
-    var averageSeriesPerSession = recentSessions.length ? (totalSeries / recentSessions.length) : 0;
-    var sessionDates = recentSessions
-      .map(function (s) { return s?.createdAt || s?.trained_at || null; })
-      .filter(Boolean)
-      .map(function (d) { return new Date(d).getTime(); })
-      .filter(function (t) { return Number.isFinite(t); })
-      .sort(function (a, b) { return a - b; });
+    var firstHalf = progressionSamples.slice(0, Math.floor(progressionSamples.length / 2));
+    var secondHalf = progressionSamples.slice(Math.floor(progressionSamples.length / 2));
+    var avg = function (arr) { return arr.length ? arr.reduce(function (a, b) { return a + b; }, 0) / arr.length : 0; };
+    var loadTrend = 'stable';
+    var delta = avg(secondHalf) - avg(firstHalf);
+    if (delta > 1.5) loadTrend = 'up';
+    else if (delta < -1.5) loadTrend = 'down';
 
-    var avgIntervalDays = 0;
-    if (sessionDates.length >= 2) {
-      var totalGap = 0;
-      for (var i = 1; i < sessionDates.length; i += 1) {
-        totalGap += (sessionDates[i] - sessionDates[i - 1]) / (1000 * 60 * 60 * 24);
-      }
-      avgIntervalDays = totalGap / (sessionDates.length - 1);
-    }
-
-    var sufficientData = recentSessions.length >= 3 && totalSeries >= 12;
-    if (!sufficientData) {
-      return {
-        sufficientData: false,
-        validationStatus: 'insufficient_data',
-        blockedReason: 'progress_history_below_minimum',
-        message: 'Ainda nao ha base suficiente para uma analise robusta. Registre mais sessoes e series completas.',
-        sourceOfTruth: hasTransforms ? 'transform_snapshot' : 'user_structured_data',
-        usedStructuredUserData: recentSessions.length > 0,
-        usedTransforms: hasTransforms || hasDraft,
-        payload: {
-          sessionsConsidered: recentSessions.length,
-          totalSeries: totalSeries,
-          hasDraft: hasDraft,
-          hasTransforms: hasTransforms,
-        },
-      };
-    }
-
-    var consistencyLabel = avgIntervalDays > 0 && avgIntervalDays <= 3.5
-      ? 'consistencia alta'
-      : avgIntervalDays > 0 && avgIntervalDays <= 5.5
-        ? 'consistencia moderada'
-        : 'consistencia irregular';
-
-    var averageLoadPerSet = weightedLoadSamples ? (totalLoad / weightedLoadSamples) : 0;
-    var message = [
-      'Diagnostico de progresso:',
-      'foram analisadas ' + recentSessions.length + ' sessoes recentes, com ' + totalSeries + ' series registradas.',
-      'A frequencia indica ' + consistencyLabel + (avgIntervalDays ? ' (intervalo medio de ' + avgIntervalDays.toFixed(1) + ' dias).' : '.'),
-      'Volume medio aproximado de ' + averageSeriesPerSession.toFixed(1) + ' series por sessao.',
-      averageLoadPerSet > 0
-        ? 'Carga media por serie valida em torno de ' + averageLoadPerSet.toFixed(1) + ' kg-reps.'
-        : 'Nao houve amostra de carga/repeticao suficiente para calcular tendencia de carga.'
-    ].join(' ');
+    var adherenceRatio = recent.length ? (datedSessions / recent.length) : 0;
 
     return {
       sufficientData: true,
+      sourceOfTruth: transforms ? 'transform_snapshot' : 'user_structured_data',
       validationStatus: 'validated',
       blockedReason: null,
-      message: message,
-      sourceOfTruth: hasTransforms ? 'combined_scientific_engine' : 'user_structured_data',
       usedStructuredUserData: true,
-      usedTransforms: hasTransforms || hasDraft,
-      payload: {
-        sessionsConsidered: recentSessions.length,
-        totalExercises: totalExercises,
-        totalSeries: totalSeries,
-        averageSeriesPerSession: Number(averageSeriesPerSession.toFixed(2)),
-        averageLoadPerSet: Number(averageLoadPerSet.toFixed(2)),
-        avgIntervalDays: Number(avgIntervalDays.toFixed(2)),
+      usedTransforms: !!transforms,
+      summary: 'Análise disponível com base no seu histórico recente.',
+      metrics: {
+        sessions: recent.length,
+        totalVolume: Math.round(totalVolume),
+        totalSets: totalSets,
+        loadTrend: loadTrend,
+        adherenceRatio: Number(adherenceRatio.toFixed(2)),
       },
     };
   }
@@ -225,13 +197,13 @@
       return Object.assign({}, base, {
         type: 'analysis_answer',
         targetModule: 'analysis',
-        message: context.message,
+        message: context.summary,
         sourceOfTruth: context.sourceOfTruth,
         usedStructuredUserData: !!context.usedStructuredUserData,
         usedTransforms: !!context.usedTransforms,
         validationStatus: context.validationStatus,
         blockedReason: context.blockedReason,
-        payload: context.payload,
+        payload: context.metrics || {},
       });
     }
 
@@ -270,8 +242,9 @@
           : window.buildScientificConstraintsForDiet;
         if (typeof scienceBuilder === 'function') {
           var science = await scienceBuilder(input || {});
-          decision.usedScientificEvidence = !!science?.usedScientificEvidence;
           decision.evidenceCount = Number(science?.evidenceCount || 0);
+          var hasEvidence = decision.evidenceCount > 0;
+          decision.usedScientificEvidence = !!science?.usedScientificEvidence && hasEvidence;
           decision.sourceOfTruth = science?.sourceOfTruth || decision.sourceOfTruth;
           decision.scienceTopicsUsed = Array.isArray(science?.scienceTopicsUsed) ? science.scienceTopicsUsed : [];
           decision.payload.scientificConstraints = science?.constraints || {};
@@ -290,7 +263,7 @@
             },
           });
 
-          if (!science?.ok) {
+          if (!science?.ok || !hasEvidence) {
             decision.type = 'answer_only';
             decision.ctaAction = null;
             decision.message = 'Ainda nao encontrei evidencia cientifica suficiente para direcionar com seguranca agora.';
