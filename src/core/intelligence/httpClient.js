@@ -3,28 +3,48 @@ import { supabaseClient as supabase } from '@/lib/supabase/client';
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_SESSION_WAIT_MS = 4000;
 const SESSION_POLL_INTERVAL_MS = 120;
+let sessionCache = null;
+let sessionPromise = null;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function waitForSession(maxWaitMs = DEFAULT_SESSION_WAIT_MS) {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < maxWaitMs) {
-    const { data, error } = await supabase.auth.getSession();
-    if (!error && data?.session?.access_token) return data.session;
-    await sleep(SESSION_POLL_INTERVAL_MS);
+  if (sessionCache?.access_token) {
+    return sessionCache;
   }
 
-  const { data } = await supabase.auth.getSession();
-  return data?.session ?? null;
+  if (sessionPromise) {
+    return sessionPromise;
+  }
+
+  sessionPromise = (async () => {
+    const start = Date.now();
+
+    while (Date.now() - start < maxWaitMs) {
+      const { data } = await supabase.auth.getSession();
+
+      if (data?.session?.access_token) {
+        sessionCache = data.session;
+        sessionPromise = null;
+        return sessionCache;
+      }
+
+      await sleep(SESSION_POLL_INTERVAL_MS);
+    }
+
+    sessionPromise = null;
+    return null;
+  })();
+
+  return sessionPromise;
 }
 
 function resolveBaseUrl() {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
-  throw new Error('Missing NEXT_PUBLIC_APP_URL and window.location.origin unavailable');
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) throw new Error('Missing NEXT_PUBLIC_APP_URL');
+  return baseUrl;
 }
 
 function normalizeUrl(inputUrl) {
