@@ -1,7 +1,5 @@
 var exerciseImport = require('../src/server/internal/exerciseImport');
-var supabaseJs = require('@supabase/supabase-js');
 
-var DEFAULT_BATCH_SIZE = 200;
 var DEFAULT_HTTP_MAX_ITEMS = 100;
 
 function parseBoolean(value) {
@@ -22,11 +20,6 @@ function parsePositiveInt(value) {
   return parsed;
 }
 
-function parseBatchSizeWithFallback(value, fallback) {
-  var parsed = parsePositiveInt(value);
-  return parsed == null ? fallback : parsed;
-}
-
 function getParam(req, key) {
   if (req.query && req.query[key] != null) {
     return req.query[key];
@@ -37,55 +30,10 @@ function getParam(req, key) {
   return null;
 }
 
-function createSupabaseAdminClient() {
-  var env = exerciseImport.validateRequiredEnv();
-  return supabaseJs.createClient(env.supabaseUrl, env.serviceRoleKey, {
-    auth: { persistSession: false }
-  });
-}
-
 function isAuthorized(req) {
   var expected = process.env.IMPORT_ADMIN_KEY;
   var provided = req.headers['x-admin-key'];
-
-  if (!expected) {
-    return { ok: false };
-  }
-
-  if (!provided || provided !== expected) {
-    return { ok: false };
-  }
-
-  return { ok: true };
-}
-
-async function tryAcquireAdvisoryLock(supabase, lockKey) {
-  var response = await supabase.rpc('admin_acquire_import_lock', { p_lock_key: lockKey });
-  if (response.error) {
-    throw new Error('Falha ao adquirir lock de importação.');
-  }
-  return response.data === true;
-}
-
-async function releaseAdvisoryLock(supabase, lockKey) {
-  try {
-    await supabase.rpc('admin_release_import_lock', { p_lock_key: lockKey });
-  } catch (error) {}
-}
-
-async function hasRunningImport(supabase) {
-  var attempts = [
-    { p_job_type: 'exercise_import' },
-    { p_type: 'exercise_import' },
-    { job_type: 'exercise_import' }
-  ];
-  for (var i = 0; i < attempts.length; i += 1) {
-    var result = await supabase.rpc('admin_has_running_import', attempts[i]);
-    if (!result.error) {
-      return result.data === true;
-    }
-  }
-  throw new Error('Falha ao verificar importação em andamento.');
+  return Boolean(expected && provided && provided === expected);
 }
 
 function parseHttpMaxItems() {
@@ -120,16 +68,19 @@ async function getRunningImportJob(supabase) {
   var result = await supabase
     .from('admin_import_jobs')
     .select('id,total_batches,processed_batches')
-    .eq('job_type', 'exercise_import')
+    .eq('job_type', exerciseImport.JOB_TYPE)
     .eq('status', 'running')
     .order('started_at', { ascending: false })
     .limit(1);
+
   if (result.error) {
-    return null;
+    throw new Error('Falha ao consultar job em execução.');
   }
+
   if (!Array.isArray(result.data) || result.data.length === 0) {
     return null;
   }
+
   return result.data[0];
 }
 
@@ -143,8 +94,7 @@ module.exports = async function handler(req, res) {
     }));
   }
 
-  var auth = isAuthorized(req);
-  if (!auth.ok) {
+  if (!isAuthorized(req)) {
     return res.status(401).json(buildResponse({
       ok: false,
       status: 'unauthorized',
@@ -153,9 +103,7 @@ module.exports = async function handler(req, res) {
   }
 
   var dryRunRaw = getParam(req, 'dryRun');
-  if (dryRunRaw == null) {
-    dryRunRaw = getParam(req, 'dry_run');
-  }
+  if (dryRunRaw == null) dryRunRaw = getParam(req, 'dry_run');
   var dryRun = parseBoolean(String(dryRunRaw == null ? '' : dryRunRaw));
 
   var limitRaw = getParam(req, 'limit');
@@ -168,12 +116,14 @@ module.exports = async function handler(req, res) {
       message: 'invalid "limit": use a positive integer'
     }));
   }
+
   var batchSizeRaw = getParam(req, 'batchSize');
+  if (batchSizeRaw == null) batchSizeRaw = getParam(req, 'batch_size');
+  var batchSize = parsePositiveInt(batchSizeRaw);
   if (batchSizeRaw == null) {
-    batchSizeRaw = getParam(req, 'batch_size');
+    batchSize = exerciseImport.DEFAULT_BATCH_SIZE;
   }
-  var batchSize = parseBatchSizeWithFallback(batchSizeRaw, DEFAULT_BATCH_SIZE);
-  if (batchSizeRaw != null && parsePositiveInt(batchSizeRaw) == null) {
+  if (batchSizeRaw != null && batchSize == null) {
     return res.status(400).json(buildResponse({
       ok: false,
       status: 'invalid_input',
@@ -182,36 +132,44 @@ module.exports = async function handler(req, res) {
     }));
   }
 
-  var supabase = null;
+  var supabase = exerciseImport.createSupabaseAdminClient();
   var lockAcquired = false;
 
   try {
-    supabase = createSupabaseAdminClient();
-    if (await hasRunningImport(supabase)) {
-      var runningJobA = await getRunningImportJob(supabase);
+    var hasRunning = await exerciseImport.hasRunningImport(supabase);
+    if (hasRunning) {
+      var runningJob = await getRunningImportJob(supabase);
       return res.status(200).json(buildResponse({
         ok: false,
         status: 'already_running',
-        jobId: runningJobA && runningJobA.id,
-        totalBatches: runningJobA && runningJobA.total_batches,
-        processedBatches: runningJobA && runningJobA.processed_batches,
+        jobId: runningJob && runningJob.id,
         dryRun: dryRun,
         batchSize: batchSize,
+        totalBatches: runningJob && runningJob.total_batches,
+        processedBatches: runningJob && runningJob.processed_batches,
         message: 'exercise import already running'
       }));
     }
 
-    lockAcquired = await tryAcquireAdvisoryLock(supabase, exerciseImport.IMPORT_LOCK_KEY);
+    lockAcquired = await supabase.rpc('admin_acquire_import_lock', {
+      p_lock_key: exerciseImport.IMPORT_LOCK_KEY
+    }).then(function(result) {
+      if (result.error) {
+        throw new Error('Falha ao adquirir lock de importação.');
+      }
+      return result.data === true;
+    });
+
     if (!lockAcquired) {
-      var runningJobB = await getRunningImportJob(supabase);
+      var runningJobFromLock = await getRunningImportJob(supabase);
       return res.status(200).json(buildResponse({
         ok: false,
         status: 'already_running',
-        jobId: runningJobB && runningJobB.id,
-        totalBatches: runningJobB && runningJobB.total_batches,
-        processedBatches: runningJobB && runningJobB.processed_batches,
+        jobId: runningJobFromLock && runningJobFromLock.id,
         dryRun: dryRun,
         batchSize: batchSize,
+        totalBatches: runningJobFromLock && runningJobFromLock.total_batches,
+        processedBatches: runningJobFromLock && runningJobFromLock.processed_batches,
         message: 'exercise import already running'
       }));
     }
@@ -219,27 +177,25 @@ module.exports = async function handler(req, res) {
     var exercises = await exerciseImport.loadExercisesFromFile(exerciseImport.DEFAULT_EXERCISES_FILE);
     var totalDatasetItems = exercises.length;
     var httpMaxItems = parseHttpMaxItems();
+
     if (!dryRun && limit == null && totalDatasetItems > httpMaxItems) {
       return res.status(400).json(buildResponse({
         ok: false,
         status: 'requires_limit',
-        dryRun: dryRun,
+        dryRun: false,
         totalExercises: totalDatasetItems,
         batchSize: batchSize,
+        totalBatches: Math.ceil(totalDatasetItems / batchSize),
+        processedBatches: 0,
+        importedOrUpdated: 0,
         message: 'HTTP import requires limit for large datasets; use limit or CLI for full import'
       }));
     }
 
-    console.info('[admin-import-exercises] Início import', {
-      dryRun: dryRun,
-      limit: limit,
-      batchSize: batchSize
-    });
-
     var summary = await exerciseImport.runExerciseImport({
       batchSize: batchSize,
-      exercisesFile: exerciseImport.DEFAULT_EXERCISES_FILE,
       batchDelayMs: 200,
+      exercisesFile: exerciseImport.DEFAULT_EXERCISES_FILE,
       dryRun: dryRun,
       limit: limit,
       requestedBy: req.headers['x-requested-by'] || 'admin-endpoint',
@@ -251,7 +207,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json(buildResponse({
       ok: true,
-      status: summary.status || 'completed',
+      status: summary.status,
       jobId: summary.jobId,
       dryRun: summary.dryRun,
       totalExercises: summary.totalExercises,
@@ -264,9 +220,6 @@ module.exports = async function handler(req, res) {
       message: 'exercise import completed'
     }));
   } catch (error) {
-    console.error('[admin-import-exercises] Erro resumido', {
-      message: error instanceof Error ? error.message : String(error)
-    });
     return res.status(500).json(buildResponse({
       ok: false,
       status: 'failed',
@@ -275,9 +228,16 @@ module.exports = async function handler(req, res) {
       message: 'exercise import failed'
     }));
   } finally {
-    console.info('[admin-import-exercises] Finalização import');
-    if (lockAcquired && supabase) {
-      await releaseAdvisoryLock(supabase, exerciseImport.IMPORT_LOCK_KEY);
+    if (lockAcquired) {
+      try {
+        await supabase.rpc('admin_release_import_lock', {
+          p_lock_key: exerciseImport.IMPORT_LOCK_KEY
+        });
+      } catch (error) {
+        console.error('[admin-import-exercises] Falha ao liberar lock', {
+          message: exerciseImport.sanitizeErrorMessage(error)
+        });
+      }
     }
   }
 };

@@ -3,7 +3,7 @@ var path = require('node:path');
 var supabaseJs = require('@supabase/supabase-js');
 
 var DEFAULT_EXERCISES_FILE = path.resolve(process.cwd(), 'data/exercises.json');
-var DEFAULT_BATCH_SIZE = 200;
+var DEFAULT_BATCH_SIZE = 100;
 var IMPORT_LOCK_KEY = 948221;
 var JOB_TYPE = 'exercise_import';
 
@@ -20,6 +20,13 @@ function validateRequiredEnv() {
     supabaseUrl: process.env.SUPABASE_URL,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
   };
+}
+
+function createSupabaseAdminClient() {
+  var env = validateRequiredEnv();
+  return supabaseJs.createClient(env.supabaseUrl, env.serviceRoleKey, {
+    auth: { persistSession: false }
+  });
 }
 
 function getExercisesFile() {
@@ -41,13 +48,6 @@ function sanitizeErrorMessage(error) {
   return message.slice(0, 300);
 }
 
-function logImportJobUpdateError(context, error) {
-  console.error('[exercise-import:update-job] Falha ao atualizar admin_import_jobs', {
-    context: context,
-    message: sanitizeErrorMessage(error)
-  });
-}
-
 function validateDuplicates(exercises) {
   var seen = Object.create(null);
   for (var i = 0; i < exercises.length; i += 1) {
@@ -63,6 +63,23 @@ function validateDuplicates(exercises) {
   }
 }
 
+async function hasRunningImport(supabase) {
+  var attempts = [
+    { p_job_type: JOB_TYPE },
+    { p_type: JOB_TYPE },
+    { job_type: JOB_TYPE }
+  ];
+
+  for (var i = 0; i < attempts.length; i += 1) {
+    var result = await supabase.rpc('admin_has_running_import', attempts[i]);
+    if (!result.error) {
+      return result.data === true;
+    }
+  }
+
+  throw new Error('Falha ao verificar importação em andamento.');
+}
+
 async function acquireImportLock(supabase) {
   var lockResult = await supabase.rpc('admin_acquire_import_lock', { p_lock_key: IMPORT_LOCK_KEY });
   if (lockResult.error) {
@@ -74,7 +91,11 @@ async function acquireImportLock(supabase) {
 async function releaseImportLock(supabase) {
   try {
     await supabase.rpc('admin_release_import_lock', { p_lock_key: IMPORT_LOCK_KEY });
-  } catch (error) {}
+  } catch (error) {
+    console.error('[exercise-import:lock] Falha ao liberar lock.', {
+      message: sanitizeErrorMessage(error)
+    });
+  }
 }
 
 async function createImportJob(supabase, payload) {
@@ -86,10 +107,13 @@ async function createImportJob(supabase, payload) {
 }
 
 async function updateImportJob(supabase, jobId, patch) {
-  if (!jobId) return;
+  if (!jobId) {
+    throw new Error('Falha ao atualizar admin_import_jobs: jobId ausente.');
+  }
+
   var result = await supabase.from('admin_import_jobs').update(patch).eq('id', jobId);
   if (result.error) {
-    logImportJobUpdateError({ jobId: jobId, fields: Object.keys(patch || {}) }, result.error);
+    throw new Error('Falha ao atualizar admin_import_jobs.');
   }
 }
 
@@ -111,12 +135,21 @@ async function loadExercisesFromFile(exercisesFile) {
   return exercises;
 }
 
+async function getExercisesCount(supabase) {
+  var countResult = await supabase.from('exercises').select('*', { count: 'exact', head: true });
+  if (countResult.error) {
+    throw new Error('Falha ao consultar total da tabela exercises.');
+  }
+  return countResult.count || 0;
+}
+
 async function runExerciseImport(options) {
   var opts = options || {};
   var batchSize = opts.batchSize;
   if (!Number.isInteger(batchSize) || batchSize <= 0) {
     batchSize = DEFAULT_BATCH_SIZE;
   }
+
   var batchDelayMs = opts.batchDelayMs == null ? 200 : opts.batchDelayMs;
   var exercisesFile = opts.exercisesFile || getExercisesFile();
   var limit = opts.limit;
@@ -129,26 +162,39 @@ async function runExerciseImport(options) {
     throw new Error('limit inválido. Use um inteiro positivo.');
   }
 
-  var env = validateRequiredEnv();
-  var supabase = supabaseJs.createClient(env.supabaseUrl, env.serviceRoleKey, {
-    auth: { persistSession: false }
-  });
-
+  var supabase = createSupabaseAdminClient();
   var lockAcquired = false;
   var jobId = null;
   var started = new Date().toISOString();
   var exercises = await loadExercisesFromFile(exercisesFile);
   validateDuplicates(exercises);
+
   var sourceExercises = limit == null ? exercises : exercises.slice(0, limit);
   var batches = chunk(sourceExercises, batchSize);
   var processedBatches = 0;
   var importedOrUpdated = 0;
   var failedBatch = null;
   var finalExercisesCount = null;
-  var finalStatus = 'running';
 
   try {
     if (!lockAlreadyHeld) {
+      var running = await hasRunningImport(supabase);
+      if (running) {
+        return {
+          jobId: null,
+          started: started,
+          dryRun: dryRun,
+          totalExercises: sourceExercises.length,
+          batchSize: batchSize,
+          totalBatches: batches.length,
+          processedBatches: 0,
+          importedOrUpdated: 0,
+          totalInTable: null,
+          status: 'already_running',
+          failedBatch: null
+        };
+      }
+
       lockAcquired = await acquireImportLock(supabase);
       if (!lockAcquired) {
         return {
@@ -162,8 +208,7 @@ async function runExerciseImport(options) {
           importedOrUpdated: 0,
           totalInTable: null,
           status: 'already_running',
-          failedBatch: null,
-          alreadyRunning: true
+          failedBatch: null
         };
       }
     }
@@ -195,29 +240,25 @@ async function runExerciseImport(options) {
         var rpc = await supabase.rpc('import_exercises_json', { payload: batch });
         if (rpc.error) {
           failedBatch = batchNumber;
-          throw new Error('Erro no lote ' + batchNumber + '/' + batches.length + ': ' + rpc.error.message);
+          throw new Error('Erro no lote ' + batchNumber + '/' + batches.length + ': ' + sanitizeErrorMessage(rpc.error));
         }
         importedOrUpdated += batch.length;
       }
 
       processedBatches += 1;
-      logger('Lote ' + batchNumber + '/' + batches.length + ' concluído com sucesso.');
       await updateImportJob(supabase, jobId, {
         processed_batches: processedBatches,
         imported_or_updated: dryRun ? 0 : importedOrUpdated
       });
 
+      logger('Lote ' + batchNumber + '/' + batches.length + ' concluído com sucesso.');
       if (batchNumber < batches.length && batchDelayMs > 0) {
         await sleep(batchDelayMs);
       }
     }
 
     if (!dryRun) {
-      var countResult = await supabase.from('exercises').select('*', { count: 'exact', head: true });
-      if (countResult.error) {
-        throw new Error('Falha ao consultar total da tabela exercises: ' + countResult.error.message);
-      }
-      finalExercisesCount = countResult.count || 0;
+      finalExercisesCount = await getExercisesCount(supabase);
     }
 
     await updateImportJob(supabase, jobId, {
@@ -229,7 +270,7 @@ async function runExerciseImport(options) {
 
     return {
       jobId: jobId,
-      started: started,
+      status: 'completed',
       dryRun: dryRun,
       totalExercises: sourceExercises.length,
       batchSize: batchSize,
@@ -237,26 +278,33 @@ async function runExerciseImport(options) {
       processedBatches: processedBatches,
       importedOrUpdated: dryRun ? 0 : importedOrUpdated,
       totalInTable: finalExercisesCount,
-      status: 'completed',
       failedBatch: null
     };
   } catch (error) {
-    finalStatus = 'failed';
-    logger('Erro resumido: ' + sanitizeErrorMessage(error));
-    await updateImportJob(supabase, jobId, {
-      status: 'failed',
-      finished_at: new Date().toISOString(),
-      failed_batch: failedBatch,
-      error_message: sanitizeErrorMessage(error),
-      processed_batches: processedBatches,
-      imported_or_updated: dryRun ? 0 : importedOrUpdated
-    });
+    var updateError = null;
+
+    if (jobId) {
+      try {
+        await updateImportJob(supabase, jobId, {
+          status: 'failed',
+          finished_at: new Date().toISOString(),
+          failed_batch: failedBatch,
+          error_message: sanitizeErrorMessage(error),
+          processed_batches: processedBatches,
+          imported_or_updated: dryRun ? 0 : importedOrUpdated
+        });
+      } catch (innerError) {
+        updateError = innerError;
+      }
+    }
+
+    if (updateError) {
+      throw new Error('Falha durante importação e também ao persistir status de erro em admin_import_jobs.');
+    }
+
     throw error;
   } finally {
-    if (finalStatus === 'running') {
-      finalStatus = 'completed';
-    }
-    logger('Finalização do import. status=' + finalStatus);
+    logger('Finalização do import.');
     if (!lockAlreadyHeld && lockAcquired) {
       await releaseImportLock(supabase);
     }
@@ -264,11 +312,17 @@ async function runExerciseImport(options) {
 }
 
 module.exports = {
+  JOB_TYPE: JOB_TYPE,
   IMPORT_LOCK_KEY: IMPORT_LOCK_KEY,
+  DEFAULT_BATCH_SIZE: DEFAULT_BATCH_SIZE,
   DEFAULT_EXERCISES_FILE: DEFAULT_EXERCISES_FILE,
   chunk: chunk,
+  createSupabaseAdminClient: createSupabaseAdminClient,
+  getExercisesCount: getExercisesCount,
   getExercisesFile: getExercisesFile,
+  hasRunningImport: hasRunningImport,
   loadExercisesFromFile: loadExercisesFromFile,
   runExerciseImport: runExerciseImport,
+  sanitizeErrorMessage: sanitizeErrorMessage,
   validateRequiredEnv: validateRequiredEnv
 };

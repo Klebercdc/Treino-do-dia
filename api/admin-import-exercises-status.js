@@ -1,44 +1,9 @@
 var exerciseImport = require('../src/server/internal/exerciseImport');
-var supabaseJs = require('@supabase/supabase-js');
 
 function isAuthorized(req) {
   var expected = process.env.IMPORT_ADMIN_KEY;
   var provided = req.headers['x-admin-key'];
   return Boolean(expected && provided && provided === expected);
-}
-
-function createSupabaseAdminClient() {
-  var env = exerciseImport.validateRequiredEnv();
-  return supabaseJs.createClient(env.supabaseUrl, env.serviceRoleKey, {
-    auth: { persistSession: false }
-  });
-}
-
-function safeJob(job) {
-  if (!job) return null;
-  return {
-    jobId: job.id,
-    jobType: job.job_type,
-    status: job.status,
-    started: job.started_at,
-    finished: job.finished_at,
-    dryRun: job.dry_run,
-    limit: job.limit_count,
-    batchSize: job.batch_size,
-    totalExercises: job.total_exercises,
-    totalBatches: job.total_batches,
-    processedBatches: job.processed_batches,
-    importedOrUpdated: job.imported_or_updated,
-    failedBatch: job.failed_batch,
-    errorMessage: sanitizeErrorMessage(job.error_message)
-  };
-}
-
-function sanitizeErrorMessage(value) {
-  if (value == null) return null;
-  var message = String(value);
-  message = message.replace(/([A-Za-z]:)?[\\/][^ ]+/g, '[path]');
-  return message.slice(0, 300);
 }
 
 function buildStatusResponse(payload) {
@@ -61,6 +26,26 @@ function buildStatusResponse(payload) {
   };
 }
 
+function safeJob(job) {
+  if (!job) return null;
+  return {
+    jobId: job.id,
+    jobType: job.job_type,
+    status: job.status,
+    started: job.started_at,
+    finished: job.finished_at,
+    dryRun: job.dry_run,
+    limit: job.limit_count,
+    batchSize: job.batch_size,
+    totalExercises: job.total_exercises,
+    totalBatches: job.total_batches,
+    processedBatches: job.processed_batches,
+    importedOrUpdated: job.imported_or_updated,
+    failedBatch: job.failed_batch,
+    errorMessage: exerciseImport.sanitizeErrorMessage(job.error_message)
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -79,18 +64,19 @@ module.exports = async function handler(req, res) {
     }));
   }
 
-  var supabase = createSupabaseAdminClient();
-  var jobId = req.query && req.query.jobId;
+  var supabase = exerciseImport.createSupabaseAdminClient();
+  var requestedJobId = req.query && req.query.jobId;
 
   try {
     var query = supabase
       .from('admin_import_jobs')
-      .select('id,job_type,status,started_at,finished_at,dry_run,limit_count,batch_size,total_exercises,total_batches,processed_batches,imported_or_updated,failed_batch,error_message');
+      .select('id,job_type,status,started_at,finished_at,dry_run,limit_count,batch_size,total_exercises,total_batches,processed_batches,imported_or_updated,failed_batch,error_message')
+      .eq('job_type', exerciseImport.JOB_TYPE);
 
-    if (jobId) {
-      query = query.eq('id', jobId).eq('job_type', 'exercise_import').limit(1);
+    if (requestedJobId) {
+      query = query.eq('id', requestedJobId).limit(1);
     } else {
-      query = query.eq('job_type', 'exercise_import').order('started_at', { ascending: false }).limit(1);
+      query = query.order('started_at', { ascending: false }).limit(1);
     }
 
     var result = await query;
@@ -106,6 +92,7 @@ module.exports = async function handler(req, res) {
         message: 'exercise import job not found'
       }));
     }
+
     var safe = safeJob(job);
     return res.status(200).json(buildStatusResponse({
       ok: true,
