@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "../../../../lib/utils/serverRateLimit"
 import { requireBearerAuth } from "../../_shared/requireBearerAuth"
 import { KroniaChatService } from "../../../../ai/chatService"
@@ -10,13 +10,11 @@ import { createClient } from "@supabase/supabase-js"
 import { AI_ENV } from "../../../../ai/env"
 import type { ChatMessage, UserProfile } from "../../../../ai/types"
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     // 1. Autenticação
     const auth = await requireBearerAuth(req)
-    if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    if (!auth.ok) return auth.response
 
     const userId = auth.user.id
 

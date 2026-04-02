@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { checkRateLimit } from '../../../../../lib/utils/serverRateLimit';
@@ -55,7 +55,7 @@ function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error';
   );
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const exerciseId = searchParams.get('id')?.trim() || '';
@@ -96,12 +96,10 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const auth = await requireBearerAuth(req);
-    if (!auth) {
-      return NextResponse.json(buildExerciseDetailsErrorPayload('Não autorizado.', 'UNAUTHORIZED'), { status: 401 });
-    }
+    if (!auth.ok) return auth.response;
 
     const userId = auth.user.id;
     const rateLimit = checkRateLimit(userId, { max: 40, windowMs: 60000 });

@@ -1,40 +1,30 @@
-import { getAIConfig, getSupabaseConfig, validateRuntimeEnv } from '../utils/env';
-import { CheckContext, CheckResult } from './types';
+const requiredRuntimeEnv = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_APP_URL',
+] as const;
 
-export function runEnvCheck(): { context?: CheckContext; result: CheckResult } {
-  const runtime = validateRuntimeEnv();
-  const missing = runtime.vars.filter((item) => ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_APP_URL'].includes(item.key) && !item.found);
+export function validateRuntimeEnv() {
+  const missing = requiredRuntimeEnv.filter((key) => !process.env[key]);
 
-  if (missing.length) {
+  return {
+    ok: missing.length === 0,
+    missing,
+    message: missing.length === 0
+      ? 'Runtime environment OK'
+      : `Missing required environment variables: ${missing.join(', ')}`,
+  };
+}
+
+export function runEnvCheck() {
+  const result = validateRuntimeEnv();
+
+  if (!result.ok) {
     return {
-      result: {
-        name: 'ambiente',
-        status: 'ERROR',
-        summary: 'Variáveis críticas de runtime ausentes (Supabase/App URL).',
-        error: `Missing: ${missing.map((m) => m.key).join(', ')}`,
-        suggestion: runtime.runtime === 'local'
-          ? 'As envs podem estar apenas na Vercel. Para check local, replique em .env.local incluindo NEXT_PUBLIC_APP_URL.'
-          : 'Revise variáveis no runtime atual.',
-      },
+      ok: false,
+      message: `Environment check failed. Missing: ${result.missing.join(', ')}`,
     };
   }
 
-  const supabase = getSupabaseConfig('server');
-  const ai = getAIConfig();
-
-  return {
-    context: {
-      supabaseUrl: supabase.url,
-      anonKey: supabase.anonKey,
-      serviceRoleKey: supabase.serviceRoleKey as string,
-      groqApiKey: ai.chatApiKey,
-      aiChatModel: ai.chatModel,
-    },
-    result: {
-      name: 'ambiente',
-      status: 'OK',
-      summary: 'Variáveis mínimas de runtime carregadas.',
-      details: { runtime: runtime.runtime, source: runtime.source, aiProvider: ai.provider },
-    },
-  };
+  return { ok: true, message: 'Environment check passed' };
 }

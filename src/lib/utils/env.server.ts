@@ -37,6 +37,14 @@ export function getOptionalEnv(name: string): string | undefined {
   return value || undefined;
 }
 
+export function assertServerEnv() {
+  const required = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_APP_URL'] as const;
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required env vars: ${missing.join(', ')}`);
+  }
+}
+
 export const optionalEnv = getOptionalEnv;
 export const getOptionalEnvLegacy = getOptionalEnv;
 

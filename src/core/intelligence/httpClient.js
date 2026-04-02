@@ -1,147 +1,170 @@
-(function () {
-  'use strict';
+import { supabaseClient as supabase } from '@/lib/supabase/client';
 
-  var DEFAULT_TIMEOUT_MS = 12000;
-  var DEFAULT_SESSION_RETRIES = 6;
-  var DEFAULT_SESSION_RETRY_DELAY_MS = 180;
+const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_SESSION_WAIT_MS = 4000;
+const SESSION_POLL_INTERVAL_MS = 120;
 
-  function toSafeError(err) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForSession(maxWaitMs = DEFAULT_SESSION_WAIT_MS) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < maxWaitMs) {
+    const { data, error } = await supabase.auth.getSession();
+    if (!error && data?.session?.access_token) return data.session;
+    await sleep(SESSION_POLL_INTERVAL_MS);
+  }
+
+  const { data } = await supabase.auth.getSession();
+  return data?.session ?? null;
+}
+
+function resolveBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+  throw new Error('Missing NEXT_PUBLIC_APP_URL and window.location.origin unavailable');
+}
+
+function normalizeUrl(inputUrl) {
+  if (!inputUrl) throw new Error('Missing request URL');
+  if (/^https?:\/\//i.test(inputUrl)) return inputUrl;
+  return new URL(inputUrl, resolveBaseUrl()).toString();
+}
+
+async function parseResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
+  if (isJson) {
+    try {
+      return await response.json();
+    } catch {
+      return { ok: false, error: 'invalid_json', message: 'Failed to parse JSON response' };
+    }
+  }
+
+  try {
+    const text = await response.text();
     return {
-      name: err && err.name ? String(err.name) : 'Error',
-      message: err && err.message ? String(err.message) : 'unknown_error',
+      ok: false,
+      error: 'non_json_response',
+      message: text || `Unexpected non-JSON response (${response.status})`,
+    };
+  } catch {
+    return {
+      ok: false,
+      error: 'non_json_response',
+      message: `Unexpected non-JSON response (${response.status})`,
     };
   }
+}
 
-  function sleep(ms) {
-    return new Promise(function (resolve) { setTimeout(resolve, ms); });
-  }
+async function request(method, url, options = {}) {
+  const {
+    headers = {},
+    body,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    requireAuth = true,
+    sessionWaitMs = DEFAULT_SESSION_WAIT_MS,
+    cache = 'no-store',
+  } = options;
 
-  function safeJsonParse(raw) {
-    try { return raw ? JSON.parse(raw) : null; } catch (_) { return null; }
-  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  function getConfiguredBaseOrigin() {
-    var envUrl = '';
-    try {
-      envUrl = String((typeof process !== 'undefined' && process && process.env && process.env.NEXT_PUBLIC_APP_URL) || '').trim();
-    } catch (_) {
-      envUrl = '';
-    }
+  try {
+    let accessToken = null;
 
-    if (envUrl) {
-      try { return new URL(envUrl).origin; } catch (_) {}
-    }
+    if (requireAuth) {
+      const session = await waitForSession(sessionWaitMs);
+      accessToken = session?.access_token || null;
 
-    if (typeof window !== 'undefined' && window.location && window.location.origin) {
-      return window.location.origin;
-    }
-
-    return '';
-  }
-
-  function resolveAbsoluteUrl(input) {
-    var raw = String(input || '').trim();
-    if (!raw) throw new Error('HTTP_URL_REQUIRED');
-    if (/^https?:\/\//i.test(raw)) return raw;
-
-    var baseOrigin = getConfiguredBaseOrigin();
-    if (!baseOrigin) throw new Error('HTTP_BASE_ORIGIN_UNAVAILABLE');
-
-    if (raw.charAt(0) !== '/') raw = '/' + raw;
-    return new URL(raw, baseOrigin).toString();
-  }
-
-  async function waitForSession(options) {
-    var retries = Number.isFinite(Number(options && options.retries)) ? Number(options.retries) : DEFAULT_SESSION_RETRIES;
-    var retryDelayMs = Number.isFinite(Number(options && options.retryDelayMs)) ? Number(options.retryDelayMs) : DEFAULT_SESSION_RETRY_DELAY_MS;
-
-    for (var i = 0; i <= retries; i += 1) {
-      try {
-        var sessionResp = await window._sb?.auth?.getSession?.();
-        var token = sessionResp?.data?.session?.access_token || null;
-        if (token) return { token: token, attempt: i };
-      } catch (_) {}
-      if (i < retries) await sleep(retryDelayMs);
-    }
-
-    return { token: null, attempt: retries + 1 };
-  }
-
-  async function request(url, options) {
-    var startedAt = Date.now();
-    var timeoutMs = Number.isFinite(Number(options && options.timeoutMs)) ? Number(options.timeoutMs) : DEFAULT_TIMEOUT_MS;
-    var method = String((options && options.method) || 'GET').toUpperCase();
-    var body = options && options.body;
-    var absoluteUrl = resolveAbsoluteUrl(url);
-
-    var session = await waitForSession(options && options.session);
-    var headers = Object.assign({ 'content-type': 'application/json' }, (options && options.headers) || {});
-    if (session.token) headers.authorization = 'Bearer ' + session.token;
-
-    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timeout = null;
-    if (controller) {
-      timeout = setTimeout(function () { controller.abort(); }, timeoutMs);
-    }
-
-    try {
-      var response = await fetch(absoluteUrl, {
-        method: method,
-        headers: headers,
-        body: typeof body === 'undefined' ? undefined : JSON.stringify(body),
-        keepalive: !!(options && options.keepalive),
-        signal: controller ? controller.signal : undefined,
-      });
-
-      var responseText = await response.text();
-      var parsed = safeJsonParse(responseText);
-
-      if (!response.ok) {
-        console.error('[kronia_http_client] request_failed', {
-          url: absoluteUrl,
-          method: method,
-          status: response.status,
-          body: parsed || responseText || null,
-          elapsedMs: Date.now() - startedAt,
-        });
-        var requestError = new Error('HTTP_REQUEST_FAILED');
-        requestError.code = 'HTTP_REQUEST_FAILED';
-        requestError.status = response.status;
-        requestError.url = absoluteUrl;
-        requestError.responseBody = parsed || responseText || null;
-        throw requestError;
+      if (!accessToken) {
+        return {
+          ok: false,
+          status: 401,
+          error: 'missing_session',
+          message: 'No active session found for authenticated request',
+        };
       }
-
-      console.info('[kronia_http_client] request_ok', {
-        url: absoluteUrl,
-        method: method,
-        status: response.status,
-        elapsedMs: Date.now() - startedAt,
-        sessionAttempt: session.attempt,
-      });
-
-      return { status: response.status, data: parsed, text: responseText, headers: response.headers };
-    } catch (error) {
-      console.error('[kronia_http_client] request_exception', {
-        url: absoluteUrl,
-        method: method,
-        elapsedMs: Date.now() - startedAt,
-        error: toSafeError(error),
-      });
-      throw error;
-    } finally {
-      if (timeout) clearTimeout(timeout);
     }
-  }
 
-  function createKroniaHttpClient() {
-    return {
-      request: request,
-      resolveAbsoluteUrl: resolveAbsoluteUrl,
-      waitForSession: waitForSession,
+    const finalHeaders = {
+      Accept: 'application/json',
+      ...headers,
     };
-  }
 
-  window.KroniaCreateHttpClient = window.KroniaCreateHttpClient || createKroniaHttpClient;
-  window.KroniaHttpClient = window.KroniaHttpClient || createKroniaHttpClient();
-})();
+    if (body !== undefined && !finalHeaders['Content-Type']) {
+      finalHeaders['Content-Type'] = 'application/json';
+    }
+
+    if (accessToken) {
+      finalHeaders.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(normalizeUrl(url), {
+      method,
+      headers: finalHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+      credentials: 'omit',
+      cache,
+    });
+
+    const payload = await parseResponse(response);
+
+    if (!response.ok) {
+      console.error('[httpClient] request failed', { method, url, status: response.status, payload });
+      return {
+        ok: false,
+        status: response.status,
+        ...(payload && typeof payload === 'object'
+          ? payload
+          : { error: 'request_failed', message: 'Request failed' }),
+      };
+    }
+
+    if (payload && typeof payload === 'object') {
+      return { ok: true, status: response.status, ...payload };
+    }
+
+    return { ok: true, status: response.status, data: payload };
+  } catch (error) {
+    const isAbort = error?.name === 'AbortError';
+    console.error('[httpClient] transport error', {
+      method,
+      url,
+      isAbort,
+      message: error?.message || 'Unknown error',
+    });
+
+    return {
+      ok: false,
+      status: isAbort ? 408 : 0,
+      error: isAbort ? 'timeout' : 'network_error',
+      message: isAbort ? 'Request timed out' : (error?.message || 'Network error'),
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export const httpClient = {
+  get(url, options) {
+    return request('GET', url, options);
+  },
+  post(url, body, options) {
+    return request('POST', url, { ...options, body });
+  },
+  put(url, body, options) {
+    return request('PUT', url, { ...options, body });
+  },
+  patch(url, body, options) {
+    return request('PATCH', url, { ...options, body });
+  },
+  delete(url, options) {
+    return request('DELETE', url, options);
+  },
+};
