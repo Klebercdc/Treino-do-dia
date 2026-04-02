@@ -57,6 +57,9 @@ function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error';
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireBearerAuth(req);
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(req.url);
     const exerciseId = searchParams.get('id')?.trim() || '';
     const slug = searchParams.get('slug')?.trim() || '';
