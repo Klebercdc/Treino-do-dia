@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { KroniaExerciseApplication } from '../../../../../lib/exercises/application';
@@ -9,14 +9,14 @@ function isAdminEmail(email?: string | null): boolean {
   return Boolean(email && allowlist.includes(email.toLowerCase()));
 }
 
-async function ensureAdmin(req: Request) {
+async function ensureAdmin(req: NextRequest) {
   const auth = await requireBearerAuth(req);
-  if (!auth) return null;
+  if (!auth.ok) return null;
   if (isAdminEmail(auth.user.email)) return auth.user;
   return null;
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const user = await ensureAdmin(req);
   if (!user) {
     return NextResponse.json({ success: false, message: 'Não autorizado.', error: { code: 'UNAUTHORIZED' } }, { status: 401 });
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const user = await ensureAdmin(req);
   if (!user) {
     return NextResponse.json({ success: false, message: 'Não autorizado.', error: { code: 'UNAUTHORIZED' } }, { status: 401 });

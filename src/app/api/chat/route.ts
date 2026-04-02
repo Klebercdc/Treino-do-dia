@@ -1,14 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireBearerAuth } from '../_shared/requireBearerAuth';
 import { getSupabaseConfig } from '../../../lib/utils/env.server';
 import { checkRateLimit } from '../../../lib/utils/serverRateLimit';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const auth = await requireBearerAuth(req);
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!auth.ok) return auth.response;
 
     const accessToken = auth.accessToken;
     const rl = checkRateLimit(auth.user.id, { max: 20, windowMs: 60000 });

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { analyzeEvents } from '../../../../core/intelligence/analysisEngine';
 import { buildOperationalBacklog } from '../../../../core/intelligence/decisionEngine';
@@ -31,9 +31,9 @@ function normalizeRow(row: any, fallbackUserId: string) {
   };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const auth = await requireBearerAuth(req);
-  if (!auth) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED' } }, { status: 401 });
+  if (!auth.ok) return auth.response;
   const user = auth.user;
 
   const body = await req.json().catch(() => null);
@@ -50,9 +50,9 @@ export async function POST(req: Request) {
   return NextResponse.json({ success: true, ingested: rows.length });
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const auth = await requireBearerAuth(req);
-  if (!auth || !isAdminEmail(auth.user.email)) {
+  if (!auth.ok || !isAdminEmail(auth.user.email)) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED' } }, { status: 401 });
   }
   const { searchParams } = new URL(req.url);
