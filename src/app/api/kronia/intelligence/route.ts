@@ -1,22 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
-import { createServerSupabaseClient } from '../../../../../lib/supabase/server';
 import { analyzeEvents } from '../../../../core/intelligence/analysisEngine';
 import { buildOperationalBacklog } from '../../../../core/intelligence/decisionEngine';
+import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 
 function isAdminEmail(email?: string | null): boolean {
   const allowlist = String(process.env.KRONIA_ADMIN_EMAILS || '').split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
   return Boolean(email && allowlist.includes(email.toLowerCase()));
-}
-
-async function resolveUser(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const accessToken = authHeader.replace('Bearer ', '').trim();
-  const userClient = createServerSupabaseClient(accessToken);
-  const { data, error } = await userClient.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user;
 }
 
 function safeText(value: unknown, max = 220) {
@@ -42,8 +32,9 @@ function normalizeRow(row: any, fallbackUserId: string) {
 }
 
 export async function POST(req: Request) {
-  const user = await resolveUser(req);
-  if (!user) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED' } }, { status: 401 });
+  const auth = await requireBearerAuth(req);
+  if (!auth) return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED' } }, { status: 401 });
+  const user = auth.user;
 
   const body = await req.json().catch(() => null);
   const events = Array.isArray(body?.events) ? body.events.slice(0, 80) : [];
@@ -60,11 +51,10 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const user = await resolveUser(req);
-  if (!user || !isAdminEmail(user.email)) {
+  const auth = await requireBearerAuth(req);
+  if (!auth || !isAdminEmail(auth.user.email)) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED' } }, { status: 401 });
   }
-
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action') || 'overview';
   const severity = searchParams.get('severity');

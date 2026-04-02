@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../lib/supabase/server';
+import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { checkRateLimit } from '../../../../../lib/utils/serverRateLimit';
 import { buildExerciseDetails, KroniaExerciseApplication } from '../../../../../lib/exercises/application';
@@ -98,20 +98,12 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await requireBearerAuth(req);
+    if (!auth) {
       return NextResponse.json(buildExerciseDetailsErrorPayload('Não autorizado.', 'UNAUTHORIZED'), { status: 401 });
     }
 
-    const accessToken = authHeader.replace('Bearer ', '').trim();
-    const userClient = createServerSupabaseClient(accessToken);
-    const { data: userData, error: authError } = await userClient.auth.getUser();
-
-    if (authError || !userData.user) {
-      return NextResponse.json(buildExerciseDetailsErrorPayload('Não autorizado.', 'UNAUTHORIZED'), { status: 401 });
-    }
-
-    const userId = userData.user.id;
+    const userId = auth.user.id;
     const rateLimit = checkRateLimit(userId, { max: 40, windowMs: 60000 });
     if (!rateLimit.allowed) {
       return NextResponse.json(buildExerciseDetailsErrorPayload('Muitas requisições. Tente novamente em instantes.', 'RATE_LIMIT'), { status: 429 });

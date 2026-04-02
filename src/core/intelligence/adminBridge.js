@@ -83,6 +83,16 @@
     return panel;
   }
 
+
+  function getHttpClient() {
+    if (window.KroniaHttpClient && typeof window.KroniaHttpClient.request === 'function') return window.KroniaHttpClient;
+    if (typeof window.KroniaCreateHttpClient === 'function') {
+      window.KroniaHttpClient = window.KroniaCreateHttpClient();
+      return window.KroniaHttpClient;
+    }
+    return null;
+  }
+
   async function getToken() {
     try {
       var session = await window._sb?.auth?.getSession?.();
@@ -95,11 +105,14 @@
     if (!token) return { success: false, error: { code: 'UNAUTHORIZED' } };
     var params = new URLSearchParams(filters || {});
     if (action) params.set('action', action);
-    var resp = await fetch('/api/kronia/intelligence?' + params.toString(), {
+    var http = getHttpClient();
+    if (!http) return { success: false, error: { code: 'HTTP_CLIENT_UNAVAILABLE' } };
+    var resp = await http.request('/api/kronia/intelligence?' + params.toString(), {
       method: 'GET',
-      headers: { authorization: 'Bearer ' + token }
+      headers: { authorization: 'Bearer ' + token },
+      timeoutMs: 10000,
     });
-    return resp.json().catch(function () { return { success: false, error: { code: 'INVALID_RESPONSE' } }; });
+    return resp && resp.data ? resp.data : { success: false, error: { code: 'INVALID_RESPONSE' } };
   }
 
   function getHealthValue(overview, module) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../lib/supabase/server';
+import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { KroniaExerciseApplication } from '../../../../../lib/exercises/application';
 import { syncExercisesWeekly } from '../../../../../lib/exercises/sync-core';
@@ -10,13 +10,9 @@ function isAdminEmail(email?: string | null): boolean {
 }
 
 async function ensureAdmin(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
-  const accessToken = authHeader.replace('Bearer ', '').trim();
-  const userClient = createServerSupabaseClient(accessToken);
-  const { data, error } = await userClient.auth.getUser();
-  if (error || !data.user) return null;
-  if (isAdminEmail(data.user.email)) return data.user;
+  const auth = await requireBearerAuth(req);
+  if (!auth) return null;
+  if (isAdminEmail(auth.user.email)) return auth.user;
   return null;
 }
 

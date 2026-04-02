@@ -1,24 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../lib/supabase/server';
+import { requireBearerAuth } from '../_shared/requireBearerAuth';
 import { getSupabaseConfig } from '../../../lib/utils/env.server';
 import { checkRateLimit } from '../../../lib/utils/serverRateLimit';
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await requireBearerAuth(req);
+    if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const accessToken = authHeader.replace('Bearer ', '').trim();
-    const db = createServerSupabaseClient(accessToken);
-    const { data: userData, error: authError } = await db.auth.getUser();
-
-    if (authError || !userData.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const rl = checkRateLimit(userData.user.id, { max: 20, windowMs: 60000 });
+    const accessToken = auth.accessToken;
+    const rl = checkRateLimit(auth.user.id, { max: 20, windowMs: 60000 });
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
