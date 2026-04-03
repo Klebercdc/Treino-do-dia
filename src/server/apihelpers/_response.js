@@ -10,8 +10,10 @@ function createApiEnvelope(partial) {
   var message = String(p.message || (success ? '' : 'Não consegui processar agora.'));
   var data = p.data && typeof p.data === 'object' ? p.data : null;
   var envelope = {
+    ok: success,
     success: success,
     type: type,
+    state: p.state ? String(p.state) : (success ? 'success' : 'provider_unavailable'),
     action: p.action == null ? null : String(p.action),
     message: message,
     data: data,

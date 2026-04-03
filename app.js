@@ -316,7 +316,7 @@ async function gerarProtocolo() {
     { respectedCardContext: true, respectedAnamnesisContext: false }
   );
   if (!guard.ok) {
-    dlgAlert('Nao foi possivel gerar treino sem evidencia cientifica valida. Tente novamente em instantes.');
+    dlgAlert('Não consegui gerar treino com segurança para este cenário. Revise os dados e tente novamente.');
     return;
   }
 
@@ -2691,6 +2691,26 @@ function buildApiErrorEnvelope(message, errorCode) {
   };
 }
 
+function resolveAiFriendlyError(payload, httpStatus) {
+  const state = String(payload?.state || '').toLowerCase();
+  const code = String(payload?.errorCode || payload?.error || '').toLowerCase();
+  const retryable = !!payload?.retryable;
+
+  if (state === 'limit_reached_plan' || code === 'limit_reached_plan' || code === 'quota_exceeded') {
+    return payload?.message || 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.';
+  }
+  if (state === 'rate_limited_temporary' || code === 'rate_limited_temporary' || httpStatus === 429) {
+    return payload?.message || 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente novamente.';
+  }
+  if (state === 'provider_unavailable' || code === 'provider_unavailable' || httpStatus === 503 || retryable) {
+    return payload?.message || 'Serviço de IA temporariamente indisponível. Tente novamente em instantes.';
+  }
+  if (state === 'invalid_request' || httpStatus === 400) {
+    return payload?.message || 'Não consegui processar esta solicitação. Revise os dados e tente novamente.';
+  }
+  return payload?.message || 'Não consegui processar sua solicitação agora.';
+}
+
 function normalizeDietContentNode(payload) {
   const directData = payload && payload.data && typeof payload.data === "object" ? payload.data : {};
   const fromDataNode = Array.isArray(directData.content) ? directData.content.find(n => n && typeof n === "object" && n.type === "diet_result") : null;
@@ -2861,7 +2881,20 @@ async function sendAI(overrideText, isGerarTreino = false) {
       return;
     }
 
-    if (flow.type === 'analysis_answer' || flow.intent === 'supplement_question') {
+    if (flow.type === 'analysis_answer') {
+      try {
+        var progressResp = await apiFetch('/api/memory?action=progress', { method: 'GET' });
+        var progressData = await parseApiJsonSafely(progressResp);
+        if (progressResp.ok && progressData && progressData.success && progressData.data && progressData.data.progress) {
+          addAIMessage('assistant', progressData.data.progress.explanation || flow.message || 'Análise concluída.');
+          return;
+        }
+      } catch (_memoryErr) {}
+      addAIMessage('assistant', flow.message || 'Analise concluida.');
+      return;
+    }
+
+    if (flow.intent === 'supplement_question') {
       addAIMessage('assistant', flow.message || 'Analise concluida.');
       return;
     }
@@ -2870,12 +2903,14 @@ async function sendAI(overrideText, isGerarTreino = false) {
     var messages = _aiHistory.slice(-12);
     var response = await apiFetch('/api/agent', {
       method: 'POST',
-      body: JSON.stringify({ messages: messages, history: userData.history, profile: userData.profile }),
+      body: JSON.stringify({ messages: messages, history: userData.history, profile: userData.profile, requestId: correlationId }),
     });
-    if (!response.ok) {
-      throw new Error('Erro ' + response.status);
-    }
     var data = await parseApiJsonSafely(response);
+    if (!response.ok || data?.success === false || data?.ok === false) {
+      var friendlyError = resolveAiFriendlyError(data, response.status);
+      addAIMessage('assistant', `${_ico('alert-triangle', 16)} ${friendlyError}`);
+      return;
+    }
     var contentNodes = getApiContentNodes(data);
     var reply = data?.message || contentNodes?.[0]?.text || 'Nao consegui processar. Tente novamente.';
 
@@ -4526,6 +4561,8 @@ function buildGenerationEnvelope(input) {
     respectedCardContext: !!input?.respectedCardContext,
     respectedAnamnesisContext: !!input?.respectedAnamnesisContext,
     usedFallback: !!input?.usedFallback,
+    evidenceState: input?.evidenceState || null,
+    warningMessage: input?.warningMessage || null,
     timestamp: new Date().toISOString(),
   };
 }
@@ -4582,17 +4619,26 @@ async function buildScientificConstraintsByObjective(objective, kind) {
     }).filter(Boolean);
     var constraints = deriveOperationalScienceConstraints(kind || "diet", objective, evidence);
 
-    var blocked = !response.ok || payload?.ok === false || evidence.length < 1;
+    var evidenceState = evidence.length >= 3 ? 'ok' : (evidence.length > 0 ? 'weak_evidence' : 'no_evidence');
+    var serviceUnavailable = !response.ok || payload?.ok === false;
+    var unsafeObjective = /extremo|milagre|sem comer|anabolizante sem acompanhamento/.test(String(objective || '').toLowerCase());
     var result = {
-      ok: !blocked,
-      blockedReason: blocked ? (response.ok ? 'missing_science_evidence' : 'science_unavailable') : null,
-      sourceOfTruth: 'supabase_scientific_evidence',
-      usedScientificEvidence: !blocked,
+      ok: !unsafeObjective,
+      blockedReason: unsafeObjective ? 'unsafe_request' : null,
+      sourceOfTruth: serviceUnavailable ? 'safe_default_protocol' : 'supabase_scientific_evidence',
+      usedScientificEvidence: evidence.length > 0,
       evidenceCount: evidence.length,
       scienceTopicsUsed: topics,
-      constraints: blocked ? {} : constraints,
-      validationStatus: blocked ? 'blocked' : 'validated',
-      usedFallback: false,
+      constraints: constraints,
+      evidenceState: serviceUnavailable && evidence.length === 0 ? 'no_evidence' : evidenceState,
+      validationStatus: unsafeObjective ? 'blocked' : (evidenceState === 'ok' ? 'validated' : 'fallback_safe_protocol'),
+      usedFallback: serviceUnavailable || evidenceState !== 'ok',
+      fallbackProtocol: evidenceState === 'no_evidence' || serviceUnavailable ? 'safe_conservative_sports_nutrition' : null,
+      warningMessage: evidenceState === 'weak_evidence'
+        ? 'Evidência científica parcial para este objetivo. Aplicando protocolo técnico conservador.'
+        : ((evidenceState === 'no_evidence' || serviceUnavailable)
+          ? 'Sem evidência específica disponível agora. Aplicando protocolo padrão seguro e conservador.'
+          : null),
       timestamp: new Date().toISOString(),
     };
 
@@ -4611,15 +4657,18 @@ async function buildScientificConstraintsByObjective(objective, kind) {
     return result;
   } catch (_err) {
     var failure = {
-      ok: false,
-      blockedReason: 'science_unavailable',
-      sourceOfTruth: 'supabase_scientific_evidence',
+      ok: true,
+      blockedReason: null,
+      sourceOfTruth: 'safe_default_protocol',
       usedScientificEvidence: false,
       evidenceCount: 0,
       scienceTopicsUsed: [],
-      constraints: {},
-      validationStatus: 'blocked',
-      usedFallback: false,
+      constraints: deriveOperationalScienceConstraints(kind || 'diet', objective, []),
+      evidenceState: 'no_evidence',
+      validationStatus: 'fallback_safe_protocol',
+      usedFallback: true,
+      fallbackProtocol: 'safe_conservative_sports_nutrition',
+      warningMessage: 'Sem evidência específica disponível agora. Aplicando protocolo padrão seguro e conservador.',
       timestamp: new Date().toISOString(),
     };
     writeAuditTracePatch({
@@ -4628,7 +4677,7 @@ async function buildScientificConstraintsByObjective(objective, kind) {
         usedScientificEvidence: false,
         evidenceCount: 0,
         scienceTopicsUsed: [],
-        usedFallback: false,
+        usedFallback: !!guard.generationTrace?.usedFallback,
         blockedReason: failure.blockedReason,
         validationStatus: failure.validationStatus,
         timestamp: failure.timestamp,
@@ -4667,20 +4716,22 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
       usedFallback: false,
     };
 
-  var blocked = !science?.ok || Number(science?.evidenceCount || 0) <= 0;
+  var blocked = !science?.ok;
   var envelope = buildGenerationEnvelope({
     type: kind,
-    sourceOfTruth: science?.sourceOfTruth || 'supabase_scientific_evidence',
-    usedScientificEvidence: !!science?.usedScientificEvidence && !blocked,
+    sourceOfTruth: science?.sourceOfTruth || 'safe_default_protocol',
+    usedScientificEvidence: !!science?.usedScientificEvidence,
     scienceTopicsUsed: science?.scienceTopicsUsed || [],
     evidenceCount: Number(science?.evidenceCount || 0),
-    validationStatus: blocked ? 'blocked' : 'validated',
-    blockedReason: blocked ? (science?.blockedReason || 'missing_science_evidence') : null,
-    constraintsUsed: blocked ? {} : (science?.constraints || {}),
+    validationStatus: blocked ? 'blocked' : (science?.validationStatus || 'validated'),
+    blockedReason: blocked ? (science?.blockedReason || 'unsafe_request') : null,
+    constraintsUsed: science?.constraints || {},
     userInputsUsed: userInputsUsed,
     respectedCardContext: !!contextFlags?.respectedCardContext,
     respectedAnamnesisContext: !!contextFlags?.respectedAnamnesisContext,
     usedFallback: !!science?.usedFallback,
+    evidenceState: science?.evidenceState || null,
+    warningMessage: science?.warningMessage || null,
   });
 
   writeAuditTracePatch({
@@ -4692,6 +4743,7 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
       validationStatus: envelope.validationStatus,
       blockedReason: envelope.blockedReason,
       usedFallback: envelope.usedFallback,
+      evidenceState: envelope.evidenceState || null,
       timestamp: envelope.timestamp,
     },
     generation: envelope,
@@ -4700,6 +4752,8 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
   return {
     ok: !blocked,
     blockedReason: envelope.blockedReason,
+    evidenceState: science?.evidenceState || (envelope.evidenceCount > 0 ? 'weak_evidence' : 'no_evidence'),
+    warningMessage: science?.warningMessage || null,
     science: science,
     generationTrace: envelope,
   };
@@ -6074,7 +6128,7 @@ async function gerarDieta() {
     const txtBlocked = document.getElementById("dietaTexto");
     const resBlocked = document.getElementById("dietaResultado");
     if (resBlocked) resBlocked.style.display = "block";
-    if (txtBlocked) txtBlocked.textContent = "Geracao bloqueada: evidencia cientifica indisponivel para este objetivo agora.";
+    if (txtBlocked) txtBlocked.textContent = "Não consegui gerar a dieta com segurança para este cenário. Revise os dados críticos e tente novamente.";
     return;
   }
 
@@ -6139,6 +6193,9 @@ PERFIL PREMIUM — DIRETRIZES:
   const btn = document.getElementById("btnGerarDieta");
   res.style.display = "block";
   txt.textContent = "Analisando perfil e calculando TMB/TDEE — montando sua dieta personalizada…";
+  if (guard.warningMessage) {
+    showToast(guard.warningMessage, "info", 5200);
+  }
   btn.disabled = true;
 
   // Bloco de proteínas obrigatórias
@@ -6289,6 +6346,7 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
     const resp = await apiFetch(_apiChatUrl, {
       method: "POST",
       body: JSON.stringify({
+        requestId: 'diet_' + Date.now(),
         system: buildTrainingContext(),
         messages: [{ role: "user", content: prompt }],
         isGerarTreino: false,
@@ -6314,13 +6372,13 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
     const data = await parseApiJsonSafely(resp);
     if (!resp.ok || data.success === false) {
       logUiEvent("diet_pipeline_failed", { status: resp.status, error: data.error || "unknown_error" });
-      txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
+      txt.textContent = resolveAiFriendlyError(data, resp.status);
       return;
     }
     const renderModel = extractDietRenderModel(data);
     if (!renderModel) {
       logUiEvent("diet_response_invalid_contract", { context: "gerarDieta.extractDietRenderModel", keys: Object.keys(data || {}) });
-      txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
+      txt.textContent = resolveAiFriendlyError(data, resp.status);
       return;
     }
     txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || "Não consegui montar a dieta agora. Tente novamente em instantes.";
@@ -6337,7 +6395,7 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
         userInputsUsed: guard.generationTrace?.userInputsUsed || { objetivo: obj, sexo: sexo, peso: peso, altura: altura, idade: idade },
         respectedCardContext: false,
         respectedAnamnesisContext: true,
-        usedFallback: false,
+        usedFallback: !!guard.generationTrace?.usedFallback,
       }),
     });
   } catch(e) {

@@ -263,12 +263,17 @@
             },
           });
 
-          if (!science?.ok || !hasEvidence) {
+          if (!science?.ok) {
             decision.type = 'answer_only';
             decision.ctaAction = null;
-            decision.message = 'Ainda nao encontrei evidencia cientifica suficiente para direcionar com seguranca agora.';
-            decision.validationStatus = science?.validationStatus || 'blocked_missing_science';
-            decision.blockedReason = science?.blockedReason || 'missing_science_evidence';
+            decision.message = 'Não consegui validar esta solicitação com segurança. Ajuste os dados e tente novamente.';
+            decision.validationStatus = science?.validationStatus || 'blocked_unsafe_request';
+            decision.blockedReason = science?.blockedReason || 'unsafe_request';
+          } else if (!hasEvidence) {
+            decision.message = 'Posso seguir com protocolo técnico conservador enquanto a base científica específica é atualizada.';
+            decision.validationStatus = science?.validationStatus || 'fallback_safe_protocol';
+            decision.blockedReason = null;
+            decision.usedFallback = true;
           }
         }
       } catch (_err) {

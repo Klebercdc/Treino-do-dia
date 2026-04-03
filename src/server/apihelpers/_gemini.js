@@ -1,14 +1,13 @@
 /**
  * Helper para a API Groq (compatível com OpenAI).
- * Modelos: llama-3.3-70b-versatile, llama-3.1-8b-instant
- *
- * Variável de ambiente necessária (Vercel):
- *   GROQ_API_KEY = chave do console.groq.com
  */
 
 var https = require('https');
 
 var GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+var RETRYABLE_STATUS = { 429: true, 502: true, 503: true, 504: true };
+var RETRYABLE_NETWORK = { timeout: true, econnreset: true, etimedout: true, eai_again: true };
+var RETRY_DELAYS_MS = [350, 900, 1800];
 
 function isModelDeprecationError(status, rawBody) {
   if (status !== 400) return false;
@@ -16,56 +15,95 @@ function isModelDeprecationError(status, rawBody) {
   return (
     body.indexOf('decommissioned') >= 0 ||
     body.indexOf('no longer supported') >= 0 ||
-    body.indexOf('model') >= 0 && body.indexOf('not found') >= 0
+    (body.indexOf('model') >= 0 && body.indexOf('not found') >= 0)
   );
+}
+
+function sleep(ms, next) {
+  return setTimeout(next, ms);
 }
 
 function makeOptions(KEY, body) {
   return {
-    options: {
-      hostname: 'api.groq.com',
-      path: '/openai/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + KEY,
-        'Content-Length': Buffer.byteLength(body)
-      }
-    },
-    body: body
+    hostname: 'api.groq.com',
+    path: '/openai/v1/chat/completions',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + KEY,
+      'Content-Length': Buffer.byteLength(body)
+    }
   };
+}
+
+function isRetryableNetworkError(errMessage) {
+  var text = String(errMessage || '').toLowerCase();
+  return Object.keys(RETRYABLE_NETWORK).some(function(key) { return text.indexOf(key) >= 0; });
+}
+
+function executeRequest(KEY, payload, timeoutMs, callback) {
+  var body = JSON.stringify(payload);
+  var req = https.request(makeOptions(KEY, body), function(res) {
+    var data = '';
+    res.on('data', function(c) { data += c; });
+    res.on('end', function() {
+      callback(null, { status: res.statusCode, raw: data });
+    });
+  });
+
+  req.on('error', function(e) { callback(e.message || 'network_error', null); });
+  req.setTimeout(timeoutMs, function() { req.destroy(); callback('timeout', null); });
+  req.write(body);
+  req.end();
 }
 
 function tryModels(KEY, payload, timeoutMs, onData, callback) {
   var models = GROQ_MODELS.slice();
-  var idx = 0;
+  var modelIndex = 0;
 
-  function attempt() {
-    if (idx >= models.length) return callback('Cota Groq esgotada em todos os modelos', null);
-    payload.model = models[idx++];
-    var body = JSON.stringify(payload);
-    var r = makeOptions(KEY, body);
-    var req = https.request(r.options, function(res) {
-      var data = '';
-      res.on('data', function(c) { data += c; });
-      res.on('end', function() {
-        var status = res.statusCode;
-        if (status === 429 || status === 503 || isModelDeprecationError(status, data)) return attempt();
-        if (status >= 400) return callback('HTTP ' + status + ': ' + data.substring(0, 300), null);
+  function attemptModel() {
+    if (modelIndex >= models.length) return callback('Cota Groq esgotada em todos os modelos', null);
+    var selectedModel = models[modelIndex++];
+    var attempt = 0;
+
+    function tryOnce() {
+      var currentPayload = Object.assign({}, payload, { model: selectedModel });
+      executeRequest(KEY, currentPayload, timeoutMs, function(err, response) {
+        if (err) {
+          if (isRetryableNetworkError(err) && attempt < RETRY_DELAYS_MS.length) {
+            return sleep(RETRY_DELAYS_MS[attempt++], tryOnce);
+          }
+          return attemptModel();
+        }
+
+        var status = Number(response.status || 0);
+        var raw = response.raw || '';
+
+        if (isModelDeprecationError(status, raw)) return attemptModel();
+
+        if (RETRYABLE_STATUS[status]) {
+          if (attempt < RETRY_DELAYS_MS.length) {
+            return sleep(RETRY_DELAYS_MS[attempt++], tryOnce);
+          }
+          return attemptModel();
+        }
+
+        if (status >= 400) {
+          return callback('HTTP ' + status + ': ' + String(raw).substring(0, 300), null);
+        }
+
         try {
-          callback(null, onData(JSON.parse(data)));
+          callback(null, onData(JSON.parse(raw || '{}')));
         } catch (e) {
           callback('JSON parse error: ' + e.message, null);
         }
       });
-    });
-    req.on('error', function(e) { callback(e.message, null); });
-    req.setTimeout(timeoutMs, function() { req.destroy(); callback('timeout', null); });
-    req.write(body);
-    req.end();
+    }
+
+    tryOnce();
   }
 
-  attempt();
+  attemptModel();
 }
 
 function callGemini(KEY, payload, timeoutMs, maxRetries, callback) {
@@ -82,16 +120,12 @@ function callGeminiAgent(KEY, payload, timeoutMs, maxRetries, callback) {
 
 function callGeminiFull(KEY, payload, timeoutMs, maxRetries, callback) {
   tryModels(KEY, payload, timeoutMs, function(j) {
-    var text  = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    var text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
     var usage = j.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
     return { text: text, usage: usage, model: payload.model };
   }, callback);
 }
 
-// Streaming call with tool_calls support (SSE from Groq)
-// onDelta({content}) called for each text chunk
-// onDone(toolCalls, contentAccum) called when stream ends
-// onError(err) called on error
 function callGeminiStreamWithTools(KEY, payload, timeoutMs, onDelta, onDone, onError) {
   var models = GROQ_MODELS.slice();
   var idx = 0;
@@ -100,23 +134,14 @@ function callGeminiStreamWithTools(KEY, payload, timeoutMs, onDelta, onDone, onE
     if (idx >= models.length) return onError('Cota Groq esgotada em todos os modelos');
     var p = Object.assign({}, payload, { model: models[idx++], stream: true });
     var body = JSON.stringify(p);
-    var opts = {
-      hostname: 'api.groq.com',
-      path: '/openai/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + KEY,
-        'Content-Length': Buffer.byteLength(body)
-      }
-    };
+    var opts = makeOptions(KEY, body);
 
     var toolCallsMap = {};
     var contentAccum = '';
     var buf = '';
 
     var req = https.request(opts, function(res) {
-      if (res.statusCode === 429 || res.statusCode === 503) return attempt();
+      if (RETRYABLE_STATUS[res.statusCode]) return attempt();
       if (res.statusCode >= 400) {
         var e = '';
         res.on('data', function(c) { e += c; });
@@ -154,7 +179,7 @@ function callGeminiStreamWithTools(KEY, payload, timeoutMs, onDelta, onDone, onE
                 }
               });
             }
-          } catch (e) {}
+          } catch (_e) {}
         });
       });
 

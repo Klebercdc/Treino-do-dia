@@ -18,6 +18,8 @@ var conversationStateUtil = require('../src/server/apihelpers/_conversationState
 var scienceInsight = require('../src/lib/science/scienceInsightService');
 var diagnostics = require('../src/server/apihelpers/_diagnosticTracker');
 var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants');
+var aiContracts = require('../src/server/apihelpers/_aiContracts');
+var userMemory = require('../src/server/apihelpers/_userMemory');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;
@@ -132,6 +134,41 @@ function emitDecisionTelemetry(userId, classification, decision, usedLLM, opened
   }
 }
 
+
+function isTransientProviderError(err) {
+  var text = String(err || '').toLowerCase();
+  return /timeout|429|502|503|504|econnreset|socket hang up|temporar/.test(text);
+}
+
+function toProviderErrorContract(err, requestMeta) {
+  var transient = isTransientProviderError(err);
+  return aiContracts.buildAiErrorContract({
+    status: transient ? 503 : 500,
+    code: transient ? 'PROVIDER_UNAVAILABLE' : 'INVALID_REQUEST',
+    state: transient ? 'provider_unavailable' : 'invalid_request',
+    message: transient
+      ? 'Serviço de IA temporariamente indisponível. Tente novamente em instantes.'
+      : 'Não consegui processar esta solicitação no formato enviado.',
+    retryable: transient,
+    suggestion: transient ? 'Aguarde alguns segundos e tente novamente.' : 'Revise a solicitação e tente novamente.',
+    meta: Object.assign({ provider: 'groq', lastError: String(err || 'unknown') }, requestMeta || {})
+  });
+}
+
+
+function fireAndForgetMemoryEvent(input) {
+  Promise.resolve()
+    .then(function() { return userMemory.captureEventAndRecompute(input); })
+    .catch(function(err) {
+      console.warn('[user-memory] update_failed', {
+        userId: input && input.userId,
+        eventType: input && input.eventType,
+        requestId: input && input.requestId,
+        error: err && err.message ? err.message : String(err || 'unknown')
+      });
+    });
+}
+
 function callChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
   var GROQ_KEY = process.env.GROQ_API_KEY;
   var m = [];
@@ -183,6 +220,8 @@ module.exports = function(req, res) {
   }
 
   auth.requireAuth(req, res, function(user) {
+    var requestBody = req.body || {};
+    var usageCategory = requestBody && requestBody.isDietDirect ? 'ai_heavy_operation' : 'chat_light';
     rl.rateLimit(req, res, function() {
       access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
       accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
@@ -190,17 +229,12 @@ module.exports = function(req, res) {
       function runPaidAiCall(executor, done) {
         plans.getQuotaInfo(user.id, function(qErr, quota) {
           if (qErr) {
-            return responseUtil.sendJson(res, 503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true, reason: 'quota_check_failed' } });
+            var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed', usageCategory: usageCategory, requestId: b.requestId || b.correlationId || null } });
+            return responseUtil.sendJson(res, quotaErr.status, quotaErr.body);
           }
           if (!quota.allowed) {
-            return responseUtil.sendJson(res, 402, {
-              success: false,
-              type: 'error',
-              message: 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
-              error: 'QUOTA_EXCEEDED',
-              data: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } },
-              meta: { fallback: true }
-            });
+            var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan }, usageCategory: usageCategory, requestId: b.requestId || b.correlationId || null } });
+            return responseUtil.sendJson(res, planLimit.status, planLimit.body);
           }
 
           executor(function(err, payload) {
@@ -212,7 +246,7 @@ module.exports = function(req, res) {
         }, { accessProfile: accessProfile });
       }
 
-      var b = req.body || {};
+      var b = requestBody;
       var messages = Array.isArray(b.messages) ? b.messages : [];
       if (!Array.isArray(messages)) {
         return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
@@ -241,6 +275,16 @@ module.exports = function(req, res) {
       function safeTrack(fn) {
         try { fn(); } catch (e) { console.error('[diagnostics] tracker operation failed:', e && e.message ? e.message : e); }
       }
+      fireAndForgetMemoryEvent({
+        userId: user.id,
+        eventType: 'chat_message',
+        eventKey: user.id + ':chat_message:' + (b.requestId || b.correlationId || Date.now()) + ':' + String(lastContent || '').length,
+        payload: { message: String(lastContent || '').slice(0, 600), usageCategory: usageCategory, intentHint: null },
+        requestId: b.requestId || b.correlationId || null,
+        component: 'api/chat',
+        source: 'chat_api'
+      });
+
       safeTrack(function() {
         tracker.addStep({
           layer: 'input',
@@ -320,6 +364,9 @@ module.exports = function(req, res) {
             responseSummary: normalizedPayload && normalizedPayload.message ? normalizedPayload.message : ''
           }); });
         }
+        normalizedPayload.requestId = normalizedPayload.requestId || (b.requestId || b.correlationId || null);
+        normalizedPayload.meta = Object.assign({}, normalizedPayload.meta || {}, { usageCategory: usageCategory });
+        if (user && user.id && !normalizedPayload.userId) normalizedPayload.userId = user.id;
         tracker.finishExecution(function(err) {
           if (err) console.error('[diagnostics] failed to persist execution', err);
           return responseUtil.sendJson(res, statusCode, normalizedPayload);
@@ -375,9 +422,19 @@ module.exports = function(req, res) {
         }, function(err, data) {
           if (err) {
             safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
-            return sendTracked(503, { success: false, type: 'error', message: err, error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+            var providerError = toProviderErrorContract(err, { operation: 'workout_generation' });
+            return sendTracked(providerError.status, providerError.body, 'failure');
           }
           safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
+          fireAndForgetMemoryEvent({
+            userId: user.id,
+            eventType: 'workout_generated',
+            eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':flow',
+            payload: { source: 'workout_flow', sections: Array.isArray(data && data.treinos) ? data.treinos.length : 0 },
+            requestId: b.requestId || b.correlationId || null,
+            component: 'api/chat',
+            source: 'workout_pipeline'
+          });
           return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }], conversationState: { memory: shortState } }, meta: {} });
         });
       }
@@ -444,6 +501,15 @@ module.exports = function(req, res) {
           try {
             var directPlan = diet.buildDietPlan(b.dietProfile);
             console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile' }));
+            fireAndForgetMemoryEvent({
+              userId: user.id,
+              eventType: 'diet_generated',
+              eventKey: user.id + ':diet_generated:' + (b.requestId || b.correlationId || Date.now()),
+              payload: { objective: b.dietProfile && b.dietProfile.objetivo || null, refeicoes: (directPlan.refeicoes || []).length, source: 'diet_direct' },
+              requestId: b.requestId || b.correlationId || null,
+              component: 'api/chat',
+              source: 'diet_pipeline'
+            });
             return sendTracked(200, buildDietSuccessPayload(
               formatDietSummary(directPlan),
               directPlan,
@@ -499,8 +565,13 @@ module.exports = function(req, res) {
           return scienceInsight.buildScienceContextFromText(lastContent);
         })
         .then(function(scienceContext) {
+          return Promise.resolve(userMemory.getCoachingSummary(user.id)).catch(function() { return null; }).then(function(memorySummary) {
           var context = Object.assign({}, b.context || {});
           if (scienceContext) context.science_context = scienceContext;
+          if (memorySummary && memorySummary.text) {
+            context.coaching_summary = memorySummary.text;
+            context.memory_status = memorySummary.status;
+          }
 
           safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { layer: 'ai', nodeKey: 'Recomendacao', inputSummary: lastContent }); });
           safeTrack(function() { tracker.captureMetric({ key: 'promptSizeEstimate', value: String(lastContent || '').length, unit: 'chars' }); });
@@ -517,13 +588,23 @@ module.exports = function(req, res) {
             if (err) {
               safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
               safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Alerta', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: false, errorCode: 'PROVIDER_UNAVAILABLE', decisionReason: 'LLM indisponível no endpoint principal.' }); });
-              return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+              var providerError = toProviderErrorContract(err, { operation: 'chat_llm' });
+              return sendTracked(providerError.status, providerError.body, 'failure');
             }
             safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: true, outputSummary: typeof payload === 'string' ? payload : 'workout_json_payload' }); });
             safeTrack(function() { tracker.captureMetric({ key: 'llmCalled', value: true }); });
             safeTrack(function() { tracker.captureMetric({ key: 'responseSizeEstimate', value: typeof payload === 'string' ? payload.length : JSON.stringify(payload || {}).length, unit: 'chars' }); });
             emitDecisionTelemetry(user.id, classification, decision, true, false);
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && typeof payload === 'object') {
+              fireAndForgetMemoryEvent({
+                userId: user.id,
+                eventType: 'workout_generated',
+                eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':llm',
+                payload: { source: 'llm_full', sections: Array.isArray(payload && payload.treinos) ? payload.treinos.length : 0 },
+                requestId: b.requestId || b.correlationId || null,
+                component: 'api/chat',
+                source: 'llm'
+              });
               return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }], conversationState: { memory: nextShortState } }, meta: {} });
             }
             return sendTracked(200, {
@@ -534,13 +615,15 @@ module.exports = function(req, res) {
               meta: { decision: process.env.NODE_ENV === 'development' ? decision : undefined }
             });
           });
+          });
         })
         .catch(function(err) {
           safeTrack(function() { tracker.markFailure({ errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: (err && err.message) || 'Falha na camada Promise principal.' }); });
-          return sendTracked(503, { success: false, type: 'error', message: 'Não consegui processar agora.', error: 'PROVIDER_UNAVAILABLE', meta: { fallback: true } }, 'failure');
+          var providerError = toProviderErrorContract(err, { operation: 'chat_promise' });
+          return sendTracked(providerError.status, providerError.body, 'failure');
         });
 
       });
-    }, { max: 40, windowMs: 60000 }, user.id);
+    }, { max: 24, windowMs: 60000, category: usageCategory }, user.id);
   });
 };

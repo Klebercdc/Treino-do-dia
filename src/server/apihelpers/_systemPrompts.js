@@ -36,6 +36,8 @@ function buildCoachPrompt(mode, topic, context, tokenLimit) {
 
   if (context && context.nome) sections.push('Nome do usuário: ' + context.nome + '.');
   if (context && context.objetivo) sections.push('Objetivo atual: ' + context.objetivo + '.');
+  if (context && context.coaching_summary) sections.push('Memória evolutiva: ' + context.coaching_summary + '.');
+  if (context && context.memory_status) sections.push('Estado longitudinal: ' + context.memory_status + '.');
 
   if (shouldUseDomainModule(topic, 'call_llm_' + (mode === 'full' ? 'full' : 'short'))) {
     sections.push(domainModules[topic] || 'Módulo geral: foco em orientação prática.');
