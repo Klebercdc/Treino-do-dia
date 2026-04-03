@@ -32,12 +32,12 @@
     var text = normalizeText(input?.message);
 
     var workout =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar)\b/]) &&
-      hasAny(text, [/\b(treino|ficha|programa|periodizacao)\b/]);
+      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar|crie|cria|monte|gere|gera|ajuste|ajusta|faz|precisa|manda|passa)\b/]) &&
+      hasAny(text, [/\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina)\b/]);
 
     var diet =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar)\b/]) &&
-      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao)\b/]);
+      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar|crie|cria|monte|gere|gera|ajuste|ajusta|calcule|calcula|faz|precisa|manda|passa)\b/]) &&
+      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
 
     var analysis = hasAny(text, [
       /\b(evolucao|progresso|funcionando|resultado|melhorei|plato|aderencia|consistencia|desempenho|carga|frequencia)\b/

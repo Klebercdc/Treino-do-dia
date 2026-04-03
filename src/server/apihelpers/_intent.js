@@ -37,8 +37,8 @@ function safeExtractLastUserMessage(messages) {
 }
 
 var GREETING_REGEX = /^(oi+|ola+|ol[áa]|opa|e ai|eae|hey|hello|bom dia|boa tarde|boa noite)(\b.*)?$/i;
-var WORKOUT_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|revis(e|a)|me passa|me manda|preciso)\b[\s\S]{0,45}\b(treino|ficha|divisao|rotina de treino|exercicio)\b/i;
-var DIET_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|calcule|calcula|me passa|me manda|preciso)\b[\s\S]{0,45}\b(dieta|plano alimentar|cardapio|alimentacao|refeicoes|macros?|calorias?)\b/i;
+var WORKOUT_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|revis(e|a)|me passa|me manda|preciso|montar|criar|fazer|faz|elaborar|elabore|elabora|precisa)\b[\s\S]{0,60}\b(treino|ficha|divisao|rotina de treino|exercicio|musculacao|programa)\b/i;
+var DIET_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|calcule|calcula|me passa|me manda|preciso|montar|criar|fazer|faz|elaborar|elabore|elabora|precisa)\b[\s\S]{0,60}\b(dieta|plano alimentar|cardapio|alimentacao|refeicoes|macros?|calorias?|nutricao)\b/i;
 
 function detectIntent(message) {
   var raw = String(message || '');
