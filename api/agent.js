@@ -513,11 +513,14 @@ module.exports = function(req, res) {
   }
 
   auth.requireAuth(req, res, function(user) {
+    var requestBody = req.body || {};
+    var usageCategory = requestBody && requestBody.stream ? 'chat_light_stream' : 'chat_light';
     rl.rateLimit(req, res, function() {
-      var b = req.body || {};
+      var b = requestBody;
       access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
       accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
 
+      var requestId = b.requestId || ('agent_' + Date.now());
       var messages = b.messages || [];
       if (!Array.isArray(messages)) {
         return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
@@ -574,9 +577,11 @@ module.exports = function(req, res) {
       }
 
       plans.getQuotaInfo(user.id, function(qErr, quota) {
-        if (qErr) { var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed' } }); return responseUtil.sendJson(res, quotaErr.status, quotaErr.body); }
+        if (qErr) { var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed', requestId: requestId, usageCategory: usageCategory } }); quotaErr.body.requestId = requestId; quotaErr.body.userId = user.id; return responseUtil.sendJson(res, quotaErr.status, quotaErr.body); }
         if (!quota.allowed) {
-          var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } } });
+          var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan }, requestId: requestId, usageCategory: usageCategory } });
+          planLimit.body.requestId = requestId;
+          planLimit.body.userId = user.id;
           return responseUtil.sendJson(res, planLimit.status, planLimit.body);
         }
 
@@ -596,7 +601,9 @@ module.exports = function(req, res) {
       agentLoop(messages, userData, function(err, text) {
         if (err) {
           console.error('[agent] provider_fallback:', err);
-          var providerError = toProviderErrorContract(err, { operation: 'agent_loop' });
+          var providerError = toProviderErrorContract(err, { operation: 'agent_loop', requestId: requestId, usageCategory: usageCategory });
+          providerError.body.requestId = requestId;
+          providerError.body.userId = user.id;
           return responseUtil.sendJson(res, providerError.status, providerError.body);
         }
         var estimatedPrompt = JSON.stringify(messages).length / 4;
@@ -611,12 +618,14 @@ module.exports = function(req, res) {
             message: text || 'Sem resposta.',
             data: { content: [{ type: 'text', text: text || 'Sem resposta.' }] },
             error: null,
-            meta: {}
+            requestId: requestId,
+            userId: user.id,
+            meta: { usageCategory: usageCategory }
           });
         }, { accessProfile: accessProfile });
       });
       }, { accessProfile: accessProfile });
       });
-    }, { max: 45, windowMs: 60000, category: b && b.stream ? 'chat_light_stream' : 'chat_light' }, user.id);
+    }, { max: 45, windowMs: 60000, category: usageCategory }, user.id);
   });
 };

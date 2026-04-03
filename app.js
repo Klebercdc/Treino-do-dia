@@ -4548,6 +4548,8 @@ function buildGenerationEnvelope(input) {
     respectedCardContext: !!input?.respectedCardContext,
     respectedAnamnesisContext: !!input?.respectedAnamnesisContext,
     usedFallback: !!input?.usedFallback,
+    evidenceState: input?.evidenceState || null,
+    warningMessage: input?.warningMessage || null,
     timestamp: new Date().toISOString(),
   };
 }
@@ -4662,7 +4664,7 @@ async function buildScientificConstraintsByObjective(objective, kind) {
         usedScientificEvidence: false,
         evidenceCount: 0,
         scienceTopicsUsed: [],
-        usedFallback: failure.usedFallback,
+        usedFallback: !!guard.generationTrace?.usedFallback,
         blockedReason: failure.blockedReason,
         validationStatus: failure.validationStatus,
         timestamp: failure.timestamp,
@@ -4715,6 +4717,8 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
     respectedCardContext: !!contextFlags?.respectedCardContext,
     respectedAnamnesisContext: !!contextFlags?.respectedAnamnesisContext,
     usedFallback: !!science?.usedFallback,
+    evidenceState: science?.evidenceState || null,
+    warningMessage: science?.warningMessage || null,
   });
 
   writeAuditTracePatch({
@@ -4726,6 +4730,7 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
       validationStatus: envelope.validationStatus,
       blockedReason: envelope.blockedReason,
       usedFallback: envelope.usedFallback,
+      evidenceState: envelope.evidenceState || null,
       timestamp: envelope.timestamp,
     },
     generation: envelope,
@@ -6328,6 +6333,7 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
     const resp = await apiFetch(_apiChatUrl, {
       method: "POST",
       body: JSON.stringify({
+        requestId: 'diet_' + Date.now(),
         system: buildTrainingContext(),
         messages: [{ role: "user", content: prompt }],
         isGerarTreino: false,
@@ -6376,7 +6382,7 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
         userInputsUsed: guard.generationTrace?.userInputsUsed || { objetivo: obj, sexo: sexo, peso: peso, altura: altura, idade: idade },
         respectedCardContext: false,
         respectedAnamnesisContext: true,
-        usedFallback: failure.usedFallback,
+        usedFallback: !!guard.generationTrace?.usedFallback,
       }),
     });
   } catch(e) {

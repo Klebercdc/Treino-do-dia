@@ -205,6 +205,8 @@ module.exports = function(req, res) {
   }
 
   auth.requireAuth(req, res, function(user) {
+    var requestBody = req.body || {};
+    var usageCategory = requestBody && requestBody.isDietDirect ? 'ai_heavy_operation' : 'chat_light';
     rl.rateLimit(req, res, function() {
       access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
       accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
@@ -212,11 +214,11 @@ module.exports = function(req, res) {
       function runPaidAiCall(executor, done) {
         plans.getQuotaInfo(user.id, function(qErr, quota) {
           if (qErr) {
-            var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed' } });
+            var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed', usageCategory: usageCategory, requestId: b.requestId || b.correlationId || null } });
             return responseUtil.sendJson(res, quotaErr.status, quotaErr.body);
           }
           if (!quota.allowed) {
-            var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan } } });
+            var planLimit = aiContracts.buildAiErrorContract({ status: 402, code: 'LIMIT_REACHED_PLAN', state: 'limit_reached_plan', message: 'Você atingiu o limite diário do seu plano. Faça upgrade para continuar.', retryable: false, action: { type: 'upgrade_plan', label: 'Ver planos' }, meta: { quota: { used: quota.used, limit: quota.limit, plan: quota.plan }, usageCategory: usageCategory, requestId: b.requestId || b.correlationId || null } });
             return responseUtil.sendJson(res, planLimit.status, planLimit.body);
           }
 
@@ -229,7 +231,7 @@ module.exports = function(req, res) {
         }, { accessProfile: accessProfile });
       }
 
-      var b = req.body || {};
+      var b = requestBody;
       var messages = Array.isArray(b.messages) ? b.messages : [];
       if (!Array.isArray(messages)) {
         return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
@@ -338,6 +340,7 @@ module.exports = function(req, res) {
           }); });
         }
         normalizedPayload.requestId = normalizedPayload.requestId || (b.requestId || b.correlationId || null);
+        normalizedPayload.meta = Object.assign({}, normalizedPayload.meta || {}, { usageCategory: usageCategory });
         if (user && user.id && !normalizedPayload.userId) normalizedPayload.userId = user.id;
         tracker.finishExecution(function(err) {
           if (err) console.error('[diagnostics] failed to persist execution', err);
@@ -563,6 +566,6 @@ module.exports = function(req, res) {
         });
 
       });
-    }, { max: 24, windowMs: 60000, category: b && b.isDietDirect ? 'ai_heavy_operation' : 'chat_light' }, user.id);
+    }, { max: 24, windowMs: 60000, category: usageCategory }, user.id);
   });
 };
