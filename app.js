@@ -93,6 +93,9 @@ const STORAGE = Object.freeze({
   exerciseDetailsCacheKey: "kronia_exercise_details_cache_v2",
   maxHistory: 80, maxTemplates: 20,
 });
+var KRONIA_PENDING_INTENT_KEY = 'kronia_pending_conversation_intent_v1';
+var KRONIA_PENDING_INTENT_TTL_MS = 8 * 60 * 1000;
+var __kroniaPendingIntentConsumeScheduled = false;
 const divisoesGen = { "2":["A","B"],"3":["A","B","C"],"4":["A","B","C","D"],"5":["A","B","C","D","E"],"6":["A","B","C","D","E","F"] };
 const biblioteca = {
   Peito:   ["Supino Inclinado","Supino Reto","Crossover","Voador","Flexão"],
@@ -1859,7 +1862,16 @@ function gerarTreinoDoPrograma() {
 function openConfig(context) {
   document.getElementById("configWarning").style.display="none";
   if (context && typeof context === 'object') {
-    window._kroniaLastTrainingContext = context;
+    var safeContext = sanitizeCtaObject(context);
+    window._kroniaLastTrainingContext = safeContext;
+    if (safeContext.fromChatIntent) {
+      var hydrated = hydrateTrainingFromConversationIntent(safeContext);
+      window._kroniaChatTrainingHydratedContext = hydrated;
+      trackKroniaCta('home_card_hydrated_from_chat', 'success', {
+        type: 'open_training',
+        hasPayload: !!Object.keys(hydrated).length,
+      });
+    }
   }
   const configBox = document.getElementById("configBox");
   if (configBox) configBox.scrollTop = 0;
@@ -1880,11 +1892,23 @@ function openConfig(context) {
 }
 function closeConfig() { document.getElementById("configSheet").classList.remove("show"); }
 async function applyConfig() {
+  var fromChat = !!window._kroniaChatTrainingHydratedContext;
+  if (fromChat) {
+    trackKroniaCta('training_apply_started_from_chat', 'success', {
+      hasPayload: !!Object.keys(window._kroniaChatTrainingHydratedContext || {}).length,
+    });
+  }
   const warning = document.getElementById("configWarning");
   if (warning.style.display!=="none") {
     if (!await dlgConfirm("Gerar novo protocolo? O treino atual será substituído.")) return;
   }
   await gerarProtocolo(); closeConfig();
+  if (fromChat) {
+    trackKroniaCta('training_apply_completed_from_chat', 'success', {
+      hasPayload: !!Object.keys(window._kroniaChatTrainingHydratedContext || {}).length,
+    });
+    window._kroniaChatTrainingHydratedContext = null;
+  }
 }
 document.getElementById("configSheet")?.addEventListener("click", function(e) { if(e.target===this) closeConfig(); });
 
@@ -2736,6 +2760,298 @@ function getApiContentNodes(payload) {
   return payload.data.content;
 }
 
+function normalizeConversationIntentType(action) {
+  var canonicalAction = resolveCanonicalKroniaAction(action);
+  if (canonicalAction === 'open_training') return 'open_training';
+  if (canonicalAction === 'open_diet') return 'open_diet';
+  return null;
+}
+
+function sanitizeConversationIntentPayload(intentType, payload) {
+  var safePayload = sanitizeCtaObject(payload);
+  var normalized = Object.create(null);
+  if (intentType === 'open_training') {
+    if (typeof safePayload.objective === 'string') normalized.objective = safePayload.objective;
+    if (typeof safePayload.level === 'string') normalized.level = safePayload.level;
+    if (safePayload.days_per_week != null && Number.isFinite(Number(safePayload.days_per_week))) normalized.days_per_week = Number(safePayload.days_per_week);
+    if (typeof safePayload.split === 'string') normalized.split = safePayload.split;
+    if (Array.isArray(safePayload.restrictions)) normalized.restrictions = safePayload.restrictions.map(function (v) { return String(v || '').trim(); }).filter(Boolean).slice(0, 8);
+    if (typeof safePayload.notes === 'string') normalized.notes = safePayload.notes.slice(0, 500);
+    if (typeof safePayload.origin_message === 'string') normalized.origin_message = safePayload.origin_message.slice(0, 500);
+    return normalized;
+  }
+  if (intentType === 'open_diet') {
+    if (typeof safePayload.objective === 'string') normalized.objective = safePayload.objective;
+    if (safePayload.calories != null && Number.isFinite(Number(safePayload.calories))) normalized.calories = Number(safePayload.calories);
+    if (safePayload.meals != null && Number.isFinite(Number(safePayload.meals))) normalized.meals = Number(safePayload.meals);
+    if (Array.isArray(safePayload.restrictions)) normalized.restrictions = safePayload.restrictions.map(function (v) { return String(v || '').trim(); }).filter(Boolean).slice(0, 12);
+    if (typeof safePayload.dietary_style === 'string') normalized.dietary_style = safePayload.dietary_style;
+    if (typeof safePayload.notes === 'string') normalized.notes = safePayload.notes.slice(0, 500);
+    if (typeof safePayload.origin_message === 'string') normalized.origin_message = safePayload.origin_message.slice(0, 500);
+    return normalized;
+  }
+  return {};
+}
+
+function buildCanonicalConversationIntent(data) {
+  if (!data || typeof data !== 'object') return null;
+  var intentType = normalizeConversationIntentType(data.type);
+  if (!intentType) return null;
+  var source = data.source === 'inferred' ? 'inferred' : 'agent';
+  return {
+    type: intentType,
+    eligible: true,
+    label: intentType === 'open_training' ? 'Abrir treino' : 'Abrir dieta',
+    target: intentType === 'open_training' ? 'home_training_card' : 'home_diet_card',
+    source: source,
+    payload: sanitizeConversationIntentPayload(intentType, data.payload || {}),
+    meta: sanitizeCtaObject(data.meta || {}),
+  };
+}
+
+function inferConversationCtaFromApiResponse(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  var explicitCanonical = buildCanonicalConversationIntent(payload.conversationIntent);
+  if (explicitCanonical) {
+    trackKroniaCta('api_cta_inferred', 'success', {
+      normalizedAction: explicitCanonical.type,
+      source: explicitCanonical.source,
+      hasPayload: !!Object.keys(explicitCanonical.payload || {}).length,
+      inferredFrom: 'explicit_conversation_intent',
+    });
+    return explicitCanonical;
+  }
+
+  var action = String(payload.action || '').trim();
+  var buttonType = String(payload.buttonType || '').trim().toLowerCase();
+  var shouldCreateButton = payload.shouldCreateButton === true;
+  var messageText = String(payload.message || '').toLowerCase();
+  var inferredAction = null;
+
+  if (action === 'abrir_tela_treino_com_payload' || action === 'open_workout_flow' || buttonType === 'treino') inferredAction = 'open_training';
+  if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta' || action === 'open_diet_flow' || buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
+  if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
+    inferredAction = 'open_training';
+  }
+  if (!inferredAction && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
+    inferredAction = 'open_diet';
+  }
+
+  var canonicalAction = resolveCanonicalKroniaAction(inferredAction);
+  if (!canonicalAction || (!shouldCreateButton && !inferredAction)) {
+    trackKroniaCta('api_cta_rejected', 'success', {
+      reason: 'not_eligible',
+      actionRaw: action || null,
+      buttonType: buttonType || null,
+      shouldCreateButton: shouldCreateButton,
+    });
+    return null;
+  }
+
+  var rawPayloadByAction = canonicalAction === 'open_training'
+    ? sanitizeCtaObject(payload.workoutPayload)
+    : sanitizeCtaObject(payload.dietPayload);
+  if (!Object.keys(rawPayloadByAction).length && !shouldCreateButton) {
+    trackKroniaCta('api_cta_rejected', 'success', {
+      reason: 'missing_payload_for_inferred_action',
+      normalizedAction: canonicalAction,
+    });
+    return null;
+  }
+
+  var intent = buildCanonicalConversationIntent({
+    type: canonicalAction,
+    source: shouldCreateButton ? 'agent' : 'inferred',
+    payload: rawPayloadByAction,
+    meta: {
+      source: 'api_agent_response',
+      inferred_from: shouldCreateButton ? 'explicit_fields' : 'textual_fallback',
+      originalAction: action || null,
+    },
+  });
+  if (!intent) return null;
+  trackKroniaCta('api_cta_inferred', 'success', {
+    normalizedAction: intent.type,
+    source: intent.source,
+    hasPayload: !!Object.keys(intent.payload || {}).length,
+  });
+  return intent;
+}
+
+function buildCtaFromCanonicalIntent(intent) {
+  if (!intent || intent.eligible !== true) return null;
+  var action = resolveCanonicalKroniaAction(intent.type);
+  if (!action) return null;
+  return {
+    action: action,
+    label: String(intent.label || (action === 'open_training' ? 'Abrir treino' : 'Abrir dieta')),
+    payload: sanitizeConversationIntentPayload(action, intent.payload || {}),
+    meta: sanitizeCtaObject(intent.meta || {}),
+    intentSource: intent.source || 'agent',
+    targetModule: intent.target === 'home_training_card' ? 'programa' : 'dieta',
+  };
+}
+
+function persistPendingConversationIntent(intent) {
+  var normalized = buildCanonicalConversationIntent(intent);
+  if (!normalized) return false;
+  var envelope = {
+    v: 1,
+    type: normalized.type,
+    target: normalized.target,
+    source: normalized.source,
+    payload: sanitizeConversationIntentPayload(normalized.type, normalized.payload || {}),
+    meta: sanitizeCtaObject(normalized.meta || {}),
+    createdAt: Date.now(),
+  };
+  try {
+    localStorage.setItem(KRONIA_PENDING_INTENT_KEY, JSON.stringify(envelope));
+    trackKroniaCta('pending_intent_persisted', 'success', {
+      normalizedAction: envelope.type,
+      target: envelope.target,
+      source: envelope.source,
+      hasPayload: !!Object.keys(envelope.payload || {}).length,
+    });
+    return true;
+  } catch (_) {
+    trackKroniaCta('pending_intent_persist_failed', 'error', {
+      normalizedAction: envelope.type,
+    });
+    return false;
+  }
+}
+
+function readPendingConversationIntent() {
+  try {
+    var raw = localStorage.getItem(KRONIA_PENDING_INTENT_KEY);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearPendingConversationIntent() {
+  try { localStorage.removeItem(KRONIA_PENDING_INTENT_KEY); } catch (_) {}
+}
+
+function schedulePendingConversationIntentConsumption(reason) {
+  if (__kroniaPendingIntentConsumeScheduled) return;
+  __kroniaPendingIntentConsumeScheduled = true;
+  setTimeout(function () {
+    __kroniaPendingIntentConsumeScheduled = false;
+    consumePendingConversationIntentFromHome(reason || 'scheduled');
+  }, 30);
+}
+
+function hydrateTrainingFromConversationIntent(payload) {
+  var safePayload = sanitizeConversationIntentPayload('open_training', payload || {});
+  if (safePayload.objective) {
+    var objectiveMap = { hipertrofia: 'hipertrofia', definicao: 'definicao', forca: 'forca', resistencia: 'resistencia', saude: 'saude' };
+    var objectiveValue = objectiveMap[String(safePayload.objective).toLowerCase()] || String(safePayload.objective).toLowerCase();
+    var objectiveChip = document.querySelector('#objChips [data-val="' + objectiveValue + '"]');
+    if (objectiveChip && typeof selObj === 'function') selObj(objectiveChip);
+  }
+  if (safePayload.level) {
+    var levelMap = { iniciante: 'iniciante', intermediario: 'intermediario', avancado: 'avancado' };
+    var levelValue = levelMap[String(safePayload.level).toLowerCase()] || String(safePayload.level).toLowerCase();
+    var levelChip = document.querySelector('#nivelChips [data-val="' + levelValue + '"]');
+    if (levelChip && typeof selNivel === 'function') selNivel(levelChip);
+  }
+  if (safePayload.days_per_week != null) {
+    var freqValue = String(Math.max(1, Math.min(6, Number(safePayload.days_per_week))));
+    var freqInput = document.getElementById('freq');
+    if (freqInput) freqInput.value = freqValue;
+  }
+  return safePayload;
+}
+
+function hydrateDietFromConversationIntent(payload) {
+  var safePayload = sanitizeConversationIntentPayload('open_diet', payload || {});
+  if (safePayload.objective) {
+    var objMap = { emagrecer: 'emagrecimento', emagrecimento: 'emagrecimento', hipertrofia: 'hipertrofia', manutencao: 'manutencao', forca: 'forca', recomposicao: 'recomposicao' };
+    var objValue = objMap[String(safePayload.objective).toLowerCase()] || String(safePayload.objective).toLowerCase();
+    var objChip = document.querySelector('#dietaObjChips [data-val="' + objValue + '"]');
+    if (objChip && typeof selDietaObj === 'function') selDietaObj(objChip);
+  }
+  if (safePayload.meals != null) {
+    var mealsInput = document.getElementById('dietaRefeicoes');
+    if (mealsInput) mealsInput.value = String(Math.max(2, Math.min(8, Number(safePayload.meals))));
+  }
+  if (safePayload.restrictions && safePayload.restrictions.length) {
+    var restrictionsInput = document.getElementById('dietaRestric');
+    if (restrictionsInput && !restrictionsInput.value.trim()) restrictionsInput.value = safePayload.restrictions.join(', ');
+  }
+  if (safePayload.dietary_style) {
+    var styleInput = document.getElementById('dietaPadrao');
+    if (styleInput && !styleInput.value) styleInput.value = String(safePayload.dietary_style);
+  }
+  return safePayload;
+}
+
+function consumePendingConversationIntentFromHome(reason) {
+  var pending = readPendingConversationIntent();
+  if (!pending) return false;
+  var createdAt = Number(pending.createdAt || 0);
+  var ageMs = createdAt > 0 ? (Date.now() - createdAt) : Infinity;
+  if (!Number.isFinite(ageMs) || ageMs > KRONIA_PENDING_INTENT_TTL_MS) {
+    clearPendingConversationIntent();
+    trackKroniaCta('pending_intent_expired', 'success', {
+      type: String(pending.type || ''),
+      reason: reason || null,
+    });
+    return false;
+  }
+
+  var intent = buildCanonicalConversationIntent({
+    type: pending.type,
+    source: pending.source || 'agent',
+    payload: pending.payload || {},
+    meta: pending.meta || {},
+  });
+  if (!intent) {
+    clearPendingConversationIntent();
+    trackKroniaCta('conversation_cta_rejected', 'error', {
+      reason: 'invalid_pending_intent_shape',
+    });
+    return false;
+  }
+
+  clearPendingConversationIntent();
+  trackKroniaCta('pending_intent_consumed', 'success', {
+    normalizedAction: intent.type,
+    target: intent.target,
+    reason: reason || null,
+  });
+
+  try {
+    if (intent.type === 'open_training') {
+      navTo?.('programa');
+      var hydratedTrainingPayload = hydrateTrainingFromConversationIntent(intent.payload || {});
+      openConfig?.(Object.assign({}, hydratedTrainingPayload, { source: 'chat', fromChatIntent: true }));
+      trackKroniaCta('home_card_auto_opened', 'success', { type: intent.type, target: intent.target });
+      trackKroniaCta('home_card_hydrated_from_chat', 'success', { type: intent.type, hasPayload: !!Object.keys(hydratedTrainingPayload).length });
+      return true;
+    }
+    if (intent.type === 'open_diet') {
+      var hydratedDietPayload = hydrateDietFromConversationIntent(intent.payload || {});
+      openDietaSheet?.(Object.assign({}, hydratedDietPayload, { source: 'chat', fromChatIntent: true }));
+      trackKroniaCta('home_card_auto_opened', 'success', { type: intent.type, target: intent.target });
+      trackKroniaCta('home_card_hydrated_from_chat', 'success', { type: intent.type, hasPayload: !!Object.keys(hydratedDietPayload).length });
+      return true;
+    }
+  } catch (_) {
+    trackKroniaCta('home_card_auto_open_failed', 'error', {
+      type: intent.type,
+      target: intent.target,
+    });
+    return false;
+  }
+  return false;
+}
+
 function ensureApiContract(payload, contextName) {
   const valid = !!payload && typeof payload === "object"
     && typeof payload.success === "boolean"
@@ -2915,6 +3231,20 @@ async function sendAI(overrideText, isGerarTreino = false) {
     var reply = data?.message || contentNodes?.[0]?.text || 'Nao consegui processar. Tente novamente.';
 
     addAIMessage('assistant', reply);
+    var inferredIntent = inferConversationCtaFromApiResponse(data);
+    var inferredCta = buildCtaFromCanonicalIntent(inferredIntent);
+    if (inferredIntent && inferredCta) {
+      renderConversationCta(
+        'aiMessages',
+        { action: inferredCta.action, label: inferredCta.label, intentSource: inferredCta.intentSource },
+        Object.assign({}, inferredCta.payload, { _targetModule: inferredCta.targetModule })
+      );
+      trackKroniaCta('api_cta_rendered', 'success', {
+        normalizedAction: inferredIntent.type,
+        source: inferredIntent.source,
+        inferredFrom: inferredIntent?.meta?.inferred_from || null,
+      });
+    }
     _aiHistory.push({ role: 'assistant', content: reply });
     try {
       window.KroniaIntelligence?.track?.({
@@ -3524,6 +3854,7 @@ function openHome() {
   // Atualiza dados no próximo frame — tela aparece antes de qualquer cálculo
   requestAnimationFrame(() => {
     try { updateHomeScreen(); } catch(e) {}
+    schedulePendingConversationIntentConsumption('home_open');
   });
 }
 function closeHome() {
@@ -4465,11 +4796,17 @@ function autoResizeOrientInput(el) {
 function runKroniaActionFallback(action, context) {
   var safeContext = sanitizeCtaObject(context);
   if (action === 'open_training') {
+    try { openHome?.(); } catch (_) {}
+    try { navTo?.('inicio'); } catch (_) {}
+    try { schedulePendingConversationIntentConsumption('fallback_training'); return true; } catch (_) {}
     try { navTo?.('programa'); } catch (_) {}
     try { openConfig?.(safeContext); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
   }
   if (action === 'open_diet') {
+    try { openHome?.(); } catch (_) {}
+    try { navTo?.('inicio'); } catch (_) {}
+    try { schedulePendingConversationIntentConsumption('fallback_diet'); return true; } catch (_) {}
     try { openDietaSheet?.(safeContext); return true; } catch (_) {}
     try { openDieta?.(); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
@@ -4481,18 +4818,15 @@ window.KroniaActions = {
   openTrainingBuilder: function (context) {
     try { closeOrientacao?.(); } catch (_) {}
     try { openHome?.(); } catch (_) {}
-    setTimeout(function () {
-      try { navTo?.('programa'); } catch (_) {}
-      try { openConfig?.(context || {}); } catch (_) {}
-    }, 150);
+    try { navTo?.('inicio'); } catch (_) {}
+    schedulePendingConversationIntentConsumption('kronia_action_training');
   },
 
   openDietGenerator: function (context) {
     try { closeOrientacao?.(); } catch (_) {}
     try { openHome?.(); } catch (_) {}
-    setTimeout(function () {
-      try { openDietaSheet?.(context || {}); } catch (_) {}
-    }, 150);
+    try { navTo?.('inicio'); } catch (_) {}
+    schedulePendingConversationIntentConsumption('kronia_action_diet');
   },
 };
 
@@ -4878,6 +5212,7 @@ function renderConversationCta(containerId, cta, payload) {
   button.setAttribute('data-cta-meta', JSON.stringify({
     source: 'conversation_message',
     targetModule: payload?._targetModule || null,
+    intentSource: cta?.intentSource || null,
   }));
 
   var inner = document.createElement('div');
@@ -4988,6 +5323,24 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
     ctaLabel: safeMeta.label || null,
     ctaMeta: safeMeta,
   });
+  trackKroniaCta('conversation_cta_clicked', 'success', {
+    normalizedAction: canonicalAction,
+    source: context.source || null,
+    hasPayload: !!Object.keys(safePayload).length,
+  });
+
+  var pendingIntentSaved = persistPendingConversationIntent({
+    type: canonicalAction,
+    source: safeMeta.intentSource === 'agent' || context.source === 'api_agent_response' ? 'agent' : 'inferred',
+    payload: safePayload,
+    meta: Object.assign({}, safeMeta, { source: context.source || 'conversation_cta' }),
+  });
+  if (!pendingIntentSaved) {
+    trackKroniaCta('conversation_cta_rejected', 'error', {
+      reason: 'pending_intent_not_persisted',
+      normalizedAction: canonicalAction,
+    });
+  }
 
   try { window.KroniaActions = window.KroniaActions || {}; } catch (_) {}
   trackKroniaCta('execution_started', 'success', {
@@ -5674,12 +6027,24 @@ function formatMuscleLabel(value) {
 
 async function openDietaSheet(context) {
   if (context && typeof context === 'object') {
-    window._kroniaLastDietContext = context;
+    var safeContext = sanitizeCtaObject(context);
+    window._kroniaLastDietContext = safeContext;
   }
   preencherDietaDosPerfil();
   document.getElementById("dietaSheet").classList.add("show");
   atualizarBasalDieta();
   await _preencherDietaDoSupabase();
+  if (context && typeof context === 'object') {
+    var hydratedDiet = hydrateDietFromConversationIntent(context);
+    if (context.fromChatIntent) {
+      window._kroniaChatDietHydratedContext = hydratedDiet;
+      trackKroniaCta('home_card_hydrated_from_chat', 'success', {
+        type: 'open_diet',
+        hasPayload: !!Object.keys(hydratedDiet).length,
+      });
+    }
+    atualizarBasalDieta();
+  }
 }
 function closeDietaSheet() {
   document.getElementById("dietaSheet").classList.remove("show");
@@ -6303,6 +6668,12 @@ function gerarDietaPDF() {
 }
 
 async function gerarDieta() {
+  var fromChatDiet = !!window._kroniaChatDietHydratedContext;
+  if (fromChatDiet) {
+    trackKroniaCta('diet_apply_started_from_chat', 'success', {
+      hasPayload: !!Object.keys(window._kroniaChatDietHydratedContext || {}).length,
+    });
+  }
   // ── Coleta todos os dados da anamnese ─────────────────────────────
   const obj      = document.querySelector("#dietaObjChips .bs-chip.active")?.dataset.val || "hipertrofia";
   const sexo     = document.getElementById("dietaSexoF").classList.contains("active") ? "feminino" : "masculino";
@@ -6623,6 +6994,12 @@ ${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado 
     txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
   }
   finally { btn.disabled = false; }
+  if (fromChatDiet) {
+    trackKroniaCta('diet_apply_completed_from_chat', 'success', {
+      hasPayload: !!Object.keys(window._kroniaChatDietHydratedContext || {}).length,
+    });
+    window._kroniaChatDietHydratedContext = null;
+  }
 }
 
 // ══════════════════════════════════════════
