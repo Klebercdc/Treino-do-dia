@@ -12,6 +12,7 @@ var responseUtil = require('../src/server/apihelpers/_response');
 var intent = require('../src/server/apihelpers/_intent');
 var access = require('../src/server/apihelpers/_access');
 var aiContracts = require('../src/server/apihelpers/_aiContracts');
+var userMemory = require('../src/server/apihelpers/_userMemory');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -326,6 +327,20 @@ function toProviderErrorContract(err, requestMeta) {
   });
 }
 
+
+function fireAndForgetMemoryEvent(input) {
+  Promise.resolve()
+    .then(function() { return userMemory.captureEventAndRecompute(input); })
+    .catch(function(err) {
+      console.warn('[user-memory] update_failed', {
+        userId: input && input.userId,
+        eventType: input && input.eventType,
+        requestId: input && input.requestId,
+        error: err && err.message ? err.message : String(err || 'unknown')
+      });
+    });
+}
+
 // ══════════════════════════════════════════
 // CHAMADA GROQ COM SUPORTE A TOOLS
 // ══════════════════════════════════════════
@@ -374,7 +389,13 @@ function callAgent(messages, tools, callback) {
 // ══════════════════════════════════════════
 
 function buildAgentSystem(userData) {
-  return prompts.buildAgentSystem(userData.profile || {});
+  var profile = Object.assign({}, userData.profile || {});
+  if (userData.memorySummary && userData.memorySummary.text) {
+    profile.coaching_summary = userData.memorySummary.text;
+    profile.memory_status = userData.memorySummary.status;
+    profile.memory_confidence = userData.memorySummary.confidence;
+  }
+  return prompts.buildAgentSystem(profile);
 }
 
 function agentLoop(userMessages, userData, callback) {
@@ -522,6 +543,15 @@ module.exports = function(req, res) {
 
       var requestId = b.requestId || ('agent_' + Date.now());
       var messages = b.messages || [];
+      fireAndForgetMemoryEvent({
+        userId: user.id,
+        eventType: 'chat_message',
+        eventKey: user.id + ':agent_chat_message:' + requestId + ':' + messages.length,
+        payload: { endpoint: 'agent', usageCategory: usageCategory, messages: messages.length },
+        requestId: requestId,
+        component: 'api/agent',
+        source: 'agent_api'
+      });
       if (!Array.isArray(messages)) {
         return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
       }
@@ -576,6 +606,8 @@ module.exports = function(req, res) {
         });
       }
 
+      Promise.resolve(userMemory.getCoachingSummary(user.id)).catch(function() { return null; }).then(function(memorySummary) {
+      userData.memorySummary = memorySummary;
       plans.getQuotaInfo(user.id, function(qErr, quota) {
         if (qErr) { var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed', requestId: requestId, usageCategory: usageCategory } }); quotaErr.body.requestId = requestId; quotaErr.body.userId = user.id; return responseUtil.sendJson(res, quotaErr.status, quotaErr.body); }
         if (!quota.allowed) {
@@ -611,6 +643,15 @@ module.exports = function(req, res) {
         var modelUsed = process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'meta/llama-3.3-70b-instruct';
         logger.logUsage({ userId: user.id, endpoint: 'agent', promptTokens: Math.round(estimatedPrompt), completionTokens: Math.round(estimatedCompletion), model: modelUsed, tools: TOOLS.map(function(t){ return t.function.name; }).join(',') });
         plans.checkAndIncrementQuota(user.id, res, function() {
+          fireAndForgetMemoryEvent({
+            userId: user.id,
+            eventType: 'chat_response',
+            eventKey: user.id + ':agent_chat_response:' + requestId,
+            payload: { responseChars: String(text || '').length, usageCategory: usageCategory },
+            requestId: requestId,
+            component: 'api/agent',
+            source: 'agent_api'
+          });
           responseUtil.sendJson(res, 200, {
             success: true,
             type: 'text',
@@ -625,6 +666,7 @@ module.exports = function(req, res) {
         }, { accessProfile: accessProfile });
       });
       }, { accessProfile: accessProfile });
+      });
       });
     }, { max: 45, windowMs: 60000, category: usageCategory }, user.id);
   });

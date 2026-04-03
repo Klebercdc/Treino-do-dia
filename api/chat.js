@@ -19,6 +19,7 @@ var scienceInsight = require('../src/lib/science/scienceInsightService');
 var diagnostics = require('../src/server/apihelpers/_diagnosticTracker');
 var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants');
 var aiContracts = require('../src/server/apihelpers/_aiContracts');
+var userMemory = require('../src/server/apihelpers/_userMemory');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;
@@ -154,6 +155,20 @@ function toProviderErrorContract(err, requestMeta) {
   });
 }
 
+
+function fireAndForgetMemoryEvent(input) {
+  Promise.resolve()
+    .then(function() { return userMemory.captureEventAndRecompute(input); })
+    .catch(function(err) {
+      console.warn('[user-memory] update_failed', {
+        userId: input && input.userId,
+        eventType: input && input.eventType,
+        requestId: input && input.requestId,
+        error: err && err.message ? err.message : String(err || 'unknown')
+      });
+    });
+}
+
 function callChat(system, messages, maxTokens, temp, userId, endpoint, callback) {
   var GROQ_KEY = process.env.GROQ_API_KEY;
   var m = [];
@@ -260,6 +275,16 @@ module.exports = function(req, res) {
       function safeTrack(fn) {
         try { fn(); } catch (e) { console.error('[diagnostics] tracker operation failed:', e && e.message ? e.message : e); }
       }
+      fireAndForgetMemoryEvent({
+        userId: user.id,
+        eventType: 'chat_message',
+        eventKey: user.id + ':chat_message:' + (b.requestId || b.correlationId || Date.now()) + ':' + String(lastContent || '').length,
+        payload: { message: String(lastContent || '').slice(0, 600), usageCategory: usageCategory, intentHint: null },
+        requestId: b.requestId || b.correlationId || null,
+        component: 'api/chat',
+        source: 'chat_api'
+      });
+
       safeTrack(function() {
         tracker.addStep({
           layer: 'input',
@@ -401,6 +426,15 @@ module.exports = function(req, res) {
             return sendTracked(providerError.status, providerError.body, 'failure');
           }
           safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
+          fireAndForgetMemoryEvent({
+            userId: user.id,
+            eventType: 'workout_generated',
+            eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':flow',
+            payload: { source: 'workout_flow', sections: Array.isArray(data && data.treinos) ? data.treinos.length : 0 },
+            requestId: b.requestId || b.correlationId || null,
+            component: 'api/chat',
+            source: 'workout_pipeline'
+          });
           return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }], conversationState: { memory: shortState } }, meta: {} });
         });
       }
@@ -467,6 +501,15 @@ module.exports = function(req, res) {
           try {
             var directPlan = diet.buildDietPlan(b.dietProfile);
             console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile' }));
+            fireAndForgetMemoryEvent({
+              userId: user.id,
+              eventType: 'diet_generated',
+              eventKey: user.id + ':diet_generated:' + (b.requestId || b.correlationId || Date.now()),
+              payload: { objective: b.dietProfile && b.dietProfile.objetivo || null, refeicoes: (directPlan.refeicoes || []).length, source: 'diet_direct' },
+              requestId: b.requestId || b.correlationId || null,
+              component: 'api/chat',
+              source: 'diet_pipeline'
+            });
             return sendTracked(200, buildDietSuccessPayload(
               formatDietSummary(directPlan),
               directPlan,
@@ -522,8 +565,13 @@ module.exports = function(req, res) {
           return scienceInsight.buildScienceContextFromText(lastContent);
         })
         .then(function(scienceContext) {
+          return Promise.resolve(userMemory.getCoachingSummary(user.id)).catch(function() { return null; }).then(function(memorySummary) {
           var context = Object.assign({}, b.context || {});
           if (scienceContext) context.science_context = scienceContext;
+          if (memorySummary && memorySummary.text) {
+            context.coaching_summary = memorySummary.text;
+            context.memory_status = memorySummary.status;
+          }
 
           safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { layer: 'ai', nodeKey: 'Recomendacao', inputSummary: lastContent }); });
           safeTrack(function() { tracker.captureMetric({ key: 'promptSizeEstimate', value: String(lastContent || '').length, unit: 'chars' }); });
@@ -548,6 +596,15 @@ module.exports = function(req, res) {
             safeTrack(function() { tracker.captureMetric({ key: 'responseSizeEstimate', value: typeof payload === 'string' ? payload.length : JSON.stringify(payload || {}).length, unit: 'chars' }); });
             emitDecisionTelemetry(user.id, classification, decision, true, false);
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && typeof payload === 'object') {
+              fireAndForgetMemoryEvent({
+                userId: user.id,
+                eventType: 'workout_generated',
+                eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':llm',
+                payload: { source: 'llm_full', sections: Array.isArray(payload && payload.treinos) ? payload.treinos.length : 0 },
+                requestId: b.requestId || b.correlationId || null,
+                component: 'api/chat',
+                source: 'llm'
+              });
               return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }], conversationState: { memory: nextShortState } }, meta: {} });
             }
             return sendTracked(200, {
@@ -557,6 +614,7 @@ module.exports = function(req, res) {
               data: { content: [{ type: 'text', text: payload }], conversationState: { memory: nextShortState } },
               meta: { decision: process.env.NODE_ENV === 'development' ? decision : undefined }
             });
+          });
           });
         })
         .catch(function(err) {

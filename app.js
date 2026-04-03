@@ -2881,7 +2881,20 @@ async function sendAI(overrideText, isGerarTreino = false) {
       return;
     }
 
-    if (flow.type === 'analysis_answer' || flow.intent === 'supplement_question') {
+    if (flow.type === 'analysis_answer') {
+      try {
+        var progressResp = await apiFetch('/api/memory?action=progress', { method: 'GET' });
+        var progressData = await parseApiJsonSafely(progressResp);
+        if (progressResp.ok && progressData && progressData.success && progressData.data && progressData.data.progress) {
+          addAIMessage('assistant', progressData.data.progress.explanation || flow.message || 'Análise concluída.');
+          return;
+        }
+      } catch (_memoryErr) {}
+      addAIMessage('assistant', flow.message || 'Analise concluida.');
+      return;
+    }
+
+    if (flow.intent === 'supplement_question') {
       addAIMessage('assistant', flow.message || 'Analise concluida.');
       return;
     }
