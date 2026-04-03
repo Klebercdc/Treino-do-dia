@@ -37,8 +37,11 @@ function safeExtractLastUserMessage(messages) {
 }
 
 var GREETING_REGEX = /^(oi+|ola+|ol[áa]|opa|e ai|eae|hey|hello|bom dia|boa tarde|boa noite)(\b.*)?$/i;
-var WORKOUT_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|revis(e|a)|me passa|me manda|preciso|montar|criar|fazer|faz|elaborar|elabore|elabora|precisa)\b[\s\S]{0,60}\b(treino|ficha|divisao|rotina de treino|exercicio|musculacao|programa)\b/i;
-var DIET_REQUEST = /\b(quero|monte|monta|crie|cria|gere|gera|ajuste|ajusta|calcule|calcula|me passa|me manda|preciso|montar|criar|fazer|faz|elaborar|elabore|elabora|precisa)\b[\s\S]{0,60}\b(dieta|plano alimentar|cardapio|alimentacao|refeicoes|macros?|calorias?|nutricao)\b/i;
+// Qualquer mensagem que contenha uma palavra-chave de treino ou dieta
+// — independentemente de verbo de ação — sinaliza intenção de criação.
+// A detecção semântica profunda fica no LLM; aqui queremos máxima cobertura.
+var WORKOUT_REQUEST = /\b(treino|ficha|divisao|rotina de treino|exercicio|musculacao|programa)\b/i;
+var DIET_REQUEST = /\b(dieta|plano alimentar|cardapio|alimentacao|refeicoes|macros?|calorias?|nutricao)\b/i;
 
 function detectIntent(message) {
   var raw = String(message || '');

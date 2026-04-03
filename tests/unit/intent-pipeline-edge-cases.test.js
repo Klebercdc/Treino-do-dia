@@ -278,6 +278,53 @@ test('explicit conversationIntent contract still takes priority over textual inf
   assert.equal(cta.payload.meals, 4);
 });
 
+// ── 7. single-keyword detection (user just says "dieta" or "treino") ──────────
+
+test('frontend classifier triggers open_training with just the word "treino"', async () => {
+  const app = loadClassifierRuntime();
+  const result = await app.resolveConversationFlow({ message: 'treino' });
+  assert.equal(result.type, 'answer_with_cta');
+  assert.equal(result.cta.action, 'open_training');
+});
+
+test('frontend classifier triggers open_diet with just the word "dieta"', async () => {
+  const app = loadClassifierRuntime();
+  const result = await app.resolveConversationFlow({ message: 'dieta' });
+  assert.equal(result.type, 'answer_with_cta');
+  assert.equal(result.cta.action, 'open_diet');
+});
+
+test('frontend classifier triggers open_training with context phrase (no action verb)', async () => {
+  const app = loadClassifierRuntime();
+  const r1 = await app.resolveConversationFlow({ message: 'não consigo seguir meu treino' });
+  assert.equal(r1.cta?.action, 'open_training');
+
+  const r2 = await app.resolveConversationFlow({ message: 'minha dieta está difícil' });
+  assert.equal(r2.cta?.action, 'open_diet');
+});
+
+test('frontend classifier does NOT trigger CTA for analysis questions about treino', async () => {
+  const app = loadClassifierRuntime();
+  // "evolução" triggers analysis → should NOT return workout CTA
+  const result = await app.resolveConversationFlow({ message: 'como está minha evolução de treino?' });
+  // analysis wins over workout because of the guard
+  assert.notEqual(result.type, 'answer_with_cta', 'progress analysis question must not generate training CTA');
+});
+
+test('backend detectIntent triggers workout on keyword alone', () => {
+  const { detectIntent } = loadIntentDetector();
+  assert.equal(detectIntent('treino'), 'workout');
+  assert.equal(detectIntent('dieta'), 'diet');
+  assert.equal(detectIntent('musculacao'), 'workout');
+  assert.equal(detectIntent('cardapio'), 'diet');
+});
+
+test('backend detectIntent still returns greeting for short greetings', () => {
+  const { detectIntent } = loadIntentDetector();
+  assert.equal(detectIntent('oi'), 'greeting');
+  assert.equal(detectIntent('olá tudo bem'), 'greeting');
+});
+
 test('whitelist still blocks unknown actions after changes', () => {
   const rt = loadInferenceRuntime();
   const cta = rt.inferConversationCtaFromApiResponse({

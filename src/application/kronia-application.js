@@ -31,19 +31,21 @@
   function classifyConversationIntent(input) {
     var text = normalizeText(input?.message);
 
-    var workout =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar|crie|cria|monte|gere|gera|ajuste|ajusta|faz|precisa|manda|passa)\b/]) &&
-      hasAny(text, [/\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina)\b/]);
-
-    var diet =
-      hasAny(text, [/\b(quero|preciso|criar|montar|fazer|ajustar|gerar|monta|elaborar|crie|cria|monte|gere|gera|ajuste|ajusta|calcule|calcula|faz|precisa|manda|passa)\b/]) &&
-      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
-
+    // Análise e suplemento são verificados primeiro para não serem engolidos
+    // por perguntas que mencionam treino/dieta em contexto diferente.
     var analysis = hasAny(text, [
       /\b(evolucao|progresso|funcionando|resultado|melhorei|plato|aderencia|consistencia|desempenho|carga|frequencia)\b/
     ]);
 
     var supplement = hasAny(text, [/\b(creatina|whey|cafeina|pre treino|beta alanina|suplement)\b/]);
+
+    // Qualquer menção a treino ou dieta abre o CTA — sem exigir verbo de ação.
+    // Perguntas de análise ficam de fora (analysis=true) para não conflitar.
+    var workout = !analysis &&
+      hasAny(text, [/\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina)\b/]);
+
+    var diet = !analysis &&
+      hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
 
     if (workout) return 'workout_creation_request';
     if (diet) return 'diet_creation_request';
