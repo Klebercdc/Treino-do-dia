@@ -21,6 +21,7 @@ function loadCtaRuntime() {
     extract(code, /function trackKroniaCta\(stage, status, metadata\) \{[\s\S]*?\n\}/, 'trackKroniaCta'),
     extract(code, /function parseCtaPayloadAttribute\(payloadRaw\) \{[\s\S]*?\n\}/, 'parseCtaPayloadAttribute'),
     extract(code, /function parseCtaMetaAttribute\(metaRaw\) \{[\s\S]*?\n\}/, 'parseCtaMetaAttribute'),
+    extract(code, /function sanitizeCtaObject\(value\) \{[\s\S]*?\n\}/, 'sanitizeCtaObject'),
     extract(code, /function runKroniaActionFallback\(action, context\) \{[\s\S]*?\n\}/, 'runKroniaActionFallback'),
     extract(code, /function normalizeKroniaAction\(action\) \{[\s\S]*?\n\}/, 'normalizeKroniaAction'),
     extract(code, /function acquireKroniaCtaExecutionLock\(action\) \{[\s\S]*?\n\}/, 'acquireKroniaCtaExecutionLock'),
@@ -176,4 +177,17 @@ test('fallback works when KroniaActions is not ready', () => {
   assert.ok(calls.navTo.includes('programa'));
   assert.equal(calls.openConfig.length, 1);
   assert.equal(calls.openDietaSheet.length, 1);
+});
+
+test('executeConversationCta preserves provided meta payload', () => {
+  const { context, calls } = loadCtaRuntime();
+  const ok = context.window.executeConversationCta({
+    action: 'open_training',
+    payload: { source: 'direct' },
+    meta: { label: 'Direct CTA', source: 'custom' }
+  });
+  assert.equal(ok, true);
+  assert.equal(calls.trainingAction.length, 1);
+  assert.equal(calls.trainingAction[0].ctaMeta.source, 'custom');
+  assert.equal(calls.trainingAction[0].ctaLabel, 'Direct CTA');
 });

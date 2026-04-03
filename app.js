@@ -2956,7 +2956,7 @@ function aiQuick(tipo) {
     rpe:     "Olhando os RPEs registrados no meu histórico, meu esforço está adequado? Estou treinando pesado demais, leve demais, ou na zona ideal?"
   };
   if (tipo === 'gerar') {
-    window.KroniaActions.openTrainingBuilder({ source: 'ai_quick_gerar' });
+    executeKroniaQuickAction('open_training', { source: 'ai_quick_gerar' }, { label: 'Abrir treino' });
     return;
   }
   const text = prompts[tipo];
@@ -3095,11 +3095,11 @@ function gerarTreinoComRespostas() {
   ].join('\n');
 
   addAIMessage('assistant', 'Perfeito. Vou abrir o modulo oficial de treino com esse contexto.');
-  window.KroniaActions.openTrainingBuilder({
+  executeKroniaQuickAction('open_training', {
     source: 'wq_questionnaire',
     questionnaire: Object.assign({}, r, { lesao: lesao }),
     originalPrompt: prompt,
-  });
+  }, { label: 'Abrir treino' });
   _wqRespostas = {};
 }
 
@@ -4807,6 +4807,10 @@ function normalizeCtaPayload(payload) {
   return safePayload;
 }
 
+function sanitizeCtaObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? Object.assign({}, value) : {};
+}
+
 var KRONIA_CTA_ALLOWED_ACTIONS = Object.freeze({
   open_training: true,
   open_diet: true,
@@ -4917,7 +4921,7 @@ function acquireKroniaCtaExecutionLock(action) {
 }
 
 window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
-  var safeMeta = meta && typeof meta === 'object' && !Array.isArray(meta) ? Object.assign({}, meta) : {};
+  var safeMeta = sanitizeCtaObject(meta);
   var normalizedAction = normalizeKroniaAction(action);
   if (!normalizedAction) return false;
   if (!KRONIA_CTA_ALLOWED_ACTIONS[normalizedAction]) {
@@ -4936,7 +4940,7 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
     return false;
   }
 
-  var safePayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? Object.assign({}, payload) : {};
+  var safePayload = sanitizeCtaObject(payload);
   var context = Object.assign({}, safePayload, {
     source: safePayload.source || 'conversation_cta',
     ctaLabel: safeMeta.label || null,
@@ -4953,6 +4957,7 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
     if (window.KroniaActions && typeof window.KroniaActions.openTrainingBuilder === 'function') {
       window.KroniaActions.openTrainingBuilder(context);
       trackKroniaCta('execution_succeeded', 'success', { normalizedAction: normalizedAction, executor: 'primary' });
+      trackKroniaCta('result', 'success', { normalizedAction: normalizedAction, path: 'primary' });
       return true;
     }
     var fallbackTraining = runKroniaActionFallback('open_training', context);
@@ -4960,6 +4965,7 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
       normalizedAction: normalizedAction,
       executor: 'fallback',
     });
+    trackKroniaCta('result', fallbackTraining ? 'success' : 'error', { normalizedAction: normalizedAction, path: 'fallback' });
     return fallbackTraining;
   }
 
@@ -4967,6 +4973,7 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
     if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
       window.KroniaActions.openDietGenerator(context);
       trackKroniaCta('execution_succeeded', 'success', { normalizedAction: normalizedAction, executor: 'primary' });
+      trackKroniaCta('result', 'success', { normalizedAction: normalizedAction, path: 'primary' });
       return true;
     }
     var fallbackDiet = runKroniaActionFallback('open_diet', context);
@@ -4974,16 +4981,28 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
       normalizedAction: normalizedAction,
       executor: 'fallback',
     });
+    trackKroniaCta('result', fallbackDiet ? 'success' : 'error', { normalizedAction: normalizedAction, path: 'fallback' });
     return fallbackDiet;
   }
 
-  return runKroniaActionFallback(normalizedAction, context);
+  var genericFallback = runKroniaActionFallback(normalizedAction, context);
+  trackKroniaCta('result', genericFallback ? 'success' : 'error', { normalizedAction: normalizedAction, path: 'fallback_generic' });
+  return genericFallback;
 };
 
 window.executeConversationCta = function executeConversationCta(data) {
   if (!data || !data.action) return false;
-  return window.handleKroniaCTA(data.action, data.payload, { label: data.label || null });
+  var meta = sanitizeCtaObject(data.meta);
+  if (!meta.label && data.label) meta.label = data.label;
+  return window.handleKroniaCTA(data.action, sanitizeCtaObject(data.payload), meta);
 };
+
+function executeKroniaQuickAction(action, payload, meta) {
+  if (typeof window.handleKroniaCTA === 'function') {
+    return window.handleKroniaCTA(action, sanitizeCtaObject(payload), sanitizeCtaObject(meta));
+  }
+  return runKroniaActionFallback(normalizeKroniaAction(action), sanitizeCtaObject(payload));
+}
 
 function installConversationCtaDelegation() {
   if (__kroniaCtaDelegationInstalled || window.__kroniaCtaDelegationInstalled) return;
@@ -5157,7 +5176,7 @@ function orientExpertQuick(tipo) {
     return;
   }
   if (tipo === 'dieta') {
-    window.KroniaActions.openDietGenerator({ source: 'orient_quick_dieta' });
+    executeKroniaQuickAction('open_diet', { source: 'orient_quick_dieta' }, { label: 'Abrir dieta' });
     return;
   }
   const msgs = {
