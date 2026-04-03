@@ -17,8 +17,11 @@ function loadCtaRuntime() {
     extract(code, /var KRONIA_CTA_ACTION_ALIASES = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'KRONIA_CTA_ACTION_ALIASES'),
     extract(code, /var KRONIA_CTA_LOCK_MS = 1200;/, 'KRONIA_CTA_LOCK_MS'),
     extract(code, /var __kroniaCtaExecutionLocks = Object\.create\(null\);/, '__kroniaCtaExecutionLocks'),
+    extract(code, /var __kroniaCtaDelegationInstalled = false;/, '__kroniaCtaDelegationInstalled'),
     extract(code, /function trackKroniaCta\(stage, status, metadata\) \{[\s\S]*?\n\}/, 'trackKroniaCta'),
     extract(code, /function parseCtaPayloadAttribute\(payloadRaw\) \{[\s\S]*?\n\}/, 'parseCtaPayloadAttribute'),
+    extract(code, /function parseCtaMetaAttribute\(metaRaw\) \{[\s\S]*?\n\}/, 'parseCtaMetaAttribute'),
+    extract(code, /function sanitizeCtaObject\(value\) \{[\s\S]*?\n\}/, 'sanitizeCtaObject'),
     extract(code, /function runKroniaActionFallback\(action, context\) \{[\s\S]*?\n\}/, 'runKroniaActionFallback'),
     extract(code, /function normalizeKroniaAction\(action\) \{[\s\S]*?\n\}/, 'normalizeKroniaAction'),
     extract(code, /function acquireKroniaCtaExecutionLock\(action\) \{[\s\S]*?\n\}/, 'acquireKroniaCtaExecutionLock'),
@@ -71,6 +74,7 @@ function makeTarget(action, payload = {}, label = 'CTA') {
     'data-action': action,
     'data-cta-label': label,
     'data-cta-payload': JSON.stringify(payload),
+    'data-cta-meta': JSON.stringify({ source: 'test-meta' }),
   };
   return {
     getAttribute(name) { return attrs[name] || ''; },
@@ -83,10 +87,13 @@ function makeTarget(action, payload = {}, label = 'CTA') {
 
 test('delegation executes treino CTA action correctly', () => {
   const { document, calls } = loadCtaRuntime();
-  document.clickHandler({ target: makeTarget('open_training', { source: 'test' }) });
+  const event = { target: makeTarget('open_training', { source: 'test' }), preventDefaultCalled: false, preventDefault() { this.preventDefaultCalled = true; } };
+  document.clickHandler(event);
   assert.equal(calls.trainingAction.length, 1);
   assert.equal(calls.dietAction.length, 0);
   assert.equal(calls.trainingAction[0].source, 'test');
+  assert.equal(event.preventDefaultCalled, true);
+  assert.equal(calls.trainingAction[0].ctaMeta.source, 'test-meta');
 });
 
 test('delegation executes dieta CTA action correctly', () => {
@@ -143,6 +150,21 @@ test('malformed payload does not break execution', () => {
   assert.equal(calls.trainingAction.length, 1);
 });
 
+test('malformed meta does not break execution', () => {
+  const { document, calls } = loadCtaRuntime();
+  const target = makeTarget('open_training', { source: 'ok' });
+  target.getAttribute = function(name) {
+    if (name === 'data-cta-meta') return '{invalid-meta';
+    if (name === 'data-cta-payload') return JSON.stringify({ source: 'safe' });
+    if (name === 'data-action') return 'open_training';
+    if (name === 'data-cta-label') return 'Treino';
+    return '';
+  };
+  document.clickHandler({ target });
+  assert.equal(calls.trainingAction.length, 1);
+  assert.equal(calls.trainingAction[0].ctaLabel, 'Treino');
+});
+
 test('fallback works when KroniaActions is not ready', () => {
   const { context, calls } = loadCtaRuntime();
   context.window.KroniaActions = {};
@@ -155,4 +177,17 @@ test('fallback works when KroniaActions is not ready', () => {
   assert.ok(calls.navTo.includes('programa'));
   assert.equal(calls.openConfig.length, 1);
   assert.equal(calls.openDietaSheet.length, 1);
+});
+
+test('executeConversationCta preserves provided meta payload', () => {
+  const { context, calls } = loadCtaRuntime();
+  const ok = context.window.executeConversationCta({
+    action: 'open_training',
+    payload: { source: 'direct' },
+    meta: { label: 'Direct CTA', source: 'custom' }
+  });
+  assert.equal(ok, true);
+  assert.equal(calls.trainingAction.length, 1);
+  assert.equal(calls.trainingAction[0].ctaMeta.source, 'custom');
+  assert.equal(calls.trainingAction[0].ctaLabel, 'Direct CTA');
 });
