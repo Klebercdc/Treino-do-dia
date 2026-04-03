@@ -1,9 +1,11 @@
-# TypeScript/test files — not needed for deployment
+# Testes e artefatos não necessários para deploy serverless + static
 playwright.config.ts
-tsconfig.json
 tests/
 etl/
 *.py
 *.sh
 backup-to-drive.sh
 PROXIMOS-PASSOS.md
+
+# APIs experimentais Next App Router (não usadas no deploy atual baseado em /api/*.js)
+src/app/api/
