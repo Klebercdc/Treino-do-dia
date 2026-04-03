@@ -52,6 +52,8 @@ function buildAccessProfile(userOrEmail, options) {
   var fromClaims = resolveClaimAdmin(userOrEmail);
   var fromProfile = !!(options && options.profileIsAdmin === true);
   var hasProfileDecision = !!(options && options.profileLookupPerformed === true);
+  var isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  var allowWhitelistOverride = fromWhitelist && !isProduction;
 
   var isAdmin;
   var source;
@@ -60,20 +62,14 @@ function buildAccessProfile(userOrEmail, options) {
     if (fromProfile) {
       isAdmin = true;
       source = 'profiles_table';
-    } else if (fromClaims) {
+    } else if (allowWhitelistOverride) {
       isAdmin = true;
-      source = 'auth_claims';
-    } else if (fromWhitelist) {
-      isAdmin = true;
-      source = 'env_whitelist';
+      source = 'env_whitelist_override';
     } else {
       isAdmin = false;
       source = 'profiles_table';
     }
-  } else if (fromClaims) {
-    isAdmin = true;
-    source = 'auth_claims';
-  } else if (fromWhitelist) {
+  } else if (allowWhitelistOverride) {
     isAdmin = true;
     source = 'env_whitelist';
   } else {
