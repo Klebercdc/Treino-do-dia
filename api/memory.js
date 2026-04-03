@@ -3,6 +3,7 @@ var cors = require('../src/server/apihelpers/_cors');
 var rl = require('../src/server/apihelpers/_ratelimit');
 var responseUtil = require('../src/server/apihelpers/_response');
 var userMemory = require('../src/server/apihelpers/_userMemory');
+var memoryValidation = require('../src/server/apihelpers/_memoryValidation');
 
 module.exports = function(req, res) {
   cors.setCors(req, res);
@@ -75,12 +76,24 @@ module.exports = function(req, res) {
       var payload = body.payload && typeof body.payload === 'object' ? body.payload : {};
       var source = body.source || 'memory_api';
       var eventKey = body.eventKey || (user.id + ':' + eventType + ':' + requestId);
+      var validation = memoryValidation.validateMemoryEventInput({ eventType: eventType, payload: payload });
+      if (!validation.ok) {
+        return responseUtil.sendJson(res, validation.status || 400, {
+          success: false,
+          type: 'error',
+          state: 'invalid_request',
+          message: validation.message,
+          error: validation.code,
+          retryable: false,
+          meta: { requestId: requestId }
+        });
+      }
 
       userMemory.captureEventAndRecompute({
         userId: user.id,
-        eventType: eventType,
+        eventType: validation.eventType,
         eventKey: eventKey,
-        payload: payload,
+        payload: validation.payload,
         requestId: requestId,
         component: 'api/memory',
         source: source

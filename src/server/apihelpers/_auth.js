@@ -36,6 +36,7 @@ function verifyToken(token, callback) {
     port: 443,
     path: urlObj.pathname,
     method: 'GET',
+    timeout: 7000,
     headers: {
       'Authorization': 'Bearer ' + token,
       'apikey': apiKey
@@ -69,6 +70,9 @@ function verifyToken(token, callback) {
   req.on('error', function(e) {
     callback('Erro de conexão com Supabase: ' + e.message, null);
   });
+  req.on('timeout', function() {
+    req.destroy(new Error('timeout'));
+  });
 
   req.end();
 }
@@ -82,13 +86,27 @@ function requireAuth(req, res, next) {
   var token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
   if (!token) {
-    res.status(401).json({ error: 'Autenticação necessária' });
+    res.status(401).json({
+      ok: false,
+      success: false,
+      type: 'error',
+      state: 'unauthorized',
+      error: 'UNAUTHORIZED',
+      message: 'Autenticação necessária'
+    });
     return;
   }
 
   verifyToken(token, function(err, user) {
     if (err || !user) {
-      res.status(401).json({ error: err || 'Token inválido' });
+      res.status(401).json({
+        ok: false,
+        success: false,
+        type: 'error',
+        state: 'unauthorized',
+        error: 'UNAUTHORIZED',
+        message: err || 'Token inválido'
+      });
       return;
     }
     next(user);
