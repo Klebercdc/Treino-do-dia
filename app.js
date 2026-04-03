@@ -4463,25 +4463,13 @@ function autoResizeOrientInput(el) {
 
 
 function runKroniaActionFallback(action, context) {
-  var safeContext = context && typeof context === 'object' && !Array.isArray(context) ? context : {};
+  var safeContext = sanitizeCtaObject(context);
   if (action === 'open_training') {
-    try {
-      if (window.KroniaActions && typeof window.KroniaActions.openTrainingBuilder === 'function') {
-        window.KroniaActions.openTrainingBuilder(safeContext);
-        return true;
-      }
-    } catch (_) {}
     try { navTo?.('programa'); } catch (_) {}
     try { openConfig?.(safeContext); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
   }
   if (action === 'open_diet') {
-    try {
-      if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
-        window.KroniaActions.openDietGenerator(safeContext);
-        return true;
-      }
-    } catch (_) {}
     try { openDietaSheet?.(safeContext); return true; } catch (_) {}
     try { openDieta?.(); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
@@ -4800,15 +4788,28 @@ async function resolveKronosConversation(inputText) {
 }
 
 function normalizeCtaPayload(payload) {
-  var safePayload = (payload && typeof payload === 'object' && !Array.isArray(payload))
-    ? Object.assign({}, payload)
-    : {};
+  var safePayload = sanitizeCtaObject(payload);
   delete safePayload._targetModule;
   return safePayload;
 }
 
 function sanitizeCtaObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? Object.assign({}, value) : {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  var cloned = Object.create(null);
+  Object.keys(value).forEach(function (key) {
+    if (key === '__proto__' || key === 'prototype' || key === 'constructor') return;
+    var normalizedKey = String(key || '').trim();
+    if (!normalizedKey) return;
+    var fieldValue = value[key];
+    if (fieldValue === undefined || typeof fieldValue === 'function') return;
+    if (fieldValue && typeof fieldValue === 'object') {
+      if (Array.isArray(fieldValue)) return;
+      cloned[normalizedKey] = sanitizeCtaObject(fieldValue);
+      return;
+    }
+    cloned[normalizedKey] = fieldValue;
+  });
+  return cloned;
 }
 
 var KRONIA_CTA_ALLOWED_ACTIONS = Object.freeze({
@@ -4841,7 +4842,7 @@ function parseCtaPayloadAttribute(payloadRaw) {
   if (!payloadRaw) return {};
   try {
     var parsed = JSON.parse(String(payloadRaw));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    return sanitizeCtaObject(parsed);
   } catch (_) {
     trackKroniaCta('payload_parse_failed', 'error', { reason: 'invalid_json_payload' });
     return {};
@@ -4852,7 +4853,7 @@ function parseCtaMetaAttribute(metaRaw) {
   if (!metaRaw) return {};
   try {
     var parsed = JSON.parse(String(metaRaw));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    return sanitizeCtaObject(parsed);
   } catch (_) {
     trackKroniaCta('meta_parse_failed', 'error', { reason: 'invalid_json_meta' });
     return {};
@@ -4871,13 +4872,12 @@ function renderConversationCta(containerId, cta, payload) {
   button.type = 'button';
   button.className = 'ai-suggest-btn kronia-cta';
   button.textContent = cta.label || 'Continuar';
-  button.setAttribute('data-action', String(normalizeKroniaAction(cta.action) || ''));
+  button.setAttribute('data-action', String(resolveCanonicalKroniaAction(cta.action) || ''));
   button.setAttribute('data-cta-label', String(cta.label || ''));
   button.setAttribute('data-cta-payload', JSON.stringify(normalizeCtaPayload(payload)));
   button.setAttribute('data-cta-meta', JSON.stringify({
     source: 'conversation_message',
     targetModule: payload?._targetModule || null,
-    renderedAt: new Date().toISOString(),
   }));
 
   var inner = document.createElement('div');
@@ -4911,8 +4911,23 @@ function normalizeKroniaAction(action) {
   return value;
 }
 
-function acquireKroniaCtaExecutionLock(action) {
-  var key = String(action || '');
+function resolveCanonicalKroniaAction(action) {
+  var normalizedAction = normalizeKroniaAction(action);
+  if (!normalizedAction) return null;
+  return KRONIA_CTA_ALLOWED_ACTIONS[normalizedAction] ? normalizedAction : null;
+}
+
+function buildKroniaCtaLockKey(action, payload, meta) {
+  var safePayload = sanitizeCtaObject(payload);
+  var safeMeta = sanitizeCtaObject(meta);
+  var label = String(safeMeta.label || '');
+  var targetModule = String(safeMeta.targetModule || safePayload._targetModule || '');
+  return String(action || '') + '|' + label + '|' + targetModule;
+}
+
+function acquireKroniaCtaExecutionLock(actionKey) {
+  var key = String(actionKey || '');
+  if (!key) return false;
   var now = Date.now();
   var lockedUntil = Number(__kroniaCtaExecutionLocks[key] || 0);
   if (lockedUntil > now) return false;
@@ -4920,27 +4935,54 @@ function acquireKroniaCtaExecutionLock(action) {
   return true;
 }
 
+var KRONIA_CTA_EXECUTOR_MAP = Object.freeze({
+  open_training: function (context) {
+    if (window.KroniaActions && typeof window.KroniaActions.openTrainingBuilder === 'function') {
+      window.KroniaActions.openTrainingBuilder(context);
+      return true;
+    }
+    return false;
+  },
+  open_diet: function (context) {
+    if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
+      window.KroniaActions.openDietGenerator(context);
+      return true;
+    }
+    return false;
+  },
+});
+
+function executeKroniaCtaAction(action, context) {
+  var executor = KRONIA_CTA_EXECUTOR_MAP[action];
+  if (typeof executor !== 'function') return false;
+  try {
+    if (executor(context)) return true;
+  } catch (_) {}
+  return runKroniaActionFallback(action, context);
+}
+
 window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
   var safeMeta = sanitizeCtaObject(meta);
-  var normalizedAction = normalizeKroniaAction(action);
-  if (!normalizedAction) return false;
-  if (!KRONIA_CTA_ALLOWED_ACTIONS[normalizedAction]) {
+  var safePayload = sanitizeCtaObject(payload);
+  var canonicalAction = resolveCanonicalKroniaAction(action);
+  if (!canonicalAction) {
     trackKroniaCta('action_rejected', 'error', {
       actionRaw: String(action || ''),
-      normalizedAction: normalizedAction,
+      normalizedAction: normalizeKroniaAction(action),
       reason: 'action_not_whitelisted',
     });
     return false;
   }
-  if (!acquireKroniaCtaExecutionLock(normalizedAction)) {
+  var lockKey = buildKroniaCtaLockKey(canonicalAction, safePayload, safeMeta);
+  if (!acquireKroniaCtaExecutionLock(lockKey)) {
     trackKroniaCta('click_deduplicated', 'success', {
-      normalizedAction: normalizedAction,
+      normalizedAction: canonicalAction,
+      lockKey: lockKey,
       deduplicated: true,
     });
     return false;
   }
 
-  var safePayload = sanitizeCtaObject(payload);
   var context = Object.assign({}, safePayload, {
     source: safePayload.source || 'conversation_cta',
     ctaLabel: safeMeta.label || null,
@@ -4949,45 +4991,19 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
 
   try { window.KroniaActions = window.KroniaActions || {}; } catch (_) {}
   trackKroniaCta('execution_started', 'success', {
-    normalizedAction: normalizedAction,
+    normalizedAction: canonicalAction,
     hasPrimaryExecutor: !!(window.KroniaActions && (window.KroniaActions.openTrainingBuilder || window.KroniaActions.openDietGenerator)),
   });
-
-  if (normalizedAction === 'open_training') {
-    if (window.KroniaActions && typeof window.KroniaActions.openTrainingBuilder === 'function') {
-      window.KroniaActions.openTrainingBuilder(context);
-      trackKroniaCta('execution_succeeded', 'success', { normalizedAction: normalizedAction, executor: 'primary' });
-      trackKroniaCta('result', 'success', { normalizedAction: normalizedAction, path: 'primary' });
-      return true;
-    }
-    var fallbackTraining = runKroniaActionFallback('open_training', context);
-    trackKroniaCta(fallbackTraining ? 'execution_succeeded' : 'execution_failed', fallbackTraining ? 'success' : 'error', {
-      normalizedAction: normalizedAction,
-      executor: 'fallback',
-    });
-    trackKroniaCta('result', fallbackTraining ? 'success' : 'error', { normalizedAction: normalizedAction, path: 'fallback' });
-    return fallbackTraining;
-  }
-
-  if (normalizedAction === 'open_diet') {
-    if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
-      window.KroniaActions.openDietGenerator(context);
-      trackKroniaCta('execution_succeeded', 'success', { normalizedAction: normalizedAction, executor: 'primary' });
-      trackKroniaCta('result', 'success', { normalizedAction: normalizedAction, path: 'primary' });
-      return true;
-    }
-    var fallbackDiet = runKroniaActionFallback('open_diet', context);
-    trackKroniaCta(fallbackDiet ? 'execution_succeeded' : 'execution_failed', fallbackDiet ? 'success' : 'error', {
-      normalizedAction: normalizedAction,
-      executor: 'fallback',
-    });
-    trackKroniaCta('result', fallbackDiet ? 'success' : 'error', { normalizedAction: normalizedAction, path: 'fallback' });
-    return fallbackDiet;
-  }
-
-  var genericFallback = runKroniaActionFallback(normalizedAction, context);
-  trackKroniaCta('result', genericFallback ? 'success' : 'error', { normalizedAction: normalizedAction, path: 'fallback_generic' });
-  return genericFallback;
+  var executed = executeKroniaCtaAction(canonicalAction, context);
+  trackKroniaCta(executed ? 'execution_succeeded' : 'execution_failed', executed ? 'success' : 'error', {
+    normalizedAction: canonicalAction,
+    executor: executed ? 'central' : 'fallback_failed',
+  });
+  trackKroniaCta('result', executed ? 'success' : 'error', {
+    normalizedAction: canonicalAction,
+    path: executed ? 'centralized_executor' : 'centralized_executor_failed',
+  });
+  return executed;
 };
 
 window.executeConversationCta = function executeConversationCta(data) {
@@ -5001,7 +5017,7 @@ function executeKroniaQuickAction(action, payload, meta) {
   if (typeof window.handleKroniaCTA === 'function') {
     return window.handleKroniaCTA(action, sanitizeCtaObject(payload), sanitizeCtaObject(meta));
   }
-  return runKroniaActionFallback(normalizeKroniaAction(action), sanitizeCtaObject(payload));
+  return runKroniaActionFallback(resolveCanonicalKroniaAction(action), sanitizeCtaObject(payload));
 }
 
 function installConversationCtaDelegation() {
@@ -5025,7 +5041,7 @@ function installConversationCtaDelegation() {
     meta.label = label || meta.label || null;
     trackKroniaCta('click_received', 'success', {
       actionRaw: action,
-      normalizedAction: normalizeKroniaAction(action),
+      normalizedAction: resolveCanonicalKroniaAction(action),
       hasPayload: !!Object.keys(payload).length,
       hasMeta: !!Object.keys(meta).length,
     });
@@ -5034,7 +5050,7 @@ function installConversationCtaDelegation() {
     writeAuditTracePatch({
       conversation: {
         ctaClicked: !!executed,
-        ctaAction: action,
+        ctaAction: resolveCanonicalKroniaAction(action) || String(action || ''),
         ctaLabel: label || null,
         payload: payload,
         meta: meta,

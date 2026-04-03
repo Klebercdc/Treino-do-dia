@@ -27,8 +27,10 @@ function loadRenderRuntime() {
   const snippets = [
     extract(code, /var KRONIA_CTA_ALLOWED_ACTIONS = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'KRONIA_CTA_ALLOWED_ACTIONS'),
     extract(code, /var KRONIA_CTA_ACTION_ALIASES = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'KRONIA_CTA_ACTION_ALIASES'),
+    extract(code, /function sanitizeCtaObject\(value\) \{[\s\S]*?\n\}/, 'sanitizeCtaObject'),
     extract(code, /function normalizeCtaPayload\(payload\) \{[\s\S]*?\n\}/, 'normalizeCtaPayload'),
     extract(code, /function normalizeKroniaAction\(action\) \{[\s\S]*?\n\}/, 'normalizeKroniaAction'),
+    extract(code, /function resolveCanonicalKroniaAction\(action\) \{[\s\S]*?\n\}/, 'resolveCanonicalKroniaAction'),
     extract(code, /function renderConversationCta\(containerId, cta, payload\) \{[\s\S]*?\n\}/, 'renderConversationCta'),
   ].join('\n\n');
 
@@ -74,5 +76,6 @@ test('renderConversationCta outputs button with canonical action and attrs', () 
   assert.ok(button.getAttribute('data-cta-payload').includes('"source":"test"'));
   assert.ok(!button.getAttribute('data-cta-payload').includes('_targetModule'));
   assert.ok(button.getAttribute('data-cta-meta').includes('conversation_message'));
+  assert.ok(!button.getAttribute('data-cta-meta').includes('renderedAt'));
   assert.equal(container.scrollTop, 900);
 });
