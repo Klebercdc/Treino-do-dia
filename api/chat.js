@@ -279,7 +279,7 @@ module.exports = function(req, res) {
         userId: user.id,
         eventType: 'chat_message',
         eventKey: user.id + ':chat_message:' + (b.requestId || b.correlationId || Date.now()) + ':' + String(lastContent || '').length,
-        payload: { message: String(lastContent || '').slice(0, 600), usageCategory: usageCategory, intentHint: null },
+        payload: { note: String(lastContent || '').slice(0, 600), channel: 'chat', intent_hint: 'conversation' },
         requestId: b.requestId || b.correlationId || null,
         component: 'api/chat',
         source: 'chat_api'

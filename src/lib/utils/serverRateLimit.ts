@@ -23,6 +23,7 @@ export interface RateLimitOptions {
   max: number;
   windowMs: number;
   category?: string;
+  strictRemote?: boolean;
 }
 
 function checkRateLimitLocal(
@@ -81,6 +82,7 @@ export async function checkRateLimit(
   const namespacedKey = `${key}:c:${category}`;
 
   if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    if (opts.strictRemote) throw new Error('RATE_LIMIT_REMOTE_REQUIRED_BUT_NOT_CONFIGURED');
     return checkRateLimitLocal(namespacedKey, { ...opts, category });
   }
 
@@ -119,7 +121,8 @@ export async function checkRateLimit(
       backend: 'upstash-redis',
       category,
     };
-  } catch {
+  } catch (error) {
+    if (opts.strictRemote) throw error;
     return { ...checkRateLimitLocal(namespacedKey, { ...opts, category }), fallback: true };
   }
 }

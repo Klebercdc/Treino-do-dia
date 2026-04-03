@@ -1,4 +1,5 @@
 var crypto = require('crypto');
+var responseUtil = require('./_response');
 
 function readSecretFromReq(req) {
   var auth = req && req.headers ? String(req.headers['authorization'] || '') : '';
@@ -22,14 +23,24 @@ function safeEquals(a, b) {
 function requireInternalAccess(req, res, next) {
   var expected = String(process.env.INTERNAL_WORKER_SECRET || process.env.CRON_SECRET || '').trim();
   if (!expected) {
-    res.status(500).json({ ok: false, success: false, type: 'error', state: 'misconfigured', message: 'INTERNAL_WORKER_SECRET não configurado.', error: 'MISSING_INTERNAL_SECRET' });
-    return;
+    return responseUtil.sendJson(res, 500, {
+      success: false,
+      type: 'error',
+      state: 'misconfigured',
+      message: 'INTERNAL_WORKER_SECRET não configurado.',
+      error: 'MISSING_INTERNAL_SECRET'
+    });
   }
 
   var provided = readSecretFromReq(req);
   if (!provided || !safeEquals(provided, expected)) {
-    res.status(401).json({ ok: false, success: false, type: 'error', state: 'unauthorized', message: 'Acesso interno não autorizado.', error: 'UNAUTHORIZED_INTERNAL' });
-    return;
+    return responseUtil.sendJson(res, 401, {
+      success: false,
+      type: 'error',
+      state: 'unauthorized',
+      message: 'Acesso interno não autorizado.',
+      error: 'UNAUTHORIZED_INTERNAL'
+    });
   }
 
   next();

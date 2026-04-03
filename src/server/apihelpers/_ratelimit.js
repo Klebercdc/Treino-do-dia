@@ -115,14 +115,19 @@ function checkRateLimitRemote(req, opts, userId) {
 }
 
 function checkRateLimit(req, opts, userId) {
+  var strictRemote = !!(opts && opts.strictRemote);
   if (UPSTASH_URL && UPSTASH_TOKEN && typeof fetch === 'function') {
     return checkRateLimitRemote(req, opts, userId)
       .catch(function(err) {
+        if (strictRemote) throw err;
         var fallback = checkRateLimitLocal(req, opts, userId);
         fallback.fallback = true;
         fallback.fallbackReason = err && err.message ? err.message : String(err || 'unknown');
         return fallback;
       });
+  }
+  if (strictRemote) {
+    return Promise.reject(new Error('RATE_LIMIT_REMOTE_REQUIRED_BUT_NOT_CONFIGURED'));
   }
   return Promise.resolve(checkRateLimitLocal(req, opts, userId));
 }

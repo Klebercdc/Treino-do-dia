@@ -547,7 +547,7 @@ module.exports = function(req, res) {
         userId: user.id,
         eventType: 'chat_message',
         eventKey: user.id + ':agent_chat_message:' + requestId + ':' + messages.length,
-        payload: { endpoint: 'agent', usageCategory: usageCategory, messages: messages.length },
+        payload: { note: ('Mensagens no agent: ' + messages.length), channel: 'agent', intent_hint: 'conversation' },
         requestId: requestId,
         component: 'api/agent',
         source: 'agent_api'

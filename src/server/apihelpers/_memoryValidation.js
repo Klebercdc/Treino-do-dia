@@ -6,7 +6,8 @@ var ALLOWED_EVENT_TYPES = {
   body_metrics: true,
   weight_update: true,
   checkin: true,
-  subjective_feedback: true
+  subjective_feedback: true,
+  chat_message: true
 };
 
 var MAX_STRING = 500;
@@ -63,6 +64,16 @@ function normalizePayload(eventType, payload) {
       carbs_g: toFiniteNumber(data.carbs_g, 0, 1200),
       fat_g: toFiniteNumber(data.fat_g, 0, 400),
       note: data.note ? truncateString(data.note) : null
+    };
+  }
+
+
+  if (eventType === 'chat_message') {
+    var note = data.note != null ? data.note : data.message;
+    return {
+      note: note ? truncateString(note) : null,
+      intent_hint: data.intent_hint ? truncateString(data.intent_hint) : null,
+      channel: data.channel ? truncateString(data.channel) : null
     };
   }
 

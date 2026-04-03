@@ -46,6 +46,9 @@ function mapBlocksForEvent(eventType) {
   if (t === 'checkin' || t === 'subjective_feedback') {
     return ['recovery_state', 'fatigue_state', 'adherence_state', 'training_tolerance_state', 'coaching_summary'];
   }
+  if (t === 'chat_message') {
+    return ['coaching_summary'];
+  }
   return ['coaching_summary'];
 }
 
@@ -117,39 +120,14 @@ async function enqueueMemoryRecomputeJob(params) {
     p_request_id: requestId,
     p_component: component,
     p_max_attempts: maxAttempts
-  }).catch(function() { return null; });
-
-  if (rpcResult) {
-    var rpcJobId = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
-    if (typeof rpcJobId === 'string' && rpcJobId) {
-      return { jobId: rpcJobId, queued: true, via: 'rpc' };
-    }
-  }
-
-  var fallbackPayload = {
-    user_id: userId,
-    status: 'queued',
-    due_at: dueAt,
-    blocks: blocks,
-    latest_request_id: requestId,
-    latest_component: component,
-    attempts: 0,
-    max_attempts: maxAttempts,
-    updated_at: safeNowIso(),
-    created_at: safeNowIso()
-  };
-
-  await supabase('POST', 'user_memory_recompute_jobs', fallbackPayload).catch(async function() {
-    await supabase('PATCH', 'user_memory_recompute_jobs?user_id=eq.' + userId + '&status=in.(queued,processing,retryable)', {
-      blocks: blocks,
-      latest_request_id: requestId,
-      latest_component: component,
-      updated_at: safeNowIso(),
-      max_attempts: maxAttempts
-    });
   });
 
-  return { jobId: null, queued: true, via: 'fallback' };
+  var rpcJobId = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+  if (typeof rpcJobId !== 'string' || !rpcJobId) {
+    throw new Error('MEMORY_QUEUE_ENQUEUE_RPC_INVALID');
+  }
+
+  return { jobId: rpcJobId, queued: true, via: 'rpc' };
 }
 
 async function claimQueuedMemoryJobs(params) {
@@ -161,15 +139,13 @@ async function claimQueuedMemoryJobs(params) {
     p_limit: limit,
     p_lock_token: lockToken,
     p_lock_timeout_seconds: lockTimeoutSeconds
-  }).catch(function() { return null; });
+  });
 
-  if (!Array.isArray(claimed)) {
-    claimed = await supabase('GET', 'user_memory_recompute_jobs?status=eq.queued&order=due_at.asc&limit=' + limit, null).catch(function() { return []; });
-  }
+  if (!Array.isArray(claimed)) throw new Error('MEMORY_QUEUE_CLAIM_RPC_INVALID');
 
   return {
     lockToken: lockToken,
-    jobs: Array.isArray(claimed) ? claimed : []
+    jobs: claimed
   };
 }
 
@@ -182,21 +158,10 @@ async function completeMemoryRecomputeJob(params) {
     p_job_id: jobId,
     p_lock_token: lockToken,
     p_request_id: requestId
-  }).catch(function() { return null; });
+  });
 
   if (done === true || done === 'true') return true;
-
-  await supabase('PATCH', 'user_memory_recompute_jobs?id=eq.' + jobId + '&status=eq.processing', {
-    status: 'completed',
-    completed_at: safeNowIso(),
-    last_completed_at: safeNowIso(),
-    lock_token: null,
-    locked_at: null,
-    last_error: null,
-    updated_at: safeNowIso(),
-    latest_request_id: requestId
-  }).catch(function() { return null; });
-  return true;
+  throw new Error('MEMORY_QUEUE_COMPLETE_REJECTED');
 }
 
 async function failMemoryRecomputeJob(params) {
@@ -214,25 +179,13 @@ async function failMemoryRecomputeJob(params) {
     p_error: lastError,
     p_retry_delay_seconds: retryDelaySec,
     p_request_id: requestId
-  }).catch(function() { return null; });
+  });
 
   if (Array.isArray(failed) && failed[0] && failed[0].status) {
     return { status: failed[0].status, retryDelaySec: retryDelaySec };
   }
 
-  var shouldRetry = attempts < maxAttempts;
-  await supabase('PATCH', 'user_memory_recompute_jobs?id=eq.' + jobId, {
-    status: shouldRetry ? 'retryable' : 'failed',
-    due_at: shouldRetry ? new Date(Date.now() + (retryDelaySec * 1000)).toISOString() : safeNowIso(),
-    completed_at: shouldRetry ? null : safeNowIso(),
-    lock_token: null,
-    locked_at: null,
-    last_error: lastError,
-    updated_at: safeNowIso(),
-    latest_request_id: requestId
-  }).catch(function() { return null; });
-
-  return { status: shouldRetry ? 'retryable' : 'failed', retryDelaySec: retryDelaySec };
+  throw new Error('MEMORY_QUEUE_FAIL_REJECTED');
 }
 
 async function processMemoryRecomputeJob(params) {

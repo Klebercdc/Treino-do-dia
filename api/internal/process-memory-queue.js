@@ -88,6 +88,6 @@ module.exports = function(req, res) {
             }
           });
         });
-    }, { max: 120, windowMs: 60000, category: 'internal_worker' });
+    }, { max: 120, windowMs: 60000, category: 'internal_worker', strictRemote: true });
   });
 };

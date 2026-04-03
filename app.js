@@ -4772,6 +4772,12 @@ async function resolveKronosConversation(inputText) {
   return appLayer.resolveConversationFlow({ message: String(inputText || '') });
 }
 
+function normalizeCtaPayload(payload) {
+  var safePayload = Object.assign({}, payload || {});
+  delete safePayload._targetModule;
+  return safePayload;
+}
+
 function renderConversationCta(containerId, cta, payload) {
   var container = document.getElementById(containerId);
   if (!container || !cta || !cta.action) return null;
@@ -4784,23 +4790,9 @@ function renderConversationCta(containerId, cta, payload) {
   button.type = 'button';
   button.className = 'ai-suggest-btn';
   button.textContent = cta.label || 'Continuar';
-  button.addEventListener('click', function () {
-    var actionPayload = Object.assign({}, payload || {});
-    delete actionPayload._targetModule;
-    var executed = window.executeConversationCta({ action: cta.action, payload: actionPayload, label: cta.label || '' });
-    var safePayload = Object.assign({}, payload || {});
-    delete safePayload._targetModule;
-    writeAuditTracePatch({
-      conversation: {
-        ctaClicked: !!executed,
-        ctaAction: cta.action,
-        ctaLabel: cta.label || null,
-        targetModule: payload?._targetModule || null,
-        payload: safePayload,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  });
+  button.setAttribute('data-cta-action', String(cta.action || ''));
+  button.setAttribute('data-cta-label', String(cta.label || ''));
+  button.setAttribute('data-cta-payload', JSON.stringify(normalizeCtaPayload(payload)));
 
   var inner = document.createElement('div');
   inner.className = 'ai-avatar-inner';
@@ -4812,8 +4804,6 @@ function renderConversationCta(containerId, cta, payload) {
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
 
-  var safePayloadRender = Object.assign({}, payload || {});
-  delete safePayloadRender._targetModule;
   writeAuditTracePatch({
     conversation: {
       ctaRendered: true,
@@ -4821,7 +4811,7 @@ function renderConversationCta(containerId, cta, payload) {
       ctaAction: cta.action,
       ctaLabel: cta.label || null,
       targetModule: payload?._targetModule || null,
-      payload: safePayloadRender,
+      payload: normalizeCtaPayload(payload),
       timestamp: new Date().toISOString(),
     },
   });
@@ -4831,16 +4821,51 @@ function renderConversationCta(containerId, cta, payload) {
 
 window.executeConversationCta = function executeConversationCta(data) {
   if (!data || !data.action) return false;
-  if (data.action === 'open_training_builder') {
-    window.KroniaActions?.openTrainingBuilder?.(data.payload || {});
+
+  var action = String(data.action || '');
+  var payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+
+  if (action === 'open_training_builder') {
+    window.KroniaActions?.openTrainingBuilder?.(payload);
     return true;
   }
-  if (data.action === 'open_diet_generator') {
-    window.KroniaActions?.openDietGenerator?.(data.payload || {});
+  if (action === 'open_diet_generator') {
+    window.KroniaActions?.openDietGenerator?.(payload);
     return true;
   }
   return false;
 };
+
+function installConversationCtaDelegation() {
+  if (window.__kroniaCtaDelegationInstalled) return;
+  window.__kroniaCtaDelegationInstalled = true;
+
+  document.addEventListener('click', function (event) {
+    var target = event && event.target && typeof event.target.closest === 'function'
+      ? event.target.closest('.ai-suggest-btn[data-cta-action]')
+      : null;
+    if (!target) return;
+
+    var action = String(target.getAttribute('data-cta-action') || '');
+    var label = String(target.getAttribute('data-cta-label') || '');
+    var payloadRaw = String(target.getAttribute('data-cta-payload') || '{}');
+    var payload = {};
+    try { payload = JSON.parse(payloadRaw); } catch (_) { payload = {}; }
+
+    var executed = window.executeConversationCta({ action: action, payload: payload, label: label });
+    writeAuditTracePatch({
+      conversation: {
+        ctaClicked: !!executed,
+        ctaAction: action,
+        ctaLabel: label || null,
+        payload: payload,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  });
+}
+
+installConversationCtaDelegation();
 
 function addOrientMsg(containerId, role, text) {
   const c = document.getElementById(containerId);
