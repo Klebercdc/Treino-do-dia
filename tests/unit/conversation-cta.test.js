@@ -21,18 +21,18 @@ function loadApplication() {
   return context.window.KroniaApplication.application;
 }
 
-test('CTA workout resolves to open_training_builder', async () => {
+test('CTA workout resolves to open_training', async () => {
   const app = loadApplication();
   const result = await app.resolveConversationFlow({ message: 'quero montar um treino hoje' });
   assert.equal(result.type, 'answer_with_cta');
-  assert.equal(result.cta.action, 'open_training_builder');
+  assert.equal(result.cta.action, 'open_training');
   assert.equal(result.cta.label, 'Abrir treino');
 });
 
-test('CTA diet resolves to open_diet_generator', async () => {
+test('CTA diet resolves to open_diet', async () => {
   const app = loadApplication();
   const result = await app.resolveConversationFlow({ message: 'preciso de uma dieta para secar' });
   assert.equal(result.type, 'answer_with_cta');
-  assert.equal(result.cta.action, 'open_diet_generator');
+  assert.equal(result.cta.action, 'open_diet');
   assert.equal(result.cta.label, 'Abrir dieta');
 });

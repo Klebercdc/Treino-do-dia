@@ -178,7 +178,7 @@
       return Object.assign({}, base, {
         type: 'answer_with_cta',
         targetModule: 'programa',
-        ctaAction: 'open_training_builder',
+        ctaAction: 'open_training',
         message: 'Perfeito. Posso abrir o modulo oficial de treino quando voce clicar no botao abaixo.',
       });
     }
@@ -187,7 +187,7 @@
       return Object.assign({}, base, {
         type: 'answer_with_cta',
         targetModule: 'dieta',
-        ctaAction: 'open_diet_generator',
+        ctaAction: 'open_diet',
         message: 'Perfeito. Posso abrir o modulo oficial de dieta quando voce clicar no botao abaixo.',
       });
     }
@@ -237,7 +237,7 @@
 
     if (decision.type === 'answer_with_cta') {
       try {
-        var scienceBuilder = decision.ctaAction === 'open_training_builder'
+        var scienceBuilder = decision.ctaAction === 'open_training'
           ? window.buildScientificConstraintsForWorkout
           : window.buildScientificConstraintsForDiet;
         if (typeof scienceBuilder === 'function') {
@@ -288,7 +288,7 @@
       intent: decision.intent,
       message: decision.message,
       cta: decision.ctaAction ? {
-        label: decision.ctaAction === 'open_training_builder' ? 'Abrir treino' : 'Abrir dieta',
+        label: decision.ctaAction === 'open_training' ? 'Abrir treino' : 'Abrir dieta',
         action: decision.ctaAction,
       } : null,
       targetModule: decision.targetModule,

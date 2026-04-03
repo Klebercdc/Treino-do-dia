@@ -4462,6 +4462,20 @@ function autoResizeOrientInput(el) {
 
 
 
+function runKroniaActionFallback(action, context) {
+  if (action === 'open_training' || action === 'open_training_builder') {
+    try { navTo?.('programa'); } catch (_) {}
+    try { openConfig?.(context || {}); return true; } catch (_) {}
+    try { navTo?.('treino'); return true; } catch (_) {}
+  }
+  if (action === 'open_diet' || action === 'open_diet_generator') {
+    try { openDietaSheet?.(context || {}); return true; } catch (_) {}
+    try { openDieta?.(); return true; } catch (_) {}
+    try { navTo?.('treino'); return true; } catch (_) {}
+  }
+  return false;
+}
+
 window.KroniaActions = {
   openTrainingBuilder: function (context) {
     try { closeOrientacao?.(); } catch (_) {}
@@ -4773,9 +4787,47 @@ async function resolveKronosConversation(inputText) {
 }
 
 function normalizeCtaPayload(payload) {
-  var safePayload = Object.assign({}, payload || {});
+  var safePayload = (payload && typeof payload === 'object' && !Array.isArray(payload))
+    ? Object.assign({}, payload)
+    : {};
   delete safePayload._targetModule;
   return safePayload;
+}
+
+var KRONIA_CTA_ALLOWED_ACTIONS = Object.freeze({
+  open_training: true,
+  open_diet: true,
+});
+
+// Compatibilidade legada temporária (remover quando emissores antigos forem eliminados).
+var KRONIA_CTA_ACTION_ALIASES = Object.freeze({
+  open_training_builder: 'open_training',
+  open_diet_generator: 'open_diet',
+});
+var KRONIA_CTA_LOCK_MS = 1200;
+var __kroniaCtaExecutionLocks = Object.create(null);
+
+function trackKroniaCta(stage, status, metadata) {
+  try {
+    window.KroniaIntelligence?.track?.({
+      module: 'conversation',
+      action: 'cta_' + String(stage || 'unknown'),
+      status: status || 'success',
+      source: 'app_cta_pipeline',
+      metadata: Object.assign({}, metadata || {}),
+    });
+  } catch (_) {}
+}
+
+function parseCtaPayloadAttribute(payloadRaw) {
+  if (!payloadRaw) return {};
+  try {
+    var parsed = JSON.parse(String(payloadRaw));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) {
+    trackKroniaCta('payload_parse_failed', 'error', { reason: 'invalid_json_payload' });
+    return {};
+  }
 }
 
 function renderConversationCta(containerId, cta, payload) {
@@ -4788,9 +4840,9 @@ function renderConversationCta(containerId, cta, payload) {
 
   var button = document.createElement('button');
   button.type = 'button';
-  button.className = 'ai-suggest-btn';
+  button.className = 'ai-suggest-btn kronia-cta';
   button.textContent = cta.label || 'Continuar';
-  button.setAttribute('data-cta-action', String(cta.action || ''));
+  button.setAttribute('data-action', String(normalizeKroniaAction(cta.action) || ''));
   button.setAttribute('data-cta-label', String(cta.label || ''));
   button.setAttribute('data-cta-payload', JSON.stringify(normalizeCtaPayload(payload)));
 
@@ -4819,21 +4871,86 @@ function renderConversationCta(containerId, cta, payload) {
   return wrap;
 }
 
+function normalizeKroniaAction(action) {
+  var value = String(action || '').trim().toLowerCase();
+  if (KRONIA_CTA_ACTION_ALIASES[value]) return KRONIA_CTA_ACTION_ALIASES[value];
+  return value;
+}
+
+function acquireKroniaCtaExecutionLock(action) {
+  var key = String(action || '');
+  var now = Date.now();
+  var lockedUntil = Number(__kroniaCtaExecutionLocks[key] || 0);
+  if (lockedUntil > now) return false;
+  __kroniaCtaExecutionLocks[key] = now + KRONIA_CTA_LOCK_MS;
+  return true;
+}
+
+window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
+  var normalizedAction = normalizeKroniaAction(action);
+  if (!normalizedAction) return false;
+  if (!KRONIA_CTA_ALLOWED_ACTIONS[normalizedAction]) {
+    trackKroniaCta('action_rejected', 'error', {
+      actionRaw: String(action || ''),
+      normalizedAction: normalizedAction,
+      reason: 'action_not_whitelisted',
+    });
+    return false;
+  }
+  if (!acquireKroniaCtaExecutionLock(normalizedAction)) {
+    trackKroniaCta('click_deduplicated', 'success', {
+      normalizedAction: normalizedAction,
+      deduplicated: true,
+    });
+    return false;
+  }
+
+  var safePayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  var context = Object.assign({}, safePayload, {
+    source: safePayload.source || 'conversation_cta',
+    ctaLabel: meta && meta.label ? meta.label : null,
+  });
+
+  try { window.KroniaActions = window.KroniaActions || {}; } catch (_) {}
+  trackKroniaCta('execution_started', 'success', {
+    normalizedAction: normalizedAction,
+    hasPrimaryExecutor: !!(window.KroniaActions && (window.KroniaActions.openTrainingBuilder || window.KroniaActions.openDietGenerator)),
+  });
+
+  if (normalizedAction === 'open_training') {
+    if (window.KroniaActions && typeof window.KroniaActions.openTrainingBuilder === 'function') {
+      window.KroniaActions.openTrainingBuilder(context);
+      trackKroniaCta('execution_succeeded', 'success', { normalizedAction: normalizedAction, executor: 'primary' });
+      return true;
+    }
+    var fallbackTraining = runKroniaActionFallback('open_training', context);
+    trackKroniaCta(fallbackTraining ? 'execution_succeeded' : 'execution_failed', fallbackTraining ? 'success' : 'error', {
+      normalizedAction: normalizedAction,
+      executor: 'fallback',
+    });
+    return fallbackTraining;
+  }
+
+  if (normalizedAction === 'open_diet') {
+    if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
+      window.KroniaActions.openDietGenerator(context);
+      trackKroniaCta('execution_succeeded', 'success', { normalizedAction: normalizedAction, executor: 'primary' });
+      return true;
+    }
+    var fallbackDiet = runKroniaActionFallback('open_diet', context);
+    trackKroniaCta(fallbackDiet ? 'execution_succeeded' : 'execution_failed', fallbackDiet ? 'success' : 'error', {
+      normalizedAction: normalizedAction,
+      executor: 'fallback',
+    });
+    return fallbackDiet;
+  }
+
+  return runKroniaActionFallback(normalizedAction, context);
+};
+
 window.executeConversationCta = function executeConversationCta(data) {
   if (!data || !data.action) return false;
-
-  var action = String(data.action || '');
-  var payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
-
-  if (action === 'open_training_builder') {
-    window.KroniaActions?.openTrainingBuilder?.(payload);
-    return true;
-  }
-  if (action === 'open_diet_generator') {
-    window.KroniaActions?.openDietGenerator?.(payload);
-    return true;
-  }
-  return false;
+  return window.handleKroniaCTA(data.action, data.payload, { label: data.label || null });
 };
 
 function installConversationCtaDelegation() {
@@ -4842,15 +4959,19 @@ function installConversationCtaDelegation() {
 
   document.addEventListener('click', function (event) {
     var target = event && event.target && typeof event.target.closest === 'function'
-      ? event.target.closest('.ai-suggest-btn[data-cta-action]')
+      ? event.target.closest('.kronia-cta[data-action]')
       : null;
     if (!target) return;
 
-    var action = String(target.getAttribute('data-cta-action') || '');
+    var action = String(target.getAttribute('data-action') || '');
     var label = String(target.getAttribute('data-cta-label') || '');
-    var payloadRaw = String(target.getAttribute('data-cta-payload') || '{}');
-    var payload = {};
-    try { payload = JSON.parse(payloadRaw); } catch (_) { payload = {}; }
+    var payloadRaw = String(target.getAttribute('data-cta-payload') || '');
+    var payload = parseCtaPayloadAttribute(payloadRaw);
+    trackKroniaCta('click_received', 'success', {
+      actionRaw: action,
+      normalizedAction: normalizeKroniaAction(action),
+      hasPayload: !!Object.keys(payload).length,
+    });
 
     var executed = window.executeConversationCta({ action: action, payload: payload, label: label });
     writeAuditTracePatch({
