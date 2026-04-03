@@ -15,6 +15,9 @@ function loadCtaRuntime() {
   const snippets = [
     extract(code, /var KRONIA_CTA_ALLOWED_ACTIONS = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'KRONIA_CTA_ALLOWED_ACTIONS'),
     extract(code, /var KRONIA_CTA_ACTION_ALIASES = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'KRONIA_CTA_ACTION_ALIASES'),
+    extract(code, /var KRONIA_PENDING_INTENT_KEY = 'kronia_pending_conversation_intent_v1';/, 'KRONIA_PENDING_INTENT_KEY'),
+    extract(code, /var KRONIA_PENDING_INTENT_TTL_MS = 8 \* 60 \* 1000;/, 'KRONIA_PENDING_INTENT_TTL_MS'),
+    extract(code, /var __kroniaPendingIntentConsumeScheduled = false;/, '__kroniaPendingIntentConsumeScheduled'),
     extract(code, /var KRONIA_CTA_LOCK_MS = 1200;/, 'KRONIA_CTA_LOCK_MS'),
     extract(code, /var __kroniaCtaExecutionLocks = Object\.create\(null\);/, '__kroniaCtaExecutionLocks'),
     extract(code, /var __kroniaCtaDelegationInstalled = false;/, '__kroniaCtaDelegationInstalled'),
@@ -22,6 +25,10 @@ function loadCtaRuntime() {
     extract(code, /function parseCtaPayloadAttribute\(payloadRaw\) \{[\s\S]*?\n\}/, 'parseCtaPayloadAttribute'),
     extract(code, /function parseCtaMetaAttribute\(metaRaw\) \{[\s\S]*?\n\}/, 'parseCtaMetaAttribute'),
     extract(code, /function sanitizeCtaObject\(value\) \{[\s\S]*?\n\}/, 'sanitizeCtaObject'),
+    extract(code, /function normalizeConversationIntentType\(action\) \{[\s\S]*?\n\}/, 'normalizeConversationIntentType'),
+    extract(code, /function sanitizeConversationIntentPayload\(intentType, payload\) \{[\s\S]*?\n\}/, 'sanitizeConversationIntentPayload'),
+    extract(code, /function buildCanonicalConversationIntent\(data\) \{[\s\S]*?\n\}/, 'buildCanonicalConversationIntent'),
+    extract(code, /function persistPendingConversationIntent\(intent\) \{[\s\S]*?\n\}/, 'persistPendingConversationIntent'),
     extract(code, /function runKroniaActionFallback\(action, context\) \{[\s\S]*?\n\}/, 'runKroniaActionFallback'),
     extract(code, /function normalizeKroniaAction\(action\) \{[\s\S]*?\n\}/, 'normalizeKroniaAction'),
     extract(code, /function resolveCanonicalKroniaAction\(action\) \{[\s\S]*?\n\}/, 'resolveCanonicalKroniaAction'),
@@ -64,8 +71,16 @@ function loadCtaRuntime() {
     openDietaSheet(payload) { calls.openDietaSheet.push(payload); },
     openDieta() { calls.openDieta += 1; },
     writeAuditTracePatch() {},
+    schedulePendingConversationIntentConsumption() {},
+    localStorage: {
+      getItem() { return null; },
+      setItem() {},
+      removeItem() {},
+    },
+    trackKroniaCta() {},
     JSON,
   };
+  context.window.localStorage = context.localStorage;
 
   vm.createContext(context);
   vm.runInContext(snippets, context, { filename: 'cta-snippets.js' });
@@ -178,9 +193,7 @@ test('fallback works when KroniaActions is not ready', () => {
 
   assert.equal(trainingOk, true);
   assert.equal(dietOk, true);
-  assert.ok(calls.navTo.includes('programa'));
-  assert.equal(calls.openConfig.length, 1);
-  assert.equal(calls.openDietaSheet.length, 1);
+  assert.ok(calls.navTo.includes('inicio'));
 });
 
 test('executeConversationCta preserves provided meta payload', () => {

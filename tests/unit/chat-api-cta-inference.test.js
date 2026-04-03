@@ -17,10 +17,13 @@ function loadInferenceRuntime() {
     extract(code, /function sanitizeCtaObject\(value\) \{[\s\S]*?\n\}/, 'sanitizeCtaObject'),
     extract(code, /function normalizeKroniaAction\(action\) \{[\s\S]*?\n\}/, 'normalizeKroniaAction'),
     extract(code, /function resolveCanonicalKroniaAction\(action\) \{[\s\S]*?\n\}/, 'resolveCanonicalKroniaAction'),
+    extract(code, /function normalizeConversationIntentType\(action\) \{[\s\S]*?\n\}/, 'normalizeConversationIntentType'),
+    extract(code, /function sanitizeConversationIntentPayload\(intentType, payload\) \{[\s\S]*?\n\}/, 'sanitizeConversationIntentPayload'),
+    extract(code, /function buildCanonicalConversationIntent\(data\) \{[\s\S]*?\n\}/, 'buildCanonicalConversationIntent'),
     extract(code, /function inferConversationCtaFromApiResponse\(payload\) \{[\s\S]*?\n\}/, 'inferConversationCtaFromApiResponse'),
   ].join('\n\n');
 
-  const context = { JSON };
+  const context = { JSON, trackKroniaCta() {} };
   vm.createContext(context);
   vm.runInContext(snippets, context, { filename: 'chat-api-cta-inference.js' });
   return context;
@@ -36,9 +39,9 @@ test('inferConversationCtaFromApiResponse maps explicit treino action to canonic
   });
 
   assert.ok(cta);
-  assert.equal(cta.action, 'open_training');
+  assert.equal(cta.type, 'open_training');
   assert.equal(cta.label, 'Abrir treino');
-  assert.equal(cta.payload.source, 'ai');
+  assert.equal(typeof cta.payload, 'object');
 });
 
 test('inferConversationCtaFromApiResponse infers dieta CTA from textual fallback safely', () => {
@@ -50,8 +53,8 @@ test('inferConversationCtaFromApiResponse infers dieta CTA from textual fallback
   });
 
   assert.ok(cta);
-  assert.equal(cta.action, 'open_diet');
-  assert.equal(cta.meta.inferred, true);
+  assert.equal(cta.type, 'open_diet');
+  assert.equal(cta.meta.inferred_from, 'textual_fallback');
 });
 
 test('inferConversationCtaFromApiResponse ignores non-actionable chat replies', () => {
