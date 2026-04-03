@@ -144,7 +144,7 @@ function handleLgpdDelete(req, res) {
       });
       });
     });
-    }, { max: 3, windowMs: 3600000 }, user.id); // 3 req/hora — operação irreversível
+    }, { max: 3, windowMs: 3600000, category: 'admin_operation' }, user.id); // 3 req/hora — operação irreversível
   });
 }
 

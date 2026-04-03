@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const userId = auth.user.id;
-    const rateLimit = await checkRateLimit(userId, { max: 40, windowMs: 60000 });
+    const rateLimit = await checkRateLimit(userId, { max: 40, windowMs: 60000, category: 'ai_heavy_operation' });
     if (!rateLimit.allowed) {
       return NextResponse.json(buildExerciseDetailsErrorPayload('Muitas requisições. Tente novamente em instantes.', 'RATE_LIMIT', { retryAfterSec: rateLimit.retryAfterSec }), { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSec) } });
     }

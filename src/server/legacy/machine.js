@@ -507,7 +507,7 @@ module.exports = async function handler(req, res) {
 
   // Rate limit: 20 req/min por usuário
   var rateLimitDone = await new Promise(function(resolve) {
-    rl.rateLimit(req, res, resolve, { max: 20, windowMs: 60000 }, user.id);
+    rl.rateLimit(req, res, resolve, { max: 20, windowMs: 60000, category: 'ai_heavy_operation' }, user.id);
   });
   if (res.headersSent) return; // rate limit bloqueou
 

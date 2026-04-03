@@ -16,10 +16,15 @@ function createApiEnvelope(partial) {
     state: p.state ? String(p.state) : (success ? 'success' : 'provider_unavailable'),
     action: p.action == null ? null : String(p.action),
     message: message,
+    requestId: p.requestId ? String(p.requestId) : null,
+    userId: p.userId ? String(p.userId) : null,
     data: data,
     error: p.error ? String(p.error) : null,
     meta: p.meta && typeof p.meta === 'object' ? p.meta : {}
   };
+
+  if (envelope.requestId && !envelope.meta.requestId) envelope.meta.requestId = envelope.requestId;
+  if (envelope.userId && !envelope.meta.userId) envelope.meta.userId = envelope.userId;
 
   if (!envelope.data) {
     envelope.data = { content: normalizeContent(message, type, null) };

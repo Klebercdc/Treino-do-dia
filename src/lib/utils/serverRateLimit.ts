@@ -16,11 +16,18 @@ export interface RateLimitResult {
   resetAt: number;
   backend: 'upstash-redis' | 'local-memory';
   fallback?: boolean;
+  category: string;
+}
+
+export interface RateLimitOptions {
+  max: number;
+  windowMs: number;
+  category?: string;
 }
 
 function checkRateLimitLocal(
   key: string,
-  opts: { max: number; windowMs: number },
+  opts: RateLimitOptions,
 ): RateLimitResult {
   const now = Date.now();
   const entry = store.get(key);
@@ -34,6 +41,7 @@ function checkRateLimitLocal(
       retryAfterSec: Math.max(1, Math.ceil(opts.windowMs / 1000)),
       resetAt: now + opts.windowMs,
       backend: 'local-memory',
+      category: opts.category ?? 'default',
     };
   }
 
@@ -45,6 +53,7 @@ function checkRateLimitLocal(
       retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
       resetAt: entry.resetAt,
       backend: 'local-memory',
+      category: opts.category ?? 'default',
     };
   }
 
@@ -56,6 +65,7 @@ function checkRateLimitLocal(
     retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
     resetAt: entry.resetAt,
     backend: 'local-memory',
+    category: opts.category ?? 'default',
   };
 }
 
@@ -65,14 +75,17 @@ function sanitizeRedisKey(key: string): string {
 
 export async function checkRateLimit(
   key: string,
-  opts: { max: number; windowMs: number },
+  opts: RateLimitOptions,
 ): Promise<RateLimitResult> {
+  const category = opts.category ?? 'default';
+  const namespacedKey = `${key}:c:${category}`;
+
   if (!UPSTASH_URL || !UPSTASH_TOKEN) {
-    return checkRateLimitLocal(key, opts);
+    return checkRateLimitLocal(namespacedKey, { ...opts, category });
   }
 
   try {
-    const redisKey = `${RATE_LIMIT_PREFIX}:${sanitizeRedisKey(key)}`;
+    const redisKey = `${RATE_LIMIT_PREFIX}:${sanitizeRedisKey(namespacedKey)}`;
     const ttlSec = Math.max(1, Math.ceil(opts.windowMs / 1000));
     const response = await fetch(`${UPSTASH_URL.replace(/\/$/, '')}/pipeline`, {
       method: 'POST',
@@ -104,8 +117,9 @@ export async function checkRateLimit(
       retryAfterSec: Math.max(1, ttl),
       resetAt: now + ttl * 1000,
       backend: 'upstash-redis',
+      category,
     };
   } catch {
-    return { ...checkRateLimitLocal(key, opts), fallback: true };
+    return { ...checkRateLimitLocal(namespacedKey, { ...opts, category }), fallback: true };
   }
 }

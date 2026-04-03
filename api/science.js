@@ -367,5 +367,5 @@ module.exports = async function(req, res) {
     }
 
     return res.status(404).json({ error: 'rota científica não encontrada' });
-  }, { max: 20, windowMs: 60000 }, user.id); });
+  }, { max: 20, windowMs: 60000, category: 'ai_heavy_operation' }, user.id); });
 };

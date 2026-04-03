@@ -20,3 +20,18 @@ test('local fallback rate limit blocks after threshold', async () => {
   assert.equal(third.allowed, false);
   assert.ok(third.retryAfterSec >= 1);
 });
+
+
+test('rate limit is isolated by category', async () => {
+  const req = reqWithIp('127.0.0.2');
+  const optsA = { max: 1, windowMs: 60000, category: 'chat_light' };
+  const optsB = { max: 1, windowMs: 60000, category: 'memory_api' };
+
+  const firstA = await checkRateLimit(req, optsA, 'user-rate-limit-isolated');
+  const secondA = await checkRateLimit(req, optsA, 'user-rate-limit-isolated');
+  const firstB = await checkRateLimit(req, optsB, 'user-rate-limit-isolated');
+
+  assert.equal(firstA.allowed, true);
+  assert.equal(secondA.allowed, false);
+  assert.equal(firstB.allowed, true);
+});

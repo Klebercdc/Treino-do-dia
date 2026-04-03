@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const userId = auth.user.id
 
     // 1b. Rate limit
-    const rl = await checkRateLimit(userId, { max: 20, windowMs: 60000 })
+    const rl = await checkRateLimit(userId, { max: 20, windowMs: 60000, category: 'chat_light' })
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many requests', retryAfterSec: rl.retryAfterSec }, { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } })
     }

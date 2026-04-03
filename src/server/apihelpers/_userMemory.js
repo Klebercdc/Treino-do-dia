@@ -86,62 +86,239 @@ async function appendUserMemoryEvent(params) {
   return { inserted: inserted, eventId: eventId, eventKey: eventKey };
 }
 
-async function enqueueMemoryRecompute(params) {
+function uniqueArray(values, fallback) {
+  var out = [];
+  var map = Object.create(null);
+  (Array.isArray(values) ? values : []).forEach(function(item) {
+    var v = String(item || '').trim();
+    if (!v || map[v]) return;
+    map[v] = true;
+    out.push(v);
+  });
+  return out.length ? out : (fallback || ['coaching_summary']);
+}
+
+function randomToken(prefix) {
+  return (prefix || 'mem') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 12);
+}
+
+async function enqueueMemoryRecomputeJob(params) {
   var userId = params.userId;
-  var blocks = Array.isArray(params.blocks) ? params.blocks : ['coaching_summary'];
+  var blocks = uniqueArray(params.blocks, ['coaching_summary']);
   var requestId = params.requestId || null;
   var component = params.component || 'chat_api';
-  var now = safeNowIso();
+  var dueAt = params.dueAt || safeNowIso();
+  var maxAttempts = clamp(params.maxAttempts || 5, 1, 12);
 
-  var payload = {
+  var rpcResult = await supabase('POST', 'rpc/enqueue_memory_recompute_job', {
+    p_user_id: userId,
+    p_blocks: blocks,
+    p_due_at: dueAt,
+    p_request_id: requestId,
+    p_component: component,
+    p_max_attempts: maxAttempts
+  }).catch(function() { return null; });
+
+  if (rpcResult) {
+    var rpcJobId = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+    if (typeof rpcJobId === 'string' && rpcJobId) {
+      return { jobId: rpcJobId, queued: true, via: 'rpc' };
+    }
+  }
+
+  var fallbackPayload = {
     user_id: userId,
     status: 'queued',
-    due_at: now,
+    due_at: dueAt,
     blocks: blocks,
     latest_request_id: requestId,
     latest_component: component,
     attempts: 0,
-    updated_at: now
+    max_attempts: maxAttempts,
+    updated_at: safeNowIso(),
+    created_at: safeNowIso()
   };
 
-  await supabase('POST', 'user_memory_recompute_jobs', payload).catch(async function() {
-    await supabase('PATCH', 'user_memory_recompute_jobs?user_id=eq.' + userId, payload);
+  await supabase('POST', 'user_memory_recompute_jobs', fallbackPayload).catch(async function() {
+    await supabase('PATCH', 'user_memory_recompute_jobs?user_id=eq.' + userId + '&status=in.(queued,processing,retryable)', {
+      blocks: blocks,
+      latest_request_id: requestId,
+      latest_component: component,
+      updated_at: safeNowIso(),
+      max_attempts: maxAttempts
+    });
   });
+
+  return { jobId: null, queued: true, via: 'fallback' };
 }
 
-async function processQueuedRecomputeForUser(userId) {
-  var rows = await supabase('GET', 'user_memory_recompute_jobs?user_id=eq.' + userId + '&select=*&limit=1', null)
-    .catch(function() { return []; });
-  var job = rows && rows[0] ? rows[0] : null;
-  if (!job || job.status !== 'queued') return { processed: false };
+async function claimQueuedMemoryJobs(params) {
+  var limit = clamp(params && params.limit ? params.limit : 10, 1, 50);
+  var lockToken = (params && params.lockToken) || randomToken('memlock');
+  var lockTimeoutSeconds = clamp(params && params.lockTimeoutSeconds ? params.lockTimeoutSeconds : 300, 30, 3600);
 
-  await supabase('PATCH', 'user_memory_recompute_jobs?user_id=eq.' + userId + '&status=eq.queued', {
-    status: 'processing',
-    attempts: Number(job.attempts || 0) + 1,
-    updated_at: safeNowIso()
+  var claimed = await supabase('POST', 'rpc/claim_memory_recompute_jobs', {
+    p_limit: limit,
+    p_lock_token: lockToken,
+    p_lock_timeout_seconds: lockTimeoutSeconds
   }).catch(function() { return null; });
+
+  if (!Array.isArray(claimed)) {
+    claimed = await supabase('GET', 'user_memory_recompute_jobs?status=eq.queued&order=due_at.asc&limit=' + limit, null).catch(function() { return []; });
+  }
+
+  return {
+    lockToken: lockToken,
+    jobs: Array.isArray(claimed) ? claimed : []
+  };
+}
+
+async function completeMemoryRecomputeJob(params) {
+  var jobId = params.jobId;
+  var lockToken = params.lockToken;
+  var requestId = params.requestId || null;
+
+  var done = await supabase('POST', 'rpc/complete_memory_recompute_job', {
+    p_job_id: jobId,
+    p_lock_token: lockToken,
+    p_request_id: requestId
+  }).catch(function() { return null; });
+
+  if (done === true || done === 'true') return true;
+
+  await supabase('PATCH', 'user_memory_recompute_jobs?id=eq.' + jobId + '&status=eq.processing', {
+    status: 'completed',
+    completed_at: safeNowIso(),
+    last_completed_at: safeNowIso(),
+    lock_token: null,
+    locked_at: null,
+    last_error: null,
+    updated_at: safeNowIso(),
+    latest_request_id: requestId
+  }).catch(function() { return null; });
+  return true;
+}
+
+async function failMemoryRecomputeJob(params) {
+  var jobId = params.jobId;
+  var lockToken = params.lockToken;
+  var requestId = params.requestId || null;
+  var attempts = Number(params.attempts || 1);
+  var maxAttempts = Number(params.maxAttempts || 5);
+  var retryDelaySec = clamp(params.retryDelaySec || Math.min(180, attempts * 30), 5, 1800);
+  var lastError = String(params.errorMessage || 'unknown').slice(0, 2000);
+
+  var failed = await supabase('POST', 'rpc/fail_memory_recompute_job', {
+    p_job_id: jobId,
+    p_lock_token: lockToken,
+    p_error: lastError,
+    p_retry_delay_seconds: retryDelaySec,
+    p_request_id: requestId
+  }).catch(function() { return null; });
+
+  if (Array.isArray(failed) && failed[0] && failed[0].status) {
+    return { status: failed[0].status, retryDelaySec: retryDelaySec };
+  }
+
+  var shouldRetry = attempts < maxAttempts;
+  await supabase('PATCH', 'user_memory_recompute_jobs?id=eq.' + jobId, {
+    status: shouldRetry ? 'retryable' : 'failed',
+    due_at: shouldRetry ? new Date(Date.now() + (retryDelaySec * 1000)).toISOString() : safeNowIso(),
+    completed_at: shouldRetry ? null : safeNowIso(),
+    lock_token: null,
+    locked_at: null,
+    last_error: lastError,
+    updated_at: safeNowIso(),
+    latest_request_id: requestId
+  }).catch(function() { return null; });
+
+  return { status: shouldRetry ? 'retryable' : 'failed', retryDelaySec: retryDelaySec };
+}
+
+async function processMemoryRecomputeJob(params) {
+  var job = params.job || {};
+  var lockToken = params.lockToken || job.lock_token || null;
+  var startedAt = Date.now();
+  var requestId = job.latest_request_id || params.requestId || null;
+  var component = job.latest_component || 'memory_worker';
+  var blocks = uniqueArray(job.blocks, ['coaching_summary']);
 
   try {
     var recomputed = await recomputeUserMemoryBlocks({
-      userId: userId,
-      blocks: Array.isArray(job.blocks) && job.blocks.length ? job.blocks : null,
-      requestId: job.latest_request_id || null,
-      component: job.latest_component || 'chat_api'
+      userId: job.user_id,
+      blocks: blocks,
+      requestId: requestId,
+      component: component
     });
-    await supabase('PATCH', 'user_memory_recompute_jobs?user_id=eq.' + userId, {
-      status: 'completed',
-      last_completed_at: safeNowIso(),
-      last_error: null,
-      updated_at: safeNowIso()
+
+    await completeMemoryRecomputeJob({ jobId: job.id, lockToken: lockToken, requestId: requestId });
+
+    await supabase('POST', 'user_memory_audit_logs', {
+      user_id: job.user_id,
+      request_id: requestId,
+      component: component,
+      event_type: 'memory_recompute_job',
+      blocks_recalculated: blocks,
+      previous_state: {
+        jobId: job.id,
+        previousStatus: job.status,
+        attempts: job.attempts,
+        lockToken: lockToken,
+        startedAt: new Date(startedAt).toISOString()
+      },
+      next_state: {
+        jobId: job.id,
+        finalStatus: 'completed',
+        completedAt: safeNowIso(),
+        durationMs: Date.now() - startedAt,
+        retry: false,
+        requestId: requestId,
+        component: component
+      },
+      duration_ms: Date.now() - startedAt,
+      status: 'success'
     }).catch(function() { return null; });
-    return { processed: true, recomputed: recomputed };
+
+    return { ok: true, status: 'completed', jobId: job.id, durationMs: Date.now() - startedAt, recomputed: recomputed };
   } catch (error) {
-    await supabase('PATCH', 'user_memory_recompute_jobs?user_id=eq.' + userId, {
-      status: 'queued',
-      last_error: String(error && error.message ? error.message : error || 'unknown'),
-      updated_at: safeNowIso()
+    var failResult = await failMemoryRecomputeJob({
+      jobId: job.id,
+      lockToken: lockToken,
+      requestId: requestId,
+      attempts: Number(job.attempts || 1),
+      maxAttempts: Number(job.max_attempts || 5),
+      errorMessage: error && error.message ? error.message : String(error || 'unknown')
+    });
+
+    await supabase('POST', 'user_memory_audit_logs', {
+      user_id: job.user_id,
+      request_id: requestId,
+      component: component,
+      event_type: 'memory_recompute_job',
+      blocks_recalculated: blocks,
+      previous_state: {
+        jobId: job.id,
+        previousStatus: job.status,
+        attempts: job.attempts,
+        lockToken: lockToken,
+        startedAt: new Date(startedAt).toISOString()
+      },
+      next_state: {
+        jobId: job.id,
+        finalStatus: failResult.status,
+        completedAt: safeNowIso(),
+        durationMs: Date.now() - startedAt,
+        retry: failResult.status !== 'failed',
+        requestId: requestId,
+        component: component,
+        error: String(error && error.message ? error.message : error || 'unknown').slice(0, 2000)
+      },
+      duration_ms: Date.now() - startedAt,
+      status: failResult.status,
+      error_message: String(error && error.message ? error.message : error || 'unknown').slice(0, 2000)
     }).catch(function() { return null; });
-    throw error;
+
+    return { ok: false, status: failResult.status, jobId: job.id, durationMs: Date.now() - startedAt, error: String(error && error.message ? error.message : error || 'unknown') };
   }
 }
 
@@ -542,7 +719,7 @@ async function getProgressAnalysis(userId) {
   };
 }
 
-function captureEventAndRecompute(params) {
+function captureEventAndEnqueue(params) {
   var validation = memoryValidation.validateMemoryEventInput(params || {});
   if (!validation.ok) {
     return Promise.reject(new Error(validation.code + ': ' + validation.message));
@@ -556,17 +733,13 @@ function captureEventAndRecompute(params) {
   return appendUserMemoryEvent(normalizedParams)
     .then(function(result) {
       var blocks = mapBlocksForEvent(normalizedParams.eventType);
-      return enqueueMemoryRecompute({
+      return enqueueMemoryRecomputeJob({
         userId: normalizedParams.userId,
         blocks: blocks,
         requestId: normalizedParams.requestId || null,
         component: normalizedParams.component || 'chat_api'
-      }).then(function() {
-        return processQueuedRecomputeForUser(normalizedParams.userId).catch(function() {
-          return { processed: false };
-        });
-      }).then(function(recomputed) {
-        return { event: result, recomputed: recomputed, queued: true };
+      }).then(function(job) {
+        return { event: result, queued: true, job: job };
       });
     });
 }
@@ -577,8 +750,11 @@ module.exports = {
   getUserMemorySnapshot: getUserMemorySnapshot,
   getCoachingSummary: getCoachingSummary,
   getProgressAnalysis: getProgressAnalysis,
-  captureEventAndRecompute: captureEventAndRecompute,
+  captureEventAndEnqueue: captureEventAndEnqueue,
   mapBlocksForEvent: mapBlocksForEvent,
-  enqueueMemoryRecompute: enqueueMemoryRecompute,
-  processQueuedRecomputeForUser: processQueuedRecomputeForUser
+  enqueueMemoryRecomputeJob: enqueueMemoryRecomputeJob,
+  claimQueuedMemoryJobs: claimQueuedMemoryJobs,
+  processMemoryRecomputeJob: processMemoryRecomputeJob,
+  completeMemoryRecomputeJob: completeMemoryRecomputeJob,
+  failMemoryRecomputeJob: failMemoryRecomputeJob
 };

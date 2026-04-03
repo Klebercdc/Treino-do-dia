@@ -44,3 +44,15 @@ test('rejects payload without valid semantic fields', () => {
   assert.equal(result.ok, false);
   assert.equal(result.code, 'MEMORY_EVENT_PAYLOAD_INVALID');
 });
+
+
+test('rejects invalid memory source', () => {
+  const result = memoryValidation.validateMemoryEventInput({
+    eventType: 'checkin',
+    source: 'webhook_external',
+    payload: { sleep_hours: 7 },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'MEMORY_SOURCE_INVALID');
+});

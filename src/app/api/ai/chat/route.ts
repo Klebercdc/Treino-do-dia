@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const accessToken = auth.accessToken;
-    const rl = await checkRateLimit(auth.user.id, { max: 20, windowMs: 60000 });
+    const rl = await checkRateLimit(auth.user.id, { max: 20, windowMs: 60000, category: 'chat_light' });
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many requests', retryAfterSec: rl.retryAfterSec }, { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } });
     }

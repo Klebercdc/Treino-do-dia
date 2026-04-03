@@ -76,7 +76,7 @@ module.exports = function(req, res) {
       var payload = body.payload && typeof body.payload === 'object' ? body.payload : {};
       var source = body.source || 'memory_api';
       var eventKey = body.eventKey || (user.id + ':' + eventType + ':' + requestId);
-      var validation = memoryValidation.validateMemoryEventInput({ eventType: eventType, payload: payload });
+      var validation = memoryValidation.validateMemoryEventInput({ eventType: eventType, payload: payload, source: source, eventVersion: body.eventVersion });
       if (!validation.ok) {
         return responseUtil.sendJson(res, validation.status || 400, {
           success: false,
@@ -89,20 +89,20 @@ module.exports = function(req, res) {
         });
       }
 
-      userMemory.captureEventAndRecompute({
+      userMemory.captureEventAndEnqueue({
         userId: user.id,
         eventType: validation.eventType,
         eventKey: eventKey,
         payload: validation.payload,
         requestId: requestId,
         component: 'api/memory',
-        source: source
+        source: validation.source
       })
         .then(function(result) {
           return responseUtil.sendJson(res, 200, {
             success: true,
-            type: 'memory_event_processed',
-            message: 'Evento de memória processado com sucesso.',
+            type: 'memory_event_enqueued',
+            message: 'Evento de memória recebido e enfileirado com sucesso.',
             requestId: requestId,
             userId: user.id,
             data: result
