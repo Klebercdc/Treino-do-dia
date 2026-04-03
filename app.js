@@ -2736,6 +2736,44 @@ function getApiContentNodes(payload) {
   return payload.data.content;
 }
 
+function inferConversationCtaFromApiResponse(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+
+  var action = String(payload.action || '').trim();
+  var buttonType = String(payload.buttonType || '').trim().toLowerCase();
+  var shouldCreateButton = payload.shouldCreateButton === true;
+  var messageText = String(payload.message || '').toLowerCase();
+  var inferredAction = null;
+
+  if (action === 'abrir_tela_treino_com_payload' || buttonType === 'treino') inferredAction = 'open_training';
+  if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta' || buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
+  if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
+    inferredAction = 'open_training';
+  }
+  if (!inferredAction && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
+    inferredAction = 'open_diet';
+  }
+
+  var canonicalAction = resolveCanonicalKroniaAction(inferredAction);
+  if (!canonicalAction) return null;
+  if (!shouldCreateButton && !inferredAction) return null;
+
+  var payloadByAction = canonicalAction === 'open_training'
+    ? sanitizeCtaObject(payload.workoutPayload)
+    : sanitizeCtaObject(payload.dietPayload);
+
+  return {
+    action: canonicalAction,
+    label: canonicalAction === 'open_training' ? 'Abrir treino' : 'Abrir dieta',
+    payload: payloadByAction,
+    meta: {
+      source: 'api_agent_response',
+      inferred: !shouldCreateButton,
+      originalAction: action || null,
+    },
+  };
+}
+
 function ensureApiContract(payload, contextName) {
   const valid = !!payload && typeof payload === "object"
     && typeof payload.success === "boolean"
@@ -2915,6 +2953,19 @@ async function sendAI(overrideText, isGerarTreino = false) {
     var reply = data?.message || contentNodes?.[0]?.text || 'Nao consegui processar. Tente novamente.';
 
     addAIMessage('assistant', reply);
+    var inferredCta = inferConversationCtaFromApiResponse(data);
+    if (inferredCta) {
+      renderConversationCta(
+        'aiMessages',
+        { action: inferredCta.action, label: inferredCta.label },
+        Object.assign({}, inferredCta.payload, { _targetModule: inferredCta.action === 'open_training' ? 'programa' : 'dieta' })
+      );
+      trackKroniaCta('api_cta_rendered', 'success', {
+        normalizedAction: inferredCta.action,
+        source: inferredCta.meta.source,
+        inferred: !!inferredCta.meta.inferred,
+      });
+    }
     _aiHistory.push({ role: 'assistant', content: reply });
     try {
       window.KroniaIntelligence?.track?.({
