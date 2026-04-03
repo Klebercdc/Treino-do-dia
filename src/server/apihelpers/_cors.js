@@ -15,6 +15,15 @@ var ALLOWED_ORIGINS = process.env.VERCEL_ENV === 'production'
   ? PROD_ORIGINS
   : PROD_ORIGINS.concat(DEV_ORIGINS);
 
+var ALLOWED_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+var ALLOWED_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'X-Request-Id',
+  'X-Cron-Secret',
+  'Cron-Secret'
+].join(', ');
+
 function setCors(req, res) {
   var origin = req.headers['origin'] || '';
   var allowed = ALLOWED_ORIGINS.includes(origin) ? origin : null;
@@ -22,8 +31,8 @@ function setCors(req, res) {
   if (allowed) {
     res.setHeader('Access-Control-Allow-Origin', allowed);
   }
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', ALLOWED_METHODS);
+  res.setHeader('Access-Control-Allow-Headers', ALLOWED_HEADERS);
   res.setHeader('Vary', 'Origin');
 }
 

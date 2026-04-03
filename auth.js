@@ -1,10 +1,35 @@
 /* ═══════════════════════════════════════════════════
    SUPABASE AUTH — Google OAuth
 ═══════════════════════════════════════════════════ */
-const _sb = supabase.createClient(
-  'https://twxoddzogbmaysebhour.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E'
-);
+const KRONIA_FALLBACK_SUPABASE_URL = 'https://twxoddzogbmaysebhour.supabase.co';
+const KRONIA_FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E';
+
+function resolveSupabaseClientConfig() {
+  const runtime = (typeof window !== 'undefined' && window.__KRONIA_ENV__ && typeof window.__KRONIA_ENV__ === 'object')
+    ? window.__KRONIA_ENV__
+    : {};
+
+  const fromWindowUrl = typeof window !== 'undefined' ? String(window.KRONIA_SUPABASE_URL || '').trim() : '';
+  const fromWindowKey = typeof window !== 'undefined' ? String(window.KRONIA_SUPABASE_ANON_KEY || '').trim() : '';
+
+  const fromRuntimeUrl = String(runtime.SUPABASE_URL || runtime.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+  const fromRuntimeKey = String(runtime.SUPABASE_ANON_KEY || runtime.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+
+  const fromStorageUrl = typeof localStorage !== 'undefined' ? String(localStorage.getItem('kronia_supabase_url') || '').trim() : '';
+  const fromStorageKey = typeof localStorage !== 'undefined' ? String(localStorage.getItem('kronia_supabase_anon_key') || '').trim() : '';
+
+  const url = fromWindowUrl || fromRuntimeUrl || fromStorageUrl || KRONIA_FALLBACK_SUPABASE_URL;
+  const anonKey = fromWindowKey || fromRuntimeKey || fromStorageKey || KRONIA_FALLBACK_SUPABASE_ANON_KEY;
+
+  if ((!fromWindowUrl && !fromRuntimeUrl && !fromStorageUrl) || (!fromWindowKey && !fromRuntimeKey && !fromStorageKey)) {
+    console.warn('[auth] Supabase config não injetada por ambiente. Usando fallback legado; configure KRONIA_SUPABASE_URL/KRONIA_SUPABASE_ANON_KEY.');
+  }
+
+  return { url, anonKey };
+}
+
+const _sbConfig = resolveSupabaseClientConfig();
+const _sb = supabase.createClient(_sbConfig.url, _sbConfig.anonKey);
 if (typeof window !== 'undefined') {
   window._sb = _sb;
 }

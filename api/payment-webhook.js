@@ -198,8 +198,31 @@ function processWebhook(provider, payload, callback) {
 // Fallback para token simples (header) enquanto o provider não estiver configurado
 // para enviar HMAC — compatibilidade com fase de ativação inicial.
 //
-// NOTA: O HMAC é computado sobre JSON.stringify(body). Para verificação
-// byte-exata, desabilite o body parser do Vercel e buffer o raw body.
+// NOTA: O HMAC usa req.rawBody quando disponível.
+// Se o runtime não expuser rawBody, faz fallback para JSON.stringify(body).
+
+
+function resolveWebhookRawBody(req) {
+  if (req && req.rawBody !== undefined && req.rawBody !== null) {
+    if (Buffer.isBuffer(req.rawBody)) return req.rawBody;
+    if (typeof req.rawBody === 'string') return Buffer.from(req.rawBody, 'utf8');
+  }
+  return Buffer.from(JSON.stringify((req && req.body) || {}), 'utf8');
+}
+
+function safeTimingEqual(received, expected) {
+  var receivedValue = String(received || '');
+  var expectedValue = String(expected || '');
+  var receivedBuffer = Buffer.from(receivedValue);
+  var expectedBuffer = Buffer.from(expectedValue);
+  if (receivedBuffer.length !== expectedBuffer.length) return false;
+  try {
+    return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
+  } catch (_) {
+    return false;
+  }
+}
+
 function validateSignature(req, provider) {
   // ── Hotmart ──────────────────────────────────────────
   if (provider === 'hotmart') {
@@ -210,8 +233,8 @@ function validateSignature(req, provider) {
     if (hmacHeader) {
       // Verificação HMAC com timing-safe (previne timing attacks)
       try {
-        var bodyStr  = JSON.stringify(req.body || {});
-        var expected = crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+        var rawBody = resolveWebhookRawBody(req);
+        var expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
         var sigBuf   = Buffer.from(hmacHeader.toLowerCase(), 'hex');
         var expBuf   = Buffer.from(expected, 'hex');
         if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
@@ -223,7 +246,7 @@ function validateSignature(req, provider) {
     } else {
       // Fallback: token simples no header (fase inicial / painel não configurado para HMAC)
       var tokenReceived = req.headers['x-hotmart-hottok'] || req.headers['x-hotmart-token'] || '';
-      if (!crypto.timingSafeEqual(Buffer.from(tokenReceived), Buffer.from(secret))) {
+      if (!safeTimingEqual(tokenReceived, secret)) {
         return { ok: false, reason: 'invalid_hotmart_token' };
       }
     }
@@ -249,8 +272,8 @@ function validateSignature(req, provider) {
     var ksig = (req.body && req.body.signature) || req.headers['x-kiwify-signature'] || '';
     if (ksig) {
       try {
-        var kBodyStr  = JSON.stringify(req.body || {});
-        var kExpected = crypto.createHmac('sha256', ksecret).update(kBodyStr).digest('hex');
+        var kRawBody  = resolveWebhookRawBody(req);
+        var kExpected = crypto.createHmac('sha256', ksecret).update(kRawBody).digest('hex');
         var kSigBuf   = Buffer.from(ksig.toLowerCase(), 'hex');
         var kExpBuf   = Buffer.from(kExpected, 'hex');
         if (kSigBuf.length !== kExpBuf.length || !crypto.timingSafeEqual(kSigBuf, kExpBuf)) {
@@ -261,7 +284,7 @@ function validateSignature(req, provider) {
       }
     } else {
       var kTokenReceived = req.headers['x-webhook-token'] || req.headers['x-kiwify-token'] || '';
-      if (!crypto.timingSafeEqual(Buffer.from(kTokenReceived), Buffer.from(ksecret))) {
+      if (!safeTimingEqual(kTokenReceived, ksecret)) {
         return { ok: false, reason: 'invalid_kiwify_token' };
       }
     }

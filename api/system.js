@@ -25,7 +25,7 @@ async function handleScienceReview(req, res) {
     var items = await scienceSync.listPendingReviews();
     return res.status(200).json({ items: items });
   } catch (error) {
-    return res.status(200).json({ items: [], warning: String(error.message || error) });
+    return res.status(500).json({ items: [], warning: String(error.message || error), error: 'SCIENCE_REVIEW_FAILED' });
   }
 }
 
@@ -35,7 +35,7 @@ async function handleScienceSync(req, res) {
     var result = await scienceSync.syncScientificTopics();
     return res.status(200).json(result);
   } catch (error) {
-    return res.status(200).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error) });
+    return res.status(500).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error), error: 'SCIENCE_SYNC_FAILED' });
   }
 }
 
