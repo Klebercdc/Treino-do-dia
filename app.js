@@ -3110,10 +3110,13 @@ function extractDietRenderModel(payload) {
   if (!node || !node.data || typeof node.data !== "object") return null;
   const plan = node.data;
   const meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
-  if (!meals.length && !plan.flow_state) return null;
+  const hasFailSafeOrientation = !!(plan.failSafe && (plan.limitedOrientation || (Array.isArray(plan.observacoes) && plan.observacoes.length)));
+  if (!meals.length && !plan.flow_state && !hasFailSafeOrientation) return null;
   return {
     text: String(node.text || safePayload.message || "").trim(),
     flowState: plan.flow_state || null,
+    failSafe: plan.failSafe === true,
+    limitedOrientation: plan.limitedOrientation && typeof plan.limitedOrientation === "object" ? plan.limitedOrientation : null,
     meta: plan.meta && typeof plan.meta === "object" ? plan.meta : {},
     refeicoes: meals,
     hidratacao: plan.hidratacao && typeof plan.hidratacao === "object" ? plan.hidratacao : {},
@@ -3123,7 +3126,16 @@ function extractDietRenderModel(payload) {
 
 function renderDietModelAsText(model) {
   if (!model) return "";
-  if (model.flowState) return model.text || "Vamos continuar montando sua dieta.";
+  if (model.flowState && model.flowState !== 'failsafe') return model.text || "Vamos continuar montando sua dieta.";
+  if (model.failSafe) {
+    const fallbackNotes = Array.isArray(model.observacoes) ? model.observacoes.filter(Boolean) : [];
+    const safeMessage = String((model.limitedOrientation && model.limitedOrientation.orientacao) || model.text || fallbackNotes[0] || "Dados insuficientes para montar a dieta completa.").trim();
+    return [
+      "##ORIENTACAO LIMITADA",
+      safeMessage,
+      fallbackNotes.length > 1 ? ("\n" + fallbackNotes.slice(1).map(function(note) { return "- " + note; }).join("\n")) : ""
+    ].join("\n").trim();
+  }
   const meta = model.meta || {};
   const meals = Array.isArray(model.refeicoes) ? model.refeicoes : [];
   const orientacoes = Array.isArray(model.observacoes) ? model.observacoes : [];

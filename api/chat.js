@@ -34,10 +34,14 @@ function formatDietSummary(plan) {
 
 function buildDietSuccessPayload(message, dietData, extraData, extraMeta) {
   var safeMessage = String(message || '').trim();
+  var normalizedDietData = dietData && typeof dietData === 'object' ? Object.assign({}, dietData) : {};
+  if (normalizedDietData.failSafe === true && !normalizedDietData.flow_state) {
+    normalizedDietData.flow_state = 'failsafe';
+  }
   var payloadData = Object.assign({}, extraData || {});
   payloadData.content = [{
     type: 'diet_result',
-    data: dietData && typeof dietData === 'object' ? dietData : {},
+    data: normalizedDietData,
     text: safeMessage
   }];
   return {
@@ -392,10 +396,13 @@ module.exports = function(req, res) {
           ));
         }
         var dietPlan = diet.buildDietPlan(dietStep.collected);
-        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: formatDietSummary(dietPlan) }); });
-        console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'conversation_state' }));
+        var dietMessage = dietPlan && dietPlan.failSafe
+          ? String((dietPlan.limitedOrientation && dietPlan.limitedOrientation.orientacao) || 'Dados insuficientes para montar um plano completo agora. Revise seus dados e tente novamente.')
+          : formatDietSummary(dietPlan);
+        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: dietMessage }); });
+        console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'conversation_state', failSafe: !!(dietPlan && dietPlan.failSafe) }));
         return sendTracked(200, buildDietSuccessPayload(
-          formatDietSummary(dietPlan),
+          dietMessage,
           dietPlan,
           { conversationState: { memory: shortState } },
           { local: true, tokensSaved: true }
@@ -500,7 +507,10 @@ module.exports = function(req, res) {
         if (b && b.isDietDirect && b.dietProfile && typeof b.dietProfile === 'object') {
           try {
             var directPlan = diet.buildDietPlan(b.dietProfile);
-            console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile' }));
+            var directDietMessage = directPlan && directPlan.failSafe
+              ? String((directPlan.limitedOrientation && directPlan.limitedOrientation.orientacao) || 'Dados insuficientes para montar um plano completo agora. Revise seus dados e tente novamente.')
+              : formatDietSummary(directPlan);
+            console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile', failSafe: !!(directPlan && directPlan.failSafe) }));
             fireAndForgetMemoryEvent({
               userId: user.id,
               eventType: 'diet_generated',
@@ -511,7 +521,7 @@ module.exports = function(req, res) {
               source: 'diet_pipeline'
             });
             return sendTracked(200, buildDietSuccessPayload(
-              formatDietSummary(directPlan),
+              directDietMessage,
               directPlan,
               { conversationState: { memory: nextShortState } },
               { local: true, flow: 'diet_direct' }

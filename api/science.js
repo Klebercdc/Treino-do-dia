@@ -87,8 +87,10 @@ function normalizeNutritionPayload(rawPayload) {
 function getCronSecret(req) {
   if (!req) return '';
 
-  var querySecret = req.query && req.query.secret ? String(req.query.secret).trim() : '';
-  if (querySecret) return querySecret;
+  var authHeader = req.headers && req.headers['authorization'] ? String(req.headers['authorization']).trim() : '';
+  if (/^Bearer\s+/i.test(authHeader)) {
+    return authHeader.replace(/^Bearer\s+/i, '').trim();
+  }
 
   var headerSecret = req.headers && req.headers['x-cron-secret'] ? String(req.headers['x-cron-secret']).trim() : '';
   if (headerSecret) return headerSecret;
@@ -110,6 +112,11 @@ function isValidCronSecret(req) {
   } catch (_) {
     return false;
   }
+}
+
+
+function isPrivilegedRoute(route) {
+  return route === 'science-sync' || route === 'science-classify' || route === 'nutrition-selftest';
 }
 
 function detectRoute(req) {
@@ -227,38 +234,48 @@ module.exports = async function(req, res) {
   req.body = parseJsonBodyIfNeeded(req);
 
   var route = detectRoute(req);
+  var hasValidCronSecret = isValidCronSecret(req);
 
-  if (route === 'science-sync' && isValidCronSecret(req)) {
+  if (isPrivilegedRoute(route) && !hasValidCronSecret) {
+    return res.status(401).json({
+      ok: false,
+      error: 'UNAUTHORIZED_CRON_ROUTE',
+      message: 'Rota administrativa exige CRON_SECRET válido no header Authorization ou x-cron-secret.'
+    });
+  }
+
+  if (route === 'science-sync' && hasValidCronSecret) {
     if (req.method !== 'POST') return res.status(405).end();
     try {
       var cronResult = await science.syncScientificTopics();
       return res.status(200).json(cronResult);
     } catch (error) {
-      return res.status(200).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error) });
+      return res.status(500).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error), error: 'SCIENCE_SYNC_FAILED' });
     }
   }
 
-  if (route === 'science-classify' && isValidCronSecret(req)) {
+  if (route === 'science-classify' && hasValidCronSecret) {
     if (req.method !== 'POST') return res.status(405).end();
     try {
       var cronLimit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
       var cronClassifyResult = await science.classifyScientificArticlesBatch(cronLimit);
       return res.status(200).json(cronClassifyResult);
     } catch (error) {
-      return res.status(200).json({
+      return res.status(500).json({
         ok: false,
         updated_articles: 0,
         scanned_articles: 0,
-        warning: String(error.message || error)
+        warning: String(error.message || error),
+        error: 'SCIENCE_CLASSIFY_FAILED'
       });
     }
   }
 
-  if (route === 'nutrition-plan' && isValidCronSecret(req)) {
+  if (route === 'nutrition-plan' && hasValidCronSecret) {
     return handleNutritionPlan(req, res);
   }
 
-  if (route === 'nutrition-selftest' && isValidCronSecret(req)) {
+  if (route === 'nutrition-selftest' && hasValidCronSecret) {
     var selfTestPayload = {
       sexo: 'masculino', idade: 40, peso: 80, altura: 175,
       nivelAtividade: 'moderado', objetivo: 'hipertrofia', refeicoesPorDia: 4
@@ -276,7 +293,7 @@ module.exports = async function(req, res) {
         science: selfTestEvidence
       });
     } catch (err) {
-      return res.status(200).json({ ok: false, test: true, error: String(err.message || err) });
+      return res.status(500).json({ ok: false, test: true, error: String(err.message || err), code: 'NUTRITION_SELFTEST_FAILED' });
     }
   }
 
@@ -290,7 +307,7 @@ module.exports = async function(req, res) {
         var items = await science.searchScientificArticles(query);
         return res.status(200).json({ query: query, items: items });
       } catch (error) {
-        return res.status(200).json({ query: req.body && req.body.query, items: [], warning: String(error.message || error) });
+        return res.status(500).json({ query: req.body && req.body.query, items: [], warning: String(error.message || error), error: 'SCIENCE_SEARCH_FAILED' });
       }
     }
 
@@ -300,7 +317,7 @@ module.exports = async function(req, res) {
         var syncResult = await science.syncScientificTopics();
         return res.status(200).json(syncResult);
       } catch (error) {
-        return res.status(200).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error) });
+        return res.status(500).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error), error: 'SCIENCE_SYNC_FAILED' });
       }
     }
 
@@ -310,7 +327,7 @@ module.exports = async function(req, res) {
         var reviewItems = await science.listPendingReviews();
         return res.status(200).json({ items: reviewItems });
       } catch (error) {
-        return res.status(200).json({ items: [], warning: String(error.message || error) });
+        return res.status(500).json({ items: [], warning: String(error.message || error), error: 'SCIENCE_REVIEW_FAILED' });
       }
     }
 
@@ -332,12 +349,13 @@ module.exports = async function(req, res) {
           automation_blocked: true
         });
       } catch (error) {
-        return res.status(200).json({
+        return res.status(500).json({
           topic: req.body && req.body.topic,
           warning: String(error.message || error),
           synthesis: null,
           evidence_level: null,
-          top_articles: []
+          top_articles: [],
+          error: 'SCIENCE_INSIGHT_FAILED'
         });
       }
     }
@@ -349,11 +367,12 @@ module.exports = async function(req, res) {
         var classifyResult = await science.classifyScientificArticlesBatch(classifyLimit);
         return res.status(200).json(classifyResult);
       } catch (error) {
-        return res.status(200).json({
+        return res.status(500).json({
           ok: false,
           updated_articles: 0,
           scanned_articles: 0,
-          warning: String(error.message || error)
+          warning: String(error.message || error),
+          error: 'SCIENCE_CLASSIFY_FAILED'
         });
       }
     }
