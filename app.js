@@ -4462,6 +4462,20 @@ function autoResizeOrientInput(el) {
 
 
 
+function runKroniaActionFallback(action, context) {
+  if (action === 'open_training' || action === 'open_training_builder') {
+    try { navTo?.('programa'); } catch (_) {}
+    try { openConfig?.(context || {}); return true; } catch (_) {}
+    try { navTo?.('treino'); return true; } catch (_) {}
+  }
+  if (action === 'open_diet' || action === 'open_diet_generator') {
+    try { openDietaSheet?.(context || {}); return true; } catch (_) {}
+    try { openDieta?.(); return true; } catch (_) {}
+    try { navTo?.('treino'); return true; } catch (_) {}
+  }
+  return false;
+}
+
 window.KroniaActions = {
   openTrainingBuilder: function (context) {
     try { closeOrientacao?.(); } catch (_) {}
@@ -4788,9 +4802,9 @@ function renderConversationCta(containerId, cta, payload) {
 
   var button = document.createElement('button');
   button.type = 'button';
-  button.className = 'ai-suggest-btn';
+  button.className = 'ai-suggest-btn kronia-cta';
   button.textContent = cta.label || 'Continuar';
-  button.setAttribute('data-cta-action', String(cta.action || ''));
+  button.setAttribute('data-action', String(cta.action || ''));
   button.setAttribute('data-cta-label', String(cta.label || ''));
   button.setAttribute('data-cta-payload', JSON.stringify(normalizeCtaPayload(payload)));
 
@@ -4819,21 +4833,46 @@ function renderConversationCta(containerId, cta, payload) {
   return wrap;
 }
 
+function normalizeKroniaAction(action) {
+  var value = String(action || '').trim().toLowerCase();
+  if (value === 'open_training_builder') return 'open_training';
+  if (value === 'open_diet_generator') return 'open_diet';
+  return value;
+}
+
+window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
+  var normalizedAction = normalizeKroniaAction(action);
+  if (!normalizedAction) return false;
+  var safePayload = payload && typeof payload === 'object' ? payload : {};
+  var context = Object.assign({}, safePayload, {
+    source: safePayload.source || 'conversation_cta',
+    ctaLabel: meta && meta.label ? meta.label : null,
+  });
+
+  try { window.KroniaActions = window.KroniaActions || {}; } catch (_) {}
+
+  if (normalizedAction === 'open_training') {
+    if (typeof window.KroniaActions?.openTrainingBuilder === 'function') {
+      window.KroniaActions.openTrainingBuilder(context);
+      return true;
+    }
+    return runKroniaActionFallback('open_training', context);
+  }
+
+  if (normalizedAction === 'open_diet') {
+    if (typeof window.KroniaActions?.openDietGenerator === 'function') {
+      window.KroniaActions.openDietGenerator(context);
+      return true;
+    }
+    return runKroniaActionFallback('open_diet', context);
+  }
+
+  return runKroniaActionFallback(normalizedAction, context);
+};
+
 window.executeConversationCta = function executeConversationCta(data) {
   if (!data || !data.action) return false;
-
-  var action = String(data.action || '');
-  var payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
-
-  if (action === 'open_training_builder') {
-    window.KroniaActions?.openTrainingBuilder?.(payload);
-    return true;
-  }
-  if (action === 'open_diet_generator') {
-    window.KroniaActions?.openDietGenerator?.(payload);
-    return true;
-  }
-  return false;
+  return window.handleKroniaCTA(data.action, data.payload, { label: data.label || null });
 };
 
 function installConversationCtaDelegation() {
@@ -4842,11 +4881,11 @@ function installConversationCtaDelegation() {
 
   document.addEventListener('click', function (event) {
     var target = event && event.target && typeof event.target.closest === 'function'
-      ? event.target.closest('.ai-suggest-btn[data-cta-action]')
+      ? event.target.closest('.kronia-cta[data-action]')
       : null;
     if (!target) return;
 
-    var action = String(target.getAttribute('data-cta-action') || '');
+    var action = String(target.getAttribute('data-action') || '');
     var label = String(target.getAttribute('data-cta-label') || '');
     var payloadRaw = String(target.getAttribute('data-cta-payload') || '{}');
     var payload = {};
