@@ -24,7 +24,11 @@ function loadCtaRuntime() {
     extract(code, /function sanitizeCtaObject\(value\) \{[\s\S]*?\n\}/, 'sanitizeCtaObject'),
     extract(code, /function runKroniaActionFallback\(action, context\) \{[\s\S]*?\n\}/, 'runKroniaActionFallback'),
     extract(code, /function normalizeKroniaAction\(action\) \{[\s\S]*?\n\}/, 'normalizeKroniaAction'),
-    extract(code, /function acquireKroniaCtaExecutionLock\(action\) \{[\s\S]*?\n\}/, 'acquireKroniaCtaExecutionLock'),
+    extract(code, /function resolveCanonicalKroniaAction\(action\) \{[\s\S]*?\n\}/, 'resolveCanonicalKroniaAction'),
+    extract(code, /function buildKroniaCtaLockKey\(action, payload, meta\) \{[\s\S]*?\n\}/, 'buildKroniaCtaLockKey'),
+    extract(code, /function acquireKroniaCtaExecutionLock\(actionKey\) \{[\s\S]*?\n\}/, 'acquireKroniaCtaExecutionLock'),
+    extract(code, /var KRONIA_CTA_EXECUTOR_MAP = Object\.freeze\(\{[\s\S]*?\n\}\);/, 'KRONIA_CTA_EXECUTOR_MAP'),
+    extract(code, /function executeKroniaCtaAction\(action, context\) \{[\s\S]*?\n\}/, 'executeKroniaCtaAction'),
     extract(code, /window\.handleKroniaCTA = function handleKroniaCTA\(action, payload, meta\) \{[\s\S]*?\n\};/, 'handleKroniaCTA'),
     extract(code, /window\.executeConversationCta = function executeConversationCta\(data\) \{[\s\S]*?\n\};/, 'executeConversationCta'),
     extract(code, /function installConversationCtaDelegation\(\) \{[\s\S]*?\n\}/, 'installConversationCtaDelegation'),
@@ -109,7 +113,7 @@ test('delegation keeps working after re-render and multiple clicks', () => {
   assert.equal(calls.trainingAction.length, 1);
   document.clickHandler({ target: makeTarget('open_training', { source: 'second' }) });
   assert.equal(calls.trainingAction.length, 1, 'second click immediate must be deduplicated');
-  context.__kroniaCtaExecutionLocks.open_training = 0;
+  context.__kroniaCtaExecutionLocks['open_training|CTA|'] = 0;
   document.clickHandler({ target: makeTarget('open_training', { source: 'third' }) });
   assert.equal(calls.trainingAction.length, 2, 'click after lock expiry must execute again');
 });
