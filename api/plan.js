@@ -45,7 +45,7 @@ function handlePlanFeatures(req, res) {
           }
         });
       }, { accessProfile: accessProfile });
-    }, { max: 10, windowMs: 60000 }, user.id);
+    }, { max: 10, windowMs: 60000, category: 'admin_operation' }, user.id);
     });
   });
 }
@@ -132,7 +132,7 @@ function handlePlanCurrent(req, res) {
         }, { accessProfile: accessProfile });
       });
     });
-    }, { max: 10, windowMs: 60000 }, user.id);
+    }, { max: 10, windowMs: 60000, category: 'admin_operation' }, user.id);
     });
   });
 }

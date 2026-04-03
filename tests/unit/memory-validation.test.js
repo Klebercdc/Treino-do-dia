@@ -44,3 +44,40 @@ test('rejects payload without valid semantic fields', () => {
   assert.equal(result.ok, false);
   assert.equal(result.code, 'MEMORY_EVENT_PAYLOAD_INVALID');
 });
+
+
+test('rejects invalid memory source', () => {
+  const result = memoryValidation.validateMemoryEventInput({
+    eventType: 'checkin',
+    source: 'webhook_external',
+    payload: { sleep_hours: 7 },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'MEMORY_SOURCE_INVALID');
+});
+
+
+test('accepts chat_message payload with note/channel', () => {
+  const result = memoryValidation.validateMemoryEventInput({
+    eventType: 'chat_message',
+    source: 'chat_api',
+    payload: { note: 'Quero evoluir no treino', channel: 'chat', intent_hint: 'conversation' },
+    eventVersion: 1,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.eventType, 'chat_message');
+});
+
+test('rejects invalid eventVersion', () => {
+  const result = memoryValidation.validateMemoryEventInput({
+    eventType: 'checkin',
+    source: 'memory_api',
+    payload: { sleep_hours: 7 },
+    eventVersion: 99,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'MEMORY_EVENT_VERSION_INVALID');
+});

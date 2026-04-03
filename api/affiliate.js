@@ -23,7 +23,7 @@ function handleAffiliateReferral(req, res) {
         if (err) return res.status(500).json({ error: String(err) });
         return res.status(200).json({ ok: true, referral: rows && rows[0] ? rows[0] : reference });
       });
-    }, { max: 10, windowMs: 60000 }, user.id);
+    }, { max: 10, windowMs: 60000, category: 'admin_operation' }, user.id);
   });
 }
 
@@ -40,7 +40,7 @@ function handleAffiliateCommissions(req, res) {
           return res.status(200).json({ items: rows || [] });
         }
       );
-    }, { max: 10, windowMs: 60000 }, user.id);
+    }, { max: 10, windowMs: 60000, category: 'admin_operation' }, user.id);
   });
 }
 

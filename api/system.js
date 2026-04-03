@@ -7,6 +7,9 @@ var adminDiagnosticsHandler = require('../src/server/legacy/admin-diagnostics');
 var machineHandler = require('../src/server/legacy/machine');
 var cronScraperHandler = require('../src/server/legacy/cron-scraper');
 var pastorDiagnosticoHandler = require('../src/server/legacy/pastor-diagnostico');
+var adminImportExercisesHandler = require('../src/server/internal/http/admin-import-exercises');
+var adminImportExercisesStatusHandler = require('../src/server/internal/http/admin-import-exercises-status');
+var adminImportExercisesAutoHandler = require('../src/server/internal/http/admin-import-exercises-auto');
 var https = require('https');
 
 var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -144,7 +147,7 @@ function handleLgpdDelete(req, res) {
       });
       });
     });
-    }, { max: 3, windowMs: 3600000 }, user.id); // 3 req/hora — operação irreversível
+    }, { max: 3, windowMs: 3600000, category: 'admin_operation' }, user.id); // 3 req/hora — operação irreversível
   });
 }
 
@@ -172,6 +175,13 @@ module.exports = function(req, res) {
       return cronScraperHandler(req, res);
     case 'pastor-diagnostico':
       return pastorDiagnosticoHandler(req, res);
+
+    case 'admin-import-exercises':
+      return adminImportExercisesHandler(req, res);
+    case 'admin-import-exercises-status':
+      return adminImportExercisesStatusHandler(req, res);
+    case 'admin-import-exercises-auto':
+      return adminImportExercisesAutoHandler(req, res);
     default:
       return res.status(404).json({ error: 'rota não encontrada' });
   }

@@ -6,11 +6,19 @@ var ALLOWED_EVENT_TYPES = {
   body_metrics: true,
   weight_update: true,
   checkin: true,
-  subjective_feedback: true
+  subjective_feedback: true,
+  chat_message: true
 };
 
 var MAX_STRING = 500;
 var MAX_PAYLOAD_BYTES = 8192;
+var MAX_PAYLOAD_KEYS = 24;
+var ALLOWED_SOURCES = {
+  memory_api: true,
+  chat_api: true,
+  agent_api: true,
+  internal_worker: true
+};
 
 function truncateString(value) {
   var str = String(value);
@@ -59,6 +67,16 @@ function normalizePayload(eventType, payload) {
     };
   }
 
+
+  if (eventType === 'chat_message') {
+    var note = data.note != null ? data.note : data.message;
+    return {
+      note: note ? truncateString(note) : null,
+      intent_hint: data.intent_hint ? truncateString(data.intent_hint) : null,
+      channel: data.channel ? truncateString(data.channel) : null
+    };
+  }
+
   if (eventType === 'workout_completed' || eventType === 'workout_generated') {
     return {
       duration_minutes: toFiniteNumber(data.duration_minutes, 5, 480),
@@ -81,7 +99,23 @@ function compactObject(input) {
   return out;
 }
 
+function validateMemorySource(inputSource) {
+  var source = String(inputSource || 'memory_api').trim().toLowerCase();
+  if (!ALLOWED_SOURCES[source]) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'MEMORY_SOURCE_INVALID',
+      message: 'source inválido para memória evolutiva.'
+    };
+  }
+  return { ok: true, source: source };
+}
+
 function validateMemoryEventInput(input) {
+  var sourceValidation = validateMemorySource(input && input.source);
+  if (!sourceValidation.ok) return sourceValidation;
+
   var eventType = String(input.eventType || '').trim().toLowerCase();
   if (!ALLOWED_EVENT_TYPES[eventType]) {
     return {
@@ -102,6 +136,15 @@ function validateMemoryEventInput(input) {
     };
   }
 
+  if (Object.keys(normalizedPayload).length > MAX_PAYLOAD_KEYS) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'MEMORY_PAYLOAD_TOO_COMPLEX',
+      message: 'payload possui campos demais para memória evolutiva.'
+    };
+  }
+
   var byteLength = Buffer.byteLength(JSON.stringify(normalizedPayload));
   if (byteLength > MAX_PAYLOAD_BYTES) {
     return {
@@ -112,14 +155,27 @@ function validateMemoryEventInput(input) {
     };
   }
 
+  var eventVersion = Number(input && input.eventVersion != null ? input.eventVersion : 1);
+  if (!Number.isFinite(eventVersion) || eventVersion < 1 || eventVersion > 5) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'MEMORY_EVENT_VERSION_INVALID',
+      message: 'eventVersion inválida para memória evolutiva.'
+    };
+  }
+
   return {
     ok: true,
     eventType: eventType,
-    payload: normalizedPayload
+    payload: normalizedPayload,
+    source: sourceValidation.source,
+    eventVersion: eventVersion
   };
 }
 
 module.exports = {
   ALLOWED_EVENT_TYPES: ALLOWED_EVENT_TYPES,
+  ALLOWED_SOURCES: ALLOWED_SOURCES,
   validateMemoryEventInput: validateMemoryEventInput
 };

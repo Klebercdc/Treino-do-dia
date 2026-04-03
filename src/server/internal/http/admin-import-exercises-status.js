@@ -1,4 +1,4 @@
-var exerciseImport = require('../src/server/internal/exerciseImport');
+var exerciseImport = require('../exerciseImport');
 var supabaseJs = require('@supabase/supabase-js');
 
 function isAuthorized(req) {

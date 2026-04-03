@@ -34,6 +34,6 @@ module.exports = function(req, res) {
         provider: provider
       });
     });
-    }, { max: 5, windowMs: 60000 }, user.id);
+    }, { max: 5, windowMs: 60000, category: 'admin_operation' }, user.id);
   });
 };
