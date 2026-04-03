@@ -2811,6 +2811,16 @@ function buildCanonicalConversationIntent(data) {
 
 function inferConversationCtaFromApiResponse(payload) {
   if (!payload || typeof payload !== 'object') return null;
+  var explicitCanonical = buildCanonicalConversationIntent(payload.conversationIntent);
+  if (explicitCanonical) {
+    trackKroniaCta('api_cta_inferred', 'success', {
+      normalizedAction: explicitCanonical.type,
+      source: explicitCanonical.source,
+      hasPayload: !!Object.keys(explicitCanonical.payload || {}).length,
+      inferredFrom: 'explicit_conversation_intent',
+    });
+    return explicitCanonical;
+  }
 
   var action = String(payload.action || '').trim();
   var buttonType = String(payload.buttonType || '').trim().toLowerCase();
@@ -2818,8 +2828,8 @@ function inferConversationCtaFromApiResponse(payload) {
   var messageText = String(payload.message || '').toLowerCase();
   var inferredAction = null;
 
-  if (action === 'abrir_tela_treino_com_payload' || buttonType === 'treino') inferredAction = 'open_training';
-  if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta' || buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
+  if (action === 'abrir_tela_treino_com_payload' || action === 'open_workout_flow' || buttonType === 'treino') inferredAction = 'open_training';
+  if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta' || action === 'open_diet_flow' || buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
   if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
     inferredAction = 'open_training';
   }
@@ -2877,6 +2887,7 @@ function buildCtaFromCanonicalIntent(intent) {
     label: String(intent.label || (action === 'open_training' ? 'Abrir treino' : 'Abrir dieta')),
     payload: sanitizeConversationIntentPayload(action, intent.payload || {}),
     meta: sanitizeCtaObject(intent.meta || {}),
+    intentSource: intent.source || 'agent',
     targetModule: intent.target === 'home_training_card' ? 'programa' : 'dieta',
   };
 }
@@ -3225,7 +3236,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
     if (inferredIntent && inferredCta) {
       renderConversationCta(
         'aiMessages',
-        { action: inferredCta.action, label: inferredCta.label },
+        { action: inferredCta.action, label: inferredCta.label, intentSource: inferredCta.intentSource },
         Object.assign({}, inferredCta.payload, { _targetModule: inferredCta.targetModule })
       );
       trackKroniaCta('api_cta_rendered', 'success', {
@@ -5201,6 +5212,7 @@ function renderConversationCta(containerId, cta, payload) {
   button.setAttribute('data-cta-meta', JSON.stringify({
     source: 'conversation_message',
     targetModule: payload?._targetModule || null,
+    intentSource: cta?.intentSource || null,
   }));
 
   var inner = document.createElement('div');
@@ -5319,7 +5331,7 @@ window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
 
   var pendingIntentSaved = persistPendingConversationIntent({
     type: canonicalAction,
-    source: context.source === 'api_agent_response' ? 'agent' : 'inferred',
+    source: safeMeta.intentSource === 'agent' || context.source === 'api_agent_response' ? 'agent' : 'inferred',
     payload: safePayload,
     meta: Object.assign({}, safeMeta, { source: context.source || 'conversation_cta' }),
   });

@@ -44,6 +44,24 @@ test('inferConversationCtaFromApiResponse maps explicit treino action to canonic
   assert.equal(typeof cta.payload, 'object');
 });
 
+test('inferConversationCtaFromApiResponse prioritizes explicit conversationIntent contract', () => {
+  const runtime = loadInferenceRuntime();
+  const cta = runtime.inferConversationCtaFromApiResponse({
+    action: 'responder_chat',
+    conversationIntent: {
+      type: 'open_diet',
+      eligible: true,
+      label: 'Abrir dieta',
+      target: 'home_diet_card',
+      source: 'agent',
+      payload: { objective: 'emagrecimento', meals: 5 },
+    },
+  });
+  assert.ok(cta);
+  assert.equal(cta.type, 'open_diet');
+  assert.equal(cta.payload.meals, 5);
+});
+
 test('inferConversationCtaFromApiResponse infers dieta CTA from textual fallback safely', () => {
   const runtime = loadInferenceRuntime();
   const cta = runtime.inferConversationCtaFromApiResponse({
@@ -55,6 +73,22 @@ test('inferConversationCtaFromApiResponse infers dieta CTA from textual fallback
   assert.ok(cta);
   assert.equal(cta.type, 'open_diet');
   assert.equal(cta.meta.inferred_from, 'textual_fallback');
+});
+
+test('inferConversationCtaFromApiResponse maps legacy open_workout_flow and open_diet_flow actions', () => {
+  const runtime = loadInferenceRuntime();
+  const treino = runtime.inferConversationCtaFromApiResponse({
+    shouldCreateButton: true,
+    action: 'open_workout_flow',
+    message: 'Vamos montar seu treino.',
+  });
+  const dieta = runtime.inferConversationCtaFromApiResponse({
+    shouldCreateButton: true,
+    action: 'open_diet_flow',
+    message: 'Vamos montar sua dieta.',
+  });
+  assert.equal(treino.type, 'open_training');
+  assert.equal(dieta.type, 'open_diet');
 });
 
 test('inferConversationCtaFromApiResponse ignores non-actionable chat replies', () => {

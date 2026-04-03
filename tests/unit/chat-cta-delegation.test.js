@@ -48,7 +48,8 @@ function loadCtaRuntime() {
     openDietaSheet: [],
     openDieta: 0,
     trainingAction: [],
-    dietAction: []
+    dietAction: [],
+    localStorage: new Map()
   };
 
   const document = {
@@ -73,9 +74,9 @@ function loadCtaRuntime() {
     writeAuditTracePatch() {},
     schedulePendingConversationIntentConsumption() {},
     localStorage: {
-      getItem() { return null; },
-      setItem() {},
-      removeItem() {},
+      getItem(key) { return calls.localStorage.has(key) ? calls.localStorage.get(key) : null; },
+      setItem(key, value) { calls.localStorage.set(key, String(value)); },
+      removeItem(key) { calls.localStorage.delete(key); },
     },
     trackKroniaCta() {},
     JSON,
@@ -207,4 +208,20 @@ test('executeConversationCta preserves provided meta payload', () => {
   assert.equal(calls.trainingAction.length, 1);
   assert.equal(calls.trainingAction[0].ctaMeta.source, 'custom');
   assert.equal(calls.trainingAction[0].ctaLabel, 'Direct CTA');
+});
+
+test('cta click persists pending intent envelope', () => {
+  const { context, calls } = loadCtaRuntime();
+  const ok = context.window.handleKroniaCTA(
+    'open_training',
+    { objective: 'hipertrofia', days_per_week: 4 },
+    { label: 'Abrir treino', intentSource: 'agent' }
+  );
+  assert.equal(ok, true);
+  const raw = calls.localStorage.get('kronia_pending_conversation_intent_v1');
+  assert.ok(raw);
+  const pending = JSON.parse(raw);
+  assert.equal(pending.type, 'open_training');
+  assert.equal(pending.source, 'agent');
+  assert.equal(pending.payload.days_per_week, 4);
 });

@@ -589,6 +589,15 @@ module.exports = function(req, res) {
           type: 'workout_intent',
           action: 'open_workout_flow',
           message: 'Beleza 💪 Vamos montar seu treino.',
+          conversationIntent: {
+            type: 'open_training',
+            eligible: true,
+            label: 'Abrir treino',
+            target: 'home_training_card',
+            source: 'agent',
+            payload: { origin_message: lastContent || '' },
+            meta: { inferred_from: 'intent_classifier' }
+          },
           data: null,
           error: null,
           meta: { local: true, tokensSaved: true }
@@ -600,6 +609,15 @@ module.exports = function(req, res) {
           type: 'diet_intent',
           action: 'open_diet_flow',
           message: 'Perfeito 🍽️ Vamos montar sua dieta.',
+          conversationIntent: {
+            type: 'open_diet',
+            eligible: true,
+            label: 'Abrir dieta',
+            target: 'home_diet_card',
+            source: 'agent',
+            payload: { origin_message: lastContent || '' },
+            meta: { inferred_from: 'intent_classifier' }
+          },
           data: null,
           error: null,
           meta: { local: true, tokensSaved: true }
