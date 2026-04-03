@@ -2827,14 +2827,17 @@ function inferConversationCtaFromApiResponse(payload) {
   var shouldCreateButton = payload.shouldCreateButton === true;
   var messageText = String(payload.message || '').toLowerCase();
   var inferredAction = null;
+  var wasTextuallyInferred = false;
 
   if (action === 'abrir_tela_treino_com_payload' || action === 'open_workout_flow' || buttonType === 'treino') inferredAction = 'open_training';
   if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta' || action === 'open_diet_flow' || buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
-  if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
+  if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
     inferredAction = 'open_training';
+    wasTextuallyInferred = true;
   }
-  if (!inferredAction && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar)\b/.test(messageText)) {
+  if (!inferredAction && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
     inferredAction = 'open_diet';
+    wasTextuallyInferred = true;
   }
 
   var canonicalAction = resolveCanonicalKroniaAction(inferredAction);
@@ -2851,12 +2854,17 @@ function inferConversationCtaFromApiResponse(payload) {
   var rawPayloadByAction = canonicalAction === 'open_training'
     ? sanitizeCtaObject(payload.workoutPayload)
     : sanitizeCtaObject(payload.dietPayload);
-  if (!Object.keys(rawPayloadByAction).length && !shouldCreateButton) {
+  if (!Object.keys(rawPayloadByAction).length && !shouldCreateButton && !wasTextuallyInferred) {
     trackKroniaCta('api_cta_rejected', 'success', {
       reason: 'missing_payload_for_inferred_action',
       normalizedAction: canonicalAction,
     });
     return null;
+  }
+  // For purely textual inference without explicit payload, seed origin_message as minimal context.
+  if (!Object.keys(rawPayloadByAction).length && wasTextuallyInferred) {
+    rawPayloadByAction = Object.create(null);
+    if (messageText) rawPayloadByAction.origin_message = String(messageText).slice(0, 500);
   }
 
   var intent = buildCanonicalConversationIntent({
@@ -2865,7 +2873,7 @@ function inferConversationCtaFromApiResponse(payload) {
     payload: rawPayloadByAction,
     meta: {
       source: 'api_agent_response',
-      inferred_from: shouldCreateButton ? 'explicit_fields' : 'textual_fallback',
+      inferred_from: shouldCreateButton ? 'explicit_fields' : (wasTextuallyInferred ? 'textual_fallback' : 'action_field'),
       originalAction: action || null,
     },
   });
@@ -5137,7 +5145,15 @@ function sanitizeCtaObject(value) {
     var fieldValue = value[key];
     if (fieldValue === undefined || typeof fieldValue === 'function') return;
     if (fieldValue && typeof fieldValue === 'object') {
-      if (Array.isArray(fieldValue)) return;
+      if (Array.isArray(fieldValue)) {
+        // Preserve arrays of primitive values only (strings, numbers, booleans).
+        // Objects and functions inside arrays are dropped for safety.
+        var safeArr = fieldValue.filter(function (v) {
+          return v !== null && v !== undefined && typeof v !== 'function' && typeof v !== 'object';
+        });
+        if (safeArr.length) cloned[normalizedKey] = safeArr;
+        return;
+      }
       cloned[normalizedKey] = sanitizeCtaObject(fieldValue);
       return;
     }
