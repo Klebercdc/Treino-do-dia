@@ -34,3 +34,17 @@ test('profiles.is_admin is canonical when profile lookup was performed', () => {
   assert.equal(yesAdmin.isAdmin, true);
   assert.equal(yesAdmin.source, 'profiles_table');
 });
+
+test('env whitelist does not bypass canonical admin in production', () => {
+  const prevNodeEnv = process.env.NODE_ENV;
+  const prevAdmin = process.env.ADMIN_EMAILS;
+  process.env.NODE_ENV = 'production';
+  process.env.ADMIN_EMAILS = 'admin@kronia.com';
+
+  const profile = access.buildAccessProfile({ email: 'admin@kronia.com' });
+  assert.equal(profile.isAdmin, false);
+  assert.equal(profile.source, 'awaiting_profiles_resolution');
+
+  process.env.NODE_ENV = prevNodeEnv;
+  process.env.ADMIN_EMAILS = prevAdmin;
+});
