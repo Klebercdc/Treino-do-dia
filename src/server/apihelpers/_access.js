@@ -148,6 +148,7 @@ function supabaseProfileAdminLookup(userId, callback) {
     });
   });
   req.on('error', function() { callback(null, null); });
+  req.setTimeout(5000, function() { req.destroy(); });
   req.end();
 }
 

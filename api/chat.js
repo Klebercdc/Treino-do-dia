@@ -500,6 +500,10 @@ module.exports = function(req, res) {
         if (b && b.isDietDirect && b.dietProfile && typeof b.dietProfile === 'object') {
           try {
             var directPlan = diet.buildDietPlan(b.dietProfile);
+            if (directPlan.failSafe) {
+              console.warn('[chat] diet_pipeline_failsafe', JSON.stringify({ event: 'diet_pipeline_failsafe', source: 'direct_profile' }));
+              return sendTracked(422, buildDietErrorPayload(), 'failure');
+            }
             console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile' }));
             fireAndForgetMemoryEvent({
               userId: user.id,
