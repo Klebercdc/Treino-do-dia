@@ -6,6 +6,28 @@ var DEFAULT_EXERCISES_FILE = path.resolve(process.cwd(), 'data/exercises.json');
 var DEFAULT_BATCH_SIZE = 200;
 var IMPORT_LOCK_KEY = 948221;
 var JOB_TYPE = 'exercise_import';
+var SUPABASE_HOST_ALIASES = {
+  'twxoddzogbmaysebnhour.supabase.co': 'twxoddzogbmaysebhour.supabase.co'
+};
+
+function normalizeSupabaseUrl(rawUrl) {
+  var value = String(rawUrl || '').trim();
+  if (!value) {
+    return value;
+  }
+
+  try {
+    var parsed = new URL(value);
+    var normalizedHost = SUPABASE_HOST_ALIASES[parsed.hostname];
+    if (normalizedHost) {
+      parsed.hostname = normalizedHost;
+      return parsed.toString().replace(/\/$/, '');
+    }
+    return value.replace(/\/$/, '');
+  } catch (error) {
+    return value;
+  }
+}
 
 function validateRequiredEnv() {
   var missing = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(function(name) {
@@ -17,7 +39,7 @@ function validateRequiredEnv() {
   }
 
   return {
-    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseUrl: normalizeSupabaseUrl(process.env.SUPABASE_URL),
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
   };
 }
@@ -82,7 +104,7 @@ function validateDuplicates(exercises) {
 }
 
 async function acquireImportLock(supabase) {
-  var lockResult = await supabase.rpc('admin_acquire_import_lock', { p_lock_key: IMPORT_LOCK_KEY });
+  var lockResult = await supabase.rpc('admin_acquire_import_lock', { lock_key: IMPORT_LOCK_KEY });
   if (lockResult.error) {
     throw new Error('Falha ao adquirir lock de importação.');
   }
@@ -91,7 +113,7 @@ async function acquireImportLock(supabase) {
 
 async function releaseImportLock(supabase) {
   try {
-    await supabase.rpc('admin_release_import_lock', { p_lock_key: IMPORT_LOCK_KEY });
+    await supabase.rpc('admin_release_import_lock', { lock_key: IMPORT_LOCK_KEY });
   } catch (error) {}
 }
 
