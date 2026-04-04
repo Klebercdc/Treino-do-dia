@@ -9,6 +9,7 @@ var responseUtil = require('../src/server/apihelpers/_response');
 var access = require('../src/server/apihelpers/_access');
 var dietflow = require('../src/server/apihelpers/_dietflow');
 var workoutflow = require('../src/server/apihelpers/_workoutflow');
+var workoutBuilder = require('../src/server/apihelpers/_workoutBuilder');
 var diet = require('../src/server/apihelpers/_diet');
 var prompts = require('../src/server/apihelpers/_systemPrompts');
 var classifier = require('../src/server/apihelpers/_conversationClassifier');
@@ -214,6 +215,19 @@ function gerarTreino(userMsg, userId, callback) {
       return callback('Erro ao gerar treino: resposta inválida da IA.');
     }
   });
+}
+
+function buildWorkoutSuccessPayload(data, extraMeta, memoryState) {
+  return {
+    success: true,
+    type: 'workout_json',
+    message: 'Treino gerado com sucesso.',
+    data: {
+      content: [{ type: 'workout_json', data: data }],
+      conversationState: { memory: memoryState || null }
+    },
+    meta: Object.assign({}, extraMeta || {})
+  };
 }
 
 module.exports = function(req, res) {
@@ -422,15 +436,24 @@ module.exports = function(req, res) {
           return sendTracked(200, { success: true, type: 'text', message: workoutStep.response, data: { conversationState: { mode: workoutStep.mode, stepIndex: workoutStep.stepIndex, collected: workoutStep.collected, memory: shortState } }, meta: { local: true, flow: 'workout' } });
         }
 
+        if (!process.env.GROQ_API_KEY) {
+          var localWorkout = workoutBuilder.buildWorkoutPlan(workoutStep.collected);
+          safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino gerado por builder local por ausencia de GROQ_API_KEY.' }); });
+          return sendTracked(200, buildWorkoutSuccessPayload(localWorkout, { local: true, fallback: true, source: 'workout_local_builder' }, shortState));
+        }
+
         safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { layer: 'ai', nodeKey: 'Treino' }); });
         return runPaidAiCall(function(nextCall) {
           var richMsg = { role: 'user', content: workoutflow.buildWorkoutMessage(workoutStep.collected) };
           gerarTreino(richMsg, user.id, nextCall);
         }, function(err, data) {
           if (err) {
-            safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
-            var providerError = toProviderErrorContract(err, { operation: 'workout_generation' });
-            return sendTracked(providerError.status, providerError.body, 'failure');
+            var fallbackWorkout = workoutBuilder.buildWorkoutPlan(workoutStep.collected);
+            safeTrack(function() {
+              tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err });
+              tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino gerado por builder local apos falha do provider.' });
+            });
+            return sendTracked(200, buildWorkoutSuccessPayload(fallbackWorkout, { local: true, fallback: true, source: 'workout_local_builder', providerError: String(err || '') }, shortState));
           }
           safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
           fireAndForgetMemoryEvent({
@@ -442,7 +465,7 @@ module.exports = function(req, res) {
             component: 'api/chat',
             source: 'workout_pipeline'
           });
-          return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: data }], conversationState: { memory: shortState } }, meta: {} });
+          return sendTracked(200, buildWorkoutSuccessPayload(data, {}, shortState));
         });
       }
 
@@ -586,6 +609,14 @@ module.exports = function(req, res) {
           safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { layer: 'ai', nodeKey: 'Recomendacao', inputSummary: lastContent }); });
           safeTrack(function() { tracker.captureMetric({ key: 'promptSizeEstimate', value: String(lastContent || '').length, unit: 'chars' }); });
           runPaidAiCall(function(nextCall) {
+            if (decision.action === 'call_llm_full' && classification.topic === 'workout' && !process.env.GROQ_API_KEY) {
+              var workoutStartFallback = workoutflow.startWorkoutFlow();
+              return nextCall(null, {
+                __localWorkoutFlowStart: true,
+                message: workoutStartFallback.response,
+                state: workoutStartFallback
+              });
+            }
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && /\b(monta|cria|gera)\b/.test(classification.sanitizedText)) {
               return gerarTreino({ role: 'user', content: lastContent }, user.id, nextCall);
             }
@@ -605,6 +636,16 @@ module.exports = function(req, res) {
             safeTrack(function() { tracker.captureMetric({ key: 'llmCalled', value: true }); });
             safeTrack(function() { tracker.captureMetric({ key: 'responseSizeEstimate', value: typeof payload === 'string' ? payload.length : JSON.stringify(payload || {}).length, unit: 'chars' }); });
             emitDecisionTelemetry(user.id, classification, decision, true, false);
+            if (payload && payload.__localWorkoutFlowStart) {
+              return sendTracked(200, {
+                success: true,
+                type: 'text',
+                action: 'open_workout_flow',
+                message: payload.message,
+                data: { conversationState: { mode: payload.state.mode, stepIndex: payload.state.stepIndex, collected: payload.state.collected, memory: nextShortState } },
+                meta: { local: true, fallback: true, source: 'workout_flow_start_no_provider' }
+              });
+            }
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && typeof payload === 'object') {
               fireAndForgetMemoryEvent({
                 userId: user.id,
@@ -615,7 +656,7 @@ module.exports = function(req, res) {
                 component: 'api/chat',
                 source: 'llm'
               });
-              return sendTracked(200, { success: true, type: 'workout_json', message: 'Treino gerado com sucesso.', data: { content: [{ type: 'workout_json', data: payload }], conversationState: { memory: nextShortState } }, meta: {} });
+              return sendTracked(200, buildWorkoutSuccessPayload(payload, {}, nextShortState));
             }
             return sendTracked(200, {
               success: true,
