@@ -52,7 +52,23 @@ function validateDuplicates(exercises) {
   var seen = Object.create(null);
   for (var i = 0; i < exercises.length; i += 1) {
     var item = exercises[i] || {};
-    var key = [item.exercise_id, item.name, item.slug].filter(Boolean).join('|');
+    var key = null;
+    if (item.source_id != null && item.source_id !== '') {
+      key = 'source_id:' + String(item.source_id);
+    } else if (item.id != null && item.id !== '') {
+      key = 'id:' + String(item.id);
+    } else if (item.exercise_id != null && item.exercise_id !== '') {
+      key = 'exercise_id:' + String(item.exercise_id);
+    } else if (item.slug != null && item.slug !== '') {
+      key = 'slug:' + String(item.slug);
+    } else {
+      var name = item.name != null ? String(item.name).trim().toLowerCase() : '';
+      var muscle = item.muscle != null ? String(item.muscle).trim().toLowerCase() : '';
+      var equipment = item.equipment != null ? String(item.equipment).trim().toLowerCase() : '';
+      if (name || muscle || equipment) {
+        key = 'fallback:' + name + '|' + muscle + '|' + equipment;
+      }
+    }
     if (!key) {
       continue;
     }
