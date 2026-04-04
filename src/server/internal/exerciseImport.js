@@ -62,11 +62,13 @@ function validateDuplicates(exercises) {
     } else if (item.slug != null && item.slug !== '') {
       key = 'slug:' + String(item.slug);
     } else {
+      var nameEn = item.name_en != null ? String(item.name_en).trim().toLowerCase() : '';
       var name = item.name != null ? String(item.name).trim().toLowerCase() : '';
-      var muscle = item.muscle != null ? String(item.muscle).trim().toLowerCase() : '';
+      var bodyPart = item.bodyPart != null ? String(item.bodyPart).trim().toLowerCase() : '';
+      var target = item.target != null ? String(item.target).trim().toLowerCase() : '';
       var equipment = item.equipment != null ? String(item.equipment).trim().toLowerCase() : '';
-      if (name || muscle || equipment) {
-        key = 'fallback:' + name + '|' + muscle + '|' + equipment;
+      if (nameEn || name || bodyPart || target || equipment) {
+        key = 'fallback:' + nameEn + '|' + name + '|' + bodyPart + '|' + target + '|' + equipment;
       }
     }
     if (!key) {
