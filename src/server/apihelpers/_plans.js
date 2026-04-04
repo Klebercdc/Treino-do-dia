@@ -47,6 +47,7 @@ function supabaseRequest(method, path, body, callback) {
     });
   });
   req.on('error', function(e) { callback(e.message, null); });
+  req.setTimeout(5000, function() { req.destroy(); });
   if (bodyStr) req.write(bodyStr);
   req.end();
 }
