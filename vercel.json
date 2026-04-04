@@ -117,6 +117,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/auto-import-exercises",
+      "schedule": "15 4 * * *"
+    },
+    {
       "path": "/api/cron/sync-exercises",
       "schedule": "0 4 * * 1"
     }

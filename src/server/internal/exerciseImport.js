@@ -184,6 +184,7 @@ async function runExerciseImport(options) {
       metadata: { source: 'data/exercises.json', started: started }
     });
 
+    logger('Job de importação criado. jobId=' + jobId + '.');
     logger('Iniciando importação: total=' + sourceExercises.length + ', batchSize=' + batchSize + ', lotes=' + batches.length + ', dryRun=' + dryRun + '.');
 
     for (var index = 0; index < batches.length; index += 1) {
