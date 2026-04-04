@@ -76,7 +76,7 @@ async function getRunningImportJob(supabase) {
 }
 
 async function tryAcquireAdvisoryLock(supabase, lockKey) {
-  var response = await supabase.rpc('admin_acquire_import_lock', { p_lock_key: lockKey });
+  var response = await supabase.rpc('admin_acquire_import_lock', { lock_key: lockKey });
   if (response.error) {
     throw new Error('Falha ao adquirir lock de importação.');
   }
@@ -85,7 +85,7 @@ async function tryAcquireAdvisoryLock(supabase, lockKey) {
 
 async function releaseAdvisoryLock(supabase, lockKey) {
   try {
-    await supabase.rpc('admin_release_import_lock', { p_lock_key: lockKey });
+    await supabase.rpc('admin_release_import_lock', { lock_key: lockKey });
   } catch (error) {}
 }
 
