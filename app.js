@@ -4836,6 +4836,7 @@ function runKroniaActionFallback(action, context) {
 
 window.KroniaActions = {
   openTrainingBuilder: function (context) {
+    try { closeAI?.(); } catch (_) {}
     try { closeOrientacao?.(); } catch (_) {}
     try { openHome?.(); } catch (_) {}
     try { navTo?.('inicio'); } catch (_) {}
@@ -4843,6 +4844,7 @@ window.KroniaActions = {
   },
 
   openDietGenerator: function (context) {
+    try { closeAI?.(); } catch (_) {}
     try { closeOrientacao?.(); } catch (_) {}
     try { openHome?.(); } catch (_) {}
     try { navTo?.('inicio'); } catch (_) {}

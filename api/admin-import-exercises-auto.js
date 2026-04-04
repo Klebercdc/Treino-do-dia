@@ -177,10 +177,26 @@ module.exports = async function handler(req, res) {
       }));
     }
 
+    var datasetExercises = await exerciseImport.loadExercisesFromFile(exerciseImport.DEFAULT_EXERCISES_FILE);
+    var availableInDataset = Array.isArray(datasetExercises) ? datasetExercises.length : 0;
+
+    if (availableInDataset === 0) {
+      return res.status(200).json(buildResponse({
+        ok: false,
+        status: 'dataset_exhausted',
+        currentTotalBefore: currentTotalBefore,
+        targetTotal: TARGET_TOTAL,
+        missing: missing,
+        totalInTable: currentTotalBefore,
+        message: 'no exercises available in dataset file'
+      }));
+    }
+
     console.info('[admin-import-exercises-auto] Início import automático', {
       currentTotalBefore: currentTotalBefore,
       targetTotal: TARGET_TOTAL,
       missing: missing,
+      availableInDataset: availableInDataset,
       batchSize: AUTO_BATCH_SIZE
     });
 
@@ -190,15 +206,13 @@ module.exports = async function handler(req, res) {
     var totalProcessedBatches = 0;
     var totalBatches = 0;
     var attempt = 0;
-    var attemptLimit = missing;
+    var attemptLimit = Math.min(missing, availableInDataset);
 
     while (currentTotal < TARGET_TOTAL && attempt < MAX_AUTO_ATTEMPTS) {
       attempt += 1;
       var beforeAttempt = currentTotal;
       var currentMissing = TARGET_TOTAL - currentTotal;
-      if (attemptLimit > TARGET_TOTAL) {
-        attemptLimit = TARGET_TOTAL;
-      }
+      attemptLimit = Math.min(currentMissing, availableInDataset);
       if (attemptLimit <= 0) {
         break;
       }
@@ -208,6 +222,7 @@ module.exports = async function handler(req, res) {
         currentTotal: currentTotal,
         missing: currentMissing,
         importLimit: attemptLimit,
+        availableInDataset: availableInDataset,
         batchSize: AUTO_BATCH_SIZE
       });
 
@@ -247,9 +262,9 @@ module.exports = async function handler(req, res) {
       }
 
       if (currentTotal <= beforeAttempt) {
-        attemptLimit = Math.min(TARGET_TOTAL, attemptLimit + AUTO_BATCH_SIZE);
-      } else {
-        attemptLimit = TARGET_TOTAL - currentTotal;
+        // No new rows — dataset upserted duplicates only; further attempts won't help
+        console.warn('[admin-import-exercises-auto] Sem progresso após tentativa ' + attempt + '. Dataset provavelmente esgotado.');
+        break;
       }
     }
 
