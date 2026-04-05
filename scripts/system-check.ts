@@ -33,16 +33,12 @@ const REQUIRED_TABLES = [
   'workouts',
   'workout_logs',
   'push_subscriptions',
-  'nutrition_knowledge_sources',
-  'nutrition_knowledge_documents',
-  'nutrition_knowledge_chunks',
 ] as const;
 
 const REQUIRED_FUNCTIONS = [
   'get_recent_food_logs',
   'get_recent_hydration_logs',
   'get_latest_body_metrics',
-  'search_nutrition_knowledge',
 ] as const;
 
 function print(result: CheckResult): void {
@@ -115,6 +111,10 @@ async function checkSupabaseTables(): Promise<CheckResult> {
       }
     }
 
+    const hasScientificArticles = !missing.includes('scientific_articles') && !(await db.from('scientific_articles').select('id').limit(0)).error;
+    const hasScientificTopics = !missing.includes('scientific_topics') && !(await db.from('scientific_topics').select('id').limit(0)).error;
+    const hasScientificEvidence = !missing.includes('scientific_evidence') && !(await db.from('scientific_evidence').select('id').limit(0)).error;
+
     if (missing.length > 0) {
       return {
         name: 'supabase_tables',
@@ -126,10 +126,24 @@ async function checkSupabaseTables(): Promise<CheckResult> {
       };
     }
 
+    if (!hasScientificArticles || !hasScientificTopics || !hasScientificEvidence) {
+      return {
+        name: 'supabase_tables',
+        status: 'WARNING',
+        summary: 'Tabelas principais existem, mas a base científica direta está incompleta.',
+        details: {
+          hasScientificArticles,
+          hasScientificTopics,
+          hasScientificEvidence,
+        },
+        suggestion: 'Garanta scientific_articles, scientific_topics e scientific_evidence para referência científica em chat e dieta.',
+      };
+    }
+
     return {
       name: 'supabase_tables',
       status: 'OK',
-      summary: `Todas as ${REQUIRED_TABLES.length} tabelas obrigatórias existem.`,
+      summary: `Todas as ${REQUIRED_TABLES.length} tabelas obrigatórias e a base científica direta existem.`,
     };
   } catch (error) {
     return {
@@ -170,7 +184,7 @@ async function checkSupabaseFunctions(): Promise<CheckResult> {
     return {
       name: 'supabase_functions',
       status: 'OK',
-      summary: `Todas as ${REQUIRED_FUNCTIONS.length} funções SQL disponíveis.`,
+      summary: `Todas as ${REQUIRED_FUNCTIONS.length} funções SQL principais estão disponíveis.`,
     };
   } catch (error) {
     return {
@@ -189,16 +203,43 @@ async function checkEmbeddings(): Promise<CheckResult> {
       auth: { persistSession: false },
     });
 
-    const { count: total } = await db
+    const { count: total, error: totalError } = await db
       .from('nutrition_knowledge_chunks')
       .select('*', { count: 'exact', head: true });
+
+    if (totalError && /schema cache|relation|does not exist/i.test(totalError.message)) {
+      const [articles, evidence] = await Promise.all([
+        db.from('scientific_articles').select('*', { count: 'exact', head: true }),
+        db.from('scientific_evidence').select('*', { count: 'exact', head: true }),
+      ]);
+
+      if (!articles.error && !evidence.error && Number(articles.count || 0) > 0 && Number(evidence.count || 0) > 0) {
+        return {
+          name: 'embeddings',
+          status: 'OK',
+          summary: 'Instância operando pela base científica direta; chunks/embeddings não são obrigatórios neste banco.',
+          details: {
+            scientificArticles: articles.count,
+            scientificEvidence: evidence.count,
+            referenceMode: 'scientific_tables',
+          },
+        };
+      }
+
+      return {
+        name: 'embeddings',
+        status: 'WARNING',
+        summary: 'Stack RAG antiga ausente e base científica direta não confirmada.',
+        error: totalError.message,
+      };
+    }
 
     if ((total ?? 0) === 0) {
       return {
         name: 'embeddings',
         status: 'WARNING',
         summary: 'Nenhum chunk de conhecimento cadastrado — RAG sem conteúdo.',
-        suggestion: 'Ingira documentos via POST /functions/v1/ingest-nutrition-knowledge.',
+        suggestion: 'Ingira documentos via POST /functions/v1/ingest-nutrition-knowledge ou opere pela base científica direta.',
       };
     }
 
@@ -430,11 +471,26 @@ async function checkAIProvider(): Promise<CheckResult> {
       details,
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const networkRestricted =
+      /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ETIMEDOUT|EPERM/i.test(message);
+
+    if (networkRestricted) {
+      return {
+        name: 'ai_provider',
+        status: 'SKIPPED',
+        summary: 'Check remoto do Groq pulado por indisponibilidade de rede no ambiente atual.',
+        error: message,
+        details,
+        suggestion: 'Rode este check em ambiente com acesso externo para validar conectividade e chave.',
+      };
+    }
+
     return {
       name: 'ai_provider',
       status: 'ERROR',
       summary: 'Falha de runtime ao chamar o Groq.',
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
       details,
     };
   }

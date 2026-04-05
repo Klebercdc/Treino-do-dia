@@ -29,10 +29,10 @@ test('CTA workout resolves to open_training', async () => {
   assert.equal(result.cta.label, 'Abrir treino');
 });
 
-test('CTA diet resolves to open_diet', async () => {
+test('CTA diet resolves to generate_diet', async () => {
   const app = loadApplication();
   const result = await app.resolveConversationFlow({ message: 'preciso de uma dieta para secar' });
   assert.equal(result.type, 'answer_with_cta');
-  assert.equal(result.cta.action, 'open_diet');
-  assert.equal(result.cta.label, 'Abrir dieta');
+  assert.equal(result.cta.action, 'generate_diet');
+  assert.equal(result.cta.label, 'Gerar dieta');
 });

@@ -23,6 +23,7 @@ supabase/.temp/
 # Sistema
 .DS_Store
 Thumbs.db
+.codex
 
 # Logs
 *.log

@@ -34,6 +34,9 @@ function normalizeWorkoutPayload(payload) {
   const safePayload = normalizeObject(payload);
   const profile = normalizeObject(safePayload.profile);
   const context = normalizeObject(safePayload.context);
+  const scientificConstraints = normalizeObject(
+    safePayload.scientificConstraints || safePayload.constraints || context.scientificConstraints,
+  );
 
   const dias = pickNumber(
     safePayload.days_per_week,
@@ -57,6 +60,8 @@ function normalizeWorkoutPayload(payload) {
       toStringArray(profile.restrictions).join(', '),
       context.limitacoes,
     ) || 'nao',
+    scientificConstraints,
+    scienceValidation: pickString(safePayload.scienceValidation, context.scienceValidation, scientificConstraints.validationStatus),
   };
 }
 
@@ -71,17 +76,36 @@ function getMissingCriticalFields(normalizedPayload) {
 
 function buildWorkoutResult(action, normalizedPayload) {
   const plan = workoutBuilder.buildWorkoutPlan(normalizedPayload);
+  const missingEvidence = !Array.isArray(plan.references) || plan.references.length === 0;
+  const templateMetadata = normalizeObject(
+    normalizedPayload.scientificConstraints && normalizedPayload.scientificConstraints.templateMetadata,
+  );
+  const validationError = pickString(
+    templateMetadata.validationError,
+    plan.templateMetadata && plan.templateMetadata.validationError,
+  );
+  const failureMessage =
+    validationError === 'INVALID_WORKOUT_TEMPLATE_SHAPE'
+      ? 'Treino não gerado: o template salvo no Supabase está inválido para prescrição referenciada.'
+      : validationError === 'WORKOUT_TEMPLATE_MISSING'
+        ? 'Treino não gerado: nenhum template de treino referenciado foi encontrado no Supabase.'
+        : 'Treino não gerado: faltam referências válidas para sustentar a prescrição.';
   return {
     action,
     domain: 'workout',
-    success: true,
-    message: `Treino gerado com ${plan.treinos.length} sessão(ões).`,
-    errorCode: null,
+    success: !plan.failSafe,
+    message: plan.failSafe ? failureMessage : `Treino gerado com ${plan.treinos.length} sessão(ões).`,
+    errorCode: plan.failSafe
+      ? (validationError || (missingEvidence ? 'WORKOUT_REFERENCE_REQUIRED' : 'WORKOUT_INPUT_INVALID'))
+      : null,
     payload: {
       profile: normalizedPayload,
       plan,
       validation: {
         missingFields: getMissingCriticalFields(normalizedPayload),
+        missingEvidenceReferences: missingEvidence,
+        templateMetadata,
+        validationError: validationError || null,
       },
     },
   };

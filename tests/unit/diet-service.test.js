@@ -81,6 +81,9 @@ test('dietService returns safe failsafe response when critical profile data is m
   assert.equal(result.success, false);
   assert.equal(result.errorCode, 'DIET_INPUT_INVALID');
   assert.equal(result.payload.plan.failSafe, true);
+  assert.ok(Array.isArray(result.payload.plan.refeicoes));
+  assert.ok(result.payload.plan.refeicoes.length >= 3);
   assert.deepEqual(result.payload.validation.missingFields, ['sexo', 'idade', 'altura']);
-  assert.match(result.message, /dados insuficientes/i);
+  assert.equal(result.payload.validation.generatedFromFallback, true);
+  assert.match(result.message, /fallback seguro|complete os dados ausentes/i);
 });

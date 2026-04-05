@@ -1,0 +1,82 @@
+[
+  {
+    "id": "hipertrofia-base-v1",
+    "name": "Hipertrofia Base",
+    "evidenceReferences": [
+      {
+        "title": "ACSM Position Stand",
+        "source": "ACSM",
+        "href": "https://example.org/acsm-position-stand",
+        "level": "guideline"
+      },
+      {
+        "title": "Progression Models in Resistance Training",
+        "source": "ACSM",
+        "href": "https://example.org/progression-models",
+        "level": "position_stand"
+      }
+    ],
+    "treinos": [
+      {
+        "nome": "Treino A",
+        "grupo": "peito/triceps",
+        "exercicios": [
+          {
+            "nome": "Supino reto com barra",
+            "series": 4,
+            "reps": "6-8",
+            "descanso": "120s",
+            "source_ref": "acsm-1"
+          },
+          {
+            "nome": "Supino inclinado com halteres",
+            "series": 3,
+            "reps": "8-10",
+            "descanso": "90s",
+            "source_ref": "acsm-2"
+          }
+        ]
+      },
+      {
+        "nome": "Treino B",
+        "grupo": "costas/biceps",
+        "exercicios": [
+          {
+            "nome": "Remada curvada",
+            "series": 4,
+            "reps": "6-8",
+            "descanso": "120s",
+            "source_ref": "acsm-1"
+          },
+          {
+            "nome": "Puxada alta",
+            "series": 3,
+            "reps": "8-10",
+            "descanso": "90s",
+            "source_ref": "acsm-2"
+          }
+        ]
+      },
+      {
+        "nome": "Treino C",
+        "grupo": "pernas",
+        "exercicios": [
+          {
+            "nome": "Agachamento livre",
+            "series": 4,
+            "reps": "5-8",
+            "descanso": "150s",
+            "source_ref": "acsm-1"
+          },
+          {
+            "nome": "Leg press",
+            "series": 3,
+            "reps": "10-12",
+            "descanso": "90s",
+            "source_ref": "acsm-2"
+          }
+        ]
+      }
+    ]
+  }
+]

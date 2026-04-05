@@ -12,6 +12,8 @@ function extract(src, pattern, label) {
 function loadDietHelpers() {
   const code = fs.readFileSync('app.js', 'utf8');
   const snippet = [
+    extract(code, /function buildApiErrorEnvelope\(message, errorCode\) \{[\s\S]*?\n\}/, 'buildApiErrorEnvelope'),
+    extract(code, /function resolveAiFriendlyError\(payload, httpStatus\) \{[\s\S]*?\n\}/, 'resolveAiFriendlyError'),
     extract(code, /function computeDietGenerationBaseline\(input\) \{[\s\S]*?\n\}/, 'computeDietGenerationBaseline'),
     extract(code, /function buildDietRequestPayloadFromInput\(input\) \{[\s\S]*?\n\}/, 'buildDietRequestPayloadFromInput'),
     extract(code, /function normalizeDietFoodText\(value\) \{[\s\S]*?\n\}/, 'normalizeDietFoodText'),
@@ -24,6 +26,7 @@ function loadDietHelpers() {
     extract(code, /function buildLocalDietPlan\(input\) \{[\s\S]*?\n\}/, 'buildLocalDietPlan'),
     extract(code, /function buildLocalDietRenderText\(input, reason\) \{[\s\S]*?\n\}/, 'buildLocalDietRenderText'),
     extract(code, /function buildDietFallbackTextFromInput\(input, reason\) \{[\s\S]*?\n\}/, 'buildDietFallbackTextFromInput'),
+    extract(code, /function resolveDietRuntimeErrorMessage\(payload, httpStatus, input, fallbackReason\) \{[\s\S]*?\n\}/, 'resolveDietRuntimeErrorMessage'),
     extract(code, /function renderDietModelAsText\(model\) \{[\s\S]*?\n\}/, 'renderDietModelAsText'),
   ].join('\n\n');
 
@@ -143,4 +146,55 @@ test('buildLocalDietPlan uses Supabase snapshot to enrich fallback diet', () => 
     },
   }, 'Plano local');
   assert.match(rendered, /CALORIAS: 2300/);
+});
+
+test('resolveDietRuntimeErrorMessage always returns a local full plan for route errors', () => {
+  const context = loadDietHelpers();
+  const rendered = context.resolveDietRuntimeErrorMessage({
+    success: false,
+    message: 'Seu plano atual não permite este recurso de dieta.',
+    error: 'LIMIT_REACHED_PLAN',
+  }, 402, {
+    objetivo: 'hipertrofia',
+    sexo: 'feminino',
+    peso: 60,
+    altura: 165,
+    idade: 28,
+    refeicoesPorDia: 4,
+    supabaseSnapshot: {
+      nutritionGoals: { calories_target: 2300, protein_g: 140, carbs_g: 250, fat_g: 65 },
+    },
+  }, 'A rota de dieta retornou erro.');
+
+  assert.match(rendered, /##META/);
+  assert.match(rendered, /CALORIAS: 2300/);
+  assert.match(rendered, /Seu plano atual não permite este recurso de dieta/);
+  assert.doesNotMatch(rendered, /##ORIENTACAO LIMITADA/);
+});
+
+test('renderDietModelAsText renders complete failsafe plan when meals are present', () => {
+  const context = loadDietHelpers();
+  const rendered = context.renderDietModelAsText({
+    failSafe: true,
+    text: 'Plano inicial seguro.',
+    limitedOrientation: { orientacao: 'Dados incompletos.' },
+    meta: { calorias: 2100, proteina: 150, carbo: 220, gordura: 60, tmb: 1600, get: 2200 },
+    refeicoes: [
+      {
+        nome: 'Café da manhã',
+        horario: '07:00',
+        foco: 'META: 500 kcal',
+        proteinas: ['Tofu firme (150 g)'],
+        carbos: ['Aveia (40 g)'],
+        extras: ['Banana (1 un)'],
+      },
+    ],
+    hidratacao: { litros: 2.5 },
+    observacoes: ['Plano local gerado em contingência.'],
+  });
+
+  assert.match(rendered, /##META/);
+  assert.match(rendered, /##REFEICAO/);
+  assert.match(rendered, /Tofu firme/);
+  assert.doesNotMatch(rendered, /##ORIENTACAO LIMITADA/);
 });

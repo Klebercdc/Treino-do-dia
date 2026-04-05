@@ -310,12 +310,13 @@ function getPrevMap() {
    GERAR PROTOCOLO
 ═══════════════════════════════════════════════════ */
 async function gerarProtocolo() {
-  const f = document.getElementById("freq")?.value || "3";
-  const objective = document.getElementById("obj")?.value || 'hipertrofia';
+  const input = collectWorkoutGenerationInput();
+  const f = input.dias;
+  const objective = input.objetivo;
   const guard = await validateScientificGenerationGuard(
     'workout',
     objective,
-    { freq: f, objective: objective },
+    input,
     { respectedCardContext: true, respectedAnamnesisContext: false }
   );
   if (!guard.ok) {
@@ -323,48 +324,49 @@ async function gerarProtocolo() {
     return;
   }
 
-  const nav = document.getElementById("nav");
-  const cont = document.getElementById("container");
-  nav.innerHTML = ""; cont.innerHTML = "";
-  const preset = TREINOS_PRONTOS[f];
-  if (preset) {
-    preset.forEach((treino, i) => {
-      const labelCurto = treino.nome.split(" ")[0];
-      nav.innerHTML += `<div class="pill ${i===0?"active":""}" id="p${i}" onclick="tab(${i})">${labelCurto}</div>`;
-      const sec = document.createElement("div");
-      sec.id = `sec${i}`; sec.className = `section ${i===0?"active":""}`;
-      sec.setAttribute("data-treino-key", treino.nome);
-      cont.appendChild(sec);
-      treino.exs.forEach((exNome, exIdx) => criarCard(exNome, sec.id, null, null, null, null, exIdx));
-    });
-  } else {
-    (divisoesGen[f] || ["A","B"]).forEach((nome, i) => {
-      nav.innerHTML += `<div class="pill ${i===0?"active":""}" id="p${i}" onclick="tab(${i})">Treino ${nome}</div>`;
-      const sec = document.createElement("div");
-      sec.id = `sec${i}`; sec.className = `section ${i===0?"active":""}`;
-      sec.setAttribute("data-treino-key", `Treino ${nome}`);
-      cont.appendChild(sec);
-      criarCard("Exercício Base", sec.id, null, null, null, null, 0);
-    });
-  }
-  addPillControls(); scheduleDraftSave(); applyPrevGhostsToAll();
+  const workoutPayload = buildWorkoutRequestPayloadFromInput(input, guard);
 
-  writeAuditTracePatch({
-    generation: buildGenerationEnvelope({
-      type: "workout",
-      sourceOfTruth: guard.generationTrace?.sourceOfTruth || "supabase_scientific_evidence",
-      usedScientificEvidence: guard.generationTrace?.usedScientificEvidence,
-      scienceTopicsUsed: guard.generationTrace?.scienceTopicsUsed || [],
-      evidenceCount: guard.generationTrace?.evidenceCount || 0,
-      validationStatus: "generated",
-      blockedReason: null,
-      constraintsUsed: guard.generationTrace?.constraintsUsed || {},
-      userInputsUsed: guard.generationTrace?.userInputsUsed || { freq: f, objective: objective },
-      respectedCardContext: true,
-      respectedAnamnesisContext: false,
-      usedFallback: false,
-    }),
-  });
+  try {
+    const resp = await requestWorkoutRoute(workoutPayload, 12000);
+    const data = await parseWorkoutApiJsonSafely(resp);
+    const renderModel = extractWorkoutRenderModel(data);
+
+    if (!resp.ok || !renderModel || renderModel.failSafe) {
+      dlgAlert(resolveWorkoutRouteFailureMessage(data, resp.status));
+      return;
+    }
+
+    applyAIWorkout({
+      treino: {
+        grupos: renderModel.plan.treinos.map(function(treino) {
+          return {
+            nome: treino.nome,
+            exercicios: Array.isArray(treino.exercicios) ? treino.exercicios : [],
+          };
+        }),
+      }
+    });
+
+    writeAuditTracePatch({
+      generation: buildGenerationEnvelope({
+        type: "workout",
+        sourceOfTruth: guard.generationTrace?.sourceOfTruth || "supabase_scientific_evidence",
+        usedScientificEvidence: guard.generationTrace?.usedScientificEvidence,
+        scienceTopicsUsed: guard.generationTrace?.scienceTopicsUsed || [],
+        evidenceCount: guard.generationTrace?.evidenceCount || 0,
+        validationStatus: "generated",
+        blockedReason: null,
+        constraintsUsed: guard.generationTrace?.constraintsUsed || {},
+        userInputsUsed: workoutPayload,
+        respectedCardContext: true,
+        respectedAnamnesisContext: false,
+        usedFallback: false,
+      }),
+    });
+  } catch (error) {
+    dlgAlert(resolveWorkoutRouteFailureMessage(null, 0, error));
+    return;
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1619,6 +1621,139 @@ function getProgramaConfig() {
   return { freq, obj, fase, equip, persona, muscs, restric };
 }
 
+function collectWorkoutGenerationInput() {
+  const programa = getProgramaConfig();
+  return {
+    objetivo: programa.obj || "hipertrofia",
+    nivel: document.querySelector("#nivelChips .config-chip.active")?.dataset.val || safeJSON("kronia_config", {}).nivel || "iniciante",
+    dias: String(programa.freq || "3"),
+    tempo: programa.persona === "turista" ? "25 min" : "60 min",
+    equipamentos: programa.equip || "academia",
+    limitacoes: (programa.restric || []).join(", ") || "nao",
+    persona: programa.persona || "dedicado",
+    restricoes: programa.restric || [],
+    musculosPrioritarios: programa.muscs || [],
+    fase: programa.fase || "1",
+  };
+}
+
+function buildWorkoutRequestPayloadFromInput(input, guard) {
+  const safeInput = input && typeof input === "object" ? input : {};
+  const constraints = guard?.generationTrace?.constraintsUsed && typeof guard.generationTrace.constraintsUsed === "object"
+    ? guard.generationTrace.constraintsUsed
+    : {};
+  return {
+    objetivo: safeInput.objetivo,
+    nivel: safeInput.nivel,
+    dias: safeInput.dias,
+    tempo: safeInput.tempo,
+    equipamentos: safeInput.equipamentos,
+    limitacoes: safeInput.limitacoes,
+    scientificConstraints: Object.assign({}, constraints, {
+      validationStatus: guard?.generationTrace?.validationStatus || null,
+      sourceOfTruth: guard?.generationTrace?.sourceOfTruth || null,
+    }),
+    profile: {
+      objetivo: safeInput.objetivo,
+      nivel: safeInput.nivel,
+      dias: safeInput.dias,
+      equipamentos: safeInput.equipamentos,
+      persona: safeInput.persona,
+      restricoes: safeInput.restricoes,
+      musculosPrioritarios: safeInput.musculosPrioritarios,
+      fase: safeInput.fase,
+    },
+    context: {
+      source: "config_sheet",
+      sourceOfTruth: guard?.generationTrace?.sourceOfTruth || null,
+    },
+  };
+}
+
+async function requestWorkoutRoute(payload, timeoutMs) {
+  const timeout = Number(timeoutMs);
+  const supportsAbort = typeof AbortController === "function";
+  const controller = supportsAbort ? new AbortController() : null;
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/kronia/workout"), {
+    method: "POST",
+    body: JSON.stringify({
+      action: "GENERATE_WORKOUT",
+      requestId: "workout_" + Date.now(),
+      payload: payload,
+    }),
+    signal: controller ? controller.signal : undefined,
+  });
+
+  if (!supportsAbort || !Number.isFinite(timeout) || timeout <= 0) {
+    return requestPromise;
+  }
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise(function (_, reject) {
+    timeoutId = setTimeout(function () {
+      try { controller.abort(); } catch (_) {}
+      reject(new Error("Tempo limite da rota de treino excedido."));
+    }, timeout);
+  });
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function parseWorkoutApiJsonSafely(response) {
+  const rawText = await response.text();
+  try {
+    return JSON.parse(rawText);
+  } catch (_) {
+    return {
+      success: false,
+      type: "error",
+      message: "Resposta inválida ao gerar treino.",
+      error: "INVALID_JSON",
+      data: { content: [] },
+    };
+  }
+}
+
+function extractWorkoutRenderModel(payload) {
+  const safePayload = payload && typeof payload === "object" ? payload : null;
+  if (!safePayload) return null;
+  const nodes = safePayload.data && Array.isArray(safePayload.data.content) ? safePayload.data.content : [];
+  const node = nodes.find(function(item) {
+    return item && typeof item === "object" && /^(workout_primary|workout_failsafe|workout_result)$/i.test(String(item.type || ""));
+  }) || null;
+  const plan = node?.data || safePayload.plan || null;
+  if (!plan || typeof plan !== "object") return null;
+  return {
+    type: String(node?.type || safePayload.type || "workout_result"),
+    failSafe: plan.failSafe === true,
+    plan: plan,
+    message: String(node?.text || safePayload.message || "").trim(),
+  };
+}
+
+function resolveWorkoutRouteFailureMessage(payload, httpStatus, error) {
+  const serviceValidation = payload?.data?.service?.validation && typeof payload.data.service.validation === "object"
+    ? payload.data.service.validation
+    : null;
+  const validationError = typeof serviceValidation?.validationError === "string"
+    ? serviceValidation.validationError
+    : null;
+  if (validationError === "INVALID_WORKOUT_TEMPLATE_SHAPE") {
+    return "O template de treino salvo no Supabase está inválido. Corrija o JSON em workout_templates.templates para liberar a geração referenciada.";
+  }
+  if (validationError === "WORKOUT_TEMPLATE_MISSING") {
+    return "Nenhum template de treino referenciado foi encontrado no Supabase para este usuário.";
+  }
+  if (payload && typeof payload.message === "string" && payload.message.trim()) return payload.message.trim();
+  if (error && error.message) return String(error.message);
+  if (httpStatus === 429) return "Muitas requisições em pouco tempo. Aguarde alguns segundos e tente novamente.";
+  return "Não consegui gerar um treino referenciado agora.";
+}
+
 // Gera treino rápido (20-30 min) para físico turista
 function gerarTreinoExpress(equip) {
   // Override temporário da config para gerar treino express
@@ -2737,11 +2872,17 @@ function resolveAiFriendlyError(payload, httpStatus) {
 
 function normalizeDietContentNode(payload) {
   const directData = payload && payload.data && typeof payload.data === "object" ? payload.data : {};
-  const fromDataNode = Array.isArray(directData.content) ? directData.content.find(n => n && typeof n === "object" && n.type === "diet_result") : null;
+  const fromDataNode = Array.isArray(directData.content)
+    ? directData.content.find(n => n && typeof n === "object" && /^(diet_result|diet_primary|diet_failsafe)$/i.test(String(n.type || "")))
+    : null;
   const planData = fromDataNode?.data || directData.diet || directData.plan || payload?.diet || payload?.plan || null;
   const text = String(fromDataNode?.text || payload?.message || "").trim();
   if (!planData && !text) return null;
-  return { type: "diet_result", data: planData && typeof planData === "object" ? planData : {}, text };
+  return {
+    type: String(fromDataNode?.type || payload?.type || "diet_result"),
+    data: planData && typeof planData === "object" ? planData : {},
+    text
+  };
 }
 
 function getApiContentNodes(payload) {
@@ -2752,7 +2893,7 @@ function getApiContentNodes(payload) {
     nodes = payload.data.content;
   } else if (Array.isArray(payload.content)) {
     nodes = payload.content;
-  } else if (payload.type === "diet_result") {
+  } else if (/^(diet_result|diet_primary|diet_failsafe)$/i.test(String(payload.type || ""))) {
     const rebuilt = normalizeDietContentNode(payload);
     nodes = rebuilt ? [rebuilt] : [];
   }
@@ -2764,6 +2905,7 @@ function normalizeConversationIntentType(action) {
   var canonicalAction = resolveCanonicalKroniaAction(action);
   if (canonicalAction === 'open_training') return 'open_training';
   if (canonicalAction === 'open_diet') return 'open_diet';
+  if (canonicalAction === 'generate_diet') return 'generate_diet';
   return null;
 }
 
@@ -2794,7 +2936,7 @@ function sanitizeConversationIntentPayload(intentType, payload) {
     if (typeof safePayload.origin_message === 'string') normalized.origin_message = safePayload.origin_message.slice(0, 500);
     return normalized;
   }
-  if (intentType === 'open_diet') {
+  if (intentType === 'open_diet' || intentType === 'generate_diet') {
     if (typeof safePayload.objective === 'string') normalized.objective = safePayload.objective;
     if (safePayload.calories != null && Number.isFinite(Number(safePayload.calories))) normalized.calories = Number(safePayload.calories);
     if (safePayload.meals != null && Number.isFinite(Number(safePayload.meals))) normalized.meals = Number(safePayload.meals);
@@ -2815,7 +2957,7 @@ function buildCanonicalConversationIntent(data) {
   return {
     type: intentType,
     eligible: true,
-    label: intentType === 'open_training' ? 'Abrir treino' : 'Abrir dieta',
+    label: intentType === 'open_training' ? 'Abrir treino' : (intentType === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'),
     target: intentType === 'open_training' ? 'home_training_card' : 'home_diet_card',
     source: source,
     payload: sanitizeConversationIntentPayload(intentType, data.payload || {}),
@@ -2844,13 +2986,16 @@ function inferConversationCtaFromApiResponse(payload) {
   var wasTextuallyInferred = false;
 
   if (action === 'abrir_tela_treino_com_payload' || action === 'open_workout_flow' || buttonType === 'treino') inferredAction = 'open_training';
-  if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta' || action === 'open_diet_flow' || buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
+  if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta') inferredAction = inferredAction || 'open_diet';
+  if (action === 'open_diet_flow') inferredAction = inferredAction || 'generate_diet';
+  if (buttonType === 'dieta' && shouldCreateButton) inferredAction = inferredAction || 'generate_diet';
+  if (buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
   if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
     inferredAction = 'open_training';
     wasTextuallyInferred = true;
   }
   if (!inferredAction && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
-    inferredAction = 'open_diet';
+    inferredAction = /\b(gerar|montar|criar|monte|crie)\b/.test(messageText) ? 'generate_diet' : 'open_diet';
     wasTextuallyInferred = true;
   }
 
@@ -2906,7 +3051,7 @@ function buildCtaFromCanonicalIntent(intent) {
   if (!action) return null;
   return {
     action: action,
-    label: String(intent.label || (action === 'open_training' ? 'Abrir treino' : 'Abrir dieta')),
+    label: String(intent.label || (action === 'open_training' ? 'Abrir treino' : (action === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'))),
     payload: sanitizeConversationIntentPayload(action, intent.payload || {}),
     meta: sanitizeCtaObject(intent.meta || {}),
     intentSource: intent.source || 'agent',
@@ -3091,9 +3236,13 @@ function consumePendingConversationIntentFromHome(reason) {
       trackKroniaCta('home_card_hydrated_from_chat', 'success', { type: intent.type, hasPayload: !!Object.keys(hydratedTrainingPayload).length });
       return true;
     }
-    if (intent.type === 'open_diet') {
+    if (intent.type === 'open_diet' || intent.type === 'generate_diet') {
       var hydratedDietPayload = hydrateDietFromConversationIntent(intent.payload || {});
-      openDietaSheet?.(Object.assign({}, hydratedDietPayload, { source: 'chat', fromChatIntent: true }));
+      openDietaSheet?.(Object.assign({}, hydratedDietPayload, {
+        source: 'chat',
+        fromChatIntent: true,
+        autoGenerate: intent.type === 'generate_diet',
+      }));
       trackKroniaCta('home_card_auto_opened', 'success', { type: intent.type, target: intent.target });
       trackKroniaCta('home_card_hydrated_from_chat', 'success', { type: intent.type, hasPayload: !!Object.keys(hydratedDietPayload).length });
       return true;
@@ -3123,7 +3272,7 @@ function ensureApiContract(payload, contextName) {
   }
   if (!payload.data || typeof payload.data !== "object") payload.data = { content: [] };
   const contentNodes = getApiContentNodes(payload);
-  if (payload.type === "diet_result") {
+  if (/^(diet_result|diet_primary|diet_failsafe)$/i.test(String(payload.type || ""))) {
     const normalizedDietNode = normalizeDietContentNode(payload);
     payload.data.content = normalizedDietNode ? [normalizedDietNode] : [];
   } else if (!Array.isArray(contentNodes)) {
@@ -3154,7 +3303,7 @@ async function parseApiJsonSafely(response) {
 function extractDietRenderModel(payload) {
   const safePayload = ensureApiContract(payload, "extractDietRenderModel");
   const nodes = getApiContentNodes(safePayload);
-  const node = nodes.find(n => n && n.type === "diet_result") || normalizeDietContentNode(safePayload);
+  const node = nodes.find(n => n && /^(diet_result|diet_primary|diet_failsafe)$/i.test(String(n.type || ""))) || normalizeDietContentNode(safePayload);
   if (!node || !node.data || typeof node.data !== "object") return null;
   const plan = node.data;
   const meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
@@ -3175,7 +3324,11 @@ function extractDietRenderModel(payload) {
 function renderDietModelAsText(model) {
   if (!model) return "";
   if (model.flowState && model.flowState !== 'failsafe') return model.text || "Vamos continuar montando sua dieta.";
-  if (model.failSafe) {
+  const meta = model.meta || {};
+  const meals = Array.isArray(model.refeicoes) ? model.refeicoes : [];
+  const orientacoes = Array.isArray(model.observacoes) ? model.observacoes : [];
+  const hasRenderablePlan = !!meals.length;
+  if (model.failSafe && !hasRenderablePlan) {
     const fallbackNotes = Array.isArray(model.observacoes) ? model.observacoes.filter(Boolean) : [];
     const safeMessage = String((model.limitedOrientation && model.limitedOrientation.orientacao) || model.text || fallbackNotes[0] || "Dados insuficientes para montar a dieta completa.").trim();
     return [
@@ -3184,9 +3337,6 @@ function renderDietModelAsText(model) {
       fallbackNotes.length > 1 ? ("\n" + fallbackNotes.slice(1).map(function(note) { return "- " + note; }).join("\n")) : ""
     ].join("\n").trim();
   }
-  const meta = model.meta || {};
-  const meals = Array.isArray(model.refeicoes) ? model.refeicoes : [];
-  const orientacoes = Array.isArray(model.observacoes) ? model.observacoes : [];
   const metaBlock = [
     "##META",
     "CALORIAS: " + (meta.calorias ?? "—"),
@@ -3800,7 +3950,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=2026-04-04-1', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=2026-04-05-2', { updateViaCache: 'none' }).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════
@@ -4911,6 +5061,14 @@ function runKroniaActionFallback(action, context) {
     try { openDieta?.(); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
   }
+  if (action === 'generate_diet') {
+    try { openHome?.(); } catch (_) {}
+    try { navTo?.('inicio'); } catch (_) {}
+    try { schedulePendingConversationIntentConsumption('fallback_generate_diet'); return true; } catch (_) {}
+    try { openDietaSheet?.(Object.assign({}, safeContext, { autoGenerate: true, fromChatIntent: true })); return true; } catch (_) {}
+    try { openDieta?.(); return true; } catch (_) {}
+    try { navTo?.('treino'); return true; } catch (_) {}
+  }
   if (action === 'open_kronos') {
     try { navTo?.('inicio'); } catch (_) {}
     try { openAI?.(); return true; } catch (_) {}
@@ -5377,13 +5535,14 @@ function sanitizeCtaObject(value) {
 var KRONIA_CTA_ALLOWED_ACTIONS = Object.freeze({
   open_training: true,
   open_diet: true,
+  generate_diet: true,
   open_kronos: true,
 });
 
 // Compatibilidade legada temporária (remover quando emissores antigos forem eliminados).
 var KRONIA_CTA_ACTION_ALIASES = Object.freeze({
   open_training_builder: 'open_training',
-  open_diet_generator: 'open_diet',
+  open_diet_generator: 'generate_diet',
 });
 var KRONIA_CTA_LOCK_MS = 1200;
 var __kroniaCtaExecutionLocks = Object.create(null);
@@ -5520,6 +5679,13 @@ var KRONIA_CTA_EXECUTOR_MAP = Object.freeze({
     return false;
   },
   open_diet: function (context) {
+    if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
+      window.KroniaActions.openDietGenerator(context);
+      return true;
+    }
+    return false;
+  },
+  generate_diet: function (context) {
     if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
       window.KroniaActions.openDietGenerator(context);
       return true;
@@ -6362,11 +6528,23 @@ async function openDietaSheet(context) {
     if (context.fromChatIntent) {
       window._kroniaChatDietHydratedContext = hydratedDiet;
       trackKroniaCta('home_card_hydrated_from_chat', 'success', {
-        type: 'open_diet',
+        type: context.autoGenerate ? 'generate_diet' : 'open_diet',
         hasPayload: !!Object.keys(hydratedDiet).length,
       });
     }
     atualizarBasalDieta();
+  }
+  if (context && context.autoGenerate === true) {
+    var peso = parseFloat(document.getElementById("dietaPeso")?.value);
+    var altura = parseFloat(document.getElementById("dietaAltura")?.value);
+    var idade = parseInt(document.getElementById("dietaIdade")?.value, 10);
+    if (peso > 0 && altura > 0 && idade > 0) {
+      await gerarDieta();
+    } else {
+      trackKroniaCta('diet_auto_generate_skipped', 'success', {
+        reason: 'missing_required_fields',
+      });
+    }
   }
 }
 function closeDietaSheet() {
@@ -7406,6 +7584,11 @@ function buildLocalDietPlan(input) {
 
 function buildLocalDietRenderText(input, reason) {
   const fallbackPlan = buildLocalDietPlan(input);
+  const fallbackNotes = Array.isArray(fallbackPlan.observacoes) ? fallbackPlan.observacoes.slice() : [];
+  const normalizedReason = String(reason || "").trim();
+  if (normalizedReason && !fallbackNotes.some(function(note) { return String(note || "").trim() === normalizedReason; })) {
+    fallbackNotes.unshift(normalizedReason);
+  }
   return renderDietModelAsText({
     text: reason || "Plano local gerado em modo contingência.",
     flowState: null,
@@ -7414,7 +7597,7 @@ function buildLocalDietRenderText(input, reason) {
     meta: fallbackPlan.meta,
     refeicoes: fallbackPlan.refeicoes,
     hidratacao: fallbackPlan.hidratacao,
-    observacoes: fallbackPlan.observacoes,
+    observacoes: fallbackNotes,
   });
 }
 
@@ -7454,14 +7637,14 @@ function buildDietFallbackTextFromInput(input, reason) {
 
 function resolveDietRuntimeErrorMessage(payload, httpStatus, input, fallbackReason) {
   const friendly = resolveAiFriendlyError(payload, httpStatus);
-  if (
+  const reason = (
     friendly &&
     !/não consegui (montar|processar)/i.test(String(friendly)) &&
     !/sem evid[eê]ncia espec[ií]fica dispon[ií]vel agora/i.test(String(friendly))
-  ) {
-    return friendly;
-  }
-  return buildLocalDietRenderText(input, friendly || fallbackReason || "Plano local gerado após falha da rota.");
+  )
+    ? friendly
+    : (fallbackReason || friendly || "Plano local gerado após falha da rota.");
+  return buildLocalDietRenderText(input, reason);
 }
 
 async function requestDietRoute(payload, timeoutMs) {

@@ -172,6 +172,141 @@
     };
   }
 
+  function buildApplicationResult(overrides) {
+    return Object.assign({
+      status: 'success',
+      data: null,
+      errors: [],
+      nextAction: null,
+    }, overrides || {});
+  }
+
+  var APPLICATION_STATES = {
+    visitor: 'visitor',
+    authenticated: 'authenticated',
+    onboarding_pending: 'onboarding_pending',
+    onboarding_in_progress: 'onboarding_in_progress',
+    onboarding_completed: 'onboarding_completed',
+    plan_not_created: 'plan_not_created',
+    plan_generating: 'plan_generating',
+    plan_generated: 'plan_generated',
+    plan_active: 'plan_active',
+    plan_expired: 'plan_expired',
+    blocked: 'blocked',
+  };
+
+  function resolveInitialRoute() {
+    return buildApplicationResult({
+      data: { route: 'chat', state: APPLICATION_STATES.visitor },
+      nextAction: 'validate_access',
+    });
+  }
+
+  function resolvePostLoginRoute() {
+    return buildApplicationResult({
+      data: { route: 'onboarding', state: APPLICATION_STATES.authenticated, fallbackState: APPLICATION_STATES.onboarding_pending },
+      nextAction: 'complete_onboarding',
+    });
+  }
+
+  function completeOnboarding(profile) {
+    return buildApplicationResult({
+      data: { profile: profile || null, state: APPLICATION_STATES.onboarding_completed },
+      nextAction: 'load_dashboard',
+    });
+  }
+
+  function saveUserProfile(profile) {
+    return buildApplicationResult({
+      data: { profile: profile || null, state: APPLICATION_STATES.onboarding_in_progress },
+      nextAction: 'complete_onboarding',
+    });
+  }
+
+  function generateWorkoutPlan(input) {
+    return buildApplicationResult({
+      data: { request: input || {}, state: APPLICATION_STATES.plan_generating, module: 'workout' },
+      nextAction: 'approve_plan',
+    });
+  }
+
+  function generateDietPlan(input) {
+    return buildApplicationResult({
+      data: { request: input || {}, state: APPLICATION_STATES.plan_generating, module: 'diet' },
+      nextAction: 'approve_plan',
+    });
+  }
+
+  function generateSupplementProtocol(input) {
+    return buildApplicationResult({
+      data: { request: input || {}, state: APPLICATION_STATES.plan_not_created, module: 'supplement', terminalState: APPLICATION_STATES.plan_expired },
+      nextAction: 'process_chat_message',
+    });
+  }
+
+  function classifyChatIntent(input) {
+    return buildApplicationResult({
+      data: { intent: classifyConversationIntent(input) },
+      nextAction: 'resolve_next_action',
+    });
+  }
+
+  async function processChatMessage(input) {
+    var flow = await resolveConversationFlow(input || {});
+    return buildApplicationResult({
+      data: flow,
+      nextAction: resolveNextAction(flow),
+    });
+  }
+
+  function loadUserDashboard() {
+    return buildApplicationResult({
+      data: { route: 'dashboard', state: APPLICATION_STATES.plan_active },
+      nextAction: 'update_plan',
+    });
+  }
+
+  function updatePlan(input) {
+    return buildApplicationResult({
+      data: { request: input || {}, state: APPLICATION_STATES.plan_generated },
+      nextAction: 'approve_plan',
+    });
+  }
+
+  function approvePlan(input) {
+    return buildApplicationResult({
+      data: { plan: input || null, state: APPLICATION_STATES.plan_active },
+      nextAction: 'load_dashboard',
+    });
+  }
+
+  function validateAccess(context) {
+    var state = context?.blocked ? APPLICATION_STATES.blocked : APPLICATION_STATES.authenticated;
+    return buildApplicationResult({
+      data: { granted: !context?.blocked, state: state },
+      nextAction: context?.blocked ? 'handle_business_error' : 'resolve_post_login_route',
+    });
+  }
+
+  function resolveNextAction(result) {
+    if (result?.blockedReason) return 'handle_business_error';
+    if (result?.ctaAction === 'open_training') return 'generate_workout_plan';
+    if (result?.ctaAction === 'generate_diet') return 'generate_diet_plan';
+    return 'process_chat_message';
+  }
+
+  function handleBusinessError(error) {
+    return buildApplicationResult({
+      status: 'error',
+      data: null,
+      errors: [{
+        code: error?.code || 'BUSINESS_ERROR',
+        message: error?.message || 'Nao foi possivel concluir a operacao.',
+      }],
+      nextAction: 'resolve_initial_route',
+    });
+  }
+
   function buildDecision(input) {
     var intent = classifyConversationIntent(input);
     var base = decisionBase(intent);
@@ -189,8 +324,8 @@
       return Object.assign({}, base, {
         type: 'answer_with_cta',
         targetModule: 'dieta',
-        ctaAction: 'open_diet',
-        message: 'Perfeito. Posso abrir o modulo oficial de dieta quando voce clicar no botao abaixo.',
+        ctaAction: 'generate_diet',
+        message: 'Perfeito. Posso gerar sua dieta quando voce clicar no botao abaixo.',
       });
     }
 
@@ -272,7 +407,7 @@
             decision.validationStatus = science?.validationStatus || 'blocked_unsafe_request';
             decision.blockedReason = science?.blockedReason || 'unsafe_request';
           } else if (!hasEvidence) {
-            decision.message = 'Posso seguir com protocolo técnico conservador enquanto a base científica específica é atualizada.';
+            decision.message = 'Não encontrei referência específica no banco científico agora. Posso seguir com protocolo conservador, mas isso indica que a base científica/Supabase pode não ter retornado evidência para este caso.';
             decision.validationStatus = science?.validationStatus || 'fallback_safe_protocol';
             decision.blockedReason = null;
             decision.usedFallback = true;
@@ -290,7 +425,7 @@
       intent: decision.intent,
       message: decision.message,
       cta: decision.ctaAction ? {
-        label: decision.ctaAction === 'open_training' ? 'Abrir treino' : 'Abrir dieta',
+        label: decision.ctaAction === 'open_training' ? 'Abrir treino' : (decision.ctaAction === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'),
         action: decision.ctaAction,
       } : null,
       targetModule: decision.targetModule,
@@ -354,6 +489,21 @@
 
   window.KroniaApplication = window.KroniaApplication || {};
   window.KroniaApplication.application = {
+    resolveInitialRoute: resolveInitialRoute,
+    resolvePostLoginRoute: resolvePostLoginRoute,
+    completeOnboarding: completeOnboarding,
+    saveUserProfile: saveUserProfile,
+    generateWorkoutPlan: generateWorkoutPlan,
+    generateDietPlan: generateDietPlan,
+    generateSupplementProtocol: generateSupplementProtocol,
+    classifyChatIntent: classifyChatIntent,
+    processChatMessage: processChatMessage,
+    loadUserDashboard: loadUserDashboard,
+    updatePlan: updatePlan,
+    approvePlan: approvePlan,
+    validateAccess: validateAccess,
+    resolveNextAction: resolveNextAction,
+    handleBusinessError: handleBusinessError,
     resolveConversationFlow: resolveConversationFlow,
   };
 })();

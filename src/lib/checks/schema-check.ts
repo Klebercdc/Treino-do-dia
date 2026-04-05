@@ -8,6 +8,7 @@ type TableProbe = {
 
 const probes: TableProbe[] = [
   { table: 'profiles', columns: ['id', 'full_name', 'updated_at'] },
+  { table: 'workout_templates', columns: ['id', 'user_id', 'updated_at'] },
   { table: 'nutrition_goals', columns: ['id', 'user_id', 'active'] },
   { table: 'meal_plans', columns: ['id', 'user_id', 'active'] },
   { table: 'meal_plan_items', columns: ['id', 'meal_plan_id', 'sort_order'] },

@@ -88,7 +88,7 @@ test('inferConversationCtaFromApiResponse maps legacy open_workout_flow and open
     message: 'Vamos montar sua dieta.',
   });
   assert.equal(treino.type, 'open_training');
-  assert.equal(dieta.type, 'open_diet');
+  assert.equal(dieta.type, 'generate_diet');
 });
 
 test('inferConversationCtaFromApiResponse ignores non-actionable chat replies', () => {

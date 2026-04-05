@@ -10,7 +10,7 @@ test('mapPlanForGate promove trial para acesso premium no gate de dieta', () => 
   assert.equal(contract.mapPlanForGate('free'), 'FREE');
 });
 
-test('buildDietRouteEnvelope preserva contrato diet_result compatível com frontend', () => {
+test('buildDietRouteEnvelope emite diet_primary para plano completo', () => {
   const envelope = contract.buildDietRouteEnvelope({
     action: 'GENERATE_DIET',
     domain: 'diet',
@@ -34,12 +34,43 @@ test('buildDietRouteEnvelope preserva contrato diet_result compatível com front
   });
 
   assert.equal(envelope.success, true);
-  assert.equal(envelope.type, 'diet_result');
+  assert.equal(envelope.type, 'diet_primary');
   assert.equal(envelope.requestId, 'req-1');
   assert.equal(envelope.userId, 'user-1');
-  assert.equal(envelope.data.content[0].type, 'diet_result');
+  assert.equal(envelope.data.content[0].type, 'diet_primary');
   assert.equal(envelope.data.content[0].data.meta.calorias, 2200);
+  assert.equal(envelope.meta.renderMode, 'diet_primary');
   assert.equal(envelope.meta.plan, 'PRO');
+});
+
+test('buildDietRouteEnvelope emite diet_failsafe quando a dieta precisa de contingencia', () => {
+  const envelope = contract.buildDietRouteEnvelope({
+    action: 'GENERATE_DIET',
+    domain: 'diet',
+    success: false,
+    message: 'Dados insuficientes para montar a dieta com segurança.',
+    errorCode: 'DIET_INPUT_INVALID',
+    payload: {
+      validation: { missingFields: ['sexo'] },
+      plan: {
+        failSafe: true,
+        limitedOrientation: { orientacao: 'Revise o perfil.' },
+        observacoes: ['Revise o perfil.'],
+        refeicoes: [],
+      },
+    },
+  }, {
+    requestId: 'req-1b',
+    userId: 'user-1b',
+    plan: 'PRO',
+  });
+
+  assert.equal(envelope.success, true);
+  assert.equal(envelope.type, 'diet_failsafe');
+  assert.equal(envelope.state, 'validation_required');
+  assert.equal(envelope.data.content[0].type, 'diet_failsafe');
+  assert.equal(envelope.meta.failSafe, true);
+  assert.equal(envelope.meta.renderMode, 'diet_failsafe');
 });
 
 test('buildDietRouteErrorEnvelope produz erro padronizado', () => {

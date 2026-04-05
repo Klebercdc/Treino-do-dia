@@ -397,25 +397,59 @@ async function classifyScientificArticlesBatch(limit) {
 var OBJETIVO_TOPIC_KEYWORDS = {
   hipertrofia: ['hypertrophy', 'hipertrofia', 'muscle gain', 'ganho muscular', 'protein', 'proteina', 'strength', 'forca', 'creatine', 'creatina'],
   emagrecimento: ['fat loss', 'emagrecimento', 'weight loss', 'perda de gordura', 'protein', 'proteina', 'deficit'],
-  manutencao: ['maintenance', 'manutencao', 'protein', 'proteina', 'recovery', 'recuperacao'],
+  manutencao: ['maintenance', 'manutencao', 'weight maintenance', 'muscle maintenance', 'body weight stability', 'maintenance calories', 'energy balance', 'body recomposition maintenance', 'protein', 'proteina', 'recovery', 'recuperacao', 'sleep', 'fatigue'],
   recomposicao: ['body recomposition', 'recomposicao', 'fat loss', 'emagrecimento', 'hypertrophy', 'hipertrofia', 'protein', 'proteina'],
-  forca: ['strength', 'forca', 'powerlifting', 'creatine', 'creatina', 'protein', 'proteina']
+  forca: ['strength', 'forca', 'strength training', 'powerlifting', 'progressive overload', 'one rep max', '1rm', 'resistance training', 'creatine', 'creatina', 'protein', 'proteina']
 };
+
+function encodeLike(value) {
+  return String(value || '')
+    .trim()
+    .replace(/ /g, '%20')
+    .replace(/,/g, '%2C');
+}
 
 async function listEvidenceByObjective(objetivo, limit) {
   const client = createSupabaseAdminClient();
   const keywords = OBJETIVO_TOPIC_KEYWORDS[String(objetivo || '').toLowerCase()] || ['protein'];
   const safeLimit = Math.min(Number(limit) || 3, 10);
-
-  const topicFilter = keywords.map(function(k) {
-    return 'topic.ilike.*' + k.replace(/ /g, '%20') + '*';
-  }).join(',');
+  const topicClauses = [];
+  keywords.forEach(function(k) {
+    const encoded = encodeLike(k);
+    topicClauses.push('topic.ilike.*' + encoded + '*');
+    topicClauses.push('keywords.cs.{"' + String(k).replace(/"/g, '\\"') + '"}');
+  });
+  const topicFilter = topicClauses.join(',');
 
   let topics = [];
   try {
-    topics = await client.request('GET', 'scientific_topics?or=(' + topicFilter + ')&status=eq.active&select=id,topic') || [];
+    topics = await client.request(
+      'GET',
+      'scientific_topics?or=(' + topicFilter + ')&select=id,topic,keywords,status'
+    ) || [];
   } catch (_) {
     return [];
+  }
+
+  topics = topics.filter(function(topic) {
+    return !topic || topic.status === undefined || topic.status === null || String(topic.status).toLowerCase() === 'active';
+  });
+
+  if (!topics.length) {
+    try {
+      const allTopics = await client.request('GET', 'scientific_topics?select=id,topic,keywords,status') || [];
+      topics = allTopics.filter(function(topic) {
+        if (!topic) return false;
+        var status = topic.status === undefined || topic.status === null ? 'active' : String(topic.status).toLowerCase();
+        if (status !== 'active') return false;
+        var topicText = [topic.topic].concat(Array.isArray(topic.keywords) ? topic.keywords : []).join(' ').toLowerCase();
+        return keywords.some(function(keyword) {
+          return topicText.indexOf(String(keyword || '').toLowerCase()) >= 0;
+        });
+      });
+    } catch (_) {
+      topics = [];
+    }
   }
 
   if (!topics.length) return [];

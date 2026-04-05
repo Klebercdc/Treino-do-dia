@@ -17,11 +17,14 @@ export async function orchestrate(message, user) {
 
   if (intent.domain === "workout" && intent.action === "generate_workout") {
     const treino = await WorkoutAgent.generate(user, message);
+    const workoutType = treino && treino.failSafe ? "workout_failsafe" : "workout_primary";
 
     return {
-      type: "workout_result",
-      uiAction: "send_to_exercise_table",
-      response: "Treino gerado e enviado para sua tabela de exercícios.",
+      type: workoutType,
+      uiAction: treino && treino.failSafe ? "none" : "send_to_exercise_table",
+      response: treino && treino.failSafe
+        ? "Não gerei um treino especulativo. Faltam referências explícitas validadas para sustentar a prescrição."
+        : "Treino gerado e enviado para sua tabela de exercícios.",
       data: treino,
       intent
     };

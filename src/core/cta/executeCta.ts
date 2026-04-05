@@ -44,6 +44,7 @@ export async function executeCta(cta: KroniaCta, ctx?: KroniaCtaContext) {
         window.location.href = '/app/treino';
         return true;
       case 'open_diet':
+      case 'generate_diet':
         window.location.href = '/app/dieta';
         return true;
       case 'open_kronos':

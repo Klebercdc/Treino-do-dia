@@ -12,7 +12,7 @@ const ANALYSIS_RULES = [
         description: 'Múltiplas falhas detectadas na geração de dieta.',
         impact: 'high',
         domain: 'diet',
-        suggested_action: 'Revisar normalizeDietEnvelope e validação de contrato diet_result.',
+        suggested_action: 'Revisar normalizeDietEnvelope e validação do contrato de dieta (diet_primary/diet_failsafe).',
         frequency: context?.frequency?.diet_pipeline_failed || 0,
       };
     },

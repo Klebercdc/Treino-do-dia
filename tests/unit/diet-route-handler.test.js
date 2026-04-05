@@ -49,10 +49,34 @@ test('handler retorna diet_result em sucesso para plano permitido', async () => 
 
   assert.equal(result.status, 200);
   assert.equal(result.body.success, true);
-  assert.equal(result.body.type, 'diet_result');
-  assert.equal(result.body.data.content[0].type, 'diet_result');
+  assert.equal(result.body.type, 'diet_primary');
+  assert.equal(result.body.data.content[0].type, 'diet_primary');
   assert.equal(result.body.data.service.gatedPlan, 'PRO');
   assert.equal(result.body.data.content[0].data.failSafe, false);
+});
+
+test('handler retorna diet_failsafe em vez de erro cru quando faltam dados criticos', async () => {
+  const result = await handler.processDietRouteRequest({
+    body: {
+      action: 'GENERATE_DIET',
+      objective: 'hipertrofia',
+      payload: {
+        peso: 82,
+      },
+    },
+    requestId: 'req-handler-1b',
+    userId: 'user-handler-1b',
+    effectivePlan: 'PRO',
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.success, true);
+  assert.equal(result.body.type, 'diet_failsafe');
+  assert.equal(result.body.state, 'validation_required');
+  assert.equal(result.body.data.content[0].type, 'diet_failsafe');
+  assert.equal(result.body.data.content[0].data.failSafe, true);
+  assert.ok(result.body.data.content[0].data.refeicoes.length >= 3);
+  assert.equal(result.body.data.service.validation.generatedFromFallback, true);
 });
 
 test('handler bloqueia geração de dieta para plano free', async () => {

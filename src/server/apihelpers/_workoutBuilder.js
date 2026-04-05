@@ -1,5 +1,56 @@
 'use strict';
 
+function toEvidenceReferences(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(function(item) {
+      if (!item || typeof item !== 'object') return null;
+      var title = item.title || item.topic || item.name || null;
+      var source = item.source || item.journal || item.provider || null;
+      var href = item.url || item.href || null;
+      if (!title && !source && !href) return null;
+      return {
+        title: title ? String(title) : null,
+        source: source ? String(source) : null,
+        href: href ? String(href) : null,
+        level: item.level || item.evidence_level || null,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeReferencedWorkoutPlan(value) {
+  if (!value || typeof value !== 'object') return null;
+  var treinos = Array.isArray(value.treinos) ? value.treinos : [];
+  var normalizedTreinos = treinos.map(function(treino, treinoIndex) {
+    var exercicios = Array.isArray(treino && treino.exercicios) ? treino.exercicios : [];
+    var normalizedExercises = exercicios.map(function(exercicio) {
+      if (!exercicio || typeof exercicio !== 'object') return null;
+      var nome = exercicio.nome || exercicio.name || exercicio.display_name || null;
+      if (!nome) return null;
+      return {
+        nome: String(nome),
+        series: Number(exercicio.series || exercicio.sets || 0) || 3,
+        reps: String(exercicio.reps || exercicio.repeticoes || '8-12'),
+        descanso: exercicio.descanso ? String(exercicio.descanso) : undefined,
+        source_ref: exercicio.source_ref || exercicio.reference_id || null,
+      };
+    }).filter(Boolean);
+    if (!normalizedExercises.length) return null;
+    return {
+      nome: String((treino && treino.nome) || ('Treino ' + String.fromCharCode(65 + treinoIndex))),
+      grupo: String((treino && treino.grupo) || ''),
+      exercicios: normalizedExercises,
+    };
+  }).filter(Boolean);
+
+  if (!normalizedTreinos.length) return null;
+  return {
+    treinos: normalizedTreinos,
+    orientacoes: value.orientacoes && typeof value.orientacoes === 'object' ? value.orientacoes : {},
+  };
+}
+
 var EXERCISES_BY_ENV = {
   academia: {
     peito: ['Supino reto com barra', 'Supino inclinado com halteres', 'Crucifixo com halteres'],
@@ -142,6 +193,47 @@ function pickExercises(groups, environment, prescription, limitations) {
 
 function buildWorkoutPlan(collected) {
   var input = collected || {};
+  var scientificConstraints = input.scientificConstraints && typeof input.scientificConstraints === 'object'
+    ? input.scientificConstraints
+    : {};
+  var evidenceReferences = toEvidenceReferences(scientificConstraints.evidenceReferences);
+  var referencedPlan = normalizeReferencedWorkoutPlan(
+    scientificConstraints.referencedPlan || scientificConstraints.referencedWorkout || scientificConstraints.workoutPlan
+  );
+  if (!evidenceReferences.length || !referencedPlan) {
+    var templateMetadata = scientificConstraints.templateMetadata && typeof scientificConstraints.templateMetadata === 'object'
+      ? scientificConstraints.templateMetadata
+      : {};
+    var templateValidationError = typeof templateMetadata.validationError === 'string'
+      ? templateMetadata.validationError
+      : (!referencedPlan ? 'WORKOUT_TEMPLATE_MISSING' : null);
+    var templateObservation = templateValidationError === 'INVALID_WORKOUT_TEMPLATE_SHAPE'
+      ? 'O template salvo em workout_templates.templates existe, mas está fora do formato oficial exigido.'
+      : 'Nenhum template válido foi encontrado em workout_templates.templates para este usuário.';
+    return {
+      failSafe: true,
+      flow_state: 'referenced_prescription_required',
+      treinos: [],
+      orientacoes: {
+        objetivo: normalizeGoal(input.objetivo),
+        nivel: normalizeLevel(input.nivel),
+        frequencia: normalizeDays(input.dias) + 'x por semana',
+        sessoes: String(input.tempo || '60 min'),
+        observacao: 'Treino não gerado: faltam referências e prescrição estruturada explicitamente validadas.',
+      },
+      references: evidenceReferences,
+      templateMetadata: {
+        templateId: templateMetadata.templateId || null,
+        templateName: templateMetadata.templateName || null,
+        validationError: templateValidationError,
+      },
+      observacoes: [
+        'Não gerei um treino especulativo.',
+        templateObservation,
+        'Envie evidenceReferences e referencedPlan válidos no scientificConstraints antes de montar o treino.',
+      ],
+    };
+  }
   var goal = normalizeGoal(input.objetivo);
   var level = normalizeLevel(input.nivel);
   var days = normalizeDays(input.dias);
@@ -150,21 +242,33 @@ function buildWorkoutPlan(collected) {
   var split = SPLITS[days] || SPLITS[3];
 
   return {
-    treinos: split.map(function(day) {
+    failSafe: false,
+    flow_state: 'referenced_ready',
+    treinos: referencedPlan.treinos.map(function(day) {
       return {
         nome: day.nome,
-        grupo: day.grupos.join('/'),
-        exercicios: pickExercises(day.grupos, environment, prescription, input.limitacoes)
+        grupo: day.grupo,
+        exercicios: day.exercicios.map(function(exercicio) {
+          return {
+            nome: exercicio.nome,
+            series: exercicio.series || prescription.series,
+            reps: exercicio.reps || prescription.reps,
+            descanso: exercicio.descanso || undefined,
+            source_ref: exercicio.source_ref || null,
+          };
+        }),
       };
     }),
+    references: evidenceReferences,
     orientacoes: {
       objetivo: goal,
       nivel: level,
       frequencia: days + 'x por semana',
       sessoes: String(input.tempo || '60 min'),
+      ambiente: environment,
       observacao: environment === 'academia'
-        ? 'Plano local gerado sem IA. Ajuste fino pode ser refinado depois.'
-        : 'Plano local adaptado ao equipamento informado.'
+        ? 'Plano montado a partir de prescrição estruturada explicitamente referenciada.'
+        : 'Plano adaptado ao equipamento informado a partir de prescrição estruturada explicitamente referenciada.'
     }
   };
 }

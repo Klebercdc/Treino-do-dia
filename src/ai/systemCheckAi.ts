@@ -92,9 +92,31 @@ export async function runRagSystemCheck(): Promise<SystemCheckResult> {
     })
 
     if (error && /function.*does not exist/i.test(error.message)) {
+      const [articles, topics, evidence] = await Promise.all([
+        db.from("scientific_articles").select("id", { count: "exact", head: true }),
+        db.from("scientific_topics").select("id", { count: "exact", head: true }),
+        db.from("scientific_evidence").select("id", { count: "exact", head: true }),
+      ])
+
+      const scientificAvailable = !articles.error && !topics.error && !evidence.error &&
+        Number(articles.count || 0) > 0 && Number(topics.count || 0) > 0 && Number(evidence.count || 0) > 0
+
+      if (scientificAvailable) {
+        return {
+          status: "OK",
+          message: "Stack RAG antiga ausente, mas a base científica direta está disponível.",
+          details: {
+            referenceMode: "scientific_tables",
+            scientificArticles: articles.count,
+            scientificTopics: topics.count,
+            scientificEvidence: evidence.count,
+          },
+        }
+      }
+
       return {
         status: "ERROR",
-        message: "Função search_nutrition_knowledge ausente. Execute sql/005_nutrition_functions.sql.",
+        message: "Função search_nutrition_knowledge ausente e fallback científico indisponível.",
         details: { error: error.message },
       }
     }
@@ -118,9 +140,24 @@ export async function runEmbeddingsSystemCheck(): Promise<SystemCheckResult> {
       auth: { persistSession: false },
     })
 
-    const { count: total } = await db
+    const { count: total, error: totalError } = await db
       .from("nutrition_knowledge_chunks")
       .select("*", { count: "exact", head: true })
+
+    if (totalError && /schema cache|relation|does not exist/i.test(totalError.message)) {
+      const [articles, evidence] = await Promise.all([
+        db.from("scientific_articles").select("id", { count: "exact", head: true }),
+        db.from("scientific_evidence").select("id", { count: "exact", head: true }),
+      ])
+
+      if (!articles.error && !evidence.error && Number(articles.count || 0) > 0 && Number(evidence.count || 0) > 0) {
+        return {
+          status: "OK",
+          message: "Embeddings não são usados nesta instância; a referência vem das tabelas científicas diretas.",
+          details: { referenceMode: "scientific_tables", scientificArticles: articles.count, scientificEvidence: evidence.count },
+        }
+      }
+    }
 
     const { count: nullCount } = await db
       .from("nutrition_knowledge_chunks")

@@ -29,8 +29,13 @@ function serializeContext(context: RetrievedContextItem[] = []): string {
   return context
     .slice(0, 8)
     .map((item, idx) => {
+      const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata : {}
       const title = item.title ? `Título: ${item.title}\n` : ""
-      return `Fonte ${idx + 1}\n${title}Conteúdo: ${item.content}`
+      const source = metadata.source ? `Origem: ${String(metadata.source)}\n` : ""
+      const category = metadata.category ? `Categoria: ${String(metadata.category)}\n` : ""
+      const href = metadata.url ? `Link: ${String(metadata.url)}\n` : ""
+      const similarity = item.score != null ? `Relevância: ${Number(item.score).toFixed(3)}\n` : ""
+      return `Fonte ${idx + 1}\n${title}${source}${category}${href}${similarity}Conteúdo: ${item.content}`
     })
     .join("\n\n")
 }
@@ -54,8 +59,8 @@ export function buildUserMessageBundle(args: {
   return [
     "MODO DE CONHECIMENTO:",
     args.sourceOfTruthMode === "rag_required"
-      ? "Use apenas o contexto recuperado, memória útil e dados do usuário. Se faltar informação, diga claramente."
-      : "Priorize o contexto recuperado, memória útil e dados do usuário. Se faltar informação, diga claramente.",
+      ? "Use apenas o contexto recuperado, memória útil e dados do usuário. Trate o CONTEXTO RECUPERADO como referência oficial. Se não houver contexto suficiente, diga claramente."
+      : "Priorize o contexto recuperado, memória útil e dados do usuário. Trate o CONTEXTO RECUPERADO como referência oficial. Se faltar informação, diga claramente.",
     "",
     "PERFIL DO USUÁRIO:",
     serializeProfile(args.userProfile),

@@ -21,25 +21,28 @@ function buildDietRouteEnvelope(result, options) {
   var plan = input.payload && input.payload.plan && typeof input.payload.plan === 'object'
     ? input.payload.plan
     : {};
+  var isFailSafe = !!plan.failSafe;
+  var responseType = isFailSafe ? 'diet_failsafe' : 'diet_primary';
   var serviceMeta = {
     action: input.action || 'GENERATE_DIET',
     domain: input.domain || 'diet',
     errorCode: input.errorCode || null,
     validation: input.payload && input.payload.validation ? input.payload.validation : null,
     gatedPlan: opts.plan || null,
+    renderMode: responseType,
   };
 
   return responseUtil.createApiEnvelope({
     success: true,
-    type: 'diet_result',
-    state: plan.failSafe ? 'validation_required' : 'success',
+    type: responseType,
+    state: isFailSafe ? 'validation_required' : 'success',
     message: String(input.message || 'Dieta processada com sucesso.'),
     requestId: opts.requestId || null,
     userId: opts.userId || null,
     error: null,
     data: {
       content: [{
-        type: 'diet_result',
+        type: responseType,
         data: plan,
         text: String(input.message || 'Dieta processada com sucesso.')
       }],
@@ -47,7 +50,8 @@ function buildDietRouteEnvelope(result, options) {
     },
     meta: {
       flow: 'kronia_diet_route',
-      failSafe: !!plan.failSafe,
+      failSafe: isFailSafe,
+      renderMode: responseType,
       plan: opts.plan || null,
     }
   });

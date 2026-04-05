@@ -159,7 +159,7 @@ test('textual inference from Groq response generates open_training CTA', () => {
   assert.ok(typeof cta.payload.origin_message === 'string', 'origin_message should be set as minimal context');
 });
 
-test('textual inference from Groq response generates open_diet CTA', () => {
+test('textual inference from Groq response generates generate_diet CTA', () => {
   const rt = loadInferenceRuntime();
   const cta = rt.inferConversationCtaFromApiResponse({
     success: true,
@@ -169,7 +169,7 @@ test('textual inference from Groq response generates open_diet CTA', () => {
     message: 'Vou criar uma dieta especial para o seu objetivo de emagrecimento.',
   });
   assert.ok(cta, 'should produce a CTA from textual inference');
-  assert.equal(cta.type, 'open_diet');
+  assert.equal(cta.type, 'generate_diet');
   assert.equal(cta.source, 'inferred');
   assert.ok(cta.payload.origin_message);
 });
@@ -216,11 +216,11 @@ test('frontend classifier resolves conjugated forms: monte/gere + dieta', async 
   const app = loadClassifierRuntime();
   const r1 = await app.resolveConversationFlow({ message: 'monte uma dieta pra eu emagrecer' });
   assert.equal(r1.type, 'answer_with_cta');
-  assert.equal(r1.cta.action, 'open_diet');
+  assert.equal(r1.cta.action, 'generate_diet');
 
   const r2 = await app.resolveConversationFlow({ message: 'gere uma dieta com 5 refeições' });
   assert.equal(r2.type, 'answer_with_cta');
-  assert.equal(r2.cta.action, 'open_diet');
+  assert.equal(r2.cta.action, 'generate_diet');
 });
 
 test('frontend classifier resolves new terms: musculacao, rotina, cardapio, macros', async () => {
@@ -229,10 +229,10 @@ test('frontend classifier resolves new terms: musculacao, rotina, cardapio, macr
   assert.equal(r1.cta?.action, 'open_training');
 
   const r2 = await app.resolveConversationFlow({ message: 'preciso de um cardapio saudavel' });
-  assert.equal(r2.cta?.action, 'open_diet');
+  assert.equal(r2.cta?.action, 'generate_diet');
 
   const r3 = await app.resolveConversationFlow({ message: 'crie um plano de macros pra mim' });
-  assert.equal(r3.cta?.action, 'open_diet');
+  assert.equal(r3.cta?.action, 'generate_diet');
 });
 
 // ── 5. backend intent detector coverage (_intent.js) ─────────────────────────
@@ -291,7 +291,7 @@ test('frontend classifier triggers open_diet with just the word "dieta"', async 
   const app = loadClassifierRuntime();
   const result = await app.resolveConversationFlow({ message: 'dieta' });
   assert.equal(result.type, 'answer_with_cta');
-  assert.equal(result.cta.action, 'open_diet');
+  assert.equal(result.cta.action, 'generate_diet');
 });
 
 test('frontend classifier triggers open_training with context phrase (no action verb)', async () => {
@@ -300,7 +300,7 @@ test('frontend classifier triggers open_training with context phrase (no action 
   assert.equal(r1.cta?.action, 'open_training');
 
   const r2 = await app.resolveConversationFlow({ message: 'minha dieta está difícil' });
-  assert.equal(r2.cta?.action, 'open_diet');
+  assert.equal(r2.cta?.action, 'generate_diet');
 });
 
 test('frontend classifier does NOT trigger CTA for analysis questions about treino', async () => {

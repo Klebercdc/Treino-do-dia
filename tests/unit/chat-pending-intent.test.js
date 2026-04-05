@@ -120,3 +120,22 @@ test('home consumes valid pending training intent and opens config with hydrated
   assert.equal(calls.openConfig[0].source, 'chat');
   assert.equal(localStorage.getItem('kronia_pending_conversation_intent_v1'), null);
 });
+
+test('home consumes valid pending generate_diet intent and forwards autoGenerate to diet sheet', () => {
+  const { context, localStorage, calls } = loadRuntime();
+  localStorage.setItem('kronia_pending_conversation_intent_v1', JSON.stringify({
+    v: 1,
+    type: 'generate_diet',
+    target: 'home_diet_card',
+    source: 'agent',
+    payload: { objective: 'emagrecimento', meals: 4 },
+    createdAt: Date.now(),
+  }));
+
+  const consumed = context.consumePendingConversationIntentFromHome('unit_test');
+  assert.equal(consumed, true);
+  assert.equal(calls.openDietaSheet.length, 1);
+  assert.equal(calls.openDietaSheet[0].fromChatIntent, true);
+  assert.equal(calls.openDietaSheet[0].autoGenerate, true);
+  assert.equal(calls.openDietaSheet[0].source, 'chat');
+});

@@ -42,11 +42,15 @@ export const DietFlow = {
       user.mode = null;
 
       const dieta = await DietAgent.generate(user.data);
+      const resultType = dieta && dieta.failSafe ? "diet_failsafe" : "diet_primary";
+      const responseText = dieta && dieta.failSafe
+        ? "Montei um plano inicial seguro com os dados atuais. Se completar a ficha, eu deixo a dieta mais precisa."
+        : "Dieta gerada com base na ficha preenchida.";
 
       return {
-        type: "diet_result",
+        type: resultType,
         uiAction: "show_diet_result",
-        response: "Dieta gerada com base nas proteínas e regras definidas.",
+        response: responseText,
         data: dieta
       };
     }

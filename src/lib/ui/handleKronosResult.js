@@ -13,8 +13,21 @@ export function handleKronosResult(result, actions) {
     return;
   }
 
+  if (result.uiAction === "show_workout_result") {
+    if (result.data) {
+      setExerciseTable(result.data);
+    }
+    setCurrentScreen("workout_table");
+    return;
+  }
+
   if (result.uiAction === "open_diet_screen") {
     setCurrentScreen("diet");
+    return;
+  }
+
+  if (result.uiAction === "open_workout_screen") {
+    setCurrentScreen("workout");
     return;
   }
 

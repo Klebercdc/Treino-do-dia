@@ -21,9 +21,10 @@ export const WorkoutFlow = {
       user.mode = null;
 
       return {
-        type: "workout_flow_done",
-        uiAction: "show_workout_result",
-        response: "Fluxo de treino concluído."
+        type: "workout_flow_ready",
+        uiAction: "open_workout_screen",
+        response: "Dados coletados. Abra o configurador oficial para gerar um treino referenciado.",
+        data: user.data,
       };
     }
 

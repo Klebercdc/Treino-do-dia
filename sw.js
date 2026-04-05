@@ -1,9 +1,9 @@
-const CACHE = 'kronia-v4-2026-04-04-1';
+const CACHE = 'kronia-v4-2026-04-05-2';
 const STATIC = [
   '/',
   '/index.html',
-  '/app.js?v=2026-04-04-1',
-  '/auth.js?v=2026-04-04-1',
+  '/app.js?v=2026-04-05-2',
+  '/auth.js?v=2026-04-05-2',
   '/styles.css?v=20260322d',
   '/Kronia.png',
   '/splash.png',
@@ -83,6 +83,7 @@ self.addEventListener('fetch', e => {
 
   // Só intercepta requisições do mesmo origin
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
 
   e.respondWith(
     fetch(e.request).then(res => {
@@ -94,7 +95,24 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => {
       // Offline: serve do cache
-      return caches.match(e.request);
+      return caches.match(e.request).then(cached => {
+        if (cached) return cached;
+
+        if (e.request.mode === 'navigate') {
+          return caches.match('/index.html').then(indexCached => {
+            if (indexCached) return indexCached;
+            return new Response('Offline', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+            });
+          });
+        }
+
+        return new Response('Offline', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      });
     })
   );
 });

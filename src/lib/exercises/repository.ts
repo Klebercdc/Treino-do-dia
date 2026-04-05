@@ -8,7 +8,20 @@ function jsonArray(value: unknown): string[] {
 type IdentityInput = { exerciseId?: string | null; slug?: string | null; normalizedLookupKey?: string | null; exerciseName?: string | null };
 
 export class ExerciseRepository {
+  private normalizedLookupKeyAvailable: boolean | null = null;
+
   constructor(private readonly db: SupabaseClient) {}
+
+  private isMissingColumnError(error: any, column: string): boolean {
+    return !!(error && typeof error.message === 'string' && error.message.includes(column) && /does not exist|schema cache|column/i.test(error.message));
+  }
+
+  private async canUseNormalizedLookupKey(): Promise<boolean> {
+    if (typeof this.normalizedLookupKeyAvailable === 'boolean') return this.normalizedLookupKeyAvailable;
+    const { error } = await this.db.from('exercises').select('normalized_lookup_key').limit(0);
+    this.normalizedLookupKeyAvailable = !this.isMissingColumnError(error, 'normalized_lookup_key');
+    return this.normalizedLookupKeyAvailable;
+  }
 
   async findById(exerciseId: string): Promise<ExerciseEntity | null> {
     const id = String(exerciseId || '').trim();
@@ -29,9 +42,21 @@ export class ExerciseRepository {
   async findByLookupKey(normalizedLookupKey: string): Promise<ExerciseEntity | null> {
     const key = this.normalizeLookup(String(normalizedLookupKey || ''));
     if (!key) return null;
-    const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', key).eq('is_active', true).maybeSingle();
-    if (error) throw error;
-    return data ? this.mapExercise(data) : null;
+    if (await this.canUseNormalizedLookupKey()) {
+      const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', key).eq('is_active', true).maybeSingle();
+      if (error && !this.isMissingColumnError(error, 'normalized_lookup_key')) throw error;
+      if (data) return this.mapExercise(data);
+    }
+
+    const candidates = await this.searchCandidates(key, 8);
+    const exact = candidates.find((candidate) => {
+      const normalizedSlug = this.normalizeLookup(candidate.slug || '').replace(/_+/g, '_');
+      const normalizedNamePt = this.normalizeLookup(candidate.name_pt || '');
+      const normalizedNameEn = this.normalizeLookup(candidate.name_en || '');
+      const searchTerms = (candidate.search_terms || []).map((item) => this.normalizeLookup(item || ''));
+      return normalizedSlug === key || normalizedNamePt === key || normalizedNameEn === key || searchTerms.includes(key);
+    });
+    return exact || null;
   }
 
   async findExerciseByName(exerciseName: string): Promise<ExerciseEntity | null> {
@@ -57,9 +82,11 @@ export class ExerciseRepository {
 
     const normalizedKey = this.normalizeLookup(String(input.normalizedLookupKey || ''));
     if (normalizedKey) {
-      const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', normalizedKey).eq('is_active', true).maybeSingle();
-      if (error) throw error;
-      if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.995 };
+      if (await this.canUseNormalizedLookupKey()) {
+        const { data, error } = await this.db.from('exercises').select('*').eq('normalized_lookup_key', normalizedKey).eq('is_active', true).maybeSingle();
+        if (error && !this.isMissingColumnError(error, 'normalized_lookup_key')) throw error;
+        if (data) return { exercise: this.mapExercise(data), confidenceScore: 0.995 };
+      }
     }
 
     const normalizedSlug = this.normalizeLookup(String(input.slug || ''));
@@ -207,13 +234,24 @@ export class ExerciseRepository {
 
   async saveAlias(exerciseId: string, alias: string, language: string, aliasType: string): Promise<void> {
     const aliasKey = this.normalizeLookup(alias).replace(/\s+/g, '_');
-    const { data: exercise } = await this.db.from('exercises').select('normalized_lookup_key').eq('id', exerciseId).maybeSingle();
+    let canonicalLookupKey: string | null = null;
+    if (await this.canUseNormalizedLookupKey()) {
+      const { data: exercise, error } = await this.db.from('exercises').select('normalized_lookup_key').eq('id', exerciseId).maybeSingle();
+      if (error && !this.isMissingColumnError(error, 'normalized_lookup_key')) throw error;
+      canonicalLookupKey = exercise?.normalized_lookup_key ?? null;
+    }
+
+    if (!canonicalLookupKey) {
+      const { data: fallbackExercise, error: fallbackError } = await this.db.from('exercises').select('slug,name_en,name_pt').eq('id', exerciseId).maybeSingle();
+      if (fallbackError) throw fallbackError;
+      canonicalLookupKey = this.normalizeLookup(fallbackExercise?.slug || fallbackExercise?.name_en || fallbackExercise?.name_pt || alias);
+    }
 
     const { error } = await this.db.from('exercise_aliases').upsert({
       exercise_id: exerciseId,
       alias,
       alias_key: aliasKey,
-      canonical_lookup_key: exercise?.normalized_lookup_key ?? null,
+      canonical_lookup_key: canonicalLookupKey,
       locale: language === 'pt' ? 'pt_BR' : 'en_US',
       language,
       alias_type: aliasType,
@@ -227,12 +265,16 @@ export class ExerciseRepository {
   }
 
   async getCatalogAdminSummary() {
-    const { data, error } = await this.db
+    const selectFields = await this.canUseNormalizedLookupKey()
+      ? 'id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,range_of_motion,target_muscle,normalized_lookup_key,completeness_score,media_confidence_score,quality_flags'
+      : 'id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,range_of_motion,target_muscle,slug,name_en,name_pt,completeness_score,media_confidence_score,quality_flags';
+    const query = this.db
       .from('exercises')
-      .select('id,media_type,media_url,gif_url,instructions,common_errors,breathing_tip,range_of_motion,target_muscle,normalized_lookup_key,completeness_score,media_confidence_score,quality_flags')
+      .select(selectFields as any)
       .eq('is_active', true);
+    const { data, error } = await (query as any);
     if (error) throw error;
-    const rows = data ?? [];
+    const rows = Array.isArray(data) ? data as any[] : [];
     const summary = {
       total: rows.length,
       withVideo: 0,
@@ -316,11 +358,16 @@ export class ExerciseRepository {
 
   private async searchCandidates(lookup: string, limit: number): Promise<ExerciseEntity[]> {
     const safeLike = lookup.replace(/[%_]/g, ' ').trim();
+    const useNormalizedLookupKey = await this.canUseNormalizedLookupKey();
+    const orFilter = useNormalizedLookupKey
+      ? `normalized_lookup_key.ilike.%${safeLike}%,slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`
+      : `slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`;
+
     const { data, error } = await this.db
       .from('exercises')
       .select('*')
       .eq('is_active', true)
-      .or(`normalized_lookup_key.ilike.%${safeLike}%,slug.ilike.%${safeLike}%,name_en.ilike.%${safeLike}%,name_pt.ilike.%${safeLike}%`)
+      .or(orFilter)
       .limit(limit);
     if (error) throw error;
     return (data ?? []).map((item) => this.mapExercise(item));
@@ -410,17 +457,19 @@ export class ExerciseRepository {
     const slug = this.normalizeLookup(item.slug || '');
     const namePt = this.normalizeLookup(item.name_pt || '');
     const nameEn = this.normalizeLookup(item.name_en || '');
-    const aliasExact = aliasCandidates.includes(lookupRaw) && aliasCandidates.some((a) => a && [normalizedLookupKey, slug, namePt, nameEn].includes(a));
+    const searchTerms = (item.search_terms || []).map((term) => this.normalizeLookup(term || ''));
+    const aliasExact = aliasCandidates.includes(lookupRaw) && aliasCandidates.some((a) => a && [normalizedLookupKey, slug, namePt, nameEn].concat(searchTerms).includes(a));
 
     if (normalizedLookupKey && normalizedLookupKey === lookupRaw) return 0.995;
     if (aliasExact) return 0.985;
     if (slug && slug === lookupRaw) return 0.97;
     if (namePt && namePt === lookupRaw) return 0.955;
     if (nameEn && nameEn === lookupRaw) return 0.945;
+    if (searchTerms.includes(lookupRaw)) return 0.94;
 
     const queryTokens = new Set(this.tokenize(lookupRaw));
-    const ptTokens = new Set(this.tokenize(`${namePt}_${normalizedLookupKey}`));
-    const enTokens = new Set(this.tokenize(`${nameEn}_${slug}`));
+    const ptTokens = new Set(this.tokenize(`${namePt}_${normalizedLookupKey}_${searchTerms.join('_')}`));
+    const enTokens = new Set(this.tokenize(`${nameEn}_${slug}_${searchTerms.join('_')}`));
     const ptOverlap = queryTokens.size ? Array.from(queryTokens).filter((token) => ptTokens.has(token)).length / queryTokens.size : 0;
     const enOverlap = queryTokens.size ? Array.from(queryTokens).filter((token) => enTokens.has(token)).length / queryTokens.size : 0;
 
@@ -430,4 +479,3 @@ export class ExerciseRepository {
     return Number(Math.max(0, capped).toFixed(4));
   }
 }
-

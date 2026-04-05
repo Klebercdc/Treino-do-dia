@@ -131,7 +131,7 @@
     }
     if (event.action === 'contract_failure' || event.problemCode === 'INVALID_CONTRACT') {
       out.push({ problemCode: 'invalid_api_contract', problemLabel: 'Contrato inválido', module: event.module || 'api', severity: 'HIGH', confidence: 0.92, impactType: 'contract', likelyRootCause: 'Envelope fora do schema.', shouldPersist: true });
-      if (event.module === 'diet') out.push({ problemCode: 'diet_contract_normalization_failed', problemLabel: 'Falha de normalização de contrato de dieta', module: 'diet', severity: 'HIGH', confidence: 0.9, impactType: 'contract', likelyRootCause: 'Node diet_result ausente/inválido.', shouldPersist: true });
+      if (event.module === 'diet') out.push({ problemCode: 'diet_contract_normalization_failed', problemLabel: 'Falha de normalização de contrato de dieta', module: 'diet', severity: 'HIGH', confidence: 0.9, impactType: 'contract', likelyRootCause: 'Node de dieta ausente/inválido (diet_primary/diet_failsafe).', shouldPersist: true });
     }
     if (event.module === 'exercise' && (event.metadata?.hasMedia === false || event.metadata?.hasInstructions === false || Number(event.metadata?.completenessScore || 0) < 55)) {
       out.push({ problemCode: 'exercise_detail_low_value_detected', problemLabel: 'Baixa qualidade no detalhe de exercício', module: 'exercise', severity: 'MEDIUM', confidence: 0.8, impactType: 'ux', likelyRootCause: 'Mídia/instruções insuficientes.', shouldPersist: true });
@@ -146,7 +146,7 @@
 
   KroniaIntelligence.prototype._recommend = function (d) {
     var map = {
-      diet_contract_normalization_failed: 'Padronizar contrato diet_result e centralizar normalização no frontend/backend.',
+      diet_contract_normalization_failed: 'Padronizar contrato de dieta (diet_primary/diet_failsafe) e centralizar normalização no frontend/backend.',
       exercise_detail_low_value_detected: 'Completar mídia e instruções do catálogo para elevar qualidade de detalhe.',
       invalid_api_contract: 'Adicionar validação de schema e testes de contrato no endpoint.',
       diet_pipeline_failed: 'Reforçar fallback estruturado e observabilidade do pipeline de dieta.',

@@ -100,31 +100,111 @@ function getMissingCriticalFields(normalizedInput) {
   return missing;
 }
 
-function buildDietResponse(action, normalizedInput) {
-  const plan = dietCompat.buildDietPlan(normalizedInput);
+function buildRenderableFallbackInput(normalizedInput) {
+  const safe = normalizedInput && typeof normalizedInput === 'object' ? normalizedInput : {};
+  const objetivo = pickString(safe.objetivo, 'manutencao');
+  const sexo = pickString(safe.sexo, 'masculino');
+  const idade = pickNumber(safe.idade, 30);
+  const peso = pickNumber(safe.peso, 75);
+  const altura = pickNumber(safe.altura, 175);
+  const refeicoesPorDia = pickNumber(safe.refeicoesPorDia, 4);
+  const nivelAtividade = pickString(safe.nivelAtividade, safe.rotina, 'moderado');
+  const padraoAlimentar = pickString(safe.padraoAlimentar, 'onívoro');
+
+  return Object.assign({}, safe, {
+    objetivo,
+    sexo,
+    idade,
+    peso,
+    altura,
+    refeicoesPorDia,
+    nivelAtividade,
+    rotina: safe.rotina || nivelAtividade,
+    padraoAlimentar,
+  });
+}
+
+function buildDietPlanWithFallback(normalizedInput) {
+  const primaryPlan = dietCompat.buildDietPlan(normalizedInput);
+  if (!primaryPlan.failSafe) {
+    return {
+      plan: primaryPlan,
+      generatedFromFallback: false,
+      missingFields: getMissingCriticalFields(normalizedInput),
+    };
+  }
+
+  const fallbackInput = buildRenderableFallbackInput(normalizedInput);
+  const fallbackPlan = dietCompat.buildDietPlan(fallbackInput);
   const missingFields = getMissingCriticalFields(normalizedInput);
-  const message = plan.failSafe
-    ? `Dados insuficientes para montar a dieta com segurança. ${String((plan.limitedOrientation && plan.limitedOrientation.orientacao) || 'Revise sexo, idade, peso e altura.')}`
+  const orientation = String(
+    (primaryPlan.limitedOrientation && primaryPlan.limitedOrientation.orientacao) ||
+    'Dados insuficientes para o plano completo; aplicando versão inicial segura.'
+  ).trim();
+
+  if (fallbackPlan.failSafe) {
+    return {
+      plan: primaryPlan,
+      generatedFromFallback: true,
+      missingFields,
+      fallbackInput,
+    };
+  }
+
+  const notes = Array.isArray(fallbackPlan.observacoes) ? fallbackPlan.observacoes.slice() : [];
+  notes.unshift(orientation);
+  if (missingFields.length) {
+    notes.push('Campos ausentes para personalização completa: ' + missingFields.join(', ') + '.');
+  }
+
+  return {
+    plan: Object.assign({}, fallbackPlan, {
+      failSafe: true,
+      flow_state: 'failsafe_renderable',
+      limitedOrientation: {
+        limited: true,
+        reason: 'Dados insuficientes para personalização completa.',
+        inconsistencias: missingFields,
+        orientacao: orientation,
+        objetivoSolicitado: normalizedInput.objetivo || fallbackInput.objetivo,
+      },
+      observacoes: notes,
+    }),
+    generatedFromFallback: true,
+    missingFields,
+    fallbackInput,
+  };
+}
+
+function buildDietResponse(action, normalizedInput) {
+  const generation = buildDietPlanWithFallback(normalizedInput);
+  const plan = generation.plan;
+  const missingFields = generation.missingFields;
+  const isFallbackPlan = !!generation.generatedFromFallback;
+  const message = isFallbackPlan
+    ? `Plano inicial gerado com fallback seguro. Complete os dados ausentes para uma dieta mais precisa.`
     : `Plano alimentar gerado com ${plan.refeicoes.length} refeicoes.`;
 
   return {
     action,
     domain: 'diet',
-    success: !plan.failSafe,
+    success: !isFallbackPlan,
     message,
-    errorCode: plan.failSafe ? 'DIET_INPUT_INVALID' : null,
+    errorCode: isFallbackPlan ? 'DIET_INPUT_INVALID' : null,
     payload: {
       profile: normalizedInput,
       plan,
       validation: {
         missingFields,
+        generatedFromFallback: isFallbackPlan,
       },
     },
   };
 }
 
 function buildDietFallbackResponse(action, normalizedInput, err) {
-  const message = 'Erro ao gerar dieta. Gerando versão básica...';
+  const generation = buildDietPlanWithFallback(normalizedInput);
+  const message = 'Erro ao gerar dieta principal. Aplicando versão básica segura...';
   if (err) console.error('Diet error:', err);
 
   return {
@@ -136,19 +216,16 @@ function buildDietFallbackResponse(action, normalizedInput, err) {
     errorCode: 'DIET_FALLBACK',
     payload: {
       profile: normalizedInput,
-      plan: {
+      plan: Object.assign({}, generation.plan, {
         failSafe: true,
-        flow_state: 'failsafe',
-        limitedOrientation: {
-          orientacao: message,
-        },
-        observacoes: [
+        flow_state: generation.plan.refeicoes && generation.plan.refeicoes.length ? 'failsafe_renderable' : 'failsafe',
+        observacoes: (Array.isArray(generation.plan.observacoes) ? generation.plan.observacoes : []).concat([
           'Revise os dados do perfil e tente novamente.',
-        ],
-        refeicoes: [],
-      },
+        ]),
+      }),
       validation: {
-        missingFields: getMissingCriticalFields(normalizedInput),
+        missingFields: generation.missingFields,
+        generatedFromFallback: true,
       },
     },
   };

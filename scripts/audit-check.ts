@@ -57,7 +57,10 @@ async function checkSchema() {
     'ai_messages',
     'ai_context_logs',
     'ai_audit_logs',
-    'nutrition_knowledge_chunks',
+    'scientific_articles',
+    'scientific_topics',
+    'scientific_evidence',
+    'exercises',
   ];
 
   for (const t of tables) {
@@ -78,11 +81,57 @@ async function checkTextSearch() {
     category_filter: null,
   });
 
-  if (error) {
-    add({ name: 'TEXT_SEARCH', status: 'WARNING', message: error.message });
-  } else {
-    add({ name: 'TEXT_SEARCH', status: 'OK' });
+  if (!error) {
+    add({ name: 'TEXT_SEARCH', status: 'OK', message: 'Função search_nutrition_knowledge disponível.' });
+    return;
   }
+
+  if (/function.*does not exist|schema cache|relation/i.test(error.message)) {
+    const [articles, evidence, topics] = await Promise.all([
+      supabase.from('scientific_articles').select('*', { count: 'exact', head: true }),
+      supabase.from('scientific_evidence').select('*', { count: 'exact', head: true }),
+      supabase.from('scientific_topics').select('*', { count: 'exact', head: true }),
+    ]);
+
+    if (!articles.error && !evidence.error && !topics.error && Number(articles.count || 0) > 0 && Number(evidence.count || 0) > 0) {
+      add({
+        name: 'TEXT_SEARCH',
+        status: 'OK',
+        message: `Stack legada ausente, mas base científica direta ativa (${articles.count} artigos / ${evidence.count} evidências / ${topics.count} tópicos).`,
+      });
+      return;
+    }
+  }
+
+  add({ name: 'TEXT_SEARCH', status: 'WARNING', message: error.message });
+}
+
+async function checkScientificCoverage() {
+  const [exercises, articles, evidence] = await Promise.all([
+    supabase.from('exercises').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('scientific_articles').select('*', { count: 'exact', head: true }),
+    supabase.from('scientific_evidence').select('*', { count: 'exact', head: true }),
+  ]);
+
+  if (exercises.error || articles.error || evidence.error) {
+    add({
+      name: 'SCIENTIFIC_COVERAGE',
+      status: 'WARNING',
+      message: exercises.error?.message || articles.error?.message || evidence.error?.message || 'falha ao ler cobertura científica',
+    });
+    return;
+  }
+
+  const exercisesCount = Number(exercises.count || 0);
+  const articlesCount = Number(articles.count || 0);
+  const evidenceCount = Number(evidence.count || 0);
+
+  const healthy = exercisesCount >= 1000 && articlesCount >= 20 && evidenceCount >= 20;
+  add({
+    name: 'SCIENTIFIC_COVERAGE',
+    status: healthy ? 'OK' : 'WARNING',
+    message: `${exercisesCount} exercícios ativos / ${articlesCount} artigos / ${evidenceCount} evidências`,
+  });
 }
 
 async function checkAuditLogs() {
@@ -105,6 +154,7 @@ async function run() {
   await checkDatabase();
   await checkSchema();
   await checkTextSearch();
+  await checkScientificCoverage();
   await checkAuditLogs();
 
   const hasError = results.some((r) => r.status === 'ERROR');

@@ -10,6 +10,7 @@ var access = require('../src/server/apihelpers/_access');
 var dietflow = require('../src/server/apihelpers/_dietflow');
 var workoutflow = require('../src/server/apihelpers/_workoutflow');
 var workoutBuilder = require('../src/server/apihelpers/_workoutBuilder');
+var workoutService = require('../src/services/workout/workoutService');
 var diet = require('../src/server/apihelpers/_diet');
 var prompts = require('../src/server/apihelpers/_systemPrompts');
 var classifier = require('../src/server/apihelpers/_conversationClassifier');
@@ -218,16 +219,29 @@ function gerarTreino(userMsg, userId, callback) {
 }
 
 function buildWorkoutSuccessPayload(data, extraMeta, memoryState) {
+  var isFailSafe = !!(data && data.failSafe);
   return {
-    success: true,
+    success: !isFailSafe,
     type: 'workout_json',
-    message: 'Treino gerado com sucesso.',
+    message: isFailSafe ? 'Treino não gerado por falta de referência válida.' : 'Treino gerado com sucesso.',
     data: {
       content: [{ type: 'workout_json', data: data }],
       conversationState: { memory: memoryState || null }
     },
     meta: Object.assign({}, extraMeta || {})
   };
+}
+
+function buildReferencedWorkoutFallback(collected, done) {
+  Promise.resolve(workoutService.execute('GENERATE_WORKOUT', collected || {}))
+    .then(function(result) {
+      var plan = result && result.payload && result.payload.plan ? result.payload.plan : null;
+      if (plan) return done(null, plan);
+      return done(null, workoutBuilder.buildWorkoutPlan(collected || {}));
+    })
+    .catch(function() {
+      return done(null, workoutBuilder.buildWorkoutPlan(collected || {}));
+    });
 }
 
 module.exports = function(req, res) {
@@ -437,9 +451,10 @@ module.exports = function(req, res) {
         }
 
         if (!process.env.GROQ_API_KEY) {
-          var localWorkout = workoutBuilder.buildWorkoutPlan(workoutStep.collected);
-          safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino gerado por builder local por ausencia de GROQ_API_KEY.' }); });
-          return sendTracked(200, buildWorkoutSuccessPayload(localWorkout, { local: true, fallback: true, source: 'workout_local_builder' }, shortState));
+          return buildReferencedWorkoutFallback(workoutStep.collected, function(_fallbackErr, localWorkout) {
+            safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via serviço oficial de fallback por ausencia de GROQ_API_KEY.' }); });
+            return sendTracked(200, buildWorkoutSuccessPayload(localWorkout, { local: true, fallback: true, source: 'workout_reference_service' }, shortState));
+          });
         }
 
         safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { layer: 'ai', nodeKey: 'Treino' }); });
@@ -448,12 +463,13 @@ module.exports = function(req, res) {
           gerarTreino(richMsg, user.id, nextCall);
         }, function(err, data) {
           if (err) {
-            var fallbackWorkout = workoutBuilder.buildWorkoutPlan(workoutStep.collected);
-            safeTrack(function() {
-              tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err });
-              tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino gerado por builder local apos falha do provider.' });
+            return buildReferencedWorkoutFallback(workoutStep.collected, function(_fallbackErr, fallbackWorkout) {
+              safeTrack(function() {
+                tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err });
+                tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via serviço oficial de fallback apos falha do provider.' });
+              });
+              return sendTracked(200, buildWorkoutSuccessPayload(fallbackWorkout, { local: true, fallback: true, source: 'workout_reference_service', providerError: String(err || '') }, shortState));
             });
-            return sendTracked(200, buildWorkoutSuccessPayload(fallbackWorkout, { local: true, fallback: true, source: 'workout_local_builder', providerError: String(err || '') }, shortState));
           }
           safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
           fireAndForgetMemoryEvent({

@@ -39,18 +39,7 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      # ── 3. System check — valida env, tabelas, RAG e IA ──────────────────
-      - name: System Check
-        id: system_check
-        env:
-          SUPABASE_URL:              ${{ secrets.VITE_SUPABASE_URL_TEST }}
-          SUPABASE_ANON_KEY:         ${{ secrets.VITE_SUPABASE_ANON_KEY_TEST }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_KEY_TEST }}
-          GROQ_API_KEY:              ${{ secrets.GROQ_API_KEY_TEST }}
-        run: npm run system:check
-        continue-on-error: true   # informativo — não bloqueia o pipeline se secrets ausentes
-
-      # ── 4. Gera .env.test a partir dos Secrets ────────────────────────────
+      # ── 3. Gera .env.test a partir dos Secrets ────────────────────────────
       - name: Criar .env.test
         run: |
           cat > .env.test << 'EOF'
@@ -70,18 +59,39 @@ jobs:
             echo "⚠️ Secrets de teste ausentes. Testes E2E serão ignorados neste run."
           fi
 
-      # ── 4. Migration no banco de testes (se secrets configurados) ─────────
+      # ── 4. Gates de saúde e prontidão ─────────────────────────────────────
+      - name: System Check
+        id: system_check
+        if: ${{ steps.test_secrets.outputs.available == 'true' }}
+        env:
+          SUPABASE_URL:              ${{ secrets.VITE_SUPABASE_URL_TEST }}
+          SUPABASE_ANON_KEY:         ${{ secrets.VITE_SUPABASE_ANON_KEY_TEST }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_KEY_TEST }}
+          GROQ_API_KEY:              ${{ secrets.GROQ_API_KEY_TEST }}
+        run: npm run system:check
+
+      - name: Release Readiness
+        if: ${{ steps.test_secrets.outputs.available == 'true' }}
+        env:
+          SUPABASE_URL:              ${{ secrets.VITE_SUPABASE_URL_TEST }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_KEY_TEST }}
+        run: npm run release:readiness
+
+      # ── 5. Migration no banco de testes (se secrets configurados) ─────────
       - name: Aplicar migration no banco de testes
         if: ${{ steps.test_secrets.outputs.available == 'true' && env.VITE_SUPABASE_DB_URL_TEST != '' }}
         run: |
           npx supabase db push --db-url "$VITE_SUPABASE_DB_URL_TEST"
         continue-on-error: true   # não bloqueia se banco de testes não estiver configurado
 
-      # ── 5. Roda os testes ─────────────────────────────────────────────────
+      # ── 6. Roda os testes ─────────────────────────────────────────────────
       - name: Sanity check (verifica roteamento do banco)
         if: ${{ steps.test_secrets.outputs.available == 'true' }}
         run: npm run test:sanity
-        continue-on-error: true   # sanity é informativo, não bloqueia
+
+      - name: Testes E2E — CTA e Dieta
+        if: ${{ steps.test_secrets.outputs.available == 'true' }}
+        run: playwright test tests/e2e/cta-diet.spec.ts --reporter=list
 
       - name: Testes E2E — Registro de Treino
         if: ${{ steps.test_secrets.outputs.available == 'true' }}
@@ -91,7 +101,7 @@ jobs:
         if: ${{ steps.test_secrets.outputs.available != 'true' }}
         run: echo "E2E ignorado porque os secrets de Supabase não estão disponíveis para este workflow."
 
-      # ── 6. Relatórios e artefatos ─────────────────────────────────────────
+      # ── 7. Relatórios e artefatos ─────────────────────────────────────────
       - name: Upload do relatório HTML
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,7 +118,7 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      # ── 7. Resumo no PR ───────────────────────────────────────────────────
+      # ── 8. Resumo no PR ───────────────────────────────────────────────────
       - name: Resumo dos testes no PR
         if: always()
         uses: daun/playwright-report-summary@v3
