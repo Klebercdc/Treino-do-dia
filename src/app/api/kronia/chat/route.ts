@@ -10,6 +10,62 @@ import { createClient } from "@supabase/supabase-js"
 import { AI_ENV } from "../../../../ai/env"
 import type { ChatMessage, UserProfile } from "../../../../ai/types"
 
+function firstString() {
+  for (const value of arguments) {
+    if (typeof value === "string") {
+      const trimmed = value.trim()
+      if (trimmed) return trimmed
+    }
+  }
+  return undefined
+}
+
+function firstNumber() {
+  for (const value of arguments) {
+    if (value === undefined || value === null || value === "") continue
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return undefined
+}
+
+function toStringArray(value: unknown): string[] | undefined {
+  if (!value) return undefined
+  if (Array.isArray(value)) {
+    const items = value.map((item) => String(item ?? "").trim()).filter(Boolean)
+    return items.length ? items : undefined
+  }
+  if (typeof value === "string") {
+    const items = value.split(",").map((item) => item.trim()).filter(Boolean)
+    return items.length ? items : undefined
+  }
+  return undefined
+}
+
+function mapProfileRowToUserProfile(userId: string, profileRow: Record<string, unknown> | null): UserProfile | null {
+  if (!profileRow || typeof profileRow !== "object") return null
+
+  const config = profileRow.config && typeof profileRow.config === "object"
+    ? (profileRow.config as Record<string, unknown>)
+    : {}
+
+  return {
+    id: userId,
+    nome: firstString(profileRow.nome, profileRow.full_name, config.full_name, config.nome),
+    objetivo: firstString(profileRow.objetivo, profileRow.objective, config.objetivo, config.objective),
+    nivel: firstString(profileRow.nivel, config.nivel, config.level),
+    idade: firstNumber(profileRow.idade, config.idade, config.age),
+    sexo: firstString(profileRow.sexo, profileRow.sex, config.sexo, config.sex),
+    pesoKg: firstNumber(profileRow.peso_kg, profileRow.current_weight_kg, config.peso_kg, config.current_weight_kg, config.pesoKg),
+    alturaCm: firstNumber(profileRow.altura_cm, profileRow.height_cm, config.altura_cm, config.height_cm, config.alturaCm),
+    restricoes: toStringArray(profileRow.restricoes ?? profileRow.intolerances ?? config.restricoes ?? config.intolerances),
+    preferencias: toStringArray(profileRow.preferencias ?? profileRow.liked_foods ?? config.preferencias ?? config.liked_foods),
+    lesoes: toStringArray(profileRow.lesoes ?? config.lesoes ?? config.injuries),
+    rotina: firstString(profileRow.rotina, profileRow.activity_level, config.rotina, config.activity_level),
+    observacoes: firstString(profileRow.observacoes, profileRow.clinical_notes, config.observacoes, config.clinical_notes),
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // 1. Autenticação
@@ -39,28 +95,15 @@ export async function POST(req: NextRequest) {
     })
 
     const { data: profileRow } = await adminClient
-      .from("user_profiles")
+      .from("profiles")
       .select("*")
-      .eq("user_id", userId)
+      .eq("id", userId)
       .maybeSingle()
 
-    const userProfile: UserProfile | null = profileRow
-      ? {
-          id: userId,
-          nome: profileRow.nome ?? undefined,
-          objetivo: profileRow.objetivo ?? undefined,
-          nivel: profileRow.nivel ?? undefined,
-          idade: profileRow.idade ?? undefined,
-          sexo: profileRow.sexo ?? undefined,
-          pesoKg: profileRow.peso_kg ?? undefined,
-          alturaCm: profileRow.altura_cm ?? undefined,
-          restricoes: profileRow.restricoes ?? [],
-          preferencias: profileRow.preferencias ?? [],
-          lesoes: profileRow.lesoes ?? [],
-          rotina: profileRow.rotina ?? undefined,
-          observacoes: profileRow.observacoes ?? undefined,
-        }
-      : null
+    const userProfile: UserProfile | null = mapProfileRowToUserProfile(
+      userId,
+      profileRow as Record<string, unknown> | null,
+    )
 
     // 4. Executar KroniaBrain
     const service = new KroniaChatService(

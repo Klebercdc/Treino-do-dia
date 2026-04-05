@@ -18,6 +18,7 @@ export const config = {
     '/api/chat',
     '/api/ai/chat',
     '/api/kronia/chat',
+    '/api/kronia/diet',
     '/api/kronia/intent',
     '/api/kronia/intelligence',
     '/api/kronia/exercises/discovery',

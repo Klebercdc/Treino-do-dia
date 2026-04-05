@@ -2771,11 +2771,25 @@ function sanitizeConversationIntentPayload(intentType, payload) {
   var safePayload = sanitizeCtaObject(payload);
   var normalized = Object.create(null);
   if (intentType === 'open_training') {
-    if (typeof safePayload.objective === 'string') normalized.objective = safePayload.objective;
-    if (typeof safePayload.level === 'string') normalized.level = safePayload.level;
-    if (safePayload.days_per_week != null && Number.isFinite(Number(safePayload.days_per_week))) normalized.days_per_week = Number(safePayload.days_per_week);
+    var questionnaire = safePayload.questionnaire && typeof safePayload.questionnaire === 'object' ? safePayload.questionnaire : {};
+    var rawObjective = typeof safePayload.objective === 'string' ? safePayload.objective : (typeof questionnaire.objetivo === 'string' ? questionnaire.objetivo : '');
+    var rawLevel = typeof safePayload.level === 'string' ? safePayload.level : (typeof questionnaire.nivel === 'string' ? questionnaire.nivel : '');
+    var rawEnvironment = typeof safePayload.environment === 'string' ? safePayload.environment : (typeof questionnaire.local === 'string' ? questionnaire.local : '');
+    var rawDays = safePayload.days_per_week != null ? safePayload.days_per_week : questionnaire.frequencia;
+    var normalizedDays = null;
+    if (rawDays != null) {
+      var digitsMatch = String(rawDays).match(/\d+/);
+      if (digitsMatch && Number.isFinite(Number(digitsMatch[0]))) normalizedDays = Number(digitsMatch[0]);
+    }
+    if (rawObjective) normalized.objective = rawObjective;
+    if (rawLevel) normalized.level = rawLevel;
+    if (normalizedDays != null) normalized.days_per_week = Math.max(1, Math.min(6, normalizedDays));
     if (typeof safePayload.split === 'string') normalized.split = safePayload.split;
-    if (Array.isArray(safePayload.restrictions)) normalized.restrictions = safePayload.restrictions.map(function (v) { return String(v || '').trim(); }).filter(Boolean).slice(0, 8);
+    if (rawEnvironment) normalized.environment = rawEnvironment;
+    var restrictions = Array.isArray(safePayload.restrictions)
+      ? safePayload.restrictions
+      : (questionnaire.lesao ? [questionnaire.lesao] : []);
+    if (Array.isArray(restrictions)) normalized.restrictions = restrictions.map(function (v) { return String(v || '').trim(); }).filter(Boolean).slice(0, 8);
     if (typeof safePayload.notes === 'string') normalized.notes = safePayload.notes.slice(0, 500);
     if (typeof safePayload.origin_message === 'string') normalized.origin_message = safePayload.origin_message.slice(0, 500);
     return normalized;
@@ -2957,21 +2971,55 @@ function schedulePendingConversationIntentConsumption(reason) {
 function hydrateTrainingFromConversationIntent(payload) {
   var safePayload = sanitizeConversationIntentPayload('open_training', payload || {});
   if (safePayload.objective) {
-    var objectiveMap = { hipertrofia: 'hipertrofia', definicao: 'definicao', forca: 'forca', resistencia: 'resistencia', saude: 'saude' };
+    var objectiveMap = { hipertrofia: 'hipertrofia', 'ganho de massa': 'hipertrofia', massa: 'hipertrofia', definicao: 'definicao', força: 'forca', forca: 'forca', resistencia: 'resistencia', saúde: 'saude', saude: 'saude' };
     var objectiveValue = objectiveMap[String(safePayload.objective).toLowerCase()] || String(safePayload.objective).toLowerCase();
     var objectiveChip = document.querySelector('#objChips [data-val="' + objectiveValue + '"]');
-    if (objectiveChip && typeof selObj === 'function') selObj(objectiveChip);
+    if (objectiveChip && typeof selectObj === 'function') selectObj(objectiveChip);
   }
   if (safePayload.level) {
-    var levelMap = { iniciante: 'iniciante', intermediario: 'intermediario', avancado: 'avancado' };
+    var levelMap = { iniciante: 'iniciante', intermediário: 'intermediario', intermediario: 'intermediario', avançado: 'avancado', avancado: 'avancado' };
     var levelValue = levelMap[String(safePayload.level).toLowerCase()] || String(safePayload.level).toLowerCase();
     var levelChip = document.querySelector('#nivelChips [data-val="' + levelValue + '"]');
-    if (levelChip && typeof selNivel === 'function') selNivel(levelChip);
+    if (levelChip && typeof selectNivel === 'function') selectNivel(levelChip);
   }
   if (safePayload.days_per_week != null) {
     var freqValue = String(Math.max(1, Math.min(6, Number(safePayload.days_per_week))));
     var freqInput = document.getElementById('freq');
     if (freqInput) freqInput.value = freqValue;
+    var freqChip = document.querySelector('#freqChips [data-val="' + freqValue + '"]');
+    if (freqChip && typeof selectFreq === 'function') selectFreq(freqChip);
+  }
+  if (safePayload.environment) {
+    var environmentRaw = String(safePayload.environment).toLowerCase();
+    var equipValue = /hotel/.test(environmentRaw) ? 'hotel' : (/casa|sem equipamento|bodyweight/.test(environmentRaw) ? 'casa' : (/halter/.test(environmentRaw) ? 'halteres' : 'academia'));
+    var equipChip = document.querySelector('#equipChips [data-val="' + equipValue + '"]');
+    if (equipChip && typeof selectEquip === 'function') selectEquip(equipChip);
+  }
+  if (Array.isArray(safePayload.restrictions) && safePayload.restrictions.length) {
+    document.querySelectorAll('.config-chip-restric').forEach(function (chip) { chip.classList.remove('active'); });
+    var restrictionMap = {
+      joelho: 'joelho',
+      ombro: 'ombro',
+      lombar: 'lombar',
+      coluna: 'lombar',
+      cervical: 'cervical',
+      punho: 'punho',
+      cotovelo: 'cotovelo',
+      quadril: 'quadril'
+    };
+    safePayload.restrictions.forEach(function (item) {
+      var raw = String(item || '').toLowerCase();
+      Object.keys(restrictionMap).forEach(function (key) {
+        if (raw.indexOf(key) >= 0) {
+          var chip = document.querySelector('.config-chip-restric[data-val="' + restrictionMap[key] + '"]');
+          if (chip) chip.classList.add('active');
+        }
+      });
+    });
+    var anyRestriction = Array.from(document.querySelectorAll('.config-chip-restric.active')).some(function (chip) {
+      return chip.dataset.val !== 'nenhuma';
+    });
+    if (!anyRestriction) document.querySelector('.config-chip-restric[data-val="nenhuma"]')?.classList.add('active');
   }
   return safePayload;
 }
@@ -3251,20 +3299,7 @@ async function sendAI(overrideText, isGerarTreino = false) {
     var reply = data?.message || contentNodes?.[0]?.text || 'Nao consegui processar. Tente novamente.';
 
     addAIMessage('assistant', reply);
-    var inferredIntent = inferConversationCtaFromApiResponse(data);
-    var inferredCta = buildCtaFromCanonicalIntent(inferredIntent);
-    if (inferredIntent && inferredCta) {
-      renderConversationCta(
-        'aiMessages',
-        { action: inferredCta.action, label: inferredCta.label, intentSource: inferredCta.intentSource },
-        Object.assign({}, inferredCta.payload, { _targetModule: inferredCta.targetModule })
-      );
-      trackKroniaCta('api_cta_rendered', 'success', {
-        normalizedAction: inferredIntent.type,
-        source: inferredIntent.source,
-        inferredFrom: inferredIntent?.meta?.inferred_from || null,
-      });
-    }
+    renderInferredConversationCta('aiMessages', data);
     _aiHistory.push({ role: 'assistant', content: reply });
     try {
       window.KroniaIntelligence?.track?.({
@@ -3431,24 +3466,23 @@ function gerarTreinoComRespostas() {
 
   const r = _wqRespostas;
   const lesao = r.lesao || 'Nenhuma restrição';
-
-  const prompt = [
-    'Crie um treino personalizado para mim com as seguintes características:',
-    '- Objetivo: ' + (r.objetivo || 'Hipertrofia'),
-    '- Frequência: ' + (r.frequencia || '3 dias por semana'),
-    '- Nível: ' + (r.nivel || 'Intermediário'),
-    '- Local/equipamentos: ' + (r.local || 'Academia completa'),
-    '- Restrições/lesões: ' + lesao,
-    '',
-    'Responda APENAS com JSON válido, sem texto antes/depois:',
-    '{"treinos":[{"nome":"A","grupo":"Peito/Tríceps","exercicios":[{"nome":"Supino Reto","series":4,"reps":"8-12","mev":3,"mav":4,"mrv":5}]}]}'
-  ].join('\n');
+  const diasPorSemanaMatch = String(r.frequencia || '').match(/\d+/);
+  const diasPorSemana = diasPorSemanaMatch ? Number(diasPorSemanaMatch[0]) : 3;
+  const environment = /hotel/i.test(String(r.local || ''))
+    ? 'hotel'
+    : (/casa|sem equipamento/i.test(String(r.local || '')) ? 'casa' : 'academia');
+  const restrictions = /nenhuma/i.test(lesao) ? [] : [lesao];
 
   addAIMessage('assistant', 'Perfeito. Vou abrir o modulo oficial de treino com esse contexto.');
   executeKroniaQuickAction('open_training', {
     source: 'wq_questionnaire',
+    objective: r.objetivo || 'Hipertrofia',
+    level: r.nivel || 'Intermediário',
+    days_per_week: diasPorSemana,
+    environment: environment,
+    restrictions: restrictions,
+    notes: [r.local || '', lesao].filter(Boolean).join(' | '),
     questionnaire: Object.assign({}, r, { lesao: lesao }),
-    originalPrompt: prompt,
   }, { label: 'Abrir treino' });
   _wqRespostas = {};
 }
@@ -3552,7 +3586,7 @@ function ensureExerciseRef(source = {}, fallbackName = "Exercício", origin = "w
   const stub = buildExerciseStubFromPayload({ ...source, display_name: displayName, normalized_lookup_key: lookupKey }, displayName);
   return {
     exercise_id: source.exercise_id || source.id || null,
-    slug: source.slug || lookupKey,
+    slug: source.slug || null,
     normalized_lookup_key: lookupKey,
     display_name: displayName,
     source: source.source || origin,
@@ -3766,7 +3800,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=2026-03-31-2', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=2026-04-04-1', { updateViaCache: 'none' }).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════
@@ -3774,12 +3808,58 @@ if ("serviceWorker" in navigator) {
    (removido openConfig() automático no load)
 ═══════════════════════════════════════════════════ */
 window.onerror = function(msg, src, line, col, err) {
+  console.error('GLOBAL ERROR:', msg, err || null, {
+    src: src || null,
+    line: line || null,
+    col: col || null,
+  });
   if (msg === "Script error." || !line) return true;
   console.error("TITAN ERR:", msg, "L"+line);
   return false;
 };
 
+function validateClientRuntimeEnv() {
+  var runtime = (typeof window !== 'undefined' && window.__KRONIA_RUNTIME__ && typeof window.__KRONIA_RUNTIME__ === 'object')
+    ? window.__KRONIA_RUNTIME__
+    : {};
+  var missing = [];
+  var supabaseUrl = String(
+    (typeof window !== 'undefined' ? (window.KRONIA_SUPABASE_URL || '') : '')
+    || runtime.NEXT_PUBLIC_SUPABASE_URL
+    || runtime.SUPABASE_URL
+    || ''
+  ).trim();
+  var supabaseAnonKey = String(
+    (typeof window !== 'undefined' ? (window.KRONIA_SUPABASE_ANON_KEY || '') : '')
+    || runtime.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || runtime.SUPABASE_ANON_KEY
+    || ''
+  ).trim();
+  var aiRuntimeKey = String(
+    (typeof window !== 'undefined' ? (window.KRONIA_GROQ_API_KEY || window.KRONIA_AI_KEY || '') : '')
+    || runtime.GROQ_API_KEY
+    || runtime.OPENAI_API_KEY
+    || runtime.AI_API_KEY
+    || ''
+  ).trim();
+
+  if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+  if (!supabaseAnonKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  if (!aiRuntimeKey) missing.push('GROQ_API_KEY');
+
+  if (missing.length) {
+    console.error('KRONIA ENV ERROR:', {
+      missing: missing,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseAnonKey: !!supabaseAnonKey,
+      hasAiRuntimeKey: !!aiRuntimeKey,
+    });
+  }
+  return missing;
+}
+
 window.onload = () => {
+  validateClientRuntimeEnv();
   // Data
   try { document.getElementById("displayDate").innerText = new Date().toLocaleDateString("pt-BR"); } catch {}
 
@@ -4831,6 +4911,18 @@ function runKroniaActionFallback(action, context) {
     try { openDieta?.(); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
   }
+  if (action === 'open_kronos') {
+    try { navTo?.('inicio'); } catch (_) {}
+    try { openAI?.(); return true; } catch (_) {}
+    try {
+      var aiModal = document.getElementById('aiModal');
+      if (aiModal) {
+        aiModal.style.display = 'flex';
+        return true;
+      }
+    } catch (_) {}
+    try { window.location.href = '/app/chat'; return true; } catch (_) {}
+  }
   return false;
 }
 
@@ -4969,13 +5061,110 @@ function deriveOperationalScienceConstraints(kind, objective, evidenceRows) {
   };
 }
 
-async function buildScientificConstraintsByObjective(objective, kind) {
-  var profile = safeJSON('kronia_config', {});
+function pickScientificProfileValue() {
+  for (var i = 0; i < arguments.length; i += 1) {
+    var value = arguments[i];
+    if (value === undefined || value === null || value === '') continue;
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeScientificProfileInput(input) {
+  var safeInput = input && typeof input === 'object' ? input : {};
+  var profile = safeInput.profile && typeof safeInput.profile === 'object' ? safeInput.profile : {};
+  var context = safeInput.context && typeof safeInput.context === 'object' ? safeInput.context : {};
+  var persisted = safeJSON('kronia_config', {});
+
+  return {
+    objetivo: pickScientificProfileValue(
+      safeInput.objetivo,
+      safeInput.objective,
+      profile.objetivo,
+      profile.objective,
+      context.objetivo,
+      context.objective,
+      persisted.objetivo,
+      persisted.objective
+    ),
+    sexo: pickScientificProfileValue(
+      safeInput.sexo,
+      safeInput.sex,
+      profile.sexo,
+      profile.sex,
+      context.sexo,
+      context.sex,
+      persisted.sexo,
+      persisted.sex
+    ),
+    idade: pickScientificProfileValue(
+      safeInput.idade,
+      safeInput.age,
+      profile.idade,
+      profile.age,
+      context.idade,
+      context.age,
+      persisted.idade,
+      persisted.age
+    ),
+    peso: pickScientificProfileValue(
+      safeInput.peso,
+      safeInput.pesoKg,
+      safeInput.weight,
+      safeInput.weightKg,
+      profile.peso,
+      profile.pesoKg,
+      profile.weight,
+      profile.weightKg,
+      context.peso,
+      context.pesoKg,
+      context.weight,
+      context.weightKg,
+      persisted.peso,
+      persisted.weight
+    ),
+    altura: pickScientificProfileValue(
+      safeInput.altura,
+      safeInput.alturaCm,
+      safeInput.height,
+      safeInput.heightCm,
+      profile.altura,
+      profile.alturaCm,
+      profile.height,
+      profile.heightCm,
+      context.altura,
+      context.alturaCm,
+      context.height,
+      context.heightCm,
+      persisted.altura,
+      persisted.height
+    ),
+    atividade: pickScientificProfileValue(
+      safeInput.nivelAtividade,
+      safeInput.activityLevel,
+      safeInput.rotina,
+      safeInput.routine,
+      profile.nivelAtividade,
+      profile.activityLevel,
+      profile.rotina,
+      profile.routine,
+      context.nivelAtividade,
+      context.activityLevel,
+      context.rotina,
+      context.routine,
+      persisted.atividade,
+      persisted.nivelAtividade
+    ),
+  };
+}
+
+async function buildScientificConstraintsByObjective(objective, kind, input) {
+  var profile = normalizeScientificProfileInput(input);
   try {
     var response = await apiFetch('/api/science', {
       method: 'POST',
       body: JSON.stringify({
-        objetivo: objective,
+        objetivo: objective || profile.objetivo,
         sexo: profile.sexo || undefined,
         idade: profile.idade || undefined,
         peso: profile.peso || undefined,
@@ -5007,9 +5196,7 @@ async function buildScientificConstraintsByObjective(objective, kind) {
       fallbackProtocol: evidenceState === 'no_evidence' || serviceUnavailable ? 'safe_conservative_sports_nutrition' : null,
       warningMessage: evidenceState === 'weak_evidence'
         ? 'Evidência científica parcial para este objetivo. Aplicando protocolo técnico conservador.'
-        : ((evidenceState === 'no_evidence' || serviceUnavailable)
-          ? 'Sem evidência específica disponível agora. Aplicando protocolo padrão seguro e conservador.'
-          : null),
+        : null,
       timestamp: new Date().toISOString(),
     };
 
@@ -5039,7 +5226,7 @@ async function buildScientificConstraintsByObjective(objective, kind) {
       validationStatus: 'fallback_safe_protocol',
       usedFallback: true,
       fallbackProtocol: 'safe_conservative_sports_nutrition',
-      warningMessage: 'Sem evidência específica disponível agora. Aplicando protocolo padrão seguro e conservador.',
+      warningMessage: null,
       timestamp: new Date().toISOString(),
     };
     writeAuditTracePatch({
@@ -5060,12 +5247,12 @@ async function buildScientificConstraintsByObjective(objective, kind) {
 
 window.buildScientificConstraintsForDiet = async function buildScientificConstraintsForDiet(input) {
   var objective = extractObjectiveFromInput(input);
-  return buildScientificConstraintsByObjective(objective, 'diet');
+  return buildScientificConstraintsByObjective(objective, 'diet', input);
 };
 
 window.buildScientificConstraintsForWorkout = async function buildScientificConstraintsForWorkout(input) {
   var objective = extractObjectiveFromInput(input);
-  return buildScientificConstraintsByObjective(objective, 'workout');
+  return buildScientificConstraintsByObjective(objective, 'workout', input);
 };
 
 async function validateScientificGenerationGuard(kind, objective, userInputsUsed, contextFlags) {
@@ -5074,7 +5261,12 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
     : window.buildScientificConstraintsForWorkout;
 
   var science = typeof scienceBuilder === 'function'
-    ? await scienceBuilder({ objective: objective, message: String(objective || '') })
+    ? await scienceBuilder({
+      objective: objective,
+      message: String(objective || ''),
+      profile: userInputsUsed || {},
+      context: contextFlags || {},
+    })
     : {
       ok: false,
       blockedReason: 'science_builder_missing',
@@ -5130,6 +5322,12 @@ async function validateScientificGenerationGuard(kind, objective, userInputsUsed
   };
 }
 
+function shouldShowScientificWarningToast(guard) {
+  if (!guard || typeof guard !== 'object') return false;
+  if (!guard.warningMessage) return false;
+  return String(guard.evidenceState || '') === 'weak_evidence';
+}
+
 async function resolveKronosConversation(inputText) {
   var appLayer = window.KroniaApplication && window.KroniaApplication.application;
   if (!appLayer || typeof appLayer.resolveConversationFlow !== 'function') {
@@ -5179,6 +5377,7 @@ function sanitizeCtaObject(value) {
 var KRONIA_CTA_ALLOWED_ACTIONS = Object.freeze({
   open_training: true,
   open_diet: true,
+  open_kronos: true,
 });
 
 // Compatibilidade legada temporária (remover quando emissores antigos forem eliminados).
@@ -5244,6 +5443,18 @@ function renderConversationCta(containerId, cta, payload) {
     targetModule: payload?._targetModule || null,
     intentSource: cta?.intentSource || null,
   }));
+  button.onclick = function () {
+    return window.executeConversationCta({
+      action: cta.action,
+      label: cta.label || 'Continuar',
+      payload: normalizeCtaPayload(payload),
+      meta: {
+        source: 'conversation_message',
+        targetModule: payload?._targetModule || null,
+        intentSource: cta?.intentSource || null,
+      },
+    });
+  };
 
   var inner = document.createElement('div');
   inner.className = 'ai-avatar-inner';
@@ -5319,11 +5530,28 @@ var KRONIA_CTA_EXECUTOR_MAP = Object.freeze({
 
 function executeKroniaCtaAction(action, context) {
   var executor = KRONIA_CTA_EXECUTOR_MAP[action];
-  if (typeof executor !== 'function') return false;
+  if (typeof executor !== 'function') return runKroniaActionFallback(action, context);
   try {
     if (executor(context)) return true;
   } catch (_) {}
   return runKroniaActionFallback(action, context);
+}
+
+function renderInferredConversationCta(containerId, payload) {
+  var inferredIntent = inferConversationCtaFromApiResponse(payload);
+  var inferredCta = buildCtaFromCanonicalIntent(inferredIntent);
+  if (!inferredIntent || !inferredCta) return false;
+  renderConversationCta(
+    containerId,
+    { action: inferredCta.action, label: inferredCta.label, intentSource: inferredCta.intentSource },
+    Object.assign({}, inferredCta.payload, { _targetModule: inferredCta.targetModule })
+  );
+  trackKroniaCta('api_cta_rendered', 'success', {
+    normalizedAction: inferredIntent.type,
+    source: inferredIntent.source,
+    inferredFrom: inferredIntent?.meta?.inferred_from || null,
+  });
+  return true;
 }
 
 window.handleKroniaCTA = function handleKroniaCTA(action, payload, meta) {
@@ -5892,6 +6120,63 @@ function resolveAppApiUrl(path) {
   return "https://kronia.app.br" + normalizedPath;
 }
 
+async function fetchExerciseDetailsResponse(endpoint) {
+  const buildFallbackHeaders = async function() {
+    return typeof getAuthHeaders === "function"
+      ? await getAuthHeaders()
+      : { "Content-Type": "application/json" };
+  };
+
+  const buildRelativeEndpoint = function(url) {
+    try {
+      const resolved = new URL(String(url || ""), window.location.href);
+      return resolved.pathname + resolved.search;
+    } catch (_) {
+      return String(url || "");
+    }
+  };
+
+  const relativeEndpoint = buildRelativeEndpoint(endpoint);
+  const attempts = [
+    async function tryApiFetch() {
+      return apiFetch(endpoint);
+    },
+    async function tryAbsoluteFetch() {
+      return fetch(endpoint, {
+        method: "GET",
+        headers: await buildFallbackHeaders(),
+        credentials: "same-origin",
+      });
+    },
+    async function tryRelativeFetch() {
+      return fetch(relativeEndpoint, {
+        method: "GET",
+        headers: await buildFallbackHeaders(),
+        credentials: "same-origin",
+      });
+    },
+    async function tryRelativeFetchWithoutHeaders() {
+      return fetch(relativeEndpoint, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+    }
+  ];
+
+  let lastError = null;
+  for (const attempt of attempts) {
+    try {
+      return await attempt();
+    } catch (error) {
+      lastError = error;
+      const message = String(error && error.message ? error.message : error || "");
+      const isRecoverable = /string did not match the expected pattern|failed to fetch|load failed|networkerror/i.test(message);
+      if (!isRecoverable) throw error;
+    }
+  }
+  throw lastError || new Error("Falha ao abrir detalhes do exercício.");
+}
+
 async function openExerciseDetailsByName(exerciseName, options = {}) {
   const exerciseRef = ensureExerciseRef(options.exerciseRef || { display_name: exerciseName }, exerciseName, options.origin || "direct_open");
   const lookupKey = exerciseRef.normalized_lookup_key || normalizeExerciseLookupKey(exerciseName);
@@ -5904,17 +6189,25 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
 
   try {
     const params = new URLSearchParams();
-    if (exerciseId) {
-      params.set("id", exerciseId);
-    } else if (exerciseSlug) {
-      params.set("slug", exerciseSlug);
-    } else {
-      params.set("lookupKey", lookupKey);
-    }
+    if (exerciseId) params.set("id", exerciseId);
+    if (exerciseSlug) params.set("slug", exerciseSlug);
+    if (lookupKey) params.set("lookupKey", lookupKey);
 
     const endpoint = resolveAppApiUrl(`/api/kronia/exercises/details?${params.toString()}`);
-    const resp = await apiFetch(endpoint);
-    const json = await resp.json();
+    const resp = await fetchExerciseDetailsResponse(endpoint);
+    const rawText = await resp.text();
+    let json = null;
+    try {
+      json = rawText ? JSON.parse(rawText) : null;
+    } catch (_parseError) {
+      const contentType = resp.headers?.get("content-type") || "";
+      const looksHtml = /text\/html/i.test(contentType) || /^\s*</.test(String(rawText || ""));
+      throw new Error(
+        looksHtml
+          ? "A rota de exercícios retornou uma página em vez de JSON. Atualize o app e faça login novamente."
+          : "Resposta inválida ao carregar detalhes do exercício."
+      );
+    }
 
     if (!resp.ok) {
       throw new Error(json?.message || "Falha ao carregar detalhes do exercício.");
@@ -5928,8 +6221,8 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
     });
   } catch (e) {
     const rawMessage = e?.message || "";
-    const normalizedMessage = /string did not match the expected pattern/i.test(rawMessage)
-      ? "Não consegui abrir os detalhes do exercício nesse modo do app. Feche e abra novamente para sincronizar."
+    const normalizedMessage = /string did not match the expected pattern|failed to fetch|load failed|networkerror/i.test(rawMessage)
+      ? "Não consegui sincronizar os detalhes do exercício agora. Atualize o app e tente novamente."
       : (rawMessage || "Erro ao carregar detalhes do exercício.");
     document.getElementById("exerciseDiscErrorMsg").textContent = normalizedMessage;
     _exerciseDiscSetState("error");
@@ -6106,6 +6399,14 @@ async function _preencherDietaDoSupabase() {
     const bm = metricRes.data;
     const g  = goalsRes.data;
     const sp = suplRes.data || [];
+
+    window._dietaSupabaseSnapshot = {
+      profile: p || null,
+      bodyMetrics: bm || null,
+      nutritionGoals: g || null,
+      supplementProtocols: sp.map(function(item) { return item?.supplement_name; }).filter(Boolean),
+      hydratedAt: new Date().toISOString(),
+    };
 
     // Guarda goals para usar no prompt
     if (g) window._dietaGoalsSupabase = g;
@@ -6697,334 +6998,585 @@ function gerarDietaPDF() {
   win.document.close();
 }
 
+function collectDietGenerationInput() {
+  const sexo = document.getElementById("dietaSexoF").classList.contains("active") ? "feminino" : "masculino";
+  const suplementosAtivos = Array.from(document.querySelectorAll("#dietaSuplChips .bs-chip.active")).map(function (element) {
+    return element.dataset.val;
+  });
+  const outrosSuplementos = document.getElementById("dietaOutrosSupl")?.value.trim() || "";
+
+  return {
+    objetivo: document.querySelector("#dietaObjChips .bs-chip.active")?.dataset.val || "hipertrofia",
+    sexo: sexo,
+    peso: parseFloat(document.getElementById("dietaPeso").value) || 75,
+    altura: parseFloat(document.getElementById("dietaAltura").value) || 175,
+    idade: parseInt(document.getElementById("dietaIdade").value) || 25,
+    gorduraCorporal: parseFloat(document.getElementById("dietaGordura")?.value) || null,
+    biotipo: document.querySelector("#dietaBioChips .bs-chip.active")?.dataset.val || "mesomorfo",
+    refeicoesPorDia: parseInt(document.getElementById("dietaRefeicoes").value) || 4,
+    nivelAtividade: document.querySelector("#dietaAtivChips .bs-chip.active")?.dataset.val || "levemente ativo",
+    frequenciaTreino: document.getElementById("dietaFreqTreino")?.value || "3x por semana",
+    duracaoTreino: document.getElementById("dietaDuracaoTreino")?.value || "~60 minutos",
+    tipoTreino: Array.from(document.querySelectorAll("#dietaTipoTreinoChips .bs-chip.active")).map(function (element) {
+      return element.dataset.val;
+    }).join(", ") || "musculação",
+    sono: document.getElementById("dietaSono")?.value || "7-8h",
+    estresse: document.getElementById("dietaEstresse")?.value || "moderado",
+    patologia: Array.from(document.querySelectorAll("#dietaPatologiaChips .bs-chip.active")).map(function (element) {
+      return element.dataset.val;
+    }).join(", ") || "nenhuma",
+    medicamentos: document.getElementById("dietaMedicamentos")?.value.trim() || "",
+    padraoAlimentar: document.getElementById("dietaPadrao")?.value || "onívoro",
+    restricoes: document.getElementById("dietaRestric").value.trim() || "nenhuma",
+    preferencias: document.getElementById("dietaPrefs").value.trim(),
+    alimentosEvitar: document.getElementById("dietaDislikes")?.value.trim() || "",
+    suplementos: suplementosAtivos.concat(outrosSuplementos ? [outrosSuplementos] : []),
+    orcamento: document.getElementById("dietaOrcamento").value || "",
+    nutritionGoals: window._dietaGoalsSupabase || null,
+    supabaseSnapshot: window._dietaSupabaseSnapshot || null,
+    fromChatDiet: !!window._kroniaChatDietHydratedContext,
+  };
+}
+
+function computeDietGenerationBaseline(input) {
+  const safeInput = input && typeof input === "object" ? input : {};
+  const peso = Number(safeInput.peso || 0);
+  const altura = Number(safeInput.altura || 0);
+  const idade = Number(safeInput.idade || 0);
+  const gordura = Number(safeInput.gorduraCorporal || 0);
+  const sexo = String(safeInput.sexo || "masculino").toLowerCase();
+  const objetivo = String(safeInput.objetivo || "manutencao").toLowerCase();
+  const atividade = String(safeInput.nivelAtividade || "levemente ativo").toLowerCase();
+
+  const tmbMifflin = sexo === "feminino"
+    ? Math.round((10 * peso) + (6.25 * altura) - (5 * idade) - 161)
+    : Math.round((10 * peso) + (6.25 * altura) - (5 * idade) + 5);
+
+  var massaMagra = null;
+  var tmbKatch = null;
+  if (gordura > 2 && gordura < 60) {
+    massaMagra = Math.round(peso * (1 - gordura / 100) * 10) / 10;
+    tmbKatch = Math.round(370 + (21.6 * massaMagra));
+  }
+
+  const atividadeFator = {
+    "sedentário": 1.2,
+    "sedentario": 1.2,
+    "levemente ativo": 1.375,
+    "moderadamente ativo": 1.55,
+    "muito ativo": 1.725,
+    "atleta": 1.9,
+  }[atividade] || 1.375;
+  const tdee = Math.round((tmbKatch || tmbMifflin) * atividadeFator);
+  const metaDelta = { emagrecimento: -400, hipertrofia: 300, manutencao: 0, forca: 200, recomposicao: -50 }[objetivo] || 0;
+  const metaCalorias = tdee + metaDelta;
+  const proteinaPorKg = { emagrecimento: 2.3, hipertrofia: 2.0, manutencao: 1.8, forca: 2.0, recomposicao: 2.2 }[objetivo] || 2.0;
+  const proteinaMeta = Math.round(peso * proteinaPorKg);
+  const gorduraMeta = Math.round((metaCalorias * 0.25) / 9);
+  const carboMeta = Math.max(0, Math.round((metaCalorias - (proteinaMeta * 4) - (gorduraMeta * 9)) / 4));
+
+  return {
+    tmb: tmbKatch || tmbMifflin,
+    tdee: tdee,
+    metaCalorias: metaCalorias,
+    proteinaMeta: proteinaMeta,
+    gorduraMeta: gorduraMeta,
+    carboMeta: carboMeta,
+    hidratacaoLitros: Number((peso * 0.035).toFixed(1)),
+    massaMagra: massaMagra,
+  };
+}
+
+function persistDietGenerationPrefs(input) {
+  const safeInput = input && typeof input === "object" ? input : {};
+  localStorage.setItem("kronia_calc_prefs", JSON.stringify({
+    ...safeJSON("kronia_calc_prefs", {}),
+    dietaObj: safeInput.objetivo,
+    dietaSexo: safeInput.sexo === "feminino" ? "F" : "M",
+    dietaPeso: String(safeInput.peso || ""),
+    dietaAltura: String(safeInput.altura || ""),
+    dietaIdade: String(safeInput.idade || ""),
+    dietaGordura: String(safeInput.gorduraCorporal || ""),
+    dietaBio: safeInput.biotipo || "",
+    dietaRefeicoes: String(safeInput.refeicoesPorDia || ""),
+    dietaAtiv: safeInput.nivelAtividade || "",
+    dietaRestric: safeInput.restricoes || "",
+    dietaPrefs: safeInput.preferencias || "",
+    dietaDislikes: safeInput.alimentosEvitar || "",
+    dietaMedicamentos: safeInput.medicamentos || "",
+    dietaOutrosSupl: Array.isArray(safeInput.suplementos) ? safeInput.suplementos.join(", ") : "",
+    dietaOrcamento: safeInput.orcamento || "",
+    dietaPadrao: safeInput.padraoAlimentar || "",
+  }));
+}
+
+function buildDietRequestPayloadFromInput(input) {
+  const safeInput = input && typeof input === "object" ? input : {};
+  const baseline = computeDietGenerationBaseline(safeInput);
+  const observacoes = [
+    safeInput.orcamento ? ("orcamento: " + safeInput.orcamento) : "",
+    safeInput.medicamentos ? ("medicamentos: " + safeInput.medicamentos) : "",
+    safeInput.patologia && safeInput.patologia !== "nenhuma" ? ("patologia: " + safeInput.patologia) : "",
+    "sono: " + (safeInput.sono || "7-8h"),
+    "estresse: " + (safeInput.estresse || "moderado"),
+    "treino: " + [safeInput.frequenciaTreino, safeInput.duracaoTreino, safeInput.tipoTreino].filter(Boolean).join(" | "),
+    "tdee_estimado: " + baseline.tdee,
+    "meta_calorica_estimada: " + baseline.metaCalorias,
+  ].filter(Boolean).join(" ; ");
+
+  return {
+    objetivo: safeInput.objetivo,
+    sexo: safeInput.sexo,
+    peso: safeInput.peso,
+    altura: safeInput.altura,
+    idade: safeInput.idade,
+    gorduraCorporal: safeInput.gorduraCorporal,
+    biotipo: safeInput.biotipo,
+    rotina: safeInput.nivelAtividade,
+    nivelAtividade: safeInput.nivelAtividade,
+    refeicoesPorDia: safeInput.refeicoesPorDia,
+    padraoAlimentar: safeInput.padraoAlimentar,
+    restricoes: safeInput.restricoes,
+    preferencias: safeInput.preferencias,
+    alimentosEvitar: safeInput.alimentosEvitar,
+    suplementos: safeInput.suplementos,
+    observacoes: observacoes,
+    contextoTreino: {
+      frequencia: safeInput.frequenciaTreino,
+      duracao: safeInput.duracaoTreino,
+      tipo: safeInput.tipoTreino,
+    },
+    saude: {
+      patologia: safeInput.patologia,
+      medicamentos: safeInput.medicamentos,
+      sono: safeInput.sono,
+      estresse: safeInput.estresse,
+    },
+    nutritionGoals: safeInput.nutritionGoals || null,
+    supabaseSnapshot: safeInput.supabaseSnapshot || null,
+    profile: {
+      objetivo: safeInput.objetivo,
+      sexo: safeInput.sexo,
+      idade: safeInput.idade,
+      pesoKg: safeInput.peso,
+      alturaCm: safeInput.altura,
+      bodyFatPercent: safeInput.gorduraCorporal,
+      biotipo: safeInput.biotipo,
+      activityLevel: safeInput.nivelAtividade,
+      refeicoesPorDia: safeInput.refeicoesPorDia,
+      dietaryPattern: safeInput.padraoAlimentar,
+      restricoes: safeInput.restricoes,
+      preferencias: safeInput.preferencias,
+      alimentosEvitar: safeInput.alimentosEvitar,
+      suplementos: safeInput.suplementos,
+      nutritionGoals: safeInput.nutritionGoals || null,
+      supabaseSnapshot: safeInput.supabaseSnapshot || null,
+    },
+    context: {
+      source: "diet_sheet",
+      fromChatDiet: !!safeInput.fromChatDiet,
+      trainingContext: {
+        frequencia: safeInput.frequenciaTreino,
+        duracao: safeInput.duracaoTreino,
+        tipo: safeInput.tipoTreino,
+      },
+      healthContext: {
+        patologia: safeInput.patologia,
+        medicamentos: safeInput.medicamentos,
+        sono: safeInput.sono,
+        estresse: safeInput.estresse,
+      },
+    },
+  };
+}
+
+function normalizeDietFoodText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function dietTextIncludesAny(value, candidates) {
+  const source = normalizeDietFoodText(value);
+  return (Array.isArray(candidates) ? candidates : []).some(function (candidate) {
+    const normalized = normalizeDietFoodText(candidate);
+    return normalized && source.indexOf(normalized) >= 0;
+  });
+}
+
+function splitDietList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(function (item) { return String(item || "").trim(); }).filter(Boolean);
+  return String(value).split(",").map(function (item) { return item.trim(); }).filter(Boolean);
+}
+
+function mergeUniqueDietList() {
+  const items = [];
+  for (let index = 0; index < arguments.length; index += 1) {
+    items.push.apply(items, splitDietList(arguments[index]));
+  }
+  const seen = Object.create(null);
+  return items.filter(function (item) {
+    const key = normalizeDietFoodText(item);
+    if (!key || seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+function parseDietAgeFromBirthDate(birthDate) {
+  if (!birthDate) return undefined;
+  const date = new Date(birthDate);
+  if (Number.isNaN(date.getTime())) return undefined;
+  const years = Math.floor((Date.now() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  return years >= 10 && years <= 120 ? years : undefined;
+}
+
+function buildMergedDietInput(input) {
+  const safeInput = input && typeof input === "object" ? input : {};
+  const snapshot = safeInput.supabaseSnapshot && typeof safeInput.supabaseSnapshot === "object"
+    ? safeInput.supabaseSnapshot
+    : {};
+  const profile = snapshot.profile && typeof snapshot.profile === "object" ? snapshot.profile : {};
+  const bodyMetrics = snapshot.bodyMetrics && typeof snapshot.bodyMetrics === "object" ? snapshot.bodyMetrics : {};
+  const nutritionGoals = snapshot.nutritionGoals && typeof snapshot.nutritionGoals === "object"
+    ? snapshot.nutritionGoals
+    : (safeInput.nutritionGoals && typeof safeInput.nutritionGoals === "object" ? safeInput.nutritionGoals : null);
+  const supplementProtocols = Array.isArray(snapshot.supplementProtocols) ? snapshot.supplementProtocols : [];
+
+  const merged = Object.assign({}, safeInput);
+  merged.objetivo = safeInput.objetivo || profile.objective || "hipertrofia";
+  merged.sexo = safeInput.sexo || profile.sex || "masculino";
+  merged.peso = Number(safeInput.peso || bodyMetrics.weight_kg || profile.current_weight_kg || 75);
+  merged.altura = Number(safeInput.altura || profile.height_cm || 175);
+  merged.idade = Number(safeInput.idade || parseDietAgeFromBirthDate(profile.birth_date) || 25);
+  merged.gorduraCorporal = safeInput.gorduraCorporal != null ? safeInput.gorduraCorporal : (bodyMetrics.body_fat_percent || null);
+  merged.nivelAtividade = safeInput.nivelAtividade || profile.activity_level || "levemente ativo";
+  merged.padraoAlimentar = safeInput.padraoAlimentar || profile.dietary_pattern || "onívoro";
+  merged.restricoes = mergeUniqueDietList(safeInput.restricoes, profile.allergies, profile.intolerances).join(", ");
+  merged.preferencias = mergeUniqueDietList(safeInput.preferencias, profile.liked_foods).join(", ");
+  merged.alimentosEvitar = mergeUniqueDietList(safeInput.alimentosEvitar, profile.disliked_foods).join(", ");
+  merged.suplementos = mergeUniqueDietList(safeInput.suplementos, supplementProtocols);
+  merged.nutritionGoals = nutritionGoals || null;
+  if (!merged.medicamentos && profile.clinical_notes) merged.medicamentos = String(profile.clinical_notes);
+  return merged;
+}
+
+function buildLocalDietFoodCatalog(input) {
+  const safeInput = buildMergedDietInput(input);
+  const preferencias = splitDietList(safeInput.preferencias);
+  const evitar = splitDietList(safeInput.alimentosEvitar);
+  const restricoes = splitDietList(safeInput.restricoes);
+  const padrao = normalizeDietFoodText(safeInput.padraoAlimentar);
+  const suplementos = Array.isArray(safeInput.suplementos) ? safeInput.suplementos : [];
+
+  function allowed(item) {
+    if (dietTextIncludesAny(item.nome, evitar)) return false;
+    if (/vegano/.test(padrao) && /(frango|patinho|ovo|iogurte|atum|sardinha)/i.test(item.nome)) return false;
+    if (/vegetariano/.test(padrao) && /(frango|patinho|atum|sardinha)/i.test(item.nome)) return false;
+    if (dietTextIncludesAny("lactose", restricoes) && /(iogurte)/i.test(item.nome)) return false;
+    return true;
+  }
+
+  function sortByPreference(items) {
+    return items.slice().sort(function (a, b) {
+      const aScore = dietTextIncludesAny(a.nome, preferencias) ? 1 : 0;
+      const bScore = dietTextIncludesAny(b.nome, preferencias) ? 1 : 0;
+      return bScore - aScore;
+    });
+  }
+
+  const proteins = sortByPreference([
+    { nome: "Frango grelhado", porcao: "120 g", kcal: 198, prot: 37, carb: 0, gord: 4 },
+    { nome: "Patinho grelhado", porcao: "120 g", kcal: 225, prot: 34, carb: 0, gord: 10 },
+    { nome: "Ovo inteiro", porcao: "2 un", kcal: 143, prot: 12, carb: 1, gord: 10 },
+    { nome: "Tofu firme", porcao: "150 g", kcal: 144, prot: 15, carb: 4, gord: 8 },
+    { nome: "Atum em lata", porcao: "1 lata", kcal: 170, prot: 30, carb: 0, gord: 5 },
+  ].filter(allowed));
+
+  const carbs = [
+    { nome: "Arroz cozido", porcao: "120 g", kcal: 156, prot: 3, carb: 34, gord: 0.4 },
+    { nome: "Batata-doce cozida", porcao: "130 g", kcal: 112, prot: 2, carb: 26, gord: 0.1 },
+    { nome: "Aveia", porcao: "40 g", kcal: 156, prot: 6.8, carb: 26.5, gord: 3.4 },
+    { nome: "Feijão cozido", porcao: "100 g", kcal: 76, prot: 4.8, carb: 13.6, gord: 0.5 },
+    { nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 },
+  ].filter(allowed);
+
+  const fats = [
+    { nome: "Azeite de oliva", porcao: "10 g", kcal: 88, prot: 0, carb: 0, gord: 10 },
+    { nome: "Abacate", porcao: "100 g", kcal: 96, prot: 1.2, carb: 6, gord: 8.4 },
+  ].filter(allowed);
+
+  const veggies = [
+    { nome: "Brócolis cozido", porcao: "100 g", kcal: 25, prot: 3, carb: 4.4, gord: 0.5 },
+    { nome: "Cenoura cozida", porcao: "100 g", kcal: 30, prot: 1, carb: 7, gord: 0.2 },
+    { nome: "Salada verde", porcao: "1 prato", kcal: 20, prot: 1, carb: 3, gord: 0.2 },
+  ].filter(allowed);
+
+  const extras = [];
+  if (suplementos.some(function (item) { return /whey/i.test(String(item || "")); })) {
+    extras.push({ nome: "Whey protein", porcao: "30 g", kcal: 120, prot: 24, carb: 3, gord: 2 });
+  }
+
+  return {
+    proteins: proteins.length ? proteins : [{ nome: "Tofu firme", porcao: "150 g", kcal: 144, prot: 15, carb: 4, gord: 8 }],
+    carbs: carbs.length ? carbs : [{ nome: "Arroz cozido", porcao: "120 g", kcal: 156, prot: 3, carb: 34, gord: 0.4 }],
+    fats: fats.length ? fats : [{ nome: "Abacate", porcao: "100 g", kcal: 96, prot: 1.2, carb: 6, gord: 8.4 }],
+    veggies: veggies.length ? veggies : [{ nome: "Salada verde", porcao: "1 prato", kcal: 20, prot: 1, carb: 3, gord: 0.2 }],
+    extras: extras,
+  };
+}
+
+function buildLocalDietPlan(input) {
+  const safeInput = buildMergedDietInput(input);
+  const baseline = computeDietGenerationBaseline(safeInput);
+  const refeicoesPorDia = Math.min(6, Math.max(3, Number(safeInput.refeicoesPorDia || 4)));
+  const splitMap = {
+    3: [0.3, 0.4, 0.3],
+    4: [0.25, 0.35, 0.15, 0.25],
+    5: [0.22, 0.28, 0.15, 0.15, 0.2],
+    6: [0.2, 0.2, 0.15, 0.15, 0.15, 0.15],
+  };
+  const mealNames = ["Café da manhã", "Lanche manhã", "Almoço", "Lanche tarde", "Jantar", "Ceia"];
+  const mealHours = ["07:00", "10:00", "13:00", "16:30", "20:00", "22:30"];
+  const split = splitMap[refeicoesPorDia] || splitMap[4];
+  const catalog = buildLocalDietFoodCatalog(safeInput);
+
+  const refeicoes = split.map(function (pct, index) {
+    const protein = catalog.proteins[index % catalog.proteins.length];
+    const carb = catalog.carbs[index % catalog.carbs.length];
+    const fat = catalog.fats[index % catalog.fats.length];
+    const veggie = catalog.veggies[index % catalog.veggies.length];
+    const extra = catalog.extras[index % Math.max(catalog.extras.length, 1)] || null;
+    const mealProtTarget = Math.max(20, Math.round(baseline.proteinaMeta * pct));
+    const proteins = [protein.nome + " (" + protein.porcao + ")"];
+    if (extra && mealProtTarget >= 28) proteins.push(extra.nome + " (" + extra.porcao + ")");
+
+    return {
+      nome: mealNames[index] || ("Refeição " + (index + 1)),
+      horario: mealHours[index] || "00:00",
+      foco: "META: " + Math.round(baseline.metaCalorias * pct) + " kcal",
+      proteinas: proteins,
+      carbos: [carb.nome + " (" + carb.porcao + ")"],
+      extras: [veggie.nome + " (" + veggie.porcao + ")", fat.nome + " (" + fat.porcao + ")"],
+      substituicoes: [
+        {
+          item: protein.nome,
+          opcoes: catalog.proteins.filter(function (item) { return item.nome !== protein.nome; }).slice(0, 2).map(function (item) {
+            return {
+              nome: item.nome,
+              porcao: item.porcao,
+              calorias: item.kcal,
+              proteinas: item.prot,
+              carboidratos: item.carb,
+              gorduras: item.gord,
+            };
+          }),
+        },
+      ],
+    };
+  });
+
+  const goalCalories = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.calories_target);
+  const goalProtein = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.protein_g);
+  const goalCarbs = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.carbs_g);
+  const goalFat = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.fat_g);
+
+  return {
+    failSafe: false,
+    meta: {
+      calorias: Number.isFinite(goalCalories) && goalCalories > 0 ? goalCalories : baseline.metaCalorias,
+      proteina: Number.isFinite(goalProtein) && goalProtein > 0 ? goalProtein : baseline.proteinaMeta,
+      carbo: Number.isFinite(goalCarbs) && goalCarbs > 0 ? goalCarbs : baseline.carboMeta,
+      gordura: Number.isFinite(goalFat) && goalFat > 0 ? goalFat : baseline.gorduraMeta,
+      tmb: baseline.tmb,
+      get: baseline.tdee,
+    },
+    refeicoes: refeicoes,
+    hidratacao: { litros: baseline.hidratacaoLitros },
+    observacoes: [
+      "Plano local gerado em modo contingência com base na sua ficha atual.",
+      safeInput.padraoAlimentar ? ("Padrão alimentar respeitado: " + safeInput.padraoAlimentar + ".") : "",
+      safeInput.restricoes ? ("Restrições consideradas: " + safeInput.restricoes + ".") : "",
+    ].filter(Boolean),
+  };
+}
+
+function buildLocalDietRenderText(input, reason) {
+  const fallbackPlan = buildLocalDietPlan(input);
+  return renderDietModelAsText({
+    text: reason || "Plano local gerado em modo contingência.",
+    flowState: null,
+    failSafe: false,
+    limitedOrientation: null,
+    meta: fallbackPlan.meta,
+    refeicoes: fallbackPlan.refeicoes,
+    hidratacao: fallbackPlan.hidratacao,
+    observacoes: fallbackPlan.observacoes,
+  });
+}
+
+function buildDietFallbackTextFromInput(input, reason) {
+  const safeInput = input && typeof input === "object" ? input : {};
+  const baseline = computeDietGenerationBaseline(safeInput);
+  const motivo = String(reason || "O serviço principal de dieta falhou; aplicando protocolo inicial seguro.").trim();
+  const orientacoes = [
+    "- Objetivo: " + (safeInput.objetivo || "manutencao"),
+    "- Meta calórica inicial: " + baseline.metaCalorias + " kcal",
+    "- Proteína alvo: " + baseline.proteinaMeta + " g/dia",
+    "- Carboidrato inicial: " + baseline.carboMeta + " g/dia",
+    "- Gordura inicial: " + baseline.gorduraMeta + " g/dia",
+    "- Água: " + baseline.hidratacaoLitros + " L/dia",
+    "- Refeições por dia: " + (safeInput.refeicoesPorDia || 4),
+    safeInput.padraoAlimentar ? ("- Padrão alimentar: " + safeInput.padraoAlimentar) : "",
+    safeInput.restricoes ? ("- Restrições: " + safeInput.restricoes) : "",
+    safeInput.alimentosEvitar ? ("- Evitar: " + safeInput.alimentosEvitar) : "",
+    safeInput.preferencias ? ("- Preferências: " + safeInput.preferencias) : "",
+  ].filter(Boolean);
+
+  return [
+    "##ORIENTACAO LIMITADA",
+    motivo,
+    "",
+    "##META",
+    "CALORIAS: " + baseline.metaCalorias,
+    "PROTEINA: " + baseline.proteinaMeta,
+    "CARB: " + baseline.carboMeta,
+    "GORDURA: " + baseline.gorduraMeta,
+    "TMB: " + baseline.tmb,
+    "TDEE: " + baseline.tdee,
+    "",
+    "##ORIENTACOES",
+  ].concat(orientacoes).join("\n");
+}
+
+function resolveDietRuntimeErrorMessage(payload, httpStatus, input, fallbackReason) {
+  const friendly = resolveAiFriendlyError(payload, httpStatus);
+  if (
+    friendly &&
+    !/não consegui (montar|processar)/i.test(String(friendly)) &&
+    !/sem evid[eê]ncia espec[ií]fica dispon[ií]vel agora/i.test(String(friendly))
+  ) {
+    return friendly;
+  }
+  return buildLocalDietRenderText(input, friendly || fallbackReason || "Plano local gerado após falha da rota.");
+}
+
+async function requestDietRoute(payload, timeoutMs) {
+  const timeout = Number(timeoutMs);
+  const supportsAbort = typeof AbortController === "function";
+  const controller = supportsAbort ? new AbortController() : null;
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/kronia/diet"), {
+    method: "POST",
+    body: JSON.stringify({
+      action: "GENERATE_DIET",
+      requestId: "diet_" + Date.now(),
+      payload: payload,
+    }),
+    signal: controller ? controller.signal : undefined,
+  });
+
+  if (!supportsAbort || !Number.isFinite(timeout) || timeout <= 0) {
+    return requestPromise;
+  }
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise(function (_, reject) {
+    timeoutId = setTimeout(function () {
+      try { controller.abort(); } catch (_) {}
+      reject(new Error("Tempo limite da rota de dieta excedido."));
+    }, timeout);
+  });
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 async function gerarDieta() {
-  var fromChatDiet = !!window._kroniaChatDietHydratedContext;
-  if (fromChatDiet) {
+  const input = collectDietGenerationInput();
+  if (input.fromChatDiet) {
     trackKroniaCta('diet_apply_started_from_chat', 'success', {
       hasPayload: !!Object.keys(window._kroniaChatDietHydratedContext || {}).length,
     });
   }
-  // ── Coleta todos os dados da anamnese ─────────────────────────────
-  const obj      = document.querySelector("#dietaObjChips .bs-chip.active")?.dataset.val || "hipertrofia";
-  const sexo     = document.getElementById("dietaSexoF").classList.contains("active") ? "feminino" : "masculino";
-  const peso     = parseFloat(document.getElementById("dietaPeso").value) || 75;
-  const altura   = parseFloat(document.getElementById("dietaAltura").value) || 175;
-  const idade    = parseInt(document.getElementById("dietaIdade").value) || 25;
-  const gordPct  = parseFloat(document.getElementById("dietaGordura")?.value) || null;
-  const biotipo  = document.querySelector("#dietaBioChips .bs-chip.active")?.dataset.val || "mesomorfo";
-  const refs     = parseInt(document.getElementById("dietaRefeicoes").value) || 4;
-  const ativ     = document.querySelector("#dietaAtivChips .bs-chip.active")?.dataset.val || "levemente ativo";
-  const freqTreino    = document.getElementById("dietaFreqTreino")?.value || "3x por semana";
-  const duracaoTreino = document.getElementById("dietaDuracaoTreino")?.value || "~60 minutos";
-  const tipoTreino    = Array.from(document.querySelectorAll("#dietaTipoTreinoChips .bs-chip.active")).map(e => e.dataset.val).join(", ") || "musculação";
-  const sono          = document.getElementById("dietaSono")?.value || "7-8h";
-  const estresse      = document.getElementById("dietaEstresse")?.value || "moderado";
-  const patologia     = Array.from(document.querySelectorAll("#dietaPatologiaChips .bs-chip.active")).map(e => e.dataset.val).join(", ") || "nenhuma";
-  const medicamentos  = document.getElementById("dietaMedicamentos")?.value.trim() || "";
-  const padrao        = document.getElementById("dietaPadrao")?.value || "onívoro";
-  const restric       = document.getElementById("dietaRestric").value.trim() || "nenhuma";
-  const prefs         = document.getElementById("dietaPrefs").value.trim();
-  const dislikes      = document.getElementById("dietaDislikes")?.value.trim() || "";
-  const suplAtivos    = Array.from(document.querySelectorAll("#dietaSuplChips .bs-chip.active")).map(e => e.dataset.val);
-  const outrosSupl    = document.getElementById("dietaOutrosSupl")?.value.trim() || "";
-  const todosSupl     = [...suplAtivos, ...(outrosSupl ? [outrosSupl] : [])];
-  const orcamento     = document.getElementById("dietaOrcamento").value;
 
+  const dietPayload = buildDietRequestPayloadFromInput(input);
   const guard = await validateScientificGenerationGuard(
     'diet',
-    obj,
-    {
-      objetivo: obj,
-      sexo: sexo,
-      peso: peso,
-      altura: altura,
-      idade: idade,
-      restricoes: restric,
-      preferencias: prefs,
-      suplementos: todosSupl,
-    },
+    input.objetivo,
+    dietPayload,
     { respectedCardContext: false, respectedAnamnesisContext: true }
   );
-  if (!guard.ok) {
-    const txtBlocked = document.getElementById("dietaTexto");
-    const resBlocked = document.getElementById("dietaResultado");
-    if (resBlocked) resBlocked.style.display = "block";
-    if (txtBlocked) txtBlocked.textContent = "Não consegui gerar a dieta com segurança para este cenário. Revise os dados críticos e tente novamente.";
-    return;
-  }
-
-  // Cálculos basais para o prompt
-  const tmbMifflin = sexo === "feminino"
-    ? Math.round(10*peso + 6.25*altura - 5*idade - 161)
-    : Math.round(10*peso + 6.25*altura - 5*idade + 5);
-  let tmbKatch = null, massaMagra = null;
-  if (gordPct && gordPct > 2 && gordPct < 60) {
-    massaMagra = Math.round(peso * (1 - gordPct/100) * 10) / 10;
-    tmbKatch   = Math.round(370 + 21.6 * massaMagra);
-  }
-  const tmbUsar  = tmbKatch || tmbMifflin;
-  const fatorAtiv = { "sedentário":1.2,"levemente ativo":1.375,"moderadamente ativo":1.55,"muito ativo":1.725,"atleta":1.9 }[ativ] || 1.375;
-  const tdee = Math.round(tmbUsar * fatorAtiv);
-  const metaDelta = { emagrecimento:-400, hipertrofia:300, manutencao:0, forca:200, recomposicao:-50 }[obj] || 0;
-  const metaCal  = tdee + metaDelta;
-  const protFat  = { emagrecimento:2.3, hipertrofia:2.0, manutencao:1.8, forca:2.0, recomposicao:2.2 }[obj] || 2.0;
-  const protMeta = Math.round(peso * protFat);
-  const gordMeta = Math.round(metaCal * 0.25 / 9);
-  const carbMeta = Math.max(0, Math.round((metaCal - protMeta*4 - gordMeta*9) / 4));
-
-  // Goals do Supabase (se disponíveis)
-  const goalsDb = window._dietaGoalsSupabase;
-
-  // ── Instrução de orçamento para o prompt ──────────────────────────
-  const orcamentoInstrucao = {
-    economico: `
-PERFIL ECONÔMICO — REGRAS OBRIGATÓRIAS:
-- Use APENAS alimentos de baixo custo disponíveis no Brasil: ovo, frango (coxa/sobrecoxa), atum/sardinha em lata, carne moída (patinho), fígado bovino, feijão, lentilha, grão-de-bico, arroz, batata-doce, aveia, banana, maçã, laranja, couve, cenoura, beterraba, aipim, inhame, pão integral, leite, iogurte natural, queijo cottage, amendoim/pasta de amendoim.
-- PROIBIDO usar: salmão, filé mignon, whey protein, suplementos caros, quinoa, frutas vermelhas frescas, azeite extravirgem premium ou qualquer item com custo acima de R$ 25/kg.
-- Priorize custo por grama de proteína: ovo (~R$ 0,50/unid), frango coxa (~R$ 14/kg), atum lata (~R$ 6/lata 170g), feijão (~R$ 8/kg).
-- Monte refeições simples, práticas e que possam ser preparadas em lote (meal prep).
-- Objetivo: dieta completa por aproximadamente R$ 250–300/mês.`,
-    moderado: `
-PERFIL MODERADO — DIRETRIZES:
-- Priorize alimentos com bom custo-benefício: frango peito, ovo, atum, patinho, peixe branco, batata-doce, arroz integral, aveia, frutas sazonais, iogurte grego, queijo cottage.
-- Pode incluir whey protein apenas se necessário para atingir meta de proteína.
-- Evite itens premium como salmão diário, suplementos excessivos ou cortes nobres de carne.
-- Objetivo: dieta completa por aproximadamente R$ 400–600/mês.`,
-    premium: `
-PERFIL PREMIUM — DIRETRIZES:
-- Use alimentos de alta qualidade nutricional sem restrição de custo: salmão, frango orgânico, carnes nobres, azeite extravirgem, frutas vermelhas, oleaginosas, whey isolado, ovos caipiras.
-- Estruture uma dieta premium com foco em performance e saúde intestinal: fibras distribuídas no dia, fontes de ômega-3, vegetais coloridos e proteína de alto valor biológico em todas as refeições.
-- Inclua substituições premium por refeição (1 opção equivalente para cada principal alimento), mantendo macros semelhantes.
-- Priorize variedade, biodisponibilidade, praticidade e aderência de longo prazo.`
-  }[orcamento] || "";
-  // Salva preferências para re-uso
-  localStorage.setItem("kronia_calc_prefs", JSON.stringify({
-    ...safeJSON("kronia_calc_prefs", {}),
-    dietaObj: obj, dietaSexo: sexo === "feminino" ? "F" : "M",
-    dietaPeso: String(peso), dietaAltura: String(altura), dietaIdade: String(idade),
-    dietaGordura: String(gordPct || ""), dietaBio: biotipo,
-    dietaRefeicoes: String(refs), dietaAtiv: ativ,
-    dietaRestric: restric, dietaPrefs: prefs, dietaDislikes: dislikes,
-    dietaMedicamentos: medicamentos, dietaOutrosSupl: outrosSupl,
-    dietaOrcamento: orcamento, dietaPadrao: padrao
-  }));
 
   const res = document.getElementById("dietaResultado");
   const txt = document.getElementById("dietaTexto");
   const btn = document.getElementById("btnGerarDieta");
   res.style.display = "block";
-  txt.textContent = "Analisando perfil e calculando TMB/TDEE — montando sua dieta personalizada…";
-  if (guard.warningMessage) {
+  txt.textContent = buildLocalDietRenderText(input, "Plano inicial gerado localmente. Sincronizando versão completa...");
+  btn.disabled = true;
+  persistDietGenerationPrefs(input);
+
+  if (!guard.ok) {
+    txt.textContent = buildLocalDietRenderText(input, "Não foi possível validar todos os critérios científicos agora. Aplicando plano local conservador.");
+    btn.disabled = false;
+    return;
+  }
+  if (shouldShowScientificWarningToast(guard)) {
     showToast(guard.warningMessage, "info", 5200);
   }
-  btn.disabled = true;
-
-  // Bloco de proteínas obrigatórias
-  const proteinsLine = prefs
-    ? `\nPROTEÍNAS OBRIGATÓRIAS — REGRA CRÍTICA:\nO usuário quer usar especificamente: "${prefs}"\n→ Identifique os alimentos proteicos dessa lista (ex: ovo, frango, patinho, atum, etc.).\n→ Use SOMENTE essas proteínas em TODAS as refeições que contêm fonte proteica animal.\n→ NÃO inclua nenhuma outra proteína animal não listada.\n→ Distribua inteligentemente: ovo no café, frango no almoço, patinho no jantar, etc.\n→ Se uma proteína não fizer sentido em determinada refeição, apenas não a use — nunca substitua por outra não listada.`
-    : "";
-
-  // Suplementos em uso (contexto para a IA)
-  const suplLine = todosSupl.length
-    ? `\n- Suplementos em uso: ${todosSupl.join(", ")} → considere na distribuição de proteína e timing de nutrientes.`
-    : "";
-
-  // Dados do Supabase (nutrition_goals)
-  const goalsLine = goalsDb
-    ? `\n- Meta calórica registrada no perfil: ${goalsDb.calories_target || "—"} kcal | Proteína: ${goalsDb.protein_g || "—"}g | Carbo: ${goalsDb.carbs_g || "—"}g | Gordura: ${goalsDb.fat_g || "—"}g`
-    : "";
-
-  // Ajustes específicos por patologia
-  const scienceConstraintLines = (guard.science?.constraints?.evidenceReferences || []).map(function (entry) {
-    return '- ' + (entry.topic || 'topico') + ': ' + (entry.recommendation || 'usar recomendacao cientifica validada');
-  });
-
-  const patologiaRules = {
-    "diabetes tipo 2":         "→ DIABETES: priorizar baixo índice glicêmico. Evitar açúcar, farinha branca refinada, sucos. Prefira batata-doce, arroz integral, feijão, aveia. Distribuir carboidratos uniformemente nas refeições.",
-    "hipertensão arterial":    "→ HIPERTENSÃO: limitar sódio a <2000mg/dia. Evitar embutidos, enlatados, sal em excesso. Incluir potássio (banana, batata-doce, abacate) e magnésio.",
-    "colesterol alto":         "→ COLESTEROL: limitar gordura saturada. Incluir aveia, azeite, oleaginosas, ômega-3. Evitar frituras e embutidos.",
-    "hipotireoidismo":         "→ HIPOTIREOIDISMO: evitar excesso de soja crua e crucíferas cruas (brócolis, couve) em grandes quantidades. Incluir selênio (castanha-do-pará) e zinco.",
-    "resistência à insulina":  "→ RESISTÊNCIA À INSULINA: priorizar baixo IG, alto teor de fibras. Evitar carboidratos simples. Distribuir refeições a cada 3-4h.",
-    "SOP":                     "→ SOP: dieta anti-inflamatória. Reduzir carboidratos simples, preferir low GI. Incluir ômega-3, zinco, magnésio. Controlar insulina.",
-    "gastrite/refluxo":        "→ GASTRITE/REFLUXO: evitar alimentos ácidos (tomate, laranja), café em excesso, frituras, pimenta. Preferir refeições menores e frequentes."
-  }[patologia] || "";
-
-  const prompt = `Você é KRONOS, especialista em nutrição esportiva e clínica. Crie uma dieta 100% personalizada com base na anamnese completa abaixo.
-
-════════════════════════════════════════
-ANAMNESE COMPLETA DO PACIENTE
-════════════════════════════════════════
-
-DADOS ANTROPOMÉTRICOS:
-- Objetivo: ${obj}
-- Sexo: ${sexo} | Biotipo: ${biotipo}
-- Peso: ${peso}kg | Altura: ${altura}cm | Idade: ${idade} anos
-${gordPct ? `- % Gordura corporal: ${gordPct}% | Massa magra estimada: ${massaMagra}kg` : "- % Gordura: não informado"}
-- Padrão alimentar: ${padrao}
-
-CÁLCULO ENERGÉTICO (pré-calculado):
-- TMB Mifflin-St Jeor: ~${tmbMifflin} kcal/dia
-${tmbKatch ? `- TMB Katch-McArdle (com massa magra): ~${tmbKatch} kcal/dia (use este — mais preciso)` : ""}
-- Nível de atividade: ${ativ} → Fator: ${fatorAtiv}
-- TDEE estimado: ~${tdee} kcal/dia
-- META CALÓRICA DEFINIDA: ${metaCal} kcal/dia
-- Meta proteína: ${protMeta}g/dia (${protFat.toFixed(1)}g/kg)
-- Meta carboidrato: ${carbMeta}g/dia | Meta gordura: ${gordMeta}g/dia${goalsLine}
-
-ATIVIDADE FÍSICA:
-- Frequência de treino: ${freqTreino}
-- Duração média: ${duracaoTreino}
-- Tipo de treino: ${tipoTreino}
-- Sono: ${sono} por noite
-- Nível de estresse: ${estresse}${suplLine}
-
-SAÚDE:
-- Patologia/condição: ${patologia}
-${medicamentos ? `- Medicamentos: ${medicamentos}` : "- Medicamentos: nenhum"}
-${patologiaRules}
-
-ALIMENTAÇÃO:
-- Refeições por dia: ${refs}
-- Restrições/alergias/intolerâncias: ${restric}
-- Alimentos que gosta / proteínas desejadas: ${prefs || "sem preferência específica"}
-${dislikes ? `- Alimentos que NÃO gosta / evita: ${dislikes}` : ""}
-${orcamento ? `- Perfil de orçamento: ${orcamento}` : ""}
-${proteinsLine}
-
-════════════════════════════════════════
-DIRETRIZES CLINICAS (ISSN / ACSM)
-════════════════════════════════════════
-- Hipertrofia: ≥1.6g/kg proteína, superávit 200-300 kcal
-- Emagrecimento: ≥2.0g/kg proteína, déficit 300-500 kcal, preservar músculo
-- Recomposição: ≥2.2g/kg proteína, calorias = TDEE ±50 kcal
-- Manutenção: 1.6-1.8g/kg proteína, = TDEE
-- Distribuição proteica: 0.3-0.4g/kg por refeição, máx. 40g/refeição para síntese ideal
-- Carboidratos pré-treino: 30-60min antes, baixa fibra (banana, tapioca, arroz branco)
-- Carboidratos pós-treino: prioridade para reposição de glicogênio
-- Gorduras: evitar em pré/pós-treino imediato
-
-EVIDENCIAS CIENTIFICAS OBRIGATORIAS (SUPABASE):
-${scienceConstraintLines.length ? scienceConstraintLines.join('\n') : '- Sem evidencias adicionais.'}
-
-${orcamentoInstrucao}
-
-RACIOCÍNIO CULINÁRIO — valide antes de prescrever:
-- Frango, carne, peixe, ovo → grelhados, assados ou cozidos
-- Arroz, feijão, lentilha, macarrão → cozidos em água
-- Salada, tomate, pepino → crus
-- NUNCA: "alface grelhada", "feijão cru", "banana frita em gordura"
-- Quantidades no estado consumido (cozido/grelhado/cru), não cru
-- Café da manhã: inclua sempre café + 2 itens nutritivos (ovo, fruta, tapioca, pão integral, aveia)
-- Almoço/jantar: proteína + carbo + legumes + salada
-- Lanche: mais leve, proteico
-
-MEDIDAS CASEIRAS (inclua para cada alimento):
-- 1 concha = ~80-100g arroz/feijão cozido
-- 1 col. sopa = ~15-20g (azeite ~12g)
-- 1 filé médio = ~100-120g proteína
-- 1 unidade = ovo, banana média (~120g)
-- 1 xícara = ~240ml líquido
-
-════════════════════════════════════════
-FORMATO DE SAÍDA — RESPONDA APENAS COM OS BLOCOS ABAIXO
-════════════════════════════════════════
-
-##META
-CALORIAS: ${metaCal}
-PROTEINA: ${protMeta}
-CARB: ${carbMeta}
-GORDURA: ${gordMeta}
-TMB: ${tmbMifflin}
-TDEE: ${tdee}
-
-##REFEICAO
-NOME: [nome da refeição]
-HORARIO: [ex: 07:00]
-TAG: [descrição curta — ex: Energia matinal · Pré-treino]
-[Alimento (preparo)]|[qtde + medida caseira]|[kcal]|[prot g]|[carb g]|[gord g]
-SUBTOTAL||[kcal]|[prot]|[carb]|[gord]
-
-(repita ##REFEICAO para TODAS as ${refs} refeições do dia)
-
-##RESUMO
-[Nome refeição]|[kcal]|[prot]|[carb]|[gord]
-TOTAL|[kcal total]|[prot total]|[carb total]|[gord total]
-
-##ORIENTACOES
-Água|${(peso*0.035).toFixed(1)} L/dia (35ml × ${peso}kg) — aumentar em dias de treino intenso
-Proteína|${protMeta}g/dia distribuídos em ${refs} refeições (~${Math.round(protMeta/refs)}g/refeição)
-Cafeína|Até 400mg/dia. Evitar após 14h para preservar qualidade do sono.
-Fibras|25–35g/dia via vegetais, leguminosas e grãos integrais
-Janela Alimentar|10–12h entre primeira e última refeição. Consistência > perfeição.
-${sono === "menos de 5h" || sono === "5-6h" ? "Sono|ATENÇÃO: sono insuficiente impacta síntese proteica e cortisol. Priorize 7-8h." : "Sono|Manter 7-8h para otimizar recuperação muscular e hormônios anabólicos."}
-${estresse === "alto" || estresse === "muito alto" ? "Estresse|Estresse elevado aumenta cortisol — incluir adaptógenos naturais (ashwagandha), magnésio, ômega-3." : ""}`;
 
   try {
-    // URL absoluta — evita "The string did not match the expected pattern" no iOS Safari
-    const _apiChatUrl = (/^https?:$/i.test(String(location.protocol || '')) && location.host)
-      ? location.protocol + '//' + location.host + '/api/chat'
-      : 'https://kronia.app.br/api/chat';
-    const resp = await apiFetch(_apiChatUrl, {
-      method: "POST",
-      body: JSON.stringify({
-        requestId: 'diet_' + Date.now(),
-        system: buildTrainingContext(),
-        messages: [{ role: "user", content: prompt }],
-        isGerarTreino: false,
-        isDietDirect: true,
-        dietProfile: {
-          objetivo: obj,
-          sexo: sexo,
-          peso: peso,
-          altura: altura,
-          idade: idade,
-          rotina: ativ,
-          restricoes: restric,
-          biotipo: biotipo,
-          preferencias: prefs,
-          alimentosEvitar: dislikes,
-          suplementos: todosSupl,
-          refeicoesPorDia: refs,
-          contextoTreino: { frequencia: freqTreino, duracao: duracaoTreino, tipo: tipoTreino },
-          saude: { patologia: patologia, medicamentos: medicamentos, sono: sono, estresse: estresse }
-        }
-      })
-    });
+    const resp = await requestDietRoute(dietPayload, 12000);
     const data = await parseApiJsonSafely(resp);
     if (!resp.ok || data.success === false) {
       logUiEvent("diet_pipeline_failed", { status: resp.status, error: data.error || "unknown_error" });
-      txt.textContent = resolveAiFriendlyError(data, resp.status);
+      txt.textContent = resolveDietRuntimeErrorMessage(data, resp.status, input, "A rota de dieta retornou erro.");
       return;
     }
+
     const renderModel = extractDietRenderModel(data);
     if (!renderModel) {
-      logUiEvent("diet_response_invalid_contract", { context: "gerarDieta.extractDietRenderModel", keys: Object.keys(data || {}) });
-      txt.textContent = resolveAiFriendlyError(data, resp.status);
+      logUiEvent("diet_response_invalid_contract", {
+        context: "gerarDieta.extractDietRenderModel",
+        keys: Object.keys(data || {}),
+      });
+      txt.textContent = buildLocalDietRenderText(input, "A resposta da dieta veio em formato inválido; aplicando plano local.");
       return;
     }
-    txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || "Não consegui montar a dieta agora. Tente novamente em instantes.";
+
+    txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || buildDietFallbackTextFromInput(input);
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({
-        type: 'diet',
-        sourceOfTruth: guard.generationTrace?.sourceOfTruth || 'supabase_scientific_evidence',
+        type: "diet",
+        sourceOfTruth: guard.generationTrace?.sourceOfTruth || "supabase_scientific_evidence",
         usedScientificEvidence: guard.generationTrace?.usedScientificEvidence,
         scienceTopicsUsed: guard.generationTrace?.scienceTopicsUsed || [],
         evidenceCount: guard.generationTrace?.evidenceCount || 0,
-        validationStatus: 'generated',
+        validationStatus: "generated",
         blockedReason: null,
         constraintsUsed: guard.generationTrace?.constraintsUsed || {},
-        userInputsUsed: guard.generationTrace?.userInputsUsed || { objetivo: obj, sexo: sexo, peso: peso, altura: altura, idade: idade },
+        userInputsUsed: guard.generationTrace?.userInputsUsed || dietPayload,
         respectedCardContext: false,
         respectedAnamnesisContext: true,
         usedFallback: !!guard.generationTrace?.usedFallback,
       }),
     });
-  } catch(e) {
-    logUiEvent("diet_pipeline_failed", { context: "gerarDieta.catch", error: e && e.message ? e.message : "unknown" });
-    txt.textContent = "Não consegui montar a dieta agora. Tente novamente em instantes.";
+  } catch (e) {
+    logUiEvent("diet_pipeline_failed", {
+      context: "gerarDieta.catch",
+      error: e && e.message ? e.message : "unknown",
+    });
+    txt.textContent = buildLocalDietRenderText(input, e && e.message ? e.message : "Falha de rede ao gerar dieta.");
+  } finally {
+    btn.disabled = false;
   }
-  finally { btn.disabled = false; }
-  if (fromChatDiet) {
+
+  if (input.fromChatDiet) {
     trackKroniaCta('diet_apply_completed_from_chat', 'success', {
       hasPayload: !!Object.keys(window._kroniaChatDietHydratedContext || {}).length,
     });

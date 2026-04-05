@@ -47,6 +47,7 @@ function loadCtaRuntime() {
     openConfig: [],
     openDietaSheet: [],
     openDieta: 0,
+    openAI: 0,
     trainingAction: [],
     dietAction: [],
     localStorage: new Map()
@@ -71,6 +72,7 @@ function loadCtaRuntime() {
     openConfig(payload) { calls.openConfig.push(payload); },
     openDietaSheet(payload) { calls.openDietaSheet.push(payload); },
     openDieta() { calls.openDieta += 1; },
+    openAI() { calls.openAI += 1; },
     writeAuditTracePatch() {},
     schedulePendingConversationIntentConsumption() {},
     localStorage: {
@@ -82,6 +84,7 @@ function loadCtaRuntime() {
     JSON,
   };
   context.window.localStorage = context.localStorage;
+  context.window.location = { href: '' };
 
   vm.createContext(context);
   vm.runInContext(snippets, context, { filename: 'cta-snippets.js' });
@@ -195,6 +198,17 @@ test('fallback works when KroniaActions is not ready', () => {
   assert.equal(trainingOk, true);
   assert.equal(dietOk, true);
   assert.ok(calls.navTo.includes('inicio'));
+});
+
+test('open_kronos falls back to chat entrypoint when no mapped executor exists', () => {
+  const { context, calls } = loadCtaRuntime();
+  context.window.KroniaActions = {};
+
+  const ok = context.window.handleKroniaCTA('open_kronos', { source: 'fallback-chat' }, { label: 'Abrir chat' });
+
+  assert.equal(ok, true);
+  assert.ok(calls.navTo.includes('inicio'));
+  assert.equal(calls.openAI, 1);
 });
 
 test('executeConversationCta preserves provided meta payload', () => {

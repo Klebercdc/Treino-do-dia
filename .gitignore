@@ -32,3 +32,5 @@ npm-debug.log*
 etl/scrapers/.cache/
 etl/scrapers/output/
 .tmp-system-check/
+.vercel
+.env*.local

@@ -395,10 +395,11 @@ async function classifyScientificArticlesBatch(limit) {
 }
 
 var OBJETIVO_TOPIC_KEYWORDS = {
-  hipertrofia: ['hypertrophy', 'protein', 'strength', 'creatine'],
-  emagrecimento: ['fat loss', 'protein'],
-  manutencao: ['protein', 'recovery'],
-  recomposicao: ['fat loss', 'hypertrophy', 'protein']
+  hipertrofia: ['hypertrophy', 'hipertrofia', 'muscle gain', 'ganho muscular', 'protein', 'proteina', 'strength', 'forca', 'creatine', 'creatina'],
+  emagrecimento: ['fat loss', 'emagrecimento', 'weight loss', 'perda de gordura', 'protein', 'proteina', 'deficit'],
+  manutencao: ['maintenance', 'manutencao', 'protein', 'proteina', 'recovery', 'recuperacao'],
+  recomposicao: ['body recomposition', 'recomposicao', 'fat loss', 'emagrecimento', 'hypertrophy', 'hipertrofia', 'protein', 'proteina'],
+  forca: ['strength', 'forca', 'powerlifting', 'creatine', 'creatina', 'protein', 'proteina']
 };
 
 async function listEvidenceByObjective(objetivo, limit) {

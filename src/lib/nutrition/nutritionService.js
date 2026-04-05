@@ -72,9 +72,10 @@ function normalizeActivity(input, rotina, frequencia) {
 }
 
 function normalizeSex(input) {
-  var raw = String(input || '').toLowerCase();
-  if (/fem/.test(raw)) return 'feminino';
-  if (/masc/.test(raw)) return 'masculino';
+  var raw = String(input || '').trim().toLowerCase();
+  if (!raw) return null;
+  if (/^(f|fem|feminino|female|mulher|woman)$/.test(raw)) return 'feminino';
+  if (/^(m|masc|masculino|male|homem|man)$/.test(raw)) return 'masculino';
   return null;
 }
 
@@ -84,7 +85,25 @@ function normalizeStringArray(input) {
   return String(input).split(',').map(function(v) { return v.trim(); }).filter(Boolean);
 }
 
+function normalizeFreeText(input) {
+  return String(input || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function textIncludesAny(text, items) {
+  var haystack = normalizeFreeText(text);
+  return (items || []).some(function(item) {
+    var needle = normalizeFreeText(item);
+    return needle && haystack.indexOf(needle) !== -1;
+  });
+}
+
 function buildNutritionProfile(input) {
+  var dietaryPattern = String(input.padraoAlimentar || input.dietaryPattern || '').trim();
+  var dislikes = normalizeStringArray(input.alimentosEvitar || input.dislikes);
   var profile = {
     sexo: normalizeSex(input.sexo),
     idade: Number(input.idade),
@@ -92,11 +111,18 @@ function buildNutritionProfile(input) {
     altura: Number(input.altura),
     objetivo: normalizeObjective(input.objetivo),
     nivelAtividade: normalizeActivity(input.nivelAtividade || input.nivel_atividade, input.rotina, input.frequencia),
-    restricoesAlimentares: normalizeStringArray(input.restricoesAlimentares || input.restricoes),
+    restricoesAlimentares: normalizeStringArray(input.restricoesAlimentares || input.restricoes).concat(dietaryPattern ? [dietaryPattern] : []),
     preferencias: normalizeStringArray(input.preferencias),
+    alimentosEvitar: dislikes,
     refeicoesPorDia: Math.min(6, Math.max(3, Number(input.refeicoesPorDia || input.refeicoes_por_dia || 4))),
     usoSuplementos: normalizeStringArray(input.usoSuplementos || input.suplementos),
-    observacoes: String(input.observacoes || '').trim()
+    observacoes: String(input.observacoes || '').trim(),
+    padraoAlimentar: dietaryPattern || null,
+    bodyFatPercent: input.gorduraCorporal || input.bodyFatPercent || null,
+    biotipo: String(input.biotipo || '').trim() || null,
+    contextoTreino: input.contextoTreino || input.trainingContext || null,
+    saude: input.saude || input.healthContext || null,
+    nutritionGoals: input.nutritionGoals || null
   };
 
   return profile;
@@ -139,19 +165,30 @@ function applyObjectiveToCalories(get, objective) {
   return round(get * (1 + config.calorieDelta));
 }
 
-function isRestricted(food, restrictions) {
+function isRestricted(food, restrictions, dislikes) {
   var text = restrictions.join(' ').toLowerCase();
-  if (!text) return false;
-  if (/vegetarian/.test(text) && /frango|patinho/.test(food.name.toLowerCase())) return true;
+  var disliked = (dislikes || []).join(' ').toLowerCase();
+  if (/vegetarian|vegetariano/.test(text) && /frango|patinho/.test(food.name.toLowerCase())) return true;
   if (/vegano|vegan/.test(text) && /frango|patinho|ovo|iogurte|whey/.test(food.name.toLowerCase())) return true;
   if (/lactose|latic/.test(text) && /iogurte|whey/.test(food.name.toLowerCase())) return true;
+  if (disliked && textIncludesAny(food.name, dislikes)) return true;
   return false;
 }
 
-function getFoodsByGroup(group, restrictions) {
-  return FOOD_CATALOG.filter(function(food) {
-    return food.group === group && !isRestricted(food, restrictions || []);
-  });
+function getFoodsByGroup(group, profile) {
+  var restrictions = profile && Array.isArray(profile.restricoesAlimentares) ? profile.restricoesAlimentares : [];
+  var dislikes = profile && Array.isArray(profile.alimentosEvitar) ? profile.alimentosEvitar : [];
+  var preferences = profile && Array.isArray(profile.preferencias) ? profile.preferencias : [];
+
+  return FOOD_CATALOG
+    .filter(function(food) {
+      return food.group === group && !isRestricted(food, restrictions, dislikes);
+    })
+    .sort(function(a, b) {
+      var aPreferred = textIncludesAny(a.name, preferences) ? 1 : 0;
+      var bPreferred = textIncludesAny(b.name, preferences) ? 1 : 0;
+      return bPreferred - aPreferred;
+    });
 }
 
 function allocateMealTargets(total, split, index) {
@@ -164,18 +201,18 @@ function allocateMealTargets(total, split, index) {
   };
 }
 
-function buildMealItems(target, restrictions, supplements) {
-  var proteinFood = getFoodsByGroup('proteina_magra', restrictions)[0] || getFoodsByGroup('proteina_veg', restrictions)[0] || getFoodsByGroup('proteina_ovos', restrictions)[0];
-  var carbFood = getFoodsByGroup('carbo_complexo', restrictions)[0] || getFoodsByGroup('carbo_fibra', restrictions)[0];
-  var veggie = getFoodsByGroup('vegetal', restrictions)[0];
-  var fatFood = getFoodsByGroup('gordura', restrictions)[0];
+function buildMealItems(target, profile) {
+  var proteinFood = getFoodsByGroup('proteina_magra', profile)[0] || getFoodsByGroup('proteina_veg', profile)[0] || getFoodsByGroup('proteina_ovos', profile)[0];
+  var carbFood = getFoodsByGroup('carbo_complexo', profile)[0] || getFoodsByGroup('carbo_fibra', profile)[0];
+  var veggie = getFoodsByGroup('vegetal', profile)[0];
+  var fatFood = getFoodsByGroup('gordura', profile)[0];
 
   var items = [];
   if (proteinFood) items.push(proteinFood);
   if (carbFood) items.push(carbFood);
   if (veggie) items.push(veggie);
   if (fatFood && target.fat > 8) items.push(fatFood);
-  if (supplements.some(function(s) { return /whey/.test(s.toLowerCase()); })) {
+  if ((profile.usoSuplementos || []).some(function(s) { return /whey/.test(s.toLowerCase()); })) {
     var whey = FOOD_CATALOG.find(function(food) { return food.code === 'whey_30'; });
     if (whey && target.protein >= 30) items.push(whey);
   }
@@ -218,7 +255,7 @@ function buildInitialNutritionPlan(profile, calc) {
       fat: calc.macros.fat
     }, split, index);
 
-    var items = buildMealItems(mealTarget, profile.restricoesAlimentares, profile.usoSuplementos);
+    var items = buildMealItems(mealTarget, profile);
 
     return {
       ordem: index + 1,

@@ -72,9 +72,13 @@ export async function GET(req: NextRequest) {
     const adminClient = createAdminSupabaseClient();
     const repository = new ExerciseRepository(adminClient);
 
-    const exercise = (exerciseId && await repository.findById(exerciseId))
-      || (slug && await repository.findBySlug(slug))
-      || (lookupKey && await repository.findByLookupKey(lookupKey));
+    const resolved = await repository.findExerciseByIdentity({
+      exerciseId: exerciseId || undefined,
+      slug: slug || undefined,
+      normalizedLookupKey: lookupKey || undefined,
+      exerciseName: lookupKey || slug || undefined,
+    });
+    const exercise = resolved.exercise;
 
     if (!exercise) {
       return NextResponse.json(buildExerciseDetailsErrorPayload('Exercício não encontrado.', 'EXERCISE_NOT_FOUND'), { status: 404 });
