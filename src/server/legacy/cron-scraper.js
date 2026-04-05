@@ -29,14 +29,29 @@ var https  = require('https');
 var crypto = require('crypto');
 var cors   = require('../apihelpers/_cors');
 
-var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-var SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+function readSupabaseUrl() {
+  return (
+    process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || ''
+  ).replace(/\/$/, '');
+}
+
+function readSupabaseServiceKey() {
+  return process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || '';
+}
+
+var SUPABASE_URL = readSupabaseUrl();
+var SERVICE_KEY  = readSupabaseServiceKey();
 var CRON_SECRET  = process.env.CRON_SECRET || '';
 
 var EXDB_URL = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 var EXDB_IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
-
-// ── Mapeamentos (mesmo padrão do github-exdb.js) ──────────────────────────────
 
 var MUSCLE_GROUP = {
   abdominals:'Abdômen/Lombar', abductors:'Glúteos', adductors:'Quadríceps/Isquiotibiais',
@@ -52,8 +67,6 @@ var EQUIPMENT_PT = {
   'medicine ball':'Bola Medicinal', 'exercise ball':'Bola Suíça',
   'foam roll':'Rolo de Espuma', 'e-z curl bar':'Barra EZ', other:'Outro',
 };
-
-// ── Helpers HTTP ──────────────────────────────────────────────────────────────
 
 function httpsGET(url) {
   return new Promise(function(resolve, reject) {
@@ -104,8 +117,6 @@ function supaUpsert(table, rows) {
   });
 }
 
-// ── Normalização ──────────────────────────────────────────────────────────────
-
 function normalizeExercises(raw) {
   return raw
     .filter(function(ex) { return ex.name; })
@@ -116,14 +127,13 @@ function normalizeExercises(raw) {
       var equipment   = EQUIPMENT_PT[eqKey] || ex.equipment || '';
       var imageUrl    = (ex.images && ex.images.length > 0) ? EXDB_IMG + ex.images[0] : null;
       var instructions = Array.isArray(ex.instructions)
-        ? ex.instructions  // guarda como array para o campo TEXT[] do Supabase
+        ? ex.instructions
         : (ex.instructions ? [ex.instructions] : null);
 
       return {
         name:              ex.name,
         muscle_group:      muscleGroup,
         source:            'free-exercise-db',
-        // Campos da migration 005
         instructions:      instructions,
         image_url:         imageUrl,
         level:             ex.level    || null,
@@ -135,14 +145,11 @@ function normalizeExercises(raw) {
     });
 }
 
-// ── Handler ───────────────────────────────────────────────────────────────────
-
 module.exports = async function handler(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'GET')     { res.status(405).json({ error: 'Use GET' }); return; }
 
-  // Segurança: valida o secret do cron (timing-safe para evitar timing attacks)
   var secret = req.headers['x-cron-secret'] || (req.query && req.query.secret) || '';
   var secretBuf   = Buffer.from(CRON_SECRET || '');
   var receivedBuf = Buffer.from(secret);
@@ -163,7 +170,6 @@ module.exports = async function handler(req, res) {
   var log     = [];
 
   try {
-    // 1. Baixa exercícios
     log.push({ ts: Date.now(), msg: 'Buscando free-exercise-db…' });
     var raw  = await httpsGET(EXDB_URL);
     log.push({ ts: Date.now(), msg: raw.length + ' exercícios brutos recebidos' });
@@ -171,7 +177,6 @@ module.exports = async function handler(req, res) {
     var rows = normalizeExercises(raw);
     log.push({ ts: Date.now(), msg: rows.length + ' exercícios normalizados' });
 
-    // 2. Upsert em batches de 200 (limite do Supabase REST)
     var BATCH    = 200;
     var batches  = Math.ceil(rows.length / BATCH);
     var inserted = 0;

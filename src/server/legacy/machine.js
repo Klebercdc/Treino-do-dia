@@ -35,10 +35,28 @@ var cors  = require('../apihelpers/_cors');
 var auth  = require('../apihelpers/_auth');
 var rl    = require('../apihelpers/_ratelimit');
 
-var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-var SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+function readSupabaseUrl() {
+  return (
+    process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || ''
+  ).replace(/\/$/, '');
+}
 
-// ── Supabase REST helper ──────────────────────────────────────────────────────
+function readSupabaseKey() {
+  return process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_ANON_KEY
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_ANON_KEY
+    || '';
+}
+
+var SUPABASE_URL = readSupabaseUrl();
+var SUPABASE_KEY = readSupabaseKey();
 
 function supaGET(path, userToken) {
   return new Promise(function(resolve, reject) {
@@ -71,8 +89,6 @@ function supaGET(path, userToken) {
   });
 }
 
-// ── KroniaEntity (servidor) ───────────────────────────────────────────────────
-
 function KE(type, value, confidence, props) {
   this.type       = type;
   this.value      = value;
@@ -80,8 +96,6 @@ function KE(type, value, confidence, props) {
   this.props      = props || {};
   this.id         = type + '::' + JSON.stringify(value);
 }
-
-// ── Deduplicação + TopN ───────────────────────────────────────────────────────
 
 function dedup(entities) {
   var seen = new Map();
@@ -96,8 +110,6 @@ function topN(entities, n) {
   if (!n || entities.length <= n) return entities;
   return entities.slice().sort(function(a, b) { return b.confidence - a.confidence; }).slice(0, n);
 }
-
-// ── free-exercise-db (cached por instância Vercel) ────────────────────────────
 
 var _exdbCache = null;
 var _EXDB_URL  = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
@@ -144,11 +156,7 @@ function loadExdb() {
   });
 }
 
-// ── Engine Factory — injeta dados do usuário nos transforms ──────────────────
-
 function createEngine(workoutHistory) {
-
-  /* ── REGISTRY DE TRANSFORMS ── */
   var R = {};
 
   R.expandTreinos = function(entity) {
@@ -251,7 +259,6 @@ function createEngine(workoutHistory) {
     var nome = (entity.value.nome || '').trim();
     if (!nome) return [];
 
-    // Circuit breaker: timeout de 6s na carga do índice
     var index;
     try {
       index = await Promise.race([
@@ -338,7 +345,6 @@ function createEngine(workoutHistory) {
     return recs;
   };
 
-  /* ── MACHINES ── */
   var MACHINES = {
     'kronia.full_analysis': {
       id: 'kronia.full_analysis', displayName: 'Análise Completa do Atleta',
@@ -397,7 +403,6 @@ function createEngine(workoutHistory) {
     },
   };
 
-  /* ── STEP EXECUTOR ── */
   async function execStep(step, workingSet, logger) {
     logger('[step:' + step.id + '] tipo=' + step.type + ' entrada=' + workingSet.length);
 
@@ -447,7 +452,6 @@ function createEngine(workoutHistory) {
     return workingSet;
   }
 
-  /* ── MACHINE RUNNER ── */
   async function run(machineId, userId) {
     var machine = MACHINES[machineId];
     if (!machine) throw new Error('Machine "' + machineId + '" não encontrada. Disponíveis: ' + Object.keys(MACHINES).join(', '));
@@ -487,14 +491,11 @@ function createEngine(workoutHistory) {
   return { run: run, machines: MACHINES };
 }
 
-// ── Handler HTTP ──────────────────────────────────────────────────────────────
-
 module.exports = async function handler(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST')    { res.status(405).json({ error: 'Use POST' }); return; }
 
-  // Autenticação
   var authHeader = req.headers['authorization'] || '';
   var token      = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
@@ -505,18 +506,15 @@ module.exports = async function handler(req, res) {
   });
   if (!user) { res.status(401).json({ error: 'Token inválido ou expirado' }); return; }
 
-  // Rate limit: 20 req/min por usuário
   var rateLimitDone = await new Promise(function(resolve) {
     rl.rateLimit(req, res, resolve, { max: 20, windowMs: 60000, category: 'ai_heavy_operation' }, user.id);
   });
-  if (res.headersSent) return; // rate limit bloqueou
+  if (res.headersSent) return;
 
-  // Valida body
   var body      = req.body || {};
   var machineId = (body.machineId || '').trim();
   if (!machineId) { res.status(400).json({ error: 'machineId é obrigatório' }); return; }
 
-  // Busca histórico do usuário no Supabase
   var workoutHistory = [];
   try {
     var rows = await supaGET(
@@ -526,11 +524,8 @@ module.exports = async function handler(req, res) {
       token
     );
     if (Array.isArray(rows)) workoutHistory = rows;
-  } catch(e) {
-    // Falha silenciosa — roda com histórico vazio (sem dados = recomendações vazias)
-  }
+  } catch(e) {}
 
-  // Executa a machine
   try {
     var engine = createEngine(workoutHistory);
     var result = await engine.run(machineId, user.id);
