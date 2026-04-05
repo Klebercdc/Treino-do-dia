@@ -11,9 +11,31 @@
 
 var https = require('https');
 
-var SUPABASE_URL = process.env.SUPABASE_URL;
+function readSupabaseUrl() {
+  return process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || '';
+}
+
+function readSupabaseAnonKey() {
+  return process.env.SUPABASE_ANON_KEY
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || process.env.VITE_SUPABASE_ANON_KEY
+    || '';
+}
+
+function readSupabaseServiceKey() {
+  return process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || '';
+}
+
+var SUPABASE_URL = readSupabaseUrl();
 if (!SUPABASE_URL) {
-  throw new Error('[_auth] SUPABASE_URL não configurada. Adicione a variável de ambiente no Vercel.');
+  throw new Error('[_auth] SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL não configurada. Adicione a variável de ambiente no Vercel.');
 }
 
 /**
@@ -24,9 +46,7 @@ if (!SUPABASE_URL) {
 function verifyToken(token, callback) {
   if (!token) return callback('Token ausente', null);
 
-  var apiKey = process.env.SUPABASE_SERVICE_KEY
-             || process.env.SUPABASE_SERVICE_ROLE_KEY
-             || process.env.SUPABASE_ANON_KEY;
+  var apiKey = readSupabaseServiceKey() || readSupabaseAnonKey();
 
   var baseUrl = SUPABASE_URL.replace(/\/$/, '');
   var urlObj = new URL(baseUrl + '/auth/v1/user');

@@ -12,7 +12,12 @@ var adminImportExercisesStatusHandler = require('../src/server/internal/http/adm
 var adminImportExercisesAutoHandler = require('../src/server/internal/http/admin-import-exercises-auto');
 var https = require('https');
 
-var SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+var SUPABASE_URL = (
+  process.env.SUPABASE_URL
+  || process.env.NEXT_PUBLIC_SUPABASE_URL
+  || process.env.VITE_SUPABASE_URL
+  || ''
+).replace(/\/$/, '');
 
 function handleScienceArticles(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -85,7 +90,10 @@ function handleLgpdExport(req, res) {
 }
 
 function deleteAuthUser(userId, callback) {
-  var serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  var serviceKey = process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) return callback(null, 'sem service key — exclusão de auth pendente');
 
   var hostname = SUPABASE_URL.replace('https://', '').replace('http://', '');
@@ -147,7 +155,7 @@ function handleLgpdDelete(req, res) {
       });
       });
     });
-    }, { max: 3, windowMs: 3600000, category: 'admin_operation' }, user.id); // 3 req/hora — operação irreversível
+    }, { max: 3, windowMs: 3600000, category: 'admin_operation' }, user.id);
   });
 }
 
@@ -175,7 +183,6 @@ module.exports = function(req, res) {
       return cronScraperHandler(req, res);
     case 'pastor-diagnostico':
       return pastorDiagnosticoHandler(req, res);
-
     case 'admin-import-exercises':
       return adminImportExercisesHandler(req, res);
     case 'admin-import-exercises-status':
