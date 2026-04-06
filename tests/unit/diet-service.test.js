@@ -4,6 +4,13 @@ const assert = require('node:assert/strict');
 const nutritionService = require('../../src/lib/nutrition/nutritionService');
 const dietService = require('../../src/services/diet/dietService');
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 test('nutritionService accepts abbreviated sex values for diet generation', () => {
   const result = nutritionService.generateNutritionPlan({
     sexo: 'F',
@@ -102,6 +109,41 @@ test('nutritionService returns daily totals aligned with meal subtotals and real
   assert.equal(Math.round(totals.proteina * 10) / 10, result.calculation.macros.protein);
   assert.equal(Math.round(totals.carbo * 10) / 10, result.calculation.macros.carbs);
   assert.equal(Math.round(totals.gordura * 10) / 10, result.calculation.macros.fat);
+});
+
+test('nutritionService keeps almoço brasileiro para onívoro e proteína vegetal para vegano', () => {
+  const omnivore = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 30,
+    peso: 80,
+    altura: 176,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 5,
+    padraoAlimentar: 'onívoro',
+  });
+  assert.equal(omnivore.failSafe, false);
+  const lunch = omnivore.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('almoco'));
+  const lunchFoods = lunch.itens.map((item) => item.nome.toLowerCase());
+  assert.ok(lunchFoods.some((name) => /frango|patinho|til[aá]pia/.test(name)));
+  assert.ok(lunchFoods.some((name) => /arroz/.test(name)));
+  assert.ok(lunchFoods.some((name) => /feij[aã]o/.test(name)));
+  assert.ok(!lunchFoods.some((name) => /tofu/.test(name)));
+
+  const vegan = nutritionService.generateNutritionPlan({
+    sexo: 'F',
+    idade: 28,
+    peso: 62,
+    altura: 167,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 5,
+    padraoAlimentar: 'vegano',
+  });
+  assert.equal(vegan.failSafe, false);
+  const veganLunch = vegan.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('almoco'));
+  const veganLunchFoods = veganLunch.itens.map((item) => item.nome.toLowerCase());
+  assert.ok(veganLunchFoods.some((name) => /tofu/.test(name)));
+  assert.ok(veganLunchFoods.some((name) => /arroz/.test(name)));
+  assert.ok(veganLunchFoods.some((name) => /feij[aã]o/.test(name)));
 });
 
 test('dietService returns safe failsafe response when critical profile data is missing', async () => {

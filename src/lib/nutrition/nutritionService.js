@@ -229,6 +229,18 @@ function isRestricted(food, restrictions, dislikes) {
   return false;
 }
 
+function isVeganProfile(profile) {
+  return /vegano|vegan/.test(normalizeFreeText((profile.restricoesAlimentares || []).join(' ')));
+}
+
+function isVegetarianProfile(profile) {
+  return /vegetarian|vegetariano/.test(normalizeFreeText((profile.restricoesAlimentares || []).join(' ')));
+}
+
+function isPlantProtein(food) {
+  return /tofu/.test(normalizeFreeText(food && food.name));
+}
+
 function chooseFood(listName, profile, fallbackIndex) {
   var items = (FOOD_LIBRARY[listName] || []).filter(function(food) {
     return !isRestricted(food, profile.restricoesAlimentares, profile.alimentosEvitar);
@@ -237,7 +249,12 @@ function chooseFood(listName, profile, fallbackIndex) {
   items = items.slice().sort(function(a, b) {
     var aPref = textIncludesAny(a.name, profile.preferencias) ? 1 : 0;
     var bPref = textIncludesAny(b.name, profile.preferencias) ? 1 : 0;
-    return bPref - aPref;
+    var aPlant = isPlantProtein(a) ? 1 : 0;
+    var bPlant = isPlantProtein(b) ? 1 : 0;
+    if (!isVeganProfile(profile) && !isVegetarianProfile(profile)) {
+      if (aPlant !== bPlant) return aPlant - bPlant;
+    }
+    return (bPref - aPref) || (aPlant - bPlant);
   });
   return items[fallbackIndex % Math.max(items.length, 1)] || null;
 }
@@ -317,13 +334,35 @@ function buildMealItems(template, profile, macros, index) {
   supportCarb = chooseFood('supportCarbs', profile, index);
   fatSource = chooseFood('fats', profile, index);
   veggieSource = chooseFood('veggies', profile, index);
+  var beanSource = (FOOD_LIBRARY.mealCarbs || []).find(function(food) { return /feijao/.test(normalizeFreeText(food.name)); });
+  var riceSource = (FOOD_LIBRARY.mealCarbs || []).find(function(food) { return /arroz/.test(normalizeFreeText(food.name)); });
+  var breakfastFruit = (FOOD_LIBRARY.breakfastCarbs || []).find(function(food) { return /banana/.test(normalizeFreeText(food.name)); });
+  var isMainMeal = /almoco|jantar/.test(template.tipo);
+  var isBreakfast = /cafe/.test(template.tipo);
+  var isSnack = /lanche/.test(template.tipo);
+  var isWorkoutMeal = /pre_treino|pos_treino/.test(template.tipo);
 
   var items = [];
-  if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(0.8, macros.protein / Math.max(proteinSource.protein, 1))));
-  if (carbSource) items.push(cloneFoodItem(carbSource, Math.max(0.7, (macros.carbs * 0.72) / Math.max(carbSource.carbs, 1))));
-  if (supportCarb && macros.carbs > 25) items.push(cloneFoodItem(supportCarb, Math.max(0.6, (macros.carbs * 0.28) / Math.max(supportCarb.carbs, 1))));
-  if (veggieSource && !/lanche/.test(template.tipo)) items.push(cloneFoodItem(veggieSource, 1));
-  if (fatSource && macros.fat > 4) items.push(cloneFoodItem(fatSource, Math.max(0.4, macros.fat / Math.max(fatSource.fat, 1))));
+  if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(0.8, Math.min(1.45, macros.protein / Math.max(proteinSource.protein, 1)))));
+
+  if (isBreakfast) {
+    if (carbSource) items.push(cloneFoodItem(carbSource, Math.max(0.8, Math.min(1.3, (macros.carbs * 0.65) / Math.max(carbSource.carbs, 1)))));
+    if (breakfastFruit && breakfastFruit.code !== (carbSource && carbSource.code)) {
+      items.push(cloneFoodItem(breakfastFruit, Math.max(0.6, Math.min(1.1, (macros.carbs * 0.2) / Math.max(breakfastFruit.carbs, 1)))));
+    }
+  } else if (isMainMeal) {
+    if (riceSource) items.push(cloneFoodItem(riceSource, Math.max(0.8, Math.min(1.5, (macros.carbs * 0.55) / Math.max(riceSource.carbs, 1)))));
+    if (beanSource) items.push(cloneFoodItem(beanSource, Math.max(0.7, Math.min(1.4, (macros.carbs * 0.25) / Math.max(beanSource.carbs, 1)))));
+    if (supportCarb && macros.carbs > 28) items.push(cloneFoodItem(supportCarb, Math.max(0.45, Math.min(0.9, (macros.carbs * 0.12) / Math.max(supportCarb.carbs, 1)))));
+  } else {
+    if (carbSource) items.push(cloneFoodItem(carbSource, Math.max(0.7, Math.min(1.3, (macros.carbs * 0.68) / Math.max(carbSource.carbs, 1)))));
+    if (supportCarb && macros.carbs > 25) items.push(cloneFoodItem(supportCarb, Math.max(0.5, Math.min(1.0, (macros.carbs * 0.22) / Math.max(supportCarb.carbs, 1)))));
+  }
+
+  if (veggieSource && !isSnack) items.push(cloneFoodItem(veggieSource, 1));
+  if (fatSource && macros.fat > 4 && !isWorkoutMeal) {
+    items.push(cloneFoodItem(fatSource, Math.max(0.3, Math.min(isBreakfast ? 0.8 : 1.0, macros.fat / Math.max(fatSource.fat, 1)))));
+  }
 
   items = items.map(function(item) {
     return Object.assign({}, item, {
@@ -341,7 +380,7 @@ function buildMealItems(template, profile, macros, index) {
       substituicoes: buildSubstitutions(cloneFoodItem(whey, 1), profile)
     }));
   }
-  if (carbGap > 8) {
+  if (carbGap > 8 && !isMainMeal) {
     var banana = chooseFood('supportCarbs', profile, 0) || chooseFood('breakfastCarbs', profile, 0);
     if (banana) items.push(Object.assign({}, cloneFoodItem(banana, Math.max(0.5, carbGap / Math.max(banana.carbs, 1))), {
       substituicoes: buildSubstitutions(cloneFoodItem(banana, 1), profile)

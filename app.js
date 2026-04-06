@@ -7470,6 +7470,8 @@ function buildLocalDietFoodCatalog(input) {
   const restricoes = splitDietList(safeInput.restricoes);
   const padrao = normalizeDietFoodText(safeInput.padraoAlimentar);
   const suplementos = Array.isArray(safeInput.suplementos) ? safeInput.suplementos : [];
+  const isVegan = /vegano|vegan/.test(padrao);
+  const isVegetarian = /vegetarian|vegetariano/.test(padrao);
 
   function allowed(item) {
     if (dietTextIncludesAny(item.nome, evitar)) return false;
@@ -7483,7 +7485,10 @@ function buildLocalDietFoodCatalog(input) {
     return items.slice().sort(function (a, b) {
       const aScore = dietTextIncludesAny(a.nome, preferencias) ? 1 : 0;
       const bScore = dietTextIncludesAny(b.nome, preferencias) ? 1 : 0;
-      return bScore - aScore;
+      const aPlant = /tofu/i.test(a.nome) ? 1 : 0;
+      const bPlant = /tofu/i.test(b.nome) ? 1 : 0;
+      if (!isVegan && !isVegetarian && aPlant !== bPlant) return aPlant - bPlant;
+      return (bScore - aScore) || (aPlant - bPlant);
     });
   }
 
@@ -7561,6 +7566,10 @@ function buildLocalDietFoodCatalog(input) {
     fats: fats.length ? fats : [{ nome: "Abacate", porcao: "100 g", kcal: 96, prot: 1.2, carb: 6, gord: 8.4 }],
     veggies: veggies.length ? veggies : [{ nome: "Salada verde", porcao: "1 prato", kcal: 20, prot: 1, carb: 3, gord: 0.2 }],
     extras: extras,
+    helpers: {
+      isVegan: isVegan,
+      isVegetarian: isVegetarian,
+    },
   };
 }
 
@@ -7649,11 +7658,26 @@ function buildLocalDietPlan(input) {
     const extra = catalog.extras[index % Math.max(catalog.extras.length, 1)] || null;
     const isWorkoutMeal = /pre_treino|pos_treino/.test(template.tipo);
     const isBreakfast = /cafe/.test(template.tipo);
+    const isMainMeal = /almoco|jantar/.test(template.tipo);
+    const rice = catalog.mealCarbs.find(function(item) { return /arroz/i.test(item.nome); }) || catalog.mealCarbs[0];
+    const beans = catalog.mealCarbs.find(function(item) { return /feij[aã]o/i.test(item.nome); }) || catalog.mealCarbs[0];
+    const breakfastFruit = catalog.breakfastCarbs.find(function(item) { return /banana/i.test(item.nome); }) || catalog.breakfastCarbs[0];
 
     const alimentos = [];
     alimentos.push(cloneFood(protein, Math.max(0.9, Math.min(1.4, mealProteinTarget / Math.max(protein.prot, 1)))));
-    alimentos.push(cloneFood(carb, Math.max(0.8, Math.min(1.6, (mealCarbTarget * 0.7) / Math.max(carb.carb, 1)))));
-    if (mealCarbTarget > 28) alimentos.push(cloneFood(supportCarb, Math.max(0.6, Math.min(1.2, (mealCarbTarget * 0.2) / Math.max(supportCarb.carb, 1)))));
+    if (isBreakfast) {
+      alimentos.push(cloneFood(carb, Math.max(0.8, Math.min(1.3, (mealCarbTarget * 0.65) / Math.max(carb.carb, 1)))));
+      if (breakfastFruit && breakfastFruit.nome !== carb.nome) {
+        alimentos.push(cloneFood(breakfastFruit, Math.max(0.6, Math.min(1.1, (mealCarbTarget * 0.2) / Math.max(breakfastFruit.carb, 1)))));
+      }
+    } else if (isMainMeal) {
+      alimentos.push(cloneFood(rice, Math.max(0.8, Math.min(1.5, (mealCarbTarget * 0.55) / Math.max(rice.carb, 1)))));
+      alimentos.push(cloneFood(beans, Math.max(0.7, Math.min(1.4, (mealCarbTarget * 0.25) / Math.max(beans.carb, 1)))));
+      if (mealCarbTarget > 28) alimentos.push(cloneFood(supportCarb, Math.max(0.45, Math.min(0.9, (mealCarbTarget * 0.12) / Math.max(supportCarb.carb, 1)))));
+    } else {
+      alimentos.push(cloneFood(carb, Math.max(0.8, Math.min(1.4, (mealCarbTarget * 0.68) / Math.max(carb.carb, 1)))));
+      if (mealCarbTarget > 28) alimentos.push(cloneFood(supportCarb, Math.max(0.6, Math.min(1.0, (mealCarbTarget * 0.22) / Math.max(supportCarb.carb, 1)))));
+    }
     if (!/lanche/.test(template.tipo)) alimentos.push(cloneFood(veggie, 1));
 
     const subtotalBeforeFat = sumMeal(alimentos);
