@@ -51,3 +51,32 @@ test('enrichDietPayload merges Supabase profile into sparse request payload', ()
   assert.equal(result.profile.bodyFatPercent, 22);
   assert.equal(result.nutritionGoals.calories_target, 2100);
 });
+
+test('enrichDietPayload inclui contexto clínico do exame válido mais recente', () => {
+  const result = helper.enrichDietPayload({}, {
+    profile: {
+      birth_date: '1992-01-01',
+      sex: 'masculino',
+      height_cm: 180,
+      current_weight_kg: 84,
+      activity_level: 'ativo',
+      objective: 'hipertrofia',
+    },
+    latestLabReport: {
+      id: 'lab-1',
+      parsed: { glucose: 108, hba1c: 5.9, potassium: 4.8, ldl: 120 },
+      confidence: 0.67,
+      isValid: true,
+      mode: 'clinical',
+      clinicalFlags: ['pre_diabetes', 'glycemic_risk'],
+      criticalFlags: [],
+      createdAt: '2026-04-06T10:00:00Z',
+    },
+  });
+
+  assert.equal(result.labContext.id, 'lab-1');
+  assert.equal(result.labContext.mode, 'clinical');
+  assert.deepEqual(result.labContext.clinicalFlags, ['pre_diabetes', 'glycemic_risk']);
+  assert.equal(result.profile.labContext.id, 'lab-1');
+  assert.equal(result.context.labContext.id, 'lab-1');
+});

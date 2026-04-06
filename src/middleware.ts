@@ -22,6 +22,8 @@ export const config = {
     '/api/kronia/workout',
     '/api/kronia/intent',
     '/api/kronia/intelligence',
+    '/api/labs/upload',
+    '/api/kronia/labs/upload',
     '/api/kronia/exercises/discovery',
     '/api/kronia/exercises/details',
     '/api/kronia/exercises/catalog-admin',

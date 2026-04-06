@@ -153,6 +153,113 @@ function normalizeFreeText(input) {
     .trim();
 }
 
+function normalizeClinicalFlags(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(function(item) { return String(item || '').trim(); }).filter(Boolean);
+  return [];
+}
+
+function resolveDietMode(labReport) {
+  if (!labReport || !labReport.isValid || !labReport.parsed) return 'standard';
+  return 'clinical';
+}
+
+function applyClinicalRules(labReport) {
+  var parsed = labReport && labReport.parsed && typeof labReport.parsed === 'object' ? labReport.parsed : null;
+  if (!parsed) return { mode: 'standard', clinicalFlags: [], criticalFlags: [] };
+
+  var clinicalFlags = [];
+  var criticalFlags = [];
+
+  if (Number(parsed.glucose) > 100) clinicalFlags.push('pre_diabetes');
+  if (Number(parsed.hba1c) > 5.7) clinicalFlags.push('glycemic_risk');
+  if (Number(parsed.potassium) > 5) clinicalFlags.push('high_potassium');
+  if (Number(parsed.ldl) > 130) clinicalFlags.push('high_ldl');
+
+  if (Number(parsed.glucose) >= 126) criticalFlags.push('hyperglycemia_alert');
+  if (Number(parsed.hba1c) >= 6.5) criticalFlags.push('hba1c_alert');
+  if (Number(parsed.potassium) >= 5.5) criticalFlags.push('potassium_alert');
+  if (Number(parsed.creatinine) >= 2) criticalFlags.push('kidney_alert');
+  if (Number(parsed.ldl) >= 160) criticalFlags.push('ldl_alert');
+
+  return {
+    mode: 'clinical',
+    clinicalFlags: clinicalFlags,
+    criticalFlags: criticalFlags
+  };
+}
+
+function buildLabContext(input) {
+  var source = input && typeof input === 'object' ? input : null;
+  if (!source) return { mode: 'standard', parsed: null, clinicalFlags: [], criticalFlags: [], isValid: false };
+
+  var parsed = source.parsed && typeof source.parsed === 'object' ? source.parsed : null;
+  var clinicalFlags = normalizeClinicalFlags(source.clinicalFlags || source.clinical_flags);
+  var criticalFlags = normalizeClinicalFlags(source.criticalFlags || source.critical_flags);
+  var isValid = source.isValid === true || source.is_valid === true;
+  var mode = resolveDietMode({ parsed: parsed, isValid: isValid });
+
+  if (mode === 'clinical' && !clinicalFlags.length && !criticalFlags.length) {
+    var recalculated = applyClinicalRules({ parsed: parsed, isValid: isValid });
+    clinicalFlags = recalculated.clinicalFlags;
+    criticalFlags = recalculated.criticalFlags;
+  }
+
+  return {
+    id: source.id || null,
+    parsed: parsed,
+    confidence: Number(source.confidence || 0),
+    isValid: isValid,
+    mode: mode,
+    clinicalFlags: clinicalFlags,
+    criticalFlags: criticalFlags,
+    createdAt: source.createdAt || source.created_at || null
+  };
+}
+
+function hasClinicalFlag(profile, flag) {
+  return !!(profile.labContext && Array.isArray(profile.labContext.clinicalFlags) && profile.labContext.clinicalFlags.indexOf(flag) !== -1);
+}
+
+function hasCriticalLabFlag(profile) {
+  return !!(profile.labContext && Array.isArray(profile.labContext.criticalFlags) && profile.labContext.criticalFlags.length);
+}
+
+function shouldAvoidFoodForClinical(food, profile) {
+  var name = normalizeFreeText(food && food.name);
+  if (!name) return false;
+  if (hasClinicalFlag(profile, 'high_potassium') && (/banana|abacate|batata-doce/.test(name))) return true;
+  if (hasClinicalFlag(profile, 'high_ldl') && (/patinho/.test(name))) return true;
+  if ((hasClinicalFlag(profile, 'pre_diabetes') || hasClinicalFlag(profile, 'glycemic_risk')) && (/mel/.test(name))) return true;
+  return false;
+}
+
+function getClinicalPenalty(food, profile) {
+  var name = normalizeFreeText(food && food.name);
+  var penalty = 0;
+  if ((hasClinicalFlag(profile, 'pre_diabetes') || hasClinicalFlag(profile, 'glycemic_risk')) && (/granola|pao integral|macarrao/.test(name))) penalty += 4;
+  if (hasClinicalFlag(profile, 'high_ldl') && (/ovo|iogurte/.test(name))) penalty += 2;
+  return penalty;
+}
+
+function applyMedicalAdjustments(profile, targetCalories, macros) {
+  var adjustedCalories = targetCalories;
+  var adjustedMacros = {
+    protein: macros.protein,
+    carbs: macros.carbs,
+    fat: macros.fat
+  };
+
+  if (hasCriticalLabFlag(profile)) {
+    adjustedCalories = round(profile.getForClinicalSafety || targetCalories);
+  }
+
+  return {
+    targetCalories: adjustedCalories,
+    macros: adjustedMacros
+  };
+}
+
 function textIncludesAny(text, items) {
   var haystack = normalizeFreeText(text);
   return (items || []).some(function(item) {
@@ -183,7 +290,8 @@ function buildNutritionProfile(input) {
     biotipo: String(input.biotipo || '').trim() || null,
     contextoTreino: training,
     saude: input.saude || input.healthContext || null,
-    nutritionGoals: input.nutritionGoals || null
+    nutritionGoals: input.nutritionGoals || null,
+    labContext: buildLabContext(input.labContext || (input.saude && input.saude.labContext) || null)
   };
 }
 
@@ -243,7 +351,7 @@ function isPlantProtein(food) {
 
 function chooseFood(listName, profile, fallbackIndex) {
   var items = (FOOD_LIBRARY[listName] || []).filter(function(food) {
-    return !isRestricted(food, profile.restricoesAlimentares, profile.alimentosEvitar);
+    return !isRestricted(food, profile.restricoesAlimentares, profile.alimentosEvitar) && !shouldAvoidFoodForClinical(food, profile);
   });
   if (!items.length) items = FOOD_LIBRARY[listName] || [];
   items = items.slice().sort(function(a, b) {
@@ -251,6 +359,9 @@ function chooseFood(listName, profile, fallbackIndex) {
     var bPref = textIncludesAny(b.name, profile.preferencias) ? 1 : 0;
     var aPlant = isPlantProtein(a) ? 1 : 0;
     var bPlant = isPlantProtein(b) ? 1 : 0;
+    var aPenalty = getClinicalPenalty(a, profile);
+    var bPenalty = getClinicalPenalty(b, profile);
+    if (aPenalty !== bPenalty) return aPenalty - bPenalty;
     if (!isVeganProfile(profile) && !isVegetarianProfile(profile)) {
       if (aPlant !== bPlant) return aPlant - bPlant;
     }
@@ -337,6 +448,7 @@ function buildMealItems(template, profile, macros, index) {
   var beanSource = (FOOD_LIBRARY.mealCarbs || []).find(function(food) { return /feijao/.test(normalizeFreeText(food.name)); });
   var riceSource = (FOOD_LIBRARY.mealCarbs || []).find(function(food) { return /arroz/.test(normalizeFreeText(food.name)); });
   var breakfastFruit = (FOOD_LIBRARY.breakfastCarbs || []).find(function(food) { return /banana/.test(normalizeFreeText(food.name)); });
+  if (breakfastFruit && shouldAvoidFoodForClinical(breakfastFruit, profile)) breakfastFruit = null;
   var isMainMeal = /almoco|jantar/.test(template.tipo);
   var isBreakfast = /cafe/.test(template.tipo);
   var isSnack = /lanche/.test(template.tipo);
@@ -485,10 +597,12 @@ function calculateNutrition(profileInput) {
   var bmr = calculateBmr(profile);
   var get = calculateGet(bmr, profile);
   var requestedTarget = profile.nutritionGoals && Number(profile.nutritionGoals.calories_target);
-  var targetCalories = Number.isFinite(requestedTarget) && requestedTarget > 1200
+  var rawTargetCalories = Number.isFinite(requestedTarget) && requestedTarget > 1200
     ? round(requestedTarget)
     : applyObjectiveToCalories(get, profile.objetivo);
-  var macros = calculateMacroTargets(profile, targetCalories);
+  profile.getForClinicalSafety = round(get);
+  var macros = calculateMacroTargets(profile, rawTargetCalories);
+  var clinicalAdjusted = applyMedicalAdjustments(profile, rawTargetCalories, macros);
 
   return {
     profile: profile,
@@ -501,8 +615,8 @@ function calculateNutrition(profileInput) {
     result: {
       tmb: bmr,
       get: get,
-      targetCalories: targetCalories,
-      macros: macros,
+      targetCalories: clinicalAdjusted.targetCalories,
+      macros: clinicalAdjusted.macros,
       activityFactor: ACTIVITY_FACTORS[profile.nivelAtividade],
       objective: profile.objetivo
     }
@@ -514,6 +628,22 @@ function generateNutritionPlan(profileInput) {
   if (calc.failSafe) return calc;
 
   var plan = buildInitialNutritionPlan(calc.profile, calc.result);
+  var clinicalNotes = [];
+  if (calc.profile.labContext && calc.profile.labContext.mode === 'clinical') {
+    clinicalNotes.push('Plano ajustado com base no seu exame recente.');
+    if (hasClinicalFlag(calc.profile, 'pre_diabetes') || hasClinicalFlag(calc.profile, 'glycemic_risk')) {
+      clinicalNotes.push('Carboidratos distribuídos de forma mais estável ao longo do dia, com menor ênfase em fontes refinadas.');
+    }
+    if (hasClinicalFlag(calc.profile, 'high_potassium')) {
+      clinicalNotes.push('Foram evitados alimentos com maior carga de potássio, como banana, abacate e batata-doce.');
+    }
+    if (hasClinicalFlag(calc.profile, 'high_ldl')) {
+      clinicalNotes.push('Foram priorizadas fontes proteicas mais magras e fibras alimentares para um plano mais conservador.');
+    }
+    if (hasCriticalLabFlag(calc.profile)) {
+      clinicalNotes.push('Valores críticos recentes mantiveram o plano em modo conservador, sem estratégia agressiva de cutting ou bulking.');
+    }
+  }
   return {
     profile: calc.profile,
     failSafe: false,
@@ -531,7 +661,16 @@ function generateNutritionPlan(profileInput) {
       objective: calc.result.objective
     },
     plan: plan,
-    clinicalSafety: 'Plano esportivo educacional. Não substitui conduta clínica, terapêutica ou nutricional individualizada em casos complexos.'
+    clinicalContext: {
+      mode: calc.profile.labContext.mode,
+      clinicalFlags: calc.profile.labContext.clinicalFlags,
+      criticalFlags: calc.profile.labContext.criticalFlags,
+      summaryMessage: clinicalNotes[0] || null,
+      reportDate: calc.profile.labContext.createdAt || null,
+      confidence: calc.profile.labContext.confidence || 0
+    },
+    clinicalSafety: 'Plano esportivo educacional. Não substitui conduta clínica, terapêutica ou nutricional individualizada em casos complexos.',
+    clinicalNotes: clinicalNotes
   };
 }
 
@@ -539,6 +678,9 @@ module.exports = {
   ACTIVITY_FACTORS: ACTIVITY_FACTORS,
   FOOD_LIBRARY: FOOD_LIBRARY,
   buildNutritionProfile: buildNutritionProfile,
+  resolveDietMode: resolveDietMode,
+  applyClinicalRules: applyClinicalRules,
+  applyMedicalAdjustments: applyMedicalAdjustments,
   calculateNutrition: calculateNutrition,
   generateNutritionPlan: generateNutritionPlan,
   round: round
