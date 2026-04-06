@@ -13,11 +13,18 @@ type CheckResult = {
   message?: string;
 };
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_URL = process.env.SUPABASE_URL
+  || process.env.NEXT_PUBLIC_SUPABASE_URL
+  || process.env.VITE_SUPABASE_URL
+  || '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_SERVICE_KEY
+  || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+  || process.env.VITE_SUPABASE_SERVICE_KEY
+  || '';
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('❌ SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.');
+  console.error('❌ SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SERVICE_KEY são obrigatórios.');
   process.exit(1);
 }
 
