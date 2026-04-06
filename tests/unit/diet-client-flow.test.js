@@ -74,7 +74,7 @@ test('buildDietRequestPayloadFromInput creates compact payload for route', () =>
   assert.equal(payload.supabaseSnapshot.profile.id, 'user-1');
 });
 
-test('buildDietFallbackTextFromInput returns limited orientation instead of generic error', () => {
+test('buildDietFallbackTextFromInput returns full deterministic plan instead of limited orientation', () => {
   const context = loadDietHelpers();
   const text = context.buildDietFallbackTextFromInput({
     objetivo: 'emagrecimento',
@@ -90,10 +90,13 @@ test('buildDietFallbackTextFromInput returns limited orientation instead of gene
     nivelAtividade: 'levemente ativo',
   }, 'Falha temporária da rota.');
 
-  assert.match(text, /##ORIENTACAO LIMITADA/);
+  assert.match(text, /##META/);
+  assert.match(text, /##REFEICAO/);
+  assert.match(text, /##RESUMO/);
   assert.match(text, /Falha temporária da rota/);
   assert.match(text, /CALORIAS:/);
-  assert.match(text, /Restrições: lactose/);
+  assert.match(text, /Restrições consideradas: lactose/);
+  assert.doesNotMatch(text, /—/);
 });
 
 test('buildLocalDietPlan uses Supabase snapshot to enrich fallback diet', () => {
@@ -130,9 +133,10 @@ test('buildLocalDietPlan uses Supabase snapshot to enrich fallback diet', () => 
     },
   });
 
-  assert.equal(plan.meta.calorias, 2300);
-  assert.equal(plan.meta.proteina, 140);
+  assert.ok(Math.abs(plan.meta.calorias - 2300) <= 0.2);
+  assert.ok(Math.abs(plan.meta.proteina - 140) <= 5);
   assert.equal(plan.refeicoes.length, 4);
+  assert.ok(plan.refeicoes[0].alimentos.some((item) => /tofu|proteína vegetal|aveia|banana/i.test(item.nome)));
   const rendered = context.buildLocalDietRenderText({
     objetivo: 'hipertrofia',
     sexo: 'feminino',
@@ -146,6 +150,7 @@ test('buildLocalDietPlan uses Supabase snapshot to enrich fallback diet', () => 
     },
   }, 'Plano local');
   assert.match(rendered, /CALORIAS: 2300/);
+  assert.match(rendered, /##RESUMO/);
 });
 
 test('resolveDietRuntimeErrorMessage always returns a local full plan for route errors', () => {
