@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import { checkRateLimit } from '../../../../../lib/utils/serverRateLimit';
-import { buildExerciseDetails, KroniaExerciseApplication } from '../../../../../lib/exercises/application';
-import { ExerciseRepository } from '../../../../../lib/exercises/repository';
+import { KroniaExerciseApplication } from '../../../../../lib/exercises/application';
 
 function buildExerciseDetailsSuccessPayload(data: unknown, meta: Record<string, unknown> = {}) {
   return {
@@ -58,7 +57,7 @@ function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error';
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireBearerAuth(req);
-    if (!auth.ok) return auth.response;
+    if (!auth.ok || !('user' in auth)) return auth.response;
 
     const { searchParams } = new URL(req.url);
     const exerciseId = searchParams.get('id')?.trim() || '';
@@ -70,28 +69,21 @@ export async function GET(req: NextRequest) {
     }
 
     const adminClient = createAdminSupabaseClient();
-    const repository = new ExerciseRepository(adminClient);
-
-    const resolved = await repository.findExerciseByIdentity({
+    const service = new KroniaExerciseApplication(adminClient);
+    const result = await service.getExerciseDetailsByName({
+      userId: auth.user.id,
       exerciseId: exerciseId || undefined,
       slug: slug || undefined,
       normalizedLookupKey: lookupKey || undefined,
       exerciseName: lookupKey || slug || undefined,
+      locale: 'pt',
     });
-    const exercise = resolved.exercise;
-
-    if (!exercise) {
-      return NextResponse.json(buildExerciseDetailsErrorPayload('Exercício não encontrado.', 'EXERCISE_NOT_FOUND'), { status: 404 });
+    if (result.status === 'success' && result.data) {
+      return NextResponse.json(result.data, { status: 200 });
     }
-
-    const enriched = await buildExerciseDetails(exercise);
-    console.info('[kronia_exercise] exercise_details_enriched_returned', {
-      id: enriched.id,
-      slug: enriched.slug,
-      normalizedLookupKey: enriched.metadata?.normalizedLookupKey,
-    });
-
-    return NextResponse.json(enriched, { status: 200 });
+    const envelope = normalizeExerciseDetailsEnvelope(result);
+    const statusCode = envelope.type === 'exercise_partial' ? 206 : (((envelope as any).error?.code === 'EXERCISE_NOT_FOUND') ? 404 : 422);
+    return NextResponse.json(envelope, { status: statusCode });
   } catch (error) {
     console.error('[kronia/exercises/details][GET] erro interno:', error instanceof Error ? error.message : error);
     return NextResponse.json(
@@ -106,7 +98,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireBearerAuth(req);
-    if (!auth.ok) return auth.response;
+    if (!auth.ok || !('user' in auth)) return auth.response;
 
     const userId = auth.user.id;
     const rateLimit = await checkRateLimit(userId, { max: 40, windowMs: 60000, category: 'ai_heavy_operation' });

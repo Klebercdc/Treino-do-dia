@@ -30,6 +30,7 @@
     "seed:exercises": "tsx scripts/seed-exercises.ts",
     "import:exercises:catalog": "tsx scripts/import-exercises-catalog.ts",
     "sync:exercises": "tsx scripts/sync-exercises-weekly.ts",
+    "enrich:exercises:media": "tsx scripts/enrich-exercises.ts",
     "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts",
     "audit:admin-scope": "node scripts/admin-scope-audit.js",
     "import:exercises": "node scripts/import-exercises.mjs",

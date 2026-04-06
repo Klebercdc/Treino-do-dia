@@ -12,7 +12,7 @@ export class PexelsClient {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const url = `${this.baseUrl}/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=portrait`;
+      const url = `${this.baseUrl}/search?query=${encodeURIComponent(query)}&per_page=${perPage}`;
       const response = await fetch(url, {
         headers: { Authorization: this.apiKey },
         signal: controller.signal,

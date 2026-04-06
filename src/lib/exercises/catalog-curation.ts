@@ -1,5 +1,6 @@
 import type { ExerciseEntity } from './types';
 import { resolveFallbackKey } from './fallback-map';
+import { sanitizeMediaUrl } from './media-utils';
 
 export type CuratedExerciseContent = {
   name_pt?: string;
@@ -339,6 +340,7 @@ export function applyCuratedExerciseContent(exercise: Partial<ExerciseEntity>): 
 
 export function computeExerciseCompletenessScore(exercise: Record<string, any>): number {
   let score = 0;
+  const hasValidMedia = Boolean(sanitizeMediaUrl(exercise.media_url) || sanitizeMediaUrl(exercise.gif_url) || sanitizeMediaUrl(exercise.image_url));
   if (String(exercise.name_pt || '').trim()) score += 8;
   if (String(exercise.target_muscle || '').trim()) score += 18;
   if (toList(exercise.secondary_muscles).length) score += 8;
@@ -348,13 +350,14 @@ export function computeExerciseCompletenessScore(exercise: Record<string, any>):
   else if (toList(exercise.common_errors).length === 1) score += 10;
   if (String(exercise.breathing_tip || '').trim()) score += 10;
   if (String(exercise.range_of_motion || '').trim()) score += 10;
-  if (String(exercise.media_url || '').trim()) score += 6;
-  if (String(exercise.media_type || '').toLowerCase() === 'video' && Number(exercise.media_confidence_score || 0) >= 0.75) score += 4;
+  if (hasValidMedia) score += 6;
+  if (sanitizeMediaUrl(exercise.media_url) && String(exercise.media_type || '').toLowerCase() === 'video' && Number(exercise.media_confidence_score || 0) >= 0.75) score += 4;
   return Math.max(0, Math.min(100, score));
 }
 
 export function computeQualityFlags(exercise: Record<string, any>): string[] {
   const flags: string[] = [];
+  const hasValidMedia = Boolean(sanitizeMediaUrl(exercise.media_url) || sanitizeMediaUrl(exercise.gif_url) || sanitizeMediaUrl(exercise.image_url));
   if (!String(exercise.name_pt || '').trim()) flags.push('missing_name_pt');
   if (!String(exercise.target_muscle || '').trim()) flags.push('missing_target_muscle');
 
@@ -366,8 +369,9 @@ export function computeQualityFlags(exercise: Record<string, any>): string[] {
   if (!String(exercise.breathing_tip || '').trim()) flags.push('missing_breathing_tip');
   if (!String(exercise.range_of_motion || '').trim()) flags.push('missing_range_of_motion');
 
-  if (!String(exercise.media_url || '').trim()) flags.push('missing_media');
+  if (!hasValidMedia) flags.push('missing_media');
   if (Number(exercise.media_confidence_score || 0) < 0.5) flags.push('low_media_confidence');
+  if ((exercise.media_url && !sanitizeMediaUrl(exercise.media_url)) || (exercise.gif_url && !sanitizeMediaUrl(exercise.gif_url))) flags.push('invalid_media_placeholder');
 
   if (computeExerciseCompletenessScore(exercise) < 50) flags.push('low_content_value');
 
