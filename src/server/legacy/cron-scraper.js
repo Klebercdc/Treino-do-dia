@@ -53,8 +53,6 @@ var CRON_SECRET  = process.env.CRON_SECRET || '';
 var EXDB_URL = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
 var EXDB_IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
-// ── Mapeamentos (mesmo padrão do github-exdb.js) ──────────────────────────────
-
 var MUSCLE_GROUP = {
   abdominals:'Abdômen/Lombar', abductors:'Glúteos', adductors:'Quadríceps/Isquiotibiais',
   biceps:'Bíceps/Tríceps', calves:'Panturrilha', chest:'Peito', forearms:'Antebraço',
@@ -69,8 +67,6 @@ var EQUIPMENT_PT = {
   'medicine ball':'Bola Medicinal', 'exercise ball':'Bola Suíça',
   'foam roll':'Rolo de Espuma', 'e-z curl bar':'Barra EZ', other:'Outro',
 };
-
-// ── Helpers HTTP ──────────────────────────────────────────────────────────────
 
 function httpsGET(url) {
   return new Promise(function(resolve, reject) {
@@ -121,8 +117,6 @@ function supaUpsert(table, rows) {
   });
 }
 
-// ── Normalização ──────────────────────────────────────────────────────────────
-
 function normalizeExercises(raw) {
   return raw
     .filter(function(ex) { return ex.name; })
@@ -150,8 +144,6 @@ function normalizeExercises(raw) {
       };
     });
 }
-
-// ── Handler ───────────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
   cors.setCors(req, res);
