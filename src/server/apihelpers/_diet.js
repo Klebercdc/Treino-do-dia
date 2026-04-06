@@ -40,32 +40,43 @@ function calculateMacros(calorias, peso, objetivo) {
 
 function toLegacyMeals(planMeals) {
   return (planMeals || []).map(function(meal) {
-    var items = Array.isArray(meal.itens) ? meal.itens : [];
+    var alimentos = Array.isArray(meal.itens) ? meal.itens.map(function(item) {
+      return {
+        nome: item.nome,
+        qtde: item.porcao,
+        kcal: item.calorias,
+        prot: item.proteinas,
+        carb: item.carboidratos,
+        gord: item.gorduras
+      };
+    }) : [];
+    var proteinas = alimentos.filter(function(item) { return Number(item.prot || 0) >= 8; }).map(function(item) {
+      return item.nome + ' (' + item.qtde + ')';
+    });
+    var carbos = alimentos.filter(function(item) { return Number(item.carb || 0) >= 8; }).map(function(item) {
+      return item.nome + ' (' + item.qtde + ')';
+    });
+    var extras = alimentos.filter(function(item) {
+      return Number(item.gord || 0) >= 7 || (Number(item.prot || 0) < 8 && Number(item.carb || 0) < 8);
+    }).map(function(item) {
+      return item.nome + ' (' + item.qtde + ')';
+    });
     return {
       nome: meal.nome,
       tipo: meal.tipo || null,
       horario: meal.horario || (String(6 + meal.ordem * 3).padStart(2, '0') + ':00'),
-      foco: meal.tag || ('META: ' + meal.meta.calories + ' kcal'),
-      proteinas: items.filter(function(i) { return i.proteinas >= 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      carbos: items.filter(function(i) { return i.carboidratos >= 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      extras: items.filter(function(i) { return i.gorduras >= 5 || i.fibras >= 2; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      alimentos: items.map(function(item) {
-        return {
-          nome: item.nome,
-          qtde: item.porcao,
-          kcal: round(item.calorias, 1),
-          prot: round(item.proteinas, 1),
-          carb: round(item.carboidratos, 1),
-          gord: round(item.gorduras, 1)
-        };
-      }),
+      foco: 'META: ' + meal.meta.calories + ' kcal',
+      proteinas: proteinas,
+      carbos: carbos,
+      extras: extras,
+      alimentos: alimentos,
       subtotal: {
-        kcal: round(meal.subtotal && meal.subtotal.kcal, 1),
-        prot: round(meal.subtotal && meal.subtotal.protein, 1),
-        carb: round(meal.subtotal && meal.subtotal.carbs, 1),
-        gord: round(meal.subtotal && meal.subtotal.fat, 1)
+        kcal: meal.subtotal && meal.subtotal.calorias != null ? meal.subtotal.calorias : null,
+        prot: meal.subtotal && meal.subtotal.proteinas != null ? meal.subtotal.proteinas : null,
+        carb: meal.subtotal && meal.subtotal.carboidratos != null ? meal.subtotal.carboidratos : null,
+        gord: meal.subtotal && meal.subtotal.gorduras != null ? meal.subtotal.gorduras : null
       },
-      substituicoes: items.map(function(item) {
+      substituicoes: (meal.itens || []).map(function(item) {
         return {
           item: item.nome,
           opcoes: item.substituicoes
