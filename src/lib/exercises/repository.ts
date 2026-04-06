@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DetectedExerciseContext, ExerciseEntity, ExerciseMediaCacheEntity } from './types';
+import { sanitizeMediaUrl } from './media-utils';
 
 function jsonArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -9,6 +10,7 @@ type IdentityInput = { exerciseId?: string | null; slug?: string | null; normali
 
 export class ExerciseRepository {
   private normalizedLookupKeyAvailable: boolean | null = null;
+  private columnAvailability = new Map<string, boolean>();
 
   constructor(private readonly db: SupabaseClient) {}
 
@@ -21,6 +23,14 @@ export class ExerciseRepository {
     const { error } = await this.db.from('exercises').select('normalized_lookup_key').limit(0);
     this.normalizedLookupKeyAvailable = !this.isMissingColumnError(error, 'normalized_lookup_key');
     return this.normalizedLookupKeyAvailable;
+  }
+
+  private async canUseColumn(column: string): Promise<boolean> {
+    if (this.columnAvailability.has(column)) return Boolean(this.columnAvailability.get(column));
+    const { error } = await this.db.from('exercises').select(column).limit(0);
+    const available = !this.isMissingColumnError(error, column);
+    this.columnAvailability.set(column, available);
+    return available;
   }
 
   async findById(exerciseId: string): Promise<ExerciseEntity | null> {
@@ -147,10 +157,15 @@ export class ExerciseRepository {
   }
 
   async upsertExercise(input: Partial<ExerciseEntity> & { slug: string; name_en: string; name_pt: string }): Promise<ExerciseEntity> {
+    const sanitizedGifUrl = sanitizeMediaUrl(input.gif_url);
+    const sanitizedMediaUrl = sanitizeMediaUrl(input.media_url);
+    const sanitizedImageUrl = sanitizeMediaUrl(input.image_url);
+    const sanitizedThumbnailUrl = sanitizeMediaUrl(input.media_thumbnail_url) ?? sanitizedImageUrl ?? sanitizedGifUrl;
     const payload = {
       slug: input.slug,
       source: input.source ?? 'internal',
       source_id: input.source_id ?? null,
+      name: input.name_en ?? input.name_pt,
       name_pt: input.name_pt,
       name_en: input.name_en,
       body_part: input.body_part ?? null,
@@ -159,11 +174,13 @@ export class ExerciseRepository {
       equipment: input.equipment ?? null,
       category: input.category ?? null,
       instructions: input.instructions ?? [],
-      gif_url: input.gif_url ?? null,
-      media_url: input.media_url ?? null,
-      media_thumbnail_url: input.media_thumbnail_url ?? null,
-      media_type: input.media_type ?? null,
-      media_provider: input.media_provider ?? null,
+      gif_url: sanitizedGifUrl,
+      video_url: sanitizedMediaUrl,
+      media_url: sanitizedMediaUrl,
+      media_thumbnail_url: sanitizedThumbnailUrl,
+      thumbnail_url: sanitizedThumbnailUrl,
+      media_type: sanitizedMediaUrl ? (input.media_type ?? null) : (sanitizedGifUrl ? 'gif' : (sanitizedImageUrl ? 'image' : null)),
+      media_provider: sanitizedMediaUrl ? (input.media_provider ?? null) : (sanitizedGifUrl ? 'ExerciseDB' : input.media_provider ?? null),
       common_errors: input.common_errors ?? [],
       breathing_tip: input.breathing_tip ?? null,
       range_of_motion: input.range_of_motion ?? null,
@@ -172,16 +189,17 @@ export class ExerciseRepository {
       content_source: input.content_source ?? null,
       last_enriched_at: input.last_enriched_at ?? null,
       quality_flags: input.quality_flags ?? [],
-      image_url: input.image_url ?? null,
+      image_url: sanitizedImageUrl,
       search_terms: input.search_terms ?? [],
       difficulty: input.difficulty ?? null,
       is_active: input.is_active ?? true,
       updated_at: new Date().toISOString(),
     };
+    const sanitizedPayload = await this.buildExerciseWritePayload(payload);
 
     const { data, error } = await this.db
       .from('exercises')
-      .upsert(payload, { onConflict: 'slug' })
+      .upsert(sanitizedPayload, { onConflict: 'slug' })
       .select('*')
       .single();
     if (error) throw error;
@@ -190,21 +208,32 @@ export class ExerciseRepository {
 
   async updateExerciseEnrichmentById(id: string, patch: Partial<ExerciseEntity>): Promise<ExerciseEntity> {
     const payload = {
+      name: patch.name_en ?? patch.name_pt ?? null,
       name_pt: patch.name_pt ?? null,
+      name_en: patch.name_en ?? null,
       target_muscle: patch.target_muscle ?? null,
       secondary_muscles: patch.secondary_muscles ?? [],
       instructions: patch.instructions ?? [],
       common_errors: patch.common_errors ?? [],
       breathing_tip: patch.breathing_tip ?? null,
       range_of_motion: patch.range_of_motion ?? null,
+      gif_url: sanitizeMediaUrl(patch.gif_url),
+      video_url: sanitizeMediaUrl(patch.media_url),
+      media_url: sanitizeMediaUrl(patch.media_url),
+      media_thumbnail_url: sanitizeMediaUrl(patch.media_thumbnail_url),
+      thumbnail_url: sanitizeMediaUrl(patch.media_thumbnail_url),
+      media_type: patch.media_type ?? null,
+      media_provider: patch.media_provider ?? null,
       completeness_score: Number(patch.completeness_score ?? 0),
+      media_confidence_score: Number(patch.media_confidence_score ?? 0),
       quality_flags: patch.quality_flags ?? [],
       content_source: patch.content_source ?? null,
       last_enriched_at: patch.last_enriched_at ?? null,
       updated_at: new Date().toISOString(),
     };
+    const sanitizedPayload = await this.buildExerciseWritePayload(payload);
 
-    const { data, error } = await this.db.from('exercises').update(payload).eq('id', id).select('*').single();
+    const { data, error } = await this.db.from('exercises').update(sanitizedPayload).eq('id', id).select('*').single();
     if (error) throw error;
     return this.mapExercise(data);
   }
@@ -374,6 +403,13 @@ export class ExerciseRepository {
   }
 
   private mapExercise(raw: any): ExerciseEntity {
+    const gifUrl = sanitizeMediaUrl(raw.gif_url);
+    const imageUrl = sanitizeMediaUrl(raw.image_url);
+    const mediaUrl = sanitizeMediaUrl(raw.media_url) ?? (String(raw.media_type || '').toLowerCase() === 'gif' ? gifUrl : null);
+    const mediaThumbnailUrl = sanitizeMediaUrl(raw.media_thumbnail_url ?? raw.thumbnail_url) ?? imageUrl ?? gifUrl;
+    const mediaType = mediaUrl
+      ? (String(raw.media_type || '').toLowerCase() === 'gif' ? 'gif' : (String(raw.media_type || '').toLowerCase() === 'image' ? 'image' : 'video'))
+      : (gifUrl ? 'gif' : (imageUrl ? 'image' : null));
     return {
       id: raw.id,
       slug: raw.slug,
@@ -388,11 +424,11 @@ export class ExerciseRepository {
       equipment: raw.equipment,
       category: raw.category,
       instructions: jsonArray(raw.instructions),
-      gif_url: raw.gif_url,
-      media_url: raw.media_url ?? raw.gif_url ?? raw.image_url ?? null,
-      media_thumbnail_url: raw.media_thumbnail_url ?? raw.image_url ?? raw.gif_url ?? null,
-      media_type: raw.media_type ?? (raw.gif_url ? 'gif' : (raw.image_url ? 'image' : null)),
-      media_provider: raw.media_provider ?? (raw.gif_url ? 'ExerciseDB' : null),
+      gif_url: gifUrl,
+      media_url: mediaUrl,
+      media_thumbnail_url: mediaThumbnailUrl,
+      media_type: mediaType,
+      media_provider: raw.media_provider ?? (gifUrl ? 'ExerciseDB' : null),
       completeness_score: Number(raw.completeness_score ?? 0),
       media_confidence_score: Number(raw.media_confidence_score ?? 0),
       content_source: raw.content_source ?? null,
@@ -402,13 +438,24 @@ export class ExerciseRepository {
       common_errors: jsonArray(raw.common_errors),
       breathing_tip: raw.breathing_tip ?? null,
       range_of_motion: raw.range_of_motion ?? null,
-      image_url: raw.image_url,
+      image_url: imageUrl,
       search_terms: jsonArray(raw.search_terms),
       difficulty: raw.difficulty ?? raw.level,
       is_active: raw.is_active ?? true,
       created_at: raw.created_at,
       updated_at: raw.updated_at ?? raw.created_at,
     };
+  }
+
+  private async buildExerciseWritePayload(payload: Record<string, unknown>) {
+    const entries = await Promise.all(Object.entries(payload).map(async ([key, value]) => {
+      if (key === 'slug' || key === 'source' || key === 'source_id' || key === 'name' || key === 'name_pt' || key === 'name_en' || key === 'body_part' || key === 'target_muscle' || key === 'secondary_muscles' || key === 'equipment' || key === 'category' || key === 'instructions' || key === 'gif_url' || key === 'video_url' || key === 'media_url' || key === 'thumbnail_url' || key === 'media_type' || key === 'media_provider' || key === 'image_url' || key === 'search_terms' || key === 'difficulty' || key === 'is_active' || key === 'updated_at') {
+        return [key, value];
+      }
+      const allowed = await this.canUseColumn(key);
+      return allowed ? [key, value] : null;
+    }));
+    return Object.fromEntries(entries.filter(Boolean) as Array<[string, unknown]>);
   }
 
   private mapMedia(raw: any): ExerciseMediaCacheEntity {
@@ -418,8 +465,8 @@ export class ExerciseRepository {
       provider: raw.provider,
       provider_media_id: raw.provider_media_id,
       media_type: raw.media_type,
-      video_url: raw.video_url,
-      thumbnail_url: raw.thumbnail_url,
+      video_url: sanitizeMediaUrl(raw.video_url),
+      thumbnail_url: sanitizeMediaUrl(raw.thumbnail_url),
       width: raw.width,
       height: raw.height,
       duration: raw.duration,
