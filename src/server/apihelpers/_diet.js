@@ -40,14 +40,32 @@ function calculateMacros(calorias, peso, objetivo) {
 
 function toLegacyMeals(planMeals) {
   return (planMeals || []).map(function(meal) {
+    var items = Array.isArray(meal.itens) ? meal.itens : [];
     return {
       nome: meal.nome,
-      horario: String(6 + meal.ordem * 3).padStart(2, '0') + ':00',
-      foco: 'META: ' + meal.meta.calories + ' kcal',
-      proteinas: meal.itens.filter(function(i) { return i.proteinas > 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      carbos: meal.itens.filter(function(i) { return i.carboidratos > 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      extras: meal.itens.filter(function(i) { return i.gorduras > 7 || i.fibras > 2; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      substituicoes: meal.itens.map(function(item) {
+      tipo: meal.tipo || null,
+      horario: meal.horario || (String(6 + meal.ordem * 3).padStart(2, '0') + ':00'),
+      foco: meal.tag || ('META: ' + meal.meta.calories + ' kcal'),
+      proteinas: items.filter(function(i) { return i.proteinas >= 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
+      carbos: items.filter(function(i) { return i.carboidratos >= 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
+      extras: items.filter(function(i) { return i.gorduras >= 5 || i.fibras >= 2; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
+      alimentos: items.map(function(item) {
+        return {
+          nome: item.nome,
+          qtde: item.porcao,
+          kcal: round(item.calorias, 1),
+          prot: round(item.proteinas, 1),
+          carb: round(item.carboidratos, 1),
+          gord: round(item.gorduras, 1)
+        };
+      }),
+      subtotal: {
+        kcal: round(meal.subtotal && meal.subtotal.kcal, 1),
+        prot: round(meal.subtotal && meal.subtotal.protein, 1),
+        carb: round(meal.subtotal && meal.subtotal.carbs, 1),
+        gord: round(meal.subtotal && meal.subtotal.fat, 1)
+      },
+      substituicoes: items.map(function(item) {
         return {
           item: item.nome,
           opcoes: item.substituicoes

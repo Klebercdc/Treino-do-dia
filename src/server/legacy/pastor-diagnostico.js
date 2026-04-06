@@ -46,6 +46,10 @@ function readSupabaseKey() {
     || '';
 }
 
+// ══════════════════════════════════════════
+// HELPER: chamada direta ao Supabase REST
+// ══════════════════════════════════════════
+
 function supabaseReq(method, path, body, callback) {
   var base = readSupabaseUrl();
   var key  = readSupabaseKey();
