@@ -29,18 +29,35 @@ function normalizeSupabaseUrl(rawUrl) {
   }
 }
 
+function readSupabaseUrl() {
+  return process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || '';
+}
+
+function readSupabaseServiceRoleKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || '';
+}
+
 function validateRequiredEnv() {
-  var missing = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(function(name) {
-    return !process.env[name];
-  });
+  var supabaseUrl = readSupabaseUrl();
+  var serviceRoleKey = readSupabaseServiceRoleKey();
+  var missing = [];
+  if (!supabaseUrl) missing.push('SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL');
+  if (!serviceRoleKey) missing.push('SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SERVICE_KEY');
 
   if (missing.length > 0) {
     throw new Error('Variáveis de ambiente obrigatórias ausentes: ' + missing.join(', '));
   }
 
   return {
-    supabaseUrl: normalizeSupabaseUrl(process.env.SUPABASE_URL),
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+    supabaseUrl: normalizeSupabaseUrl(supabaseUrl),
+    serviceRoleKey: serviceRoleKey
   };
 }
 

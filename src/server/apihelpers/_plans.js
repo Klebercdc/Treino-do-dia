@@ -77,6 +77,9 @@ function getCurrentMonthStart() {
 }
 
 function createDefaultTrialPlan(userId) {
+  // Usa 'trial' (suportado pelo CHECK constraint desde a migration 006).
+  // Evita 'trial_ultra_7_days' que causava constraint violation em produção → 503.
+  // toCanonicalPlan('trial') === PLAN.TRIAL_ULTRA_7_DAYS, portanto semanticamente idêntico.
   return {
     user_id: userId,
     plan: 'trial',
@@ -118,18 +121,36 @@ function getUserPlan(userId, callback) {
 }
 
 function getPlanSnapshot(userId, callback) {
-  supabaseRequest('GET', 'user_plan_access_snapshot?user_id=eq.' + userId + '&select=*', null, function(err, rows) {
-    if (err) return callback(err, null);
-    callback(null, rows && rows[0] ? rows[0] : null);
-  });
+  supabaseRequest(
+    'GET',
+    'user_plan_access_snapshot?user_id=eq.' + userId + '&select=*',
+    null,
+    function(err, rows) {
+      if (err) return callback(err, null);
+      callback(null, rows && rows[0] ? rows[0] : null);
+    }
+  );
 }
 
 function resolveEffectivePlan(userId, planRow, callback) {
   getPlanSnapshot(userId, function(snapshotErr, snapshot) {
     if (!snapshotErr && snapshot && snapshot.effective_plan) {
-      return callback({ canonicalPlan: planRules.toCanonicalPlan(snapshot.effective_plan), patch: null, snapshot: snapshot, source: 'snapshot_sql', degraded: false });
+      return callback({
+        canonicalPlan: planRules.toCanonicalPlan(snapshot.effective_plan),
+        patch: null,
+        snapshot: snapshot,
+        source: 'snapshot_sql',
+        degraded: false
+      });
     }
-    return callback({ canonicalPlan: planRules.toCanonicalPlan((planRow && planRow.plan) || PLAN.FREE), patch: null, snapshot: snapshot || null, source: 'plan_row_fallback_without_snapshot', degraded: true });
+
+    return callback({
+      canonicalPlan: planRules.toCanonicalPlan((planRow && planRow.plan) || PLAN.FREE),
+      patch: null,
+      snapshot: snapshot || null,
+      source: 'plan_row_fallback_without_snapshot',
+      degraded: true
+    });
   });
 }
 
@@ -140,7 +161,9 @@ function maybePersistPlanPatch(userId, state, done) {
 
 function registerFeatureUsage(userId, featureKey, planAtUse, metadata) {
   var planAtUseDb = planRules.toDbPlan(planAtUse || PLAN.FREE);
-  var eventKey = (metadata && (metadata.eventKey || metadata.requestId)) ? String(metadata.eventKey || metadata.requestId) : crypto.randomUUID();
+  var eventKey = (metadata && (metadata.eventKey || metadata.requestId))
+    ? String(metadata.eventKey || metadata.requestId)
+    : crypto.randomUUID();
   supabaseRpcRequest('register_feature_usage', {
     p_user_id: userId,
     p_feature_key: featureKey,
@@ -165,20 +188,33 @@ function registerFeatureUsage(userId, featureKey, planAtUse, metadata) {
 function checkAndIncrementQuota(userId, res, next, options) {
   var accessProfile = (options && options.accessProfile) || null;
   if (access.canBypassQuota(accessProfile)) {
-    if (accessProfile && accessProfile.email) console.log('[access] privileged bypass applied for', accessProfile.email);
+    if (accessProfile && accessProfile.email) {
+      console.log('[access] privileged bypass applied for', accessProfile.email);
+    }
     registerFeatureUsage(userId, 'ai_chat', PLAN.ULTRA, { source: 'privileged_bypass' });
-    return next({ user_id: userId, plan: planRules.toDbPlan(PLAN.ULTRA), ai_requests_used: 0, accessMode: 'admin_override' });
+    return next({
+      user_id: userId,
+      plan: planRules.toDbPlan(PLAN.ULTRA),
+      ai_requests_used: 0,
+      accessMode: 'admin_override'
+    });
   }
 
   if (!SUPABASE_SERVICE_KEY) {
     console.error('[plans] SUPABASE_SERVICE_KEY ausente — quota guard bloqueando acesso por segurança.');
-    return res.status(503).json({ error: 'Serviço temporariamente indisponível. Tente novamente em instantes.', code: 'SERVICE_UNAVAILABLE' });
+    return res.status(503).json({
+      error: 'Serviço temporariamente indisponível. Tente novamente em instantes.',
+      code: 'SERVICE_UNAVAILABLE'
+    });
   }
 
   getUserPlan(userId, function(err, planRow) {
     if (err) {
       console.error('[plans] erro ao verificar plano:', err, '— bloqueando acesso por segurança (fail-closed).');
-      return res.status(503).json({ error: 'Não foi possível verificar seu plano. Tente novamente em instantes.', code: 'QUOTA_CHECK_FAILED' });
+      return res.status(503).json({
+        error: 'Não foi possível verificar seu plano. Tente novamente em instantes.',
+        code: 'QUOTA_CHECK_FAILED'
+      });
     }
 
     resolveEffectivePlan(userId, planRow, function(state) {
@@ -188,7 +224,9 @@ function checkAndIncrementQuota(userId, res, next, options) {
 
         if (limit !== Infinity && used >= limit) {
           return res.status(402).json({
-            error: state.canonicalPlan === PLAN.TRIAL_ULTRA_7_DAYS ? 'Limite do trial atingido. Faça upgrade para continuar.' : 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
+            error: state.canonicalPlan === PLAN.TRIAL_ULTRA_7_DAYS
+              ? 'Limite do trial atingido. Faça upgrade para continuar.'
+              : 'Limite do plano gratuito atingido. Faça upgrade para continuar.',
             code: 'QUOTA_EXCEEDED',
             used: used,
             limit: limit,
@@ -211,7 +249,9 @@ function checkAndIncrementQuota(userId, res, next, options) {
 function getQuotaInfo(userId, callback, options) {
   var accessProfile = (options && options.accessProfile) || null;
   if (access.canBypassQuota(accessProfile)) {
-    if (accessProfile && accessProfile.email) console.log('[access] privileged bypass applied for', accessProfile.email);
+    if (accessProfile && accessProfile.email) {
+      console.log('[access] privileged bypass applied for', accessProfile.email);
+    }
     var adminFeatures = planRules.getPlanAccess(PLAN.ULTRA).features;
     return callback(null, {
       allowed: true,
@@ -238,7 +278,7 @@ function getQuotaInfo(userId, callback, options) {
       maybePersistPlanPatch(userId, state, function() {
         var used = planRow.ai_requests_used || 0;
         var limit = planRules.getQuotaLimit(state.canonicalPlan, { free: FREE_AI_LIMIT, trial: TRIAL_AI_LIMIT });
-        var accessData = planRules.getPlanAccess(state.canonicalPlan);
+        var access = planRules.getPlanAccess(state.canonicalPlan);
 
         callback(null, {
           allowed: limit === Infinity ? true : used < limit,
@@ -246,7 +286,7 @@ function getQuotaInfo(userId, callback, options) {
           limit: limit,
           remaining: limit === Infinity ? Infinity : Math.max(0, limit - used),
           plan: state.canonicalPlan,
-          features: accessData.features,
+          features: access.features,
           effectivePlanSource: state.source || null,
           degradedMode: state.degraded === true
         });
@@ -260,7 +300,12 @@ function requireFeatureAccess(userId, featureKey, res, next) {
     if (err) return res.status(500).json({ error: String(err) });
 
     if (!planRules.canAccessFeature(quotaInfo.plan, featureKey)) {
-      return res.status(403).json({ error: 'Feature bloqueada para o plano atual.', code: 'FEATURE_LOCKED', feature: featureKey, plan: quotaInfo.plan });
+      return res.status(403).json({
+        error: 'Feature bloqueada para o plano atual.',
+        code: 'FEATURE_LOCKED',
+        feature: featureKey,
+        plan: quotaInfo.plan
+      });
     }
 
     registerFeatureUsage(userId, featureKey, quotaInfo.plan, { source: 'feature_access' });

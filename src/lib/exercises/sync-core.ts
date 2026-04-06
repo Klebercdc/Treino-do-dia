@@ -40,14 +40,31 @@ export type SyncSummary = {
   aliases_seeded_count: number;
 };
 
-const REQUIRED_ENVS = ['EXERCISEDB_BASE_URL', 'EXERCISEDB_API_KEY', 'PEXELS_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
+const REQUIRED_ENVS = ['EXERCISEDB_BASE_URL', 'EXERCISEDB_API_KEY', 'PEXELS_API_KEY'] as const;
 
 function emit(mode: SyncMode, name: string, meta: Record<string, unknown> = {}) {
   logger.info(mode === 'sync' ? `sync_exercises_${name}` : name, meta);
 }
 
+function readSupabaseUrl(): string {
+  return process.env.SUPABASE_URL
+    ?? process.env.NEXT_PUBLIC_SUPABASE_URL
+    ?? process.env.VITE_SUPABASE_URL
+    ?? '';
+}
+
+function readSupabaseServiceRoleKey(): string {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY
+    ?? process.env.SUPABASE_SERVICE_KEY
+    ?? process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    ?? process.env.VITE_SUPABASE_SERVICE_KEY
+    ?? '';
+}
+
 function assertEnv() {
-  const missing = REQUIRED_ENVS.filter((key) => !process.env[key]);
+  const missing: string[] = REQUIRED_ENVS.filter((key) => !process.env[key]);
+  if (!readSupabaseUrl()) missing.push('SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL');
+  if (!readSupabaseServiceRoleKey()) missing.push('SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SERVICE_KEY');
   if (missing.length) throw new Error(`Missing required env(s): ${missing.join(', ')}`);
 }
 
@@ -184,7 +201,7 @@ export async function syncExercisesWeekly(options: SyncOptions = {}): Promise<Sy
   const mediaBatchSize = Number(options.mediaBatchSize ?? 80);
   const requestDelayMs = Number(options.requestDelayMs ?? 120);
 
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const supabase = createClient(readSupabaseUrl(), readSupabaseServiceRoleKey(), { auth: { persistSession: false, autoRefreshToken: false } });
   const state = useStateFile ? readState(stateFilePath) : { importOffset: 0, mediaOffset: 0, aliasCompleted: false, updatedAt: new Date(0).toISOString() };
 
   const summary: SyncSummary = {

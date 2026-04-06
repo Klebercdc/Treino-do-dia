@@ -19,6 +19,10 @@ export interface FullSystemCheckResult {
   timestamp: string
 }
 
+function hasSupabaseSystemEnv(): boolean {
+  return Boolean(AI_ENV.SUPABASE_URL && AI_ENV.SUPABASE_SERVICE_ROLE_KEY)
+}
+
 export async function runAiSystemCheck(): Promise<SystemCheckResult> {
   if (!process.env.GROQ_API_KEY) {
     return { status: "SKIPPED", message: "GROQ_API_KEY not configured" }
@@ -43,7 +47,7 @@ export async function runAiSystemCheck(): Promise<SystemCheckResult> {
 }
 
 export async function runDbSystemCheck(): Promise<SystemCheckResult> {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!hasSupabaseSystemEnv()) {
     return { status: "SKIPPED", message: "Variáveis Supabase não configuradas" }
   }
 
@@ -76,7 +80,7 @@ export async function runDbSystemCheck(): Promise<SystemCheckResult> {
 }
 
 export async function runRagSystemCheck(): Promise<SystemCheckResult> {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!hasSupabaseSystemEnv()) {
     return { status: "SKIPPED", message: "Variáveis Supabase não configuradas" }
   }
 
@@ -131,7 +135,7 @@ export async function runRagSystemCheck(): Promise<SystemCheckResult> {
 }
 
 export async function runEmbeddingsSystemCheck(): Promise<SystemCheckResult> {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!hasSupabaseSystemEnv()) {
     return { status: "SKIPPED", message: "Variáveis Supabase não configuradas" }
   }
 

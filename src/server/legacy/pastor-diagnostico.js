@@ -26,13 +26,29 @@ var https  = require('https');
 var crypto = require('crypto');
 var cors   = require('../apihelpers/_cors');
 
-// ══════════════════════════════════════════
-// HELPER: chamada direta ao Supabase REST
-// ══════════════════════════════════════════
+function readSupabaseUrl() {
+  return (
+    process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || ''
+  ).replace(/\/$/, '');
+}
+
+function readSupabaseKey() {
+  return process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_ANON_KEY
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_ANON_KEY
+    || '';
+}
 
 function supabaseReq(method, path, body, callback) {
-  var base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-  var key  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  var base = readSupabaseUrl();
+  var key  = readSupabaseKey();
   if (!base || !key) return callback('SUPABASE não configurado', null);
 
   var url;
@@ -69,15 +85,14 @@ function supabaseReq(method, path, body, callback) {
   req.end();
 }
 
-// ══════════════════════════════════════════
-// CHECK 1 — Variáveis de ambiente
-// ══════════════════════════════════════════
-
 function checkEnv(report) {
-  var criticas  = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'GROQ_API_KEY'];
+  var criticas  = [
+    !readSupabaseUrl() ? 'SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL' : null,
+    !readSupabaseKey() ? 'SUPABASE_SERVICE_KEY/SUPABASE_SERVICE_ROLE_KEY' : null,
+    !process.env.GROQ_API_KEY ? 'GROQ_API_KEY' : null
+  ].filter(Boolean);
   var opcionais = ['CHECKOUT_URL', 'FREE_AI_LIMIT', 'CRON_SECRET'];
-
-  var faltando_criticas  = criticas.filter(function(k) { return !process.env[k]; });
+  var faltando_criticas  = criticas;
   var faltando_opcionais = opcionais.filter(function(k) { return !process.env[k]; });
 
   report.checagens.env = {
@@ -91,10 +106,6 @@ function checkEnv(report) {
   }
 }
 
-// ══════════════════════════════════════════
-// CHECK 2 — Conectividade Supabase
-// ══════════════════════════════════════════
-
 function checkSupabase(report, callback) {
   supabaseReq('GET', '/rest/v1/user_plans?select=user_id&limit=1', null, function(err) {
     report.checagens.supabase = { ok: !err, erro: err || null };
@@ -102,11 +113,6 @@ function checkSupabase(report, callback) {
     callback();
   });
 }
-
-// ══════════════════════════════════════════
-// CHECK 3 — Quotas de planos desatualizadas
-//           AUTO-REPARO: chama reset_monthly_quotas
-// ══════════════════════════════════════════
 
 function checkERepararQuotaStale(report, reparos, callback) {
   var mesAtual = new Date();
@@ -143,12 +149,8 @@ function checkERepararQuotaStale(report, reparos, callback) {
   });
 }
 
-// ══════════════════════════════════════════
-// CHECK 4 — Webhooks de pagamento presos
-// ══════════════════════════════════════════
-
 function checkWebhooksPresos(report, callback) {
-  var limite = new Date(Date.now() - 3600000).toISOString(); // 1h atrás
+  var limite = new Date(Date.now() - 3600000).toISOString();
   var q = '/rest/v1/payment_webhooks?processed=eq.false&created_at=lt.' + encodeURIComponent(limite)
         + '&select=id,provider,event,created_at';
 
@@ -172,11 +174,6 @@ function checkWebhooksPresos(report, callback) {
   });
 }
 
-// ══════════════════════════════════════════
-// CHECK 5 — Compactação de logs antigos
-//           AUTO-REPARO: deleta logs > 90 dias
-// ══════════════════════════════════════════
-
 function compactarLogs(report, reparos, callback) {
   var limite = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
   var q = '/rest/v1/ai_usage_logs?created_at=lt.' + encodeURIComponent(limite);
@@ -196,13 +193,9 @@ function compactarLogs(report, reparos, callback) {
   });
 }
 
-// ══════════════════════════════════════════
-// SALVAR RELATÓRIO NA TABELA diagnosticos
-// ══════════════════════════════════════════
-
 function salvarRelatorio(report, callback) {
-  var base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-  var key  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  var base = readSupabaseUrl();
+  var key  = readSupabaseKey();
   if (!base || !key) return callback();
 
   var body = {
@@ -220,18 +213,10 @@ function salvarRelatorio(report, callback) {
   });
 }
 
-// ══════════════════════════════════════════
-// BUSCAR ÚLTIMO RELATÓRIO (GET)
-// ══════════════════════════════════════════
-
 function buscarUltimoRelatorio(callback) {
   var q = '/rest/v1/diagnosticos?order=executado_em.desc&limit=5&select=*';
   supabaseReq('GET', q, null, callback);
 }
-
-// ══════════════════════════════════════════
-// PIPELINE COMPLETO DA RONDA
-// ══════════════════════════════════════════
 
 function executarRonda(callback) {
   var reparos = [];
@@ -273,16 +258,10 @@ function executarRonda(callback) {
   }); }); }); });
 }
 
-// ══════════════════════════════════════════
-// HANDLER HTTP
-// ══════════════════════════════════════════
-
 function isAuthorized(req) {
   var secret = process.env.CRON_SECRET;
-  // Em produção, CRON_SECRET é obrigatório — x-forwarded-for é forjável no Vercel
   if (!secret) {
     if (process.env.VERCEL_ENV === 'production') return false;
-    // Local/preview: aceita apenas loopback (sem x-forwarded-for para evitar bypass)
     var ip = req.socket && req.socket.remoteAddress || '';
     return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
   }
@@ -304,7 +283,6 @@ module.exports = function(req, res) {
     return res.status(401).json({ error: 'Não autorizado. Configure CRON_SECRET.' });
   }
 
-  // GET → retorna os últimos relatórios sem executar ronda
   if (req.method === 'GET') {
     buscarUltimoRelatorio(function(err, data) {
       if (err) return res.status(500).json({ error: err });
@@ -313,7 +291,6 @@ module.exports = function(req, res) {
     return;
   }
 
-  // POST → executa ronda completa
   if (req.method === 'POST') {
     executarRonda(function(err, report) {
       if (err) return res.status(500).json({ error: err });

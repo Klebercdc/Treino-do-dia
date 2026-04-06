@@ -27,7 +27,12 @@ var OUTPUT_COST = parseFloat(process.env.NVIDIA_OUTPUT_COST_PER_1K || '0.00040')
  * @param {string} [opts.model]
  */
 function logUsage(opts) {
-  if (!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) return; // dev: não loga
+  if (
+    !process.env.SUPABASE_SERVICE_KEY
+    && !process.env.SUPABASE_SERVICE_ROLE_KEY
+    && !process.env.VITE_SUPABASE_SERVICE_KEY
+    && !process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+  ) return; // dev: não loga
 
   var prompt     = opts.promptTokens     || 0;
   var completion = opts.completionTokens || 0;

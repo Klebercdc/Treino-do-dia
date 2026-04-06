@@ -1,5 +1,20 @@
 var https = require('https');
 
+function readSupabaseUrl() {
+  return process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || '';
+}
+
+function readSupabaseServiceKey() {
+  return process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || '';
+}
+
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -118,8 +133,8 @@ function logAccessDecision(event, payload) {
 }
 
 function supabaseProfileAdminLookup(userId, callback) {
-  var url = process.env.SUPABASE_URL;
-  var key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  var url = readSupabaseUrl();
+  var key = readSupabaseServiceKey();
   if (!url || !key || !userId) return callback(null, null);
 
   var hostname = url.replace('https://', '').replace('http://', '').split('/')[0];
