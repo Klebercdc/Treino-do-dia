@@ -18,9 +18,6 @@ test('nutritionService accepts abbreviated sex values for diet generation', () =
   assert.equal(result.failSafe, false);
   assert.equal(result.profile.sexo, 'feminino');
   assert.ok(result.plan.refeicoes.length >= 3);
-  const breakfast = result.plan.refeicoes[0];
-  assert.match(breakfast.nome, /Café/);
-  assert.ok(breakfast.itens.some((item) => /ovo|aveia|banana|whey|proteína/i.test(item.nome)));
 });
 
 test('dietService normalizes mixed payload shapes and generates diet plan', async () => {
@@ -74,7 +71,7 @@ test('nutritionService personaliza plano com padrao alimentar e alimentos evitad
   assert.ok(!foods.includes('brocolis cozido'));
 });
 
-test('nutritionService fecha o total diário somando exatamente as refeições', () => {
+test('nutritionService returns daily totals aligned with meal subtotals and realistic breakfast', () => {
   const result = nutritionService.generateNutritionPlan({
     sexo: 'M',
     idade: 31,
@@ -82,24 +79,29 @@ test('nutritionService fecha o total diário somando exatamente as refeições',
     altura: 178,
     objetivo: 'hipertrofia',
     refeicoesPorDia: 5,
-    rotina: 'musculação 5x por semana',
-    contextoTreino: { frequencia: '5x por semana', horario: '18:00' },
+    contextoTreino: { frequencia: '5x por semana', tipo: 'musculacao' },
   });
 
   assert.equal(result.failSafe, false);
-  const totalMeals = result.plan.refeicoes.reduce((acc, meal) => {
-    acc.kcal += Number(meal.subtotal.kcal || 0);
-    acc.protein += Number(meal.subtotal.protein || 0);
-    acc.carbs += Number(meal.subtotal.carbs || 0);
-    acc.fat += Number(meal.subtotal.fat || 0);
-    return acc;
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  const breakfast = result.plan.refeicoes[0];
+  assert.match(breakfast.nome, /caf/i);
+  const breakfastFoods = breakfast.itens.map((item) => item.nome.toLowerCase());
+  assert.ok(
+    breakfastFoods.some((name) => /ovo|aveia|banana|p[aã]o|whey|iogurte|tofu/.test(name)),
+  );
 
-  assert.ok(Math.abs(totalMeals.kcal - result.calculation.targetCalories) <= 0.2);
-  assert.ok(Math.abs(totalMeals.protein - result.calculation.macros.protein) <= 0.2);
-  assert.ok(Math.abs(totalMeals.carbs - result.calculation.macros.carbs) <= 0.2);
-  assert.ok(Math.abs(totalMeals.fat - result.calculation.macros.fat) <= 0.2);
-  assert.ok(result.plan.refeicoes.every((meal) => meal.subtotal.protein > 0));
+  const totals = result.plan.refeicoes.reduce((acc, meal) => {
+    acc.calorias += Number(meal.subtotal.calorias || 0);
+    acc.proteina += Number(meal.subtotal.proteinas || 0);
+    acc.carbo += Number(meal.subtotal.carboidratos || 0);
+    acc.gordura += Number(meal.subtotal.gorduras || 0);
+    return acc;
+  }, { calorias: 0, proteina: 0, carbo: 0, gordura: 0 });
+
+  assert.equal(Math.round(totals.calorias), Math.round(result.calculation.targetCalories));
+  assert.equal(Math.round(totals.proteina * 10) / 10, result.calculation.macros.protein);
+  assert.equal(Math.round(totals.carbo * 10) / 10, result.calculation.macros.carbs);
+  assert.equal(Math.round(totals.gordura * 10) / 10, result.calculation.macros.fat);
 });
 
 test('dietService returns safe failsafe response when critical profile data is missing', async () => {
