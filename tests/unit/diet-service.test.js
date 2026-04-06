@@ -162,3 +162,73 @@ test('dietService returns safe failsafe response when critical profile data is m
   assert.equal(result.payload.validation.generatedFromFallback, true);
   assert.match(result.message, /fallback seguro|complete os dados ausentes/i);
 });
+
+test('nutritionService ativa modo clínico e remove alimentos incoerentes para potássio alto', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'F',
+    idade: 34,
+    peso: 70,
+    altura: 168,
+    objetivo: 'manutencao',
+    refeicoesPorDia: 5,
+    padraoAlimentar: 'onívoro',
+    labContext: {
+      id: 'lab-1',
+      isValid: true,
+      mode: 'clinical',
+      parsed: {
+        glucose: 94,
+        hba1c: 5.4,
+        creatinine: 0.9,
+        potassium: 5.3,
+        sodium: 139,
+        cholesterol_total: 180,
+        hdl: 52,
+        ldl: 110,
+        triglycerides: 100,
+      },
+      clinicalFlags: ['high_potassium'],
+      criticalFlags: [],
+    },
+  });
+
+  assert.equal(result.failSafe, false);
+  assert.equal(result.clinicalContext.mode, 'clinical');
+  const foods = result.plan.refeicoes.flatMap((meal) => meal.itens.map((item) => normalizeText(item.nome)));
+  assert.ok(!foods.some((name) => /banana|abacate|batata-doce/.test(name)));
+  assert.ok(result.clinicalNotes.some((note) => /exame recente/i.test(note)));
+});
+
+test('nutritionService mantém plano conservador quando há flag crítica laboratorial', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 42,
+    peso: 88,
+    altura: 180,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 4,
+    labContext: {
+      id: 'lab-2',
+      isValid: true,
+      mode: 'clinical',
+      parsed: {
+        glucose: 132,
+        hba1c: 6.6,
+        creatinine: 1.1,
+        potassium: 4.7,
+        sodium: 140,
+        cholesterol_total: 210,
+        hdl: 45,
+        ldl: 135,
+        triglycerides: 150,
+      },
+      clinicalFlags: ['pre_diabetes', 'glycemic_risk', 'high_ldl'],
+      criticalFlags: ['hyperglycemia_alert', 'hba1c_alert'],
+    },
+  });
+
+  assert.equal(result.failSafe, false);
+  assert.equal(result.clinicalContext.mode, 'clinical');
+  assert.ok(result.calculation.targetCalories <= Math.round(result.calculation.get));
+  assert.ok(result.clinicalNotes.some((note) => /modo conservador/i.test(note)));
+});

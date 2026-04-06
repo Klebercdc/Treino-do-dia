@@ -48,6 +48,7 @@ function buildDietProfileFromSupabase(context) {
   var nutritionGoals = context && context.nutritionGoals ? context.nutritionGoals : null;
   var supplements = normalizeSupplements(context && context.supplements);
   var restrictions = mergeUniqueArrays(profile.allergies, profile.intolerances);
+  var latestLabReport = context && context.latestLabReport ? context.latestLabReport : null;
 
   return {
     objetivo: profile.objective || undefined,
@@ -64,9 +65,11 @@ function buildDietProfileFromSupabase(context) {
     suplementos: supplements,
     observacoes: profile.clinical_notes || undefined,
     nutritionGoals: nutritionGoals,
+    labContext: latestLabReport,
     contextoTreino: {},
     saude: {
       clinicalNotes: profile.clinical_notes || undefined,
+      labContext: latestLabReport,
     },
   };
 }
@@ -91,6 +94,7 @@ function enrichDietPayload(basePayload, context) {
   payload.suplementos = mergeUniqueArrays(payload.suplementos, payload.supplements, dbProfile.suplementos);
   payload.observacoes = firstDefined(payload.observacoes, payload.notes, dbProfile.observacoes);
   payload.nutritionGoals = payload.nutritionGoals || payload.goals || dbProfile.nutritionGoals || null;
+  payload.labContext = payload.labContext || payload.labs || dbProfile.labContext || null;
   payload.supabaseSnapshot = payload.supabaseSnapshot || context || null;
 
   payload.profile = Object.assign({}, existingProfile, {
@@ -107,11 +111,13 @@ function enrichDietPayload(basePayload, context) {
     alimentosEvitar: mergeUniqueArrays(existingProfile.alimentosEvitar, payload.alimentosEvitar),
     suplementos: mergeUniqueArrays(existingProfile.suplementos, payload.suplementos),
     nutritionGoals: existingProfile.nutritionGoals || payload.nutritionGoals || null,
+    labContext: existingProfile.labContext || payload.labContext || null,
     supabaseSnapshot: existingProfile.supabaseSnapshot || context || null,
   });
 
   payload.context = Object.assign({}, existingContext, {
     source: existingContext.source || 'diet_route_supabase_enriched',
+    labContext: existingContext.labContext || payload.labContext || null,
     supabaseSnapshot: existingContext.supabaseSnapshot || context || null,
   });
 
@@ -130,6 +136,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
     bodyMetrics: null,
     nutritionGoals: null,
     supplements: [],
+    latestLabReport: null,
   };
 
   if (!adminClient || !userId) return empty;
@@ -160,14 +167,34 @@ async function loadDietSupabaseContext(adminClient, userId) {
       .select('supplement_name,active')
       .eq('user_id', userId)
       .eq('active', true);
+    var labReportsQuery = adminClient
+      .from('lab_reports')
+      .select('id,parsed,confidence,is_valid,clinical_flags,critical_flags,created_at')
+      .eq('user_id', userId)
+      .eq('is_valid', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    var responses = await Promise.allSettled([profileQuery, bodyMetricsQuery, goalsQuery, supplementsQuery]);
+    var responses = await Promise.allSettled([profileQuery, bodyMetricsQuery, goalsQuery, supplementsQuery, labReportsQuery]);
 
     return {
       profile: responses[0].status === 'fulfilled' ? responses[0].value.data || null : null,
       bodyMetrics: responses[1].status === 'fulfilled' ? responses[1].value.data || null : null,
       nutritionGoals: responses[2].status === 'fulfilled' ? responses[2].value.data || null : null,
       supplements: responses[3].status === 'fulfilled' ? responses[3].value.data || [] : [],
+      latestLabReport: responses[4].status === 'fulfilled' && responses[4].value.data
+        ? {
+            id: responses[4].value.data.id || null,
+            parsed: responses[4].value.data.parsed || null,
+            confidence: Number(responses[4].value.data.confidence || 0),
+            isValid: Boolean(responses[4].value.data.is_valid),
+            mode: 'clinical',
+            clinicalFlags: Array.isArray(responses[4].value.data.clinical_flags) ? responses[4].value.data.clinical_flags : [],
+            criticalFlags: Array.isArray(responses[4].value.data.critical_flags) ? responses[4].value.data.critical_flags : [],
+            createdAt: responses[4].value.data.created_at || null,
+          }
+        : null,
     };
   } catch (_) {
     return empty;

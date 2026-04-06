@@ -48,6 +48,9 @@ function normalizeDietPayload(payload) {
   const nutritionGoals = normalizeObject(
     safePayload.nutritionGoals || safePayload.goals || profile.nutritionGoals || context.nutritionGoals,
   );
+  const labContext = normalizeObject(
+    safePayload.labContext || safePayload.labs || profile.labContext || context.labContext || healthContext.labContext,
+  );
   const supabaseSnapshot = normalizeObject(
     safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot,
   );
@@ -86,6 +89,7 @@ function normalizeDietPayload(payload) {
       carbs_g: pickNumber(nutritionGoals.carbs_g, nutritionGoals.carbsTarget),
       fat_g: pickNumber(nutritionGoals.fat_g, nutritionGoals.fatTarget),
     },
+    labContext: Object.keys(labContext).length ? labContext : null,
     supabaseSnapshot,
   };
 }
@@ -121,6 +125,7 @@ function buildRenderableFallbackInput(normalizedInput) {
     nivelAtividade,
     rotina: safe.rotina || nivelAtividade,
     padraoAlimentar,
+    labContext: safe.labContext || null,
   });
 }
 
@@ -183,7 +188,9 @@ function buildDietResponse(action, normalizedInput) {
   const isFallbackPlan = !!generation.generatedFromFallback;
   const message = isFallbackPlan
     ? `Plano inicial gerado com fallback seguro. Complete os dados ausentes para uma dieta mais precisa.`
-    : `Plano alimentar gerado com ${plan.refeicoes.length} refeicoes.`;
+    : plan.clinicalContext && plan.clinicalContext.mode === 'clinical'
+      ? 'Plano alimentar gerado com ajustes clínicos conservadores baseados no exame mais recente.'
+      : `Plano alimentar gerado com ${plan.refeicoes.length} refeicoes.`;
 
   return {
     action,

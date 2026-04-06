@@ -137,12 +137,15 @@ function buildDietPlan(profile) {
     },
     refeicoes: legacyMeals,
     planoEstruturado: nutrition.plan,
+    clinicalContext: nutrition.clinicalContext || null,
     hidratacao: { litros: round((Number(p.peso) || 75) * 0.035, 1) },
-    observacoes: [
-      'Plano inicial automatizado para fins educativos e operacionais.',
-      'Sem conduta clínica, diagnóstico ou dieta terapêutica.',
-      nutrition.clinicalSafety
-    ]
+    observacoes: []
+      .concat(nutrition.clinicalNotes || [])
+      .concat([
+        'Plano inicial automatizado para fins educativos e operacionais.',
+        'Sem conduta clínica, diagnóstico ou dieta terapêutica.',
+        nutrition.clinicalSafety
+      ])
   };
 }
 
