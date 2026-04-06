@@ -40,14 +40,43 @@ function calculateMacros(calorias, peso, objetivo) {
 
 function toLegacyMeals(planMeals) {
   return (planMeals || []).map(function(meal) {
+    var alimentos = Array.isArray(meal.itens) ? meal.itens.map(function(item) {
+      return {
+        nome: item.nome,
+        qtde: item.porcao,
+        kcal: item.calorias,
+        prot: item.proteinas,
+        carb: item.carboidratos,
+        gord: item.gorduras
+      };
+    }) : [];
+    var proteinas = alimentos.filter(function(item) { return Number(item.prot || 0) >= 8; }).map(function(item) {
+      return item.nome + ' (' + item.qtde + ')';
+    });
+    var carbos = alimentos.filter(function(item) { return Number(item.carb || 0) >= 8; }).map(function(item) {
+      return item.nome + ' (' + item.qtde + ')';
+    });
+    var extras = alimentos.filter(function(item) {
+      return Number(item.gord || 0) >= 7 || (Number(item.prot || 0) < 8 && Number(item.carb || 0) < 8);
+    }).map(function(item) {
+      return item.nome + ' (' + item.qtde + ')';
+    });
     return {
       nome: meal.nome,
-      horario: String(6 + meal.ordem * 3).padStart(2, '0') + ':00',
+      tipo: meal.tipo || null,
+      horario: meal.horario || (String(6 + meal.ordem * 3).padStart(2, '0') + ':00'),
       foco: 'META: ' + meal.meta.calories + ' kcal',
-      proteinas: meal.itens.filter(function(i) { return i.proteinas > 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      carbos: meal.itens.filter(function(i) { return i.carboidratos > 8; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      extras: meal.itens.filter(function(i) { return i.gorduras > 7 || i.fibras > 2; }).map(function(i) { return i.nome + ' (' + i.porcao + ')'; }),
-      substituicoes: meal.itens.map(function(item) {
+      proteinas: proteinas,
+      carbos: carbos,
+      extras: extras,
+      alimentos: alimentos,
+      subtotal: {
+        kcal: meal.subtotal && meal.subtotal.calorias != null ? meal.subtotal.calorias : null,
+        prot: meal.subtotal && meal.subtotal.proteinas != null ? meal.subtotal.proteinas : null,
+        carb: meal.subtotal && meal.subtotal.carboidratos != null ? meal.subtotal.carboidratos : null,
+        gord: meal.subtotal && meal.subtotal.gorduras != null ? meal.subtotal.gorduras : null
+      },
+      substituicoes: (meal.itens || []).map(function(item) {
         return {
           item: item.nome,
           opcoes: item.substituicoes

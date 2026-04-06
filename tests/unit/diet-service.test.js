@@ -71,6 +71,39 @@ test('nutritionService personaliza plano com padrao alimentar e alimentos evitad
   assert.ok(!foods.includes('brocolis cozido'));
 });
 
+test('nutritionService returns daily totals aligned with meal subtotals and realistic breakfast', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 31,
+    peso: 82,
+    altura: 178,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 5,
+    contextoTreino: { frequencia: '5x por semana', tipo: 'musculacao' },
+  });
+
+  assert.equal(result.failSafe, false);
+  const breakfast = result.plan.refeicoes[0];
+  assert.match(breakfast.nome, /caf/i);
+  const breakfastFoods = breakfast.itens.map((item) => item.nome.toLowerCase());
+  assert.ok(
+    breakfastFoods.some((name) => /ovo|aveia|banana|p[aã]o|whey|iogurte|tofu/.test(name)),
+  );
+
+  const totals = result.plan.refeicoes.reduce((acc, meal) => {
+    acc.calorias += Number(meal.subtotal.calorias || 0);
+    acc.proteina += Number(meal.subtotal.proteinas || 0);
+    acc.carbo += Number(meal.subtotal.carboidratos || 0);
+    acc.gordura += Number(meal.subtotal.gorduras || 0);
+    return acc;
+  }, { calorias: 0, proteina: 0, carbo: 0, gordura: 0 });
+
+  assert.equal(Math.round(totals.calorias), Math.round(result.calculation.targetCalories));
+  assert.equal(Math.round(totals.proteina * 10) / 10, result.calculation.macros.protein);
+  assert.equal(Math.round(totals.carbo * 10) / 10, result.calculation.macros.carbs);
+  assert.equal(Math.round(totals.gordura * 10) / 10, result.calculation.macros.fat);
+});
+
 test('dietService returns safe failsafe response when critical profile data is missing', async () => {
   const result = await dietService.execute('GENERATE_DIET', {
     objetivo: 'hipertrofia',
