@@ -29,6 +29,13 @@ export function isUtcWeekday(date: Date, weekday: number): boolean {
   return date.getUTCDay() === weekday;
 }
 
+/**
+ * Watchdog inline — para uso exclusivo pelo endpoint manual /api/cron/labs-watchdog.
+ *
+ * Processa OCR diretamente no contexto de quem chama (serial, até 45 s/exame).
+ * NÃO deve ser chamado pelo daily-dispatch: use runLabsWatchdogDispatchTask,
+ * que delega cada exame para /api/labs/process preservando o maxDuration de 60 s.
+ */
 export async function runLabsWatchdogTask(
   admin: SupabaseClient,
   limit: number,
