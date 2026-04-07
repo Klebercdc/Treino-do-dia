@@ -1,3 +1,19 @@
+/**
+ * Endpoint de watchdog manual para exames presos em "processing".
+ *
+ * USO CORRETO: trigger pontual via curl/admin para recuperar exames após
+ * incidente — ex: falha de OCR em lote, degradação de serviço externo.
+ *
+ * NÃO USE como automação frequente ou cron independente:
+ *   - Processa OCR inline e serial (até 45 s por exame) — estoura maxDuration
+ *     se houver vários exames presos.
+ *   - O agendamento oficial é o daily-dispatch (vercel.json, 04:00 UTC), que
+ *     usa a variante de dispatch assíncrono (não-bloqueante) do watchdog.
+ *   - Adicionar este endpoint ao vercel.json como cron frequente reproduziria
+ *     o risco de cascata corrigido no PR #355.
+ *
+ * Query param: ?limit=N (padrão 5, máximo 50).
+ */
 import { NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import {
