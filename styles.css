@@ -435,23 +435,28 @@ dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); }
    LIGHT MODE
 ══════════════════════════════════════════ */
 body.light-mode {
-  --bg:#f3f4f6;
-  --bg2:#e8eaee;
+  --bg:#f8fafc;
+  --bg2:#eef2f7;
   --surface:#ffffff;
   --card:#ffffff;
-  --card-hover:#f8fafc;
-  --border:rgba(15,23,42,0.12);
-  --border-soft:rgba(15,23,42,0.06);
-  --text:#111827;
-  --text-2:#4b5563;
-  --muted:#6b7280;
+  --card-hover:#f3f7fc;
+  --border:rgba(15,23,42,0.14);
+  --border-soft:rgba(15,23,42,0.08);
+  --text:#0f172a;
+  --text-2:#334155;
+  --muted:#64748b;
   --accent:#ea6c0a;
   --accent-dim:rgba(234,108,10,0.12);
   --accent-glow:rgba(234,108,10,0.22);
-  --shadow-sm:0 1px 2px rgba(15,23,42,0.08);
-  --shadow-md:0 8px 24px rgba(15,23,42,0.10);
-  --shadow-lg:0 14px 38px rgba(15,23,42,0.14);
+  --shadow-sm:0 1px 3px rgba(15,23,42,0.08);
+  --shadow-md:0 10px 30px rgba(15,23,42,0.11);
+  --shadow-lg:0 16px 42px rgba(15,23,42,0.15);
   color-scheme: light;
+}
+body.light-mode,
+body.light-mode .screen,
+body.light-mode .tab-pane {
+  color: var(--text);
 }
 body.light-mode .top-header { background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); }
 body.light-mode .footer-actions { background: rgba(250,250,250,0.98) !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
@@ -498,6 +503,24 @@ body.light-mode .evo-tab.active { background: var(--accent); color: #fff; }
 body.light-mode .summary-stat { background: #f0f0f0; }
 body.light-mode .date-badge { background: #ebebeb; border-color: rgba(0,0,0,0.08); color: #333; }
 body.light-mode .dark-toggle { background: #ebebeb; }
+body.light-mode .pill,
+body.light-mode .pill-add,
+body.light-mode .btn-add-ex,
+body.light-mode .ai-msg-time,
+body.light-mode .config-section-lbl,
+body.light-mode .tsheet-close,
+body.light-mode .tsheet-label,
+body.light-mode .home-labs-cta-title {
+  color: rgba(15,23,42,0.68) !important;
+}
+body.light-mode [style*="color:#fff"],
+body.light-mode [style*="color: #fff"],
+body.light-mode [style*="color:#ffffff"],
+body.light-mode [style*="color: #ffffff"],
+body.light-mode [style*="color:rgb(255,255,255)"],
+body.light-mode [style*="color: rgb(255,255,255)"] {
+  color: #0f172a !important;
+}
 body.light-mode .home-section-title,
 body.light-mode .perfil-section-title,
 body.light-mode .risk-card-title,
