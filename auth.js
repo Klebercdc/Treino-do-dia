@@ -311,6 +311,30 @@ function showApp() {
   setTimeout(checkFirstTimeFlow, 350);
 }
 
+async function bootstrapAuthenticatedSession(session) {
+  try {
+    try {
+      window.KroniaIntelligence?.init?.({ source: 'auth_bootstrap', appVersion: 'web' });
+      window.KroniaIntelligence?.identifyUser?.({ userId: session.user.id, sessionId: session.access_token ? String(session.access_token).slice(0, 16) : undefined });
+      window.KroniaIntelligence?.setContext?.({ route: 'inicio', currentJourney: 'authenticated_session' });
+      window.KroniaIntelligence?.track?.({ module: 'auth', action: 'loginSuccess', status: 'success', correlationId: 'login_' + Date.now(), source: 'auth_state_change' });
+    } catch (_) {}
+    if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
+      await window.KroniaAccessScope.hydrateAccessContext(session);
+      trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'on_auth_state_change' });
+    }
+    window.KroniaIntelligenceAdmin?.refreshAccess?.();
+    await _dbSync.pullAll(session.user.id);
+    if (typeof fetchUserPlan === 'function') {
+      try { await fetchUserPlan(); } catch (_) {}
+    }
+  } catch (_) {}
+  if (typeof window.KroniaDashboard !== 'undefined') {
+    window.KroniaDashboard.render(session.user.id);
+  }
+  refreshIntelligenceAdminAccessSafe();
+}
+
 function handleBusinessRoute(route) {
   if (route === 'krona-setup') {
     if (typeof openKronaSetup === 'function') openKronaSetup();
@@ -588,31 +612,7 @@ _sb.auth.onAuthStateChange((_event, session) => {
     showApp();
     if (firstLoad) { navTo('inicio'); openHome(); }
     refreshIntelligenceAdminAccessSafe();
-
-    (async function bootstrapAuthenticatedSessionInBackground() {
-      try {
-        try {
-          window.KroniaIntelligence?.init?.({ source: 'auth_bootstrap', appVersion: 'web' });
-          window.KroniaIntelligence?.identifyUser?.({ userId: session.user.id, sessionId: session.access_token ? String(session.access_token).slice(0, 16) : undefined });
-          window.KroniaIntelligence?.setContext?.({ route: 'inicio', currentJourney: 'authenticated_session' });
-          window.KroniaIntelligence?.track?.({ module: 'auth', action: 'loginSuccess', status: 'success', correlationId: 'login_' + Date.now(), source: 'auth_state_change' });
-        } catch (_) {}
-        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
-          await window.KroniaAccessScope.hydrateAccessContext(session);
-          trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'on_auth_state_change' });
-        }
-        window.KroniaIntelligenceAdmin?.refreshAccess?.();
-        await _dbSync.pullAll(session.user.id);
-        if (typeof fetchUserPlan === 'function') {
-          try { await fetchUserPlan(); } catch (_) {}
-        }
-      } catch (_) {}
-
-      if (typeof window.KroniaDashboard !== 'undefined') {
-        window.KroniaDashboard.render(session.user.id);
-      }
-      refreshIntelligenceAdminAccessSafe();
-    })();
+    bootstrapAuthenticatedSession(session);
   } else if (_appUnlocked) {
     _appUnlocked = false;
     refreshIntelligenceAdminAccessSafe();
@@ -627,22 +627,10 @@ Promise.all([
 ]).then(async ([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
+    const firstLoad = !_appUnlocked;
     showApp();
-    navTo('inicio');
-    openHome();
-    refreshIntelligenceAdminAccessSafe();
-
-    (async function bootstrapInitialSessionInBackground() {
-      try {
-        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
-          await window.KroniaAccessScope.hydrateAccessContext(session);
-          trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'initial_session_check' });
-        }
-        window.KroniaIntelligenceAdmin?.refreshAccess?.();
-        await _dbSync.pullAll(session.user.id);
-        if (typeof fetchUserPlan === 'function') await fetchUserPlan();
-      } catch (_) {}
-    })();
+    if (firstLoad) { navTo('inicio'); openHome(); }
+    bootstrapAuthenticatedSession(session);
   } else {
     refreshIntelligenceAdminAccessSafe();
     showLogin();

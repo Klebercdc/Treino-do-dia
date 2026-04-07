@@ -1727,19 +1727,90 @@ async function requestWorkoutRoute(payload, timeoutMs) {
   }
 }
 
-async function parseWorkoutApiJsonSafely(response) {
-  const rawText = await response.text();
-  try {
-    return JSON.parse(rawText);
-  } catch (_) {
-    return {
-      success: false,
-      type: "error",
-      message: "Resposta inválida ao gerar treino.",
-      error: "INVALID_JSON",
-      data: { content: [] },
-    };
+function extractParsableWorkoutJson(rawText) {
+  if (typeof rawText !== "string" || !rawText.length) return null;
+  const closingMap = { "}": "{", "]": "[" };
+  const stack = [];
+  let startIndex = -1;
+  let insideString = false;
+  let escapeNext = false;
+
+  for (let index = 0; index < rawText.length; index += 1) {
+    const char = rawText[index];
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (char === "\\") {
+      escapeNext = true;
+      continue;
+    }
+    if (char === '"') {
+      insideString = !insideString;
+      continue;
+    }
+    if (insideString) continue;
+
+    if (char === "{" || char === "[") {
+      if (!stack.length) startIndex = index;
+      stack.push(char);
+      continue;
+    }
+
+    const expectedOpen = closingMap[char];
+    if (expectedOpen && stack.length && stack[stack.length - 1] === expectedOpen) {
+      stack.pop();
+      if (!stack.length && startIndex >= 0) {
+        const candidate = rawText.slice(startIndex, index + 1).trim();
+        if (candidate) {
+          try {
+            return { snippet: candidate, value: JSON.parse(candidate) };
+          } catch (_err) {
+            startIndex = -1;
+          }
+        }
+        startIndex = -1;
+      }
+    }
   }
+  return null;
+}
+
+function resolveWorkoutResponseContentType(response) {
+  if (!response || !response.headers || typeof response.headers.get !== "function") return null;
+  const header = response.headers.get("content-type");
+  if (!header) return null;
+  return header.split(";")[0].trim().toLowerCase();
+}
+
+async function parseWorkoutApiJsonSafely(response) {
+  const rawText = typeof response?.text === "function" ? await response.text() : "";
+  const normalizedBody = typeof rawText === "string" ? rawText.trim() : "";
+  const tryParse = (value) => {
+    if (!value || typeof value !== "string") return null;
+    try {
+      return JSON.parse(value);
+    } catch (_err) {
+      return null;
+    }
+  };
+
+  const direct = tryParse(normalizedBody);
+  if (direct) return direct;
+
+  const extracted = extractParsableWorkoutJson(rawText);
+  if (extracted && extracted.value) return extracted.value;
+
+  return {
+    success: false,
+    type: "error",
+    message: "Resposta inválida ao gerar treino.",
+    error: "INVALID_JSON",
+    data: { content: [] },
+    rawBody: normalizedBody || null,
+    contentType: resolveWorkoutResponseContentType(response),
+    parsedSnippet: extracted?.snippet || null,
+  };
 }
 
 function extractWorkoutRenderModel(payload) {
