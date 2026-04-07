@@ -4498,6 +4498,160 @@ function validateClientRuntimeEnv() {
   return missing;
 }
 
+(() => {
+  const THEME_KEY = 'kronia_theme';
+  const LEGACY_THEME_KEY = 'kronia_light';
+  const LIGHT = 'light';
+  const DARK = 'dark';
+  const META_COLOR_LIGHT = '#f7f7f8';
+  const META_COLOR_DARK = '#0b0b0f';
+
+  function safeGet(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function safeSet(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {}
+  }
+
+  function getThemeMetaTag() {
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      document.head.appendChild(meta);
+    }
+    return meta;
+  }
+
+  function getSystemTheme() {
+    try {
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? LIGHT : DARK;
+    } catch {
+      return DARK;
+    }
+  }
+
+  function getInitialTheme() {
+    const stored = safeGet(THEME_KEY);
+    if (stored === LIGHT || stored === DARK) return stored;
+    const legacy = safeGet(LEGACY_THEME_KEY);
+    if (legacy === '1') return LIGHT;
+    if (legacy === '0') return DARK;
+    return getSystemTheme();
+  }
+
+  function syncThemeUI(theme) {
+    const settingsThemeVal = document.getElementById('settingsThemeVal');
+    if (settingsThemeVal) {
+      settingsThemeVal.textContent = theme === LIGHT ? 'Claro' : 'Escuro';
+    }
+    const checkbox = document.querySelector('[data-theme-toggle-input]');
+    if (checkbox && 'checked' in checkbox) {
+      checkbox.checked = theme === LIGHT;
+    }
+    document.querySelectorAll('[data-theme-state]').forEach((el) => {
+      el.textContent = theme === LIGHT ? 'Claro' : 'Escuro';
+    });
+  }
+
+  function applyTheme(theme, { persist = true, source = 'manual' } = {}) {
+    const resolved = theme === LIGHT ? LIGHT : DARK;
+    const isLight = resolved === LIGHT;
+    const root = document.documentElement;
+    const body = document.body;
+
+    root.dataset.theme = resolved;
+    root.classList.toggle('light-mode', isLight);
+    root.classList.toggle('dark-mode', !isLight);
+
+    if (body) {
+      body.dataset.theme = resolved;
+      body.classList.toggle('light-mode', isLight);
+      body.classList.toggle('dark-mode', !isLight);
+    }
+
+    root.style.colorScheme = resolved;
+    if (body) {
+      body.style.colorScheme = resolved;
+    }
+    getThemeMetaTag().setAttribute('content', isLight ? META_COLOR_LIGHT : META_COLOR_DARK);
+
+    if (persist) {
+      safeSet(THEME_KEY, resolved);
+      safeSet(LEGACY_THEME_KEY, isLight ? '1' : '0');
+    }
+
+    syncThemeUI(resolved);
+    window.dispatchEvent(new CustomEvent('kronia:theme-changed', { detail: { theme: resolved, source } }));
+    return resolved;
+  }
+
+  function toggleTheme(nextTheme) {
+    const current = document.documentElement.dataset.theme === LIGHT ? LIGHT : DARK;
+    const target = nextTheme === LIGHT || nextTheme === DARK
+      ? nextTheme
+      : current === LIGHT ? DARK : LIGHT;
+    return applyTheme(target, { persist: true, source: 'toggle' });
+  }
+
+  function bindThemeControls() {
+    document.querySelectorAll('[data-action="toggle-theme"], [data-theme-toggle], [onclick*="toggleTheme"]').forEach((el) => {
+      if (el.dataset.themeBound === '1') return;
+      el.dataset.themeBound = '1';
+
+      const isCheckbox = el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
+      if (isCheckbox) {
+        el.addEventListener('change', () => {
+          toggleTheme(el.checked ? LIGHT : DARK);
+        });
+        return;
+      }
+
+      el.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleTheme();
+      });
+    });
+  }
+
+  function bootTheme() {
+    applyTheme(getInitialTheme(), { persist: false, source: 'boot' });
+    bindThemeControls();
+  }
+
+  window.toggleTheme = toggleTheme;
+  window.applyTheme = applyTheme;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootTheme, { once: true });
+  } else {
+    bootTheme();
+  }
+
+  try {
+    const mql = window.matchMedia('(prefers-color-scheme: light)');
+    const handleSystemThemeChange = (event) => {
+      const stored = safeGet(THEME_KEY);
+      const hasExplicitUserChoice = stored === LIGHT || stored === DARK;
+      if (!hasExplicitUserChoice) {
+        applyTheme(event.matches ? LIGHT : DARK, { persist: false, source: 'system' });
+      }
+    };
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', handleSystemThemeChange);
+    } else if (typeof mql.addListener === 'function') {
+      mql.addListener(handleSystemThemeChange);
+    }
+  } catch {}
+})();
+
 window.onload = () => {
   validateClientRuntimeEnv();
   // Data
@@ -4526,13 +4680,6 @@ window.onload = () => {
     const hs = document.getElementById("homeScreen");
     if (hs && !hs.classList.contains("show")) { try { openHome(); } catch(e) {} }
   }, 300);
-
-  // Tema salvo
-  if (localStorage.getItem("kronia_light") === "1") {
-    document.body.classList.add('light-mode');
-    const val = document.getElementById('settingsThemeVal');
-    if (val) val.textContent = 'Claro';
-  }
 
   // UI
   updateStreakUI();
@@ -4927,7 +5074,7 @@ function openSettingsScreen() {
     }
     // Tema atual
     const themeVal = document.getElementById('settingsThemeVal');
-    if (themeVal) themeVal.textContent = document.body.classList.contains('light-mode') ? 'Claro' : 'Escuro';
+    if (themeVal) themeVal.textContent = document.documentElement.dataset.theme === 'light' ? 'Claro' : 'Escuro';
     // Unidade atual
     const unidadeVal = document.getElementById('settingsUnidadeVal');
     if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
@@ -4982,14 +5129,6 @@ function toggleUnidade() {
   const el = document.getElementById('settingsUnidadeVal');
   if (el) el.textContent = novo;
   showToast(`Unidade alterada para ${novo}`, 'success', 2500);
-}
-
-function toggleTheme() {
-  const isLight = document.body.classList.toggle('light-mode');
-  localStorage.setItem('kronia_light', isLight ? '1' : '0');
-  const val = document.getElementById('settingsThemeVal');
-  if (val) val.textContent = isLight ? 'Claro' : 'Escuro';
-  showToast(`Tema ${isLight ? 'claro' : 'escuro'} ativado`, 'success', 2000);
 }
 
 // ══════════════════════════════════════════
