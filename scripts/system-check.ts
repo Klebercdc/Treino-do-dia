@@ -111,9 +111,31 @@ async function checkSupabaseTables(): Promise<CheckResult> {
       }
     }
 
-    const hasScientificArticles = !missing.includes('scientific_articles') && !(await db.from('scientific_articles').select('id').limit(0)).error;
-    const hasScientificTopics = !missing.includes('scientific_topics') && !(await db.from('scientific_topics').select('id').limit(0)).error;
-    const hasScientificEvidence = !missing.includes('scientific_evidence') && !(await db.from('scientific_evidence').select('id').limit(0)).error;
+    const [articles, topics, evidence] = await Promise.all([
+      db.from('scientific_articles').select('id', { count: 'exact', head: true }),
+      db.from('scientific_topics').select('id', { count: 'exact', head: true }),
+      db.from('scientific_evidence').select('id', { count: 'exact', head: true }),
+    ]);
+
+    const scientificErrors = [
+      articles.error?.message,
+      topics.error?.message,
+      evidence.error?.message,
+    ].filter(Boolean);
+
+    if (scientificErrors.length) {
+      return {
+        name: 'supabase_tables',
+        status: 'SKIPPED',
+        summary: 'Não foi possível confirmar a base científica direta neste ambiente.',
+        error: scientificErrors.join(' | '),
+        suggestion: 'Rode este check em ambiente com conectividade plena ao Supabase para validar scientific_articles/scientific_topics/scientific_evidence.',
+      };
+    }
+
+    const hasScientificArticles = !articles.error;
+    const hasScientificTopics = !topics.error;
+    const hasScientificEvidence = !evidence.error;
 
     if (missing.length > 0) {
       return {
@@ -144,6 +166,11 @@ async function checkSupabaseTables(): Promise<CheckResult> {
       name: 'supabase_tables',
       status: 'OK',
       summary: `Todas as ${REQUIRED_TABLES.length} tabelas obrigatórias e a base científica direta existem.`,
+      details: {
+        scientificArticles: articles.count ?? null,
+        scientificTopics: topics.count ?? null,
+        scientificEvidence: evidence.count ?? null,
+      },
     };
   } catch (error) {
     return {
@@ -235,6 +262,34 @@ async function checkEmbeddings(): Promise<CheckResult> {
     }
 
     if ((total ?? 0) === 0) {
+      const [articles, evidence] = await Promise.all([
+        db.from('scientific_articles').select('*', { count: 'exact', head: true }),
+        db.from('scientific_evidence').select('*', { count: 'exact', head: true }),
+      ]);
+
+      if (articles.error || evidence.error) {
+        return {
+          name: 'embeddings',
+          status: 'SKIPPED',
+          summary: 'Não foi possível confirmar embeddings/base científica neste ambiente.',
+          error: [articles.error?.message, evidence.error?.message].filter(Boolean).join(' | '),
+          suggestion: 'Rode este check em ambiente com conectividade plena ao Supabase para validar a base ativa.',
+        };
+      }
+
+      if (!articles.error && !evidence.error && Number(articles.count || 0) > 0 && Number(evidence.count || 0) > 0) {
+        return {
+          name: 'embeddings',
+          status: 'OK',
+          summary: 'Chunks/embeddings antigos estão vazios, mas a base científica direta está pronta e é a fonte ativa desta instância.',
+          details: {
+            scientificArticles: articles.count,
+            scientificEvidence: evidence.count,
+            referenceMode: 'scientific_tables',
+          },
+        };
+      }
+
       return {
         name: 'embeddings',
         status: 'WARNING',
