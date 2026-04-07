@@ -114,10 +114,30 @@ export async function invokeExamOcrService(input: {
       const body = await res.text().catch(() => '');
       throw new Error(`OCR service ${res.status}: ${body.slice(0, 200)}`);
     }
-    return (await res.json()) as ExamOcrResponse;
+    const payload = (await res.json()) as ExamOcrResponse;
+    if (payload?.success !== true) {
+      throw new Error('OCR service retornou success=false');
+    }
+    return payload;
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function markLabReportAsFailed(
+  admin: SupabaseClient,
+  input: { labReportId: string; reason: string },
+): Promise<void> {
+  await admin
+    .from('lab_reports')
+    .update({
+      status: 'failed',
+      parse_status: 'failed',
+      processing_error: input.reason.slice(0, 280),
+      processed_at: new Date().toISOString(),
+      is_valid: false,
+    })
+    .eq('id', input.labReportId);
 }
 
 export async function persistLabExtraction(
@@ -370,4 +390,26 @@ export async function processLabReportUpload(
   });
 
   return { status: analysis.status, biomarkersCount: normalizedBiomarkers.length };
+}
+
+export async function processLabReportUploadSafely(
+  admin: SupabaseClient,
+  input: {
+    labReportId: string;
+    storageBucket: string;
+    storagePath: string;
+    mimeType: string;
+  },
+): Promise<{ status: LabReportStatus; biomarkersCount: number }> {
+  try {
+    return await processLabReportUpload(admin, input);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'processing_failed';
+    await markLabReportAsFailed(admin, { labReportId: input.labReportId, reason });
+    logger.warn('labs_pipeline_failed', {
+      labReportId: input.labReportId,
+      reason,
+    });
+    return { status: 'failed', biomarkersCount: 0 };
+  }
 }
