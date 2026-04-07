@@ -47,6 +47,17 @@ async function main() {
     db.from('scientific_topics').select('id,topic,keywords,status'),
   ]);
 
+  const initialErrors = [
+    exercises.error?.message,
+    articles.error?.message,
+    evidence.error?.message,
+    topics.error?.message,
+  ].filter(Boolean);
+
+  if (initialErrors.length) {
+    throw new Error(`Release readiness failed to read Supabase state: ${initialErrors.join(' | ')}`);
+  }
+
   const topicRows = (topics.data || []).filter((row: any) => !row?.status || String(row.status).toLowerCase() === 'active');
 
   const coverage = [];
@@ -58,6 +69,9 @@ async function main() {
     const evidenceRows = topicIds.length
       ? await db.from('scientific_evidence').select('article_id,topic:scientific_topics(topic)').in('topic_id', topicIds).eq('needs_review', false).limit(20)
       : { data: [], error: null };
+    if (evidenceRows.error) {
+      throw new Error(`Release readiness failed to read goal coverage for ${goal}: ${evidenceRows.error.message}`);
+    }
     const count = Array.isArray(evidenceRows.data) ? evidenceRows.data.length : 0;
     coverage.push({
       goal,

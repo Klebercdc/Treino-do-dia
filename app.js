@@ -5369,7 +5369,7 @@ async function buildScientificConstraintsByObjective(objective, kind, input) {
       usedFallback: serviceUnavailable || evidenceState !== 'ok',
       fallbackProtocol: evidenceState === 'no_evidence' || serviceUnavailable ? 'safe_conservative_sports_nutrition' : null,
       warningMessage: evidenceState === 'weak_evidence'
-        ? 'Evidência científica parcial para este objetivo. Aplicando protocolo técnico conservador.'
+        ? 'Estou usando a melhor base disponível para esse objetivo e reforçando o plano com regras esportivas confiáveis.'
         : null,
       timestamp: new Date().toISOString(),
     };
@@ -7492,26 +7492,32 @@ function buildLocalDietFoodCatalog(input) {
     });
   }
 
-  const breakfastProteins = sortByPreference([
+  function preferAnimalProteins(items) {
+    if (isVegan || isVegetarian || dietTextIncludesAny("tofu", preferencias)) return items;
+    const animalOnly = items.filter(function(item) { return !/tofu/i.test(String(item.nome || "")); });
+    return animalOnly.length ? animalOnly : items;
+  }
+
+  const breakfastProteins = preferAnimalProteins(sortByPreference([
     { nome: "Ovos mexidos", porcao: "3 un", kcal: 210, prot: 18, carb: 1, gord: 15 },
     { nome: "Whey protein", porcao: "30 g", kcal: 120, prot: 24, carb: 3, gord: 2 },
     { nome: "Tofu mexido", porcao: "180 g", kcal: 173, prot: 18, carb: 5, gord: 10 },
     { nome: "Iogurte grego natural", porcao: "170 g", kcal: 130, prot: 17, carb: 6, gord: 4 },
-  ].filter(allowed));
+  ].filter(allowed)));
 
-  const fastProteins = sortByPreference([
+  const fastProteins = preferAnimalProteins(sortByPreference([
     { nome: "Whey protein", porcao: "30 g", kcal: 120, prot: 24, carb: 3, gord: 2 },
     { nome: "Iogurte natural", porcao: "170 g", kcal: 104, prot: 6, carb: 8, gord: 5 },
     { nome: "Tofu firme", porcao: "150 g", kcal: 144, prot: 15, carb: 4, gord: 8 },
-  ].filter(allowed));
+  ].filter(allowed)));
 
-  const mealProteins = sortByPreference([
+  const mealProteins = preferAnimalProteins(sortByPreference([
     { nome: "Frango grelhado", porcao: "120 g", kcal: 198, prot: 37, carb: 0, gord: 4 },
     { nome: "Patinho grelhado", porcao: "120 g", kcal: 225, prot: 34, carb: 0, gord: 10 },
     { nome: "Tilápia grelhada", porcao: "140 g", kcal: 180, prot: 33, carb: 0, gord: 4 },
     { nome: "Tofu firme", porcao: "200 g", kcal: 192, prot: 20, carb: 5, gord: 11 },
     { nome: "Atum em lata", porcao: "1 lata", kcal: 170, prot: 30, carb: 0, gord: 5 },
-  ].filter(allowed));
+  ].filter(allowed)));
 
   const breakfastCarbs = [
     { nome: "Aveia", porcao: "40 g", kcal: 156, prot: 6.8, carb: 26.5, gord: 3.4 },
@@ -7536,6 +7542,11 @@ function buildLocalDietFoodCatalog(input) {
     { nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 },
     { nome: "Maçã", porcao: "1 un", kcal: 72, prot: 0.3, carb: 19, gord: 0.2 },
     { nome: "Mel", porcao: "20 g", kcal: 61, prot: 0, carb: 17, gord: 0 },
+  ].filter(allowed);
+
+  const breakfastFats = [
+    { nome: "Pasta de amendoim", porcao: "20 g", kcal: 118, prot: 5, carb: 4, gord: 10 },
+    { nome: "Castanhas", porcao: "20 g", kcal: 120, prot: 3, carb: 4, gord: 10 },
   ].filter(allowed);
 
   const fats = [
@@ -7563,6 +7574,7 @@ function buildLocalDietFoodCatalog(input) {
     fastCarbs: fastCarbs.length ? fastCarbs : [{ nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 }],
     mealCarbs: mealCarbs.length ? mealCarbs : [{ nome: "Arroz cozido", porcao: "120 g", kcal: 156, prot: 3, carb: 34, gord: 0.4 }],
     supportCarbs: supportCarbs.length ? supportCarbs : [{ nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 }],
+    breakfastFats: breakfastFats.length ? breakfastFats : [{ nome: "Pasta de amendoim", porcao: "20 g", kcal: 118, prot: 5, carb: 4, gord: 10 }],
     fats: fats.length ? fats : [{ nome: "Abacate", porcao: "100 g", kcal: 96, prot: 1.2, carb: 6, gord: 8.4 }],
     veggies: veggies.length ? veggies : [{ nome: "Salada verde", porcao: "1 prato", kcal: 20, prot: 1, carb: 3, gord: 0.2 }],
     extras: extras,
@@ -7641,6 +7653,76 @@ function buildLocalDietPlan(input) {
     }, { kcal: 0, prot: 0, carb: 0, gord: 0 });
   }
 
+  function scaleFood(item, factor) {
+    const ratio = Math.max(0.45, Math.min(1.65, Number(factor || 1)));
+    return cloneFood({
+      nome: item.nome,
+      porcao: item.qtde || item.porcao,
+      kcal: Number(item.kcal || 0),
+      prot: Number(item.prot || 0),
+      carb: Number(item.carb || 0),
+      gord: Number(item.gord || 0),
+    }, ratio);
+  }
+
+  function pickDistinctFood(items, excludedNames) {
+    const excluded = (excludedNames || []).map(normalizeDietFoodText).filter(Boolean);
+    return (items || []).find(function(item) {
+      return excluded.indexOf(normalizeDietFoodText(item && item.nome)) === -1;
+    }) || null;
+  }
+
+  function pickAdjustableIndex(items, macroKey, options) {
+    const settings = options || {};
+    let index = -1;
+    let best = -1;
+    items.forEach(function(item, itemIndex) {
+      const name = normalizeDietFoodText(item && item.nome);
+      if (!name) return;
+      if (settings.excludeVeggies && /brocolis|salada|legumes|cenoura/.test(name)) return;
+      const score = Number(item[macroKey] || 0);
+      if (score > best) {
+        best = score;
+        index = itemIndex;
+      }
+    });
+    return index;
+  }
+
+  function rebalanceLocalMeal(alimentos, target, options) {
+    const settings = options || {};
+    const balanced = alimentos.slice();
+    for (let pass = 0; pass < 4; pass += 1) {
+      const subtotal = sumMeal(balanced);
+      const proteinGap = Math.round(((Number(target.protein || 0) - subtotal.prot) || 0) * 10) / 10;
+      const carbGap = Math.round(((Number(target.carbs || 0) - subtotal.carb) || 0) * 10) / 10;
+      const fatGap = Math.round(((Number(target.fat || 0) - subtotal.gord) || 0) * 10) / 10;
+
+      if (Math.abs(proteinGap) > 2) {
+        const proteinIndex = pickAdjustableIndex(balanced, "prot", { excludeVeggies: true });
+        if (proteinIndex >= 0) {
+          const item = balanced[proteinIndex];
+          balanced[proteinIndex] = scaleFood(item, (Number(item.prot || 0) + proteinGap) / Math.max(Number(item.prot || 1), 1));
+        }
+      }
+      if (Math.abs(carbGap) > 4) {
+        const carbIndex = pickAdjustableIndex(balanced, "carb", { excludeVeggies: true });
+        if (carbIndex >= 0) {
+          const item = balanced[carbIndex];
+          balanced[carbIndex] = scaleFood(item, (Number(item.carb || 0) + carbGap) / Math.max(Number(item.carb || 1), 1));
+        }
+      }
+      if (!settings.isWorkoutMeal && Math.abs(fatGap) > 1.5) {
+        const fatIndex = pickAdjustableIndex(balanced, "gord", { excludeVeggies: true });
+        if (fatIndex >= 0) {
+          const item = balanced[fatIndex];
+          balanced[fatIndex] = scaleFood(item, (Number(item.gord || 0) + fatGap) / Math.max(Number(item.gord || 1), 1));
+        }
+      }
+    }
+    return balanced;
+  }
+
   const refeicoes = templates.map(function (template, index) {
     const mealProteinTarget = Math.round(baseline.proteinaMeta * template.proteinShare * 10) / 10;
     const mealCarbTarget = Math.round(baseline.carboMeta * template.carbShare * 10) / 10;
@@ -7652,13 +7734,15 @@ function buildLocalDietPlan(input) {
     const carb = /cafe/.test(template.tipo)
       ? catalog.breakfastCarbs[index % catalog.breakfastCarbs.length]
       : (/lanche/.test(template.tipo) ? catalog.fastCarbs[index % catalog.fastCarbs.length] : catalog.mealCarbs[index % catalog.mealCarbs.length]);
-    const supportCarb = catalog.supportCarbs[index % catalog.supportCarbs.length];
-    const fat = catalog.fats[index % catalog.fats.length];
-    const veggie = catalog.veggies[index % catalog.veggies.length];
-    const extra = catalog.extras[index % Math.max(catalog.extras.length, 1)] || null;
     const isWorkoutMeal = /pre_treino|pos_treino/.test(template.tipo);
     const isBreakfast = /cafe/.test(template.tipo);
     const isMainMeal = /almoco|jantar/.test(template.tipo);
+    const supportCarb = catalog.supportCarbs[index % catalog.supportCarbs.length];
+    const fat = isBreakfast
+      ? catalog.breakfastFats[index % catalog.breakfastFats.length]
+      : catalog.fats[index % catalog.fats.length];
+    const veggie = catalog.veggies[index % catalog.veggies.length];
+    const extra = catalog.extras[index % Math.max(catalog.extras.length, 1)] || null;
     const rice = catalog.mealCarbs.find(function(item) { return /arroz/i.test(item.nome); }) || catalog.mealCarbs[0];
     const beans = catalog.mealCarbs.find(function(item) { return /feij[aã]o/i.test(item.nome); }) || catalog.mealCarbs[0];
     const breakfastFruit = catalog.breakfastCarbs.find(function(item) { return /banana/i.test(item.nome); }) || catalog.breakfastCarbs[0];
@@ -7678,7 +7762,7 @@ function buildLocalDietPlan(input) {
       alimentos.push(cloneFood(carb, Math.max(0.8, Math.min(1.4, (mealCarbTarget * 0.68) / Math.max(carb.carb, 1)))));
       if (mealCarbTarget > 28) alimentos.push(cloneFood(supportCarb, Math.max(0.6, Math.min(1.0, (mealCarbTarget * 0.22) / Math.max(supportCarb.carb, 1)))));
     }
-    if (!/lanche/.test(template.tipo)) alimentos.push(cloneFood(veggie, 1));
+    if (isMainMeal) alimentos.push(cloneFood(veggie, 1));
 
     const subtotalBeforeFat = sumMeal(alimentos);
     const remainingProtein = Math.max(0, mealProteinTarget - subtotalBeforeFat.prot);
@@ -7687,11 +7771,28 @@ function buildLocalDietPlan(input) {
     if (extra && remainingProtein > 8) {
       alimentos.push(cloneFood(extra, Math.max(0.5, Math.min(1.2, remainingProtein / Math.max(extra.prot, 1)))));
     }
+    if (!isMainMeal) {
+      const subtotalAfterProtein = sumMeal(alimentos);
+      const carbGap = Math.max(0, mealCarbTarget - subtotalAfterProtein.carb);
+      if (carbGap > 8) {
+        const candidate = isBreakfast
+          ? (pickDistinctFood(catalog.breakfastCarbs, alimentos.map(function(item) { return item.nome; })) || pickDistinctFood(catalog.supportCarbs, alimentos.map(function(item) { return item.nome; })))
+          : (pickDistinctFood(catalog.supportCarbs, alimentos.map(function(item) { return item.nome; })) || pickDistinctFood(catalog.fastCarbs, alimentos.map(function(item) { return item.nome; })));
+        if (candidate) {
+          alimentos.push(cloneFood(candidate, Math.max(0.5, Math.min(1.2, carbGap / Math.max(candidate.carb, 1)))));
+        }
+      }
+    }
     if (remainingFat > 3 && !isWorkoutMeal) {
       alimentos.push(cloneFood(fat, Math.max(0.3, Math.min(isBreakfast ? 0.8 : 1.0, remainingFat / Math.max(fat.gord, 1)))));
     }
 
-    const subtotalRaw = sumMeal(alimentos);
+    const alimentosBalanceados = rebalanceLocalMeal(alimentos, {
+      protein: mealProteinTarget,
+      carbs: mealCarbTarget,
+      fat: mealFatTarget,
+    }, { isWorkoutMeal: isWorkoutMeal });
+    const subtotalRaw = sumMeal(alimentosBalanceados);
     const subtotal = {
       kcal: Math.round(subtotalRaw.kcal),
       prot: Math.round(subtotalRaw.prot * 10) / 10,
@@ -7703,10 +7804,10 @@ function buildLocalDietPlan(input) {
       nome: template.nome,
       horario: template.horario,
       foco: "META: " + Math.round((mealProteinTarget * 4) + (mealCarbTarget * 4) + (mealFatTarget * 9)) + " kcal",
-      proteinas: alimentos.filter(function(item) { return Number(item.prot || 0) >= 8; }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
-      carbos: alimentos.filter(function(item) { return Number(item.carb || 0) >= 8; }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
-      extras: alimentos.filter(function(item) { return Number(item.gord || 0) >= 7 || (Number(item.prot || 0) < 8 && Number(item.carb || 0) < 8); }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
-      alimentos: alimentos,
+      proteinas: alimentosBalanceados.filter(function(item) { return Number(item.prot || 0) >= 8; }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
+      carbos: alimentosBalanceados.filter(function(item) { return Number(item.carb || 0) >= 8; }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
+      extras: alimentosBalanceados.filter(function(item) { return Number(item.gord || 0) >= 7 || (Number(item.prot || 0) < 8 && Number(item.carb || 0) < 8); }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
+      alimentos: alimentosBalanceados,
       subtotal: subtotal,
       substituicoes: [],
     };

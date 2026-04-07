@@ -90,6 +90,10 @@ var FOOD_LIBRARY = {
     { code: 'maca_1', name: 'Maçã', portionLabel: '1 un média', grams: 130, calories: 72, protein: 0.3, carbs: 19, fat: 0.2, fiber: 3, source: 'TACO (adaptado)' },
     { code: 'mel_20', name: 'Mel', portionLabel: '20 g', grams: 20, calories: 61, protein: 0, carbs: 17, fat: 0, fiber: 0, source: 'USDA FoodData Central (adaptado)' }
   ],
+  breakfastFats: [
+    { code: 'pasta_amendoim_20', name: 'Pasta de amendoim', portionLabel: '20 g', grams: 20, calories: 118, protein: 5, carbs: 4, fat: 10, fiber: 1.8, source: 'USDA FoodData Central (adaptado)' },
+    { code: 'castanhas_20_breakfast', name: 'Castanhas', portionLabel: '20 g', grams: 20, calories: 120, protein: 3, carbs: 4, fat: 10, fiber: 2, source: 'USDA FoodData Central (adaptado)' }
+  ],
   fats: [
     { code: 'azeite_10', name: 'Azeite de oliva', portionLabel: '10 g', grams: 10, calories: 88, protein: 0, carbs: 0, fat: 10, fiber: 0, source: 'USDA FoodData Central (adaptado)' },
     { code: 'castanhas_20', name: 'Castanhas', portionLabel: '20 g', grams: 20, calories: 120, protein: 3, carbs: 4, fat: 10, fiber: 2, source: 'USDA FoodData Central (adaptado)' },
@@ -349,8 +353,102 @@ function isPlantProtein(food) {
   return /tofu/.test(normalizeFreeText(food && food.name));
 }
 
+function isProteinList(listName) {
+  return /proteins$/i.test(String(listName || ''));
+}
+
+function cloneScaledMealItem(item, factor) {
+  var ratio = Math.max(0.45, Math.min(1.65, Number(factor || 1)));
+  return {
+    foodCode: item.foodCode,
+    nome: item.nome,
+    porcao: round(Number(item.gramas || 0) * ratio) + ' g',
+    gramas: round(Number(item.gramas || 0) * ratio),
+    calorias: round(Number(item.calorias || 0) * ratio),
+    proteinas: round(Number(item.proteinas || 0) * ratio, 1),
+    carboidratos: round(Number(item.carboidratos || 0) * ratio, 1),
+    gorduras: round(Number(item.gorduras || 0) * ratio, 1),
+    fibras: round(Number(item.fibras || 0) * ratio, 1),
+    source: item.source,
+    substituicoes: item.substituicoes || []
+  };
+}
+
+function selectDistinctFood(listName, profile, index, excludedNames) {
+  var excluded = (excludedNames || []).map(normalizeFreeText).filter(Boolean);
+  var pool = (FOOD_LIBRARY[listName] || []).filter(function(food) {
+    if (isRestricted(food, profile.restricoesAlimentares, profile.alimentosEvitar)) return false;
+    if (shouldAvoidFoodForClinical(food, profile)) return false;
+    return excluded.indexOf(normalizeFreeText(food.name)) === -1;
+  });
+
+  if (!pool.length) return null;
+  return chooseFood(listName, Object.assign({}, profile, { _overrideFoodPool: pool }), index);
+}
+
+function selectAdjustableItemIndex(items, macroKey, options) {
+  var settings = options || {};
+  var index = -1;
+  var bestScore = -1;
+  for (var i = 0; i < items.length; i += 1) {
+    var item = items[i];
+    var name = normalizeFreeText(item && item.nome);
+    if (!name) continue;
+    if (settings.excludeVeggies && /brocolis|salada|legumes|cenoura/.test(name)) continue;
+    if (settings.excludeWorkoutFat && /azeite|castanhas|abacate/.test(name)) continue;
+    var score = Number(item[macroKey] || 0);
+    if (score > bestScore) {
+      bestScore = score;
+      index = i;
+    }
+  }
+  return index;
+}
+
+function rebalanceMealItems(items, target, options) {
+  var balanced = (items || []).slice();
+  var settings = options || {};
+
+  for (var pass = 0; pass < 4; pass += 1) {
+    var subtotal = sumMeal(balanced);
+    var proteinGap = round(Number(target.protein || 0) - subtotal.protein, 1);
+    var carbGap = round(Number(target.carbs || 0) - subtotal.carbs, 1);
+    var fatGap = round(Number(target.fat || 0) - subtotal.fat, 1);
+
+    if (Math.abs(proteinGap) > 2) {
+      var proteinIndex = selectAdjustableItemIndex(balanced, 'proteinas', { excludeVeggies: true });
+      if (proteinIndex >= 0) {
+        var proteinItem = balanced[proteinIndex];
+        var proteinFactor = (Number(proteinItem.proteinas || 0) + proteinGap) / Math.max(Number(proteinItem.proteinas || 1), 1);
+        balanced[proteinIndex] = cloneScaledMealItem(proteinItem, proteinFactor);
+      }
+    }
+
+    if (Math.abs(carbGap) > 4) {
+      var carbIndex = selectAdjustableItemIndex(balanced, 'carboidratos', { excludeVeggies: true });
+      if (carbIndex >= 0) {
+        var carbItem = balanced[carbIndex];
+        var carbFactor = (Number(carbItem.carboidratos || 0) + carbGap) / Math.max(Number(carbItem.carboidratos || 1), 1);
+        balanced[carbIndex] = cloneScaledMealItem(carbItem, carbFactor);
+      }
+    }
+
+    if (!settings.isWorkoutMeal && Math.abs(fatGap) > 1.5) {
+      var fatIndex = selectAdjustableItemIndex(balanced, 'gorduras', { excludeVeggies: true, excludeWorkoutFat: false });
+      if (fatIndex >= 0) {
+        var fatItem = balanced[fatIndex];
+        var fatFactor = (Number(fatItem.gorduras || 0) + fatGap) / Math.max(Number(fatItem.gorduras || 1), 1);
+        balanced[fatIndex] = cloneScaledMealItem(fatItem, fatFactor);
+      }
+    }
+  }
+
+  return balanced;
+}
+
 function chooseFood(listName, profile, fallbackIndex) {
-  var items = (FOOD_LIBRARY[listName] || []).filter(function(food) {
+  var baseItems = Array.isArray(profile && profile._overrideFoodPool) ? profile._overrideFoodPool : (FOOD_LIBRARY[listName] || []);
+  var items = baseItems.filter(function(food) {
     return !isRestricted(food, profile.restricoesAlimentares, profile.alimentosEvitar) && !shouldAvoidFoodForClinical(food, profile);
   });
   if (!items.length) items = FOOD_LIBRARY[listName] || [];
@@ -367,7 +465,12 @@ function chooseFood(listName, profile, fallbackIndex) {
     }
     return (bPref - aPref) || (aPlant - bPlant);
   });
-  return items[fallbackIndex % Math.max(items.length, 1)] || null;
+  if (!isVeganProfile(profile) && !isVegetarianProfile(profile) && isProteinList(listName) && !textIncludesAny('tofu', profile.preferencias)) {
+    var animalFirst = items.filter(function(food) { return !isPlantProtein(food); });
+    if (animalFirst.length) items = animalFirst;
+  }
+  var rotationWindow = isProteinList(listName) ? Math.min(items.length, 2) : items.length;
+  return items[fallbackIndex % Math.max(rotationWindow, 1)] || null;
 }
 
 function cloneFoodItem(food, factor) {
@@ -442,9 +545,6 @@ function buildMealItems(template, profile, macros, index) {
     carbSource = chooseFood('mealCarbs', profile, index);
   }
 
-  supportCarb = chooseFood('supportCarbs', profile, index);
-  fatSource = chooseFood('fats', profile, index);
-  veggieSource = chooseFood('veggies', profile, index);
   var beanSource = (FOOD_LIBRARY.mealCarbs || []).find(function(food) { return /feijao/.test(normalizeFreeText(food.name)); });
   var riceSource = (FOOD_LIBRARY.mealCarbs || []).find(function(food) { return /arroz/.test(normalizeFreeText(food.name)); });
   var breakfastFruit = (FOOD_LIBRARY.breakfastCarbs || []).find(function(food) { return /banana/.test(normalizeFreeText(food.name)); });
@@ -453,6 +553,9 @@ function buildMealItems(template, profile, macros, index) {
   var isBreakfast = /cafe/.test(template.tipo);
   var isSnack = /lanche/.test(template.tipo);
   var isWorkoutMeal = /pre_treino|pos_treino/.test(template.tipo);
+  supportCarb = chooseFood('supportCarbs', profile, index);
+  fatSource = chooseFood(isBreakfast ? 'breakfastFats' : 'fats', profile, index);
+  veggieSource = chooseFood('veggies', profile, index);
 
   var items = [];
   if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(0.8, Math.min(1.45, macros.protein / Math.max(proteinSource.protein, 1)))));
@@ -471,7 +574,7 @@ function buildMealItems(template, profile, macros, index) {
     if (supportCarb && macros.carbs > 25) items.push(cloneFoodItem(supportCarb, Math.max(0.5, Math.min(1.0, (macros.carbs * 0.22) / Math.max(supportCarb.carbs, 1)))));
   }
 
-  if (veggieSource && !isSnack) items.push(cloneFoodItem(veggieSource, 1));
+  if (veggieSource && isMainMeal) items.push(cloneFoodItem(veggieSource, 1));
   if (fatSource && macros.fat > 4 && !isWorkoutMeal) {
     items.push(cloneFoodItem(fatSource, Math.max(0.3, Math.min(isBreakfast ? 0.8 : 1.0, macros.fat / Math.max(fatSource.fat, 1)))));
   }
@@ -493,13 +596,16 @@ function buildMealItems(template, profile, macros, index) {
     }));
   }
   if (carbGap > 8 && !isMainMeal) {
-    var banana = chooseFood('supportCarbs', profile, 0) || chooseFood('breakfastCarbs', profile, 0);
-    if (banana) items.push(Object.assign({}, cloneFoodItem(banana, Math.max(0.5, carbGap / Math.max(banana.carbs, 1))), {
-      substituicoes: buildSubstitutions(cloneFoodItem(banana, 1), profile)
+    var existingNames = items.map(function(item) { return item.nome; });
+    var extraCarb = isBreakfast
+      ? (selectDistinctFood('breakfastCarbs', profile, 0, existingNames) || selectDistinctFood('supportCarbs', profile, 0, existingNames))
+      : (selectDistinctFood('supportCarbs', profile, 0, existingNames) || selectDistinctFood('fastCarbs', profile, 0, existingNames));
+    if (extraCarb) items.push(Object.assign({}, cloneFoodItem(extraCarb, Math.max(0.5, carbGap / Math.max(extraCarb.carbs, 1))), {
+      substituicoes: buildSubstitutions(cloneFoodItem(extraCarb, 1), profile)
     }));
   }
 
-  return items;
+  return rebalanceMealItems(items, macros, { isWorkoutMeal: isWorkoutMeal });
 }
 
 function getMealTemplates(profile) {
