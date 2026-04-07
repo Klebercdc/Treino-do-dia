@@ -3,6 +3,7 @@ import { logger } from '../../../lib/utils/logger';
 
 const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
+const PROCESSING_STALE_MINUTES = 20;
 
 export type LabReportStatus = 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
 
@@ -72,6 +73,69 @@ export async function enqueueLabReportProcessing(
     .update({ status: 'processing', parse_status: 'pending', processing_error: null })
     .eq('id', labReportId);
   if (error) throw new Error(`Falha ao enfileirar processamento: ${error.message}`);
+}
+
+function getProcessingStaleBeforeIso(now = new Date()): string {
+  const staleMs = PROCESSING_STALE_MINUTES * 60 * 1000;
+  return new Date(now.getTime() - staleMs).toISOString();
+}
+
+function canAcquireProcessingLock(status: string | null | undefined, updatedAt: string | null | undefined): boolean {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'uploaded' || normalized === 'failed' || normalized === 'needs_review') {
+    return true;
+  }
+
+  if (normalized !== 'processing') return false;
+  if (!updatedAt) return true;
+
+  const staleBefore = Date.parse(getProcessingStaleBeforeIso());
+  const updatedAtMs = Date.parse(String(updatedAt));
+  if (!Number.isFinite(updatedAtMs)) return true;
+  return updatedAtMs <= staleBefore;
+}
+
+export async function acquireLabReportProcessingLock(
+  admin: SupabaseClient,
+  input: {
+    labReportId: string;
+    currentStatus: string;
+    updatedAt?: string | null;
+  },
+): Promise<boolean> {
+  if (!canAcquireProcessingLock(input.currentStatus, input.updatedAt)) return false;
+
+  const { data, error } = await admin
+    .from('lab_reports')
+    .update({
+      status: 'processing',
+      parse_status: 'pending',
+      processing_error: null,
+    })
+    .eq('id', input.labReportId)
+    .eq('status', input.currentStatus)
+    .select('id')
+    .limit(1);
+
+  if (error) throw new Error(`Falha ao adquirir lock de processamento: ${error.message}`);
+  return Array.isArray(data) && data.length === 1;
+}
+
+export async function listStaleProcessingLabReports(
+  admin: SupabaseClient,
+  limit = 10,
+): Promise<Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>> {
+  const staleBefore = getProcessingStaleBeforeIso();
+  const { data, error } = await admin
+    .from('lab_reports')
+    .select('id,storage_bucket,storage_path,mime_type,file_type,status,updated_at')
+    .eq('status', 'processing')
+    .lt('updated_at', staleBefore)
+    .order('updated_at', { ascending: true })
+    .limit(Math.min(Math.max(limit, 1), 50));
+
+  if (error) throw new Error(`Falha ao listar exames presos em processing: ${error.message}`);
+  return (data || []) as Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>;
 }
 
 export async function downloadLabReportFromStorage(

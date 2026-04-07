@@ -123,6 +123,10 @@
     {
       "path": "/api/cron/sync-exercises",
       "schedule": "0 4 * * 1"
+    },
+    {
+      "path": "/api/cron/labs-watchdog",
+      "schedule": "*/10 * * * *"
     }
   ],
   "installCommand": "npm ci --include=dev"

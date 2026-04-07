@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
+  acquireLabReportProcessingLock,
   computeReadinessForAI,
   invokeExamOcrService,
   processLabReportUploadSafely,
@@ -128,4 +129,44 @@ test('upload despacha processamento desacoplado e não executa pipeline inline',
   const routeSource = readFileSync('src/app/api/labs/upload/route.ts', 'utf-8');
   assert.match(routeSource, /\/api\/labs\/process/);
   assert.doesNotMatch(routeSource, /processLabReportUpload\(/);
+});
+
+test('acquireLabReportProcessingLock impede corrida quando status mudou', async () => {
+  const admin = {
+    from: () => ({
+      update: () => ({
+        eq: () => ({
+          eq: () => ({
+            select: () => ({
+              limit: async () => [],
+            }),
+          }),
+        }),
+      }),
+    }),
+  } as any;
+
+  const acquired = await acquireLabReportProcessingLock(admin, {
+    labReportId: 'lab-3',
+    currentStatus: 'uploaded',
+    updatedAt: new Date().toISOString(),
+  });
+
+  assert.equal(acquired, false);
+});
+
+test('watchdog cron para exames presos existe e exige autorização', () => {
+  const source = readFileSync('src/app/api/cron/labs-watchdog/route.ts', 'utf-8');
+  assert.match(source, /listStaleProcessingLabReports/);
+  assert.match(source, /authorization/);
+  assert.match(source, /processLabReportUploadSafely/);
+
+  const vercelConfig = readFileSync('vercel.json', 'utf-8');
+  assert.equal(vercelConfig.includes('"path": "/api/cron/labs-watchdog"'), true);
+});
+
+test('home mantém CTA visível para entrada de Exames', () => {
+  const html = readFileSync('index.html', 'utf-8');
+  assert.match(html, /home-labs-cta-card/);
+  assert.match(html, /Enviar exames agora/);
 });
