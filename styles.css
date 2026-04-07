@@ -1628,6 +1628,70 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
 #homeBannerSub   { font-size: .72rem; color: var(--text-2); }
 
 /* ══════════════════════════════════════════
+   HOME LABS CTA
+══════════════════════════════════════════ */
+.home-labs-cta-card {
+  margin: 8px 16px 6px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(16,185,129,.38);
+  background: linear-gradient(145deg,rgba(16,185,129,.2),rgba(14,165,233,.08));
+  box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.07);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.home-labs-cta-card:active { transform: scale(.985); }
+.home-labs-cta-card:hover { border-color: rgba(16,185,129,.6); box-shadow: 0 14px 28px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.1); }
+.home-labs-cta-badge {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(16,185,129,.55);
+  background: rgba(16,185,129,.18);
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6ee7b7;
+}
+.home-labs-cta-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: linear-gradient(145deg,#10b981,#0284c7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(14,165,233,.35);
+}
+.home-labs-cta-title { font-size: .9rem; font-weight: 800; line-height: 1.32; color: var(--text); margin-bottom: 4px; }
+.home-labs-cta-sub { font-size: .75rem; line-height: 1.45; color: rgba(255,255,255,.78); }
+.home-labs-cta-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(145deg,#10b981,#059669);
+  color: #f0fdf4;
+  padding: 11px 12px;
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.home-labs-cta-btn:active { transform: scale(.985); }
+body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
+
+/* ══════════════════════════════════════════
    HOME TOOLS
 ══════════════════════════════════════════ */
 .home-tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
