@@ -3,7 +3,7 @@ import { createAdminSupabaseClient } from '../../../../../lib/supabase/admin';
 import {
   isAuthorizedCronRequest,
   runExerciseSyncTask,
-  runLabsWatchdogTask,
+  runLabsWatchdogDispatchTask,
   type CronTaskResult,
 } from '../../../../../server/internal/cron/dispatcher';
 import { logger } from '../../../../../lib/utils/logger';
@@ -131,7 +131,10 @@ export async function GET(req: Request) {
   const now = new Date();
   const tasks: CronTaskResult[] = [];
 
-  tasks.push(await runLabsWatchdogTask(admin, 10));
+  // Dispatch: lista exames presos e enfileira via POST /api/labs/process (cada um roda
+  // em sua própria invocação serverless). O processamento OCR inline consumiria até
+  // 45 s por exame, estourando o maxDuration de 60 s com apenas 2 exames em série.
+  tasks.push(await runLabsWatchdogDispatchTask(admin, req, 20));
   tasks.push(await runExerciseSyncTask(now));
   tasks.push(await runAutoImportTask(req));
   tasks.push(await runMemoryQueueTask(req));
