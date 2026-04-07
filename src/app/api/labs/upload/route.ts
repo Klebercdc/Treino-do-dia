@@ -6,7 +6,6 @@ import { LAB_REPORTS_BUCKET, uploadLabReportFile } from '../../../../core/labs/l
 import {
   createLabReportRecord,
   enqueueLabReportProcessing,
-  processLabReportUpload,
 } from '../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
@@ -59,45 +58,36 @@ export async function POST(req: NextRequest) {
 
     await enqueueLabReportProcessing(admin, created.id);
 
-    try {
-      const processed = await processLabReportUpload(admin, {
-        labReportId: created.id,
-        storageBucket: LAB_REPORTS_BUCKET,
-        storagePath: uploaded.path,
-        mimeType: file.type,
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const processUrl = new URL('/api/labs/process', req.url);
+      void fetch(processUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${cronSecret}`,
+        },
+        body: JSON.stringify({ labReportId: created.id }),
+      }).catch((dispatchError) => {
+        logger.warn('labs_upload_dispatch_failed', {
+          userId: auth.user.id,
+          labReportId: created.id,
+          reason: dispatchError instanceof Error ? dispatchError.message : 'unknown',
+        });
       });
-
-      return NextResponse.json({
-        ok: true,
-        uploaded: true,
-        labReportId: created.id,
-        status: processed.status,
-        biomarkersCount: processed.biomarkersCount,
-      });
-    } catch (processingError) {
-      await admin
-        .from('lab_reports')
-        .update({
-          status: 'failed',
-          parse_status: 'failed',
-          processing_error: processingError instanceof Error ? processingError.message.slice(0, 280) : 'processing_failed',
-          is_valid: false,
-        })
-        .eq('id', created.id);
-
-      logger.warn('labs_upload_process_failed', {
+    } else {
+      logger.warn('labs_upload_missing_cron_secret', {
         userId: auth.user.id,
         labReportId: created.id,
-        reason: processingError instanceof Error ? processingError.message : 'unknown',
-      });
-
-      return NextResponse.json({
-        ok: true,
-        uploaded: true,
-        labReportId: created.id,
-        status: 'failed',
       });
     }
+
+    return NextResponse.json({
+      ok: true,
+      uploaded: true,
+      labReportId: created.id,
+      status: 'processing',
+    });
   } catch (error) {
     logger.error('labs_upload_internal_error', {
       reason: error instanceof Error ? error.message : 'unknown',
