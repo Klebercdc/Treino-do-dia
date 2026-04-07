@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminSupabaseClient } from '../../../../lib/supabase/admin';
 import { LAB_REPORTS_BUCKET } from '../../../../core/labs/labRepository';
 import { logger } from '../../../../lib/utils/logger';
-import { processLabReportUploadSafely } from '../../../../server/internal/labReports/service';
+import {
+  acquireLabReportProcessingLock,
+  processLabReportUploadSafely,
+} from '../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminSupabaseClient();
   const { data: report, error } = await admin
     .from('lab_reports')
-    .select('id,storage_bucket,storage_path,mime_type,file_type,status')
+    .select('id,storage_bucket,storage_path,mime_type,file_type,status,updated_at')
     .eq('id', labReportId)
     .maybeSingle();
 
@@ -36,6 +39,15 @@ export async function POST(req: NextRequest) {
 
   if (report.status === 'analyzed') {
     return NextResponse.json({ ok: true, status: 'analyzed', skipped: true });
+  }
+
+  const lockAcquired = await acquireLabReportProcessingLock(admin, {
+    labReportId,
+    currentStatus: String(report.status || ''),
+    updatedAt: report.updated_at ? String(report.updated_at) : null,
+  });
+  if (!lockAcquired) {
+    return NextResponse.json({ ok: true, status: String(report.status || 'processing'), skipped: true, reason: 'already_processing' }, { status: 202 });
   }
 
   const result = await processLabReportUploadSafely(admin, {
