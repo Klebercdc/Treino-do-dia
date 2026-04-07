@@ -584,7 +584,12 @@ document.addEventListener('click', function(e) {
 _sb.auth.onAuthStateChange((_event, session) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
-    (async function bootstrapAuthenticatedSession() {
+    const firstLoad = !_appUnlocked;
+    showApp();
+    if (firstLoad) { navTo('inicio'); openHome(); }
+    refreshIntelligenceAdminAccessSafe();
+
+    (async function bootstrapAuthenticatedSessionInBackground() {
       try {
         try {
           window.KroniaIntelligence?.init?.({ source: 'auth_bootstrap', appVersion: 'web' });
@@ -602,10 +607,6 @@ _sb.auth.onAuthStateChange((_event, session) => {
           try { await fetchUserPlan(); } catch (_) {}
         }
       } catch (_) {}
-
-      const firstLoad = !_appUnlocked;
-      showApp();
-      if (firstLoad) { navTo('inicio'); openHome(); }
 
       if (typeof window.KroniaDashboard !== 'undefined') {
         window.KroniaDashboard.render(session.user.id);
@@ -626,19 +627,22 @@ Promise.all([
 ]).then(async ([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
-    try {
-      if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
-        await window.KroniaAccessScope.hydrateAccessContext(session);
-        trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'initial_session_check' });
-      }
-      window.KroniaIntelligenceAdmin?.refreshAccess?.();
-      await _dbSync.pullAll(session.user.id);
-      if (typeof fetchUserPlan === 'function') await fetchUserPlan();
-    } catch (_) {}
     showApp();
     navTo('inicio');
     openHome();
     refreshIntelligenceAdminAccessSafe();
+
+    (async function bootstrapInitialSessionInBackground() {
+      try {
+        if (window.KroniaAccessScope && typeof window.KroniaAccessScope.hydrateAccessContext === 'function') {
+          await window.KroniaAccessScope.hydrateAccessContext(session);
+          trackAdminHydrationDebug('hydrate_access_context_completed', { source: 'initial_session_check' });
+        }
+        window.KroniaIntelligenceAdmin?.refreshAccess?.();
+        await _dbSync.pullAll(session.user.id);
+        if (typeof fetchUserPlan === 'function') await fetchUserPlan();
+      } catch (_) {}
+    })();
   } else {
     refreshIntelligenceAdminAccessSafe();
     showLogin();
