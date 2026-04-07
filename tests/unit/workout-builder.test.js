@@ -59,7 +59,9 @@ test('workout builder respects environment when explicit references are present'
   assert.ok(exerciseNames.some((name) => name.includes('flexao') || name.includes('prancha')));
 });
 
-test('workout builder refuses to generate without explicit references', () => {
+test('workout builder uses catalog fallback when no template references provided', () => {
+  // After the catalog-fallback fix, the builder generates a real workout
+  // instead of returning failSafe:true when no Supabase templates exist.
   const plan = workoutBuilder.buildWorkoutPlan({
     objetivo: 'hipertrofia',
     nivel: 'intermediario',
@@ -68,10 +70,9 @@ test('workout builder refuses to generate without explicit references', () => {
     limitacoes: 'nao'
   });
 
-  assert.equal(plan.failSafe, true);
-  assert.equal(plan.flow_state, 'referenced_prescription_required');
-  assert.equal(plan.treinos.length, 0);
-  assert.deepEqual(plan.references, []);
+  assert.equal(plan.failSafe, false);
+  assert.equal(plan.flow_state, 'catalog_generated');
+  assert.ok(plan.treinos.length > 0, 'deve gerar pelo menos um treino via catálogo');
 });
 
 test('diet legacy builder returns meals for valid profile', () => {

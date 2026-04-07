@@ -3182,3 +3182,140 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   text-align: center;
   padding: 8px 0;
 }
+
+/* ── Labs History ───────────────────────────────────────── */
+.labs-hist-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+}
+.labs-hist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+.labs-hist-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.labs-hist-meta {
+  font-size: 0.68rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.labs-hist-bms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.labs-hist-bm {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+  color: var(--text-2);
+}
+.labs-hist-flags {
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.labs-hist-flag {
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.67rem;
+  color: #f59e0b;
+}
+
+/* ── Templates Manager ──────────────────────────────────── */
+.tm-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+}
+.tm-card-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tm-card-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+  flex: 1;
+}
+.tm-card-meta {
+  font-size: 0.7rem;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.tm-card-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tm-card-apply {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.tm-card-delete {
+  background: rgba(239,68,68,0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+/* ── Config Templates Section ───────────────────────────── */
+.config-template-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  gap: 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.config-template-card:active {
+  opacity: 0.7;
+}
+.config-template-name {
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.config-template-meta {
+  font-size: 0.68rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
