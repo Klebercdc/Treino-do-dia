@@ -100,6 +100,79 @@ export async function runLabsWatchdogTask(
   }
 }
 
+/**
+ * Versão dispatch do watchdog para uso no daily-dispatch.
+ * Em vez de processar OCR inline (podendo ultrapassar os 60 s de maxDuration),
+ * apenas enfileira cada exame preso via POST /api/labs/process — que roda em
+ * sua própria invocação serverless com budget independente de 60 s.
+ */
+export async function runLabsWatchdogDispatchTask(
+  admin: SupabaseClient,
+  req: Request,
+  limit: number,
+): Promise<CronTaskResult> {
+  const startedAt = Date.now();
+  const secret = String(process.env.CRON_SECRET || '').trim();
+
+  if (!secret) {
+    return {
+      task: 'labs_watchdog',
+      status: 'skipped',
+      durationMs: Date.now() - startedAt,
+      details: { reason: 'missing_cron_secret' },
+    };
+  }
+
+  try {
+    const candidates = await listStaleProcessingLabReports(admin, limit);
+    let dispatched = 0;
+
+    if (candidates.length > 0) {
+      const processUrl = new URL('/api/labs/process', req.url);
+
+      for (const report of candidates) {
+        const labReportId = String(report.id || '');
+        if (!labReportId) continue;
+
+        void fetch(processUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${secret}`,
+          },
+          body: JSON.stringify({ labReportId }),
+        }).catch((err) => {
+          logger.warn('labs_watchdog_dispatch_item_failed', {
+            labReportId,
+            reason: err instanceof Error ? err.message : 'unknown',
+          });
+        });
+
+        dispatched++;
+      }
+    }
+
+    logger.info('labs_watchdog_dispatch_finished', {
+      scanned: candidates.length,
+      dispatched,
+    });
+
+    return {
+      task: 'labs_watchdog',
+      status: 'success',
+      durationMs: Date.now() - startedAt,
+      details: { scanned: candidates.length, dispatched },
+    };
+  } catch (error) {
+    return {
+      task: 'labs_watchdog',
+      status: 'failed',
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : 'unknown',
+    };
+  }
+}
+
 export async function runExerciseSyncTask(now: Date): Promise<CronTaskResult> {
   const startedAt = Date.now();
   if (!isUtcWeekday(now, 1)) {

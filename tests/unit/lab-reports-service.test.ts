@@ -132,10 +132,11 @@ test('upload despacha processamento desacoplado e não executa pipeline inline',
 });
 
 test('acquireLabReportProcessingLock impede corrida quando status mudou', async () => {
+  // Simula resposta real do Supabase: 0 linhas afetadas (outro processo já mudou o status)
   const chain = {
     eq: () => chain,
     select: () => chain,
-    limit: async () => [],
+    limit: async () => ({ data: [], error: null }),
   } as any;
   const admin = {
     from: () => ({
@@ -150,6 +151,70 @@ test('acquireLabReportProcessingLock impede corrida quando status mudou', async 
   });
 
   assert.equal(acquired, false);
+});
+
+test('acquireLabReportProcessingLock adquire quando 1 linha é atualizada', async () => {
+  const chain = {
+    eq: () => chain,
+    select: () => chain,
+    limit: async () => ({ data: [{ id: 'lab-4' }], error: null }),
+  } as any;
+  const admin = {
+    from: () => ({
+      update: () => chain,
+    }),
+  } as any;
+
+  const acquired = await acquireLabReportProcessingLock(admin, {
+    labReportId: 'lab-4',
+    currentStatus: 'uploaded',
+    updatedAt: new Date().toISOString(),
+  });
+
+  assert.equal(acquired, true);
+});
+
+test('canAcquireProcessingLock bloqueia processing recente (não está stale)', async () => {
+  // processing com updated_at de 5 minutos atrás — NÃO deve ser retomado
+  const recentUpdatedAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const chain = {
+    eq: () => chain,
+    select: () => chain,
+    limit: async () => ({ data: [], error: null }),
+  } as any;
+  const admin = {
+    from: () => ({ update: () => chain }),
+  } as any;
+
+  const acquired = await acquireLabReportProcessingLock(admin, {
+    labReportId: 'lab-5',
+    currentStatus: 'processing',
+    updatedAt: recentUpdatedAt,
+  });
+
+  // canAcquireProcessingLock retorna false para processing recente → não deve chegar ao DB
+  assert.equal(acquired, false);
+});
+
+test('canAcquireProcessingLock permite retomada de processing stale (> 20 min)', async () => {
+  // processing com updated_at de 30 minutos atrás — deve ser retomado
+  const staleUpdatedAt = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const chain = {
+    eq: () => chain,
+    select: () => chain,
+    limit: async () => ({ data: [{ id: 'lab-6' }], error: null }),
+  } as any;
+  const admin = {
+    from: () => ({ update: () => chain }),
+  } as any;
+
+  const acquired = await acquireLabReportProcessingLock(admin, {
+    labReportId: 'lab-6',
+    currentStatus: 'processing',
+    updatedAt: staleUpdatedAt,
+  });
+
+  assert.equal(acquired, true);
 });
 
 test('watchdog cron para exames presos existe e exige autorização', () => {
@@ -173,10 +238,18 @@ test('lock de processamento usa updated_at para CAS forte', () => {
   assert.match(source, /\.eq\('updated_at', input\.updatedAt\)/);
 });
 
-test('dispatcher diário centraliza tarefas de cron', () => {
+test('dispatcher diário centraliza tarefas de cron e usa dispatch não-bloqueante para watchdog', () => {
   const source = readFileSync('src/app/api/cron/daily-dispatch/route.ts', 'utf-8');
-  assert.match(source, /runLabsWatchdogTask/);
+  // Watchdog usa dispatch (não inline) para não consumir o budget de 60 s do cron diário
+  assert.match(source, /runLabsWatchdogDispatchTask/);
+  assert.doesNotMatch(source, /runLabsWatchdogTask\b/);
   assert.match(source, /runExerciseSyncTask/);
   assert.match(source, /auto_import_exercises/);
   assert.match(source, /memory_queue_worker/);
+});
+
+test('labs-watchdog standalone ainda usa processamento inline para trigger manual', () => {
+  const source = readFileSync('src/app/api/cron/labs-watchdog/route.ts', 'utf-8');
+  assert.match(source, /runLabsWatchdogTask\b/);
+  assert.doesNotMatch(source, /runLabsWatchdogDispatchTask/);
 });
