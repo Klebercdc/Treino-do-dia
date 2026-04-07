@@ -2695,26 +2695,23 @@ async function handleLabsFileUpload(file) {
 
 function renderLabsResult(payload, container) {
   if (!container) return;
-  const parsed = payload.parsed;
-  if (!parsed || typeof parsed !== 'object') {
-    container.innerHTML = '<div class="labs-result-note">Exame registrado (sem dados estruturados extraídos).</div>';
+  const biomarkersList = Array.isArray(payload.biomarkers) ? payload.biomarkers : [];
+  if (!biomarkersList.length) {
+    container.innerHTML = '<div class="labs-result-note">Exame registrado. Processamento em andamento ou aguardando revisão.</div>';
     return;
   }
 
-  const flags = Array.isArray(payload.clinicalFlags) && payload.clinicalFlags.length
-    ? '<div class="labs-result-flags"><strong>Alertas clínicos:</strong> ' + payload.clinicalFlags.join(', ') + '</div>'
-    : '';
-
-  const biomarkers = Object.entries(parsed)
-    .filter(function(e) { return e[1] !== null && e[1] !== undefined; })
-    .map(function(e) {
-      return '<div class="labs-result-row"><span class="labs-result-key">' + escapeHTML(String(e[0])) + '</span><span class="labs-result-val">' + escapeHTML(String(e[1])) + '</span></div>';
+  const biomarkers = biomarkersList
+    .map(function(item) {
+      var key = item.marker_name || item.marker_key || 'marcador';
+      var val = item.value_numeric != null ? item.value_numeric : (item.value_text || '—');
+      var unit = item.unit ? (' ' + item.unit) : '';
+      return '<div class="labs-result-row"><span class="labs-result-key">' + escapeHTML(String(key)) + '</span><span class="labs-result-val">' + escapeHTML(String(val) + unit) + '</span></div>';
     }).join('');
 
   container.innerHTML =
     '<div class="labs-result-card">' +
-      '<div class="labs-result-confidence">Confiança: ' + Math.round((payload.confidence || 0) * 100) + '%</div>' +
-      (flags || '') +
+      '<div class="labs-result-confidence">Status: ' + escapeHTML(String(payload.status || 'processing')) + '</div>' +
       (biomarkers ? '<div class="labs-result-biomarkers">' + biomarkers + '</div>' : '') +
     '</div>';
 }
@@ -2784,20 +2781,21 @@ function renderLabReportHistory(reports, container, emptyEl) {
     hdl: 'HDL', ldl: 'LDL', triglycerides: 'Triglicerídeos',
   };
 
-  const STATUS_LABELS = { parsed: '✅ Processado', pending: '⏳ Aguardando', failed: '❌ Falhou' };
+  const STATUS_LABELS = { analyzed: '✅ Analisado', extracted: '🧪 Extraído', processing: '⏳ Processando', uploaded: '📤 Enviado', needs_review: '🕵️ Revisão', failed: '❌ Falhou', parsed: '✅ Processado', pending: '⏳ Aguardando' };
 
   container.innerHTML = reports.map(function(r) {
     var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '—';
-    var statusLabel = STATUS_LABELS[r.parseStatus] || r.parseStatus || '—';
+    var statusKey = r.status || r.parseStatus;
+    var statusLabel = STATUS_LABELS[statusKey] || statusKey || '—';
     var fileName = r.fileName ? escapeHTML(r.fileName.replace(/^\d+-/, '')) : 'Exame';
 
     var biomarkersHtml = '';
-    if (r.isValid && r.parsed && typeof r.parsed === 'object') {
-      var items = Object.entries(r.parsed)
-        .filter(function(e) { return e[1] !== null && e[1] !== undefined; })
-        .map(function(e) {
-          return '<span class="labs-hist-bm"><span class="labs-hist-bm-key">' + escapeHTML(BIOMARKER_LABELS[e[0]] || e[0]) + '</span><span class="labs-hist-bm-val">' + escapeHTML(String(e[1])) + '</span></span>';
-        });
+    if (Array.isArray(r.biomarkers) && r.biomarkers.length) {
+      var items = r.biomarkers.slice(0, 8).map(function(b) {
+        var key = b.marker_key || b.marker_name || '';
+        var val = b.value_numeric != null ? b.value_numeric : b.value_text;
+        return '<span class="labs-hist-bm"><span class="labs-hist-bm-key">' + escapeHTML(BIOMARKER_LABELS[key] || key) + '</span><span class="labs-hist-bm-val">' + escapeHTML(String(val || '—')) + '</span></span>';
+      });
       if (items.length) biomarkersHtml = '<div class="labs-hist-bms">' + items.join('') + '</div>';
     }
 

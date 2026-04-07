@@ -477,6 +477,42 @@ function checkClientPrivilegeIsolation(): CheckResult {
       };
 }
 
+
+async function checkExamOcrService(): Promise<CheckResult> {
+  const serviceUrl = process.env.EXAM_OCR_SERVICE_URL;
+  if (!serviceUrl) {
+    return {
+      name: 'exam_ocr_service',
+      status: 'WARNING',
+      summary: 'EXAM_OCR_SERVICE_URL não configurada; pipeline de exames ficará degradado.',
+      suggestion: 'Configure EXAM_OCR_SERVICE_URL e EXAM_OCR_TIMEOUT_MS para habilitar OCR/parser estruturado.',
+    };
+  }
+
+  try {
+    const response = await fetch(`${serviceUrl.replace(/\/$/, '')}/health`);
+    if (!response.ok) {
+      return {
+        name: 'exam_ocr_service',
+        status: 'WARNING',
+        summary: `OCR service respondeu ${response.status}.`,
+      };
+    }
+    return {
+      name: 'exam_ocr_service',
+      status: 'OK',
+      summary: 'OCR service disponível.',
+      details: { serviceUrl },
+    };
+  } catch (error) {
+    return {
+      name: 'exam_ocr_service',
+      status: 'WARNING',
+      summary: 'Não foi possível alcançar OCR service.',
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
 async function checkAIProvider(): Promise<CheckResult> {
   const ai = getAIConfig();
   const details = {
@@ -565,6 +601,7 @@ async function run(): Promise<void> {
     checkSupabaseFunctions(),
     checkEmbeddings(),
     checkAIProvider(),
+    checkExamOcrService(),
   ]) {
     const result = await Promise.resolve(step);
     results.push(result);

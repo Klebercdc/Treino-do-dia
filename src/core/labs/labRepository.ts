@@ -46,7 +46,12 @@ export async function createInitialLabReport(
       file_name: input.fileName,
       file_type: input.fileType,
       parse_status: "pending",
+      status: "uploaded",
       confidence: 0,
+      confidence_summary: {},
+      storage_bucket: LAB_REPORTS_BUCKET,
+      storage_path: input.fileUrl,
+      mime_type: input.fileType,
       is_valid: false,
     })
     .select("id")
