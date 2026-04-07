@@ -264,3 +264,47 @@ test('labs-watchdog define maxDuration para não abortar processamento inline', 
   const source = readFileSync('src/app/api/cron/labs-watchdog/route.ts', 'utf-8');
   assert.match(source, /export const maxDuration\s*=\s*60/);
 });
+
+test('budget: timeout padrão de OCR + overhead operacional cabe no maxDuration da rota', () => {
+  // Garante que uma mudança em EXAM_OCR_TIMEOUT_MS ou maxDuration não cria
+  // incompatibilidade silenciosa — OCR abortado antes de concluir.
+  const serviceSource = readFileSync('src/server/internal/labReports/service.ts', 'utf-8');
+  const processSource = readFileSync('src/app/api/labs/process/route.ts', 'utf-8');
+
+  const ocrMatch = serviceSource.match(/EXAM_OCR_TIMEOUT_MS\s*\|\|\s*(\d+)/);
+  const durMatch = processSource.match(/export const maxDuration\s*=\s*(\d+)/);
+
+  assert.ok(ocrMatch, 'EXAM_OCR_TIMEOUT_MS default deve estar declarado em service.ts');
+  assert.ok(durMatch, 'maxDuration deve estar declarado em labs/process/route.ts');
+
+  const ocrDefaultMs = Number(ocrMatch![1]);
+  const maxDurationMs = Number(durMatch![1]) * 1000;
+  const OVERHEAD_MS = 5_000; // signed URL + DB (lock, persist, analyze) + logging + rede
+
+  assert.ok(
+    ocrDefaultMs + OVERHEAD_MS <= maxDurationMs,
+    `OCR padrão (${ocrDefaultMs} ms) + overhead (${OVERHEAD_MS} ms) = ${ocrDefaultMs + OVERHEAD_MS} ms `
+    + `deve caber em maxDuration (${maxDurationMs} ms). `
+    + `Ajuste EXAM_OCR_TIMEOUT_MS ou maxDuration se mudar um dos valores.`,
+  );
+});
+
+test('labs/process loga skip com reason correto (não usa "already_processing" para estado não-processing)', () => {
+  const source = readFileSync('src/app/api/labs/process/route.ts', 'utf-8');
+  // Reason deve ser descritivo — não "already_processing" para estados como extracted/analyzed
+  assert.match(source, /reason.*already_analyzed/);
+  assert.match(source, /reason.*lock_not_acquired/);
+  assert.doesNotMatch(source, /reason.*already_processing/);
+});
+
+test('dispatch de upload loga erro HTTP (não só falha de rede)', () => {
+  const source = readFileSync('src/app/api/labs/upload/route.ts', 'utf-8');
+  assert.match(source, /labs_upload_dispatch_http_error/);
+  assert.match(source, /labs_upload_dispatch_failed/);
+});
+
+test('dispatch do watchdog loga erro HTTP (não só falha de rede)', () => {
+  const source = readFileSync('src/server/internal/cron/dispatcher.ts', 'utf-8');
+  assert.match(source, /labs_watchdog_dispatch_item_http_error/);
+  assert.match(source, /labs_watchdog_dispatch_item_failed/);
+});

@@ -148,6 +148,13 @@ export async function runLabsWatchdogDispatchTask(
             Authorization: `Bearer ${secret}`,
           },
           body: JSON.stringify({ labReportId }),
+        }).then((res) => {
+          if (!res.ok) {
+            logger.warn('labs_watchdog_dispatch_item_http_error', {
+              labReportId,
+              httpStatus: res.status,
+            });
+          }
         }).catch((err) => {
           logger.warn('labs_watchdog_dispatch_item_failed', {
             labReportId,
