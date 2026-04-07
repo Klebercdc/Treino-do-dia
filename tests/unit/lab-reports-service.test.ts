@@ -253,3 +253,14 @@ test('labs-watchdog standalone ainda usa processamento inline para trigger manua
   assert.match(source, /runLabsWatchdogTask\b/);
   assert.doesNotMatch(source, /runLabsWatchdogDispatchTask/);
 });
+
+test('labs/process define maxDuration para suportar OCR de até 45 s sem timeout', () => {
+  const source = readFileSync('src/app/api/labs/process/route.ts', 'utf-8');
+  // Sem maxDuration explícito, Next.js usa ~15 s — OCR seria silenciosamente abortado
+  assert.match(source, /export const maxDuration\s*=\s*60/);
+});
+
+test('labs-watchdog define maxDuration para não abortar processamento inline', () => {
+  const source = readFileSync('src/app/api/cron/labs-watchdog/route.ts', 'utf-8');
+  assert.match(source, /export const maxDuration\s*=\s*60/);
+});

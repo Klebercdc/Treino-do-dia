@@ -22,6 +22,8 @@ import {
 } from '../../../../../server/internal/cron/dispatcher';
 
 export const runtime = 'nodejs';
+// Processamento OCR inline pode levar até 45 s por exame — maxDuration obrigatório.
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   if (!isAuthorizedCronRequest(req)) {

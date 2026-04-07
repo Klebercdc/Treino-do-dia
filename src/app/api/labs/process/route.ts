@@ -8,6 +8,9 @@ import {
 } from '../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
+// OCR pode levar até 45 s (EXAM_OCR_TIMEOUT_MS). Sem maxDuration explícito,
+// o Next.js usa ~15 s de padrão — processamento silenciosamente abortado.
+export const maxDuration = 60;
 
 function isAuthorizedInternalCall(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
