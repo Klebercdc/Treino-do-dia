@@ -434,11 +434,29 @@ dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); }
 /* ══════════════════════════════════════════
    LIGHT MODE
 ══════════════════════════════════════════ */
-body.light-mode { --bg:#f5f5f5; --bg2:#ebebeb; --surface:#ffffff; --card:#ffffff; --card-hover:#f9f9f9; --border:rgba(0,0,0,0.08); --border-soft:rgba(0,0,0,0.04); --text:#0f0f0f; --text-2:#525252; --muted:#a3a3a3; --accent:#ea6c0a; --accent-dim:rgba(234,108,10,0.1); --accent-glow:rgba(234,108,10,0.2); color-scheme: light; }
+body.light-mode {
+  --bg:#f3f4f6;
+  --bg2:#e8eaee;
+  --surface:#ffffff;
+  --card:#ffffff;
+  --card-hover:#f8fafc;
+  --border:rgba(15,23,42,0.12);
+  --border-soft:rgba(15,23,42,0.06);
+  --text:#111827;
+  --text-2:#4b5563;
+  --muted:#6b7280;
+  --accent:#ea6c0a;
+  --accent-dim:rgba(234,108,10,0.12);
+  --accent-glow:rgba(234,108,10,0.22);
+  --shadow-sm:0 1px 2px rgba(15,23,42,0.08);
+  --shadow-md:0 8px 24px rgba(15,23,42,0.10);
+  --shadow-lg:0 14px 38px rgba(15,23,42,0.14);
+  color-scheme: light;
+}
 body.light-mode .top-header { background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); }
 body.light-mode .footer-actions { background: rgba(250,250,250,0.98) !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
-body.light-mode .btn .btn-icon { color: rgba(0,0,0,0.3) !important; }
-body.light-mode .btn .btn-label { color: rgba(0,0,0,0.3) !important; }
+body.light-mode .btn .btn-icon { color: rgba(15,23,42,0.46) !important; }
+body.light-mode .btn .btn-label { color: rgba(15,23,42,0.46) !important; }
 body.light-mode .btn-nav.active .btn-icon { color: var(--accent) !important; }
 body.light-mode .btn-nav.active .btn-label { color: var(--accent) !important; }
 body.light-mode .nav-pills { background: #fff; }
@@ -480,6 +498,35 @@ body.light-mode .evo-tab.active { background: var(--accent); color: #fff; }
 body.light-mode .summary-stat { background: #f0f0f0; }
 body.light-mode .date-badge { background: #ebebeb; border-color: rgba(0,0,0,0.08); color: #333; }
 body.light-mode .dark-toggle { background: #ebebeb; }
+body.light-mode .home-section-title,
+body.light-mode .perfil-section-title,
+body.light-mode .risk-card-title,
+body.light-mode .perfil-input-lbl,
+body.light-mode .perfil-stat-lbl,
+body.light-mode .ss-lbl,
+body.light-mode .hist-details,
+body.light-mode .div-meta-sub,
+body.light-mode .div-day-exs,
+body.light-mode .instr-step-desc,
+body.light-mode .instr-feat-desc,
+body.light-mode .instr-tip-text,
+body.light-mode .home-labs-cta-sub {
+  color: rgba(17,24,39,0.68) !important;
+}
+body.light-mode .risk-card-title { color: rgba(17,24,39,0.6) !important; }
+body.light-mode .perfil-stat,
+body.light-mode .perfil-pr-item,
+body.light-mode .perfil-input,
+body.light-mode .perfil-cal-day,
+body.light-mode .home-quick-card,
+body.light-mode .home-tool-card,
+body.light-mode .fatigue-card,
+body.light-mode .challenge-card {
+  border-color: rgba(15,23,42,0.11) !important;
+  box-shadow: var(--shadow-sm);
+}
+body.light-mode .perfil-input::placeholder { color: rgba(75,85,99,0.75); }
+body.light-mode .perfil-cal-day { color: rgba(31,41,55,0.72); }
 body.light-mode .kronos-ai-card {
   background: linear-gradient(145deg, rgba(168,85,247,0.22) 0%, rgba(196,181,253,0.38) 58%, rgba(255,255,255,0.82) 100%);
   border-color: rgba(168,85,247,0.5);
@@ -498,8 +545,6 @@ body.light-mode .kronos-ai-tip { color: #8b5cf6; }
 body.light-mode .kronos-ai-model { color: rgba(124,58,237,0.82); }
 body.light-mode .kronia-tools-title { color: #0c4a6e; }
 body.light-mode .kronia-tools-subtitle { color: rgba(8,145,178,0.84); }
-body.light-mode .risk-card-title { color: rgba(17,24,39,0.55); }
-
 @keyframes lightCardDrift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
