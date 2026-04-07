@@ -100,6 +100,8 @@ export function validateRuntimeEnv(): RuntimeEnvValidation {
     'SUPABASE_SERVICE_ROLE_KEY',
     'GROQ_API_KEY',
     'NEXT_PUBLIC_APP_URL',
+    'EXAM_OCR_SERVICE_URL',
+    'EXAM_OCR_TIMEOUT_MS',
   ].map((key) => {
     const value = getOptionalEnv(key);
     return {

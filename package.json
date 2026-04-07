@@ -34,7 +34,10 @@
     "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts",
     "audit:admin-scope": "node scripts/admin-scope-audit.js",
     "import:exercises": "node scripts/import-exercises.mjs",
-    "import:exercises:500": "DRY_RUN=false IMPORT_LIMIT=500 BATCH_SIZE=100 node scripts/import-exercises.mjs"
+    "import:exercises:500": "DRY_RUN=false IMPORT_LIMIT=500 BATCH_SIZE=100 node scripts/import-exercises.mjs",
+    "exam:ocr:dev": "python -m uvicorn services.exam_ocr.app:app --host 0.0.0.0 --port 8010 --reload",
+    "exam:ocr:health": "node -e \"fetch((process.env.EXAM_OCR_SERVICE_URL||'http://localhost:8010')+'/health').then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e.message);process.exit(1);})\"",
+    "exam:process:test": "tsx --test tests/unit/lab-reports-service.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",

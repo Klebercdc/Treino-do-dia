@@ -25,9 +25,10 @@ export async function GET() {
     error: null as string | null,
   };
   let labs = {
-    parserConfigured: Boolean(process.env.OPENAI_API_KEY),
+    parserConfigured: Boolean(process.env.EXAM_OCR_SERVICE_URL),
+      ocrServiceUrlConfigured: Boolean(process.env.EXAM_OCR_SERVICE_URL),
     reports: null as number | null,
-    validReports: null as number | null,
+    analyzedReports: null as number | null,
     error: null as string | null,
   };
   try {
@@ -45,7 +46,7 @@ export async function GET() {
       admin.from('scientific_topics').select('id', { count: 'exact', head: true }),
       admin.from('exercises').select('id', { count: 'exact', head: true }).eq('is_active', true),
       admin.from('lab_reports').select('id', { count: 'exact', head: true }),
-      admin.from('lab_reports').select('id', { count: 'exact', head: true }).eq('is_valid', true),
+      admin.from('lab_reports').select('id', { count: 'exact', head: true }).eq('status', 'analyzed'),
     ]);
 
     scientific = {
@@ -57,9 +58,10 @@ export async function GET() {
       error: articles.error?.message || evidence.error?.message || topics.error?.message || exercises.error?.message || null,
     };
     labs = {
-      parserConfigured: Boolean(process.env.OPENAI_API_KEY),
+      parserConfigured: Boolean(process.env.EXAM_OCR_SERVICE_URL),
+      ocrServiceUrlConfigured: Boolean(process.env.EXAM_OCR_SERVICE_URL),
       reports: reports.count ?? null,
-      validReports: validReports.count ?? null,
+      analyzedReports: validReports.count ?? null,
       error: reports.error?.message || validReports.error?.message || null,
     };
   } catch (error) {
