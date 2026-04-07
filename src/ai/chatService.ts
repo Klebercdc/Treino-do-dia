@@ -48,7 +48,7 @@ export class KroniaChatService {
       history: input.history,
       userProfile: input.userProfile,
       retrievedContext,
-      sourceOfTruthMode: "rag_required",
+      sourceOfTruthMode: retrievedContext.length ? "rag_required" : "rag_preferred",
     })
   }
 }

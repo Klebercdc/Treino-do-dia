@@ -146,6 +146,29 @@ test('nutritionService keeps almoço brasileiro para onívoro e proteína vegeta
   assert.ok(veganLunchFoods.some((name) => /feij[aã]o/.test(name)));
 });
 
+test('nutritionService evita café da manhã com vegetais e pré-treino com tofu para onívoro', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 30,
+    peso: 80,
+    altura: 176,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 4,
+    padraoAlimentar: 'onívoro',
+  });
+
+  assert.equal(result.failSafe, false);
+  const breakfast = result.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('cafe'));
+  const preWorkout = result.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('pre-treino'));
+
+  const breakfastFoods = breakfast.itens.map((item) => normalizeText(item.nome));
+  const preWorkoutFoods = preWorkout.itens.map((item) => normalizeText(item.nome));
+
+  assert.ok(!breakfastFoods.some((name) => /brocolis|salada|cenoura|legumes/.test(name)));
+  assert.ok(!breakfastFoods.some((name) => /azeite/.test(name)));
+  assert.ok(!preWorkoutFoods.some((name) => /tofu/.test(name)));
+});
+
 test('dietService returns safe failsafe response when critical profile data is missing', async () => {
   const result = await dietService.execute('GENERATE_DIET', {
     objetivo: 'hipertrofia',

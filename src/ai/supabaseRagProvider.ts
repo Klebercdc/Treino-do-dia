@@ -4,6 +4,10 @@ import type { RagProvider, RagSearchInput } from "./rag"
 import type { RetrievedContextItem } from "./types"
 import type { EmbeddingProvider } from "./embeddings"
 import { vectorToSqlLiteral } from "./embeddings"
+import {
+  expandScienceTokens,
+  scoreScientificTextMatch,
+} from "./scienceSearchUtils"
 
 interface SupabaseRagRow {
   id: string | number
@@ -31,41 +35,6 @@ interface ScienceEvidenceRow {
     doi?: string | null
     pmid?: string | null
   } | null
-}
-
-const SCIENCE_QUERY_ALIASES: Record<string, string[]> = {
-  hipertrofia: ["hypertrophy", "muscle gain", "ganho muscular", "protein", "proteina", "creatine", "creatina", "strength", "forca"],
-  hypertrophy: ["hipertrofia", "muscle gain", "ganho muscular", "protein", "proteina", "creatine", "creatina"],
-  proteina: ["protein", "muscle protein synthesis", "intake", "hipertrofia", "hypertrophy"],
-  protein: ["proteina", "muscle protein synthesis", "intake", "hipertrofia", "hypertrophy"],
-  creatina: ["creatine", "supplementation", "performance", "forca", "strength"],
-  creatine: ["creatina", "supplementation", "performance", "forca", "strength"],
-  emagrecimento: ["fat loss", "weight loss", "deficit", "perda de gordura", "body fat"],
-  forca: ["strength", "powerlifting", "creatine", "creatina", "protein", "proteina"],
-  strength: ["forca", "powerlifting", "creatine", "creatina", "protein", "proteina"],
-}
-
-function tokenizeQuery(text: string): string[] {
-  return String(text || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 3);
-}
-
-function expandScienceTokens(text: string): string[] {
-  const base = tokenizeQuery(text)
-  const expanded = new Set<string>(base)
-  base.forEach((token) => {
-    const aliases = SCIENCE_QUERY_ALIASES[token]
-    if (aliases) {
-      aliases.forEach((alias) => expanded.add(alias.toLowerCase()))
-    }
-  })
-  return Array.from(expanded).slice(0, 12)
 }
 
 function mapRows(rows: SupabaseRagRow[], source: string): RetrievedContextItem[] {
@@ -161,7 +130,48 @@ export class SupabaseRagProvider implements RagProvider {
       })
     }
 
-    if (!activeTopics.length) return []
+    if (!activeTopics.length) {
+      const { data: fallbackEvidence, error: fallbackError } = await this.supabase
+        .from("scientific_evidence")
+        .select("relevance_score,summary,topic:scientific_topics(topic),article:scientific_articles(title,journal,published_at,doi,pmid)")
+        .eq("needs_review", false)
+        .order("relevance_score", { ascending: false })
+        .limit(160)
+
+      if (fallbackError) {
+        throw new Error(`Erro scientific_evidence fallback: ${fallbackError.message}`)
+      }
+
+      return ((fallbackEvidence ?? []) as ScienceEvidenceRow[])
+        .map((row) => ({ row, score: scoreScientificTextMatch(row, tokens) }))
+        .filter((entry) => entry.score >= 0.25)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK)
+        .map((entry, index) => {
+          const article = entry.row.article ?? {}
+          const topic = entry.row.topic ?? {}
+          const content = [
+            entry.row.summary ? `Resumo: ${entry.row.summary}` : "",
+            topic.topic ? `Tópico: ${topic.topic}` : "",
+            article.journal ? `Journal: ${article.journal}` : "",
+            article.published_at ? `Publicado em: ${article.published_at}` : "",
+          ].filter(Boolean).join("\n")
+
+          return {
+            id: `scientific_evidence_text_${index}_${article.doi || article.pmid || topic.topic || "row"}`,
+            title: article.title ?? topic.topic ?? "Evidência científica",
+            content,
+            score: entry.score,
+            metadata: {
+              source: "scientific_evidence_fallback",
+              category: "science_reference",
+              url: article.doi ? `https://doi.org/${article.doi}` : undefined,
+              pmid: article.pmid ?? undefined,
+              topic: topic.topic ?? undefined,
+            },
+          }
+        })
+    }
 
     const topicIds = activeTopics.map((topic) => topic.id)
     const { data: evidenceData, error: evidenceError } = await this.supabase
@@ -176,7 +186,7 @@ export class SupabaseRagProvider implements RagProvider {
       throw new Error(`Erro scientific_evidence: ${evidenceError.message}`)
     }
 
-    return ((evidenceData ?? []) as ScienceEvidenceRow[]).map((row, index) => {
+    const mapped = ((evidenceData ?? []) as ScienceEvidenceRow[]).map((row, index) => {
       const article = row.article ?? {}
       const topic = row.topic ?? {}
       const content = [
@@ -200,6 +210,49 @@ export class SupabaseRagProvider implements RagProvider {
         },
       }
     })
+
+    if (mapped.length) return mapped
+
+    const { data: fallbackEvidence, error: fallbackError } = await this.supabase
+      .from("scientific_evidence")
+      .select("relevance_score,summary,topic:scientific_topics(topic),article:scientific_articles(title,journal,published_at,doi,pmid)")
+      .eq("needs_review", false)
+      .order("relevance_score", { ascending: false })
+      .limit(160)
+
+    if (fallbackError) {
+      throw new Error(`Erro scientific_evidence empty fallback: ${fallbackError.message}`)
+    }
+
+    return ((fallbackEvidence ?? []) as ScienceEvidenceRow[])
+      .map((row) => ({ row, score: scoreScientificTextMatch(row, tokens) }))
+      .filter((entry) => entry.score >= 0.25)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK)
+      .map((entry, index) => {
+        const article = entry.row.article ?? {}
+        const topic = entry.row.topic ?? {}
+        const content = [
+          entry.row.summary ? `Resumo: ${entry.row.summary}` : "",
+          topic.topic ? `Tópico: ${topic.topic}` : "",
+          article.journal ? `Journal: ${article.journal}` : "",
+          article.published_at ? `Publicado em: ${article.published_at}` : "",
+        ].filter(Boolean).join("\n")
+
+        return {
+          id: `scientific_evidence_empty_fallback_${index}_${article.doi || article.pmid || topic.topic || "row"}`,
+          title: article.title ?? topic.topic ?? "Evidência científica",
+          content,
+          score: entry.score,
+          metadata: {
+            source: "scientific_evidence_fallback",
+            category: "science_reference",
+            url: article.doi ? `https://doi.org/${article.doi}` : undefined,
+            pmid: article.pmid ?? undefined,
+            topic: topic.topic ?? undefined,
+          },
+        }
+      })
   }
 
   async search(input: RagSearchInput): Promise<RetrievedContextItem[]> {
