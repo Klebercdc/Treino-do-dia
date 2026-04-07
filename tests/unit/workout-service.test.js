@@ -35,7 +35,8 @@ test('workoutService builds workout plan only when explicit references are prese
   assert.equal(result.payload.validation.missingEvidenceReferences, false);
 });
 
-test('workoutService refuses to build workout without references', async () => {
+test('workoutService usa catálogo interno quando sem referências (novo comportamento)', async () => {
+  // Antes retornava failSafe:true; agora gera do catálogo quando há dados suficientes
   const result = await workoutService.execute('GENERATE_WORKOUT', {
     objective: 'hipertrofia',
     level: 'intermediario',
@@ -44,11 +45,20 @@ test('workoutService refuses to build workout without references', async () => {
   });
 
   assert.equal(result.domain, 'workout');
-  assert.equal(result.success, false);
-  assert.equal(result.errorCode, 'WORKOUT_TEMPLATE_MISSING');
-  assert.equal(result.payload.plan.failSafe, true);
+  assert.equal(result.success, true, 'Deve ter sucesso — usa catálogo');
+  assert.equal(result.payload.plan.failSafe, false);
+  assert.ok(result.payload.plan.treinos.length > 0);
   assert.equal(result.payload.validation.missingEvidenceReferences, true);
-  assert.equal(result.payload.validation.validationError, 'WORKOUT_TEMPLATE_MISSING');
+  // validationError só é propagado quando o templateMetadata está presente no payload
+  // Quando não há metadado, é null (esperado neste cenário)
+});
+
+test('workoutService retorna failSafe quando dados mínimos ausentes', async () => {
+  const result = await workoutService.execute('GENERATE_WORKOUT', {});
+
+  assert.equal(result.domain, 'workout');
+  assert.equal(result.success, false);
+  assert.equal(result.payload.plan.failSafe, true);
 });
 
 test('workoutService analyze returns summary instead of raw stub payload', async () => {

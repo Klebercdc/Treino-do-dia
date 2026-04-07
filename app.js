@@ -311,7 +311,6 @@ function getPrevMap() {
 ═══════════════════════════════════════════════════ */
 async function gerarProtocolo() {
   const input = collectWorkoutGenerationInput();
-  const f = input.dias;
   const objective = input.objetivo;
   const guard = await validateScientificGenerationGuard(
     'workout',
@@ -329,10 +328,34 @@ async function gerarProtocolo() {
   try {
     const resp = await requestWorkoutRoute(workoutPayload, 12000);
     const data = await parseWorkoutApiJsonSafely(resp);
+
+    // parseWorkoutApiJsonSafely retorna {error:"INVALID_JSON"} quando a resposta
+    // não é JSON válido (ex: HTML de erro do servidor). Nesse caso usa geração local.
+    if (data && data.error === 'INVALID_JSON') {
+      console.warn('[gerarProtocolo] resposta não-JSON da rota de treino, usando geração local como fallback');
+      gerarTreinoDoPrograma();
+      return;
+    }
+
     const renderModel = extractWorkoutRenderModel(data);
 
-    if (!resp.ok || !renderModel || renderModel.failSafe) {
+    if (!resp.ok) {
+      // Erro HTTP real — exibe mensagem da API se disponível
       dlgAlert(resolveWorkoutRouteFailureMessage(data, resp.status));
+      return;
+    }
+
+    if (!renderModel) {
+      // Shape desconhecido — fallback local silencioso
+      console.warn('[gerarProtocolo] renderModel nulo após parse, usando geração local');
+      gerarTreinoDoPrograma();
+      return;
+    }
+
+    if (renderModel.failSafe) {
+      // API em modo failsafe (dados insuficientes) — usa geração local
+      console.info('[gerarProtocolo] API em modo failsafe, usando geração local como fallback');
+      gerarTreinoDoPrograma();
       return;
     }
 
@@ -364,8 +387,9 @@ async function gerarProtocolo() {
       }),
     });
   } catch (error) {
-    dlgAlert(resolveWorkoutRouteFailureMessage(null, 0, error));
-    return;
+    // Erro de rede / timeout — fallback local
+    console.warn('[gerarProtocolo] erro na rota de treino, usando geração local como fallback', error);
+    gerarTreinoDoPrograma();
   }
 }
 
@@ -2520,12 +2544,128 @@ function navTo(tab) {
 function openLabsUploadScreen(context) {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
-  try { openHome?.(); } catch (_) {}
-  try { navTo?.('inicio'); } catch (_) {}
   try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
-  try { window.location.href = '/labs/upload'; return true; } catch (_) {}
-  try { window.open('/labs/upload', '_blank'); return true; } catch (_) {}
-  return false;
+  // Abre a tela de perfil e faz scroll para a seção de exames
+  try { openPerfil?.(); } catch (_) {}
+  setTimeout(function() {
+    const el = document.getElementById('perfilLabsSection');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Destaque visual temporário
+      el.classList.add('labs-highlight');
+      setTimeout(function() { el.classList.remove('labs-highlight'); }, 1800);
+    }
+  }, 320);
+}
+
+/* ─── Upload de Exames Laboratoriais ─────────────────────── */
+async function handleLabsFileUpload(file) {
+  if (!file) return;
+  const statusEl = document.getElementById('perfilLabsStatus');
+  const resultEl = document.getElementById('perfilLabsResult');
+  const uploadBtn = document.getElementById('perfilLabsUploadBtn');
+
+  function setStatus(msg, type) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = 'perfil-labs-status' + (type ? ' perfil-labs-status--' + type : '');
+  }
+
+  const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+  const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png'];
+  if (!ALLOWED.includes(file.type)) {
+    setStatus('Formato inválido. Use PDF, JPEG ou PNG.', 'error');
+    return;
+  }
+  if (file.size > MAX_SIZE) {
+    setStatus('Arquivo muito grande. Máximo 10 MB.', 'error');
+    return;
+  }
+
+  if (uploadBtn) uploadBtn.disabled = true;
+  setStatus('Enviando exame…', 'loading');
+  if (resultEl) resultEl.innerHTML = '';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
+    // Remove Content-Type para deixar o browser definir o boundary do multipart
+    delete headers['Content-Type'];
+
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const payload = await resp.json().catch(function() { return null; });
+
+    if (!resp.ok || !payload || !payload.ok) {
+      const msg = payload?.message || payload?.error || 'Erro ao processar o exame.';
+      setStatus(msg, 'error');
+      if (uploadBtn) uploadBtn.disabled = false;
+      return;
+    }
+
+    setStatus('Exame enviado com sucesso!', 'success');
+    renderLabsResult(payload, resultEl);
+  } catch (err) {
+    console.error('[labs-upload] erro:', err);
+    setStatus('Falha na conexão. Verifique sua internet e tente novamente.', 'error');
+  } finally {
+    if (uploadBtn) uploadBtn.disabled = false;
+    // Limpa o input para permitir re-envio do mesmo arquivo
+    const fileInput = document.getElementById('perfilLabsFile');
+    if (fileInput) fileInput.value = '';
+  }
+}
+
+function renderLabsResult(payload, container) {
+  if (!container) return;
+  const parsed = payload.parsed;
+  if (!parsed || typeof parsed !== 'object') {
+    container.innerHTML = '<div class="labs-result-note">Exame registrado (sem dados estruturados extraídos).</div>';
+    return;
+  }
+
+  const flags = Array.isArray(payload.clinicalFlags) && payload.clinicalFlags.length
+    ? '<div class="labs-result-flags"><strong>Alertas clínicos:</strong> ' + payload.clinicalFlags.join(', ') + '</div>'
+    : '';
+
+  const biomarkers = Object.entries(parsed)
+    .filter(function(e) { return e[1] !== null && e[1] !== undefined; })
+    .map(function(e) {
+      return '<div class="labs-result-row"><span class="labs-result-key">' + escapeHTML(String(e[0])) + '</span><span class="labs-result-val">' + escapeHTML(String(e[1])) + '</span></div>';
+    }).join('');
+
+  container.innerHTML =
+    '<div class="labs-result-card">' +
+      '<div class="labs-result-confidence">Confiança: ' + Math.round((payload.confidence || 0) * 100) + '%</div>' +
+      (flags || '') +
+      (biomarkers ? '<div class="labs-result-biomarkers">' + biomarkers + '</div>' : '') +
+    '</div>';
+}
+
+function initLabsUploadSection() {
+  const fileInput = document.getElementById('perfilLabsFile');
+  const dropArea = document.getElementById('perfilLabsDropArea');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files && fileInput.files[0]) handleLabsFileUpload(fileInput.files[0]);
+    });
+  }
+  if (dropArea) {
+    dropArea.addEventListener('dragover', function(e) { e.preventDefault(); dropArea.classList.add('drag-over'); });
+    dropArea.addEventListener('dragleave', function() { dropArea.classList.remove('drag-over'); });
+    dropArea.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropArea.classList.remove('drag-over');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleLabsFileUpload(file);
+    });
+  }
 }
 
 window.addEventListener("resize", syncMainScrollArea);
@@ -4097,6 +4237,9 @@ window.onload = () => {
 
   // Pedir permissão de notificação após 30s (não invasivo)
   setTimeout(() => { kronaRequestNotificationPermission(); }, 30000);
+
+  // Inicializa seção de upload de exames
+  try { initLabsUploadSection(); } catch(e) { console.warn('[labs] init error', e); }
 };
 
 // ══ NOTIFICAÇÕES PWA ════════════════════════════════

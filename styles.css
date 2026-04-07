@@ -3126,3 +3126,59 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
 }
+
+/* ── Exames Laboratoriais ───────────────────────────────── */
+#perfilLabsDropArea:hover,
+#perfilLabsDropArea.drag-over {
+  border-color: var(--accent);
+  background: rgba(249,115,22,0.06);
+}
+#perfilLabsSection.labs-highlight {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 12px;
+  animation: labsHighlightPulse 1.8s ease-out forwards;
+}
+@keyframes labsHighlightPulse {
+  0%   { outline-color: var(--accent); }
+  100% { outline-color: transparent; }
+}
+.perfil-labs-status { color: var(--text-2); }
+.perfil-labs-status--loading { color: var(--accent); }
+.perfil-labs-status--success { color: #10b981; font-weight: 600; }
+.perfil-labs-status--error   { color: #ef4444; }
+.labs-result-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.78rem;
+}
+.labs-result-confidence {
+  font-size: 0.7rem;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.labs-result-flags {
+  color: #f59e0b;
+  font-size: 0.75rem;
+  margin-bottom: 8px;
+}
+.labs-result-biomarkers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.labs-result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.labs-result-key { color: var(--text-2); }
+.labs-result-val { font-weight: 600; color: var(--text); }
+.labs-result-note {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 8px 0;
+}

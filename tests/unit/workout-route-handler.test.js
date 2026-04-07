@@ -35,7 +35,8 @@ test('handler retorna workout_primary com prescrição referenciada', async () =
   assert.equal(result.body.data.content[0].data.failSafe, false);
 });
 
-test('handler retorna workout_failsafe quando faltam referências/prescrição', async () => {
+test('handler gera via catálogo (workout_primary) quando sem referências/prescrição', async () => {
+  // Novo comportamento: sem templates → gera do catálogo, não retorna failsafe
   const result = await handler.processWorkoutRouteRequest({
     body: {
       action: 'GENERATE_WORKOUT',
@@ -53,9 +54,9 @@ test('handler retorna workout_failsafe quando faltam referências/prescrição',
 
   assert.equal(result.status, 200);
   assert.equal(result.body.success, true);
-  assert.equal(result.body.type, 'workout_failsafe');
-  assert.equal(result.body.state, 'validation_required');
-  assert.equal(result.body.data.content[0].data.failSafe, true);
+  assert.equal(result.body.type, 'workout_primary');
+  assert.equal(result.body.data.content[0].data.failSafe, false);
+  assert.ok(result.body.data.content[0].data.treinos.length > 0, 'Deve ter treinos gerados');
 });
 
 test('handler aproveita scientificConstraints já enriquecidos com referencedPlan', async () => {
@@ -87,7 +88,8 @@ test('handler aproveita scientificConstraints já enriquecidos com referencedPla
   assert.equal(result.body.data.content[0].data.references.length, 1);
 });
 
-test('handler propaga falha clara quando template do Supabase esta ausente', async () => {
+test('handler gera do catálogo quando template do Supabase esta ausente (WORKOUT_TEMPLATE_MISSING)', async () => {
+  // Com o fix: WORKOUT_TEMPLATE_MISSING não impede a geração — usa catálogo interno
   const result = await handler.processWorkoutRouteRequest({
     body: {
       action: 'GENERATE_WORKOUT',
@@ -109,12 +111,15 @@ test('handler propaga falha clara quando template do Supabase esta ausente', asy
   });
 
   assert.equal(result.status, 200);
-  assert.equal(result.body.type, 'workout_failsafe');
-  assert.match(result.body.message, /nenhum template/i);
+  assert.equal(result.body.type, 'workout_primary');
+  assert.equal(result.body.data.content[0].data.failSafe, false);
+  assert.ok(result.body.data.content[0].data.treinos.length > 0);
+  // Metadado de template ainda é preservado no validation
   assert.equal(result.body.data.service.validation.validationError, 'WORKOUT_TEMPLATE_MISSING');
 });
 
-test('handler propaga falha clara quando template do Supabase esta invalido', async () => {
+test('handler gera do catálogo quando template do Supabase esta invalido (INVALID_WORKOUT_TEMPLATE_SHAPE)', async () => {
+  // Com o fix: template inválido também faz fallback para catálogo
   const result = await handler.processWorkoutRouteRequest({
     body: {
       action: 'GENERATE_WORKOUT',
@@ -127,6 +132,7 @@ test('handler propaga falha clara quando template do Supabase esta invalido', as
           templateMetadata: {
             validationError: 'INVALID_WORKOUT_TEMPLATE_SHAPE',
           },
+          // evidenceReferences sem referencedPlan válido
           evidenceReferences: [{ title: 'ACSM', source: 'Guideline' }],
         },
       },
@@ -137,7 +143,7 @@ test('handler propaga falha clara quando template do Supabase esta invalido', as
   });
 
   assert.equal(result.status, 200);
-  assert.equal(result.body.type, 'workout_failsafe');
-  assert.ok(result.body.message.includes('template salvo no Supabase'));
+  assert.equal(result.body.type, 'workout_primary');
+  assert.equal(result.body.data.content[0].data.failSafe, false);
   assert.equal(result.body.data.service.validation.validationError, 'INVALID_WORKOUT_TEMPLATE_SHAPE');
 });

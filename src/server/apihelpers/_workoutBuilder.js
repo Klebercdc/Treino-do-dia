@@ -191,6 +191,39 @@ function pickExercises(groups, environment, prescription, limitations) {
   return exercises.slice(0, environment === 'academia' ? 6 : 5);
 }
 
+/**
+ * Gera treino a partir do catálogo interno quando não há template referenciado.
+ * Retorna estrutura com failSafe:false e flow_state:'catalog_generated'.
+ */
+function buildStandaloneWorkout(input, goal, level, days, environment) {
+  var prescription = buildPrescription(goal, level);
+  var split = SPLITS[days] || SPLITS[3];
+  var limitations = input.limitacoes || '';
+
+  var treinos = split.map(function(day) {
+    return {
+      nome: day.nome,
+      grupo: day.grupos.join('/'),
+      exercicios: pickExercises(day.grupos, environment, prescription, limitations),
+    };
+  }).filter(function(t) { return t.exercicios.length > 0; });
+
+  return {
+    failSafe: false,
+    flow_state: 'catalog_generated',
+    treinos: treinos,
+    references: [],
+    orientacoes: {
+      objetivo: goal,
+      nivel: level,
+      frequencia: days + 'x por semana',
+      sessoes: String(input.tempo || '60 min'),
+      ambiente: environment,
+      observacao: 'Plano gerado a partir do catálogo de exercícios. Para prescrição referenciada, configure um template em workout_templates.',
+    },
+  };
+}
+
 function buildWorkoutPlan(collected) {
   var input = collected || {};
   var scientificConstraints = input.scientificConstraints && typeof input.scientificConstraints === 'object'
@@ -200,77 +233,92 @@ function buildWorkoutPlan(collected) {
   var referencedPlan = normalizeReferencedWorkoutPlan(
     scientificConstraints.referencedPlan || scientificConstraints.referencedWorkout || scientificConstraints.workoutPlan
   );
-  if (!evidenceReferences.length || !referencedPlan) {
-    var templateMetadata = scientificConstraints.templateMetadata && typeof scientificConstraints.templateMetadata === 'object'
-      ? scientificConstraints.templateMetadata
-      : {};
-    var templateValidationError = typeof templateMetadata.validationError === 'string'
-      ? templateMetadata.validationError
-      : (!referencedPlan ? 'WORKOUT_TEMPLATE_MISSING' : null);
-    var templateObservation = templateValidationError === 'INVALID_WORKOUT_TEMPLATE_SHAPE'
-      ? 'O template salvo em workout_templates.templates existe, mas está fora do formato oficial exigido.'
-      : 'Nenhum template válido foi encontrado em workout_templates.templates para este usuário.';
+
+  // Path 1: template referenciado disponível — usa como fonte primária
+  if (evidenceReferences.length && referencedPlan) {
+    var goal = normalizeGoal(input.objetivo);
+    var level = normalizeLevel(input.nivel);
+    var days = normalizeDays(input.dias);
+    var environment = normalizeEnvironment(input.equipamentos);
+    var prescription = buildPrescription(goal, level);
+
+    return {
+      failSafe: false,
+      flow_state: 'referenced_ready',
+      treinos: referencedPlan.treinos.map(function(day) {
+        return {
+          nome: day.nome,
+          grupo: day.grupo,
+          exercicios: day.exercicios.map(function(exercicio) {
+            return {
+              nome: exercicio.nome,
+              series: exercicio.series || prescription.series,
+              reps: exercicio.reps || prescription.reps,
+              descanso: exercicio.descanso || undefined,
+              source_ref: exercicio.source_ref || null,
+            };
+          }),
+        };
+      }),
+      references: evidenceReferences,
+      orientacoes: {
+        objetivo: goal,
+        nivel: level,
+        frequencia: days + 'x por semana',
+        sessoes: String(input.tempo || '60 min'),
+        ambiente: environment,
+        observacao: environment === 'academia'
+          ? 'Plano montado a partir de prescrição estruturada explicitamente referenciada.'
+          : 'Plano adaptado ao equipamento informado a partir de prescrição estruturada explicitamente referenciada.'
+      }
+    };
+  }
+
+  // Path 2: sem template — tenta gerar a partir do catálogo interno
+  var templateMetadata = scientificConstraints.templateMetadata && typeof scientificConstraints.templateMetadata === 'object'
+    ? scientificConstraints.templateMetadata
+    : {};
+  var templateValidationError = typeof templateMetadata.validationError === 'string'
+    ? templateMetadata.validationError
+    : (!referencedPlan ? 'WORKOUT_TEMPLATE_MISSING' : null);
+
+  var goal2 = normalizeGoal(input.objetivo);
+  var level2 = normalizeLevel(input.nivel);
+  var days2 = normalizeDays(input.dias);
+  var environment2 = normalizeEnvironment(input.equipamentos);
+
+  // Precisa de dados mínimos para gerar qualquer plano
+  if (!input.objetivo && !input.nivel && !input.dias) {
     return {
       failSafe: true,
       flow_state: 'referenced_prescription_required',
       treinos: [],
       orientacoes: {
-        objetivo: normalizeGoal(input.objetivo),
-        nivel: normalizeLevel(input.nivel),
-        frequencia: normalizeDays(input.dias) + 'x por semana',
+        objetivo: goal2,
+        nivel: level2,
+        frequencia: days2 + 'x por semana',
         sessoes: String(input.tempo || '60 min'),
-        observacao: 'Treino não gerado: faltam referências e prescrição estruturada explicitamente validadas.',
+        observacao: 'Treino não gerado: dados insuficientes (objetivo, nível e dias são necessários).',
       },
-      references: evidenceReferences,
+      references: [],
       templateMetadata: {
         templateId: templateMetadata.templateId || null,
         templateName: templateMetadata.templateName || null,
         validationError: templateValidationError,
       },
       observacoes: [
-        'Não gerei um treino especulativo.',
-        templateObservation,
-        'Envie evidenceReferences e referencedPlan válidos no scientificConstraints antes de montar o treino.',
+        'Dados insuficientes para gerar o treino.',
+        'Informe objetivo, nível e frequência semanal.',
       ],
     };
   }
-  var goal = normalizeGoal(input.objetivo);
-  var level = normalizeLevel(input.nivel);
-  var days = normalizeDays(input.dias);
-  var environment = normalizeEnvironment(input.equipamentos);
-  var prescription = buildPrescription(goal, level);
-  var split = SPLITS[days] || SPLITS[3];
 
-  return {
-    failSafe: false,
-    flow_state: 'referenced_ready',
-    treinos: referencedPlan.treinos.map(function(day) {
-      return {
-        nome: day.nome,
-        grupo: day.grupo,
-        exercicios: day.exercicios.map(function(exercicio) {
-          return {
-            nome: exercicio.nome,
-            series: exercicio.series || prescription.series,
-            reps: exercicio.reps || prescription.reps,
-            descanso: exercicio.descanso || undefined,
-            source_ref: exercicio.source_ref || null,
-          };
-        }),
-      };
-    }),
-    references: evidenceReferences,
-    orientacoes: {
-      objetivo: goal,
-      nivel: level,
-      frequencia: days + 'x por semana',
-      sessoes: String(input.tempo || '60 min'),
-      ambiente: environment,
-      observacao: environment === 'academia'
-        ? 'Plano montado a partir de prescrição estruturada explicitamente referenciada.'
-        : 'Plano adaptado ao equipamento informado a partir de prescrição estruturada explicitamente referenciada.'
-    }
-  };
+  // Gera a partir do catálogo com log de auditoria
+  console.info('[workout-builder] template ausente (' + (templateValidationError || 'sem templates') +
+    '), gerando a partir do catálogo interno. objetivo=' + goal2 +
+    ' nivel=' + level2 + ' dias=' + days2 + ' ambiente=' + environment2);
+
+  return buildStandaloneWorkout(input, goal2, level2, days2, environment2);
 }
 
 module.exports = {
