@@ -400,14 +400,15 @@
             },
           });
 
-          if (!science?.ok) {
+          var unsafeRequest = !science?.ok && (science?.blockedReason === 'unsafe_request' || science?.validationStatus === 'blocked');
+          if (unsafeRequest) {
             decision.type = 'answer_only';
             decision.ctaAction = null;
             decision.message = 'Não consegui validar esta solicitação com segurança. Ajuste os dados e tente novamente.';
             decision.validationStatus = science?.validationStatus || 'blocked_unsafe_request';
             decision.blockedReason = science?.blockedReason || 'unsafe_request';
           } else if (!hasEvidence) {
-            decision.message = 'Não encontrei referência específica no banco científico agora. Posso seguir com protocolo conservador, mas isso indica que a base científica/Supabase pode não ter retornado evidência para este caso.';
+            decision.message = 'Vou seguir com a melhor lógica esportiva disponível no seu perfil e no contexto atual. Se houver artigos específicos recuperados, eu uso como reforço.';
             decision.validationStatus = science?.validationStatus || 'fallback_safe_protocol';
             decision.blockedReason = null;
             decision.usedFallback = true;
@@ -416,7 +417,7 @@
       } catch (_err) {
         decision.usedFallback = true;
         decision.validationStatus = 'science_builder_error';
-        decision.blockedReason = 'science_builder_error';
+        decision.blockedReason = null;
       }
     }
 

@@ -5369,7 +5369,7 @@ async function buildScientificConstraintsByObjective(objective, kind, input) {
       usedFallback: serviceUnavailable || evidenceState !== 'ok',
       fallbackProtocol: evidenceState === 'no_evidence' || serviceUnavailable ? 'safe_conservative_sports_nutrition' : null,
       warningMessage: evidenceState === 'weak_evidence'
-        ? 'Evidência científica parcial para este objetivo. Aplicando protocolo técnico conservador.'
+        ? 'Estou usando a melhor base disponível para esse objetivo e reforçando o plano com regras esportivas confiáveis.'
         : null,
       timestamp: new Date().toISOString(),
     };
