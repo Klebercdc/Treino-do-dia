@@ -311,7 +311,6 @@ function getPrevMap() {
 ═══════════════════════════════════════════════════ */
 async function gerarProtocolo() {
   const input = collectWorkoutGenerationInput();
-  const f = input.dias;
   const objective = input.objetivo;
   const guard = await validateScientificGenerationGuard(
     'workout',
@@ -329,10 +328,34 @@ async function gerarProtocolo() {
   try {
     const resp = await requestWorkoutRoute(workoutPayload, 12000);
     const data = await parseWorkoutApiJsonSafely(resp);
+
+    // parseWorkoutApiJsonSafely retorna {error:"INVALID_JSON"} quando a resposta
+    // não é JSON válido (ex: HTML de erro do servidor). Nesse caso usa geração local.
+    if (data && data.error === 'INVALID_JSON') {
+      console.warn('[gerarProtocolo] resposta não-JSON da rota de treino, usando geração local como fallback');
+      gerarTreinoDoPrograma();
+      return;
+    }
+
     const renderModel = extractWorkoutRenderModel(data);
 
-    if (!resp.ok || !renderModel || renderModel.failSafe) {
+    if (!resp.ok) {
+      // Erro HTTP real — exibe mensagem da API se disponível
       dlgAlert(resolveWorkoutRouteFailureMessage(data, resp.status));
+      return;
+    }
+
+    if (!renderModel) {
+      // Shape desconhecido — fallback local silencioso
+      console.warn('[gerarProtocolo] renderModel nulo após parse, usando geração local');
+      gerarTreinoDoPrograma();
+      return;
+    }
+
+    if (renderModel.failSafe) {
+      // API em modo failsafe (dados insuficientes) — usa geração local
+      console.info('[gerarProtocolo] API em modo failsafe, usando geração local como fallback');
+      gerarTreinoDoPrograma();
       return;
     }
 
@@ -364,8 +387,9 @@ async function gerarProtocolo() {
       }),
     });
   } catch (error) {
-    dlgAlert(resolveWorkoutRouteFailureMessage(null, 0, error));
-    return;
+    // Erro de rede / timeout — fallback local
+    console.warn('[gerarProtocolo] erro na rota de treino, usando geração local como fallback', error);
+    gerarTreinoDoPrograma();
   }
 }
 
@@ -2520,12 +2544,380 @@ function navTo(tab) {
 function openLabsUploadScreen(context) {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
-  try { openHome?.(); } catch (_) {}
-  try { navTo?.('inicio'); } catch (_) {}
   try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
-  try { window.location.href = '/labs/upload'; return true; } catch (_) {}
-  try { window.open('/labs/upload', '_blank'); return true; } catch (_) {}
-  return false;
+  // Abre a tela de perfil e faz scroll para a seção de exames
+  try { openPerfil?.(); } catch (_) {}
+  setTimeout(function() {
+    const el = document.getElementById('perfilLabsSection');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Destaque visual temporário
+      el.classList.add('labs-highlight');
+      setTimeout(function() { el.classList.remove('labs-highlight'); }, 1800);
+    }
+  }, 320);
+}
+
+/* ─── Upload de Exames Laboratoriais ─────────────────────── */
+async function handleLabsFileUpload(file) {
+  if (!file) return;
+  const statusEl = document.getElementById('perfilLabsStatus');
+  const resultEl = document.getElementById('perfilLabsResult');
+  const uploadBtn = document.getElementById('perfilLabsUploadBtn');
+
+  function setStatus(msg, type) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = 'perfil-labs-status' + (type ? ' perfil-labs-status--' + type : '');
+  }
+
+  const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+  const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png'];
+  if (!ALLOWED.includes(file.type)) {
+    setStatus('Formato inválido. Use PDF, JPEG ou PNG.', 'error');
+    return;
+  }
+  if (file.size > MAX_SIZE) {
+    setStatus('Arquivo muito grande. Máximo 10 MB.', 'error');
+    return;
+  }
+
+  if (uploadBtn) uploadBtn.disabled = true;
+  setStatus('Enviando exame…', 'loading');
+  if (resultEl) resultEl.innerHTML = '';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
+    // Remove Content-Type para deixar o browser definir o boundary do multipart
+    delete headers['Content-Type'];
+
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const payload = await resp.json().catch(function() { return null; });
+
+    if (!resp.ok || !payload || !payload.ok) {
+      const msg = payload?.message || payload?.error || 'Erro ao processar o exame.';
+      setStatus(msg, 'error');
+      if (uploadBtn) uploadBtn.disabled = false;
+      return;
+    }
+
+    setStatus('Exame enviado com sucesso!', 'success');
+    renderLabsResult(payload, resultEl);
+  } catch (err) {
+    console.error('[labs-upload] erro:', err);
+    setStatus('Falha na conexão. Verifique sua internet e tente novamente.', 'error');
+  } finally {
+    if (uploadBtn) uploadBtn.disabled = false;
+    // Limpa o input para permitir re-envio do mesmo arquivo
+    const fileInput = document.getElementById('perfilLabsFile');
+    if (fileInput) fileInput.value = '';
+  }
+}
+
+function renderLabsResult(payload, container) {
+  if (!container) return;
+  const parsed = payload.parsed;
+  if (!parsed || typeof parsed !== 'object') {
+    container.innerHTML = '<div class="labs-result-note">Exame registrado (sem dados estruturados extraídos).</div>';
+    return;
+  }
+
+  const flags = Array.isArray(payload.clinicalFlags) && payload.clinicalFlags.length
+    ? '<div class="labs-result-flags"><strong>Alertas clínicos:</strong> ' + payload.clinicalFlags.join(', ') + '</div>'
+    : '';
+
+  const biomarkers = Object.entries(parsed)
+    .filter(function(e) { return e[1] !== null && e[1] !== undefined; })
+    .map(function(e) {
+      return '<div class="labs-result-row"><span class="labs-result-key">' + escapeHTML(String(e[0])) + '</span><span class="labs-result-val">' + escapeHTML(String(e[1])) + '</span></div>';
+    }).join('');
+
+  container.innerHTML =
+    '<div class="labs-result-card">' +
+      '<div class="labs-result-confidence">Confiança: ' + Math.round((payload.confidence || 0) * 100) + '%</div>' +
+      (flags || '') +
+      (biomarkers ? '<div class="labs-result-biomarkers">' + biomarkers + '</div>' : '') +
+    '</div>';
+}
+
+function initLabsUploadSection() {
+  const fileInput = document.getElementById('perfilLabsFile');
+  const dropArea = document.getElementById('perfilLabsDropArea');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files && fileInput.files[0]) handleLabsFileUpload(fileInput.files[0]);
+    });
+  }
+  if (dropArea) {
+    dropArea.addEventListener('dragover', function(e) { e.preventDefault(); dropArea.classList.add('drag-over'); });
+    dropArea.addEventListener('dragleave', function() { dropArea.classList.remove('drag-over'); });
+    dropArea.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropArea.classList.remove('drag-over');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleLabsFileUpload(file);
+    });
+  }
+  // Carrega histórico automaticamente ao abrir
+  loadLabReportsHistory(false);
+}
+
+/* ─── Histórico de Exames Laboratoriais ─────────────────── */
+
+var _labsHistoryCache = null;
+
+async function loadLabReportsHistory(forceRefresh) {
+  const container = document.getElementById('perfilLabsHistory');
+  const emptyEl = document.getElementById('perfilLabsHistoryEmpty');
+  if (!container) return;
+
+  if (!forceRefresh && _labsHistoryCache) {
+    renderLabReportHistory(_labsHistoryCache, container, emptyEl);
+    return;
+  }
+
+  container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Carregando…</div>';
+
+  try {
+    const headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/labs/reports?limit=10'), { headers });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const payload = await resp.json();
+    if (!payload.ok) throw new Error(payload.error || 'response not ok');
+    _labsHistoryCache = payload.reports || [];
+    renderLabReportHistory(_labsHistoryCache, container, emptyEl);
+  } catch (err) {
+    console.warn('[labs-history] erro ao carregar:', err);
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Não foi possível carregar o histórico.</div>';
+  }
+}
+
+function renderLabReportHistory(reports, container, emptyEl) {
+  if (!container) return;
+  if (!reports || reports.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0" id="perfilLabsHistoryEmpty">Nenhum exame enviado ainda.</div>';
+    return;
+  }
+
+  const BIOMARKER_LABELS = {
+    glucose: 'Glicose', hba1c: 'HbA1c', creatinine: 'Creatinina',
+    potassium: 'Potássio', sodium: 'Sódio', cholesterol_total: 'Colesterol Total',
+    hdl: 'HDL', ldl: 'LDL', triglycerides: 'Triglicerídeos',
+  };
+
+  const STATUS_LABELS = { parsed: '✅ Processado', pending: '⏳ Aguardando', failed: '❌ Falhou' };
+
+  container.innerHTML = reports.map(function(r) {
+    var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '—';
+    var statusLabel = STATUS_LABELS[r.parseStatus] || r.parseStatus || '—';
+    var fileName = r.fileName ? escapeHTML(r.fileName.replace(/^\d+-/, '')) : 'Exame';
+
+    var biomarkersHtml = '';
+    if (r.isValid && r.parsed && typeof r.parsed === 'object') {
+      var items = Object.entries(r.parsed)
+        .filter(function(e) { return e[1] !== null && e[1] !== undefined; })
+        .map(function(e) {
+          return '<span class="labs-hist-bm"><span class="labs-hist-bm-key">' + escapeHTML(BIOMARKER_LABELS[e[0]] || e[0]) + '</span><span class="labs-hist-bm-val">' + escapeHTML(String(e[1])) + '</span></span>';
+        });
+      if (items.length) biomarkersHtml = '<div class="labs-hist-bms">' + items.join('') + '</div>';
+    }
+
+    var flagsHtml = '';
+    if (r.clinicalFlags && r.clinicalFlags.length) {
+      flagsHtml = '<div class="labs-hist-flags">' + r.clinicalFlags.map(function(f) { return '<span class="labs-hist-flag">' + escapeHTML(f) + '</span>'; }).join('') + '</div>';
+    }
+
+    return '<div class="labs-hist-card">' +
+      '<div class="labs-hist-header">' +
+        '<span class="labs-hist-name">' + fileName + '</span>' +
+        '<span class="labs-hist-meta">' + date + ' · ' + statusLabel + (r.confidence ? ' · ' + Math.round(r.confidence * 100) + '%' : '') + '</span>' +
+      '</div>' +
+      (biomarkersHtml || '') +
+      (flagsHtml || '') +
+    '</div>';
+  }).join('');
+}
+
+/* ─── Workout Templates ──────────────────────────────────── */
+
+var _workoutTemplatesCache = null;
+
+async function loadWorkoutTemplates(forceRefresh) {
+  if (!forceRefresh && _workoutTemplatesCache !== null) return _workoutTemplatesCache;
+  try {
+    const headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/workout/templates'), { headers });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const payload = await resp.json();
+    _workoutTemplatesCache = Array.isArray(payload.templates) ? payload.templates : [];
+    return _workoutTemplatesCache;
+  } catch (err) {
+    console.warn('[workout-templates] erro ao carregar:', err);
+    return [];
+  }
+}
+
+async function refreshConfigTemplatesList() {
+  const listEl = document.getElementById('configTemplatesList');
+  const emptyEl = document.getElementById('configTemplatesEmpty');
+  if (!listEl) return;
+
+  const templates = await loadWorkoutTemplates(true);
+
+  if (!templates.length) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:10px 0" id="configTemplatesEmpty">Nenhum template salvo</div>';
+    return;
+  }
+
+  listEl.innerHTML = templates.map(function(t) {
+    var name = escapeHTML(t.name || 'Template');
+    var sessoes = Array.isArray(t.treinos) ? t.treinos.length + ' sessão(ões)' : '';
+    return '<div class="config-template-card" onclick="applyWorkoutTemplate(' + escapeAttr(JSON.stringify(t)) + ')">' +
+      '<div class="config-template-name">' + name + '</div>' +
+      (sessoes ? '<div class="config-template-meta">' + sessoes + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function applyWorkoutTemplate(template) {
+  if (!template || !Array.isArray(template.treinos)) return;
+  // Injeta o template como scientificConstraints para a próxima geração via API
+  window._kronaWorkoutTemplateOverride = {
+    referencedPlan: { treinos: template.treinos },
+    evidenceReferences: Array.isArray(template.evidenceReferences) ? template.evidenceReferences : [],
+    templateMetadata: { templateId: template.id, templateName: template.name, validationError: null },
+  };
+  showToast('Template "' + escapeHTML(template.name || 'Template') + '" carregado. Clique em Gerar com IA.', 'success', 3500);
+  closeTemplatesManager();
+}
+
+// Sobrescreve buildWorkoutRequestPayloadFromInput para injetar o override se existir
+var _origBuildWorkoutRequestPayloadFromInput = buildWorkoutRequestPayloadFromInput;
+buildWorkoutRequestPayloadFromInput = function(input, guard) {
+  var payload = _origBuildWorkoutRequestPayloadFromInput(input, guard);
+  if (window._kronaWorkoutTemplateOverride) {
+    payload.scientificConstraints = Object.assign({}, payload.scientificConstraints, window._kronaWorkoutTemplateOverride);
+    window._kronaWorkoutTemplateOverride = null; // consume once
+  }
+  return payload;
+};
+
+async function salvarTreinoComoTemplate() {
+  // Coleta os exercícios atuais do container
+  var sections = Array.from(document.querySelectorAll('#container .section'));
+  if (!sections.length) { showToast('Nenhum exercício para salvar.', 'warning', 2500); return; }
+
+  var treinos = sections.map(function(sec) {
+    var nome = sec.getAttribute('data-treino-key') || sec.id || 'Treino';
+    var cards = Array.from(sec.querySelectorAll('.exercise-card'));
+    var exercicios = cards.map(function(card) {
+      return {
+        nome: card.getAttribute('data-ex-name') || '',
+        series: Number(card.getAttribute('data-ex-sets')) || 3,
+        reps: card.getAttribute('data-ex-meta') || '8-12',
+      };
+    }).filter(function(e) { return !!e.nome; });
+    return { nome: nome, exercicios: exercicios };
+  }).filter(function(t) { return t.exercicios.length > 0; });
+
+  if (!treinos.length) { showToast('Adicione exercícios antes de salvar.', 'warning', 2500); return; }
+
+  var cfg = getProgramaConfig();
+  var templateName = 'Treino ' + (cfg.obj || 'hipertrofia').charAt(0).toUpperCase() + (cfg.obj || 'hipertrofia').slice(1) +
+    ' ' + cfg.freq + 'x — ' + new Date().toLocaleDateString('pt-BR');
+
+  try {
+    const headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/workout/templates'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ template: { name: templateName, treinos: treinos } }),
+    });
+    const payload = await resp.json();
+    if (!payload.ok) throw new Error(payload.error || 'save failed');
+    _workoutTemplatesCache = null; // invalida cache
+    showToast('✅ Template "' + escapeHTML(templateName) + '" salvo!', 'success', 3500);
+    refreshConfigTemplatesList();
+  } catch (err) {
+    console.error('[save-template] erro:', err);
+    showToast('Erro ao salvar template. Tente novamente.', 'error', 3000);
+  }
+}
+
+async function deleteWorkoutTemplate(templateId) {
+  if (!templateId) return;
+  if (!await dlgConfirm('Remover este template? Esta ação não pode ser desfeita.')) return;
+  try {
+    const headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/workout/templates?id=' + encodeURIComponent(templateId)), {
+      method: 'DELETE',
+      headers,
+    });
+    const payload = await resp.json();
+    if (!payload.ok) throw new Error(payload.error || 'delete failed');
+    _workoutTemplatesCache = null;
+    showToast('Template removido.', 'success', 2000);
+    openTemplatesManager(true);
+  } catch (err) {
+    console.error('[delete-template] erro:', err);
+    showToast('Erro ao remover template.', 'error', 2500);
+  }
+}
+
+async function openTemplatesManager(forceRefresh) {
+  const sheet = document.getElementById('templatesManagerSheet');
+  if (!sheet) return;
+  sheet.style.display = 'flex';
+  requestAnimationFrame(function() { sheet.classList.add('show'); });
+
+  const loading = document.getElementById('tmLoading');
+  const list = document.getElementById('tmList');
+  const empty = document.getElementById('tmEmptyState');
+  if (loading) loading.style.display = 'block';
+  if (list) list.innerHTML = '';
+  if (empty) empty.style.display = 'none';
+
+  const templates = await loadWorkoutTemplates(!!forceRefresh);
+  if (loading) loading.style.display = 'none';
+
+  if (!templates.length) {
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+
+  if (list) {
+    list.innerHTML = templates.map(function(t) {
+      var id = escapeAttr(t.id || '');
+      var name = escapeHTML(t.name || 'Template');
+      var sessoes = Array.isArray(t.treinos) ? t.treinos.length + ' sessão(ões)' : '';
+      var exCount = Array.isArray(t.treinos) ? t.treinos.reduce(function(acc, tr) { return acc + (Array.isArray(tr.exercicios) ? tr.exercicios.length : 0); }, 0) : 0;
+      var savedAt = t.savedAt ? new Date(t.savedAt).toLocaleDateString('pt-BR') : '';
+      return '<div class="tm-card">' +
+        '<div class="tm-card-body" onclick="applyWorkoutTemplate(' + escapeAttr(JSON.stringify(t)) + ')">' +
+          '<div class="tm-card-name">' + name + '</div>' +
+          '<div class="tm-card-meta">' + (sessoes || '') + (exCount ? ' · ' + exCount + ' exercícios' : '') + (savedAt ? ' · ' + savedAt : '') + '</div>' +
+        '</div>' +
+        '<button class="tm-card-delete" onclick="deleteWorkoutTemplate(\'' + id + '\')" title="Remover template">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>' +
+        '</button>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+function closeTemplatesManager() {
+  const sheet = document.getElementById('templatesManagerSheet');
+  if (!sheet) return;
+  sheet.classList.remove('show');
+  setTimeout(function() { sheet.style.display = 'none'; }, 300);
 }
 
 window.addEventListener("resize", syncMainScrollArea);
@@ -4097,6 +4489,9 @@ window.onload = () => {
 
   // Pedir permissão de notificação após 30s (não invasivo)
   setTimeout(() => { kronaRequestNotificationPermission(); }, 30000);
+
+  // Inicializa seção de upload de exames
+  try { initLabsUploadSection(); } catch(e) { console.warn('[labs] init error', e); }
 };
 
 // ══ NOTIFICAÇÕES PWA ════════════════════════════════

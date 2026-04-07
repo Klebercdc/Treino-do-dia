@@ -1534,6 +1534,47 @@
       <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(249,115,22,0.9)"></div>Intenso</div>
     </div>
   </div>
+  <!-- ── Exames Laboratoriais ─────────────────────────────── -->
+  <div class="perfil-section" id="perfilLabsSection">
+    <div class="perfil-section-title">Exames laboratoriais</div>
+    <p style="font-size:0.78rem;color:var(--text-2);margin:0 0 12px">
+      Envie seus exames de sangue (PDF, JPEG ou PNG). O KRONOS extrai os biomarcadores e usa os dados para personalizar suas recomendações de dieta e treino.
+    </p>
+
+    <!-- Área de drop / upload -->
+    <div id="perfilLabsDropArea" onclick="document.getElementById('perfilLabsFile').click()"
+      style="border:2px dashed var(--border);border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;background:var(--bg2);transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span style="font-size:0.85rem;font-weight:700;color:var(--text)">Enviar exame</span>
+        <span style="font-size:0.72rem;color:var(--text-2)">PDF, JPEG ou PNG · máx. 10 MB</span>
+      </div>
+    </div>
+    <input type="file" id="perfilLabsFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" aria-label="Selecionar arquivo de exame">
+
+    <button id="perfilLabsUploadBtn" onclick="document.getElementById('perfilLabsFile').click()"
+      style="display:none">Selecionar arquivo</button>
+
+    <!-- Status e resultado do upload atual -->
+    <div id="perfilLabsStatus" class="perfil-labs-status" style="margin-top:10px;font-size:0.8rem;min-height:20px"></div>
+    <div id="perfilLabsResult" style="margin-top:8px"></div>
+
+    <!-- ── Histórico de exames ── -->
+    <div style="margin-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:0.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase">Histórico</div>
+        <button onclick="loadLabReportsHistory(true)" style="background:none;border:none;color:var(--accent);font-size:0.72rem;font-weight:700;cursor:pointer;padding:2px 4px;-webkit-tap-highlight-color:transparent">Atualizar</button>
+      </div>
+      <div id="perfilLabsHistory">
+        <div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0" id="perfilLabsHistoryEmpty">Nenhum exame enviado ainda.</div>
+      </div>
+    </div>
+  </div>
+
   <div style="height:100px"></div>
 </div>
 
@@ -1549,6 +1590,19 @@
     </button>
     <div class="settings-title">Configurações</div>
     <div style="width:60px"></div>
+  </div>
+
+  <!-- Saúde -->
+  <div class="settings-section-label">Saúde</div>
+  <div class="settings-group">
+    <div class="settings-row" onclick="closeSettingsScreen();openLabsUploadScreen()">
+      <div class="settings-row-icon" style="background:rgba(16,185,129,0.12)">
+        <i data-lucide="flask-conical" class="lucide" width="17" height="17" stroke="#10b981" fill="none" stroke-width="1.75"></i>
+      </div>
+      <span class="settings-row-label">Enviar exames</span>
+      <span class="settings-row-value" style="font-size:0.7rem;color:var(--text-2)">Personalizar IA</span>
+      <i data-lucide="chevron-right" class="lucide settings-row-arrow" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+    </div>
   </div>
 
   <!-- Conta -->
@@ -2100,6 +2154,17 @@
   Isso vai resetar o treino atual. Deseja continuar?
 </div>
 
+<!-- ── Meus Templates Salvos ─────────────────────────────── -->
+<div id="configTemplatesSection" style="margin-bottom:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="font-size:0.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase">Meus templates</div>
+    <button onclick="openTemplatesManager()" style="background:none;border:none;color:var(--accent);font-size:0.72rem;font-weight:700;cursor:pointer;padding:2px 4px;-webkit-tap-highlight-color:transparent">Gerenciar</button>
+  </div>
+  <div id="configTemplatesList">
+    <div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:10px 0" id="configTemplatesEmpty">Nenhum template salvo</div>
+  </div>
+</div>
+
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
   <button onclick="usarTemplateManualConfig()" style="padding:15px 10px;background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.3);border-radius:12px;color:#60a5fa;font-family:var(--font);font-size:0.88rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
     <i data-lucide="clipboard-list" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="1.75"></i>
@@ -2161,16 +2226,57 @@
 
   </div>
 
-  <button onclick="salvarTreino()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--accent),#fb923c);border:1.5px solid rgba(249,115,22,.55);border-radius:14px;padding:12px 14px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
-    <i data-lucide="save" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
-    Salvar Treino
-  </button>
+  <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px">
+    <button onclick="salvarTreino()" style="background:linear-gradient(135deg,var(--accent),#fb923c);border:1.5px solid rgba(249,115,22,.55);border-radius:14px;padding:12px 14px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
+      <i data-lucide="save" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
+      Salvar Treino
+    </button>
+    <button onclick="salvarTreinoComoTemplate()" title="Salvar como template reutilizável"
+      style="background:rgba(59,130,246,0.12);border:1.5px solid rgba(59,130,246,0.3);border-radius:14px;padding:12px 14px;color:#60a5fa;font-family:var(--font);font-size:0.78rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:6px;white-space:nowrap">
+      <i data-lucide="bookmark-plus" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+      Template
+    </button>
+  </div>
 </div>
 
 <button class="btn-add-ex" onclick="abrirLibParaNovo()">
   <i data-lucide="plus" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
   Adicionar Exercício
 </button>
+
+<!-- ══════════════════════════════════════════
+     MODAL — GERENCIAR TEMPLATES DE TREINO
+══════════════════════════════════════════ -->
+<div id="templatesManagerSheet" class="bottom-sheet" onclick="if(event.target===this)closeTemplatesManager()" style="display:none">
+  <div class="bs-box" style="max-height:88vh;overflow-y:auto">
+    <div class="bs-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-weight:800;font-size:1rem;color:var(--text)">Meus Templates</div>
+      <button onclick="closeTemplatesManager()" style="background:none;border:none;color:var(--text-2);cursor:pointer;padding:4px">
+        <i data-lucide="x" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
+      </button>
+    </div>
+    <p style="font-size:0.78rem;color:var(--text-2);margin:0 0 14px;line-height:1.45">
+      Templates salvos são reutilizados como prescrição referenciada ao gerar treinos com IA. Salve um treino após gerá-lo ou após registrar manualmente seus exercícios.
+    </p>
+
+    <!-- Estado vazio -->
+    <div id="tmEmptyState" style="text-align:center;padding:24px 0;color:var(--muted)">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.4;margin-bottom:10px">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/>
+      </svg>
+      <div style="font-size:0.82rem">Nenhum template salvo ainda.</div>
+      <div style="font-size:0.75rem;margin-top:4px">Gere um treino e clique em "Template" para salvar.</div>
+    </div>
+
+    <!-- Lista de templates -->
+    <div id="tmList" style="display:flex;flex-direction:column;gap:10px"></div>
+
+    <!-- Loading -->
+    <div id="tmLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:0.8rem;display:none">Carregando…</div>
+
+    <div style="height:16px"></div>
+  </div>
+</div>
 
 <!-- Divisão Picker -->
 
