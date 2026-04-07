@@ -5492,12 +5492,9 @@ function runKroniaActionFallback(action, context) {
     try { navTo?.('treino'); return true; } catch (_) {}
   }
   if (action === 'open_labs_upload') {
-    try { openHome?.(); } catch (_) {}
-    try { navTo?.('inicio'); } catch (_) {}
-    try { schedulePendingConversationIntentConsumption('fallback_labs_upload'); return true; } catch (_) {}
-    try { navTo?.('treino'); } catch (_) {}
-    try { window.location.href = '/labs/upload'; return true; } catch (_) {}
-    try { window.open('/labs/upload', '_blank'); return true; } catch (_) {}
+    try { openLabsUploadScreen(safeContext); return true; } catch (_) {}
+    try { openPerfil?.(); return true; } catch (_) {}
+    try { navTo?.('perfil'); return true; } catch (_) {}
   }
   if (action === 'open_kronos') {
     try { navTo?.('inicio'); } catch (_) {}
