@@ -42,6 +42,21 @@
   --r-xs:        6px;
   color-scheme: dark;
 }
+:root, html, body {
+  color-scheme: dark;
+}
+html[data-theme="light"],
+html.light-mode,
+body[data-theme="light"],
+body.light-mode {
+  color-scheme: light;
+}
+html[data-theme="dark"],
+html.dark-mode,
+body[data-theme="dark"],
+body.dark-mode {
+  color-scheme: dark;
+}
 
 *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
 
