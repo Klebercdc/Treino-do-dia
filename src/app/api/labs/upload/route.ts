@@ -68,6 +68,14 @@ export async function POST(req: NextRequest) {
           Authorization: `Bearer ${cronSecret}`,
         },
         body: JSON.stringify({ labReportId: created.id }),
+      }).then((res) => {
+        if (!res.ok) {
+          logger.warn('labs_upload_dispatch_http_error', {
+            userId: auth.user.id,
+            labReportId: created.id,
+            httpStatus: res.status,
+          });
+        }
       }).catch((dispatchError) => {
         logger.warn('labs_upload_dispatch_failed', {
           userId: auth.user.id,

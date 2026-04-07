@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (report.status === 'analyzed') {
-    return NextResponse.json({ ok: true, status: 'analyzed', skipped: true });
+    logger.info('labs_process_route_skipped', { labReportId, reason: 'already_analyzed' });
+    return NextResponse.json({ ok: true, status: 'analyzed', skipped: true, reason: 'already_analyzed' });
   }
 
   const lockAcquired = await acquireLabReportProcessingLock(admin, {
@@ -50,7 +51,15 @@ export async function POST(req: NextRequest) {
     updatedAt: report.updated_at ? String(report.updated_at) : null,
   });
   if (!lockAcquired) {
-    return NextResponse.json({ ok: true, status: String(report.status || 'processing'), skipped: true, reason: 'already_processing' }, { status: 202 });
+    logger.info('labs_process_route_skipped', {
+      labReportId,
+      currentStatus: String(report.status || ''),
+      reason: 'lock_not_acquired',
+    });
+    return NextResponse.json(
+      { ok: true, status: String(report.status || 'processing'), skipped: true, reason: 'lock_not_acquired' },
+      { status: 202 },
+    );
   }
 
   const result = await processLabReportUploadSafely(admin, {
