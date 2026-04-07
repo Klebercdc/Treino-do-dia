@@ -1,7 +1,7 @@
 from pdf2image import convert_from_path
 import numpy as np
-from preprocess.image_pipeline import preprocess_image
-from ocr.tesseract_engine import run_and_get_multiple_output
+from ..preprocess.image_pipeline import preprocess_image
+from ..ocr.tesseract_engine import run_and_get_multiple_output
 
 def extract_pdf_scanned(path: str, language='por+eng'):
     images = convert_from_path(path, dpi=300)

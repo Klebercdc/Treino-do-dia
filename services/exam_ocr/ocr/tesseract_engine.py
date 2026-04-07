@@ -1,6 +1,5 @@
 import pytesseract
 from pytesseract import Output
-from . import __init__  # noqa: F401
 
 def image_to_text(image, language='por+eng', timeout=45, psm='6', oem='3'):
     config = f'--psm {psm} --oem {oem}'

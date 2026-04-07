@@ -5,14 +5,14 @@ import httpx
 from PIL import Image
 import numpy as np
 
-from schemas import ExtractRequest, ExtractResponse
-from config import TESSERACT_LANG
-from extractors.pdf_native import extract_pdf_native
-from extractors.pdf_scanned import extract_pdf_scanned
-from preprocess.image_pipeline import preprocess_image
-from ocr.tesseract_engine import run_and_get_multiple_output
-from parsers.lab_table_parser import rows_to_table
-from normalizers.biomarkers import parse_biomarkers
+from .schemas import ExtractRequest, ExtractResponse
+from .config import TESSERACT_LANG
+from .extractors.pdf_native import extract_pdf_native
+from .extractors.pdf_scanned import extract_pdf_scanned
+from .preprocess.image_pipeline import preprocess_image
+from .ocr.tesseract_engine import run_and_get_multiple_output
+from .parsers.lab_table_parser import rows_to_table
+from .normalizers.biomarkers import parse_biomarkers
 
 app = FastAPI(title='exam_ocr_service')
 
