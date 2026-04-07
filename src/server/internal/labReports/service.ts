@@ -105,7 +105,7 @@ export async function acquireLabReportProcessingLock(
 ): Promise<boolean> {
   if (!canAcquireProcessingLock(input.currentStatus, input.updatedAt)) return false;
 
-  const { data, error } = await admin
+  let query = admin
     .from('lab_reports')
     .update({
       status: 'processing',
@@ -113,9 +113,13 @@ export async function acquireLabReportProcessingLock(
       processing_error: null,
     })
     .eq('id', input.labReportId)
-    .eq('status', input.currentStatus)
-    .select('id')
-    .limit(1);
+    .eq('status', input.currentStatus);
+
+  if (input.updatedAt) {
+    query = query.eq('updated_at', input.updatedAt);
+  }
+
+  const { data, error } = await query.select('id').limit(1);
 
   if (error) throw new Error(`Falha ao adquirir lock de processamento: ${error.message}`);
   return Array.isArray(data) && data.length === 1;

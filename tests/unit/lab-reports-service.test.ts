@@ -132,17 +132,14 @@ test('upload despacha processamento desacoplado e não executa pipeline inline',
 });
 
 test('acquireLabReportProcessingLock impede corrida quando status mudou', async () => {
+  const chain = {
+    eq: () => chain,
+    select: () => chain,
+    limit: async () => [],
+  } as any;
   const admin = {
     from: () => ({
-      update: () => ({
-        eq: () => ({
-          eq: () => ({
-            select: () => ({
-              limit: async () => [],
-            }),
-          }),
-        }),
-      }),
+      update: () => chain,
     }),
   } as any;
 
@@ -160,6 +157,7 @@ test('watchdog cron para exames presos existe e exige autorização', () => {
   assert.match(source, /listStaleProcessingLabReports/);
   assert.match(source, /authorization/);
   assert.match(source, /processLabReportUploadSafely/);
+  assert.match(source, /labs_watchdog_item_failed/);
 
   const vercelConfig = readFileSync('vercel.json', 'utf-8');
   assert.equal(vercelConfig.includes('"path": "/api/cron/labs-watchdog"'), true);
@@ -169,4 +167,9 @@ test('home mantém CTA visível para entrada de Exames', () => {
   const html = readFileSync('index.html', 'utf-8');
   assert.match(html, /home-labs-cta-card/);
   assert.match(html, /Enviar exames agora/);
+});
+
+test('lock de processamento usa updated_at para CAS forte', () => {
+  const source = readFileSync('src/server/internal/labReports/service.ts', 'utf-8');
+  assert.match(source, /\.eq\('updated_at', input\.updatedAt\)/);
 });

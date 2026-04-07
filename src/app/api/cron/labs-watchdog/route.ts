@@ -33,28 +33,40 @@ export async function GET(req: Request) {
     const labReportId = String(report.id || '');
     if (!labReportId) continue;
 
-    const lockAcquired = await acquireLabReportProcessingLock(admin, {
-      labReportId,
-      currentStatus: String(report.status || ''),
-      updatedAt: report.updated_at,
-    });
-    if (!lockAcquired) {
-      processed.push({ labReportId, skipped: true, reason: 'lock_not_acquired' });
-      continue;
+    try {
+      const lockAcquired = await acquireLabReportProcessingLock(admin, {
+        labReportId,
+        currentStatus: String(report.status || ''),
+        updatedAt: report.updated_at,
+      });
+      if (!lockAcquired) {
+        processed.push({ labReportId, skipped: true, reason: 'lock_not_acquired' });
+        continue;
+      }
+
+      const result = await processLabReportUploadSafely(admin, {
+        labReportId,
+        storageBucket: String(report.storage_bucket || LAB_REPORTS_BUCKET),
+        storagePath: String(report.storage_path || ''),
+        mimeType: String(report.mime_type || report.file_type || ''),
+      });
+
+      processed.push({
+        labReportId,
+        status: result.status,
+        biomarkersCount: result.biomarkersCount,
+      });
+    } catch (error) {
+      logger.warn('labs_watchdog_item_failed', {
+        labReportId,
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
+      processed.push({
+        labReportId,
+        skipped: true,
+        reason: 'watchdog_item_failed',
+      });
     }
-
-    const result = await processLabReportUploadSafely(admin, {
-      labReportId,
-      storageBucket: String(report.storage_bucket || LAB_REPORTS_BUCKET),
-      storagePath: String(report.storage_path || ''),
-      mimeType: String(report.mime_type || report.file_type || ''),
-    });
-
-    processed.push({
-      labReportId,
-      status: result.status,
-      biomarkersCount: result.biomarkersCount,
-    });
   }
 
   logger.info('labs_watchdog_finished', {
