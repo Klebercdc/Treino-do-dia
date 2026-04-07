@@ -47,8 +47,14 @@
     var diet = !analysis &&
       hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
 
+    var labUpload = hasAny(text, [
+      /\b(exame|laboratorio|laboratorial|laudo|resultado|bioquimica|hemograma|coleta)\b/,
+      /\b(fazer exame|enviar exame|anexar exame)\b/,
+    ]);
+
     if (workout) return 'workout_creation_request';
     if (diet) return 'diet_creation_request';
+    if (labUpload) return 'lab_upload_request';
     if (analysis) return 'progress_analysis';
     if (supplement) return 'supplement_question';
     if (text) return 'general_question';
@@ -320,14 +326,23 @@
       });
     }
 
-    if (intent === 'diet_creation_request') {
-      return Object.assign({}, base, {
-        type: 'answer_with_cta',
-        targetModule: 'dieta',
-        ctaAction: 'generate_diet',
-        message: 'Perfeito. Posso gerar sua dieta quando voce clicar no botao abaixo.',
-      });
-    }
+  if (intent === 'diet_creation_request') {
+    return Object.assign({}, base, {
+      type: 'answer_with_cta',
+      targetModule: 'dieta',
+      ctaAction: 'generate_diet',
+      message: 'Perfeito. Posso gerar sua dieta quando voce clicar no botao abaixo.',
+    });
+  }
+
+  if (intent === 'lab_upload_request') {
+    return Object.assign({}, base, {
+      type: 'answer_with_cta',
+      targetModule: 'labs',
+      ctaAction: 'open_labs_upload',
+      message: 'Perfeito. Clique abaixo para abrir o módulo de upload de exames e enviar seu laudo.',
+    });
+  }
 
     if (intent === 'progress_analysis') {
       var context = buildProgressAnalysisContext();
@@ -372,7 +387,7 @@
   async function resolveConversationFlow(input) {
     var decision = buildDecision(input || {});
 
-    if (decision.type === 'answer_with_cta') {
+    if (decision.type === 'answer_with_cta' && decision.ctaAction !== 'open_labs_upload') {
       try {
         var scienceBuilder = decision.ctaAction === 'open_training'
           ? window.buildScientificConstraintsForWorkout

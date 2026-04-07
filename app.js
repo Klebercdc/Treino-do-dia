@@ -2517,6 +2517,17 @@ function navTo(tab) {
   syncMainScrollArea();
 }
 
+function openLabsUploadScreen(context) {
+  try { closeAI?.(); } catch (_) {}
+  try { closeOrientacao?.(); } catch (_) {}
+  try { openHome?.(); } catch (_) {}
+  try { navTo?.('inicio'); } catch (_) {}
+  try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
+  try { window.location.href = '/labs/upload'; return true; } catch (_) {}
+  try { window.open('/labs/upload', '_blank'); return true; } catch (_) {}
+  return false;
+}
+
 window.addEventListener("resize", syncMainScrollArea);
 window.addEventListener("orientationchange", () => setTimeout(syncMainScrollArea, 120));
 window.addEventListener("load", () => setTimeout(syncMainScrollArea, 0));
@@ -5085,6 +5096,14 @@ function runKroniaActionFallback(action, context) {
     try { openDieta?.(); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
   }
+  if (action === 'open_labs_upload') {
+    try { openHome?.(); } catch (_) {}
+    try { navTo?.('inicio'); } catch (_) {}
+    try { schedulePendingConversationIntentConsumption('fallback_labs_upload'); return true; } catch (_) {}
+    try { navTo?.('treino'); } catch (_) {}
+    try { window.location.href = '/labs/upload'; return true; } catch (_) {}
+    try { window.open('/labs/upload', '_blank'); return true; } catch (_) {}
+  }
   if (action === 'open_kronos') {
     try { navTo?.('inicio'); } catch (_) {}
     try { openAI?.(); return true; } catch (_) {}
@@ -5115,6 +5134,10 @@ window.KroniaActions = {
     try { openHome?.(); } catch (_) {}
     try { navTo?.('inicio'); } catch (_) {}
     schedulePendingConversationIntentConsumption('kronia_action_diet');
+  },
+
+  openLabsUpload: function (context) {
+    openLabsUploadScreen(context);
   },
 };
 
@@ -5553,12 +5576,14 @@ var KRONIA_CTA_ALLOWED_ACTIONS = Object.freeze({
   open_diet: true,
   generate_diet: true,
   open_kronos: true,
+  open_labs_upload: true,
 });
 
 // Compatibilidade legada temporária (remover quando emissores antigos forem eliminados).
 var KRONIA_CTA_ACTION_ALIASES = Object.freeze({
   open_training_builder: 'open_training',
   open_diet_generator: 'generate_diet',
+  open_labs_uploader: 'open_labs_upload',
 });
 var KRONIA_CTA_LOCK_MS = 1200;
 var __kroniaCtaExecutionLocks = Object.create(null);
@@ -5704,6 +5729,13 @@ var KRONIA_CTA_EXECUTOR_MAP = Object.freeze({
   generate_diet: function (context) {
     if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
       window.KroniaActions.openDietGenerator(context);
+      return true;
+    }
+    return false;
+  },
+  open_labs_upload: function (context) {
+    if (window.KroniaActions && typeof window.KroniaActions.openLabsUpload === 'function') {
+      window.KroniaActions.openLabsUpload(context);
       return true;
     }
     return false;
