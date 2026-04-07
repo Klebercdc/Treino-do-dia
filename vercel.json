@@ -117,16 +117,8 @@
   },
   "crons": [
     {
-      "path": "/api/cron/auto-import-exercises",
-      "schedule": "15 4 * * *"
-    },
-    {
-      "path": "/api/cron/sync-exercises",
-      "schedule": "0 4 * * 1"
-    },
-    {
-      "path": "/api/cron/labs-watchdog",
-      "schedule": "*/10 * * * *"
+      "path": "/api/cron/daily-dispatch",
+      "schedule": "0 4 * * *"
     }
   ],
   "installCommand": "npm ci --include=dev"

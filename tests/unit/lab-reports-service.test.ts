@@ -154,13 +154,12 @@ test('acquireLabReportProcessingLock impede corrida quando status mudou', async 
 
 test('watchdog cron para exames presos existe e exige autorização', () => {
   const source = readFileSync('src/app/api/cron/labs-watchdog/route.ts', 'utf-8');
-  assert.match(source, /listStaleProcessingLabReports/);
-  assert.match(source, /authorization/);
-  assert.match(source, /processLabReportUploadSafely/);
-  assert.match(source, /labs_watchdog_item_failed/);
+  assert.match(source, /runLabsWatchdogTask/);
+  assert.match(source, /isAuthorizedCronRequest/);
 
   const vercelConfig = readFileSync('vercel.json', 'utf-8');
-  assert.equal(vercelConfig.includes('"path": "/api/cron/labs-watchdog"'), true);
+  assert.equal(vercelConfig.includes('"path": "/api/cron/daily-dispatch"'), true);
+  assert.equal(vercelConfig.includes('"path": "/api/cron/labs-watchdog"'), false);
 });
 
 test('home mantém CTA visível para entrada de Exames', () => {
@@ -172,4 +171,12 @@ test('home mantém CTA visível para entrada de Exames', () => {
 test('lock de processamento usa updated_at para CAS forte', () => {
   const source = readFileSync('src/server/internal/labReports/service.ts', 'utf-8');
   assert.match(source, /\.eq\('updated_at', input\.updatedAt\)/);
+});
+
+test('dispatcher diário centraliza tarefas de cron', () => {
+  const source = readFileSync('src/app/api/cron/daily-dispatch/route.ts', 'utf-8');
+  assert.match(source, /runLabsWatchdogTask/);
+  assert.match(source, /runExerciseSyncTask/);
+  assert.match(source, /auto_import_exercises/);
+  assert.match(source, /memory_queue_worker/);
 });
