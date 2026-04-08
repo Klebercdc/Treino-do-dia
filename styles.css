@@ -932,6 +932,7 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .weekly-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #FF8C00, #FFB347); transition: width .6s cubic-bezier(.4,0,.2,1); }
 .weekly-bar-fill.vol { background: linear-gradient(90deg, #f97316, #fb923c); }
 body.light-mode .weekly-bar-track { background: rgba(15,23,42,0.12); }
+body.light-mode .weekly-ring-num { color: #0f172a; }
 body.light-mode .weekly-ring-lbl { color: rgba(15,23,42,0.56) !important; }
 body.light-mode .weekly-ring-track { stroke: rgba(15,23,42,0.18); }
 body.light-mode .risk-card-title { color: rgba(15,23,42,0.55) !important; }
