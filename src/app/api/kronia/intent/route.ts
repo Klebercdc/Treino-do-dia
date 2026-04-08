@@ -22,6 +22,6 @@ export async function POST(req: NextRequest) {
       confidence: 0.3,
       needs_clarification: true,
       domain: "general",
-    })
+    }, { status: 500 })
   }
 }
