@@ -3545,3 +3545,74 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   color: var(--text-2);
   white-space: nowrap;
 }
+
+/* stronger colored text — premium light mode */
+body.light-mode .kronos-ai-tip,
+body.light-mode .kronos-ai-title,
+body.light-mode .kronia-tools-title,
+body.light-mode .home-hero-label,
+body.light-mode .home-labs-cta-badge,
+body.light-mode .upgrade-banner-pill span,
+body.light-mode .pr-popular-badge,
+body.light-mode .pr-ultra-badge,
+body.light-mode .labs-hist-flag,
+body.light-mode .settings-plan-badge,
+body.light-mode .config-chip.active,
+body.light-mode .bs-chip.active,
+body.light-mode .evo-tab.active,
+body.light-mode .pill.active,
+body.light-mode .home-hero-badge,
+body.light-mode .home-hero-badge-green,
+body.light-mode .home-hero-badge–green {
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+}
+
+body.light-mode .kronos-ai-tip {
+  color: #6d28d9 !important;
+  font-weight: 900 !important;
+}
+
+body.light-mode .kronos-ai-title {
+  color: #4c1d95 !important;
+  font-weight: 900 !important;
+}
+
+body.light-mode .kronia-tools-title {
+  color: #0c4a6e !important;
+  font-weight: 900 !important;
+}
+
+body.light-mode .home-hero-badge {
+  color: #c2410c !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .home-hero-badge-green,
+body.light-mode .home-hero-badge–green {
+  color: #15803d !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .home-labs-cta-badge {
+  color: #059669 !important;
+  font-weight: 900 !important;
+}
+
+body.light-mode .labs-hist-flag {
+  color: #92400e !important;
+  font-weight: 800 !important;
+}
+
+body.light-mode .config-chip.active,
+body.light-mode .bs-chip.active,
+body.light-mode .evo-tab.active,
+body.light-mode .pill.active {
+  font-weight: 800 !important;
+}
+
+body.light-mode .pr-popular-badge,
+body.light-mode .pr-ultra-badge,
+body.light-mode .settings-plan-badge {
+  font-weight: 900 !important;
+}
