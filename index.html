@@ -1551,47 +1551,6 @@
       <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(249,115,22,0.9)"></div>Intenso</div>
     </div>
   </div>
-  <!-- ── Exames Laboratoriais ─────────────────────────────── -->
-  <div class="perfil-section" id="perfilLabsSection">
-    <div class="perfil-section-title">Exames laboratoriais</div>
-    <p style="font-size:0.78rem;color:var(--text-2);margin:0 0 12px">
-      Envie seus exames de sangue (PDF, JPEG ou PNG). O KRONOS extrai os biomarcadores e usa os dados para personalizar suas recomendações de dieta e treino.
-    </p>
-
-    <!-- Área de drop / upload -->
-    <div id="perfilLabsDropArea" onclick="document.getElementById('perfilLabsFile').click()"
-      style="border:2px dashed var(--border);border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;background:var(--bg2);transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span style="font-size:0.85rem;font-weight:700;color:var(--text)">Enviar exame</span>
-        <span style="font-size:0.72rem;color:var(--text-2)">PDF, JPEG ou PNG · máx. 10 MB</span>
-      </div>
-    </div>
-    <input type="file" id="perfilLabsFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" aria-label="Selecionar arquivo de exame">
-
-    <button id="perfilLabsUploadBtn" onclick="document.getElementById('perfilLabsFile').click()"
-      style="display:none">Selecionar arquivo</button>
-
-    <!-- Status e resultado do upload atual -->
-    <div id="perfilLabsStatus" class="perfil-labs-status" style="margin-top:10px;font-size:0.8rem;min-height:20px"></div>
-    <div id="perfilLabsResult" style="margin-top:8px"></div>
-
-    <!-- ── Histórico de exames ── -->
-    <div style="margin-top:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:0.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase">Histórico</div>
-        <button onclick="loadLabReportsHistory(true)" style="background:none;border:none;color:var(--accent);font-size:0.72rem;font-weight:700;cursor:pointer;padding:2px 4px;-webkit-tap-highlight-color:transparent">Atualizar</button>
-      </div>
-      <div id="perfilLabsHistory">
-        <div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0" id="perfilLabsHistoryEmpty">Nenhum exame enviado ainda.</div>
-      </div>
-    </div>
-  </div>
-
   <div style="height:100px"></div>
 </div>
 

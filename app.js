@@ -2784,74 +2784,6 @@ function _renderLabsBiomarkers(reports, container) {
     + '<div class="labs-bm-list">' + rows + '</div>';
 }
 
-/* ─── Upload de Exames Laboratoriais ─────────────────────── */
-async function handleLabsFileUpload(file) {
-  if (!file) return;
-  const statusEl = document.getElementById('perfilLabsStatus');
-  const resultEl = document.getElementById('perfilLabsResult');
-  const uploadBtn = document.getElementById('perfilLabsUploadBtn');
-
-  function setStatus(msg, type) {
-    if (!statusEl) return;
-    statusEl.textContent = msg;
-    statusEl.className = 'perfil-labs-status' + (type ? ' perfil-labs-status--' + type : '');
-  }
-
-  const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-  const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png'];
-  // Fallback por extensão para mobile Safari que reporta application/octet-stream
-  const EXT_MAP = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
-  const ext = (file.name || '').split('.').pop().toLowerCase();
-  const mime = ALLOWED.includes(file.type) ? file.type : (EXT_MAP[ext] || file.type);
-  if (!ALLOWED.includes(mime)) {
-    setStatus('Formato inválido. Use PDF, JPEG ou PNG.', 'error');
-    return;
-  }
-  if (file.size > MAX_SIZE) {
-    setStatus('Arquivo muito grande. Máximo 10 MB.', 'error');
-    return;
-  }
-
-  if (uploadBtn) uploadBtn.disabled = true;
-  setStatus('Enviando exame…', 'loading');
-  if (resultEl) resultEl.innerHTML = '';
-
-  try {
-    const formData = new FormData();
-    const uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
-    formData.append('file', uploadFile);
-
-    const headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
-    // Remove Content-Type para deixar o browser definir o boundary do multipart
-    delete headers['Content-Type'];
-
-    const resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    const payload = await resp.json().catch(function() { return null; });
-
-    if (!resp.ok || !payload || !payload.ok) {
-      const msg = payload?.message || payload?.error || 'Erro ao processar o exame.';
-      setStatus(msg, 'error');
-      if (uploadBtn) uploadBtn.disabled = false;
-      return;
-    }
-
-    setStatus('Exame enviado com sucesso!', 'success');
-    renderLabsResult(payload, resultEl);
-  } catch (err) {
-    console.error('[labs-upload] erro:', err);
-    setStatus('Falha na conexão. Verifique sua internet e tente novamente.', 'error');
-  } finally {
-    if (uploadBtn) uploadBtn.disabled = false;
-    // Limpa o input para permitir re-envio do mesmo arquivo
-    const fileInput = document.getElementById('perfilLabsFile');
-    if (fileInput) fileInput.value = '';
-  }
-}
 
 function renderLabsResult(payload, container) {
   if (!container) return;
@@ -2876,57 +2808,7 @@ function renderLabsResult(payload, container) {
     '</div>';
 }
 
-function initLabsUploadSection() {
-  const fileInput = document.getElementById('perfilLabsFile');
-  const dropArea = document.getElementById('perfilLabsDropArea');
-  if (fileInput) {
-    fileInput.addEventListener('change', function() {
-      if (fileInput.files && fileInput.files[0]) handleLabsFileUpload(fileInput.files[0]);
-    });
-  }
-  if (dropArea) {
-    dropArea.addEventListener('dragover', function(e) { e.preventDefault(); dropArea.classList.add('drag-over'); });
-    dropArea.addEventListener('dragleave', function() { dropArea.classList.remove('drag-over'); });
-    dropArea.addEventListener('drop', function(e) {
-      e.preventDefault();
-      dropArea.classList.remove('drag-over');
-      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (file) handleLabsFileUpload(file);
-    });
-  }
-  // Carrega histórico automaticamente ao abrir
-  loadLabReportsHistory(false);
-}
-
-/* ─── Histórico de Exames Laboratoriais ─────────────────── */
-
 var _labsHistoryCache = null;
-
-async function loadLabReportsHistory(forceRefresh) {
-  const container = document.getElementById('perfilLabsHistory');
-  const emptyEl = document.getElementById('perfilLabsHistoryEmpty');
-  if (!container) return;
-
-  if (!forceRefresh && _labsHistoryCache) {
-    renderLabReportHistory(_labsHistoryCache, container, emptyEl);
-    return;
-  }
-
-  container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Carregando…</div>';
-
-  try {
-    const headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
-    const resp = await fetch(resolveAppApiUrl('/api/kronia/labs/reports?limit=10'), { headers });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const payload = await resp.json();
-    if (!payload.ok) throw new Error(payload.error || 'response not ok');
-    _labsHistoryCache = payload.reports || [];
-    renderLabReportHistory(_labsHistoryCache, container, emptyEl);
-  } catch (err) {
-    console.warn('[labs-history] erro ao carregar:', err);
-    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Não foi possível carregar o histórico.</div>';
-  }
-}
 
 function renderLabReportHistory(reports, container, emptyEl) {
   if (!container) return;
@@ -4866,8 +4748,7 @@ window.onload = () => {
   // Pedir permissão de notificação após 30s (não invasivo)
   setTimeout(() => { kronaRequestNotificationPermission(); }, 30000);
 
-  // Inicializa seção de upload de exames (perfil)
-  try { initLabsUploadSection(); } catch(e) { console.warn('[labs] init error', e); }
+
 };
 
 // ══ NOTIFICAÇÕES PWA ════════════════════════════════

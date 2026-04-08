@@ -3276,22 +3276,6 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   color: rgba(255, 255, 255, 0.6);
 }
 
-/* ── Exames Laboratoriais ───────────────────────────────── */
-#perfilLabsDropArea:hover,
-#perfilLabsDropArea.drag-over {
-  border-color: var(--accent);
-  background: rgba(249,115,22,0.06);
-}
-#perfilLabsSection.labs-highlight {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: 12px;
-  animation: labsHighlightPulse 1.8s ease-out forwards;
-}
-@keyframes labsHighlightPulse {
-  0%   { outline-color: var(--accent); }
-  100% { outline-color: transparent; }
-}
 .perfil-labs-status { color: var(--text-2); }
 .perfil-labs-status--loading { color: var(--accent); }
 .perfil-labs-status--success { color: #10b981; font-weight: 600; }
