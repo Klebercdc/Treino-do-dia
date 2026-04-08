@@ -2861,7 +2861,7 @@
     <div class="transforms-panel" id="tab-catalogo" style="display:none">
       <div style="margin-bottom:14px">
         <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Catálogo de Transforms</h2>
-        <p id="catalogSubtitle" style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin:0"></p>
+        <p id="catalogSubtitle" class="transforms-subtext"></p>
       </div>
       <div id="transformsCatalogList" style="display:flex;flex-direction:column;gap:9px"></div>
     </div>
@@ -2870,7 +2870,7 @@
     <div class="transforms-panel" id="tab-machines" style="display:none">
       <div style="padding:4px 0 14px">
         <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Machines</h2>
-        <p id="machinesSubtitle" style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin:0">Pipelines automáticos — clique Run para executar</p>
+        <p id="machinesSubtitle" class="transforms-subtext" style="font-size:0.72rem">Pipelines automáticos — clique Run para executar</p>
       </div>
       <div id="machinesCatalogList" style="display:flex;flex-direction:column;gap:9px"></div>
     </div>
@@ -2879,7 +2879,7 @@
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:10px">
         <div>
           <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Defensive Transforms</h2>
-          <p style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin:0">Detecta overtraining, plateau e riscos ao atleta</p>
+          <p class="transforms-subtext">Detecta overtraining, plateau e riscos ao atleta</p>
         </div>
         <button id="btnDefensiveScan" onclick="runDefensiveScan()" class="transforms-scan-btn">
           <i data-lucide="shield" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="1.75"></i>
@@ -2907,7 +2907,7 @@
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px">
         <div>
           <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 4px">Admin Diagnóstico</h2>
-          <p style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin:0">Replay técnico, saúde e simulações internas.</p>
+          <p class="transforms-subtext">Replay técnico, saúde e simulações internas.</p>
         </div>
         <button class="transforms-scan-btn" onclick="teRunAdminHealthCheck()">Rodar Health Check</button>
       </div>

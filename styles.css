@@ -2010,6 +2010,19 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
    TITAN TRANSFORMS ENGINE SCREEN
 ══════════════════════════════════════════ */
 #transformsScreen {
+  --te-header-bg: rgba(9,9,9,0.97);
+  --te-header-border: rgba(255,107,0,0.12);
+  --te-tab-bg: rgba(255,255,255,0.1);
+  --te-tab-text: rgba(255,255,255,0.72);
+  --te-panel-subtext: rgba(255,255,255,0.45);
+  --te-graph-bg: rgba(255,255,255,0.02);
+  --te-graph-border: rgba(255,107,0,0.15);
+  --te-grid-radial: rgba(255,107,0,0.06);
+  --te-grid-line: rgba(255,107,0,0.03);
+  --te-btn-border: rgba(255,255,255,0.1);
+  --te-btn-color: rgba(255,255,255,0.78);
+  --te-btn-bg: rgba(255,255,255,0.05);
+  --te-btn-bg-hover: rgba(255,255,255,0.1);
   position: fixed;
   inset: 0;
   z-index: 4000;
@@ -2027,13 +2040,30 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   transform: translateY(0);
   pointer-events: auto;
 }
+body.light-mode #transformsScreen {
+  --te-header-bg: rgba(247,249,255,0.96);
+  --te-header-border: rgba(234,108,10,0.2);
+  --te-tab-bg: rgba(15,23,42,0.08);
+  --te-tab-text: rgba(15,23,42,0.78);
+  --te-panel-subtext: rgba(15,23,42,0.56);
+  --te-graph-bg: rgba(255,255,255,0.92);
+  --te-graph-border: rgba(234,108,10,0.2);
+  --te-grid-radial: rgba(234,108,10,0.07);
+  --te-grid-line: rgba(15,23,42,0.045);
+  --te-btn-border: rgba(15,23,42,0.14);
+  --te-btn-color: rgba(15,23,42,0.8);
+  --te-btn-bg: rgba(15,23,42,0.05);
+  --te-btn-bg-hover: rgba(15,23,42,0.08);
+  background: #f4f7fb;
+  color: #0f172a;
+}
 .transforms-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(9,9,9,0.97);
+  background: var(--te-header-bg);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255,107,0,0.12);
+  border-bottom: 1px solid var(--te-header-border);
   padding: 0 16px 10px;
   padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
   min-height: calc(60px + env(safe-area-inset-top, 0px));
@@ -2048,23 +2078,23 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   letter-spacing: 0.5px;
 }
 .transforms-back-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--te-btn-bg);
+  border: 1px solid var(--te-btn-border);
   border-radius: 10px;
   min-width: 38px;
   min-height: 38px;
   padding: 0;
   cursor: pointer;
-  color: rgba(var(--text-rgb),0.72);
+  color: var(--te-btn-color);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
 .transforms-back-btn:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(var(--text-rgb),0.2);
-  color: rgba(var(--text-rgb),0.85);
+  background: var(--te-btn-bg-hover);
+  border-color: var(--te-btn-border);
+  color: var(--te-btn-color);
 }
 .transforms-kernel-badge {
   font-size: 0.55rem;
@@ -2101,8 +2131,8 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   font-weight: 700;
   letter-spacing: 0.5px;
   transition: all 0.2s;
-  background: rgba(255,255,255,0.1);
-  color: rgba(var(--text-rgb),0.65);
+  background: var(--te-tab-bg);
+  color: var(--te-tab-text);
   font-family: var(--font);
 }
 .transforms-tab.active {
@@ -2113,13 +2143,18 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
 .transforms-panel {
   animation: teFadeIn 0.2s ease;
 }
+.transforms-subtext {
+  font-size: 0.75rem;
+  color: var(--te-panel-subtext);
+  margin: 0;
+}
 @keyframes teFadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .transforms-graph-box {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,107,0,0.15);
+  background: var(--te-graph-bg);
+  border: 1px solid var(--te-graph-border);
   border-radius: 14px;
   height: 340px;
   margin-bottom: 12px;
@@ -3228,9 +3263,9 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   inset: 0;
   pointer-events: none;
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(255,107,0,0.06) 0%, transparent 50%),
-    linear-gradient(rgba(255,107,0,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,107,0,0.03) 1px, transparent 1px);
+    radial-gradient(circle at 20% 20%, var(--te-grid-radial) 0%, transparent 50%),
+    linear-gradient(var(--te-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--te-grid-line) 1px, transparent 1px);
   background-size: 100% 100%, 40px 40px, 40px 40px;
   z-index: 0;
 }
