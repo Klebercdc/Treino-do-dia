@@ -2,16 +2,49 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { StoredLabContext } from "./labTypes"
 
 export const LAB_REPORTS_BUCKET = "lab-reports"
-const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"])
+const NORMALIZED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"])
+const MIME_ALIASES: Record<string, string> = {
+  "application/pdf": "application/pdf",
+  "image/jpeg": "image/jpeg",
+  "image/jpg": "image/jpeg",
+  "image/pjpeg": "image/jpeg",
+  "image/png": "image/png",
+  "image/x-png": "image/png",
+}
+const EXTENSION_TO_MIME: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+}
 
 function sanitizeFilename(input: string): string {
   return input.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "lab-report"
 }
 
-export function assertAllowedLabMimeType(mimeType: string): void {
-  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
-    throw new Error("Tipo de arquivo inválido. Envie PDF, JPG ou PNG.")
+function getExtension(filename: string): string {
+  const safe = sanitizeFilename(filename).toLowerCase()
+  const dotIndex = safe.lastIndexOf(".")
+  return dotIndex >= 0 ? safe.slice(dotIndex) : ""
+}
+
+export function resolveAllowedLabMimeType(input: { mimeType?: string | null; filename?: string | null }): string {
+  const rawMimeType = String(input.mimeType || "").trim().toLowerCase()
+  const normalizedFromMime = MIME_ALIASES[rawMimeType]
+  if (normalizedFromMime && NORMALIZED_MIME_TYPES.has(normalizedFromMime)) {
+    return normalizedFromMime
   }
+
+  const fromExtension = EXTENSION_TO_MIME[getExtension(String(input.filename || ""))]
+  if (fromExtension && NORMALIZED_MIME_TYPES.has(fromExtension)) {
+    return fromExtension
+  }
+
+  throw new Error("Tipo de arquivo inválido. Envie PDF, JPG ou PNG.")
+}
+
+export function assertAllowedLabMimeType(mimeType: string, filename?: string): string {
+  return resolveAllowedLabMimeType({ mimeType, filename })
 }
 
 export function buildLabReportStoragePath(userId: string, filename: string): string {
@@ -24,10 +57,10 @@ export async function uploadLabReportFile(
   userId: string,
   file: { name: string; type: string; bytes: Buffer },
 ): Promise<{ path: string }> {
-  assertAllowedLabMimeType(file.type)
+  const normalizedMimeType = assertAllowedLabMimeType(file.type, file.name)
   const path = buildLabReportStoragePath(userId, file.name)
   const { error } = await admin.storage.from(LAB_REPORTS_BUCKET).upload(path, file.bytes, {
-    contentType: file.type,
+    contentType: normalizedMimeType,
     upsert: false,
   })
   if (error) throw new Error(`Falha ao enviar exame para storage: ${error.message}`)

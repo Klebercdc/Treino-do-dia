@@ -2673,12 +2673,14 @@ async function _handleLabsScreenUpload(file) {
   }
 
   // MIME type com fallback por extensão (mobile Safari reporta octet-stream para PDF)
-  var ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+  var ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg', 'image/x-png'];
   var EXT_MAP = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
-  var ext = (file.name || '').split('.').pop().toLowerCase();
+  var ext = ((file.name || '').split('.').pop() || '').toLowerCase();
   var mime = ALLOWED_TYPES.includes(file.type) ? file.type : (EXT_MAP[ext] || file.type);
+  if (mime === 'image/jpg' || mime === 'image/pjpeg') mime = 'image/jpeg';
+  if (mime === 'image/x-png') mime = 'image/png';
 
-  if (!ALLOWED_TYPES.includes(mime)) {
+  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mime)) {
     setStatus('Formato inválido. Use PDF, JPEG ou PNG.', 'error');
     return;
   }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireBearerAuth } from '../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../lib/supabase/admin';
 import { logger } from '../../../../lib/utils/logger';
-import { LAB_REPORTS_BUCKET, uploadLabReportFile } from '../../../../core/labs/labRepository';
+import { LAB_REPORTS_BUCKET, resolveAllowedLabMimeType, uploadLabReportFile } from '../../../../core/labs/labRepository';
 import { createLabReportRecord } from '../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
@@ -31,17 +31,22 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminSupabaseClient();
     const bytes = Buffer.from(await file.arrayBuffer());
+    const normalizedMimeType = resolveAllowedLabMimeType({
+      mimeType: file.type,
+      filename: file.name,
+    });
 
     logger.info('labs_upload_received', {
       userId: auth.user.id,
       fileName: file.name,
       fileType: file.type,
+      normalizedMimeType,
       size: file.size,
     });
 
     const uploaded = await uploadLabReportFile(admin, auth.user.id, {
       name: file.name,
-      type: file.type,
+      type: normalizedMimeType,
       bytes,
     });
 
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
       storageBucket: LAB_REPORTS_BUCKET,
       storagePath: uploaded.path,
       fileName: file.name,
-      mimeType: file.type,
+      mimeType: normalizedMimeType,
     });
 
     logger.info('labs_upload_enqueued_via_supabase', {
@@ -67,9 +72,13 @@ export async function POST(req: NextRequest) {
       orchestration: 'supabase_db_trigger',
     });
   } catch (error) {
+    const reason = error instanceof Error ? error.message : 'unknown';
     logger.error('labs_upload_internal_error', {
-      reason: error instanceof Error ? error.message : 'unknown',
+      reason,
     });
+    if (/Tipo de arquivo inválido/i.test(reason)) {
+      return buildError(400, 'Tipo de arquivo inválido. Envie PDF, JPG ou PNG.');
+    }
     return buildError(500, 'Não foi possível processar o exame agora.');
   }
 }
