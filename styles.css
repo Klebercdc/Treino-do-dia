@@ -886,6 +886,15 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .kronia-tools-card:active { transform: scale(.97); }
 .kronia-tools-title { font-family:var(--display);font-size:1rem;letter-spacing:.06em;color:#fff;line-height:1; }
 .kronia-tools-subtitle { font-size:0.5rem;font-weight:800;color:rgba(34,211,238,0.85);letter-spacing:.1em; }
+.kronia-tools-tip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #67e8f9;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
 .risk-card-title { font-size:0.55rem;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:.1em;margin-bottom:6px; }
 .risk-card-title-sm { font-size:0.5rem; font-weight:700; letter-spacing:.08em; margin-bottom:4px; }
 
@@ -3656,6 +3665,7 @@ body.light-mode #aiModal #aiSendBtn i {
 body.light-mode .kronos-ai-tip,
 body.light-mode .kronos-ai-title,
 body.light-mode .kronia-tools-title,
+body.light-mode .kronia-tools-tip,
 body.light-mode .home-hero-label,
 body.light-mode .home-labs-cta-badge,
 body.light-mode .upgrade-banner-pill span,
@@ -3668,8 +3678,7 @@ body.light-mode .bs-chip.active,
 body.light-mode .evo-tab.active,
 body.light-mode .pill.active,
 body.light-mode .home-hero-badge,
-body.light-mode .home-hero-badge-green,
-body.light-mode .home-hero-badge–green {
+body.light-mode .home-hero-badge--green {
   font-weight: 800 !important;
   letter-spacing: 0.02em !important;
 }
@@ -3689,13 +3698,17 @@ body.light-mode .kronia-tools-title {
   font-weight: 900 !important;
 }
 
+body.light-mode .kronia-tools-tip {
+  color: #0e7490 !important;
+  font-weight: 800 !important;
+}
+
 body.light-mode .home-hero-badge {
   color: #c2410c !important;
   font-weight: 800 !important;
 }
 
-body.light-mode .home-hero-badge-green,
-body.light-mode .home-hero-badge–green {
+body.light-mode .home-hero-badge--green {
   color: #15803d !important;
   font-weight: 800 !important;
 }
