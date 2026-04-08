@@ -656,10 +656,21 @@ body.light-mode .home-quick-icon svg,
 body.light-mode .home-tool-icon svg,
 body.light-mode .home-hero-icon svg,
 body.light-mode .home-labs-cta-icon svg,
-body.light-mode .settings-row-icon svg,
 body.light-mode .achievement-card svg,
 body.light-mode .recommended-card svg,
 body.light-mode .desafio-ico svg { color: #fff !important; stroke: #fff !important; }
+
+body.light-mode .settings-row-icon svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+body.light-mode #homePlanBadge,
+body.light-mode #homePlanBadgeSWS {
+  background: rgba(15,23,42,0.08) !important;
+  border-color: rgba(15,23,42,0.18) !important;
+  color: #334155 !important;
+}
 body.light-mode [style*="color:#fff"],
 body.light-mode [style*="color: #fff"],
 body.light-mode [style*="color:#ffffff"],
