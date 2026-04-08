@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(payload as ChatResponse, { status: 200 });
   } catch (error) {
-    const ai = getAIConfig();
-    return NextResponse.json({ error: (error as Error).message, provider: ai.provider }, { status: 500 });
+    let provider: string | undefined;
+    try { provider = getAIConfig().provider; } catch { /* env não configurado */ }
+    return NextResponse.json({ error: (error as Error).message, provider }, { status: 500 });
   }
 }

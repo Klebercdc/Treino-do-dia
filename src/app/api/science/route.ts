@@ -112,6 +112,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     // Falha silenciosa — o frontend tem fallback local para este endpoint
     console.error("[science-route] erro interno:", error)
-    return NextResponse.json({ ok: false, science: [] }, { status: 200 })
+    return NextResponse.json({ ok: false, science: [] }, { status: 500 })
   }
 }
