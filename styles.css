@@ -3234,20 +3234,66 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
 
 
 /* KRONOS chat skin — aplica também no modal compacto */
-#aiModal { background: #000 !important; }
-#aiModal .ai-topbar { border-bottom: 1px solid rgba(255,255,255,0.08); background: #000; }
-#aiMessages { background: #000; }
+body:not(.light-mode) #aiModal { background: #000 !important; }
+body:not(.light-mode) #aiModal .ai-topbar { border-bottom: 1px solid rgba(255,255,255,0.08); background: #000; }
+body:not(.light-mode) #aiMessages { background: #000; }
 #aiMessages .ai-msg { gap: 8px; align-items: flex-end; }
 #aiMessages .ai-msg.assistant { justify-content: flex-start; }
 #aiMessages .ai-msg.user { justify-content: flex-end; }
 #aiMessages .ai-msg .ai-avatar-inner { max-width: 84%; }
 #aiMessages .ai-msg.user .ai-avatar-inner { margin-left: auto; }
-#aiMessages .ai-msg.user .ai-bubble { background: #A56700; color: #fff; border: 1px solid rgba(165,103,0,.82); border-radius: 18px 8px 18px 18px; padding: 12px 16px; font-size: 16px; line-height: 1.45; }
-#aiMessages .ai-msg.assistant .ai-bubble { background: #1C1C1E; color: #fff; border: 1px solid rgba(255,255,255,0.04); border-radius: 8px 18px 18px 18px; padding: 12px 16px; font-size: 16px; line-height: 1.45; width: auto; }
-#aiMessages .ai-msg-time { color: #8E8E93; font-size: 0.65rem; margin-top: 5px; }
-#aiModal .ai-input-wrap { background: #1C1C1E !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 22px !important; }
+body:not(.light-mode) #aiMessages .ai-msg.user .ai-bubble { background: #A56700; color: #fff; border: 1px solid rgba(165,103,0,.82); border-radius: 18px 8px 18px 18px; padding: 12px 16px; font-size: 16px; line-height: 1.45; }
+body:not(.light-mode) #aiMessages .ai-msg.assistant .ai-bubble { background: #1C1C1E; color: #fff; border: 1px solid rgba(255,255,255,0.04); border-radius: 8px 18px 18px 18px; padding: 12px 16px; font-size: 16px; line-height: 1.45; width: auto; }
+body:not(.light-mode) #aiMessages .ai-msg-time { color: #8E8E93; font-size: 0.65rem; margin-top: 5px; }
+body:not(.light-mode) #aiModal .ai-input-wrap { background: #1C1C1E !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 22px !important; }
 #aiModal .ai-input-wrap textarea { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; font-size: 16px !important; }
-#aiModal #aiSendBtn { width: 32px; height: 32px; border-radius: 50%; background: #A56700 !important; }
+body:not(.light-mode) #aiModal #aiSendBtn { width: 32px; height: 32px; border-radius: 50%; background: #A56700 !important; }
+
+/* Light mode do chat KRONOS */
+body.light-mode #aiModal,
+body.light-mode #aiMessages {
+  background: #f3f6fb !important;
+}
+body.light-mode #aiModal .ai-topbar {
+  background: rgba(255,255,255,0.96) !important;
+  border-bottom: 1px solid rgba(15,23,42,0.09) !important;
+}
+body.light-mode #aiMessages .ai-msg.assistant .ai-bubble {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15,23,42,0.09) !important;
+  border-radius: 8px 18px 18px 18px;
+  padding: 12px 16px;
+  width: auto;
+}
+body.light-mode #aiMessages .ai-msg.user .ai-bubble {
+  background: rgba(234,108,10,0.14) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(234,108,10,0.28) !important;
+  border-radius: 18px 8px 18px 18px;
+  padding: 12px 16px;
+}
+body.light-mode #aiMessages .ai-msg-time {
+  color: #64748b !important;
+}
+body.light-mode #aiModal > div > div[style*="border-top"] {
+  border-top-color: rgba(15,23,42,0.08) !important;
+  background: rgba(255,255,255,0.92) !important;
+}
+body.light-mode #aiModal .ai-input-wrap {
+  background: #ffffff !important;
+  border: 1px solid rgba(15,23,42,0.12) !important;
+}
+body.light-mode #aiModal textarea#aiInput {
+  color: #0f172a !important;
+}
+body.light-mode #aiModal textarea#aiInput::placeholder {
+  color: #94a3b8 !important;
+}
+body.light-mode #aiModal button[title="Mais"],
+body.light-mode #aiModal button[title="Voz"] {
+  color: #64748b !important;
+}
 
 .kronia-intelligence-admin-fab {
   position: fixed;
