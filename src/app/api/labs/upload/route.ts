@@ -14,6 +14,12 @@ function buildError(status: number, message: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // Pre-flight: verifica variáveis de ambiente críticas antes de qualquer operação
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    logger.error('labs_upload_missing_env', { vars: ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(k => !process.env[k]) });
+    return buildError(500, 'Configuração do servidor incompleta. Verifique as variáveis de ambiente SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.');
+  }
+
   try {
     const auth = await requireBearerAuth(req);
     if (!auth.ok) return auth.response;
@@ -73,12 +79,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown';
-    logger.error('labs_upload_internal_error', {
-      reason,
-    });
+    logger.error('labs_upload_internal_error', { reason });
     if (/Tipo de arquivo inválido/i.test(reason)) {
       return buildError(400, 'Tipo de arquivo inválido. Envie PDF, JPG ou PNG.');
     }
-    return buildError(500, 'Não foi possível processar o exame agora.');
+    return buildError(500, reason.slice(0, 200));
   }
 }

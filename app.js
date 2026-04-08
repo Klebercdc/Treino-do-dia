@@ -2689,23 +2689,51 @@ async function _handleLabsScreenUpload(file) {
     return;
   }
 
-  setStatus('Enviando exame…', 'loading');
+  setStatus('Enviando arquivo…', 'loading');
   if (resultEl) resultEl.innerHTML = '';
 
   try {
-    var formData = new FormData();
-    // Corrige MIME type para o servidor se necessário
+    // ── Passo 1: obter sessão do usuário
+    var session = null;
+    try {
+      var sessionData = await _sb.auth.getSession();
+      session = sessionData?.data?.session;
+    } catch (e) { /* fallback abaixo */ }
+    if (!session?.user?.id) {
+      setStatus('Sessão expirada. Faça login novamente.', 'error');
+      return;
+    }
+
+    // ── Passo 2: upload direto ao Supabase Storage (sem passar pelo Next.js)
+    var safeName = (file.name || 'exame').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+    var storagePath = session.user.id + '/' + Date.now() + '-' + safeName;
     var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
-    formData.append('file', uploadFile);
 
+    var storageResp = await _sb.storage.from('lab-reports').upload(storagePath, uploadFile, {
+      contentType: mime,
+      upsert: false,
+    });
+    if (storageResp.error) {
+      var storErr = storageResp.error.message || String(storageResp.error);
+      console.error('[labs-upload] storage error:', storErr);
+      setStatus('Erro ao enviar arquivo: ' + storErr, 'error');
+      return;
+    }
+
+    // ── Passo 3: registrar o exame na API (apenas JSON, sem multipart)
+    setStatus('Registrando exame…', 'loading');
     var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
-    delete headers['Content-Type'];
-
-    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), { method: 'POST', headers, body: formData });
+    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/register'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ storagePath, fileName: file.name, mimeType: mime }),
+    });
     var payload = await resp.json().catch(function() { return null; });
 
-    if (!resp.ok || !payload || !payload.ok) {
-      setStatus(payload?.error || payload?.message || 'Erro ao processar o exame.', 'error');
+    if (!resp.ok || !payload?.ok) {
+      var errMsg = payload?.error || payload?.message || ('HTTP ' + resp.status);
+      console.error('[labs-register] falha:', resp.status, errMsg);
+      setStatus('Erro ao registrar: ' + errMsg, 'error');
       return;
     }
 
@@ -2714,7 +2742,7 @@ async function _handleLabsScreenUpload(file) {
     setTimeout(function() { loadLabsScreenHistory(true); }, 2000);
   } catch (err) {
     console.error('[labs-upload] erro:', err);
-    setStatus('Falha na conexão. Verifique sua internet e tente novamente.', 'error');
+    setStatus('Falha na conexão: ' + (err.message || err), 'error');
   } finally {
     var fi = document.getElementById('labsFile');
     if (fi) fi.value = '';
