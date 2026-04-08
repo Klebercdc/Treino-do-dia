@@ -1,10 +1,10 @@
-const CACHE = 'kronia-v4-2026-04-05-2';
+const CACHE = 'kronia-v4-2026-04-08-1';
 const STATIC = [
   '/',
   '/index.html',
-  '/app.js?v=2026-04-05-2',
-  '/auth.js?v=2026-04-05-2',
-  '/styles.css?v=20260322d',
+  '/app.js?v=2026-04-08-1',
+  '/auth.js?v=2026-04-08-1',
+  '/styles.css?v=20260408',
   '/Kronia.png',
   '/splash.png',
   '/manifest.json'
@@ -84,10 +84,9 @@ self.addEventListener('fetch', e => {
   // Só intercepta requisições do mesmo origin
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
-
   e.respondWith(
     fetch(e.request).then(res => {
-      // Atualiza cache com versão nova
+      // Detecta mismatch de build via header customizado (se implementado no futuro) ou via status
       if (res.ok) {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));

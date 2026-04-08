@@ -106,6 +106,22 @@
       "destination": "/api/memory?action=process_queue"
     },
     {
+      "source": "/api/system/health",
+      "destination": "/api/system/health"
+    },
+    {
+      "source": "/api/kronia/labs/register",
+      "destination": "/api/kronia/labs/register"
+    },
+    {
+      "source": "/api/kronia/labs/reports",
+      "destination": "/api/kronia/labs/reports"
+    },
+    {
+      "source": "/api/kronia/labs/reports/:id",
+      "destination": "/api/kronia/labs/reports/:id"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
