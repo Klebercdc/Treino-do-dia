@@ -1,7 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { assertServerEnv } from '@/lib/utils/env.server';
-
-assertServerEnv();
 
 function hasBearerToken(request: NextRequest) {
   const header = request.headers.get('authorization');
@@ -24,6 +21,7 @@ export const config = {
     '/api/kronia/intelligence',
     '/api/labs/upload',
     '/api/kronia/labs/upload',
+    '/api/kronia/labs/register',
     '/api/kronia/exercises/discovery',
     '/api/kronia/exercises/details',
     '/api/kronia/exercises/catalog-admin',
