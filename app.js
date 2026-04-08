@@ -2702,8 +2702,12 @@ async function _handleLabsScreenUpload(file) {
     var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), { method: 'POST', headers, body: formData });
     var payload = await resp.json().catch(function() { return null; });
 
+    console.log('[labs-upload] status:', resp.status, 'payload:', payload);
+
     if (!resp.ok || !payload || !payload.ok) {
-      setStatus(payload?.error || payload?.message || 'Erro ao processar o exame.', 'error');
+      var errMsg = payload?.message || payload?.error || 'Erro ao processar o exame.';
+      console.error('[labs-upload] falha HTTP', resp.status, errMsg);
+      setStatus('Erro ' + resp.status + ': ' + errMsg, 'error');
       return;
     }
 
