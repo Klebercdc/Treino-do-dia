@@ -28,7 +28,7 @@ export function applyClinicalRules(parsed?: ParsedLabReport | null): ClinicalRul
   if (hasValue(parsed.creatinine) && parsed.creatinine >= 2) criticalFlags.add("kidney_alert")
   if (hasValue(parsed.ldl) && parsed.ldl >= 160) criticalFlags.add("ldl_alert")
 
-  const mode = clinicalFlags.size > 0 || criticalFlags.size > 0 ? "clinical" : "clinical"
+  const mode = clinicalFlags.size > 0 || criticalFlags.size > 0 ? "clinical" : "standard"
   return {
     mode,
     clinicalFlags: Array.from(clinicalFlags),

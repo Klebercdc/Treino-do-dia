@@ -59,6 +59,24 @@ test("applyClinicalRules ativa clinical mode e flags esperadas", () => {
   assert.ok(clinical.clinicalFlags.includes("high_ldl"))
 })
 
+test("applyClinicalRules mantém standard quando o exame é válido mas sem gatilhos clínicos", () => {
+  const clinical = applyClinicalRules({
+    glucose: 92,
+    hba1c: 5.3,
+    creatinine: 0.9,
+    potassium: 4.3,
+    sodium: 140,
+    cholesterol_total: 178,
+    hdl: 58,
+    ldl: 102,
+    triglycerides: 96,
+  })
+
+  assert.equal(clinical.mode, "standard")
+  assert.deepEqual(clinical.clinicalFlags, [])
+  assert.deepEqual(clinical.criticalFlags, [])
+})
+
 test("resolveDietMode volta para standard sem exame válido", () => {
   assert.equal(resolveDietMode(null), "standard")
   assert.equal(resolveDietMode({ is_valid: false, parsed: null }), "standard")
