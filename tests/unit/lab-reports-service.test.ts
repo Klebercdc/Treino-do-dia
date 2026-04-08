@@ -260,3 +260,41 @@ test('dispatch do watchdog do Supabase existe na migration nova', () => {
   assert.match(source, /cron\.schedule\(/);
   assert.match(source, /lab-report-orchestrator\/watchdog/);
 });
+
+test('Edge Function labs-watchdog existe e segue padrão do projeto', () => {
+  const source = readFileSync('supabase/functions/labs-watchdog/index.ts', 'utf-8');
+  // Autenticação via CRON_SECRET
+  assert.match(source, /CRON_SECRET/);
+  assert.match(source, /Unauthorized/);
+  // Consulta exames presos em processing
+  assert.match(source, /status.*processing/);
+  assert.match(source, /updated_at.*staleBefore/);
+  // Despacha para /api/labs/process com timeout explícito
+  assert.match(source, /\/api\/labs\/process/);
+  assert.match(source, /DISPATCH_TIMEOUT_MS/);
+  // Despacho paralelo (não serial)
+  assert.match(source, /Promise\.allSettled/);
+});
+
+test('migration 039 agenda pg_cron a cada 15 minutos', () => {
+  const sql = readFileSync('supabase/migrations/039_labs_watchdog_cron.sql', 'utf-8');
+  assert.match(sql, /\*\/15 \* \* \* \*/);
+  assert.match(sql, /labs-watchdog-every-15min/);
+  assert.match(sql, /labs-watchdog/);
+  assert.match(sql, /net\.http_post/);
+});
+
+test('config.toml desabilita JWT para labs-watchdog (autenticação própria via CRON_SECRET)', () => {
+  const config = readFileSync('supabase/config.toml', 'utf-8');
+  assert.match(config, /\[functions\.labs-watchdog\]/);
+  // Localiza o bloco e verifica verify_jwt = false dentro dele
+  const idx = config.indexOf('[functions.labs-watchdog]');
+  const block = config.slice(idx, idx + 200);
+  assert.match(block, /verify_jwt\s*=\s*false/);
+});
+
+test('workflow de deploy inclui labs-watchdog', () => {
+  const workflow = readFileSync('.github/workflows/deploy-edge-functions.yml', 'utf-8');
+  assert.match(workflow, /labs-watchdog/);
+  assert.match(workflow, /supabase functions deploy labs-watchdog/);
+});

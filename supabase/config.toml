@@ -22,3 +22,7 @@ verify_jwt = false
 
 [functions.check-inactivity]
 verify_jwt = false
+
+[functions.labs-watchdog]
+# verify_jwt = false: autenticação própria via CRON_SECRET no header Authorization
+verify_jwt = false
