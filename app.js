@@ -2613,20 +2613,175 @@ function navTo(tab) {
 }
 
 function openLabsUploadScreen(context) {
+  openLabsScreen();
+}
+
+/* ─── Tela Dedicada de Exames ───────────────────────────── */
+
+var _labsScreenInited = false;
+
+function openLabsScreen() {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
   try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
-  // Abre a tela de perfil e faz scroll para a seção de exames
-  try { openPerfil?.(); } catch (_) {}
-  setTimeout(function() {
-    const el = document.getElementById('perfilLabsSection');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Destaque visual temporário
-      el.classList.add('labs-highlight');
-      setTimeout(function() { el.classList.remove('labs-highlight'); }, 1800);
+  document.getElementById('labsScreen').classList.add('show');
+  document.body.classList.add('overlay-open');
+  var footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = 'none';
+  if (!_labsScreenInited) {
+    _labsScreenInited = true;
+    _initLabsScreen();
+  }
+  loadLabsScreenHistory(false);
+}
+
+function closeLabsScreen() {
+  document.getElementById('labsScreen').classList.remove('show');
+  document.body.classList.remove('overlay-open');
+  var footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
+}
+
+function _initLabsScreen() {
+  var fileInput = document.getElementById('labsFile');
+  var dropArea = document.getElementById('labsDropArea');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files && fileInput.files[0]) _handleLabsScreenUpload(fileInput.files[0]);
+    });
+  }
+  if (dropArea) {
+    dropArea.addEventListener('dragover', function(e) { e.preventDefault(); dropArea.style.borderColor = 'var(--accent)'; });
+    dropArea.addEventListener('dragleave', function() { dropArea.style.borderColor = ''; });
+    dropArea.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropArea.style.borderColor = '';
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) _handleLabsScreenUpload(file);
+    });
+  }
+}
+
+async function _handleLabsScreenUpload(file) {
+  var statusEl = document.getElementById('labsUploadStatus');
+  var resultEl = document.getElementById('labsUploadResult');
+
+  function setStatus(msg, type) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = 'perfil-labs-status' + (type ? ' perfil-labs-status--' + type : '');
+  }
+
+  // MIME type com fallback por extensão (mobile Safari reporta octet-stream para PDF)
+  var ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+  var EXT_MAP = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
+  var ext = (file.name || '').split('.').pop().toLowerCase();
+  var mime = ALLOWED_TYPES.includes(file.type) ? file.type : (EXT_MAP[ext] || file.type);
+
+  if (!ALLOWED_TYPES.includes(mime)) {
+    setStatus('Formato inválido. Use PDF, JPEG ou PNG.', 'error');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    setStatus('Arquivo muito grande. Máximo 10 MB.', 'error');
+    return;
+  }
+
+  setStatus('Enviando exame…', 'loading');
+  if (resultEl) resultEl.innerHTML = '';
+
+  try {
+    var formData = new FormData();
+    // Corrige MIME type para o servidor se necessário
+    var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
+    formData.append('file', uploadFile);
+
+    var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
+    delete headers['Content-Type'];
+
+    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), { method: 'POST', headers, body: formData });
+    var payload = await resp.json().catch(function() { return null; });
+
+    if (!resp.ok || !payload || !payload.ok) {
+      setStatus(payload?.error || payload?.message || 'Erro ao processar o exame.', 'error');
+      return;
     }
-  }, 320);
+
+    setStatus('Exame enviado! Processando biomarcadores…', 'success');
+    renderLabsResult(payload, resultEl);
+    setTimeout(function() { loadLabsScreenHistory(true); }, 2000);
+  } catch (err) {
+    console.error('[labs-upload] erro:', err);
+    setStatus('Falha na conexão. Verifique sua internet e tente novamente.', 'error');
+  } finally {
+    var fi = document.getElementById('labsFile');
+    if (fi) fi.value = '';
+  }
+}
+
+async function loadLabsScreenHistory(forceRefresh) {
+  var container = document.getElementById('labsHistoryContainer');
+  var bioContainer = document.getElementById('labsBiomarkersContainer');
+  if (!container) return;
+
+  if (!forceRefresh && _labsHistoryCache) {
+    renderLabReportHistory(_labsHistoryCache, container, null);
+    _renderLabsBiomarkers(_labsHistoryCache, bioContainer);
+    return;
+  }
+
+  container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Carregando…</div>';
+
+  try {
+    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/reports?limit=10'), { headers });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var payload = await resp.json();
+    if (!payload.ok) throw new Error(payload.error || 'response not ok');
+    _labsHistoryCache = payload.reports || [];
+    renderLabReportHistory(_labsHistoryCache, container, null);
+    _renderLabsBiomarkers(_labsHistoryCache, bioContainer);
+  } catch (err) {
+    console.warn('[labs-history] erro:', err);
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Não foi possível carregar o histórico.</div>';
+  }
+}
+
+function _renderLabsBiomarkers(reports, container) {
+  if (!container) return;
+  var report = (reports || []).find(function(r) { return Array.isArray(r.biomarkers) && r.biomarkers.length > 0; });
+  if (!report) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Nenhum biomarcador extraído ainda. Envie um exame acima.</div>';
+    return;
+  }
+
+  var LABELS = {
+    glucose: 'Glicose', hba1c: 'HbA1c', creatinine: 'Creatinina', potassium: 'Potássio',
+    sodium: 'Sódio', cholesterol_total: 'Colesterol Total', hdl: 'HDL', ldl: 'LDL',
+    triglycerides: 'Triglicerídeos', hemoglobin: 'Hemoglobina', ferritin: 'Ferritina',
+    vitamin_d: 'Vitamina D', tsh: 'TSH', t4: 'T4 Livre', uric_acid: 'Ácido Úrico',
+    alt: 'ALT (TGP)', ast: 'AST (TGO)', urea: 'Ureia',
+  };
+  var FLAG_COLOR = { high: '#ef4444', low: '#f59e0b', normal: '#10b981' };
+
+  var date = report.createdAt ? new Date(report.createdAt).toLocaleDateString('pt-BR') : '—';
+  var rows = report.biomarkers.map(function(b) {
+    var key = b.marker_key || '';
+    var label = LABELS[key] || b.marker_name || key;
+    var val = b.value_numeric != null ? b.value_numeric : (b.value_text || '—');
+    var unit = b.unit ? ' ' + b.unit : '';
+    var color = FLAG_COLOR[b.flag] || 'var(--text)';
+    var ref = (b.reference_min != null || b.reference_max != null)
+      ? '<span style="font-size:0.65rem;color:var(--muted);font-weight:400"> (' + (b.reference_min != null ? b.reference_min : '') + '–' + (b.reference_max != null ? b.reference_max : '') + (b.unit ? ' ' + b.unit : '') + ')</span>'
+      : '';
+    return '<div class="labs-bm-row"><span class="labs-bm-label">' + escapeHTML(String(label)) + '</span>'
+      + '<span class="labs-bm-val" style="color:' + color + '">' + escapeHTML(String(val) + unit) + ref + '</span></div>';
+  }).join('');
+
+  container.innerHTML =
+    '<div class="labs-bm-header"><span class="labs-bm-date">Exame de ' + escapeHTML(date) + '</span>'
+    + '<span class="labs-bm-status">' + escapeHTML(String(report.status || '')) + '</span></div>'
+    + '<div class="labs-bm-list">' + rows + '</div>';
 }
 
 /* ─── Upload de Exames Laboratoriais ─────────────────────── */
@@ -2644,7 +2799,11 @@ async function handleLabsFileUpload(file) {
 
   const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
   const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png'];
-  if (!ALLOWED.includes(file.type)) {
+  // Fallback por extensão para mobile Safari que reporta application/octet-stream
+  const EXT_MAP = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
+  const ext = (file.name || '').split('.').pop().toLowerCase();
+  const mime = ALLOWED.includes(file.type) ? file.type : (EXT_MAP[ext] || file.type);
+  if (!ALLOWED.includes(mime)) {
     setStatus('Formato inválido. Use PDF, JPEG ou PNG.', 'error');
     return;
   }
@@ -2659,7 +2818,8 @@ async function handleLabsFileUpload(file) {
 
   try {
     const formData = new FormData();
-    formData.append('file', file);
+    const uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
+    formData.append('file', uploadFile);
 
     const headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
     // Remove Content-Type para deixar o browser definir o boundary do multipart
@@ -4706,7 +4866,7 @@ window.onload = () => {
   // Pedir permissão de notificação após 30s (não invasivo)
   setTimeout(() => { kronaRequestNotificationPermission(); }, 30000);
 
-  // Inicializa seção de upload de exames
+  // Inicializa seção de upload de exames (perfil)
   try { initLabsUploadSection(); } catch(e) { console.warn('[labs] init error', e); }
 };
 

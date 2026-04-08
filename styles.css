@@ -3390,6 +3390,17 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   color: #f59e0b;
 }
 
+/* ── Labs Screen ────────────────────────────────────────── */
+#labsScreen { display: none; position: fixed; inset: 0; z-index: 3900; background: var(--bg); flex-direction: column; overflow-y: auto; padding-bottom: 24px; overscroll-behavior: none; }
+#labsScreen.show { display: flex; }
+.labs-bm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.labs-bm-date { font-size: 0.72rem; color: var(--text-2); font-weight: 600; }
+.labs-bm-status { font-size: 0.68rem; color: var(--muted); text-transform: capitalize; }
+.labs-bm-list { display: flex; flex-direction: column; gap: 4px; }
+.labs-bm-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
+.labs-bm-label { font-size: 0.78rem; color: var(--text-2); flex: 1; }
+.labs-bm-val { font-size: 0.82rem; font-weight: 700; text-align: right; }
+
 /* ── Templates Manager ──────────────────────────────────── */
 .tm-card {
   background: var(--bg2);
