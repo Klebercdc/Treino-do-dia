@@ -168,7 +168,6 @@ test('nutritionService evita café da manhã com vegetais e pré-treino com tofu
   assert.ok(!breakfastFoods.some((name) => /azeite/.test(name)));
   assert.ok(!preWorkoutFoods.some((name) => /tofu/.test(name)));
 });
-
 test('dietService returns safe failsafe response when critical profile data is missing', async () => {
   const result = await dietService.execute('GENERATE_DIET', {
     objetivo: 'hipertrofia',

@@ -8431,7 +8431,6 @@ function buildLocalDietPlan(input) {
     }
     return balanced;
   }
-
   const refeicoes = templates.map(function (template, index) {
     const mealProteinTarget = Math.round(baseline.proteinaMeta * template.proteinShare * 10) / 10;
     const mealCarbTarget = Math.round(baseline.carboMeta * template.carbShare * 10) / 10;
