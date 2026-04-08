@@ -12,6 +12,7 @@ create policy "lab_reports_storage_select_own"
     bucket_id = 'lab-reports'
     and owner = auth.uid()
     and (storage.foldername(name))[1] = auth.uid()::text
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{1,10}$'
   );
 
 create policy "lab_reports_storage_insert_own"
@@ -20,6 +21,7 @@ create policy "lab_reports_storage_insert_own"
     bucket_id = 'lab-reports'
     and owner = auth.uid()
     and (storage.foldername(name))[1] = auth.uid()::text
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{1,10}$'
   );
 
 create policy "lab_reports_storage_update_own"
@@ -28,11 +30,13 @@ create policy "lab_reports_storage_update_own"
     bucket_id = 'lab-reports'
     and owner = auth.uid()
     and (storage.foldername(name))[1] = auth.uid()::text
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{1,10}$'
   )
   with check (
     bucket_id = 'lab-reports'
     and owner = auth.uid()
     and (storage.foldername(name))[1] = auth.uid()::text
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{1,10}$'
   );
 
 create policy "lab_reports_storage_delete_own"
@@ -41,4 +45,5 @@ create policy "lab_reports_storage_delete_own"
     bucket_id = 'lab-reports'
     and owner = auth.uid()
     and (storage.foldername(name))[1] = auth.uid()::text
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.[a-z0-9]{1,10}$'
   );
