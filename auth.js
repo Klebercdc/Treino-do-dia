@@ -37,12 +37,18 @@ if (typeof window !== 'undefined') {
 // ══════════════════════════════════════════════════════
 // TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
 // ══════════════════════════════════════════════════════
-async function getAuthHeaders() {
+async function getAuthHeaders(opts = {}) {
   const { data: { session } } = await _sb.auth.getSession();
   const token = session?.access_token;
-  return token
-    ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
-    : { 'Content-Type': 'application/json' };
+  const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+  const headers = {};
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  return headers;
 }
 
 /**
@@ -75,7 +81,17 @@ async function apiFetch(url, opts = {}) {
       url = currentOrigin + normalizeRelativePath(url);
     }
   }
-  opts.headers = opts.headers || await getAuthHeaders();
+  const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+  const receivedHeaders = new Headers(opts.headers || {});
+  const authHeaders = await getAuthHeaders(opts);
+  const mergedHeaders = new Headers(receivedHeaders);
+  Object.entries(authHeaders).forEach(([key, value]) => {
+    mergedHeaders.set(key, value);
+  });
+  if (isFormData) {
+    mergedHeaders.delete('Content-Type');
+  }
+  opts.headers = mergedHeaders;
   let resp = await fetch(url, opts);
 
   if (resp.status === 401) {
@@ -83,10 +99,14 @@ async function apiFetch(url, opts = {}) {
     try {
       const { data } = await _sb.auth.refreshSession();
       if (data?.session?.access_token) {
-        opts.headers = {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + data.session.access_token
-        };
+        const retryHeaders = new Headers(opts.headers || {});
+        retryHeaders.set('Authorization', 'Bearer ' + data.session.access_token);
+        if (isFormData) {
+          retryHeaders.delete('Content-Type');
+        } else {
+          retryHeaders.set('Content-Type', 'application/json');
+        }
+        opts.headers = retryHeaders;
         resp = await fetch(url, opts);
       }
     } catch {}
