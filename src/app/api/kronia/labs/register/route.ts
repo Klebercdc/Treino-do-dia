@@ -11,8 +11,8 @@ import {
 export const runtime = 'nodejs';
 
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
-// Formato esperado: {uuid}/{timestamp}-{safename}  — sem traversal, sem espaços
-const SAFE_STORAGE_PATH_RE = /^[0-9a-f-]{36}\/[0-9]+-[a-zA-Z0-9._-]{1,120}$/;
+// Formato esperado: {uuid}/{uuid}.{ext}  — sem traversal, sem espaços
+const SAFE_STORAGE_PATH_RE = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/;
 
 export async function POST(req: NextRequest) {
   const auth = await requireBearerAuth(req);
