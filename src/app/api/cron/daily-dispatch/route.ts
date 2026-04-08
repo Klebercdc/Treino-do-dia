@@ -121,20 +121,43 @@ async function runAutoImportTask(req: Request): Promise<CronTaskResult> {
   }
 }
 
+async function runLabsWatchdogVercelFallback(req: Request): Promise<CronTaskResult> {
+  const startedAt = Date.now();
+  const enabled = ['1', 'true'].includes(String(process.env.ENABLE_VERCEL_LABS_WATCHDOG_FALLBACK || '').toLowerCase());
+
+  if (!enabled) {
+    return {
+      task: 'labs_watchdog_vercel_fallback',
+      status: 'skipped',
+      durationMs: Date.now() - startedAt,
+      details: { reason: 'supabase_pg_cron_primary' },
+    };
+  }
+
+  const admin = createAdminSupabaseClient();
+  const result = await runLabsWatchdogDispatchTask(admin, req, 20);
+  return {
+    ...result,
+    task: 'labs_watchdog_vercel_fallback',
+    details: {
+      ...(result.details || {}),
+      mode: 'secondary_fallback',
+    },
+  };
+}
+
 export async function GET(req: Request) {
   if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ ok: false, error: 'Não autorizado.' }, { status: 401 });
   }
 
-  const admin = createAdminSupabaseClient();
   const startedAt = Date.now();
   const now = new Date();
   const tasks: CronTaskResult[] = [];
 
-  // Dispatch: lista exames presos e enfileira via POST /api/labs/process (cada um roda
-  // em sua própria invocação serverless). O processamento OCR inline consumiria até
-  // 45 s por exame, estourando o maxDuration de 60 s com apenas 2 exames em série.
-  tasks.push(await runLabsWatchdogDispatchTask(admin, req, 20));
+  // Exames não dependem mais deste cron como mecanismo primário.
+  // A recuperação principal roda no Supabase via pg_cron + Edge Function.
+  tasks.push(await runLabsWatchdogVercelFallback(req));
   tasks.push(await runExerciseSyncTask(now));
   tasks.push(await runAutoImportTask(req));
   tasks.push(await runMemoryQueueTask(req));

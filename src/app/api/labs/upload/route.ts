@@ -3,10 +3,7 @@ import { requireBearerAuth } from '../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../lib/supabase/admin';
 import { logger } from '../../../../lib/utils/logger';
 import { LAB_REPORTS_BUCKET, uploadLabReportFile } from '../../../../core/labs/labRepository';
-import {
-  createLabReportRecord,
-  enqueueLabReportProcessing,
-} from '../../../../server/internal/labReports/service';
+import { createLabReportRecord } from '../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
 
@@ -56,45 +53,18 @@ export async function POST(req: NextRequest) {
       mimeType: file.type,
     });
 
-    await enqueueLabReportProcessing(admin, created.id);
-
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const processUrl = new URL('/api/labs/process', req.url);
-      void fetch(processUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${cronSecret}`,
-        },
-        body: JSON.stringify({ labReportId: created.id }),
-      }).then((res) => {
-        if (!res.ok) {
-          logger.warn('labs_upload_dispatch_http_error', {
-            userId: auth.user.id,
-            labReportId: created.id,
-            httpStatus: res.status,
-          });
-        }
-      }).catch((dispatchError) => {
-        logger.warn('labs_upload_dispatch_failed', {
-          userId: auth.user.id,
-          labReportId: created.id,
-          reason: dispatchError instanceof Error ? dispatchError.message : 'unknown',
-        });
-      });
-    } else {
-      logger.warn('labs_upload_missing_cron_secret', {
-        userId: auth.user.id,
-        labReportId: created.id,
-      });
-    }
+    logger.info('labs_upload_enqueued_via_supabase', {
+      userId: auth.user.id,
+      labReportId: created.id,
+      orchestration: 'supabase_db_trigger',
+    });
 
     return NextResponse.json({
       ok: true,
       uploaded: true,
       labReportId: created.id,
       status: 'processing',
+      orchestration: 'supabase_db_trigger',
     });
   } catch (error) {
     logger.error('labs_upload_internal_error', {
