@@ -5,6 +5,7 @@ import { logger } from '../../../../../lib/utils/logger';
 import { LAB_REPORTS_BUCKET } from '../../../../../core/labs/labRepository';
 import {
   createLabReportRecord,
+  deleteLabReportRecord,
   enqueueLabReportProcessing,
 } from '../../../../../server/internal/labReports/service';
 
@@ -13,6 +14,28 @@ export const runtime = 'nodejs';
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
 // Formato esperado: {uuid}/{uuid}.{ext}  — sem traversal, sem espaços
 const SAFE_STORAGE_PATH_RE = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/;
+
+function splitStoragePath(storagePath: string): { directory: string; fileName: string } | null {
+  const idx = storagePath.lastIndexOf('/');
+  if (idx <= 0 || idx === storagePath.length - 1) return null;
+  return {
+    directory: storagePath.slice(0, idx),
+    fileName: storagePath.slice(idx + 1),
+  };
+}
+
+async function ensureObjectExistsInStorage(admin: ReturnType<typeof createAdminSupabaseClient>, storagePath: string) {
+  const parts = splitStoragePath(storagePath);
+  if (!parts) return false;
+
+  const { data, error } = await admin.storage.from(LAB_REPORTS_BUCKET).list(parts.directory, {
+    limit: 100,
+    search: parts.fileName,
+  });
+
+  if (error) throw new Error(`Falha ao validar objeto no storage: ${error.message}`);
+  return Boolean((data || []).some((item) => item?.name === parts.fileName));
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireBearerAuth(req);
@@ -44,8 +67,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'SUPABASE_SERVICE_ROLE_KEY não configurada no servidor.' }, { status: 500 });
   }
 
+  let createdLabReportId: string | null = null;
   try {
     const admin = createAdminSupabaseClient();
+
+    const storageObjectExists = await ensureObjectExistsInStorage(admin, storagePath);
+    if (!storageObjectExists) {
+      return NextResponse.json(
+        { ok: false, error: 'Arquivo não encontrado no storage. Refaça o upload antes de registrar.' },
+        { status: 409 },
+      );
+    }
 
     const created = await createLabReportRecord(admin, {
       userId: auth.user.id,
@@ -54,6 +86,7 @@ export async function POST(req: NextRequest) {
       fileName,
       mimeType,
     });
+    createdLabReportId = created.id;
 
     await enqueueLabReportProcessing(admin, created.id);
 
@@ -72,6 +105,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, labReportId: created.id, status: 'processing' });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown';
+    try {
+      const admin = createAdminSupabaseClient();
+      await admin.storage.from(LAB_REPORTS_BUCKET).remove([storagePath]);
+    } catch (cleanupError) {
+      logger.warn('labs_register_cleanup_storage_failed', {
+        reason: cleanupError instanceof Error ? cleanupError.message : 'unknown',
+      });
+    }
+    try {
+      const admin = createAdminSupabaseClient();
+      if (createdLabReportId) {
+        await deleteLabReportRecord(admin, createdLabReportId);
+      }
+    } catch (cleanupError) {
+      logger.warn('labs_register_cleanup_db_failed', {
+        reason: cleanupError instanceof Error ? cleanupError.message : 'unknown',
+      });
+    }
     logger.error('labs_register_error', { reason });
     return NextResponse.json({ ok: false, error: reason.slice(0, 200) }, { status: 500 });
   }

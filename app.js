@@ -2724,15 +2724,25 @@ async function _handleLabsScreenUpload(file) {
     // ── Passo 3: registrar o exame na API (apenas JSON, sem multipart)
     setStatus('Registrando exame…', 'loading');
     var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
-    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/register'), {
+    var registerPath = resolveInternalApiPath('/api/kronia/labs/register');
+    var resp = await fetch(registerPath, {
       method: 'POST',
       headers,
+      credentials: 'same-origin',
       body: JSON.stringify({ storagePath, fileName: file.name, mimeType: mime }),
     });
     var payload = await resp.json().catch(function() { return null; });
 
     if (!resp.ok || !payload?.ok) {
       var errMsg = payload?.error || payload?.message || ('HTTP ' + resp.status);
+      try {
+        var rm = await _sb.storage.from('lab-reports').remove([storagePath]);
+        if (rm?.error) {
+          console.warn('[labs-cleanup] falha ao remover órfão:', rm.error.message || rm.error);
+        }
+      } catch (cleanupErr) {
+        console.warn('[labs-cleanup] erro ao remover órfão:', cleanupErr);
+      }
       console.error('[labs-register] falha:', resp.status, errMsg);
       setStatus('Erro ao registrar: ' + errMsg, 'error');
       return;
@@ -2765,7 +2775,7 @@ async function loadLabsScreenHistory(forceRefresh) {
 
   try {
     var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
-    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/reports?limit=10'), { headers });
+    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports?limit=10'), { headers, credentials: 'same-origin' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var payload = await resp.json();
     if (!payload.ok) throw new Error(payload.error || 'response not ok');
@@ -7006,6 +7016,20 @@ function resolveAppApiUrl(path) {
     return location.protocol + "//" + location.host + normalizedPath;
   }
   return "https://kronia.app.br" + normalizedPath;
+}
+
+function resolveInternalApiPath(path) {
+  var safePath = String(path || "").trim();
+  if (!safePath) return '/';
+  if (/^https?:\/\//i.test(safePath)) {
+    try {
+      var parsed = new URL(safePath, window.location.href);
+      return parsed.pathname + parsed.search;
+    } catch (_) {
+      return '/';
+    }
+  }
+  return safePath.startsWith('/') ? safePath : ('/' + safePath);
 }
 
 async function fetchExerciseDetailsResponse(endpoint) {

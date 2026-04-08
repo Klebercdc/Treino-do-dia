@@ -64,6 +64,14 @@ export async function createLabReportRecord(
   return { id: String(data.id) };
 }
 
+export async function deleteLabReportRecord(
+  admin: SupabaseClient,
+  labReportId: string,
+): Promise<void> {
+  const { error } = await admin.from('lab_reports').delete().eq('id', labReportId);
+  if (error) throw new Error(`Falha ao remover lab_report após erro: ${error.message}`);
+}
+
 export async function enqueueLabReportProcessing(
   admin: SupabaseClient,
   labReportId: string,
