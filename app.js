@@ -2689,19 +2689,51 @@ async function _handleLabsScreenUpload(file) {
     return;
   }
 
+  function sanitizeLabsFilename(input) {
+    return String(input || '').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120) || 'lab-report';
+  }
+
+  function buildLabsStoragePath(userId, filename) {
+    return String(userId || '').trim() + '/' + Date.now() + '-' + sanitizeLabsFilename(filename);
+  }
+
   setStatus('Enviando exame…', 'loading');
   if (resultEl) resultEl.innerHTML = '';
 
   try {
-    var formData = new FormData();
-    // Corrige MIME type para o servidor se necessário
+    var sessionResult = await _sb.auth.getSession();
+    var session = sessionResult && sessionResult.data ? sessionResult.data.session : null;
+    if (!session || !session.user || !session.user.id) {
+      setStatus('Sessão expirada. Faça login novamente.', 'error');
+      return;
+    }
+
     var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
-    formData.append('file', uploadFile);
+    var storageBucket = 'lab-reports';
+    var storagePath = buildLabsStoragePath(session.user.id, uploadFile.name);
+
+    var uploadResult = await _sb.storage.from(storageBucket).upload(storagePath, uploadFile, {
+      contentType: mime,
+      upsert: false
+    });
+    if (uploadResult.error) {
+      setStatus(uploadResult.error.message || 'Falha ao enviar o arquivo para o storage.', 'error');
+      return;
+    }
 
     var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
-    delete headers['Content-Type'];
+    headers['Content-Type'] = 'application/json';
 
-    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/upload'), { method: 'POST', headers, body: formData });
+    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/register'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        storageBucket: storageBucket,
+        storagePath: storagePath,
+        fileName: uploadFile.name,
+        mimeType: mime
+      })
+    });
     var payload = await resp.json().catch(function() { return null; });
 
     if (!resp.ok || !payload || !payload.ok) {

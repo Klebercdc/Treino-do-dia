@@ -189,11 +189,43 @@ test('rota de detalhe aplica filtro de ownership por user_id', () => {
   assert.match(routeSource, /\.eq\('user_id',\s*input\.userId\)/);
 });
 
-test('upload usa Supabase como gatilho primário e não despacha /api/labs/process', () => {
-  const routeSource = readFileSync('src/app/api/labs/upload/route.ts', 'utf-8');
+test('register oficial usa gatilho do Supabase e não aceita multipart', () => {
+  const routeSource = readFileSync('src/app/api/kronia/labs/register/route.ts', 'utf-8');
   assert.match(routeSource, /supabase_db_trigger/);
+  assert.doesNotMatch(routeSource, /formData\(/);
   assert.doesNotMatch(routeSource, /\/api\/labs\/process/);
-  assert.doesNotMatch(routeSource, /enqueueLabReportProcessing\(/);
+});
+
+test('register oficial valida ownership, storage real e rollback compensatório', () => {
+  const routeSource = readFileSync('src/app/api/kronia/labs/register/route.ts', 'utf-8');
+  assert.match(routeSource, /assertOwnedLabReportStoragePath/);
+  assert.match(routeSource, /getLabReportStorageObject/);
+  assert.match(routeSource, /deleteLabReportStorageObject/);
+});
+
+test('rota multipart legada de upload está desativada para evitar arquitetura paralela', () => {
+  const routeSource = readFileSync('src/app/api/labs/upload/route.ts', 'utf-8');
+  assert.match(routeSource, /Upload multipart desativado/);
+  assert.doesNotMatch(routeSource, /req\.formData\(/);
+});
+
+test('frontend envia arquivo direto ao Supabase Storage e registra via JSON', () => {
+  const source = readFileSync('app.js', 'utf-8');
+  assert.match(source, /_sb\.storage\.from\(storageBucket\)\.upload\(storagePath, uploadFile/);
+  assert.match(source, /\/api\/kronia\/labs\/register/);
+  assert.doesNotMatch(source, /\/api\/kronia\/labs\/upload/);
+});
+
+test('middleware não intercepta rotas de labs e o deploy inclui src\\/app\\/api', () => {
+  const middlewareSource = readFileSync('src/middleware.ts', 'utf-8');
+  const vercelIgnore = readFileSync('.vercelignore', 'utf-8');
+  const vercelConfig = readFileSync('vercel.json', 'utf-8');
+
+  assert.doesNotMatch(middlewareSource, /labs\/register/);
+  assert.doesNotMatch(middlewareSource, /labs\/reports/);
+  assert.doesNotMatch(middlewareSource, /labs\/upload/);
+  assert.doesNotMatch(vercelIgnore, /src\/app\/api\//);
+  assert.doesNotMatch(vercelConfig, /"source": "\/api\/\(\.\*\)"/);
 });
 
 test('watchdog cron standalone ainda existe apenas para fallback manual na Vercel', () => {

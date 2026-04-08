@@ -104,10 +104,6 @@
     {
       "source": "/api/internal/process-memory-queue",
       "destination": "/api/memory?action=process_queue"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
     }
   ],
   "functions": {

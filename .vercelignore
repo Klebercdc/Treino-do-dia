@@ -6,6 +6,3 @@ etl/
 *.sh
 backup-to-drive.sh
 PROXIMOS-PASSOS.md
-
-# APIs experimentais Next App Router (não usadas no deploy atual baseado em /api/*.js)
-src/app/api/

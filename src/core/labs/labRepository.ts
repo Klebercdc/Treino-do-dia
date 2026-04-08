@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { StoredLabContext } from "./labTypes"
 
 export const LAB_REPORTS_BUCKET = "lab-reports"
+export const MAX_LAB_REPORT_SIZE_BYTES = 10 * 1024 * 1024
 const NORMALIZED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"])
 const MIME_ALIASES: Record<string, string> = {
   "application/pdf": "application/pdf",
@@ -50,6 +51,65 @@ export function assertAllowedLabMimeType(mimeType: string, filename?: string): s
 export function buildLabReportStoragePath(userId: string, filename: string): string {
   const safeName = sanitizeFilename(filename)
   return `${userId}/${Date.now()}-${safeName}`
+}
+
+export function assertOwnedLabReportStoragePath(userId: string, storagePath: string): string {
+  const normalizedPath = String(storagePath || "").trim().replace(/^\/+/, "")
+  if (!normalizedPath) throw new Error("Caminho do arquivo é obrigatório.")
+  if (normalizedPath.includes("..")) throw new Error("Caminho do arquivo inválido.")
+  if (!normalizedPath.startsWith(`${userId}/`)) {
+    throw new Error("Arquivo não pertence ao usuário autenticado.")
+  }
+  return normalizedPath
+}
+
+function toMetadataRecord(input: unknown): Record<string, unknown> {
+  return input && typeof input === "object" ? input as Record<string, unknown> : {}
+}
+
+function readObjectSize(metadata: Record<string, unknown>): number | null {
+  const direct = metadata.size
+  const nested = toMetadataRecord(metadata.metadata).size
+  const value = direct ?? nested
+  return Number.isFinite(Number(value)) ? Number(value) : null
+}
+
+function readObjectMimeType(metadata: Record<string, unknown>): string | null {
+  const direct = metadata.mimetype
+  const nested = toMetadataRecord(metadata.metadata).mimetype
+  const value = direct ?? nested
+  return value ? String(value) : null
+}
+
+export async function getLabReportStorageObject(
+  admin: SupabaseClient,
+  input: { bucket: string; path: string },
+): Promise<{ path: string; mimeType: string | null; size: number | null } | null> {
+  const { data, error } = await admin
+    .schema("storage")
+    .from("objects")
+    .select("name,bucket_id,metadata")
+    .eq("bucket_id", input.bucket)
+    .eq("name", input.path)
+    .maybeSingle()
+
+  if (error) throw new Error(`Falha ao consultar objeto no storage: ${error.message}`)
+  if (!data?.name) return null
+
+  const metadata = toMetadataRecord(data.metadata)
+  return {
+    path: String(data.name),
+    mimeType: readObjectMimeType(metadata),
+    size: readObjectSize(metadata),
+  }
+}
+
+export async function deleteLabReportStorageObject(
+  admin: SupabaseClient,
+  input: { bucket: string; path: string },
+): Promise<void> {
+  const { error } = await admin.storage.from(input.bucket).remove([input.path])
+  if (error) throw new Error(`Falha ao remover arquivo do storage: ${error.message}`)
 }
 
 export async function uploadLabReportFile(
