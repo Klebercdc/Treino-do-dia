@@ -346,3 +346,36 @@ test('workflow de deploy inclui labs-watchdog', () => {
   assert.match(workflow, /labs-watchdog/);
   assert.match(workflow, /supabase functions deploy labs-watchdog/);
 });
+
+test('middleware não possui assertServerEnv em nível de módulo (não quebra em env incompleto)', () => {
+  const source = readFileSync('src/middleware.ts', 'utf-8');
+  assert.doesNotMatch(source, /assertServerEnv/);
+  // Continua exigindo Bearer token
+  assert.match(source, /hasBearerToken/);
+  assert.match(source, /unauthorized/);
+});
+
+test('rota register exige auth, valida MIME, bloqueia path traversal e verifica ownership', () => {
+  const source = readFileSync('src/app/api/kronia/labs/register/route.ts', 'utf-8');
+  // Auth obrigatória
+  assert.match(source, /requireBearerAuth/);
+  // Validação de MIME
+  assert.match(source, /ALLOWED_MIME_TYPES/);
+  // Ownership: path deve começar com userId do JWT
+  assert.match(source, /startsWith.*auth\.user\.id/);
+  // Bloqueio de path traversal
+  assert.match(source, /includes\(['"]\.\.['"]?\)/);
+  // Dispatch de processamento
+  assert.match(source, /labs\/process/);
+  assert.match(source, /CRON_SECRET/);
+});
+
+test('upload direto via Supabase Storage no frontend usa _sb.storage e registra via /register', () => {
+  const source = readFileSync('app.js', 'utf-8');
+  // Upload direto ao storage (sem multipart via Next.js)
+  assert.match(source, /_sb\.storage\.from\('lab-reports'\)\.upload/);
+  // Registro via nova rota JSON
+  assert.match(source, /\/api\/kronia\/labs\/register/);
+  // Não mais chama /upload com multipart
+  assert.doesNotMatch(source, /\/api\/kronia\/labs\/upload/);
+});

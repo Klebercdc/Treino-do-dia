@@ -11,6 +11,8 @@ import {
 export const runtime = 'nodejs';
 
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+// Formato esperado: {uuid}/{timestamp}-{safename}  — sem traversal, sem espaços
+const SAFE_STORAGE_PATH_RE = /^[0-9a-f-]{36}\/[0-9]+-[a-zA-Z0-9._-]{1,120}$/;
 
 export async function POST(req: NextRequest) {
   const auth = await requireBearerAuth(req);
@@ -27,7 +29,13 @@ export async function POST(req: NextRequest) {
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
     return NextResponse.json({ ok: false, error: 'Tipo de arquivo inválido. Use PDF, JPEG ou PNG.' }, { status: 400 });
   }
-  if (!storagePath.startsWith(auth.user.id + '/')) {
+  // Bloqueia path traversal (../) e garante ownership: path deve começar com userId do JWT
+  if (
+    storagePath.includes('..') ||
+    storagePath.includes('//') ||
+    !storagePath.startsWith(auth.user.id + '/') ||
+    !SAFE_STORAGE_PATH_RE.test(storagePath)
+  ) {
     return NextResponse.json({ ok: false, error: 'Caminho de storage inválido.' }, { status: 403 });
   }
 
