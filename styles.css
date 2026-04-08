@@ -908,6 +908,8 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .weekly-perf-left { flex-shrink: 0; }
 .weekly-ring-wrap { position: relative; width: 110px; height: 110px; }
 .weekly-ring-svg { width: 110px; height: 110px; }
+.weekly-ring-track { stroke: rgba(148,163,184,0.28); }
+.weekly-ring-progress { stroke: #FF8C00; transition: stroke-dashoffset .5s ease, opacity .25s ease; }
 .weekly-ring-inner {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -931,6 +933,7 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .weekly-bar-fill.vol { background: linear-gradient(90deg, #f97316, #fb923c); }
 body.light-mode .weekly-bar-track { background: rgba(15,23,42,0.12); }
 body.light-mode .weekly-ring-lbl { color: rgba(15,23,42,0.56) !important; }
+body.light-mode .weekly-ring-track { stroke: rgba(15,23,42,0.18); }
 body.light-mode .risk-card-title { color: rgba(15,23,42,0.55) !important; }
 body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.72)"] { color: rgba(15,23,42,0.82) !important; }
 body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.52)"] { color: rgba(15,23,42,0.66) !important; }

@@ -4886,6 +4886,7 @@ function updateHomeScreen() {
   if (ringEl) {
     const pct = Math.min(streak / 30, 1);
     ringEl.setAttribute("stroke-dashoffset", Math.round(314 * (1 - pct)));
+    ringEl.style.opacity = streak > 0 ? "1" : "0";
   }
   const flame1 = document.getElementById("homeStreakFlame1");
   const flame2 = document.getElementById("homeStreakFlame2");
