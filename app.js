@@ -2727,16 +2727,42 @@ async function _handleLabsScreenUpload(file) {
     setStatus('Registrando exame…', 'loading');
     var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
     var registerPath = resolveInternalApiPath('/api/kronia/labs/register');
-    var resp = await fetch(registerPath, {
-      method: 'POST',
-      headers,
-      credentials: 'same-origin',
-      body: JSON.stringify({ storagePath, fileName: file.name, mimeType: mime }),
-    });
+    
+    var resp;
+    try {
+      resp = await fetch(registerPath, {
+        method: 'POST',
+        headers,
+        credentials: 'same-origin',
+        body: JSON.stringify({ storagePath, fileName: file.name, mimeType: mime }),
+      });
+    } catch (fetchErr) {
+      console.error('[labs-register] network error:', fetchErr);
+      setStatus('Falha de rede ao registrar. Verifique sua conexão.', 'error');
+      return;
+    }
+
     var payload = await resp.json().catch(function() { return null; });
 
     if (!resp.ok || !payload?.ok) {
       var errMsg = payload?.error || payload?.message || ('HTTP ' + resp.status);
+      
+      // PENSAR FORA DA CAIXA: Detecção de 404 sistêmico (Build Mismatch / Cache Antigo)
+      if (resp.status === 404) {
+        console.error('[labs-register] 404 detectado. Verificando integridade do build...');
+        try {
+          var healthResp = await fetch('/api/system/health', { cache: 'no-store' });
+          var health = await healthResp.json().catch(function() { return null; });
+          if (health && health.ok) {
+            errMsg = 'O aplicativo está desatualizado (Cache/PWA). Por favor, recarregue a página ou limpe o cache do navegador.';
+          } else {
+            errMsg = 'Serviço temporariamente indisponível (Erro de Roteamento). Tente novamente em instantes.';
+          }
+        } catch (hErr) {
+          errMsg = 'Erro de conexão com o servidor de registro (404). Atualize o app.';
+        }
+      }
+
       try {
         var rm = await _sb.storage.from('lab-reports').remove([storagePath]);
         if (rm?.error) {

@@ -73,10 +73,13 @@ export async function GET() {
   const scientificReady = Number(scientific.articles || 0) > 0 && Number(scientific.evidence || 0) > 0 && scientific.referenceMode === 'scientific_tables' && !scientific.error;
   const status = requiredMissing.length || !migration033Applied || !scientificReady ? 'degraded' : 'ok';
 
+  const buildId = process.env.VERCEL_GITHUB_COMMIT_SHA || 'local-dev';
+
   return NextResponse.json(
     {
       status,
       version: '1.0.0',
+      buildId,
       runtime: envStatus.runtime,
       source: envStatus.source,
       ai: {
