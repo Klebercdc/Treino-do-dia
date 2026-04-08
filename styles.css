@@ -3468,3 +3468,428 @@ body.light-mode .home-labs-cta-sub { color: rgba(0,0,0,.62); }
   color: var(--text-2);
   white-space: nowrap;
 }
+
+/* ══════════════════════════════════════════
+LIGHT MODE POLISH — KRONIA
+Refinamento visual profissional do tema claro
+══════════════════════════════════════════ */
+
+body.light-mode {
+–bg: #f4f7fb;
+–bg2: #edf2f8;
+–surface: #ffffff;
+–card: #ffffff;
+–card-hover: #f7fafd;
+–border: rgba(15, 23, 42, 0.10);
+–border-soft: rgba(15, 23, 42, 0.06);
+–text: #0f172a;
+–text-2: #475569;
+–muted: #64748b;
+–accent: #ea6c0a;
+–accent-dim: rgba(234,108,10,0.10);
+–accent-glow: rgba(234,108,10,0.18);
+–shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 4px 14px rgba(15,23,42,0.05);
+–shadow-md: 0 8px 28px rgba(15,23,42,0.08);
+–shadow-lg: 0 18px 50px rgba(15,23,42,0.12);
+–text-rgb: 15,23,42;
+color-scheme: light;
+}
+
+body.light-mode,
+body.light-mode #container,
+body.light-mode #homeScreen,
+body.light-mode #settingsScreen,
+body.light-mode #perfilScreen,
+body.light-mode #editarPerfilScreen,
+body.light-mode #startWorkoutScreen,
+body.light-mode #dietaScreen {
+background:
+radial-gradient(circle at top, rgba(234,108,10,0.05), transparent 34%),
+linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+color: var(–text);
+}
+
+/* Header e navegação */
+body.light-mode .top-header,
+body.light-mode .home-header,
+body.light-mode .settings-header,
+body.light-mode .dav-header,
+body.light-mode .sws-header,
+body.light-mode .ep-avatar-wrap {
+background: rgba(255,255,255,0.92) !important;
+backdrop-filter: blur(14px);
+-webkit-backdrop-filter: blur(14px);
+border-bottom: 1px solid rgba(15,23,42,0.08) !important;
+}
+
+body.light-mode .nav-pills {
+background: rgba(255,255,255,0.88) !important;
+border-bottom: 1px solid rgba(15,23,42,0.07);
+}
+
+body.light-mode .date-badge,
+body.light-mode .dark-toggle,
+body.light-mode .sws-back-btn,
+body.light-mode .evo-close,
+body.light-mode .settings-group,
+body.light-mode .weekly-perf-card,
+body.light-mode .home-stat-card,
+body.light-mode .summary-stat,
+body.light-mode .perfil-stat,
+body.light-mode .perfil-pr-item,
+body.light-mode .perfil-input,
+body.light-mode .perfil-cal-day,
+body.light-mode .home-quick-card,
+body.light-mode .home-tool-card,
+body.light-mode .exercise-card,
+body.light-mode .dialog,
+body.light-mode dialog,
+body.light-mode .tm-card,
+body.light-mode .config-template-card,
+body.light-mode .labs-hist-card,
+body.light-mode .labs-result-card {
+background: rgba(255,255,255,0.92) !important;
+border-color: rgba(15,23,42,0.08) !important;
+box-shadow: var(–shadow-sm) !important;
+}
+
+/* Footer */
+body.light-mode .footer-actions {
+background: rgba(255,255,255,0.94) !important;
+backdrop-filter: blur(14px);
+-webkit-backdrop-filter: blur(14px);
+border-top: 1px solid rgba(15,23,42,0.08) !important;
+box-shadow: 0 -10px 30px rgba(15,23,42,0.06);
+}
+
+body.light-mode .btn .btn-icon,
+body.light-mode .btn .btn-label {
+color: rgba(15,23,42,0.50) !important;
+}
+
+body.light-mode .btn-nav.active .btn-icon,
+body.light-mode .btn-nav.active .btn-label {
+color: var(–accent) !important;
+}
+
+/* Cards de treino */
+body.light-mode .exercise-card {
+border-radius: 16px;
+box-shadow:
+0 1px 2px rgba(15,23,42,0.04),
+0 10px 18px rgba(15,23,42,0.05) !important;
+}
+
+body.light-mode .exercise-card::before {
+width: 4px;
+}
+
+body.light-mode .ex-title,
+body.light-mode .home-quick-name,
+body.light-mode .home-tool-name,
+body.light-mode .perfil-pr-name,
+body.light-mode .config-template-name,
+body.light-mode .labs-hist-name,
+body.light-mode .tm-card-name {
+color: #0f172a !important;
+}
+
+body.light-mode .ex-target,
+body.light-mode .home-quick-sub,
+body.light-mode .home-tool-sub,
+body.light-mode .labs-hist-meta,
+body.light-mode .tm-card-meta,
+body.light-mode .perfil-stat-lbl,
+body.light-mode .perfil-input-lbl,
+body.light-mode .home-section-title,
+body.light-mode .perfil-section-title,
+body.light-mode .settings-section-label,
+body.light-mode .risk-card-title,
+body.light-mode .instr-step-desc,
+body.light-mode .instr-feat-desc,
+body.light-mode .instr-tip-text,
+body.light-mode .div-meta-sub,
+body.light-mode .div-day-exs,
+body.light-mode .home-labs-cta-sub {
+color: rgba(15,23,42,0.64) !important;
+}
+
+/* Inputs */
+body.light-mode .input-box,
+body.light-mode .modal-input,
+body.light-mode .ep-input,
+body.light-mode .perfil-input,
+body.light-mode .bs-input,
+body.light-mode .evo-select {
+background: #f8fafc !important;
+border-color: rgba(15,23,42,0.10) !important;
+color: #0f172a !important;
+}
+
+body.light-mode .input-box:focus-within,
+body.light-mode .modal-input:focus,
+body.light-mode .ep-input:focus,
+body.light-mode .perfil-input:focus,
+body.light-mode .bs-input:focus,
+body.light-mode .evo-select:focus {
+background: #ffffff !important;
+border-color: rgba(234,108,10,0.45) !important;
+box-shadow: 0 0 0 4px rgba(234,108,10,0.10) !important;
+}
+
+body.light-mode .input-box input,
+body.light-mode .modal-input,
+body.light-mode .ep-input,
+body.light-mode .perfil-input,
+body.light-mode .bs-input,
+body.light-mode .evo-select {
+color: #0f172a !important;
+}
+
+body.light-mode .input-box input::placeholder,
+body.light-mode .perfil-input::placeholder,
+body.light-mode .ep-input::placeholder,
+body.light-mode .modal-input::placeholder {
+color: #94a3b8 !important;
+}
+
+/* Hero cards home */
+body.light-mode .home-hero-treino {
+background:
+linear-gradient(160deg, rgba(255,245,235,0.98) 0%, rgba(255,234,214,0.98) 100%) !important;
+border-color: rgba(234,108,10,0.20) !important;
+box-shadow: 0 10px 24px rgba(234,108,10,0.10) !important;
+}
+
+body.light-mode .home-hero-dieta {
+background:
+linear-gradient(160deg, rgba(239,253,245,0.98) 0%, rgba(220,252,231,0.98) 100%) !important;
+border-color: rgba(16,185,129,0.20) !important;
+box-shadow: 0 10px 24px rgba(16,185,129,0.10) !important;
+}
+
+body.light-mode .home-hero-label {
+color: #0f172a !important;
+}
+
+body.light-mode .home-hero-sub {
+color: rgba(15,23,42,0.62) !important;
+}
+
+body.light-mode .home-hero-arrow {
+color: rgba(234,108,10,0.50) !important;
+}
+
+body.light-mode .home-hero-arrow–green {
+color: rgba(16,185,129,0.50) !important;
+}
+
+/* Cards premium/IA */
+body.light-mode .kronos-ai-card {
+background:
+linear-gradient(145deg, rgba(139,92,246,0.14) 0%, rgba(255,255,255,0.95) 100%) !important;
+border-color: rgba(139,92,246,0.20) !important;
+box-shadow: 0 10px 26px rgba(124,58,237,0.10) !important;
+animation: none !important;
+}
+
+body.light-mode .kronia-tools-card {
+background:
+linear-gradient(145deg, rgba(14,165,233,0.12) 0%, rgba(255,255,255,0.95) 100%) !important;
+border-color: rgba(14,165,233,0.18) !important;
+box-shadow: 0 10px 26px rgba(14,165,233,0.10) !important;
+animation: none !important;
+}
+
+body.light-mode .kronos-ai-title { color: #6d28d9 !important; }
+body.light-mode .kronos-ai-subtitle,
+body.light-mode .kronos-ai-model { color: rgba(109,40,217,0.72) !important; }
+body.light-mode .kronia-tools-title { color: #075985 !important; }
+body.light-mode .kronia-tools-subtitle { color: rgba(7,89,133,0.72) !important; }
+
+/* Stats e performance */
+body.light-mode .home-stat-val,
+body.light-mode .perfil-stat-val,
+body.light-mode .dav-stat-val,
+body.light-mode .basal-res-val {
+color: var(–accent) !important;
+}
+
+body.light-mode .weekly-ring-num {
+color: #0f172a !important;
+}
+
+body.light-mode .weekly-bar-track {
+background: rgba(15,23,42,0.08) !important;
+}
+
+/* Sheets e modais */
+body.light-mode #timerSheet,
+body.light-mode #configBox,
+body.light-mode #summaryBox,
+body.light-mode #evoBox,
+body.light-mode .bs-box,
+body.light-mode .guia-sheet,
+body.light-mode .cm-box {
+background: #ffffff !important;
+border-color: rgba(15,23,42,0.08) !important;
+box-shadow: var(–shadow-lg) !important;
+}
+
+body.light-mode .tsheet-handle,
+body.light-mode .config-handle,
+body.light-mode .sum-handle,
+body.light-mode .bs-handle,
+body.light-mode .guia-handle {
+background: rgba(15,23,42,0.14) !important;
+}
+
+body.light-mode #timerDisplay,
+body.light-mode .dav-title,
+body.light-mode .evo-title,
+body.light-mode #sumTitle,
+body.light-mode .bs-title,
+body.light-mode .guia-name,
+body.light-mode .settings-title,
+body.light-mode .orient-title {
+color: #0f172a !important;
+}
+
+/* Status chips / grids */
+body.light-mode .config-chip,
+body.light-mode .bs-chip,
+body.light-mode .evo-tab,
+body.light-mode .pill {
+background: rgba(255,255,255,0.86) !important;
+border-color: rgba(15,23,42,0.08) !important;
+color: rgba(15,23,42,0.72) !important;
+}
+
+body.light-mode .config-chip.active,
+body.light-mode .bs-chip.active,
+body.light-mode .evo-tab.active,
+body.light-mode .pill.active {
+background: rgba(234,108,10,0.10) !important;
+border-color: rgba(234,108,10,0.34) !important;
+color: var(–accent) !important;
+}
+
+/* Perfil */
+body.light-mode .perfil-cal-day {
+background: rgba(255,255,255,0.84) !important;
+border-color: rgba(15,23,42,0.08) !important;
+color: rgba(15,23,42,0.72) !important;
+}
+
+body.light-mode .perfil-cal-day.treinou {
+background: rgba(234,108,10,0.10) !important;
+border-color: rgba(234,108,10,0.30) !important;
+color: var(–accent) !important;
+}
+
+body.light-mode .perfil-cal-day.today {
+border-color: rgba(245,158,11,0.35) !important;
+color: #d97706 !important;
+}
+
+/* Settings */
+body.light-mode .settings-group {
+overflow: hidden;
+}
+
+body.light-mode .settings-row {
+border-bottom-color: rgba(15,23,42,0.06) !important;
+}
+
+body.light-mode .settings-row:active {
+background: rgba(15,23,42,0.03) !important;
+}
+
+body.light-mode .settings-row-label {
+color: #0f172a !important;
+}
+
+body.light-mode .settings-row-value,
+body.light-mode .settings-row-arrow {
+color: rgba(15,23,42,0.48) !important;
+}
+
+/* Labs e templates */
+body.light-mode .labs-result-card,
+body.light-mode .labs-hist-card,
+body.light-mode .tm-card,
+body.light-mode .config-template-card {
+background: #ffffff !important;
+}
+
+body.light-mode .labs-hist-bm {
+background: #f8fafc !important;
+color: #475569 !important;
+border-color: rgba(15,23,42,0.08) !important;
+}
+
+body.light-mode .labs-hist-flag {
+background: rgba(245,158,11,0.10) !important;
+color: #b45309 !important;
+border-color: rgba(245,158,11,0.22) !important;
+}
+
+/* Banner/CTA */
+body.light-mode #homeBanner {
+background: linear-gradient(135deg, rgba(255,247,237,0.96), rgba(255,255,255,0.96)) !important;
+border-color: rgba(234,108,10,0.16) !important;
+box-shadow: var(–shadow-sm);
+}
+
+body.light-mode .home-labs-cta-card {
+background: linear-gradient(145deg, rgba(240,253,250,0.98), rgba(255,255,255,0.98)) !important;
+border-color: rgba(16,185,129,0.18) !important;
+box-shadow: 0 10px 24px rgba(16,185,129,0.08) !important;
+}
+
+body.light-mode .home-labs-cta-title {
+color: #0f172a !important;
+}
+
+/* Botões secundários */
+body.light-mode .d-btn-secondary,
+body.light-mode .tsheet-close,
+body.light-mode .tbar-adj-btn,
+body.light-mode .btn-t,
+body.light-mode .btn-add-ex,
+body.light-mode .div-cta-empty,
+body.light-mode .btn-share-rel,
+body.light-mode .btn-respira {
+background: #ffffff !important;
+border-color: rgba(15,23,42,0.10) !important;
+color: #334155 !important;
+box-shadow: var(–shadow-sm);
+}
+
+/* Pequenos refinamentos de legibilidade */
+body.light-mode .brand,
+body.light-mode .dav-title,
+body.light-mode .settings-title,
+body.light-mode .home-title,
+body.light-mode .sws-title,
+body.light-mode .ep-name-display {
+color: #0f172a !important;
+}
+
+body.light-mode .brand span,
+body.light-mode .home-title span {
+color: var(–accent) !important;
+}
+
+body.light-mode .session-strip {
+background: rgba(255,255,255,0.88) !important;
+border-top-color: rgba(15,23,42,0.06) !important;
+}
+
+body.light-mode .ss-val {
+color: #0f172a !important;
+}
+
+body.light-mode .ss-lbl {
+color: rgba(15,23,42,0.56) !important;
+}
