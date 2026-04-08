@@ -2693,20 +2693,21 @@ async function _handleLabsScreenUpload(file) {
   if (resultEl) resultEl.innerHTML = '';
 
   try {
-    // ── Passo 1: obter sessão do usuário
-    var session = null;
+    // ── Passo 1: verificar usuário autenticado (getUser valida o token no servidor)
+    var currentUser = null;
     try {
-      var sessionData = await _sb.auth.getSession();
-      session = sessionData?.data?.session;
+      var userResp = await _sb.auth.getUser();
+      currentUser = userResp?.data?.user;
     } catch (e) { /* fallback abaixo */ }
-    if (!session?.user?.id) {
+    if (!currentUser?.id) {
       setStatus('Sessão expirada. Faça login novamente.', 'error');
       return;
     }
 
     // ── Passo 2: upload direto ao Supabase Storage (sem passar pelo Next.js)
-    var safeName = (file.name || 'exame').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-    var storagePath = session.user.id + '/' + Date.now() + '-' + safeName;
+    var fileExt = ((file.name || '').split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+    var uniqueId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36);
+    var storagePath = currentUser.id + '/' + uniqueId + '.' + fileExt;
     var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
 
     var storageResp = await _sb.storage.from('lab-reports').upload(storagePath, uploadFile, {
