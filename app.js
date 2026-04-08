@@ -2705,9 +2705,11 @@ async function _handleLabsScreenUpload(file) {
     }
 
     // ── Passo 2: upload direto ao Supabase Storage (sem passar pelo Next.js)
-    var fileExt = ((file.name || '').split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
-    var uniqueId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36);
-    var storagePath = currentUser.id + '/' + uniqueId + '.' + fileExt;
+    var EXT_BY_MIME = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
+    var fallbackExt = ((file.name || '').split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+    var fileExt = EXT_BY_MIME[mime] || fallbackExt || 'pdf';
+    var objectId = generateCanonicalLabsObjectId();
+    var storagePath = currentUser.id + '/' + objectId + '.' + fileExt;
     var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
 
     var storageResp = await _sb.storage.from('lab-reports').upload(storagePath, uploadFile, {
@@ -2724,15 +2726,25 @@ async function _handleLabsScreenUpload(file) {
     // ── Passo 3: registrar o exame na API (apenas JSON, sem multipart)
     setStatus('Registrando exame…', 'loading');
     var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
-    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/register'), {
+    var registerPath = resolveInternalApiPath('/api/kronia/labs/register');
+    var resp = await fetch(registerPath, {
       method: 'POST',
       headers,
+      credentials: 'same-origin',
       body: JSON.stringify({ storagePath, fileName: file.name, mimeType: mime }),
     });
     var payload = await resp.json().catch(function() { return null; });
 
     if (!resp.ok || !payload?.ok) {
       var errMsg = payload?.error || payload?.message || ('HTTP ' + resp.status);
+      try {
+        var rm = await _sb.storage.from('lab-reports').remove([storagePath]);
+        if (rm?.error) {
+          console.warn('[labs-cleanup] falha ao remover órfão:', rm.error.message || rm.error);
+        }
+      } catch (cleanupErr) {
+        console.warn('[labs-cleanup] erro ao remover órfão:', cleanupErr);
+      }
       console.error('[labs-register] falha:', resp.status, errMsg);
       setStatus('Erro ao registrar: ' + errMsg, 'error');
       return;
@@ -2750,6 +2762,28 @@ async function _handleLabsScreenUpload(file) {
   }
 }
 
+function generateCanonicalLabsObjectId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return String(crypto.randomUUID()).toLowerCase();
+  }
+  var bytes = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  var hex = Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20, 32),
+  ].join('-');
+}
+
 async function loadLabsScreenHistory(forceRefresh) {
   var container = document.getElementById('labsHistoryContainer');
   var bioContainer = document.getElementById('labsBiomarkersContainer');
@@ -2765,7 +2799,7 @@ async function loadLabsScreenHistory(forceRefresh) {
 
   try {
     var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
-    var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/reports?limit=10'), { headers });
+    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports?limit=10'), { headers, credentials: 'same-origin' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var payload = await resp.json();
     if (!payload.ok) throw new Error(payload.error || 'response not ok');
@@ -7006,6 +7040,20 @@ function resolveAppApiUrl(path) {
     return location.protocol + "//" + location.host + normalizedPath;
   }
   return "https://kronia.app.br" + normalizedPath;
+}
+
+function resolveInternalApiPath(path) {
+  var safePath = String(path || "").trim();
+  if (!safePath) return '/';
+  if (/^https?:\/\//i.test(safePath)) {
+    try {
+      var parsed = new URL(safePath, window.location.href);
+      return parsed.pathname + parsed.search;
+    } catch (_) {
+      return '/';
+    }
+  }
+  return safePath.startsWith('/') ? safePath : ('/' + safePath);
 }
 
 async function fetchExerciseDetailsResponse(endpoint) {

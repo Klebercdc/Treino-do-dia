@@ -331,3 +331,43 @@ test('upload direto via Supabase Storage no frontend usa _sb.storage e registra 
   // Não mais chama /upload com multipart
   assert.doesNotMatch(source, /\/api\/kronia\/labs\/upload/);
 });
+
+test('storagePath canônico de labs é {userId}/{uuid}.{ext} e não timestamp-safeName', () => {
+  const source = readFileSync('app.js', 'utf-8');
+  assert.match(source, /generateCanonicalLabsObjectId/);
+  assert.match(source, /currentUser\.id \+ '\/' \+ objectId \+ '\.' \+ fileExt/);
+  assert.doesNotMatch(source, /Date\.now\(\)\.toString\(36\)/);
+
+  const canonicalRe = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/;
+  assert.match('550e8400-e29b-41d4-a716-446655440000/4d7f0b88-7f6c-4f8d-b40d-8d72d3454c1a.pdf', canonicalRe);
+  assert.doesNotMatch('550e8400-e29b-41d4-a716-446655440000/1712611111111-exame.pdf', canonicalRe);
+});
+
+test('frontend labs usa rota interna same-origin para register/history e cleanup de órfão no bucket', () => {
+  const source = readFileSync('app.js', 'utf-8');
+  assert.match(source, /resolveInternalApiPath\('\/api\/kronia\/labs\/register'\)/);
+  assert.match(source, /resolveInternalApiPath\('\/api\/kronia\/labs\/reports\?limit=10'\)/);
+  assert.match(source, /_sb\.storage\.from\('lab-reports'\)\.remove\(\[storagePath\]\)/);
+});
+
+test('register valida existência de objeto no storage e middleware não intercepta labs', () => {
+  const registerSource = readFileSync('src/app/api/kronia/labs/register/route.ts', 'utf-8');
+  const middlewareSource = readFileSync('src/middleware.ts', 'utf-8');
+
+  assert.match(registerSource, /ensureObjectExistsInStorage/);
+  assert.match(registerSource, /Arquivo não encontrado no storage/);
+  assert.match(registerSource, /deleteLabReportRecord/);
+  assert.match(registerSource, /requireBearerAuth/);
+
+  assert.doesNotMatch(middlewareSource, /\/api\/kronia\/labs\/register/);
+  assert.doesNotMatch(middlewareSource, /\/api\/kronia\/labs\/upload/);
+  assert.doesNotMatch(middlewareSource, /\/api\/labs\/upload/);
+});
+
+test('policy do bucket lab-reports exige owner + prefixo user + arquivo uuid.ext', () => {
+  const source = readFileSync('supabase/migrations/041_lab_reports_storage_owner_path_policy.sql', 'utf-8');
+  assert.match(source, /bucket_id = 'lab-reports'/);
+  assert.match(source, /owner = auth\.uid\(\)/);
+  assert.match(source, /\(storage\.foldername\(name\)\)\[1\] = auth\.uid\(\)::text/);
+  assert.match(source, /name ~ '\^\[0-9a-f-\]\{36\}\/\[0-9a-f-\]\{36\}\\\.\[a-z0-9\]\{1,10\}\$'/);
+});
