@@ -3893,3 +3893,94 @@ color: #0f172a !important;
 body.light-mode .ss-lbl {
 color: rgba(15,23,42,0.56) !important;
 }
+
+/* === Light mode contrast hardening (cards/sheets/headers on white) === */
+body.light-mode,
+body.light-mode .screen,
+body.light-mode .tab-pane {
+  color: #0f172a !important;
+}
+
+body.light-mode .ex-title,
+body.light-mode .home-quick-name,
+body.light-mode .home-tool-name,
+body.light-mode .perfil-pr-name,
+body.light-mode .config-template-name,
+body.light-mode .labs-hist-name,
+body.light-mode .tm-card-name,
+body.light-mode .settings-title,
+body.light-mode .home-title,
+body.light-mode .dav-title,
+body.light-mode .sws-title,
+body.light-mode .ep-name-display,
+body.light-mode .home-labs-cta-title,
+body.light-mode .weekly-ring-num,
+body.light-mode .settings-row-label,
+body.light-mode .brand,
+body.light-mode .ss-val {
+  color: #0f172a !important;
+}
+
+body.light-mode .ex-target,
+body.light-mode .home-quick-sub,
+body.light-mode .home-tool-sub,
+body.light-mode .labs-hist-meta,
+body.light-mode .tm-card-meta,
+body.light-mode .perfil-stat-lbl,
+body.light-mode .perfil-input-lbl,
+body.light-mode .home-section-title,
+body.light-mode .perfil-section-title,
+body.light-mode .settings-section-label,
+body.light-mode .risk-card-title,
+body.light-mode .instr-step-desc,
+body.light-mode .instr-feat-desc,
+body.light-mode .instr-tip-text,
+body.light-mode .div-meta-sub,
+body.light-mode .div-day-exs,
+body.light-mode .home-labs-cta-sub,
+body.light-mode .settings-row-value,
+body.light-mode .settings-row-arrow,
+body.light-mode .ss-lbl {
+  color: #475569 !important;
+}
+
+body.light-mode .home-stat-val,
+body.light-mode .perfil-stat-val,
+body.light-mode .dav-stat-val,
+body.light-mode .basal-res-val {
+  color: #ea6c0a !important;
+}
+
+body.light-mode .home-hero-label,
+body.light-mode .kronos-ai-title,
+body.light-mode .kronia-tools-title {
+  color: #0f172a !important;
+}
+
+body.light-mode .home-hero-sub,
+body.light-mode .kronos-ai-subtitle,
+body.light-mode .kronos-ai-model,
+body.light-mode .kronia-tools-subtitle {
+  color: #475569 !important;
+}
+
+/* ícones dentro de blocos coloridos */
+body.light-mode .home-quick-icon svg,
+body.light-mode .home-tool-icon svg,
+body.light-mode .home-hero-icon svg,
+body.light-mode .home-banner-icon svg,
+body.light-mode .labs-cta-icon svg,
+body.light-mode .achievement-card svg,
+body.light-mode .recommended-card svg,
+body.light-mode .desafio-ico svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* evita texto claro herdado em fundo branco */
+body.light-mode [style*="color:#fff"],
+body.light-mode [style*="color: #fff"],
+body.light-mode [style*="color:#ffffff"],
+body.light-mode [style*="color: #ffffff"] {
+  color: #0f172a !important;
+}
