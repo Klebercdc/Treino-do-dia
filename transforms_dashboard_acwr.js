@@ -25,7 +25,11 @@ window.KroniaDashboard = (function () {
   let _loadChart  = null;
 
   function isLightMode() {
-    return document.body && document.body.classList.contains('light-mode');
+    const rootTheme = document.documentElement?.dataset?.theme;
+    const bodyTheme = document.body?.dataset?.theme;
+    return rootTheme === 'light'
+      || bodyTheme === 'light'
+      || (document.body && document.body.classList.contains('light-mode'));
   }
 
   // ── Zonas de risco (Gabbett 2016) ────────────────────────────────────────
