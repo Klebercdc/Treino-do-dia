@@ -3247,7 +3247,8 @@ body:not(.light-mode) #aiMessages .ai-msg.assistant .ai-bubble { background: #1C
 body:not(.light-mode) #aiMessages .ai-msg-time { color: #8E8E93; font-size: 0.65rem; margin-top: 5px; }
 body:not(.light-mode) #aiModal .ai-input-wrap { background: #1C1C1E !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 22px !important; }
 #aiModal .ai-input-wrap textarea { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; font-size: 16px !important; }
-body:not(.light-mode) #aiModal #aiSendBtn { width: 32px; height: 32px; border-radius: 50%; background: #A56700 !important; }
+body:not(.light-mode) #aiModal #aiSendBtn { width: 32px; height: 32px; border-radius: 50%; background: #f97316 !important; color: #ffffff !important; }
+body:not(.light-mode) #aiModal #aiSendBtn i { color: #ffffff !important; stroke: currentColor !important; }
 
 /* Light mode do chat KRONOS */
 body.light-mode #aiModal,
@@ -3293,6 +3294,14 @@ body.light-mode #aiModal textarea#aiInput::placeholder {
 body.light-mode #aiModal button[title="Mais"],
 body.light-mode #aiModal button[title="Voz"] {
   color: #64748b !important;
+}
+body.light-mode #aiModal #aiSendBtn {
+  background: #f97316 !important;
+  color: #ffffff !important;
+}
+body.light-mode #aiModal #aiSendBtn i {
+  color: #ffffff !important;
+  stroke: currentColor !important;
 }
 
 .kronia-intelligence-admin-fab {
