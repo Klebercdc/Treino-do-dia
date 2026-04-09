@@ -5,7 +5,7 @@ const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
 const PROCESSING_STALE_MINUTES = 20;
 
-export type LabReportStatus = 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
+export type LabReportStatus = 'initiated' | 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
 
 export interface ExamOcrResponse {
   success: boolean;
@@ -55,13 +55,76 @@ export async function createLabReportRecord(
       file_type: input.mimeType,
       mime_type: input.mimeType,
       status: 'uploaded',
-      parse_status: 'pending',
+      parse_status: 'uploaded',
     })
     .select('id')
     .single();
 
   if (error || !data?.id) throw new Error(`Falha ao criar lab_report: ${error?.message || 'unknown'}`);
   return { id: String(data.id) };
+}
+
+export async function createLabReportUploadDraft(
+  admin: SupabaseClient,
+  input: {
+    userId: string;
+    storageBucket: string;
+    storagePath: string;
+    fileName: string;
+    mimeType: string;
+  },
+): Promise<{ id: string }> {
+  const { data, error } = await admin
+    .from('lab_reports')
+    .insert({
+      user_id: input.userId,
+      storage_bucket: input.storageBucket,
+      storage_path: input.storagePath,
+      file_url: input.storagePath,
+      file_name: input.fileName,
+      file_type: input.mimeType,
+      mime_type: input.mimeType,
+      status: 'initiated',
+      parse_status: 'pending',
+    })
+    .select('id')
+    .single();
+
+  if (error || !data?.id) throw new Error(`Falha ao criar rascunho de lab_report: ${error?.message || 'unknown'}`);
+  return { id: String(data.id) };
+}
+
+export async function markLabReportAsUploaded(
+  admin: SupabaseClient,
+  input: {
+    labReportId: string;
+    userId: string;
+    storageBucket: string;
+    storagePath: string;
+    fileName: string;
+    mimeType: string;
+  },
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from('lab_reports')
+    .update({
+      storage_bucket: input.storageBucket,
+      storage_path: input.storagePath,
+      file_url: input.storagePath,
+      file_name: input.fileName,
+      file_type: input.mimeType,
+      mime_type: input.mimeType,
+      status: 'uploaded',
+      parse_status: 'uploaded',
+      processing_error: null,
+    })
+    .eq('id', input.labReportId)
+    .eq('user_id', input.userId)
+    .select('id')
+    .limit(1);
+
+  if (error) throw new Error(`Falha ao marcar lab_report como uploaded: ${error.message}`);
+  return Array.isArray(data) && data.length === 1;
 }
 
 export async function enqueueLabReportProcessing(

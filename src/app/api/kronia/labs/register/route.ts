@@ -10,11 +10,15 @@ import {
   getLabReportStorageObject,
   resolveAllowedLabMimeType,
 } from '../../../../../core/labs/labRepository';
-import { createLabReportRecord } from '../../../../../server/internal/labReports/service';
+import {
+  createLabReportRecord,
+  markLabReportAsUploaded,
+} from '../../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
 
 type RegisterPayload = {
+  labReportId?: string | null;
   storageBucket?: string | null;
   storagePath?: string | null;
   fileName?: string | null;
@@ -23,6 +27,10 @@ type RegisterPayload = {
 
 function buildError(status: number, message: string) {
   return NextResponse.json({ ok: false, error: message }, { status });
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 export async function POST(req: NextRequest) {
@@ -43,6 +51,10 @@ export async function POST(req: NextRequest) {
 
   const fileName = String(payload?.fileName || '').trim();
   if (!fileName) return buildError(400, 'Nome do arquivo é obrigatório.');
+  const labReportId = String(payload?.labReportId || '').trim();
+  if (labReportId && !isUuid(labReportId)) {
+    return buildError(400, 'labReportId inválido.');
+  }
 
   let storagePath = '';
   let normalizedMimeType = '';
@@ -59,13 +71,19 @@ export async function POST(req: NextRequest) {
   const admin = createAdminSupabaseClient();
 
   try {
-    const { data: existing, error: existingError } = await admin
+    let existingQuery = admin
       .from('lab_reports')
       .select('id,status,parse_status')
       .eq('user_id', auth.user.id)
       .eq('storage_bucket', LAB_REPORTS_BUCKET)
       .eq('storage_path', storagePath)
-      .maybeSingle();
+      .limit(1);
+
+    if (labReportId) {
+      existingQuery = existingQuery.neq('id', labReportId);
+    }
+
+    const { data: existing, error: existingError } = await existingQuery.maybeSingle();
 
     if (existingError) {
       throw new Error(`Falha ao verificar duplicidade do exame: ${existingError.message}`);
@@ -112,17 +130,34 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const created = await createLabReportRecord(admin, {
-        userId: auth.user.id,
-        storageBucket: LAB_REPORTS_BUCKET,
-        storagePath,
-        fileName,
-        mimeType: normalizedMimeType,
-      });
+      let resolvedLabReportId = labReportId;
+
+      if (resolvedLabReportId) {
+        const updated = await markLabReportAsUploaded(admin, {
+          labReportId: resolvedLabReportId,
+          userId: auth.user.id,
+          storageBucket: LAB_REPORTS_BUCKET,
+          storagePath,
+          fileName,
+          mimeType: normalizedMimeType,
+        });
+        if (!updated) {
+          return buildError(404, 'labReportId inválido para o usuário autenticado.');
+        }
+      } else {
+        const created = await createLabReportRecord(admin, {
+          userId: auth.user.id,
+          storageBucket: LAB_REPORTS_BUCKET,
+          storagePath,
+          fileName,
+          mimeType: normalizedMimeType,
+        });
+        resolvedLabReportId = created.id;
+      }
 
       logger.info('labs_register_enqueued_via_supabase', {
         userId: auth.user.id,
-        labReportId: created.id,
+        labReportId: resolvedLabReportId,
         storagePath,
         orchestration: 'supabase_db_trigger',
       });
@@ -130,7 +165,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         uploaded: true,
-        labReportId: created.id,
+        labReportId: resolvedLabReportId,
         status: 'processing',
         orchestration: 'supabase_db_trigger',
       });

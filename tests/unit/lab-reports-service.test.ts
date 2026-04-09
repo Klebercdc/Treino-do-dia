@@ -196,11 +196,22 @@ test('register oficial usa gatilho do Supabase e não aceita multipart', () => {
   assert.doesNotMatch(routeSource, /\/api\/labs\/process/);
 });
 
+test('init-upload oficial cria signed upload url e rascunho antes do upload', () => {
+  const routeSource = readFileSync('src/app/api/kronia/labs/init-upload/route.ts', 'utf-8');
+  assert.match(routeSource, /createSignedUploadUrl/);
+  assert.match(routeSource, /createLabReportUploadDraft/);
+  assert.match(routeSource, /\[labs\/init-upload\] start/);
+  assert.match(routeSource, /\[labs\/init-upload\] signed-result/);
+  assert.match(routeSource, /uploadToken/);
+});
+
 test('register oficial valida ownership, storage real e rollback compensatório', () => {
   const routeSource = readFileSync('src/app/api/kronia/labs/register/route.ts', 'utf-8');
   assert.match(routeSource, /assertOwnedLabReportStoragePath/);
   assert.match(routeSource, /getLabReportStorageObject/);
   assert.match(routeSource, /deleteLabReportStorageObject/);
+  assert.match(routeSource, /labReportId\?: string \| null/);
+  assert.match(routeSource, /markLabReportAsUploaded/);
 });
 
 test('rota multipart legada de upload está desativada para evitar arquitetura paralela', () => {
@@ -209,11 +220,21 @@ test('rota multipart legada de upload está desativada para evitar arquitetura p
   assert.doesNotMatch(routeSource, /req\.formData\(/);
 });
 
-test('frontend envia arquivo direto ao Supabase Storage e registra via JSON', () => {
+test('frontend usa init-upload, uploadToSignedUrl e depois register com labReportId', () => {
   const source = readFileSync('app.js', 'utf-8');
-  assert.match(source, /_sb\.storage\.from\(storageBucket\)\.upload\(storagePath, uploadFile/);
+  assert.match(source, /\/api\/kronia\/labs\/init-upload/);
+  assert.match(source, /uploadToSignedUrl\(storagePath, uploadToken, uploadFile/);
   assert.match(source, /\/api\/kronia\/labs\/register/);
+  assert.match(source, /labReportId: labReportId/);
   assert.doesNotMatch(source, /\/api\/kronia\/labs\/upload/);
+});
+
+test('migration de labs permite initiated e dispara orquestração quando registro vira uploaded', () => {
+  const source = readFileSync('supabase/migrations/040_labs_init_upload_alignment.sql', 'utf-8');
+  assert.match(source, /'initiated'/);
+  assert.match(source, /'uploaded'/);
+  assert.match(source, /db_update_uploaded/);
+  assert.match(source, /new\.status = 'uploaded'/);
 });
 
 test('middleware não intercepta rotas de labs e o deploy inclui src\\/app\\/api', () => {

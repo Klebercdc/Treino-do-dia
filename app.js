@@ -2689,14 +2689,6 @@ async function _handleLabsScreenUpload(file) {
     return;
   }
 
-  function sanitizeLabsFilename(input) {
-    return String(input || '').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120) || 'lab-report';
-  }
-
-  function buildLabsStoragePath(userId, filename) {
-    return String(userId || '').trim() + '/' + Date.now() + '-' + sanitizeLabsFilename(filename);
-  }
-
   setStatus('Enviando exame…', 'loading');
   if (resultEl) resultEl.innerHTML = '';
 
@@ -2709,10 +2701,30 @@ async function _handleLabsScreenUpload(file) {
     }
 
     var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
-    var storageBucket = 'lab-reports';
-    var storagePath = buildLabsStoragePath(session.user.id, uploadFile.name);
+    var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
+    headers['Content-Type'] = 'application/json';
 
-    var uploadResult = await _sb.storage.from(storageBucket).upload(storagePath, uploadFile, {
+    var initResp = await fetch(resolveAppApiUrl('/api/kronia/labs/init-upload'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        fileName: uploadFile.name,
+        mimeType: mime,
+        fileSize: uploadFile.size
+      })
+    });
+    var initPayload = await initResp.json().catch(function() { return null; });
+    if (!initResp.ok || !initPayload || !initPayload.ok) {
+      setStatus(initPayload?.error || initPayload?.message || 'Falha ao iniciar o upload do exame.', 'error');
+      return;
+    }
+
+    var storageBucket = initPayload.storageBucket || 'lab-reports';
+    var storagePath = initPayload.storagePath;
+    var labReportId = initPayload.labReportId;
+    var uploadToken = initPayload.uploadToken;
+
+    var uploadResult = await _sb.storage.from(storageBucket).uploadToSignedUrl(storagePath, uploadToken, uploadFile, {
       contentType: mime,
       upsert: false
     });
@@ -2721,13 +2733,11 @@ async function _handleLabsScreenUpload(file) {
       return;
     }
 
-    var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
-    headers['Content-Type'] = 'application/json';
-
     var resp = await fetch(resolveAppApiUrl('/api/kronia/labs/register'), {
       method: 'POST',
       headers,
       body: JSON.stringify({
+        labReportId: labReportId,
         storageBucket: storageBucket,
         storagePath: storagePath,
         fileName: uploadFile.name,
