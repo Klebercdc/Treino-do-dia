@@ -77,13 +77,17 @@ async function ensureObjectExistsInStorage(admin, storagePath) {
   var parts = splitStoragePath(storagePath);
   if (!parts) return false;
 
-  var result = await admin.storage.from(LAB_REPORTS_BUCKET).list(parts.directory, {
-    limit: 100,
-    search: parts.fileName
-  });
-
-  if (result.error) throw new Error('Falha ao validar objeto no storage: ' + result.error.message);
-  return Boolean((result.data || []).some(function(item) { return item && item.name === parts.fileName; }));
+  var delays = [0, 800, 1600];
+  for (var i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) await new Promise(function(r) { setTimeout(r, delays[i]); });
+    var result = await admin.storage.from(LAB_REPORTS_BUCKET).list(parts.directory, {
+      limit: 100,
+      search: parts.fileName
+    });
+    if (result.error) throw new Error('Falha ao validar objeto no storage: ' + result.error.message);
+    if ((result.data || []).some(function(item) { return item && item.name === parts.fileName; })) return true;
+  }
+  return false;
 }
 
 function withAuth(req, res, handler) {
