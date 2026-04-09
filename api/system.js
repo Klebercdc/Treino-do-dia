@@ -2,14 +2,6 @@ var cors = require('../src/server/apihelpers/_cors');
 var auth = require('../src/server/apihelpers/_auth');
 var rl   = require('../src/server/apihelpers/_ratelimit');
 var plans = require('../src/server/apihelpers/_plans');
-var scienceSync = require('../src/lib/science/scienceSyncService');
-var adminDiagnosticsHandler = require('../src/server/legacy/admin-diagnostics');
-var machineHandler = require('../src/server/legacy/machine');
-var cronScraperHandler = require('../src/server/legacy/cron-scraper');
-var pastorDiagnosticoHandler = require('../src/server/legacy/pastor-diagnostico');
-var adminImportExercisesHandler = require('../src/server/internal/http/admin-import-exercises');
-var adminImportExercisesStatusHandler = require('../src/server/internal/http/admin-import-exercises-status');
-var adminImportExercisesAutoHandler = require('../src/server/internal/http/admin-import-exercises-auto');
 var kroniaLabsHandler = require('../src/server/internal/http/kronia-labs');
 var https = require('https');
 
@@ -25,10 +17,41 @@ function handleScienceArticles(req, res) {
   return handleScienceReview(req, res);
 }
 
+function loadOptionalModule(modulePath, routeName) {
+  try {
+    return { ok: true, mod: require(modulePath) };
+  } catch (error) {
+    console.error('[api/system] optional module load failed', {
+      route: routeName,
+      modulePath: modulePath,
+      reason: error && error.message ? error.message : String(error)
+    });
+    return { ok: false, error: error };
+  }
+}
+
+function respondUnavailable(res, routeName, loadError) {
+  return res.status(503).json({
+    ok: false,
+    error: 'ROUTE_DEPENDENCY_UNAVAILABLE',
+    route: routeName,
+    warning: String((loadError && loadError.message) || loadError || 'dependency unavailable')
+  });
+}
+
+function dispatchOptionalRoute(res, routeName, modulePath, req) {
+  var loaded = loadOptionalModule(modulePath, routeName);
+  if (!loaded.ok) return respondUnavailable(res, routeName, loaded.error);
+  return loaded.mod(req, res);
+}
+
 async function handleScienceReview(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
+  var loaded = loadOptionalModule('../src/lib/science/scienceSyncService', 'science-review');
+  if (!loaded.ok) return respondUnavailable(res, 'science-review', loaded.error);
+
   try {
-    var items = await scienceSync.listPendingReviews();
+    var items = await loaded.mod.listPendingReviews();
     return res.status(200).json({ items: items });
   } catch (error) {
     return res.status(500).json({ items: [], warning: String(error.message || error), error: 'SCIENCE_REVIEW_FAILED' });
@@ -37,8 +60,11 @@ async function handleScienceReview(req, res) {
 
 async function handleScienceSync(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  var loaded = loadOptionalModule('../src/lib/science/scienceSyncService', 'science-sync');
+  if (!loaded.ok) return respondUnavailable(res, 'science-sync', loaded.error);
+
   try {
-    var result = await scienceSync.syncScientificTopics();
+    var result = await loaded.mod.syncScientificTopics();
     return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error), error: 'SCIENCE_SYNC_FAILED' });
@@ -179,19 +205,19 @@ module.exports = function(req, res) {
     case 'lgpd-delete':
       return handleLgpdDelete(req, res);
     case 'admin-diagnostics':
-      return adminDiagnosticsHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/legacy/admin-diagnostics', req);
     case 'machine':
-      return machineHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/legacy/machine', req);
     case 'cron-scraper':
-      return cronScraperHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/legacy/cron-scraper', req);
     case 'pastor-diagnostico':
-      return pastorDiagnosticoHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/legacy/pastor-diagnostico', req);
     case 'admin-import-exercises':
-      return adminImportExercisesHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/internal/http/admin-import-exercises', req);
     case 'admin-import-exercises-status':
-      return adminImportExercisesStatusHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/internal/http/admin-import-exercises-status', req);
     case 'admin-import-exercises-auto':
-      return adminImportExercisesAutoHandler(req, res);
+      return dispatchOptionalRoute(res, route, '../src/server/internal/http/admin-import-exercises-auto', req);
     case 'kronia-labs-init-upload':
       return kroniaLabsHandler.handleInitUpload(req, res);
     case 'kronia-labs-register':
