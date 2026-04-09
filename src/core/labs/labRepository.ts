@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { StoredLabContext } from "./labTypes"
 
@@ -28,6 +29,15 @@ function getExtension(filename: string): string {
   return dotIndex >= 0 ? safe.slice(dotIndex) : ""
 }
 
+function getExtensionFromMimeOrName(mimeType: string, filename: string): string {
+  const normalizedMime = String(mimeType || "").toLowerCase()
+  const extFromName = getExtension(filename)
+
+  if (normalizedMime === "application/pdf" || extFromName === ".pdf") return ".pdf"
+  if (normalizedMime === "image/png" || extFromName === ".png") return ".png"
+  return ".jpg"
+}
+
 export function resolveAllowedLabMimeType(input: { mimeType?: string | null; filename?: string | null }): string {
   const rawMimeType = String(input.mimeType || "").trim().toLowerCase()
   const normalizedFromMime = MIME_ALIASES[rawMimeType]
@@ -47,9 +57,15 @@ export function assertAllowedLabMimeType(mimeType: string, filename?: string): s
   return resolveAllowedLabMimeType({ mimeType, filename })
 }
 
-export function buildLabReportStoragePath(userId: string, filename: string): string {
-  const safeName = sanitizeFilename(filename)
-  return `${userId}/${Date.now()}-${safeName}`
+export function buildLabReportStoragePath(
+  userId: string,
+  input: { filename?: string | null; mimeType?: string | null } | string,
+  mimeTypeFromLegacyArg?: string,
+): string {
+  const filename = typeof input === "string" ? input : String(input?.filename || "")
+  const mimeType = typeof input === "string" ? String(mimeTypeFromLegacyArg || "") : String(input?.mimeType || "")
+  const ext = getExtensionFromMimeOrName(mimeType, filename)
+  return `${userId}/${randomUUID()}${ext}`
 }
 
 export async function uploadLabReportFile(
@@ -58,7 +74,7 @@ export async function uploadLabReportFile(
   file: { name: string; type: string; bytes: Buffer },
 ): Promise<{ path: string }> {
   const normalizedMimeType = assertAllowedLabMimeType(file.type, file.name)
-  const path = buildLabReportStoragePath(userId, file.name)
+  const path = buildLabReportStoragePath(userId, { filename: file.name, mimeType: normalizedMimeType })
   const { error } = await admin.storage.from(LAB_REPORTS_BUCKET).upload(path, file.bytes, {
     contentType: normalizedMimeType,
     upsert: false,

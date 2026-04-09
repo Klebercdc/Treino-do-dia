@@ -110,6 +110,10 @@
       "destination": "/api/system/health"
     },
     {
+      "source": "/api/kronia/labs/init-upload",
+      "destination": "/api/kronia/labs/init-upload"
+    },
+    {
       "source": "/api/kronia/labs/register",
       "destination": "/api/kronia/labs/register"
     },
