@@ -10,8 +10,13 @@
     "resolveJsonModule": true,
     "outDir": "./tests/dist",
     "baseUrl": ".",
-    "types": ["@playwright/test", "node"]
+    "types": ["node", "@playwright/test"]
   },
-  "include": ["tests/**/*.ts", "playwright.config.ts"],
+  "include": [
+    "src/lib/supabase/**/*.ts",
+    "src/lib/utils/**/*.ts",
+    "tests/**/*.ts",
+    "playwright.config.ts"
+  ],
   "exclude": ["node_modules", "api", "tests/dist"]
 }
