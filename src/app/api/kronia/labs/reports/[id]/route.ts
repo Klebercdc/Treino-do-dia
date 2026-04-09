@@ -1,3 +1,4 @@
+// NOTE: rota de referência para App Router. Produção Vercel atual usa /api/system (__route=kronia-labs-*) via vercel.json.
 import { NextRequest, NextResponse } from 'next/server';
 import { requireBearerAuth } from '../../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../../lib/supabase/admin';

@@ -10,6 +10,7 @@ var pastorDiagnosticoHandler = require('../src/server/legacy/pastor-diagnostico'
 var adminImportExercisesHandler = require('../src/server/internal/http/admin-import-exercises');
 var adminImportExercisesStatusHandler = require('../src/server/internal/http/admin-import-exercises-status');
 var adminImportExercisesAutoHandler = require('../src/server/internal/http/admin-import-exercises-auto');
+var kroniaLabsHandler = require('../src/server/internal/http/kronia-labs');
 var https = require('https');
 
 var SUPABASE_URL = (
@@ -189,6 +190,14 @@ module.exports = function(req, res) {
       return adminImportExercisesStatusHandler(req, res);
     case 'admin-import-exercises-auto':
       return adminImportExercisesAutoHandler(req, res);
+    case 'kronia-labs-init-upload':
+      return kroniaLabsHandler.handleInitUpload(req, res);
+    case 'kronia-labs-register':
+      return kroniaLabsHandler.handleRegister(req, res);
+    case 'kronia-labs-reports':
+      return kroniaLabsHandler.handleReports(req, res);
+    case 'kronia-labs-report-by-id':
+      return kroniaLabsHandler.handleReportById(req, res);
     default:
       return res.status(404).json({ error: 'rota não encontrada' });
   }

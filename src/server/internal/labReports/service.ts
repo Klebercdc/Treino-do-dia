@@ -5,7 +5,7 @@ const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
 const PROCESSING_STALE_MINUTES = 20;
 
-export type LabReportStatus = 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
+export type LabReportStatus = 'pending_upload' | 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
 
 export interface ExamOcrResponse {
   success: boolean;

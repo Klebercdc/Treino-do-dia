@@ -110,16 +110,20 @@
       "destination": "/api/system/health"
     },
     {
+      "source": "/api/kronia/labs/init-upload",
+      "destination": "/api/system?__route=kronia-labs-init-upload"
+    },
+    {
       "source": "/api/kronia/labs/register",
-      "destination": "/api/kronia/labs/register"
+      "destination": "/api/system?__route=kronia-labs-register"
     },
     {
       "source": "/api/kronia/labs/reports",
-      "destination": "/api/kronia/labs/reports"
+      "destination": "/api/system?__route=kronia-labs-reports"
     },
     {
       "source": "/api/kronia/labs/reports/:id",
-      "destination": "/api/kronia/labs/reports/:id"
+      "destination": "/api/system?__route=kronia-labs-report-by-id&id=:id"
     },
     {
       "source": "/api/(.*)",

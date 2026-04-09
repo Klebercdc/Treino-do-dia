@@ -322,21 +322,19 @@ test('rota register exige auth, valida MIME, bloqueia path traversal e verifica 
   assert.match(source, /CRON_SECRET/);
 });
 
-test('upload direto via Supabase Storage no frontend usa _sb.storage e registra via /register', () => {
+test('frontend labs usa init-upload + upload assinado + register (sem multipart backend)', () => {
   const source = readFileSync('app.js', 'utf-8');
-  // Upload direto ao storage (sem multipart via Next.js)
-  assert.match(source, /_sb\.storage\.from\('lab-reports'\)\.upload/);
-  // Registro via nova rota JSON
+  assert.match(source, /\/api\/kronia\/labs\/init-upload/);
+  assert.match(source, /uploadToSignedUrl/);
   assert.match(source, /\/api\/kronia\/labs\/register/);
-  // Não mais chama /upload com multipart
   assert.doesNotMatch(source, /\/api\/kronia\/labs\/upload/);
 });
 
-test('storagePath canônico de labs é {userId}/{uuid}.{ext} e não timestamp-safeName', () => {
-  const source = readFileSync('app.js', 'utf-8');
-  assert.match(source, /generateCanonicalLabsObjectId/);
-  assert.match(source, /currentUser\.id \+ '\/' \+ objectId \+ '\.' \+ fileExt/);
-  assert.doesNotMatch(source, /Date\.now\(\)\.toString\(36\)/);
+test('storagePath canônico de labs é {userId}/{uuid}.{ext} e alinhado com policy', () => {
+  const source = readFileSync('src/core/labs/labRepository.ts', 'utf-8');
+  assert.match(source, /randomUUID/);
+  assert.match(source, /return `\$\{userId\}\/\$\{randomUUID\(\)\}\$\{ext\}`/);
+  assert.doesNotMatch(source, /Date\.now\(/);
 
   const canonicalRe = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/;
   assert.match('550e8400-e29b-41d4-a716-446655440000/4d7f0b88-7f6c-4f8d-b40d-8d72d3454c1a.pdf', canonicalRe);
@@ -359,7 +357,8 @@ test('register valida existência de objeto no storage e middleware não interce
   assert.match(registerSource, /deleteLabReportRecord/);
   assert.match(registerSource, /requireBearerAuth/);
 
-  assert.doesNotMatch(middlewareSource, /\/api\/kronia\/labs\/register/);
+  assert.match(middlewareSource, /\/api\/kronia\/labs\/register/);
+  assert.match(middlewareSource, /\/api\/kronia\/labs\/reports/);
   assert.doesNotMatch(middlewareSource, /\/api\/kronia\/labs\/upload/);
   assert.doesNotMatch(middlewareSource, /\/api\/labs\/upload/);
 });
@@ -370,4 +369,20 @@ test('policy do bucket lab-reports exige owner + prefixo user + arquivo uuid.ext
   assert.match(source, /owner = auth\.uid\(\)/);
   assert.match(source, /\(storage\.foldername\(name\)\)\[1\] = auth\.uid\(\)::text/);
   assert.match(source, /name ~ '\^\[0-9a-f-\]\{36\}\/\[0-9a-f-\]\{36\}\\\.\[a-z0-9\]\{1,10\}\$'/);
+});
+
+test('vercel rewrites de labs apontam para handler serverless único em /api/system', () => {
+  const source = readFileSync('vercel.json', 'utf-8');
+  assert.match(source, /kronia-labs-init-upload/);
+  assert.match(source, /kronia-labs-register/);
+  assert.match(source, /kronia-labs-reports/);
+  assert.match(source, /kronia-labs-report-by-id/);
+});
+
+test('api/system roteia vertical de labs para handlers reais de produção', () => {
+  const source = readFileSync('api/system.js', 'utf-8');
+  assert.match(source, /handleInitUpload/);
+  assert.match(source, /handleRegister/);
+  assert.match(source, /handleReports/);
+  assert.match(source, /handleReportById/);
 });

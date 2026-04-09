@@ -2704,37 +2704,63 @@ async function _handleLabsScreenUpload(file) {
       return;
     }
 
-    // ── Passo 2: upload direto ao Supabase Storage (sem passar pelo Next.js)
-    var EXT_BY_MIME = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
-    var fallbackExt = ((file.name || '').split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
-    var fileExt = EXT_BY_MIME[mime] || fallbackExt || 'pdf';
-    var objectId = generateCanonicalLabsObjectId();
-    var storagePath = currentUser.id + '/' + objectId + '.' + fileExt;
+    var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
+
+    // ── Passo 2: init-upload (serverless leve) para gerar path canônico + signed URL
+    setStatus('Preparando upload seguro…', 'loading');
+    var initPath = resolveInternalApiPath('/api/kronia/labs/init-upload');
+    var initResp = await fetch(initPath, {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      body: JSON.stringify({ fileName: file.name, mimeType: mime, fileSize: file.size }),
+    }).catch(function(fetchErr) {
+      console.error('[labs-init-upload] network error:', fetchErr);
+      return null;
+    });
+
+    if (!initResp) {
+      setStatus('Falha de rede ao iniciar upload. Verifique sua conexão.', 'error');
+      return;
+    }
+
+    var initPayload = await initResp.json().catch(function() { return null; });
+    if (!initResp.ok || !initPayload?.ok) {
+      var initError = initPayload?.error || initPayload?.message || ('HTTP ' + initResp.status);
+      setStatus('Erro ao iniciar upload: ' + initError, 'error');
+      return;
+    }
+
+    var labReportId = initPayload.labReportId;
+    var storagePath = initPayload.storagePath;
+    var uploadToken = initPayload.uploadToken;
+    var uploadBucket = initPayload.bucket || 'lab-reports';
     var uploadFile = mime !== file.type ? new File([file], file.name, { type: mime }) : file;
 
-    var storageResp = await _sb.storage.from('lab-reports').upload(storagePath, uploadFile, {
+    // ── Passo 3: upload direto no Storage usando signed URL/token
+    setStatus('Enviando arquivo…', 'loading');
+    var storageResp = await _sb.storage.from(uploadBucket).uploadToSignedUrl(storagePath, uploadToken, uploadFile, {
       contentType: mime,
       upsert: false,
     });
     if (storageResp.error) {
       var storErr = storageResp.error.message || String(storageResp.error);
-      console.error('[labs-upload] storage error:', storErr);
+      console.error('[labs-upload] storage signed error:', storErr);
       setStatus('Erro ao enviar arquivo: ' + storErr, 'error');
       return;
     }
 
-    // ── Passo 3: registrar o exame na API (apenas JSON, sem multipart)
+    // ── Passo 4: confirmar upload e enfileirar processamento assíncrono
     setStatus('Registrando exame…', 'loading');
-    var headers = await (typeof getAuthHeaders === 'function' ? getAuthHeaders() : Promise.resolve({}));
     var registerPath = resolveInternalApiPath('/api/kronia/labs/register');
-    
+
     var resp;
     try {
       resp = await fetch(registerPath, {
         method: 'POST',
         headers,
         credentials: 'same-origin',
-        body: JSON.stringify({ storagePath, fileName: file.name, mimeType: mime }),
+        body: JSON.stringify({ labReportId: labReportId, storagePath: storagePath, fileName: file.name, mimeType: mime }),
       });
     } catch (fetchErr) {
       console.error('[labs-register] network error:', fetchErr);
@@ -2788,27 +2814,6 @@ async function _handleLabsScreenUpload(file) {
   }
 }
 
-function generateCanonicalLabsObjectId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return String(crypto.randomUUID()).toLowerCase();
-  }
-  var bytes = new Uint8Array(16);
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-  }
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  var hex = Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20, 32),
-  ].join('-');
-}
 
 async function loadLabsScreenHistory(forceRefresh) {
   var container = document.getElementById('labsHistoryContainer');
