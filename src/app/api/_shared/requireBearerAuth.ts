@@ -32,8 +32,8 @@ function extractBearerToken(authorizationHeader: string | null): string | null {
 }
 
 export async function requireBearerAuth(request: NextRequest): Promise<RequireBearerAuthResponse> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return {
@@ -41,7 +41,7 @@ export async function requireBearerAuth(request: NextRequest): Promise<RequireBe
       response: buildApiError(
         500,
         'server_misconfigured',
-        'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY',
+        'Missing Supabase URL or anon key in runtime environment',
       ),
     };
   }

@@ -6,7 +6,14 @@ export async function GET() {
   const envStatus = validateRuntimeEnv();
   const ai = getAIConfig();
 
-  const requiredMissing = envStatus.vars.filter((item) => ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'].includes(item.key) && !item.found);
+  const hasSupabaseUrl = Boolean(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const hasSupabaseAnonKey = Boolean(process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const requiredMissing = [
+    !hasSupabaseUrl ? { key: 'SUPABASE_URL', found: false, valueMasked: 'missing' } : null,
+    !hasSupabaseAnonKey ? { key: 'SUPABASE_ANON_KEY', found: false, valueMasked: 'missing' } : null,
+    !hasServiceRoleKey ? { key: 'SUPABASE_SERVICE_ROLE_KEY', found: false, valueMasked: 'missing' } : null,
+  ].filter(Boolean);
   const upstashRequired = ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'];
   const upstash = {
     configured: upstashRequired.every((key) => Boolean(process.env[key])),

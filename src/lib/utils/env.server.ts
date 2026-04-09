@@ -56,14 +56,20 @@ export function assertServerOnlySecretNotPublic(name: string): void {
 
 export function getSupabaseConfig(target: 'server' | 'client' = 'server'): SupabaseConfig {
   if (target === 'client') {
-    const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-    const anonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    const url = getOptionalEnv('NEXT_PUBLIC_SUPABASE_URL') ?? getOptionalEnv('SUPABASE_URL');
+    const anonKey = getOptionalEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') ?? getOptionalEnv('SUPABASE_ANON_KEY');
+    if (!url || !anonKey) {
+      throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    }
     return { url, anonKey };
   }
 
-  const url = requireEnv('SUPABASE_URL');
-  const anonKey = requireEnv('SUPABASE_ANON_KEY');
+  const url = getOptionalEnv('SUPABASE_URL') ?? getOptionalEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = getOptionalEnv('SUPABASE_ANON_KEY') ?? getOptionalEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
   const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !anonKey) {
+    throw new Error('Missing required environment variable: SUPABASE_URL/SUPABASE_ANON_KEY');
+  }
   return { url, anonKey, serviceRoleKey };
 }
 
