@@ -2773,9 +2773,9 @@ async function _handleLabsScreenUpload(file) {
     if (!resp.ok || !payload?.ok) {
       var errMsg = payload?.error || payload?.message || ('HTTP ' + resp.status);
       
-      // PENSAR FORA DA CAIXA: Detecção de 404 sistêmico (Build Mismatch / Cache Antigo)
-      if (resp.status === 404) {
-        console.error('[labs-register] 404 detectado. Verificando integridade do build...');
+      // Detecção de 404 sistêmico (roteamento/build) — só quando não há erro da aplicação no payload
+      if (resp.status === 404 && !payload?.error) {
+        console.error('[labs-register] 404 de roteamento detectado. Verificando integridade do build...');
         try {
           var healthResp = await fetch('/api/system/health', { cache: 'no-store' });
           var health = await healthResp.json().catch(function() { return null; });

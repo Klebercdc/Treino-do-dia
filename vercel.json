@@ -107,7 +107,7 @@
     },
     {
       "source": "/api/system/health",
-      "destination": "/api/system/health"
+      "destination": "/api/system?__route=health"
     },
     {
       "source": "/api/kronia/labs/init-upload",

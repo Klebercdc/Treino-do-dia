@@ -166,6 +166,8 @@ module.exports = function(req, res) {
 
   var route = (req.query && req.query.__route) || '';
   switch (route) {
+    case 'health':
+      return res.status(200).json({ ok: true, ts: Date.now() });
     case 'science-articles':
       return handleScienceArticles(req, res);
     case 'science-review':
