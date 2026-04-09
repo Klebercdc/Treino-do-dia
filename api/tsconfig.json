@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "types": ["node"]
+  },
+  "include": [
+    "../src/lib/supabase/**/*.ts",
+    "../src/lib/utils/**/*.ts",
+    "../src/server/**/*.ts"
+  ],
+  "exclude": ["../node_modules", "../tests/dist"]
+}
