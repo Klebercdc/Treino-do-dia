@@ -93,19 +93,40 @@ async function ensureObjectExistsInStorage(admin, storagePath) {
 function withAuth(req, res, handler) {
   return auth.requireAuth(req, res, function(user) {
     Promise.resolve(handler(user)).catch(function(error) {
+      console.error('[labs/fatal] uncaught exception:', {
+        message: error && error.message,
+        stack: error && error.stack ? String(error.stack).slice(0, 600) : undefined
+      });
       var reason = error && error.message ? error.message : 'unknown';
-      return res.status(500).json({ ok: false, error: String(reason).slice(0, 220) });
+      return res.status(500).json({ ok: false, error: String(reason).slice(0, 500), code: 'INTERNAL_ERROR' });
     });
   });
 }
 
+// ---------------------------------------------------------------------------
+// POST /api/kronia/labs/init-upload
+// Creates a pending lab_reports row and returns a signed upload URL.
+// ---------------------------------------------------------------------------
 function handleInitUpload(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Método não permitido.' });
+
+  console.log('[labs/init-upload] start', { method: req.method });
+
   return withAuth(req, res, async function(user) {
+    console.log('[labs/init-upload] auth', { userId: user.id });
+
     var body = parseJsonBody(req);
     var fileName = String(body.fileName || '').trim();
     var mimeType = normalizeAllowedMimeType(body.mimeType);
     var fileSize = Number(body.fileSize || 0);
+
+    console.log('[labs/init-upload] payload', {
+      bodyKeys: Object.keys(body),
+      fileName: fileName,
+      mimeType: mimeType,
+      fileSize: fileSize,
+      userId: user.id
+    });
 
     if (!fileName) return res.status(400).json({ ok: false, error: 'fileName é obrigatório.' });
     if (!isAllowedMimeType(mimeType)) {
@@ -118,40 +139,100 @@ function handleInitUpload(req, res) {
     var admin = createAdminSupabaseClient();
     var storagePath = buildCanonicalLabStoragePath(user.id, mimeType, fileName);
 
+    // Validate SDK capability before touching the DB
+    var bucketHandle = admin.storage.from(LAB_REPORTS_BUCKET);
+    console.log('[labs/init-upload] storage', {
+      bucket: LAB_REPORTS_BUCKET,
+      storagePath: storagePath,
+      createSignedUploadUrlType: typeof bucketHandle.createSignedUploadUrl
+    });
+    if (typeof bucketHandle.createSignedUploadUrl !== 'function') {
+      console.error('[labs/init-upload] storage', { error: 'createSignedUploadUrl indisponível no SDK instalado' });
+      return res.status(500).json({
+        ok: false,
+        error: 'SDK incompatível: createSignedUploadUrl indisponível',
+        code: 'SDK_INCOMPATIBLE'
+      });
+    }
+
+    // Insert pending record
+    var insertPayload = {
+      user_id: user.id,
+      storage_bucket: LAB_REPORTS_BUCKET,
+      storage_path: storagePath,
+      file_url: storagePath,
+      file_name: fileName,
+      file_type: mimeType,
+      mime_type: mimeType,
+      status: 'pending_upload',
+      parse_status: 'pending_upload',  // FIX: was 'pending' — invalid per lab_reports_parse_status_check
+      processing_error: null
+    };
+    console.log('[labs/init-upload] insert-payload', insertPayload);
+
     var created = await admin
       .from('lab_reports')
-      .insert({
-        user_id: user.id,
-        storage_bucket: LAB_REPORTS_BUCKET,
-        storage_path: storagePath,
-        file_url: storagePath,
-        file_name: fileName,
-        file_type: mimeType,
-        mime_type: mimeType,
-        status: 'pending_upload',
-        parse_status: 'pending',
-        processing_error: null
-      })
+      .insert(insertPayload)
       .select('id,storage_path')
       .single();
 
+    console.log('[labs/init-upload] insert-result', {
+      hasData: !!created.data,
+      id: created.data && created.data.id,
+      hasError: !!created.error,
+      errorMessage: created.error && created.error.message,
+      errorCode: created.error && created.error.code,
+      errorDetails: created.error && created.error.details,
+      errorHint: created.error && created.error.hint
+    });
+
     if (created.error || !created.data || !created.data.id) {
-      var dbErr = created.error ? String(created.error.message || created.error.code || JSON.stringify(created.error)).slice(0, 300) : 'sem dados retornados';
-      console.error('[init-upload] DB insert error:', dbErr);
-      return res.status(500).json({ ok: false, error: 'Falha ao registrar init-upload: ' + dbErr });
+      var dbErr = created.error
+        ? String(created.error.message || created.error.code || JSON.stringify(created.error)).slice(0, 300)
+        : 'sem dados retornados';
+      console.error('[labs/init-upload] insert-result ERROR:', dbErr);
+      return res.status(500).json({
+        ok: false,
+        error: 'Falha ao registrar init-upload: ' + dbErr,
+        code: 'DB_INSERT_ERROR',
+        details: created.error ? {
+          message: created.error.message,
+          code: created.error.code,
+          details: created.error.details,
+          hint: created.error.hint
+        } : null
+      });
     }
 
-    if (typeof admin.storage.from(LAB_REPORTS_BUCKET).createSignedUploadUrl !== 'function') {
-      await admin.from('lab_reports').delete().eq('id', created.data.id);
-      return res.status(500).json({ ok: false, error: 'createSignedUploadUrl não disponível nesta versão do Supabase SDK.' });
-    }
+    // Generate signed upload URL
+    var signed = await bucketHandle.createSignedUploadUrl(storagePath);
 
-    var signed = await admin.storage.from(LAB_REPORTS_BUCKET).createSignedUploadUrl(storagePath);
+    console.log('[labs/init-upload] signed-result', {
+      hasData: !!signed.data,
+      hasSignedUrl: !!(signed.data && signed.data.signedUrl),
+      hasToken: !!(signed.data && signed.data.token),
+      hasError: !!signed.error,
+      errorMessage: signed.error && signed.error.message,
+      errorCode: signed.error && signed.error.statusCode,
+      errorDetails: signed.error && signed.error.details
+    });
+
     if (signed.error || !signed.data || !signed.data.signedUrl || !signed.data.token) {
-      var storErr = signed.error ? String(signed.error.message || signed.error.statusCode || JSON.stringify(signed.error)).slice(0, 300) : 'resposta incompleta';
-      console.error('[init-upload] storage signed URL error:', storErr);
+      var storErr = signed.error
+        ? String(signed.error.message || signed.error.statusCode || JSON.stringify(signed.error)).slice(0, 300)
+        : 'resposta incompleta da Storage API';
+      console.error('[labs/init-upload] signed-result ERROR:', storErr);
       await admin.from('lab_reports').delete().eq('id', created.data.id);
-      return res.status(500).json({ ok: false, error: 'Falha ao gerar URL assinada: ' + storErr });
+      return res.status(500).json({
+        ok: false,
+        error: 'Falha ao gerar URL assinada: ' + storErr,
+        code: 'STORAGE_SIGNED_URL_ERROR',
+        details: signed.error ? {
+          message: signed.error.message,
+          statusCode: signed.error.statusCode,
+          details: signed.error.details
+        } : null
+      });
     }
 
     return res.status(200).json({
@@ -167,14 +248,32 @@ function handleInitUpload(req, res) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// POST /api/kronia/labs/register
+// Confirms the file was uploaded to Storage and marks it ready for processing.
+// ---------------------------------------------------------------------------
 function handleRegister(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Método não permitido.' });
+
+  console.log('[labs/register] start', { method: req.method });
+
   return withAuth(req, res, async function(user) {
+    console.log('[labs/register] auth', { userId: user.id });
+
     var body = parseJsonBody(req);
     var labReportId = String(body.labReportId || '').trim();
     var storagePath = String(body.storagePath || '').trim();
     var fileName = String(body.fileName || '').trim();
     var mimeType = normalizeAllowedMimeType(body.mimeType);
+
+    console.log('[labs/register] payload', {
+      bodyKeys: Object.keys(body),
+      labReportId: labReportId,
+      storagePath: storagePath,
+      fileName: fileName,
+      mimeType: mimeType,
+      userId: user.id
+    });
 
     if (!labReportId || !storagePath || !fileName) {
       return res.status(400).json({ ok: false, error: 'labReportId, storagePath e fileName são obrigatórios.' });
@@ -210,23 +309,50 @@ function handleRegister(req, res) {
       return res.status(409).json({ ok: false, error: 'Arquivo não encontrado no storage. Refaça o upload antes de registrar.' });
     }
 
+    var updatePayload = {
+      file_name: fileName,
+      file_type: mimeType,
+      mime_type: mimeType,
+      status: 'uploaded',
+      parse_status: 'uploaded',  // FIX: was 'pending' — invalid per lab_reports_parse_status_check
+      processing_error: null
+    };
+    console.log('[labs/register] insert-payload', updatePayload);
+
     var updated = await admin
       .from('lab_reports')
-      .update({
-        file_name: fileName,
-        file_type: mimeType,
-        mime_type: mimeType,
-        status: 'uploaded',
-        parse_status: 'pending',
-        processing_error: null
-      })
+      .update(updatePayload)
       .eq('id', labReportId)
       .eq('user_id', user.id)
       .select('id')
       .single();
 
+    console.log('[labs/register] insert-result', {
+      hasData: !!updated.data,
+      id: updated.data && updated.data.id,
+      hasError: !!updated.error,
+      errorMessage: updated.error && updated.error.message,
+      errorCode: updated.error && updated.error.code,
+      errorDetails: updated.error && updated.error.details,
+      errorHint: updated.error && updated.error.hint
+    });
+
     if (updated.error || !updated.data || !updated.data.id) {
-      return res.status(500).json({ ok: false, error: 'Falha ao atualizar registro do exame.' });
+      var updErr = updated.error
+        ? String(updated.error.message || updated.error.code || JSON.stringify(updated.error)).slice(0, 300)
+        : 'sem dados retornados';
+      console.error('[labs/register] insert-result ERROR:', updErr);
+      return res.status(500).json({
+        ok: false,
+        error: 'Falha ao atualizar registro do exame: ' + updErr,
+        code: 'DB_UPDATE_ERROR',
+        details: updated.error ? {
+          message: updated.error.message,
+          code: updated.error.code,
+          details: updated.error.details,
+          hint: updated.error.hint
+        } : null
+      });
     }
 
     return res.status(200).json({ ok: true, labReportId: updated.data.id, status: 'processing' });
