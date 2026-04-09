@@ -136,13 +136,22 @@ function handleInitUpload(req, res) {
       .single();
 
     if (created.error || !created.data || !created.data.id) {
-      return res.status(500).json({ ok: false, error: 'Falha ao registrar init-upload.' });
+      var dbErr = created.error ? String(created.error.message || created.error.code || JSON.stringify(created.error)).slice(0, 300) : 'sem dados retornados';
+      console.error('[init-upload] DB insert error:', dbErr);
+      return res.status(500).json({ ok: false, error: 'Falha ao registrar init-upload: ' + dbErr });
+    }
+
+    if (typeof admin.storage.from(LAB_REPORTS_BUCKET).createSignedUploadUrl !== 'function') {
+      await admin.from('lab_reports').delete().eq('id', created.data.id);
+      return res.status(500).json({ ok: false, error: 'createSignedUploadUrl não disponível nesta versão do Supabase SDK.' });
     }
 
     var signed = await admin.storage.from(LAB_REPORTS_BUCKET).createSignedUploadUrl(storagePath);
     if (signed.error || !signed.data || !signed.data.signedUrl || !signed.data.token) {
+      var storErr = signed.error ? String(signed.error.message || signed.error.statusCode || JSON.stringify(signed.error)).slice(0, 300) : 'resposta incompleta';
+      console.error('[init-upload] storage signed URL error:', storErr);
       await admin.from('lab_reports').delete().eq('id', created.data.id);
-      return res.status(500).json({ ok: false, error: 'Falha ao gerar URL assinada de upload.' });
+      return res.status(500).json({ ok: false, error: 'Falha ao gerar URL assinada: ' + storErr });
     }
 
     return res.status(200).json({
