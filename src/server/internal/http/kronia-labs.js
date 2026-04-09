@@ -291,7 +291,7 @@ function handleReportById(req, res) {
     var admin = createAdminSupabaseClient();
     var reportResult = await admin
       .from('lab_reports')
-      .select('*')
+      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
       .eq('id', id)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -301,7 +301,7 @@ function handleReportById(req, res) {
 
     var extractions = await admin
       .from('lab_report_extractions')
-      .select('*')
+      .select('id,lab_report_id,extraction_mode,confidence,raw_output,structured_data,created_at')
       .eq('lab_report_id', id)
       .order('created_at', { ascending: false });
 
@@ -309,7 +309,7 @@ function handleReportById(req, res) {
 
     var biomarkers = await admin
       .from('lab_report_biomarkers')
-      .select('*')
+      .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
       .eq('lab_report_id', id)
       .order('created_at', { ascending: true });
 
