@@ -70,7 +70,7 @@ def extract_payload(payload: dict):
             pages = [{"page": 1, "text": raw_text}]
 
         table_rows = rows_to_table(rows)
-        biomarkers = parse_biomarkers(table_rows)
+        biomarkers = parse_biomarkers(table_rows, raw_text=raw_text, pages=pages)
         mean_conf = 0.0
         if rows:
             mean_conf = sum(float(row.get("conf", 0)) for row in rows) / max(1, len(rows))
