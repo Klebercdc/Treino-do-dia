@@ -1,51 +1,189 @@
 import re
 import unicodedata
 
+# ---------------------------------------------------------------------------
+# BIOMARKER CATALOG — EXPANDED (70+ markers, full PT-BR/EN alias coverage)
+# ---------------------------------------------------------------------------
+# Rules:
+# - marker_key: snake_case canonical key (stable, used by downstream systems)
+# - marker_name: display name in Portuguese
+# - aliases: list of normalized text strings (accents stripped, lowercase, trimmed)
+#   Order from most-specific to least-specific within each marker.
+# ---------------------------------------------------------------------------
 
 MARKERS = [
+    # -----------------------------------------------------------------------
+    # 1. GLICEMIA E METABOLISMO
+    # -----------------------------------------------------------------------
     {
-        'marker_key': 'psa_free',
-        'marker_name': 'PSA livre',
+        'marker_key': 'glucose',
+        'marker_name': 'Glicose',
         'aliases': [
-            'psa livre',
-            'psa livre antígeno prostático específico',
-            'psa livre antigeno prostatico especifico',
+            'glicose em jejum',
+            'glicemia de jejum',
+            'glicemia jejum',
+            'glicemia',
+            'glicose',
+            'glucose',
+            'blood glucose',
         ],
     },
     {
-        'marker_key': 'psa_total',
-        'marker_name': 'PSA total',
+        'marker_key': 'hba1c',
+        'marker_name': 'Hemoglobina Glicada (HbA1c)',
         'aliases': [
-            'psa total antígeno prostático específico',
-            'psa total antigeno prostatico especifico',
-            'psa total',
+            'hemoglobina glicada hba1c',
+            'hemoglobina glicada a1c',
+            'hemoglobina glicada',
+            'hba1c',
+            'a1c',
+            'glycated hemoglobin',
+            'glycohemoglobin',
         ],
     },
     {
-        'marker_key': 'testosterone_total',
-        'marker_name': 'Testosterona total',
-        'aliases': ['testosterona total'],
+        'marker_key': 'insulin',
+        'marker_name': 'Insulina',
+        'aliases': [
+            'insulina de jejum',
+            'insulina basal',
+            'insulina',
+            'insulin',
+        ],
     },
     {
-        'marker_key': 'testosterone_free',
-        'marker_name': 'Testosterona livre',
-        'aliases': ['testosterona livre'],
+        'marker_key': 'homa_ir',
+        'marker_name': 'HOMA-IR',
+        'aliases': [
+            'homa ir',
+            'homa-ir',
+            'indice homa',
+            'indice de resistencia a insulina',
+        ],
     },
+    {
+        'marker_key': 'c_peptide',
+        'marker_name': 'Peptídeo C',
+        'aliases': [
+            'peptideo c',
+            'peptideo-c',
+            'c-peptide',
+            'c peptide',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 2. LIPÍDIOS
+    # -----------------------------------------------------------------------
     {
         'marker_key': 'total_cholesterol',
-        'marker_name': 'Colesterol total',
-        'aliases': ['colesterol total'],
+        'marker_name': 'Colesterol Total',
+        'aliases': [
+            'colesterol total',
+            'total cholesterol',
+            'cholesterol total',
+        ],
     },
     {
         'marker_key': 'hdl_cholesterol',
         'marker_name': 'Colesterol HDL',
-        'aliases': ['colesterol hdl', 'hdl colesterol', 'hdl'],
+        'aliases': [
+            'colesterol hdl',
+            'hdl colesterol',
+            'hdl-colesterol',
+            'hdl',
+            'high density lipoprotein',
+        ],
+    },
+    {
+        'marker_key': 'ldl_cholesterol',
+        'marker_name': 'Colesterol LDL',
+        'aliases': [
+            'colesterol ldl calculado',
+            'colesterol ldl direto',
+            'colesterol ldl',
+            'ldl colesterol',
+            'ldl-colesterol',
+            'ldl',
+            'low density lipoprotein',
+        ],
+    },
+    {
+        'marker_key': 'vldl_cholesterol',
+        'marker_name': 'Colesterol VLDL',
+        'aliases': [
+            'colesterol vldl',
+            'vldl colesterol',
+            'vldl-colesterol',
+            'vldl',
+            'very low density lipoprotein',
+        ],
     },
     {
         'marker_key': 'triglycerides',
-        'marker_name': 'Triglicérides',
-        'aliases': ['triglicérides', 'triglicerides', 'triglicerídeos', 'triglicerideos'],
+        'marker_name': 'Triglicerídeos',
+        'aliases': [
+            'triglicerideos',
+            'triglicerides',
+            'triglicérides',
+            'triglicerídeos',
+            'triglycerides',
+            'trigliceridio',
+        ],
     },
+    {
+        'marker_key': 'non_hdl_cholesterol',
+        'marker_name': 'Colesterol Não-HDL',
+        'aliases': [
+            'colesterol nao hdl',
+            'colesterol nao-hdl',
+            'nao hdl',
+            'non-hdl cholesterol',
+            'non hdl',
+        ],
+    },
+    {
+        'marker_key': 'apolipoprotein_a1',
+        'marker_name': 'Apolipoproteína A-I',
+        'aliases': [
+            'apolipoproteina a1',
+            'apolipoproteina a-i',
+            'apolipoproteina ai',
+            'apolipoprotein a1',
+            'apolipoprotein a-i',
+            'apoa1',
+            'apo a1',
+            'apo-a1',
+        ],
+    },
+    {
+        'marker_key': 'apolipoprotein_b',
+        'marker_name': 'Apolipoproteína B',
+        'aliases': [
+            'apolipoproteina b',
+            'apolipoproteina-b',
+            'apolipoprotein b',
+            'apob',
+            'apo b',
+            'apo-b',
+        ],
+    },
+    {
+        'marker_key': 'lipoprotein_a',
+        'marker_name': 'Lipoproteína (a)',
+        'aliases': [
+            'lipoproteina(a)',
+            'lipoproteina a',
+            'lipoprotein(a)',
+            'lipoprotein a',
+            'lp(a)',
+            'lpa',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 3. FÍGADO
+    # -----------------------------------------------------------------------
     {
         'marker_key': 'ast',
         'marker_name': 'TGO / AST',
@@ -54,6 +192,7 @@ MARKERS = [
             'transaminase glutâmico oxalacética',
             'oxalacetica-tgo',
             'oxalacética-tgo',
+            'aspartato aminotransferase',
             'tgo',
             'ast',
         ],
@@ -66,39 +205,801 @@ MARKERS = [
             'transaminase glutâmico pirúvica',
             'piruvica-tgp',
             'pirúvica-tgp',
+            'alanina aminotransferase',
             'tgp',
             'alt',
         ],
     },
+    {
+        'marker_key': 'ggt',
+        'marker_name': 'GGT / Gama GT',
+        'aliases': [
+            'gama-glutamiltransferase',
+            'gama glutamiltransferase',
+            'gamma-glutamiltransferase',
+            'gamma gt',
+            'gama gt',
+            'ggt',
+        ],
+    },
+    {
+        'marker_key': 'alkaline_phosphatase',
+        'marker_name': 'Fosfatase Alcalina',
+        'aliases': [
+            'fosfatase alcalina',
+            'alkaline phosphatase',
+            'fa',
+        ],
+    },
+    {
+        'marker_key': 'bilirubin_total',
+        'marker_name': 'Bilirrubina Total',
+        'aliases': [
+            'bilirrubina total',
+            'total bilirubin',
+            'bilirubin total',
+        ],
+    },
+    {
+        'marker_key': 'bilirubin_direct',
+        'marker_name': 'Bilirrubina Direta',
+        'aliases': [
+            'bilirrubina direta',
+            'direct bilirubin',
+            'bilirubin direct',
+            'bilirrubina conjugada',
+        ],
+    },
+    {
+        'marker_key': 'bilirubin_indirect',
+        'marker_name': 'Bilirrubina Indireta',
+        'aliases': [
+            'bilirrubina indireta',
+            'indirect bilirubin',
+            'bilirubin indirect',
+            'bilirrubina livre',
+        ],
+    },
+    {
+        'marker_key': 'albumin',
+        'marker_name': 'Albumina',
+        'aliases': [
+            'albumina serica',
+            'albumina',
+            'serum albumin',
+            'albumin',
+        ],
+    },
+    {
+        'marker_key': 'total_protein',
+        'marker_name': 'Proteínas Totais',
+        'aliases': [
+            'proteinas totais',
+            'proteínas totais',
+            'total protein',
+            'proteins total',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 4. RIM E HIDRATAÇÃO
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'creatinine',
+        'marker_name': 'Creatinina',
+        'aliases': [
+            'creatinina serica',
+            'creatinina',
+            'serum creatinine',
+            'creatinine',
+        ],
+    },
+    {
+        'marker_key': 'urea',
+        'marker_name': 'Ureia',
+        'aliases': [
+            'ureia',
+            'ureia serica',
+            'ureia sanguinea',
+            'blood urea nitrogen',
+            'bun',
+            'urea',
+        ],
+    },
+    {
+        'marker_key': 'uric_acid',
+        'marker_name': 'Ácido Úrico',
+        'aliases': [
+            'acido urico',
+            'ácido úrico',
+            'uric acid',
+            'urate',
+        ],
+    },
+    {
+        'marker_key': 'egfr',
+        'marker_name': 'Taxa de Filtração Glomerular (TFG/eGFR)',
+        'aliases': [
+            'taxa de filtracao glomerular estimada',
+            'taxa de filtracao glomerular',
+            'tfg estimada',
+            'tfg',
+            'egfr',
+            'estimated gfr',
+            'creatinine clearance',
+            'clearance de creatinina',
+        ],
+    },
+    {
+        'marker_key': 'sodium',
+        'marker_name': 'Sódio',
+        'aliases': [
+            'sodio serico',
+            'sodio',
+            'sódio',
+            'serum sodium',
+            'sodium',
+            'na',
+        ],
+    },
+    {
+        'marker_key': 'potassium',
+        'marker_name': 'Potássio',
+        'aliases': [
+            'potassio serico',
+            'potassio',
+            'potássio',
+            'serum potassium',
+            'potassium',
+            'kalium',
+            'k',
+        ],
+    },
+    {
+        'marker_key': 'magnesium',
+        'marker_name': 'Magnésio',
+        'aliases': [
+            'magnesio serico',
+            'magnesio',
+            'magnésio',
+            'serum magnesium',
+            'magnesium',
+            'mg',
+        ],
+    },
+    {
+        'marker_key': 'calcium',
+        'marker_name': 'Cálcio',
+        'aliases': [
+            'calcio total',
+            'calcio ionizado',
+            'calcio serico',
+            'calcio',
+            'cálcio',
+            'serum calcium',
+            'calcium',
+            'ca',
+        ],
+    },
+    {
+        'marker_key': 'phosphorus',
+        'marker_name': 'Fósforo',
+        'aliases': [
+            'fosforo serico',
+            'fosforo',
+            'fósforo',
+            'phosphorus',
+            'phosphate',
+            'fosfato',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 5. HEMOGRAMA E FERRO
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'hemoglobin',
+        'marker_name': 'Hemoglobina',
+        'aliases': [
+            'hemoglobina',
+            'hb',
+            'hemoglobin',
+        ],
+    },
+    {
+        'marker_key': 'hematocrit',
+        'marker_name': 'Hematócrito',
+        'aliases': [
+            'hematocrito',
+            'hematócrito',
+            'hct',
+            'hematocrit',
+        ],
+    },
+    {
+        'marker_key': 'rbc',
+        'marker_name': 'Hemácias / Eritrócitos',
+        'aliases': [
+            'eritrocitos',
+            'eritrócitos',
+            'hemacias',
+            'hemácias',
+            'red blood cells',
+            'rbc',
+        ],
+    },
+    {
+        'marker_key': 'mcv',
+        'marker_name': 'VCM (Volume Corpuscular Médio)',
+        'aliases': [
+            'volume corpuscular medio',
+            'volume corpuscular médio',
+            'vcm',
+            'mean corpuscular volume',
+            'mcv',
+        ],
+    },
+    {
+        'marker_key': 'mch',
+        'marker_name': 'HCM (Hemoglobina Corpuscular Média)',
+        'aliases': [
+            'hemoglobina corpuscular media',
+            'hemoglobina corpuscular média',
+            'hcm',
+            'mean corpuscular hemoglobin',
+            'mch',
+        ],
+    },
+    {
+        'marker_key': 'mchc',
+        'marker_name': 'CHCM (Concentração de Hemoglobina Corpuscular Média)',
+        'aliases': [
+            'concentracao de hemoglobina corpuscular media',
+            'concentração de hemoglobina corpuscular média',
+            'chcm',
+            'mean corpuscular hemoglobin concentration',
+            'mchc',
+        ],
+    },
+    {
+        'marker_key': 'rdw',
+        'marker_name': 'RDW (Amplitude de Distribuição dos Eritrócitos)',
+        'aliases': [
+            'amplitude de distribuicao dos eritrocitos',
+            'amplitude de distribuição dos eritrócitos',
+            'rdw-cv',
+            'rdw',
+            'red cell distribution width',
+        ],
+    },
+    {
+        'marker_key': 'wbc',
+        'marker_name': 'Leucócitos',
+        'aliases': [
+            'leucocitos totais',
+            'leucocitos',
+            'leucócitos',
+            'white blood cells',
+            'white blood count',
+            'wbc',
+            'glóbulos brancos',
+            'globulos brancos',
+        ],
+    },
+    {
+        'marker_key': 'neutrophils',
+        'marker_name': 'Neutrófilos',
+        'aliases': [
+            'neutrofilos',
+            'neutrófilos',
+            'neutrophils',
+        ],
+    },
+    {
+        'marker_key': 'lymphocytes',
+        'marker_name': 'Linfócitos',
+        'aliases': [
+            'linfocitos',
+            'linfócitos',
+            'lymphocytes',
+        ],
+    },
+    {
+        'marker_key': 'monocytes',
+        'marker_name': 'Monócitos',
+        'aliases': [
+            'monocitos',
+            'monócitos',
+            'monocytes',
+        ],
+    },
+    {
+        'marker_key': 'eosinophils',
+        'marker_name': 'Eosinófilos',
+        'aliases': [
+            'eosinofilos',
+            'eosinófilos',
+            'eosinophils',
+        ],
+    },
+    {
+        'marker_key': 'basophils',
+        'marker_name': 'Basófilos',
+        'aliases': [
+            'basofilos',
+            'basófilos',
+            'basophils',
+        ],
+    },
+    {
+        'marker_key': 'platelets',
+        'marker_name': 'Plaquetas',
+        'aliases': [
+            'plaquetas',
+            'contagem de plaquetas',
+            'platelet count',
+            'platelets',
+            'thrombocytes',
+        ],
+    },
+    {
+        'marker_key': 'ferritin',
+        'marker_name': 'Ferritina',
+        'aliases': [
+            'ferritina serica',
+            'ferritina',
+            'serum ferritin',
+            'ferritin',
+        ],
+    },
+    {
+        'marker_key': 'serum_iron',
+        'marker_name': 'Ferro Sérico',
+        'aliases': [
+            'ferro serico',
+            'ferro',
+            'hierro',
+            'serum iron',
+            'iron',
+        ],
+    },
+    {
+        'marker_key': 'transferrin',
+        'marker_name': 'Transferrina',
+        'aliases': [
+            'transferrina',
+            'transferrin',
+        ],
+    },
+    {
+        'marker_key': 'transferrin_saturation',
+        'marker_name': 'Saturação de Transferrina',
+        'aliases': [
+            'saturacao de transferrina',
+            'saturação de transferrina',
+            'saturacao transferrina',
+            'indice de saturacao de transferrina',
+            'transferrin saturation',
+            'iron saturation',
+        ],
+    },
+    {
+        'marker_key': 'vitamin_b12',
+        'marker_name': 'Vitamina B12',
+        'aliases': [
+            'vitamina b12',
+            'cobalamina',
+            'cianocobalamina',
+            'vitamin b12',
+            'cobalamin',
+            'b12',
+        ],
+    },
+    {
+        'marker_key': 'folate',
+        'marker_name': 'Folato / Ácido Fólico',
+        'aliases': [
+            'folato serico',
+            'acido folico',
+            'ácido fólico',
+            'folato',
+            'serum folate',
+            'folic acid',
+            'folate',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 6. TIREOIDE
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'tsh',
+        'marker_name': 'TSH',
+        'aliases': [
+            'tirotropina',
+            'hormonio estimulante da tireoide',
+            'hormônio estimulante da tireoide',
+            'thyroid stimulating hormone',
+            'tsh',
+        ],
+    },
+    {
+        'marker_key': 't4_free',
+        'marker_name': 'T4 Livre',
+        'aliases': [
+            't4 livre',
+            't4l',
+            'free thyroxine',
+            'free t4',
+            'ft4',
+            'tiroxina livre',
+        ],
+    },
+    {
+        'marker_key': 't4_total',
+        'marker_name': 'T4 Total',
+        'aliases': [
+            't4 total',
+            'tiroxina total',
+            'thyroxine total',
+            'total t4',
+            't4',
+        ],
+    },
+    {
+        'marker_key': 't3_free',
+        'marker_name': 'T3 Livre',
+        'aliases': [
+            't3 livre',
+            't3l',
+            'free triiodothyronine',
+            'free t3',
+            'ft3',
+            'triiodotironina livre',
+        ],
+    },
+    {
+        'marker_key': 't3_total',
+        'marker_name': 'T3 Total',
+        'aliases': [
+            't3 total',
+            'triiodotironina total',
+            'triiodothyronine total',
+            'total t3',
+            't3',
+        ],
+    },
+    {
+        'marker_key': 'anti_tpo',
+        'marker_name': 'Anti-TPO',
+        'aliases': [
+            'anticorpo anti-tireoperoxidase',
+            'anticorpo antitireoperoxidase',
+            'anti tireoide peroxidase',
+            'anti-tireoperoxidase',
+            'anti-tpo',
+            'anti tpo',
+            'tpo antibody',
+        ],
+    },
+    {
+        'marker_key': 'anti_tg',
+        'marker_name': 'Anti-Tireoglobulina',
+        'aliases': [
+            'anticorpo anti-tireoglobulina',
+            'anti-tireoglobulina',
+            'anti tireoglobulina',
+            'anti-tg',
+            'anti tg',
+            'thyroglobulin antibody',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 7. HORMONAL MASCULINO / FEMININO
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'testosterone_total',
+        'marker_name': 'Testosterona Total',
+        'aliases': [
+            'testosterona total',
+            'testosterone total',
+            'total testosterone',
+        ],
+    },
+    {
+        'marker_key': 'testosterone_free',
+        'marker_name': 'Testosterona Livre',
+        'aliases': [
+            'testosterona livre',
+            'testosterone livre',
+            'free testosterone',
+            'testosterone free',
+        ],
+    },
+    {
+        'marker_key': 'testosterone_bioavailable',
+        'marker_name': 'Testosterona Biodisponível',
+        'aliases': [
+            'testosterona biodisponivel',
+            'testosterona biodisponível',
+            'bioavailable testosterone',
+        ],
+    },
+    {
+        'marker_key': 'shbg',
+        'marker_name': 'SHBG',
+        'aliases': [
+            'globulina ligadora de hormonios sexuais',
+            'globulina ligadora de hormônios sexuais',
+            'sex hormone binding globulin',
+            'shbg',
+        ],
+    },
+    {
+        'marker_key': 'estradiol',
+        'marker_name': 'Estradiol',
+        'aliases': [
+            'estradiol',
+            '17-beta estradiol',
+            'e2',
+            'estradiol e2',
+        ],
+    },
+    {
+        'marker_key': 'lh',
+        'marker_name': 'LH (Hormônio Luteinizante)',
+        'aliases': [
+            'hormonio luteinizante',
+            'hormônio luteinizante',
+            'luteinizing hormone',
+            'lh',
+        ],
+    },
+    {
+        'marker_key': 'fsh',
+        'marker_name': 'FSH (Hormônio Folículo-Estimulante)',
+        'aliases': [
+            'hormonio foliculo estimulante',
+            'hormônio folículo-estimulante',
+            'follicle stimulating hormone',
+            'fsh',
+        ],
+    },
+    {
+        'marker_key': 'prolactin',
+        'marker_name': 'Prolactina',
+        'aliases': [
+            'prolactina',
+            'prolactin',
+        ],
+    },
+    {
+        'marker_key': 'dht',
+        'marker_name': 'Dihidrotestosterona (DHT)',
+        'aliases': [
+            'dihidrotestosterona',
+            'di-hidrotestosterona',
+            'diidrotestosterona',
+            'dihydrotestosterone',
+            'dht',
+        ],
+    },
+    {
+        'marker_key': 'progesterone',
+        'marker_name': 'Progesterona',
+        'aliases': [
+            'progesterona',
+            'progesterone',
+        ],
+    },
+    {
+        'marker_key': 'dhea_s',
+        'marker_name': 'DHEA-S',
+        'aliases': [
+            'sulfato de dehidroepiandrosterona',
+            'sulfato de desidroepiandrosterona',
+            'dehidroepiandrosterona sulfato',
+            'desidroepiandrosterona sulfato',
+            'dhea sulfato',
+            'dheas',
+            'dhea-s',
+            'dhea s',
+            'dehydroepiandrosterone sulfate',
+        ],
+    },
+    {
+        'marker_key': 'cortisol',
+        'marker_name': 'Cortisol',
+        'aliases': [
+            'cortisol matinal',
+            'cortisol basal',
+            'cortisol',
+        ],
+    },
+    {
+        'marker_key': 'psa_total',
+        'marker_name': 'PSA Total',
+        'aliases': [
+            'psa total antígeno prostático específico',
+            'psa total antigeno prostatico especifico',
+            'antigeno prostatico especifico total',
+            'antígeno prostático específico total',
+            'psa total',
+            'prostate specific antigen total',
+        ],
+    },
+    {
+        'marker_key': 'psa_free',
+        'marker_name': 'PSA Livre',
+        'aliases': [
+            'psa livre antígeno prostático específico',
+            'psa livre antigeno prostatico especifico',
+            'antigeno prostatico especifico livre',
+            'antígeno prostático específico livre',
+            'psa livre',
+            'prostate specific antigen free',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 8. INFLAMAÇÃO E RISCO
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'crp',
+        'marker_name': 'Proteína C Reativa (PCR)',
+        'aliases': [
+            'proteina c reativa ultrassensivel',
+            'proteína c reativa ultrassensível',
+            'proteina c reativa quantitativa',
+            'proteina c reativa',
+            'proteína c reativa',
+            'pcr ultrassensivel',
+            'pcr-us',
+            'pcr',
+            'c-reactive protein',
+            'crp',
+        ],
+    },
+    {
+        'marker_key': 'homocysteine',
+        'marker_name': 'Homocisteína',
+        'aliases': [
+            'homocisteina',
+            'homocisteína',
+            'homocysteine',
+        ],
+    },
+    {
+        'marker_key': 'esr',
+        'marker_name': 'Velocidade de Hemossedimentação (VHS)',
+        'aliases': [
+            'velocidade de hemossedimentacao',
+            'velocidade de hemossedimentação',
+            'vhs',
+            'erythrocyte sedimentation rate',
+            'esr',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 9. VITAMINAS E MICRONUTRIENTES
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'vitamin_d',
+        'marker_name': 'Vitamina D (25-OH)',
+        'aliases': [
+            '25 hidroxivitamina d',
+            '25-hidroxivitamina d',
+            '25 oh vitamina d',
+            '25-oh vitamina d',
+            '25(oh)d',
+            'vitamina d 25-oh',
+            'vitamina d total',
+            'vitamina d',
+            '25-hydroxyvitamin d',
+            '25 hydroxyvitamin d',
+            'vitamin d',
+        ],
+    },
+    {
+        'marker_key': 'zinc',
+        'marker_name': 'Zinco',
+        'aliases': [
+            'zinco serico',
+            'zinco',
+            'serum zinc',
+            'zinc',
+        ],
+    },
+    {
+        'marker_key': 'copper',
+        'marker_name': 'Cobre',
+        'aliases': [
+            'cobre serico',
+            'cobre',
+            'serum copper',
+            'copper',
+        ],
+    },
+    {
+        'marker_key': 'selenium',
+        'marker_name': 'Selênio',
+        'aliases': [
+            'selenio serico',
+            'selenio',
+            'selênio',
+            'serum selenium',
+            'selenium',
+        ],
+    },
 ]
 
+# ---------------------------------------------------------------------------
+# REGEX PATTERNS
+# ---------------------------------------------------------------------------
+
 NUMBER_RE = re.compile(r'(?<![\d/])(-?\d{1,4}(?:[.,]\d{1,4})?)(?![\d/])')
+
 UNIT_RE = re.compile(
     r'\b('
-    r'mg/dl|g/dl|mmol/l|ui/l|u/l|mui/ml|ui/ml|ng/ml|ng/dl|pg/ml|pg/dl|'
-    r'mmol\/l|10\^?\d+/?u?l|%|fl|pg'
-    r')\b',
+    r'mg/dl|g/dl|g/l|mmol/l|ui/l|u/l|mui/ml|mu/ml|ui/ml|u/ml|mu/l|'
+    r'ng/ml|ng/dl|ng/l|pg/ml|pg/dl|pg/l|'
+    r'µg/dl|µg/l|ug/dl|ug/l|mcg/dl|mcg/l|'
+    r'µiu/ml|uiu/ml|miu/ml|uiu/l|'
+    r'nmol/l|pmol/l|mmol/l|'
+    r'meq/l|mmeq/l|'
+    r'10\^?3/µl|10\^?3/ul|10\^?6/µl|10\^?6/ul|'
+    r'10\^?\d+/?u?l|'
+    r'fl|pg'
+    r')\b'
+    r'|(?<!\w)(%)(?!\w)',   # % has no usable word-boundary in lab reports
     re.IGNORECASE,
 )
-RANGE_RE = re.compile(r'(-?\d+(?:[.,]\d+)?)\s*(?:a|-|até)\s*(-?\d+(?:[.,]\d+)?)', re.IGNORECASE)
-LESS_THAN_RE = re.compile(r'(?:inferior|menor|abaixo)\s+a\s*(-?\d+(?:[.,]\d+)?)', re.IGNORECASE)
-GREATER_THAN_RE = re.compile(r'(?:superior|maior|acima)\s+a\s*(-?\d+(?:[.,]\d+)?)', re.IGNORECASE)
+
+RANGE_RE = re.compile(
+    r'(-?\d+(?:[.,]\d+)?)\s*(?:a|-|até|to)\s*(-?\d+(?:[.,]\d+)?)',
+    re.IGNORECASE,
+)
+LESS_THAN_RE = re.compile(
+    # (?!\d): ensure the full number is consumed before checking lookahead
+    # (?!\s*anos\b): exclude age qualifiers like "menos de 20 anos"
+    r'(?:inferior|menor|abaixo|less than|below)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\d)(?!\s*anos\b)',
+    re.IGNORECASE,
+)
+GREATER_THAN_RE = re.compile(
+    # (?!\d): prevent partial digit match (e.g. "2" from "20") that bypasses lookahead
+    # (?!\s*anos\b): exclude age qualifiers like "acima de 20 anos"
+    r'(?:superior|maior|acima|greater than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\d)(?!\s*anos\b)',
+    re.IGNORECASE,
+)
 
 STOP_PATTERNS = [
     'material',
     'metodo',
     'método',
+    'metodologia',
     'assinado eletronicamente',
     'assinatura digital',
+    'assinatura eletronica',
     'data de aprovacao',
     'data de aprovação',
     'data de saida',
     'data de saída',
     'tecnico(a) responsavel',
     'técnico(a) responsável',
+    'responsavel tecnico',
+    'responsável técnico',
     'nº do registro',
     'no do registro',
     'exame realizado',
+    'medico responsavel',
+    'médico responsável',
+    'crm ',
+    'crbm ',
+    'carimbo',
+    'pagina',
+    'página',
 ]
 
 REFERENCE_HINTS = [
@@ -121,6 +1022,10 @@ REFERENCE_HINTS = [
     'pos',
     'limite de deteccao',
     'limite de detecção',
+    'nao foram definidos',
+    'não foram definidos',
+    'nao ha',
+    'não há',
 ]
 
 AMBIGUOUS_REFERENCE_HINTS = [
@@ -136,6 +1041,20 @@ AMBIGUOUS_REFERENCE_HINTS = [
     'menacme',
 ]
 
+# Deduplicated sorted marker list (longest aliases first for reliable matching)
+def _build_sorted_markers():
+    result = []
+    for marker in MARKERS:
+        sorted_aliases = sorted(marker['aliases'], key=len, reverse=True)
+        result.append({**marker, 'aliases': sorted_aliases})
+    return result
+
+_SORTED_MARKERS = _build_sorted_markers()
+
+
+# ---------------------------------------------------------------------------
+# TEXT UTILITIES
+# ---------------------------------------------------------------------------
 
 def _strip_accents(text):
     normalized = unicodedata.normalize('NFKD', str(text or ''))
@@ -163,6 +1082,10 @@ def _to_float(raw):
         return None
 
 
+# ---------------------------------------------------------------------------
+# LINE DEDUPLICATION
+# ---------------------------------------------------------------------------
+
 def _source_lines_from_table(lines):
     out = []
     previous = None
@@ -180,24 +1103,32 @@ def _source_lines_from_table(lines):
 
 def _source_lines_from_raw_text(raw_text):
     out = []
-    previous = None
+    seen = set()
     for raw_line in str(raw_text or '').splitlines():
         text = _normalize_space(raw_line)
         if not text:
             continue
         if set(text) == {'_'}:
             continue
-        key = text.lower()
-        if key == previous:
+        # Skip pure ruler/separator lines
+        if re.match(r'^[=\-_\.\/\|]{3,}$', text):
             continue
-        previous = key
+        # Skip repeated header lines (page-level dedup)
+        key = _normalize_text(text)
+        if key in seen:
+            continue
+        seen.add(key)
         out.append(text)
     return out
 
 
+# ---------------------------------------------------------------------------
+# MARKER DETECTION
+# ---------------------------------------------------------------------------
+
 def _find_marker(normalized_line):
     best = None
-    for marker in MARKERS:
+    for marker in _SORTED_MARKERS:
         for alias in marker['aliases']:
             normalized_alias = _normalize_text(alias)
             if re.search(rf'^(?:[\W_]*)(?:{re.escape(normalized_alias)})(?!\w)', normalized_line):
@@ -211,9 +1142,13 @@ def _has_stop_signal(normalized_line):
     return any(pattern in normalized_line for pattern in STOP_PATTERNS)
 
 
+# ---------------------------------------------------------------------------
+# BLOCK COLLECTION
+# ---------------------------------------------------------------------------
+
 def _collect_block(lines, start_idx):
     block = [lines[start_idx]]
-    for idx in range(start_idx + 1, min(len(lines), start_idx + 12)):
+    for idx in range(start_idx + 1, min(len(lines), start_idx + 15)):
         normalized = _normalize_text(lines[idx])
         if not normalized:
             continue
@@ -239,6 +1174,10 @@ def _line_is_reference(line):
         return True
     return bool(RANGE_RE.search(line) or LESS_THAN_RE.search(line) or GREATER_THAN_RE.search(line))
 
+
+# ---------------------------------------------------------------------------
+# VALUE EXTRACTION
+# ---------------------------------------------------------------------------
 
 def _extract_value_and_unit(block_lines):
     indexed = list(enumerate(block_lines))
@@ -277,10 +1216,11 @@ def _extract_value_and_unit(block_lines):
                 continue
             if idx > 0 and _line_is_reference(block_lines[idx - 1]) and _line_is_reference(line) and 'resultado' not in normalized:
                 continue
-            trailing = search_segment[match.end(): match.end() + 24]
-            combined = f'{search_segment} {block_lines[idx + 1]}' if idx + 1 < len(block_lines) else search_segment
-            unit_match = UNIT_RE.search(trailing) or UNIT_RE.search(combined[match.end(): match.end() + 40])
-            unit = unit_match.group(1).lower() if unit_match else None
+            trailing = search_segment[match.end(): match.end() + 30]
+            combined_for_unit = f'{search_segment} {block_lines[idx + 1]}' if idx + 1 < len(block_lines) else search_segment
+            unit_match = UNIT_RE.search(trailing) or UNIT_RE.search(combined_for_unit[match.start(): match.start() + 80])
+            # group(1): standard units; group(2): % (separate pattern without word boundary)
+            unit = (unit_match.group(1) or unit_match.group(2)).lower() if unit_match else None
             return {
                 'value_numeric': numeric,
                 'value_text': value_text,
@@ -289,6 +1229,10 @@ def _extract_value_and_unit(block_lines):
             }
     return None
 
+
+# ---------------------------------------------------------------------------
+# REFERENCE EXTRACTION
+# ---------------------------------------------------------------------------
 
 def _reference_lines(block_lines):
     lines = []
@@ -307,7 +1251,7 @@ def _extract_reference(block_lines):
     if not lines:
         return None, None, None
 
-    reference_text = ' | '.join(lines[:6]).strip() or None
+    reference_text = ' | '.join(lines[:8]).strip() or None
     normalized_text = _normalize_text(reference_text)
     ambiguous = any(hint in normalized_text for hint in AMBIGUOUS_REFERENCE_HINTS)
 
@@ -327,6 +1271,10 @@ def _extract_reference(block_lines):
     return None, None, reference_text
 
 
+# ---------------------------------------------------------------------------
+# FLAG AND CONFIDENCE
+# ---------------------------------------------------------------------------
+
 def _normalize_flag(value, ref_min, ref_max):
     if value is None:
         return None
@@ -345,20 +1293,36 @@ def _confidence(unit, reference_text, source_line):
         score += 0.06
     if reference_text:
         score += 0.04
-    if 'resultado' in _normalize_text(source_line):
+    if source_line and 'resultado' in _normalize_text(source_line):
         score += 0.02
     return round(min(score, 0.98), 2)
 
 
+# ---------------------------------------------------------------------------
+# MAIN ENTRY POINT
+# ---------------------------------------------------------------------------
+
 def parse_biomarkers(lines, raw_text=None, pages=None):
-    del pages
+    """Parse biomarkers from OCR output.
+
+    Args:
+        lines: list of row dicts from table parser (may be empty)
+        raw_text: raw text from PDF/OCR extraction (canonical fallback)
+        pages: page objects (not used, kept for API compatibility)
+
+    Returns:
+        list of normalized biomarker dicts, one per detected marker_key
+        (duplicates resolved by highest confidence + longest source_line)
+    """
+    del pages  # not used
 
     source_lines = _source_lines_from_table(lines)
     raw_lines = _source_lines_from_raw_text(raw_text)
 
+    # Merge: table lines first (higher precision), then raw lines as fallback
     merged_lines = source_lines + raw_lines
 
-    parsed = {}
+    parsed: dict = {}
     for idx, line in enumerate(merged_lines):
         marker = _find_marker(_normalize_text(line))
         if not marker:
@@ -370,7 +1334,7 @@ def parse_biomarkers(lines, raw_text=None, pages=None):
             continue
 
         ref_min, ref_max, ref_text = _extract_reference(block_lines)
-        evidence = ' | '.join(_normalize_space(item) for item in block_lines[:6])
+        evidence = ' | '.join(_normalize_space(item) for item in block_lines[:8])
         item = {
             'marker_key': marker['marker_key'],
             'marker_name': marker['marker_name'],
@@ -386,7 +1350,10 @@ def parse_biomarkers(lines, raw_text=None, pages=None):
         }
 
         previous = parsed.get(marker['marker_key'])
-        if previous is None or (item['confidence'], len(item['source_line'] or '')) > (previous['confidence'], len(previous['source_line'] or '')):
+        if previous is None or (
+            item['confidence'],
+            len(item['source_line'] or ''),
+        ) > (previous['confidence'], len(previous['source_line'] or '')):
             parsed[marker['marker_key']] = item
 
     return list(parsed.values())

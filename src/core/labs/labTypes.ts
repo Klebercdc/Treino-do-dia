@@ -1,15 +1,135 @@
+// ---------------------------------------------------------------------------
+// Core biomarker entry — canonical shape persisted in normalized_payload
+// ---------------------------------------------------------------------------
+export interface BiomarkerEntry {
+  marker_key: string
+  marker_name: string
+  value_numeric: number | null
+  value_text: string | null
+  unit: string | null
+  reference_min: number | null
+  reference_max: number | null
+  reference_text: string | null
+  flag: 'low' | 'high' | 'normal' | null
+  source_line: string | null
+  confidence: number | null
+}
+
+// ---------------------------------------------------------------------------
+// Legacy parsed report — still used by labValidator and labRules for
+// backwards compatibility. Kept intentionally narrow.
+// ---------------------------------------------------------------------------
 export interface ParsedLabReport {
+  // Metabolic
   glucose: number | null
   hba1c: number | null
-  creatinine: number | null
-  potassium: number | null
-  sodium: number | null
+  insulin: number | null
+  // Lipids
   cholesterol_total: number | null
   hdl: number | null
   ldl: number | null
+  vldl: number | null
   triglycerides: number | null
+  // Liver
+  ast: number | null
+  alt: number | null
+  ggt: number | null
+  // Kidney
+  creatinine: number | null
+  urea: number | null
+  uric_acid: number | null
+  egfr: number | null
+  // Electrolytes
+  potassium: number | null
+  sodium: number | null
+  magnesium: number | null
+  calcium: number | null
+  // Hematologic
+  hemoglobin: number | null
+  hematocrit: number | null
+  ferritin: number | null
+  // Thyroid
+  tsh: number | null
+  t4_free: number | null
+  // Hormonal
+  testosterone_total: number | null
+  testosterone_free: number | null
+  shbg: number | null
+  estradiol: number | null
+  cortisol: number | null
+  dhea_s: number | null
+  // Inflammation
+  crp: number | null
+  homocysteine: number | null
+  // Micronutrients
+  vitamin_d: number | null
+  vitamin_b12: number | null
+  folate: number | null
+  zinc: number | null
+  // PSA
+  psa_total: number | null
+  psa_free: number | null
 }
 
+// ---------------------------------------------------------------------------
+// Signal severity
+// ---------------------------------------------------------------------------
+export type SignalLevel = 'ok' | 'attention' | 'caution' | 'critical'
+
+export interface SignalGroup {
+  level: SignalLevel
+  flags: string[]
+  notes: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Health & performance profile — structured product signals derived from
+// biomarkers for use in training/diet/supplement personalization.
+// This is fully deterministic, conservative, NOT a medical diagnosis.
+// ---------------------------------------------------------------------------
+export interface HealthPerformanceProfile {
+  /** Metabolic: glucose, hba1c, insulin, homa_ir */
+  metabolic_health: SignalGroup
+  /** Lipid panel: cholesterol, HDL, LDL, triglycerides */
+  lipid_health: SignalGroup
+  /** Liver enzymes: AST, ALT, GGT, alkaline phosphatase, bilirubin */
+  liver_health: SignalGroup
+  /** Kidney & hydration: creatinine, urea, eGFR, electrolytes */
+  kidney_hydration: SignalGroup
+  /** Blood count & iron: hemoglobin, ferritin, vitamin B12, folate */
+  hematologic_status: SignalGroup
+  /** Thyroid: TSH, T4L, T3L */
+  thyroid_status: SignalGroup
+  /** Androgens & sex hormones: testosterone, SHBG, estradiol, cortisol, DHEA-S */
+  androgen_status: SignalGroup
+  /** Inflammation & CV risk: CRP, homocysteine */
+  inflammation_status: SignalGroup
+  /** Micronutrients: vitamin D, B12, folate, zinc, selenium */
+  micronutrient_status: SignalGroup
+  /** Composite: readiness for high-intensity training */
+  training_readiness: SignalGroup
+  /** Composite: risk of impaired recovery */
+  recovery_risk: SignalGroup
+  /** Diet attention points derived from biomarkers */
+  dietary_attention_points: SignalGroup
+  /** Safety flags requiring caution or professional evaluation */
+  safety_flags: SignalGroup
+  /** Numeric scores 0–100 for AI context */
+  scores: {
+    metabolic_score: number
+    recovery_score: number
+    hematologic_score: number
+    hormonal_score: number
+    safety_score: number
+    lipid_score: number
+    liver_score: number
+    kidney_score: number
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Validated report (wraps parsed + confidence)
+// ---------------------------------------------------------------------------
 export interface ValidatedLabReport {
   parsed: ParsedLabReport
   confidence: number
@@ -17,19 +137,26 @@ export interface ValidatedLabReport {
   validationErrors: string[]
 }
 
+// ---------------------------------------------------------------------------
+// Clinical rule result
+// ---------------------------------------------------------------------------
 export interface ClinicalRuleResult {
-  mode: "standard" | "clinical"
+  mode: 'standard' | 'clinical'
   clinicalFlags: string[]
   criticalFlags: string[]
 }
 
+// ---------------------------------------------------------------------------
+// Stored lab context (used in AI context bundles)
+// ---------------------------------------------------------------------------
 export interface StoredLabContext {
   id: string
   createdAt: string | null
   confidence: number
-  mode: "standard" | "clinical"
+  mode: 'standard' | 'clinical'
   parsed: ParsedLabReport | null
   isValid: boolean
   clinicalFlags: string[]
   criticalFlags: string[]
+  healthProfile?: HealthPerformanceProfile | null
 }

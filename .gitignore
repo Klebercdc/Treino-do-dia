@@ -35,3 +35,4 @@ etl/scrapers/output/
 .tmp-system-check/
 .vercel
 .env*.local
+__pycache__/
