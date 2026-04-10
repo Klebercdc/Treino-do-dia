@@ -22,6 +22,7 @@ export interface ExamOcrResponse {
 }
 
 type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
+type LabReportMutableFields = Record<string, unknown>;
 
 function isMissingOptionalTable(error: unknown, table: OptionalTableName): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -29,6 +30,40 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
   const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
   if (code !== 'PGRST205') return false;
   return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+}
+
+function isParseStatusConstraintViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code || '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
+  return code === '23514' && /lab_reports_parse_status_check/i.test(message);
+}
+
+async function updateLabReportWithParseStatusFallback(
+  admin: SupabaseClient,
+  labReportId: string,
+  values: LabReportMutableFields,
+  failureLabel: string,
+): Promise<void> {
+  const first = await admin
+    .from('lab_reports')
+    .update(values)
+    .eq('id', labReportId);
+
+  if (!isParseStatusConstraintViolation(first.error)) {
+    if (first.error) throw new Error(`${failureLabel}: ${first.error.message}`);
+    return;
+  }
+
+  const fallbackValues = { ...values };
+  delete fallbackValues.parse_status;
+
+  const fallback = await admin
+    .from('lab_reports')
+    .update(fallbackValues)
+    .eq('id', labReportId);
+
+  if (fallback.error) throw new Error(`${failureLabel}: ${fallback.error.message}`);
 }
 
 function toNumber(value: unknown): number | null {
@@ -403,16 +438,18 @@ export async function analyzeLabReportForUserContext(
   });
 
   if (!readiness.ready) {
-    await admin
-      .from('lab_reports')
-      .update({
+    await updateLabReportWithParseStatusFallback(
+      admin,
+      input.labReportId,
+      {
         status: 'needs_review',
         parse_status: 'processed',
         processing_error: readiness.reason || 'needs_review',
         processed_at: new Date().toISOString(),
         is_valid: false,
-      })
-      .eq('id', input.labReportId);
+      },
+      'Falha ao salvar needs_review',
+    );
     return { status: 'needs_review', aiInsights: null };
   }
 
@@ -421,16 +458,18 @@ export async function analyzeLabReportForUserContext(
     confidenceSummary: input.confidenceSummary,
   });
 
-  await admin
-    .from('lab_reports')
-    .update({
+  await updateLabReportWithParseStatusFallback(
+    admin,
+    input.labReportId,
+    {
       status: 'analyzed',
       parse_status: 'processed',
       ai_insights: aiInsights,
       processed_at: new Date().toISOString(),
       is_valid: true,
-    })
-    .eq('id', input.labReportId);
+    },
+    'Falha ao salvar análise do exame',
+  );
 
   return { status: 'analyzed', aiInsights };
 }
@@ -464,9 +503,10 @@ export async function processLabReportUpload(
     biomarkers: ocr.biomarkers_detected || [],
   });
 
-  await admin
-    .from('lab_reports')
-    .update({
+  await updateLabReportWithParseStatusFallback(
+    admin,
+    input.labReportId,
+    {
       status: 'extracted',
       parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
@@ -487,8 +527,9 @@ export async function processLabReportUpload(
       },
       confidence_summary: ocr.confidence_summary || {},
       processing_error: null,
-    })
-    .eq('id', input.labReportId);
+    },
+    'Falha ao atualizar lab_report após OCR',
+  );
 
   const analysis = await analyzeLabReportForUserContext(admin, {
     labReportId: input.labReportId,

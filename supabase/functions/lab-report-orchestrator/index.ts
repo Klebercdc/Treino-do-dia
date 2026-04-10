@@ -48,6 +48,7 @@ type OcrResponse = {
 };
 
 type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
+type LabReportUpdate = Record<string, unknown>;
 
 function json(status: number, payload: Record<string, unknown>) {
   return new Response(JSON.stringify(payload), {
@@ -97,6 +98,39 @@ function buildNormalizedPayload(ocr: OcrResponse, biomarkers: Biomarker[]) {
       confidence_summary: ocr.confidence_summary || {},
     },
   };
+}
+
+function isParseStatusConstraintViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
+  return code === '23514' && /lab_reports_parse_status_check/i.test(message);
+}
+
+async function updateLabReportWithParseStatusFallback(
+  labReportId: string,
+  values: LabReportUpdate,
+  failureLabel: string,
+) {
+  const { error } = await supabase
+    .from('lab_reports')
+    .update(values)
+    .eq('id', labReportId);
+
+  if (!isParseStatusConstraintViolation(error)) {
+    if (error) throw new Error(`${failureLabel}: ${error.message}`);
+    return;
+  }
+
+  const fallbackValues = { ...values };
+  delete fallbackValues.parse_status;
+
+  const fallback = await supabase
+    .from('lab_reports')
+    .update(fallbackValues)
+    .eq('id', labReportId);
+
+  if (fallback.error) throw new Error(`${failureLabel}: ${fallback.error.message}`);
 }
 
 async function logEvent(labReportId: string, eventType: string, level = 'info', details: Record<string, unknown> = {}) {
@@ -352,9 +386,9 @@ async function callGroqInsights(input: { biomarkers: Biomarker[]; confidenceSumm
 }
 
 async function finalizeNeedsReview(labReportId: string, ocr: OcrResponse, reason: string, biomarkers: Biomarker[]) {
-  const { error } = await supabase
-    .from('lab_reports')
-    .update({
+  await updateLabReportWithParseStatusFallback(
+    labReportId,
+    {
       status: 'needs_review',
       parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
@@ -365,10 +399,9 @@ async function finalizeNeedsReview(labReportId: string, ocr: OcrResponse, reason
       processed_at: new Date().toISOString(),
       is_valid: false,
       last_orchestrator_note: reason,
-    })
-    .eq('id', labReportId);
-
-  if (error) throw new Error(`Falha ao salvar needs_review: ${error.message}`);
+    },
+    'Falha ao salvar needs_review',
+  );
 }
 
 async function finalizeAnalyzed(
@@ -378,9 +411,9 @@ async function finalizeAnalyzed(
   aiInsights: Record<string, unknown>,
   isFallback: boolean,
 ) {
-  const { error } = await supabase
-    .from('lab_reports')
-    .update({
+  await updateLabReportWithParseStatusFallback(
+    labReportId,
+    {
       status: 'analyzed',
       parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
@@ -392,10 +425,9 @@ async function finalizeAnalyzed(
       processed_at: new Date().toISOString(),
       is_valid: true,
       last_orchestrator_note: isFallback ? 'fallback_analyzed' : 'analyzed',
-    })
-    .eq('id', labReportId);
-
-  if (error) throw new Error(`Falha ao salvar analyzed: ${error.message}`);
+    },
+    'Falha ao salvar analyzed',
+  );
 }
 
 async function processSingleReport(input: { labReportId: string; expectedUpdatedAt?: string | null; dispatchSource: string }) {
