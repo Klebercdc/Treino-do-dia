@@ -7,11 +7,13 @@ app = FastAPI(title="kronia_exam_ocr")
 
 
 @app.get("/")
+@app.get("/api/exam_ocr")
 def health():
     return health_payload()
 
 
 @app.post("/", response_model=ExtractResponse)
+@app.post("/api/exam_ocr", response_model=ExtractResponse)
 def extract(payload: ExtractRequest):
     try:
         result = extract_payload(payload.model_dump())
