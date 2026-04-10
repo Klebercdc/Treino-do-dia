@@ -1,6 +1,6 @@
 var crypto = require('crypto');
 var createClient = require('@supabase/supabase-js').createClient;
-var auth = require('../../apihelpers/_auth');
+var auth = require('../src/server/apihelpers/_auth');
 
 var LAB_REPORTS_BUCKET = 'lab-reports';
 var MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;

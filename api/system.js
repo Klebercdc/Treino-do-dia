@@ -2,7 +2,7 @@ var cors = require('../src/server/apihelpers/_cors');
 var auth = require('../src/server/apihelpers/_auth');
 var rl   = require('../src/server/apihelpers/_ratelimit');
 var plans = require('../src/server/apihelpers/_plans');
-var kroniaLabsHandler = require('../src/server/internal/http/kronia-labs');
+var kroniaLabsHandler = require('./kronia-labs');
 var https = require('https');
 
 var SUPABASE_URL = (

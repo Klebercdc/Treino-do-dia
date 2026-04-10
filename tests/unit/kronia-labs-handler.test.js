@@ -1,5 +1,5 @@
 /**
- * Unit tests for the REAL production handler: src/server/internal/http/kronia-labs.js
+ * Unit tests for the REAL production handler: api/kronia-labs.js
  *
  * Strategy: structural/contract tests (read source as string) + mock-based
  * functional tests for the insert payload logic.
@@ -20,9 +20,9 @@ const require = createRequire(import.meta.url);
 const {
   buildCanonicalLabStoragePath,
   SAFE_STORAGE_PATH_RE,
-} = require('../../src/server/internal/http/kronia-labs.js');
+} = require('../../api/kronia-labs.js');
 
-const HANDLER_PATH     = 'src/server/internal/http/kronia-labs.js';
+const HANDLER_PATH     = 'api/kronia-labs.js';
 const SYSTEM_PATH      = 'api/system.js';
 const VERCEL_JSON_PATH = 'vercel.json';
 const MIGRATION_043    = 'supabase/migrations/043_lab_reports_parse_status_fix.sql';
