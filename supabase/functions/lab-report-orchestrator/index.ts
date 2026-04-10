@@ -4,6 +4,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ?? '';
 const EXAM_OCR_SERVICE_URL = Deno.env.get('EXAM_OCR_SERVICE_URL') ?? '';
+const APP_URL = Deno.env.get('APP_URL') ?? Deno.env.get('NEXT_PUBLIC_APP_URL') ?? 'https://kronia.app.br';
 const EXAM_OCR_TIMEOUT_MS = Number(Deno.env.get('EXAM_OCR_TIMEOUT_MS') ?? '45000');
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('AI_CHAT_MODEL') ?? 'llama-3.3-70b-versatile';
@@ -46,6 +47,8 @@ type OcrResponse = {
   metadata: Record<string, unknown>;
 };
 
+type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
+
 function json(status: number, payload: Record<string, unknown>) {
   return new Response(JSON.stringify(payload), {
     status,
@@ -64,6 +67,36 @@ function normalizeFlag(value: number | null, min: number | null, max: number | n
   if (min !== null && value < min) return 'low';
   if (max !== null && value > max) return 'high';
   return 'normal';
+}
+
+function resolveExamOcrBaseUrl() {
+  if (EXAM_OCR_SERVICE_URL) return EXAM_OCR_SERVICE_URL.replace(/\/$/, '');
+  return `${APP_URL.replace(/\/$/, '')}/api/exam_ocr`;
+}
+
+function isMissingOptionalTable(error: unknown, table: OptionalTableName): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
+  if (code !== 'PGRST205') return false;
+  return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+}
+
+function buildNormalizedPayload(ocr: OcrResponse, biomarkers: Biomarker[]) {
+  return {
+    biomarkers,
+    extraction: {
+      engine: 'exam_ocr_python',
+      extraction_mode: ocr.extraction_mode,
+      raw_text: ocr.raw_text || null,
+      pages: ocr.pages || [],
+      blocks: ocr.blocks || [],
+      rows: ocr.rows || [],
+      warnings: ocr.warnings || [],
+      metadata: ocr.metadata || {},
+      confidence_summary: ocr.confidence_summary || {},
+    },
+  };
 }
 
 async function logEvent(labReportId: string, eventType: string, level = 'info', details: Record<string, unknown> = {}) {
@@ -103,13 +136,12 @@ async function createSignedUrl(bucket: string, path: string) {
 }
 
 async function callOcr(input: { sourceId: string; mimeType: string; fileUrl: string }) {
-  if (!EXAM_OCR_SERVICE_URL) throw new Error('EXAM_OCR_SERVICE_URL não configurada');
-
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), EXAM_OCR_TIMEOUT_MS);
+  const ocrBaseUrl = resolveExamOcrBaseUrl();
 
   try {
-    const response = await fetch(`${EXAM_OCR_SERVICE_URL.replace(/\/$/, '')}/extract`, {
+    const response = await fetch(`${ocrBaseUrl}/extract`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -171,18 +203,24 @@ async function persistExtraction(labReportId: string, ocr: OcrResponse) {
     metadata: ocr.metadata || {},
     confidence_summary: ocr.confidence_summary || {},
   });
-  if (error) throw new Error(`Falha ao persistir extração: ${error.message}`);
+  if (error && !isMissingOptionalTable(error, 'lab_report_extractions')) {
+    throw new Error(`Falha ao persistir extração: ${error.message}`);
+  }
 }
 
 async function persistBiomarkers(labReportId: string, biomarkers: Biomarker[]) {
   const { error: deleteError } = await supabase.from('lab_report_biomarkers').delete().eq('lab_report_id', labReportId);
-  if (deleteError) throw new Error(`Falha ao limpar biomarcadores: ${deleteError.message}`);
+  if (deleteError && !isMissingOptionalTable(deleteError, 'lab_report_biomarkers')) {
+    throw new Error(`Falha ao limpar biomarcadores: ${deleteError.message}`);
+  }
 
   if (biomarkers.length > 0) {
     const { error } = await supabase.from('lab_report_biomarkers').insert(
       biomarkers.map((item) => ({ lab_report_id: labReportId, ...item })),
     );
-    if (error) throw new Error(`Falha ao salvar biomarcadores: ${error.message}`);
+    if (error && !isMissingOptionalTable(error, 'lab_report_biomarkers')) {
+      throw new Error(`Falha ao salvar biomarcadores: ${error.message}`);
+    }
   }
 }
 
@@ -318,10 +356,10 @@ async function finalizeNeedsReview(labReportId: string, ocr: OcrResponse, reason
     .from('lab_reports')
     .update({
       status: 'needs_review',
-      parse_status: 'failed',
+      parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
       source_type: ocr.source_type,
-      normalized_payload: { biomarkers },
+      normalized_payload: buildNormalizedPayload(ocr, biomarkers),
       confidence_summary: ocr.confidence_summary || {},
       processing_error: reason,
       processed_at: new Date().toISOString(),
@@ -344,10 +382,10 @@ async function finalizeAnalyzed(
     .from('lab_reports')
     .update({
       status: 'analyzed',
-      parse_status: 'parsed',
+      parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
       source_type: ocr.source_type,
-      normalized_payload: { biomarkers },
+      normalized_payload: buildNormalizedPayload(ocr, biomarkers),
       confidence_summary: ocr.confidence_summary || {},
       ai_insights: aiInsights,
       processing_error: isFallback ? 'groq_unavailable_fallback_used' : null,

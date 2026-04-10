@@ -7,5 +7,11 @@ etl/
 backup-to-drive.sh
 PROXIMOS-PASSOS.md
 
+# Exceções do OCR publicável usado pelo pipeline de labs
+!api/exam_ocr.py
+!api/exam_ocr/**
+!services/exam_ocr/**
+!requirements.txt
+
 # APIs experimentais Next App Router (não usadas no deploy atual baseado em /api/*.js)
 src/app/api/

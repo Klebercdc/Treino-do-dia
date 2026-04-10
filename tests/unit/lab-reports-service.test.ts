@@ -386,3 +386,26 @@ test('api/system roteia vertical de labs para handlers reais de produção', () 
   assert.match(source, /handleReports/);
   assert.match(source, /handleReportById/);
 });
+
+test('service de labs usa parse_status alinhado ao contrato novo', () => {
+  const source = readFileSync('src/server/internal/labReports/service.ts', 'utf-8');
+  assert.doesNotMatch(source, /parse_status:\s*'pending'/);
+  assert.doesNotMatch(source, /parse_status:\s*'parsed'/);
+  assert.match(source, /parse_status:\s*'uploaded'/);
+  assert.match(source, /parse_status:\s*'processing'/);
+  assert.match(source, /parse_status:\s*'processed'/);
+});
+
+test('edge function de labs usa fallback canônico de OCR na própria app', () => {
+  const source = readFileSync('supabase/functions/lab-report-orchestrator/index.ts', 'utf-8');
+  assert.match(source, /resolveExamOcrBaseUrl/);
+  assert.match(source, /api\/exam_ocr/);
+});
+
+test('edge function trata tabelas auxiliares de labs como opcionais', () => {
+  const source = readFileSync('supabase/functions/lab-report-orchestrator/index.ts', 'utf-8');
+  assert.match(source, /lab_report_extractions/);
+  assert.match(source, /lab_report_biomarkers/);
+  assert.match(source, /PGRST205/);
+  assert.match(source, /buildNormalizedPayload/);
+});

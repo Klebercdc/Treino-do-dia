@@ -50,6 +50,13 @@ test('api/system.js despacha cada rota de labs para o handler correto', () => {
   assert.match(systemSrc, /kronia-labs-register/);
 });
 
+test('handler de detalhe usa colunas reais de extração e fallback para normalized_payload', () => {
+  assert.match(handlerSrc, /raw_text/);
+  assert.match(handlerSrc, /confidence_summary/);
+  assert.match(handlerSrc, /buildFallbackExtraction/);
+  assert.match(handlerSrc, /extractBiomarkersFromNormalizedPayload/);
+});
+
 // ── Critical parse_status fix ─────────────────────────────────────────────────
 
 test('handleInitUpload usa parse_status pending_upload (não pending)', () => {

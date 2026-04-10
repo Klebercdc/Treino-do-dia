@@ -103,6 +103,45 @@ function withAuth(req, res, handler) {
   });
 }
 
+function isMissingOptionalTable(error, tableName) {
+  if (!error) return false;
+  var code = String(error.code || '');
+  var message = String(error.message || '');
+  return code === 'PGRST205' && new RegExp("table ['\"]?public\\." + tableName + "['\"]?", 'i').test(message);
+}
+
+function extractBiomarkersFromNormalizedPayload(report) {
+  var payload = report && report.normalized_payload && typeof report.normalized_payload === 'object'
+    ? report.normalized_payload
+    : null;
+  return payload && Array.isArray(payload.biomarkers) ? payload.biomarkers : [];
+}
+
+function buildFallbackExtraction(report) {
+  var payload = report && report.normalized_payload && typeof report.normalized_payload === 'object'
+    ? report.normalized_payload
+    : null;
+  var extraction = payload && payload.extraction && typeof payload.extraction === 'object'
+    ? payload.extraction
+    : null;
+  if (!extraction) return [];
+
+  return [{
+    id: 'lab-report-inline-extraction',
+    lab_report_id: report.id,
+    engine: extraction.engine || 'exam_ocr_python',
+    extraction_mode: extraction.extraction_mode || report.extraction_mode || null,
+    raw_text: extraction.raw_text || null,
+    pages: extraction.pages || [],
+    blocks: extraction.blocks || [],
+    rows: extraction.rows || [],
+    warnings: extraction.warnings || [],
+    metadata: extraction.metadata || {},
+    confidence_summary: extraction.confidence_summary || report.confidence_summary || {},
+    created_at: report.processed_at || report.created_at || null
+  }];
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/kronia/labs/init-upload
 // Creates a pending lab_reports row and returns a signed upload URL.
@@ -393,6 +432,10 @@ function handleReports(req, res) {
           if (!biomarkerMap.has(key)) biomarkerMap.set(key, []);
           biomarkerMap.get(key).push(row);
         });
+      } else if (isMissingOptionalTable(biomarkersResult.error, 'lab_report_biomarkers')) {
+        rows.forEach(function(row) {
+          biomarkerMap.set(String(row.id), extractBiomarkersFromNormalizedPayload(row));
+        });
       }
     }
 
@@ -440,11 +483,13 @@ function handleReportById(req, res) {
 
     var extractions = await admin
       .from('lab_report_extractions')
-      .select('id,lab_report_id,extraction_mode,confidence,raw_output,structured_data,created_at')
+      .select('id,lab_report_id,engine,extraction_mode,raw_text,pages,blocks,rows,warnings,metadata,confidence_summary,created_at')
       .eq('lab_report_id', id)
       .order('created_at', { ascending: false });
 
-    if (extractions.error) return res.status(500).json({ ok: false, error: 'Erro ao consultar extrações.' });
+    if (extractions.error && !isMissingOptionalTable(extractions.error, 'lab_report_extractions')) {
+      return res.status(500).json({ ok: false, error: 'Erro ao consultar extrações.' });
+    }
 
     var biomarkers = await admin
       .from('lab_report_biomarkers')
@@ -452,13 +497,15 @@ function handleReportById(req, res) {
       .eq('lab_report_id', id)
       .order('created_at', { ascending: true });
 
-    if (biomarkers.error) return res.status(500).json({ ok: false, error: 'Erro ao consultar biomarcadores.' });
+    if (biomarkers.error && !isMissingOptionalTable(biomarkers.error, 'lab_report_biomarkers')) {
+      return res.status(500).json({ ok: false, error: 'Erro ao consultar biomarcadores.' });
+    }
 
     return res.status(200).json({
       ok: true,
       report: reportResult.data,
-      extractions: extractions.data || [],
-      biomarkers: biomarkers.data || []
+      extractions: extractions.data || buildFallbackExtraction(reportResult.data),
+      biomarkers: biomarkers.data || extractBiomarkersFromNormalizedPayload(reportResult.data)
     });
   });
 }

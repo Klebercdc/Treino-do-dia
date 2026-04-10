@@ -20,6 +20,11 @@ export async function getLabReportByIdForUser(
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const isMissingOptionalTable = (error: { code?: string | null; message?: string | null } | null | undefined, table: string) => (
+      error?.code === 'PGRST205'
+      && new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(String(error.message || ''))
+    );
+
     const auth = await requireBearerAuth(req);
     if (!auth.ok) return auth.response;
 
@@ -39,14 +44,29 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       admin.from('lab_report_biomarkers').select('*').eq('lab_report_id', id).order('created_at', { ascending: true }),
     ]);
 
-    if (extractions.error) return NextResponse.json({ ok: false, error: 'Erro ao consultar extrações.' }, { status: 500 });
-    if (biomarkers.error) return NextResponse.json({ ok: false, error: 'Erro ao consultar biomarcadores.' }, { status: 500 });
+    const missingExtractions = isMissingOptionalTable(extractions.error, 'lab_report_extractions');
+    const missingBiomarkers = isMissingOptionalTable(biomarkers.error, 'lab_report_biomarkers');
+    if (extractions.error && !missingExtractions) return NextResponse.json({ ok: false, error: 'Erro ao consultar extrações.' }, { status: 500 });
+    if (biomarkers.error && !missingBiomarkers) return NextResponse.json({ ok: false, error: 'Erro ao consultar biomarcadores.' }, { status: 500 });
+
+    const normalizedPayload = report.normalized_payload && typeof report.normalized_payload === 'object'
+      ? report.normalized_payload as { extraction?: Record<string, unknown>; biomarkers?: Array<Record<string, unknown>> }
+      : {};
+    const fallbackExtractions = normalizedPayload.extraction
+      ? [{
+          id: 'lab-report-inline-extraction',
+          lab_report_id: id,
+          ...normalizedPayload.extraction,
+          created_at: report.processed_at || report.created_at || null,
+        }]
+      : [];
+    const fallbackBiomarkers = Array.isArray(normalizedPayload.biomarkers) ? normalizedPayload.biomarkers : [];
 
     return NextResponse.json({
       ok: true,
       report,
-      extractions: extractions.data || [],
-      biomarkers: biomarkers.data || [],
+      extractions: extractions.data || fallbackExtractions,
+      biomarkers: biomarkers.data || fallbackBiomarkers,
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown';

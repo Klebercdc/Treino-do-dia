@@ -94,7 +94,7 @@ export async function createInitialLabReport(
       file_url: input.fileUrl,
       file_name: input.fileName,
       file_type: input.fileType,
-      parse_status: "pending",
+      parse_status: "uploaded",
       status: "uploaded",
       confidence: 0,
       confidence_summary: {},

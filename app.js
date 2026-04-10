@@ -2919,7 +2919,19 @@ function renderLabReportHistory(reports, container, emptyEl) {
     hdl: 'HDL', ldl: 'LDL', triglycerides: 'Triglicerídeos',
   };
 
-  const STATUS_LABELS = { analyzed: '✅ Analisado', extracted: '🧪 Extraído', processing: '⏳ Processando', uploaded: '📤 Enviado', needs_review: '🕵️ Revisão', failed: '❌ Falhou', parsed: '✅ Processado', pending: '⏳ Aguardando' };
+  const STATUS_LABELS = {
+    analyzed: '✅ Analisado',
+    extracted: '🧪 Extraído',
+    processing: '⏳ Processando',
+    uploaded: '📤 Enviado',
+    pending_upload: '📥 Aguardando upload',
+    queued: '🧾 Na fila',
+    processed: '✅ Processado',
+    needs_review: '🕵️ Revisão',
+    failed: '❌ Falhou',
+    parsed: '✅ Processado',
+    pending: '⏳ Aguardando'
+  };
 
   container.innerHTML = reports.map(function(r) {
     var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '—';

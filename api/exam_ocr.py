@@ -1,15 +1,17 @@
 from fastapi import FastAPI, HTTPException
 
-from .schemas import ExtractRequest, ExtractResponse
-from .service import extract_payload, health_payload
+from services.exam_ocr.service import extract_payload, health_payload
+from services.exam_ocr.schemas import ExtractRequest, ExtractResponse
 
-app = FastAPI(title='exam_ocr_service')
+app = FastAPI(title="kronia_exam_ocr")
 
-@app.get('/health')
+
+@app.get("/health")
 def health():
     return health_payload()
 
-@app.post('/extract', response_model=ExtractResponse)
+
+@app.post("/extract", response_model=ExtractResponse)
 def extract(payload: ExtractRequest):
     try:
         result = extract_payload(payload.model_dump())

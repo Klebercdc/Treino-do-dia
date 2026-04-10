@@ -8,6 +8,11 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   try {
+    const isMissingOptionalTable = (error: { code?: string | null; message?: string | null } | null | undefined, table: string) => (
+      error?.code === 'PGRST205'
+      && new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(String(error.message || ''))
+    );
+
     const auth = await requireBearerAuth(req);
     if (!auth.ok) return auth.response as Response;
 
@@ -28,17 +33,32 @@ export async function GET(req: NextRequest) {
 
     const ids = (data || []).map((row) => row.id).filter(Boolean);
     const biomarkerMap = new Map<string, Array<Record<string, unknown>>>();
+    const extractBiomarkersFromPayload = (row: Record<string, unknown>) => {
+      const payload = row.normalized_payload;
+      if (!payload || typeof payload !== 'object' || !Array.isArray((payload as { biomarkers?: unknown[] }).biomarkers)) {
+        return [];
+      }
+      return (payload as { biomarkers: Array<Record<string, unknown>> }).biomarkers;
+    };
     if (ids.length) {
-      const { data: biomarkers } = await admin
+      const { data: biomarkers, error: biomarkersError } = await admin
         .from('lab_report_biomarkers')
         .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
         .in('lab_report_id', ids)
         .order('created_at', { ascending: true });
 
-      for (const row of biomarkers || []) {
-        const key = String(row.lab_report_id);
-        if (!biomarkerMap.has(key)) biomarkerMap.set(key, []);
-        biomarkerMap.get(key)?.push(row as Record<string, unknown>);
+      if (Array.isArray(biomarkers)) {
+        for (const row of biomarkers || []) {
+          const key = String(row.lab_report_id);
+          if (!biomarkerMap.has(key)) biomarkerMap.set(key, []);
+          biomarkerMap.get(key)?.push(row as Record<string, unknown>);
+        }
+      } else if (isMissingOptionalTable(biomarkersError, 'lab_report_biomarkers')) {
+        for (const row of data || []) {
+          biomarkerMap.set(String(row.id), extractBiomarkersFromPayload(row as Record<string, unknown>));
+        }
+      } else if (biomarkersError) {
+        return NextResponse.json({ ok: false, error: 'Erro ao buscar biomarcadores do histórico.' }, { status: 500 });
       }
     }
 

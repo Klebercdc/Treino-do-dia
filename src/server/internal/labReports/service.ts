@@ -21,6 +21,16 @@ export interface ExamOcrResponse {
   metadata: Record<string, unknown>;
 }
 
+type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
+
+function isMissingOptionalTable(error: unknown, table: OptionalTableName): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code || '') : '';
+  const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
+  if (code !== 'PGRST205') return false;
+  return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+}
+
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(String(value).replace(',', '.'));
@@ -32,6 +42,14 @@ function normalizeFlag(value: number | null, min: number | null, max: number | n
   if (min !== null && value < min) return 'low';
   if (max !== null && value > max) return 'high';
   return 'normal';
+}
+
+function resolveExamOcrBaseUrl(): string {
+  const explicit = String(process.env.EXAM_OCR_SERVICE_URL || '').trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+
+  const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://kronia.app.br').trim();
+  return `${appUrl.replace(/\/$/, '')}/api/exam_ocr`;
 }
 
 export async function createLabReportRecord(
@@ -55,7 +73,7 @@ export async function createLabReportRecord(
       file_type: input.mimeType,
       mime_type: input.mimeType,
       status: 'uploaded',
-      parse_status: 'pending',
+      parse_status: 'uploaded',
     })
     .select('id')
     .single();
@@ -78,7 +96,7 @@ export async function enqueueLabReportProcessing(
 ): Promise<void> {
   const { error } = await admin
     .from('lab_reports')
-    .update({ status: 'processing', parse_status: 'pending', processing_error: null })
+    .update({ status: 'processing', parse_status: 'processing', processing_error: null })
     .eq('id', labReportId);
   if (error) throw new Error(`Falha ao enfileirar processamento: ${error.message}`);
 }
@@ -117,7 +135,7 @@ export async function acquireLabReportProcessingLock(
     .from('lab_reports')
     .update({
       status: 'processing',
-      parse_status: 'pending',
+      parse_status: 'processing',
       processing_error: null,
     })
     .eq('id', input.labReportId)
@@ -166,8 +184,7 @@ export async function invokeExamOcrService(input: {
   language?: string;
   preferNativePdf?: boolean;
 }): Promise<ExamOcrResponse> {
-  const url = process.env.EXAM_OCR_SERVICE_URL;
-  if (!url) throw new Error('EXAM_OCR_SERVICE_URL não configurada.');
+  const url = resolveExamOcrBaseUrl();
 
   const timeoutMs = Number(process.env.EXAM_OCR_TIMEOUT_MS || 45000);
   const controller = new AbortController();
@@ -236,7 +253,9 @@ export async function persistLabExtraction(
     metadata: ocr.metadata || {},
     confidence_summary: ocr.confidence_summary || {},
   });
-  if (error) throw new Error(`Falha ao persistir extração: ${error.message}`);
+  if (error && !isMissingOptionalTable(error, 'lab_report_extractions')) {
+    throw new Error(`Falha ao persistir extração: ${error.message}`);
+  }
 }
 
 export async function persistBiomarkers(
@@ -268,11 +287,18 @@ export async function persistBiomarkers(
     };
   }).filter((row) => row.marker_key);
 
-  await admin.from('lab_report_biomarkers').delete().eq('lab_report_id', input.labReportId);
+  // If the auxiliary table is not deployed, the canonical fallback becomes
+  // lab_reports.normalized_payload and history endpoints read from there.
+  const deleteResult = await admin.from('lab_report_biomarkers').delete().eq('lab_report_id', input.labReportId);
+  if (deleteResult.error && !isMissingOptionalTable(deleteResult.error, 'lab_report_biomarkers')) {
+    throw new Error(`Falha ao limpar biomarcadores: ${deleteResult.error.message}`);
+  }
 
   if (cleaned.length) {
     const { error } = await admin.from('lab_report_biomarkers').insert(cleaned);
-    if (error) throw new Error(`Falha ao persistir biomarcadores: ${error.message}`);
+    if (error && !isMissingOptionalTable(error, 'lab_report_biomarkers')) {
+      throw new Error(`Falha ao persistir biomarcadores: ${error.message}`);
+    }
   }
 
   return cleaned;
@@ -381,9 +407,10 @@ export async function analyzeLabReportForUserContext(
       .from('lab_reports')
       .update({
         status: 'needs_review',
-        parse_status: 'failed',
+        parse_status: 'processed',
         processing_error: readiness.reason || 'needs_review',
         processed_at: new Date().toISOString(),
+        is_valid: false,
       })
       .eq('id', input.labReportId);
     return { status: 'needs_review', aiInsights: null };
@@ -398,7 +425,7 @@ export async function analyzeLabReportForUserContext(
     .from('lab_reports')
     .update({
       status: 'analyzed',
-      parse_status: 'parsed',
+      parse_status: 'processed',
       ai_insights: aiInsights,
       processed_at: new Date().toISOString(),
       is_valid: true,
@@ -441,10 +468,23 @@ export async function processLabReportUpload(
     .from('lab_reports')
     .update({
       status: 'extracted',
-      parse_status: 'parsed',
+      parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
       source_type: ocr.source_type,
-      normalized_payload: { biomarkers: normalizedBiomarkers },
+      normalized_payload: {
+        biomarkers: normalizedBiomarkers,
+        extraction: {
+          engine: DEFAULT_ENGINE,
+          extraction_mode: ocr.extraction_mode,
+          raw_text: ocr.raw_text || null,
+          pages: ocr.pages || [],
+          blocks: ocr.blocks || [],
+          rows: ocr.rows || [],
+          warnings: ocr.warnings || [],
+          metadata: ocr.metadata || {},
+          confidence_summary: ocr.confidence_summary || {},
+        },
+      },
       confidence_summary: ocr.confidence_summary || {},
       processing_error: null,
     })
