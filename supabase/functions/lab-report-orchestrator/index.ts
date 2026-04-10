@@ -141,7 +141,7 @@ async function callOcr(input: { sourceId: string; mimeType: string; fileUrl: str
   const ocrBaseUrl = resolveExamOcrBaseUrl();
 
   try {
-    const response = await fetch(`${ocrBaseUrl}/extract`, {
+    const response = await fetch(ocrBaseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

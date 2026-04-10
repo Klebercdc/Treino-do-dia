@@ -191,7 +191,7 @@ export async function invokeExamOcrService(input: {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(`${url.replace(/\/$/, '')}/extract`, {
+    const res = await fetch(url.replace(/\/$/, ''), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

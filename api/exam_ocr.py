@@ -6,12 +6,12 @@ from services.exam_ocr.schemas import ExtractRequest, ExtractResponse
 app = FastAPI(title="kronia_exam_ocr")
 
 
-@app.get("/health")
+@app.get("/")
 def health():
     return health_payload()
 
 
-@app.post("/extract", response_model=ExtractResponse)
+@app.post("/", response_model=ExtractResponse)
 def extract(payload: ExtractRequest):
     try:
         result = extract_payload(payload.model_dump())

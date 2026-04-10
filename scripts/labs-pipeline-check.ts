@@ -57,8 +57,6 @@ async function main() {
 
   const ocrFilesOk = [
     'api/exam_ocr.py',
-    'api/exam_ocr/health.py',
-    'api/exam_ocr/extract.py',
     'services/exam_ocr/service.py',
     'requirements.txt',
   ].every((file) => existsSync(file));
@@ -131,11 +129,11 @@ async function main() {
     summary: `Rota protegida respondeu HTTP ${liveLabsRoute.status}.`,
   });
 
-  const liveOcr = await fetch(`${APP_URL}/api/exam_ocr/health`).catch(() => null);
+  const liveOcr = await fetch(`${APP_URL}/api/exam_ocr`).catch(() => null);
   add({
     name: 'live_ocr_route',
     status: liveOcr?.ok ? 'OK' : 'FALHA',
-    summary: liveOcr?.ok ? 'OCR HTTP respondeu /api/exam_ocr/health.' : 'OCR HTTP ainda não está disponível na app pública.',
+    summary: liveOcr?.ok ? 'OCR HTTP respondeu /api/exam_ocr.' : 'OCR HTTP ainda não está disponível na app pública.',
   });
 
   if (!SUPABASE_ANON_KEY) {
