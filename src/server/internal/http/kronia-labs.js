@@ -1,5 +1,4 @@
 var crypto = require('crypto');
-var createClient = require('@supabase/supabase-js').createClient;
 var auth = require('../../apihelpers/_auth');
 
 var LAB_REPORTS_BUCKET = 'lab-reports';
@@ -8,10 +7,10 @@ var ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
 var SAFE_STORAGE_PATH_RE = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/;
 
 function readSupabaseUrl() {
-  return process.env.SUPABASE_URL
+  return (process.env.SUPABASE_URL
     || process.env.NEXT_PUBLIC_SUPABASE_URL
     || process.env.VITE_SUPABASE_URL
-    || '';
+    || '').replace(/\/$/, '');
 }
 
 function readSupabaseServiceKey() {
@@ -22,13 +21,142 @@ function readSupabaseServiceKey() {
     || '';
 }
 
-function createAdminSupabaseClient() {
-  var url = readSupabaseUrl();
-  var serviceKey = readSupabaseServiceKey();
-  if (!url || !serviceKey) throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias.');
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false }
+// --- Native fetch helpers for Supabase REST (PostgREST) ---
+
+async function restRequest(baseUrl, serviceKey, method, table, queryString, body) {
+  var url = baseUrl + '/rest/v1/' + table + (queryString ? '?' + queryString : '');
+  var res = await fetch(url, {
+    method: method,
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': 'Bearer ' + serviceKey,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined
   });
+  var text = await res.text();
+  if (!res.ok) {
+    var errData;
+    try { errData = JSON.parse(text); } catch (e) { errData = { message: text }; }
+    return { data: null, error: { message: errData.message || text, code: String(res.status), details: errData.details, hint: errData.hint } };
+  }
+  var parsed;
+  try { parsed = JSON.parse(text); } catch (e) { parsed = []; }
+  return { data: parsed, error: null };
+}
+
+// Equivalent to .insert(body).select(cols).single()
+async function dbInsert(baseUrl, serviceKey, table, body, selectCols) {
+  var qs = selectCols ? 'select=' + encodeURIComponent(selectCols) : '';
+  var result = await restRequest(baseUrl, serviceKey, 'POST', table, qs, body);
+  if (result.error) return result;
+  var rows = Array.isArray(result.data) ? result.data : (result.data ? [result.data] : []);
+  if (rows.length === 0) return { data: null, error: { message: 'sem dados retornados', code: 'PGRST116' } };
+  return { data: rows[0], error: null };
+}
+
+// Equivalent to .delete().eq(col, val)
+async function dbDelete(baseUrl, serviceKey, table, filters) {
+  var parts = [];
+  Object.keys(filters).forEach(function(k) {
+    parts.push(encodeURIComponent(k) + '=eq.' + encodeURIComponent(String(filters[k])));
+  });
+  return restRequest(baseUrl, serviceKey, 'DELETE', table, parts.join('&'), undefined);
+}
+
+// Equivalent to .update(body).eq(...).select(cols).single()
+async function dbUpdate(baseUrl, serviceKey, table, filters, body, selectCols) {
+  var parts = [];
+  Object.keys(filters).forEach(function(k) {
+    parts.push(encodeURIComponent(k) + '=eq.' + encodeURIComponent(String(filters[k])));
+  });
+  if (selectCols) parts.push('select=' + encodeURIComponent(selectCols));
+  var result = await restRequest(baseUrl, serviceKey, 'PATCH', table, parts.join('&'), body);
+  if (result.error) return result;
+  var rows = Array.isArray(result.data) ? result.data : (result.data ? [result.data] : []);
+  if (rows.length === 0) return { data: null, error: { message: 'sem dados retornados', code: 'PGRST116' } };
+  return { data: rows[0], error: null };
+}
+
+// Equivalent to .select(cols).eq(...).maybeSingle()
+async function dbSelectOne(baseUrl, serviceKey, table, filters, selectCols) {
+  var parts = [];
+  if (selectCols) parts.push('select=' + encodeURIComponent(selectCols));
+  Object.keys(filters).forEach(function(k) {
+    parts.push(encodeURIComponent(k) + '=eq.' + encodeURIComponent(String(filters[k])));
+  });
+  parts.push('limit=1');
+  var result = await restRequest(baseUrl, serviceKey, 'GET', table, parts.join('&'), undefined);
+  if (result.error) return result;
+  var rows = Array.isArray(result.data) ? result.data : [];
+  return { data: rows.length > 0 ? rows[0] : null, error: null };
+}
+
+// Equivalent to .select(cols).eq(...).order(...).limit(n)
+async function dbSelectMany(baseUrl, serviceKey, table, eqFilters, inFilters, selectCols, orderCol, orderAsc, limitN) {
+  var parts = [];
+  if (selectCols) parts.push('select=' + encodeURIComponent(selectCols));
+  if (eqFilters) {
+    Object.keys(eqFilters).forEach(function(k) {
+      parts.push(encodeURIComponent(k) + '=eq.' + encodeURIComponent(String(eqFilters[k])));
+    });
+  }
+  if (inFilters) {
+    Object.keys(inFilters).forEach(function(k) {
+      var vals = inFilters[k].map(function(v) { return encodeURIComponent(String(v)); });
+      parts.push(encodeURIComponent(k) + '=in.(' + vals.join(',') + ')');
+    });
+  }
+  if (orderCol) parts.push('order=' + orderCol + '.' + (orderAsc ? 'asc' : 'desc'));
+  if (limitN) parts.push('limit=' + limitN);
+  return restRequest(baseUrl, serviceKey, 'GET', table, parts.join('&'), undefined);
+}
+
+// --- Native fetch helpers for Supabase Storage ---
+
+async function storageRequest(baseUrl, serviceKey, method, path, body) {
+  var url = baseUrl + '/storage/v1/' + path;
+  var res = await fetch(url, {
+    method: method,
+    headers: {
+      'apikey': serviceKey,
+      'Authorization': 'Bearer ' + serviceKey,
+      'Content-Type': 'application/json'
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  var text = await res.text();
+  if (!res.ok) {
+    var errData;
+    try { errData = JSON.parse(text); } catch (e) { errData = { message: text }; }
+    return { data: null, error: { message: errData.message || text, statusCode: String(res.status), details: errData } };
+  }
+  var parsed;
+  try { parsed = JSON.parse(text); } catch (e) { return { data: null, error: { message: 'resposta inválida do Storage', statusCode: String(res.status) } }; }
+  return { data: parsed, error: null };
+}
+
+// Equivalent to admin.storage.from(bucket).createSignedUploadUrl(path)
+async function storageCreateSignedUploadUrl(baseUrl, serviceKey, bucket, storagePath) {
+  var apiPath = 'object/upload/sign/' + encodeURIComponent(bucket) + '/' + storagePath;
+  var result = await storageRequest(baseUrl, serviceKey, 'POST', apiPath, {});
+  if (result.error) return result;
+  var raw = result.data;
+  if (!raw || !raw.signedURL || !raw.token) {
+    return { data: null, error: { message: 'resposta incompleta da Storage API', statusCode: '200', details: raw } };
+  }
+  return { data: { signedUrl: raw.signedURL, token: raw.token, path: raw.path || storagePath }, error: null };
+}
+
+// Equivalent to admin.storage.from(bucket).list(directory, {limit, search})
+async function storageList(baseUrl, serviceKey, bucket, directory, limit, search) {
+  var apiPath = 'object/list/' + encodeURIComponent(bucket);
+  var body = { prefix: directory, limit: limit || 100, offset: 0, sortBy: { column: 'name', order: 'asc' } };
+  if (search) body.search = search;
+  var result = await storageRequest(baseUrl, serviceKey, 'POST', apiPath, body);
+  if (result.error) return result;
+  return { data: Array.isArray(result.data) ? result.data : [], error: null };
 }
 
 function parseJsonBody(req) {
@@ -73,17 +201,14 @@ function splitStoragePath(storagePath) {
   };
 }
 
-async function ensureObjectExistsInStorage(admin, storagePath) {
+async function ensureObjectExistsInStorage(baseUrl, serviceKey, storagePath) {
   var parts = splitStoragePath(storagePath);
   if (!parts) return false;
 
   var delays = [0, 800, 1600];
   for (var i = 0; i < delays.length; i++) {
     if (delays[i] > 0) await new Promise(function(r) { setTimeout(r, delays[i]); });
-    var result = await admin.storage.from(LAB_REPORTS_BUCKET).list(parts.directory, {
-      limit: 100,
-      search: parts.fileName
-    });
+    var result = await storageList(baseUrl, serviceKey, LAB_REPORTS_BUCKET, parts.directory, 100, parts.fileName);
     if (result.error) throw new Error('Falha ao validar objeto no storage: ' + result.error.message);
     if ((result.data || []).some(function(item) { return item && item.name === parts.fileName; })) return true;
   }
@@ -136,24 +261,18 @@ function handleInitUpload(req, res) {
       return res.status(413).json({ ok: false, error: 'Arquivo inválido ou acima do limite permitido (10MB).' });
     }
 
-    var admin = createAdminSupabaseClient();
+    var baseUrl = readSupabaseUrl();
+    var serviceKey = readSupabaseServiceKey();
+    if (!baseUrl || !serviceKey) {
+      return res.status(500).json({ ok: false, error: 'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias.', code: 'CONFIG_ERROR' });
+    }
+
     var storagePath = buildCanonicalLabStoragePath(user.id, mimeType, fileName);
 
-    // Validate SDK capability before touching the DB
-    var bucketHandle = admin.storage.from(LAB_REPORTS_BUCKET);
     console.log('[labs/init-upload] storage', {
       bucket: LAB_REPORTS_BUCKET,
-      storagePath: storagePath,
-      createSignedUploadUrlType: typeof bucketHandle.createSignedUploadUrl
+      storagePath: storagePath
     });
-    if (typeof bucketHandle.createSignedUploadUrl !== 'function') {
-      console.error('[labs/init-upload] storage', { error: 'createSignedUploadUrl indisponível no SDK instalado' });
-      return res.status(500).json({
-        ok: false,
-        error: 'SDK incompatível: createSignedUploadUrl indisponível',
-        code: 'SDK_INCOMPATIBLE'
-      });
-    }
 
     // Insert pending record
     var insertPayload = {
@@ -165,16 +284,12 @@ function handleInitUpload(req, res) {
       file_type: mimeType,
       mime_type: mimeType,
       status: 'pending_upload',
-      parse_status: 'pending_upload',  // FIX: was 'pending' — invalid per lab_reports_parse_status_check
+      parse_status: 'pending_upload',
       processing_error: null
     };
     console.log('[labs/init-upload] insert-payload', insertPayload);
 
-    var created = await admin
-      .from('lab_reports')
-      .insert(insertPayload)
-      .select('id,storage_path')
-      .single();
+    var created = await dbInsert(baseUrl, serviceKey, 'lab_reports', insertPayload, 'id,storage_path');
 
     console.log('[labs/init-upload] insert-result', {
       hasData: !!created.data,
@@ -205,7 +320,7 @@ function handleInitUpload(req, res) {
     }
 
     // Generate signed upload URL
-    var signed = await bucketHandle.createSignedUploadUrl(storagePath);
+    var signed = await storageCreateSignedUploadUrl(baseUrl, serviceKey, LAB_REPORTS_BUCKET, storagePath);
 
     console.log('[labs/init-upload] signed-result', {
       hasData: !!signed.data,
@@ -222,7 +337,7 @@ function handleInitUpload(req, res) {
         ? String(signed.error.message || signed.error.statusCode || JSON.stringify(signed.error)).slice(0, 300)
         : 'resposta incompleta da Storage API';
       console.error('[labs/init-upload] signed-result ERROR:', storErr);
-      await admin.from('lab_reports').delete().eq('id', created.data.id);
+      await dbDelete(baseUrl, serviceKey, 'lab_reports', { id: created.data.id });
       return res.status(500).json({
         ok: false,
         error: 'Falha ao gerar URL assinada: ' + storErr,
@@ -290,13 +405,13 @@ function handleRegister(req, res) {
       return res.status(403).json({ ok: false, error: 'Caminho de storage inválido.' });
     }
 
-    var admin = createAdminSupabaseClient();
-    var existing = await admin
-      .from('lab_reports')
-      .select('id,user_id,storage_path,status')
-      .eq('id', labReportId)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    var baseUrl = readSupabaseUrl();
+    var serviceKey = readSupabaseServiceKey();
+    if (!baseUrl || !serviceKey) {
+      return res.status(500).json({ ok: false, error: 'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias.', code: 'CONFIG_ERROR' });
+    }
+
+    var existing = await dbSelectOne(baseUrl, serviceKey, 'lab_reports', { id: labReportId, user_id: user.id }, 'id,user_id,storage_path,status');
 
     if (existing.error) return res.status(500).json({ ok: false, error: 'Erro ao validar labReportId.' });
     if (!existing.data) return res.status(404).json({ ok: false, error: 'Lab report não encontrado para este usuário.' });
@@ -304,7 +419,7 @@ function handleRegister(req, res) {
       return res.status(409).json({ ok: false, error: 'labReportId não corresponde ao storagePath informado.' });
     }
 
-    var storageObjectExists = await ensureObjectExistsInStorage(admin, storagePath);
+    var storageObjectExists = await ensureObjectExistsInStorage(baseUrl, serviceKey, storagePath);
     if (!storageObjectExists) {
       return res.status(409).json({ ok: false, error: 'Arquivo não encontrado no storage. Refaça o upload antes de registrar.' });
     }
@@ -314,18 +429,12 @@ function handleRegister(req, res) {
       file_type: mimeType,
       mime_type: mimeType,
       status: 'uploaded',
-      parse_status: 'uploaded',  // FIX: was 'pending' — invalid per lab_reports_parse_status_check
+      parse_status: 'uploaded',
       processing_error: null
     };
     console.log('[labs/register] insert-payload', updatePayload);
 
-    var updated = await admin
-      .from('lab_reports')
-      .update(updatePayload)
-      .eq('id', labReportId)
-      .eq('user_id', user.id)
-      .select('id')
-      .single();
+    var updated = await dbUpdate(baseUrl, serviceKey, 'lab_reports', { id: labReportId, user_id: user.id }, updatePayload, 'id');
 
     console.log('[labs/register] insert-result', {
       hasData: !!updated.data,
@@ -363,29 +472,43 @@ function handleReports(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Método não permitido.' });
   return withAuth(req, res, async function(user) {
     var limit = Math.min(Number((req.query && req.query.limit) || '10') || 10, 50);
-    var admin = createAdminSupabaseClient();
 
-    var reportsResult = await admin
-      .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    var baseUrl = readSupabaseUrl();
+    var serviceKey = readSupabaseServiceKey();
+    if (!baseUrl || !serviceKey) {
+      return res.status(500).json({ ok: false, error: 'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias.', code: 'CONFIG_ERROR' });
+    }
+
+    var reportsResult = await dbSelectMany(
+      baseUrl, serviceKey,
+      'lab_reports',
+      { user_id: user.id },
+      null,
+      'id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at',
+      'created_at',
+      false,
+      limit
+    );
 
     if (reportsResult.error) {
       return res.status(500).json({ ok: false, error: 'Erro ao buscar histórico de exames.' });
     }
 
-    var rows = reportsResult.data || [];
+    var rows = Array.isArray(reportsResult.data) ? reportsResult.data : [];
     var ids = rows.map(function(row) { return row.id; }).filter(Boolean);
     var biomarkerMap = new Map();
 
     if (ids.length > 0) {
-      var biomarkersResult = await admin
-        .from('lab_report_biomarkers')
-        .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
-        .in('lab_report_id', ids)
-        .order('created_at', { ascending: true });
+      var biomarkersResult = await dbSelectMany(
+        baseUrl, serviceKey,
+        'lab_report_biomarkers',
+        null,
+        { lab_report_id: ids },
+        'lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at',
+        'created_at',
+        true,
+        null
+      );
 
       if (!biomarkersResult.error && Array.isArray(biomarkersResult.data)) {
         biomarkersResult.data.forEach(function(row) {
@@ -427,30 +550,45 @@ function handleReportById(req, res) {
     var id = String((req.query && req.query.id) || '').trim();
     if (!id) return res.status(400).json({ ok: false, error: 'id é obrigatório.' });
 
-    var admin = createAdminSupabaseClient();
-    var reportResult = await admin
-      .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    var baseUrl = readSupabaseUrl();
+    var serviceKey = readSupabaseServiceKey();
+    if (!baseUrl || !serviceKey) {
+      return res.status(500).json({ ok: false, error: 'SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias.', code: 'CONFIG_ERROR' });
+    }
+
+    var reportResult = await dbSelectOne(
+      baseUrl, serviceKey,
+      'lab_reports',
+      { id: id, user_id: user.id },
+      'id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at'
+    );
 
     if (reportResult.error) return res.status(500).json({ ok: false, error: 'Erro ao consultar exame.' });
     if (!reportResult.data) return res.status(404).json({ ok: false, error: 'Exame não encontrado.' });
 
-    var extractions = await admin
-      .from('lab_report_extractions')
-      .select('id,lab_report_id,extraction_mode,confidence,raw_output,structured_data,created_at')
-      .eq('lab_report_id', id)
-      .order('created_at', { ascending: false });
+    var extractions = await dbSelectMany(
+      baseUrl, serviceKey,
+      'lab_report_extractions',
+      { lab_report_id: id },
+      null,
+      'id,lab_report_id,extraction_mode,confidence,raw_output,structured_data,created_at',
+      'created_at',
+      false,
+      null
+    );
 
     if (extractions.error) return res.status(500).json({ ok: false, error: 'Erro ao consultar extrações.' });
 
-    var biomarkers = await admin
-      .from('lab_report_biomarkers')
-      .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
-      .eq('lab_report_id', id)
-      .order('created_at', { ascending: true });
+    var biomarkers = await dbSelectMany(
+      baseUrl, serviceKey,
+      'lab_report_biomarkers',
+      { lab_report_id: id },
+      null,
+      'lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at',
+      'created_at',
+      true,
+      null
+    );
 
     if (biomarkers.error) return res.status(500).json({ ok: false, error: 'Erro ao consultar biomarcadores.' });
 

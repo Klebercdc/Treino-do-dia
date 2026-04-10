@@ -77,23 +77,23 @@ test('handler nunca usa parse_status legado pending ou parsed', () => {
   assert.doesNotMatch(noComments, /parse_status:\s*['"]parsed['"]/);
 });
 
-// ── SDK safety ────────────────────────────────────────────────────────────────
+// ── Storage safety ────────────────────────────────────────────────────────────
 
-test('handler verifica typeof createSignedUploadUrl ANTES do INSERT no DB', () => {
+test('handler usa storageCreateSignedUploadUrl após INSERT no DB', () => {
   const initUploadFn = handlerSrc.slice(
     handlerSrc.indexOf('function handleInitUpload'),
     handlerSrc.indexOf('function handleRegister')
   );
-  const sdkCheckPos  = initUploadFn.indexOf('createSignedUploadUrl');
-  const insertPos    = initUploadFn.indexOf('.insert(');
-  assert.ok(sdkCheckPos !== -1,  'createSignedUploadUrl check não encontrado em handleInitUpload');
-  assert.ok(insertPos   !== -1,  '.insert() não encontrado em handleInitUpload');
-  assert.ok(sdkCheckPos < insertPos, 'SDK check deve vir ANTES do .insert()');
+  const storageCallPos = initUploadFn.indexOf('storageCreateSignedUploadUrl');
+  const insertPos      = initUploadFn.indexOf('dbInsert(');
+  assert.ok(storageCallPos !== -1, 'storageCreateSignedUploadUrl não encontrado em handleInitUpload');
+  assert.ok(insertPos      !== -1, 'dbInsert() não encontrado em handleInitUpload');
+  assert.ok(insertPos < storageCallPos, 'dbInsert deve vir ANTES de storageCreateSignedUploadUrl');
 });
 
-test('handler retorna SDK_INCOMPATIBLE se createSignedUploadUrl não existir', () => {
-  assert.match(handlerSrc, /SDK_INCOMPATIBLE/);
-  assert.match(handlerSrc, /createSignedUploadUrl indisponível/);
+test('handler retorna STORAGE_SIGNED_URL_ERROR se URL assinada falhar', () => {
+  assert.match(handlerSrc, /STORAGE_SIGNED_URL_ERROR/);
+  assert.match(handlerSrc, /Falha ao gerar URL assinada/);
 });
 
 // ── Validation ────────────────────────────────────────────────────────────────
