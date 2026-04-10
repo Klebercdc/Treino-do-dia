@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../../../lib/utils/logger';
+import type { BiomarkerEntry } from '../../../core/labs/labTypes';
+import { buildHealthPerformanceProfile, applyClinicalRulesFromBiomarkers } from '../../../core/labs/labRules';
 
 const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
@@ -355,62 +357,133 @@ export function computeReadinessForAI(input: {
   return { ready: true, needsReview: false };
 }
 
-function buildRuleBasedScores(biomarkers: Array<Record<string, unknown>>) {
-  const byKey = new Map<string, number>();
-  for (const b of biomarkers) {
-    const key = String(b.marker_key || '').toLowerCase();
-    const value = toNumber(b.value_numeric);
-    if (key && value !== null) byKey.set(key, value);
-  }
-
-  const glucose = byKey.get('glucose');
-  const hba1c = byKey.get('hba1c');
-  const ldl = byKey.get('ldl');
-  const creatinine = byKey.get('creatinine');
-
-  const metabolic = glucose && glucose > 110 ? 45 : 78;
-  const hormonal = 70;
-  const hematologic = 72;
-  const recovery = hba1c && hba1c > 5.7 ? 55 : 80;
-  const safety = (ldl && ldl > 160) || (creatinine && creatinine > 1.5) ? 42 : 82;
-
-  return {
-    recovery_score: recovery,
-    metabolic_score: metabolic,
-    hematologic_score: hematologic,
-    hormonal_score: hormonal,
-    safety_score: safety,
-  };
+/**
+ * Cast raw biomarker records to typed BiomarkerEntry array.
+ * Tolerant of missing fields — unknown fields are coerced/defaulted.
+ */
+function toBiomarkerEntries(biomarkers: Array<Record<string, unknown>>): BiomarkerEntry[] {
+  return biomarkers.map((b) => ({
+    marker_key: String(b.marker_key || '').toLowerCase(),
+    marker_name: String(b.marker_name || b.marker_key || 'Marcador'),
+    value_numeric: toNumber(b.value_numeric),
+    value_text: b.value_text != null ? String(b.value_text) : null,
+    unit: b.unit != null ? String(b.unit) : null,
+    reference_min: toNumber(b.reference_min),
+    reference_max: toNumber(b.reference_max),
+    reference_text: b.reference_text != null ? String(b.reference_text) : null,
+    flag: b.flag != null ? String(b.flag) as BiomarkerEntry['flag'] : null,
+    source_line: b.source_line != null ? String(b.source_line) : null,
+    confidence: toNumber(b.confidence),
+  })).filter((b) => b.marker_key);
 }
 
 export async function generateExamInsights(input: {
   biomarkers: Array<Record<string, unknown>>;
   confidenceSummary?: Record<string, unknown>;
 }): Promise<Record<string, unknown>> {
-  const scores = buildRuleBasedScores(input.biomarkers);
+  const typedBiomarkers = toBiomarkerEntries(input.biomarkers);
+  const profile = buildHealthPerformanceProfile(typedBiomarkers);
+  const clinical = applyClinicalRulesFromBiomarkers(typedBiomarkers);
+
+  // Build actionable training adjustments from profile
+  const trainingAdjustments: string[] = [];
+  if (profile.training_readiness.level === 'critical') {
+    trainingAdjustments.push('Sinais críticos detectados: reduzir volume e intensidade imediatamente; avaliação médica recomendada.')
+  } else if (profile.training_readiness.level === 'caution') {
+    trainingAdjustments.push('Sinais de cautela: modular volume; evitar falha muscular; priorizar recuperação ativa.')
+  } else if (profile.training_readiness.level === 'attention') {
+    trainingAdjustments.push('Monitorar fadiga e recuperação; ajuste conservador de progressão de carga.')
+  } else {
+    trainingAdjustments.push('Sem limitações clínicas identificadas. Progressão normal conforme periodização planejada.')
+  }
+
+  if (profile.hematologic_status.flags.some((f) => f.includes('hemoglobin') || f.includes('ferritin_low'))) {
+    trainingAdjustments.push('Capacidade aeróbica potencialmente reduzida: priorizar treinos de resistência moderados; limitar intensidade máxima.')
+  }
+
+  if (profile.androgen_status.flags.some((f) => f.includes('cortisol_high'))) {
+    trainingAdjustments.push('Cortisol elevado: incluir deload; priorizar sono 8h+ e técnicas de controle de estresse.')
+  }
+
+  if (profile.androgen_status.flags.some((f) => f.includes('testosterone_very_low'))) {
+    trainingAdjustments.push('Testosterona muito baixa: volume de treino moderado; frequência de deload aumentada.')
+  }
+
+  if (profile.liver_health.level !== 'ok') {
+    trainingAdjustments.push('Função hepática alterada: evitar esforço de alta intensidade por tempo prolongado; hidratação rigorosa.')
+  }
+
+  if (profile.kidney_hydration.level === 'caution' || profile.kidney_hydration.level === 'critical') {
+    trainingAdjustments.push('Função renal comprometida: hidratação obrigatória; evitar suplementos nefrotóxicos; monitorar proteína.')
+  }
+
+  // Nutrition adjustments
+  const nutritionAdjustments: string[] = []
+  for (const note of profile.dietary_attention_points.notes.slice(0, 5)) {
+    nutritionAdjustments.push(note)
+  }
+  if (nutritionAdjustments.length === 0) {
+    nutritionAdjustments.push('Distribuição equilibrada de macronutrientes conforme objetivo e composição corporal.')
+  }
+
+  // Supplementation notes (conservative)
+  const supplementationNotes: string[] = []
+  if (profile.micronutrient_status.flags.some((f) => f.includes('vitamin_d_deficient'))) {
+    supplementationNotes.push('Vitamina D deficiente: considerar suplementação 1000–4000 UI/dia conforme avaliação médica.')
+  }
+  if (profile.hematologic_status.flags.some((f) => f.includes('ferritin_very_low') || f.includes('ferritin_low'))) {
+    supplementationNotes.push('Ferritina baixa: hierarquizar ferro alimentar (heme); suplementação só após avaliação laboratorial.')
+  }
+  if (profile.micronutrient_status.flags.some((f) => f.includes('b12_low'))) {
+    supplementationNotes.push('B12 baixa: suplementar após avaliação; dose conservadora 500–1000 mcg/dia em deficiências leves.')
+  }
+  if (supplementationNotes.length === 0) {
+    supplementationNotes.push('Manter stack base: proteína, creatina e ômega-3 quando compatíveis com objetivos e perfil clínico.')
+  }
+
+  // Recovery signals
+  const recoverySignals: string[] = []
+  for (const note of profile.recovery_risk.notes.slice(0, 4)) {
+    recoverySignals.push(note)
+  }
+  if (recoverySignals.length === 0) {
+    recoverySignals.push('Marcadores de recuperação dentro dos limites esperados.')
+  }
+
+  // Safety notes
+  const safetyNotes: string[] = ['Sem diagnóstico médico. Análise orientada a treino e produto. Alterações relevantes devem ser avaliadas por médico.']
+  for (const note of profile.safety_flags.notes.slice(0, 3)) {
+    safetyNotes.push(note)
+  }
+
   return {
-    ...scores,
-    impact_on_training: [
-      'Modular volume e intensidade com base no recovery_score e safety_score.',
-      'Se safety_score baixo, priorizar técnica, sono e reduzir proximidade da falha.',
-    ],
-    impact_on_nutrition: [
-      'Ajustar distribuição de carboidratos conforme metabolic_score.',
-      'Priorizar proteína adequada e densidade nutricional para suporte de recuperação.',
-    ],
-    impact_on_supplementation: [
-      'Manter stack base conservador (creatina, proteína, ômega-3 quando aplicável).',
-      'Evitar recomendações agressivas sem marcador específico confiável.',
-    ],
-    recovery_signals: [
-      'Combinar biomarcadores com sono, fadiga subjetiva e carga interna.',
-    ],
-    safety_notes: [
-      'Sem diagnóstico médico. Em alterações relevantes, orientar avaliação profissional.',
-    ],
-    recommended_follow_up: [
-      'Repetir exame no intervalo definido pelo profissional de saúde.',
-    ],
+    scores: profile.scores,
+    health_profile: {
+      metabolic_health: profile.metabolic_health,
+      lipid_health: profile.lipid_health,
+      liver_health: profile.liver_health,
+      kidney_hydration: profile.kidney_hydration,
+      hematologic_status: profile.hematologic_status,
+      thyroid_status: profile.thyroid_status,
+      androgen_status: profile.androgen_status,
+      inflammation_status: profile.inflammation_status,
+      micronutrient_status: profile.micronutrient_status,
+      training_readiness: profile.training_readiness,
+      recovery_risk: profile.recovery_risk,
+      dietary_attention_points: profile.dietary_attention_points,
+      safety_flags: profile.safety_flags,
+    },
+    clinical_flags: clinical.clinicalFlags,
+    critical_flags: clinical.criticalFlags,
+    clinical_mode: clinical.mode,
+    impact_on_training: trainingAdjustments,
+    impact_on_nutrition: nutritionAdjustments,
+    impact_on_supplementation: supplementationNotes,
+    recovery_signals: recoverySignals,
+    safety_notes: safetyNotes,
+    recommended_follow_up: ['Repetir exame no intervalo recomendado pelo profissional de saúde.'],
+    generation_mode: 'rule_based_health_profile',
+    provider: 'local',
   };
 }
 

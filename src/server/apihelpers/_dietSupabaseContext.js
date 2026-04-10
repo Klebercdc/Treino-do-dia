@@ -169,7 +169,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
       .eq('active', true);
     var labReportsQuery = adminClient
       .from('lab_reports')
-      .select('id,parsed,confidence,is_valid,clinical_flags,critical_flags,created_at')
+      .select('id,parsed,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,clinical_flags,critical_flags,created_at,processed_at')
       .eq('user_id', userId)
       .eq('is_valid', true)
       .order('created_at', { ascending: false })
@@ -183,18 +183,46 @@ async function loadDietSupabaseContext(adminClient, userId) {
       bodyMetrics: responses[1].status === 'fulfilled' ? responses[1].value.data || null : null,
       nutritionGoals: responses[2].status === 'fulfilled' ? responses[2].value.data || null : null,
       supplements: responses[3].status === 'fulfilled' ? responses[3].value.data || [] : [],
-      latestLabReport: responses[4].status === 'fulfilled' && responses[4].value.data
-        ? {
-            id: responses[4].value.data.id || null,
-            parsed: responses[4].value.data.parsed || null,
-            confidence: Number(responses[4].value.data.confidence || 0),
-            isValid: Boolean(responses[4].value.data.is_valid),
-            mode: 'clinical',
-            clinicalFlags: Array.isArray(responses[4].value.data.clinical_flags) ? responses[4].value.data.clinical_flags : [],
-            criticalFlags: Array.isArray(responses[4].value.data.critical_flags) ? responses[4].value.data.critical_flags : [],
-            createdAt: responses[4].value.data.created_at || null,
-          }
-        : null,
+      latestLabReport: (function() {
+        if (responses[4].status !== 'fulfilled' || !responses[4].value.data) return null;
+        var d = responses[4].value.data;
+        // Canonical biomarker source: normalized_payload.biomarkers (most complete)
+        // Fallback to legacy parsed field for backwards compatibility
+        var normalizedPayload = d.normalized_payload && typeof d.normalized_payload === 'object' ? d.normalized_payload : null;
+        var biomarkers = (normalizedPayload && Array.isArray(normalizedPayload.biomarkers))
+          ? normalizedPayload.biomarkers
+          : null;
+
+        // Build health profile signals from ai_insights if already computed
+        var aiInsights = d.ai_insights && typeof d.ai_insights === 'object' ? d.ai_insights : null;
+        var healthProfile = aiInsights && aiInsights.health_profile ? aiInsights.health_profile : null;
+        var scores = aiInsights && aiInsights.scores ? aiInsights.scores : null;
+
+        // Derive clinical flags from ai_insights if available, fallback to stored flags
+        var clinicalFlags = (aiInsights && Array.isArray(aiInsights.clinical_flags))
+          ? aiInsights.clinical_flags
+          : (Array.isArray(d.clinical_flags) ? d.clinical_flags : []);
+        var criticalFlags = (aiInsights && Array.isArray(aiInsights.critical_flags))
+          ? aiInsights.critical_flags
+          : (Array.isArray(d.critical_flags) ? d.critical_flags : []);
+
+        return {
+          id: d.id || null,
+          parsed: d.parsed || null,
+          biomarkers: biomarkers,
+          healthProfile: healthProfile,
+          scores: scores,
+          aiInsights: aiInsights,
+          confidence: Number(d.confidence || 0),
+          confidenceSummary: d.confidence_summary || null,
+          isValid: Boolean(d.is_valid),
+          mode: 'clinical',
+          clinicalFlags: clinicalFlags,
+          criticalFlags: criticalFlags,
+          createdAt: d.created_at || null,
+          processedAt: d.processed_at || null,
+        };
+      })(),
     };
   } catch (_) {
     return empty;
