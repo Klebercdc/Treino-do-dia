@@ -4,18 +4,6 @@ import { requireBearerAuth } from '../../../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../../../lib/supabase/admin';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const LAB_REPORTS_BUCKET = 'lab-reports';
-
-function isMissingOptionalTable(
-  error: { code?: string | null; message?: string | null } | null | undefined,
-  table: string,
-) {
-  return (
-    error?.code === 'PGRST205' &&
-    new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(String(error.message || ''))
-  );
-}
-
 export const runtime = 'nodejs';
 
 export async function getLabReportByIdForUser(
@@ -30,8 +18,27 @@ export async function getLabReportByIdForUser(
     .maybeSingle();
 }
 
+function isDeletionBlockedStatus(statusKey: string): boolean {
+  return statusKey === 'pending_upload'
+    || statusKey === 'uploaded'
+    || statusKey === 'queued'
+    || statusKey === 'processing'
+    || statusKey === 'extracted';
+}
+
+function normalizeStringArray(input: unknown): string[] {
+  return Array.isArray(input)
+    ? input.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+}
+
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const isMissingOptionalTable = (error: { code?: string | null; message?: string | null } | null | undefined, table: string) => (
+      error?.code === 'PGRST205'
+      && new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(String(error.message || ''))
+    );
+
     const auth = await requireBearerAuth(req);
     if (!auth.ok) return auth.response;
 
@@ -71,7 +78,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     return NextResponse.json({
       ok: true,
-      report,
+      report: {
+        ...report,
+        clinicalFlags: normalizeStringArray((report.ai_insights as { clinical_flags?: unknown[] } | null)?.clinical_flags || report.clinical_flags),
+        criticalFlags: normalizeStringArray((report.ai_insights as { critical_flags?: unknown[] } | null)?.critical_flags || report.critical_flags),
+      },
       extractions: extractions.data || fallbackExtractions,
       biomarkers: biomarkers.data || fallbackBiomarkers,
     });
@@ -89,51 +100,40 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     const { id } = await ctx.params;
     const admin = createAdminSupabaseClient();
 
-    const { data: report, error: fetchError } = await admin
-      .from('lab_reports')
-      .select('id,user_id,status,parse_status,storage_path,storage_bucket')
-      .eq('id', id)
-      .eq('user_id', auth.user.id)
-      .maybeSingle();
+    const { data: report, error } = await getLabReportByIdForUser(admin, {
+      reportId: id,
+      userId: auth.user.id,
+    });
 
-    if (fetchError) return NextResponse.json({ ok: false, error: 'Erro ao verificar exame.' }, { status: 500 });
+    if (error) return NextResponse.json({ ok: false, error: 'Erro ao consultar exame.' }, { status: 500 });
     if (!report) return NextResponse.json({ ok: false, error: 'Exame não encontrado.' }, { status: 404 });
 
-    if (report.status === 'processing' || report.parse_status === 'processing') {
-      return NextResponse.json(
-        { ok: false, error: 'Exame em processamento. Aguarde a conclusão antes de excluir.', code: 'REPORT_PROCESSING' },
-        { status: 409 },
-      );
+    const statusKey = String(report.status || report.parse_status || '').toLowerCase();
+    if (isDeletionBlockedStatus(statusKey)) {
+      return NextResponse.json({
+        ok: false,
+        error: 'Este exame ainda está em processamento e não pode ser excluído agora.',
+        code: 'REPORT_STILL_PROCESSING',
+      }, { status: 409 });
     }
 
-    // Best-effort storage cleanup
-    const bucket = String(report.storage_bucket || LAB_REPORTS_BUCKET);
-    const storagePath = report.storage_path ? String(report.storage_path) : null;
+    const deletion = await admin.from('lab_reports').delete().eq('id', id).eq('user_id', auth.user.id);
+    if (deletion.error) {
+      return NextResponse.json({ ok: false, error: 'Falha ao remover exame.', code: 'DB_DELETE_ERROR' }, { status: 500 });
+    }
+
+    const storageBucket = String(report.storage_bucket || 'lab-reports');
+    const storagePath = String(report.storage_path || '').trim();
     if (storagePath) {
-      const { error: storageError } = await admin.storage.from(bucket).remove([storagePath]);
-      if (storageError) {
-        console.warn('[labs/delete] aviso ao remover storage:', { path: storagePath, reason: storageError.message });
+      const removal = await admin.storage.from(storageBucket).remove([storagePath]);
+      if (removal.error) {
+        console.warn('[app-router/labs/delete] storage cleanup failed after db delete', {
+          reportId: id,
+          storageBucket,
+          storagePath,
+          error: removal.error.message || removal.error,
+        });
       }
-    }
-
-    // Delete child records (optional tables — ignore missing table errors)
-    const childTables = ['lab_report_pipeline_events', 'lab_report_biomarkers', 'lab_report_extractions'] as const;
-    for (const table of childTables) {
-      const { error: childError } = await admin.from(table).delete().eq('lab_report_id', id);
-      if (childError && !isMissingOptionalTable(childError, table)) {
-        console.warn(`[labs/delete] erro ao excluir ${table}:`, childError.message);
-      }
-    }
-
-    // Delete parent record scoped to owner
-    const { error: deleteError } = await admin
-      .from('lab_reports')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', auth.user.id);
-
-    if (deleteError) {
-      return NextResponse.json({ ok: false, error: 'Erro ao excluir exame da base de dados.' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, deletedId: id });

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
+      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,clinical_flags,critical_flags,created_at,processed_at')
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -76,7 +76,16 @@ export async function GET(req: NextRequest) {
       isValid: row.is_valid,
       processingError: row.processing_error,
       biomarkers: biomarkerMap.get(String(row.id)) || [],
-      clinicalFlags: [],
+      clinicalFlags: Array.isArray((row.ai_insights as { clinical_flags?: unknown[] } | null)?.clinical_flags)
+        ? ((row.ai_insights as { clinical_flags?: unknown[] }).clinical_flags || []).map((item) => String(item || '')).filter(Boolean)
+        : Array.isArray(row.clinical_flags)
+          ? row.clinical_flags.map((item) => String(item || '')).filter(Boolean)
+          : [],
+      criticalFlags: Array.isArray((row.ai_insights as { critical_flags?: unknown[] } | null)?.critical_flags)
+        ? ((row.ai_insights as { critical_flags?: unknown[] }).critical_flags || []).map((item) => String(item || '')).filter(Boolean)
+        : Array.isArray(row.critical_flags)
+          ? row.critical_flags.map((item) => String(item || '')).filter(Boolean)
+          : [],
       createdAt: row.created_at,
       processedAt: row.processed_at,
     }));

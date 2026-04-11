@@ -1,16 +1,7 @@
 import { randomUUID } from "crypto"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { applyClinicalRules, applyClinicalRulesFromBiomarkers, buildHealthPerformanceProfile, parsedFromBiomarkers } from "./labRules"
-import type {
-  BiomarkerEntry,
-  BiomarkerTimeline,
-  BiomarkerTimelineEntry,
-  BiomarkerTrend,
-  HealthPerformanceProfile,
-  LabReportSummary,
-  LongitudinalLabContext,
-  StoredLabContext,
-} from "./labTypes"
+import type { BiomarkerEntry, HealthPerformanceProfile, LabBiomarkerTrend, LabLongitudinalContext, LabLongitudinalSignals, StoredLabContext } from "./labTypes"
 
 export const LAB_REPORTS_BUCKET = "lab-reports"
 const NORMALIZED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"])
@@ -27,6 +18,236 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
+}
+
+type LabReportRow = {
+  id: unknown
+  parsed: unknown
+  normalized_payload: unknown
+  ai_insights: unknown
+  confidence: unknown
+  is_valid: unknown
+  clinical_flags: unknown
+  critical_flags: unknown
+  created_at: unknown
+  processed_at: unknown
+}
+
+function normalizeStringArray(input: unknown): string[] {
+  return Array.isArray(input)
+    ? input.map((item) => String(item ?? "").trim()).filter(Boolean)
+    : []
+}
+
+function asRecord(input: unknown): Record<string, unknown> | null {
+  return input && typeof input === "object" && !Array.isArray(input)
+    ? (input as Record<string, unknown>)
+    : null
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === "string" && value.trim() === "") return null
+  if (typeof value === "number") return Number.isFinite(value) ? value : null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function extractBiomarkers(normalizedPayload: Record<string, unknown> | null): BiomarkerEntry[] {
+  const raw = normalizedPayload?.biomarkers
+  if (!Array.isArray(raw)) return []
+
+  return raw
+    .map((item) => {
+      const row = asRecord(item)
+      if (!row) return null
+
+      return {
+        marker_key: String(row.marker_key ?? row.marker ?? row.name ?? "").trim().toLowerCase(),
+        marker_name: String(row.marker_name ?? row.name ?? row.marker_key ?? "Marcador").trim(),
+        value_numeric: toNullableNumber(row.value_numeric),
+        value_text: row.value_text == null ? null : String(row.value_text),
+        unit: row.unit == null ? null : String(row.unit),
+        reference_min: toNullableNumber(row.reference_min),
+        reference_max: toNullableNumber(row.reference_max),
+        reference_text: row.reference_text == null ? null : String(row.reference_text),
+        flag: row.flag === "low" || row.flag === "high" || row.flag === "normal" ? row.flag : null,
+        source_line: row.source_line == null ? null : String(row.source_line),
+        confidence: toNullableNumber(row.confidence),
+      } satisfies BiomarkerEntry
+    })
+    .filter((item): item is BiomarkerEntry => Boolean(item && item.marker_key))
+}
+
+function resolveHealthProfile(
+  aiInsights: Record<string, unknown> | null,
+  biomarkers: BiomarkerEntry[],
+): HealthPerformanceProfile | null {
+  const fromInsights = asRecord(aiInsights?.health_profile)
+  if (fromInsights) return fromInsights as unknown as HealthPerformanceProfile
+  if (!biomarkers.length) return null
+  return buildHealthPerformanceProfile(biomarkers)
+}
+
+function mapStoredLabContext(data: LabReportRow): StoredLabContext {
+  const normalizedPayload = asRecord(data.normalized_payload)
+  const aiInsights = asRecord(data.ai_insights)
+  const biomarkers = extractBiomarkers(normalizedPayload)
+  const parsed = (data.parsed as StoredLabContext["parsed"]) || (biomarkers.length ? parsedFromBiomarkers(biomarkers) : null)
+  const fallbackClinical = biomarkers.length ? applyClinicalRulesFromBiomarkers(biomarkers) : applyClinicalRules(parsed)
+  const clinicalFlags = normalizeStringArray(aiInsights?.clinical_flags ?? data.clinical_flags)
+  const criticalFlags = normalizeStringArray(aiInsights?.critical_flags ?? data.critical_flags)
+
+  return {
+    id: String(data.id),
+    createdAt: typeof data.processed_at === "string"
+      ? data.processed_at
+      : typeof data.created_at === "string"
+        ? data.created_at
+        : null,
+    confidence: Number(data.confidence || 0),
+    mode: (clinicalFlags.length || criticalFlags.length || fallbackClinical.mode === "clinical") ? "clinical" : "standard",
+    parsed,
+    isValid: Boolean(data.is_valid),
+    clinicalFlags: clinicalFlags.length ? clinicalFlags : fallbackClinical.clinicalFlags,
+    criticalFlags: criticalFlags.length ? criticalFlags : fallbackClinical.criticalFlags,
+    healthProfile: resolveHealthProfile(aiInsights, biomarkers),
+  }
+}
+
+async function listValidLabReports(
+  admin: SupabaseClient,
+  userId: string,
+  limit: number,
+): Promise<LabReportRow[]> {
+  const { data, error } = await admin
+    .from("lab_reports")
+    .select("id, parsed, normalized_payload, ai_insights, confidence, is_valid, clinical_flags, critical_flags, created_at, processed_at")
+    .eq("user_id", userId)
+    .eq("is_valid", true)
+    .order("processed_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(limit)
+
+  if (error || !Array.isArray(data)) return []
+  return data as LabReportRow[]
+}
+
+function classifySignalDelta(current: string | null | undefined, previous: string | null | undefined): string | null {
+  if (!current && !previous) return null
+  if (current === previous) return "estável"
+  const priority: Record<string, number> = { ok: 0, attention: 1, caution: 2, critical: 3 }
+  const currentRank = current != null ? (priority[current] ?? 0) : 0
+  const previousRank = previous != null ? (priority[previous] ?? 0) : 0
+  if (currentRank > previousRank) return "piorou"
+  if (currentRank < previousRank) return "melhorou"
+  return "estável"
+}
+
+function markerDeviation(marker: {
+  value_numeric: number | null
+  reference_min: number | null
+  reference_max: number | null
+  flag: BiomarkerEntry["flag"]
+}): number | null {
+  const value = marker.value_numeric
+  if (typeof value !== "number" || !Number.isFinite(value)) return null
+  if (typeof marker.reference_min === "number" && value < marker.reference_min) {
+    return marker.reference_min - value
+  }
+  if (typeof marker.reference_max === "number" && value > marker.reference_max) {
+    return value - marker.reference_max
+  }
+  if (marker.flag === "high" || marker.flag === "low") return 1
+  return 0
+}
+
+function classifyMarkerTrend(points: BiomarkerEntry[]): LabBiomarkerTrend["status"] {
+  if (!points.length) return "insufficient_data"
+  const latest = points[0]
+  const previous = points[1]
+  const latestAbnormal = latest.flag === "high" || latest.flag === "low"
+  const previousAbnormal = previous ? previous.flag === "high" || previous.flag === "low" : false
+  const abnormalCount = points.filter((point) => point.flag === "high" || point.flag === "low").length
+
+  if (!previous) {
+    if (latestAbnormal) return "new_alert"
+    return "insufficient_data"
+  }
+
+  if (latestAbnormal && !previousAbnormal) return "new_alert"
+  if (!latestAbnormal && previousAbnormal) return "improved"
+
+  const latestDeviation = markerDeviation(latest)
+  const previousDeviation = markerDeviation(previous)
+
+  if (latestAbnormal && previousAbnormal) {
+    if (latestDeviation != null && previousDeviation != null) {
+      if (latestDeviation < previousDeviation * 0.85) return "improved"
+      if (latestDeviation > previousDeviation * 1.15) return "worsened"
+    }
+    return abnormalCount >= 2 ? "persistent_abnormal" : "worsened"
+  }
+
+  if (latestDeviation != null && previousDeviation != null) {
+    if (Math.abs(latestDeviation - previousDeviation) <= 0.05) return "stable"
+    return latestDeviation < previousDeviation ? "improved" : "worsened"
+  }
+
+  return "stable"
+}
+
+function buildLongitudinalSignals(reports: Array<StoredLabContext>): LabLongitudinalSignals {
+  const latest = reports[0]
+  const previous = reports[1]
+  const latestProfile = latest?.healthProfile ?? null
+  const previousProfile = previous?.healthProfile ?? null
+  const persistentClinicalFlags = latest?.clinicalFlags.filter((flag) => previous?.clinicalFlags.includes(flag)) ?? []
+
+  if (!latestProfile) {
+    return {
+      recovery: null,
+      trainingReadiness: null,
+      metabolicRisk: null,
+      hormonalTrend: null,
+      clinicalPersistence: null,
+    }
+  }
+
+  return {
+    recovery: classifySignalDelta(latestProfile.recovery_risk.level, previousProfile?.recovery_risk.level),
+    trainingReadiness: classifySignalDelta(latestProfile.training_readiness.level, previousProfile?.training_readiness.level),
+    metabolicRisk: classifySignalDelta(latestProfile.metabolic_health.level, previousProfile?.metabolic_health.level),
+    hormonalTrend: classifySignalDelta(latestProfile.androgen_status.level, previousProfile?.androgen_status.level),
+    clinicalPersistence: latest.criticalFlags.length
+      ? "alerta crítico ativo"
+      : persistentClinicalFlags.length
+        ? "alterações persistentes"
+        : latest.clinicalFlags.length
+          ? "alerta recente"
+          : "estável",
+  }
+}
+
+function buildLongitudinalSummary(context: {
+  totalReports: number
+  worseningMarkers: string[]
+  improvingMarkers: string[]
+  persistentAbnormalMarkers: string[]
+  newAlertMarkers: string[]
+  latestClinicalFlags: string[]
+  latestCriticalFlags: string[]
+}): string | null {
+  if (!context.totalReports) return null
+
+  const parts: string[] = [`Histórico com ${context.totalReports} exame(s) válido(s).`]
+  if (context.newAlertMarkers.length) parts.push(`Novos alertas: ${context.newAlertMarkers.slice(0, 3).join(", ")}.`)
+  if (context.persistentAbnormalMarkers.length) parts.push(`Persistência: ${context.persistentAbnormalMarkers.slice(0, 3).join(", ")}.`)
+  if (context.worseningMarkers.length) parts.push(`Piora recente: ${context.worseningMarkers.slice(0, 3).join(", ")}.`)
+  if (context.improvingMarkers.length) parts.push(`Melhora recente: ${context.improvingMarkers.slice(0, 3).join(", ")}.`)
+  if (context.latestCriticalFlags.length) parts.push(`Urgência clínica: ${context.latestCriticalFlags.slice(0, 3).join(", ")}.`)
+  else if (context.latestClinicalFlags.length) parts.push(`Atenções atuais: ${context.latestClinicalFlags.slice(0, 3).join(", ")}.`)
+  return parts.join(" ")
 }
 
 function sanitizeFilename(input: string): string {
@@ -136,365 +357,115 @@ export async function getLatestValidLabReport(
   admin: SupabaseClient,
   userId: string,
 ): Promise<StoredLabContext | null> {
-  const normalizeStringArray = (input: unknown): string[] => (
-    Array.isArray(input)
-      ? input.map((item) => String(item ?? "").trim()).filter(Boolean)
-      : []
-  )
-
-  const asRecord = (input: unknown): Record<string, unknown> | null => (
-    input && typeof input === "object" && !Array.isArray(input)
-      ? (input as Record<string, unknown>)
-      : null
-  )
-
-  const extractBiomarkers = (normalizedPayload: Record<string, unknown> | null): BiomarkerEntry[] => {
-    const raw = normalizedPayload?.biomarkers
-    if (!Array.isArray(raw)) return []
-
-    return raw
-      .map((item) => {
-        const row = asRecord(item)
-        if (!row) return null
-
-        return {
-          marker_key: String(row.marker_key ?? row.marker ?? row.name ?? "").trim().toLowerCase(),
-          marker_name: String(row.marker_name ?? row.name ?? row.marker_key ?? "Marcador").trim(),
-          value_numeric: typeof row.value_numeric === "number" ? row.value_numeric : Number.isFinite(Number(row.value_numeric)) ? Number(row.value_numeric) : null,
-          value_text: row.value_text == null ? null : String(row.value_text),
-          unit: row.unit == null ? null : String(row.unit),
-          reference_min: typeof row.reference_min === "number" ? row.reference_min : Number.isFinite(Number(row.reference_min)) ? Number(row.reference_min) : null,
-          reference_max: typeof row.reference_max === "number" ? row.reference_max : Number.isFinite(Number(row.reference_max)) ? Number(row.reference_max) : null,
-          reference_text: row.reference_text == null ? null : String(row.reference_text),
-          flag: row.flag === "low" || row.flag === "high" || row.flag === "normal" ? row.flag : null,
-          source_line: row.source_line == null ? null : String(row.source_line),
-          confidence: typeof row.confidence === "number" ? row.confidence : Number.isFinite(Number(row.confidence)) ? Number(row.confidence) : null,
-        } satisfies BiomarkerEntry
-      })
-      .filter((item): item is BiomarkerEntry => Boolean(item && item.marker_key))
-  }
-
-  const resolveHealthProfile = (
-    aiInsights: Record<string, unknown> | null,
-    biomarkers: BiomarkerEntry[],
-  ): HealthPerformanceProfile | null => {
-    const fromInsights = asRecord(aiInsights?.health_profile)
-    if (fromInsights) return fromInsights as unknown as HealthPerformanceProfile
-    if (!biomarkers.length) return null
-    return buildHealthPerformanceProfile(biomarkers)
-  }
-
-  const { data, error } = await admin
-    .from("lab_reports")
-    .select("id, parsed, normalized_payload, ai_insights, confidence, is_valid, clinical_flags, critical_flags, created_at, processed_at")
-    .eq("user_id", userId)
-    .eq("is_valid", true)
-    .order("processed_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (error || !data) return null
-
-  const normalizedPayload = asRecord(data.normalized_payload)
-  const aiInsights = asRecord(data.ai_insights)
-  const biomarkers = extractBiomarkers(normalizedPayload)
-  const parsed = (data.parsed as StoredLabContext["parsed"]) || (biomarkers.length ? parsedFromBiomarkers(biomarkers) : null)
-  const fallbackClinical = biomarkers.length ? applyClinicalRulesFromBiomarkers(biomarkers) : applyClinicalRules(parsed)
-  const clinicalFlags = normalizeStringArray(aiInsights?.clinical_flags ?? data.clinical_flags)
-  const criticalFlags = normalizeStringArray(aiInsights?.critical_flags ?? data.critical_flags)
-
-  return {
-    id: String(data.id),
-    createdAt: typeof data.processed_at === "string"
-      ? data.processed_at
-      : typeof data.created_at === "string"
-        ? data.created_at
-        : null,
-    confidence: Number(data.confidence || 0),
-    mode: (clinicalFlags.length || criticalFlags.length || fallbackClinical.mode === "clinical") ? "clinical" : "standard",
-    parsed,
-    isValid: Boolean(data.is_valid),
-    clinicalFlags: clinicalFlags.length ? clinicalFlags : fallbackClinical.clinicalFlags,
-    criticalFlags: criticalFlags.length ? criticalFlags : fallbackClinical.criticalFlags,
-    healthProfile: resolveHealthProfile(aiInsights, biomarkers),
-  }
+  const rows = await listValidLabReports(admin, userId, 1)
+  return rows[0] ? mapStoredLabContext(rows[0]) : null
 }
 
-// ---------------------------------------------------------------------------
-// Helpers shared between getLatestValidLabReport and longitudinal functions
-// ---------------------------------------------------------------------------
-
-function _asRecord(input: unknown): Record<string, unknown> | null {
-  return input && typeof input === "object" && !Array.isArray(input)
-    ? (input as Record<string, unknown>)
-    : null
-}
-
-function _normalizeStringArray(input: unknown): string[] {
-  return Array.isArray(input)
-    ? input.map((item) => String(item ?? "").trim()).filter(Boolean)
-    : []
-}
-
-function _extractBiomarkers(normalizedPayload: Record<string, unknown> | null): BiomarkerEntry[] {
-  const raw = normalizedPayload?.biomarkers
-  if (!Array.isArray(raw)) return []
-  return raw
-    .map((item) => {
-      const row = _asRecord(item)
-      if (!row) return null
-      return {
-        marker_key: String(row.marker_key ?? row.marker ?? row.name ?? "").trim().toLowerCase(),
-        marker_name: String(row.marker_name ?? row.name ?? row.marker_key ?? "Marcador").trim(),
-        value_numeric:
-          typeof row.value_numeric === "number"
-            ? row.value_numeric
-            : Number.isFinite(Number(row.value_numeric))
-              ? Number(row.value_numeric)
-              : null,
-        value_text: row.value_text == null ? null : String(row.value_text),
-        unit: row.unit == null ? null : String(row.unit),
-        reference_min:
-          typeof row.reference_min === "number"
-            ? row.reference_min
-            : Number.isFinite(Number(row.reference_min))
-              ? Number(row.reference_min)
-              : null,
-        reference_max:
-          typeof row.reference_max === "number"
-            ? row.reference_max
-            : Number.isFinite(Number(row.reference_max))
-              ? Number(row.reference_max)
-              : null,
-        reference_text: row.reference_text == null ? null : String(row.reference_text),
-        flag:
-          row.flag === "low" || row.flag === "high" || row.flag === "normal" ? row.flag : null,
-        source_line: row.source_line == null ? null : String(row.source_line),
-        confidence:
-          typeof row.confidence === "number"
-            ? row.confidence
-            : Number.isFinite(Number(row.confidence))
-              ? Number(row.confidence)
-              : null,
-      } satisfies BiomarkerEntry
-    })
-    .filter((item): item is BiomarkerEntry => Boolean(item && item.marker_key))
-}
-
-function _resolveHealthProfile(
-  aiInsights: Record<string, unknown> | null,
-  biomarkers: BiomarkerEntry[],
-): HealthPerformanceProfile | null {
-  const fromInsights = _asRecord(aiInsights?.health_profile)
-  if (fromInsights) return fromInsights as unknown as HealthPerformanceProfile
-  if (!biomarkers.length) return null
-  return buildHealthPerformanceProfile(biomarkers)
-}
-
-// ---------------------------------------------------------------------------
-// Longitudinal: fetch all valid reports for a user (newest first)
-// ---------------------------------------------------------------------------
-export async function getLabReportsForLongitudinal(
+export async function getUserLabLongitudinalContext(
   admin: SupabaseClient,
   userId: string,
-  limit = 10,
-): Promise<LabReportSummary[]> {
-  const { data, error } = await admin
-    .from("lab_reports")
-    .select(
-      "id, normalized_payload, ai_insights, is_valid, clinical_flags, critical_flags, confidence, created_at, processed_at",
-    )
-    .eq("user_id", userId)
-    .eq("is_valid", true)
-    .order("processed_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .limit(limit)
+): Promise<LabLongitudinalContext | null> {
+  const rows = await listValidLabReports(admin, userId, 12)
+  if (!rows.length) return null
 
-  if (error || !data?.length) return []
+  const reports = rows.map(mapStoredLabContext)
+  const markerMap = new Map<string, Array<{ row: LabReportRow; biomarker: BiomarkerEntry }>>()
+  const latestRow = rows[0]
+  const previousRow = rows[1]
 
-  return data.map((row) => {
-    const normalizedPayload = _asRecord(row.normalized_payload)
-    const aiInsights = _asRecord(row.ai_insights)
-    const biomarkers = _extractBiomarkers(normalizedPayload)
-    const healthProfile = _resolveHealthProfile(aiInsights, biomarkers)
-    const clinicalFlags = _normalizeStringArray(aiInsights?.clinical_flags ?? row.clinical_flags)
-    const criticalFlags = _normalizeStringArray(aiInsights?.critical_flags ?? row.critical_flags)
-
-    return {
-      id: String(row.id),
-      createdAt: typeof row.created_at === "string" ? row.created_at : null,
-      processedAt: typeof row.processed_at === "string" ? row.processed_at : null,
-      isValid: Boolean(row.is_valid),
-      biomarkers,
-      healthProfile,
-      clinicalFlags,
-      criticalFlags,
-      confidence: Number(row.confidence || 0),
-    } satisfies LabReportSummary
+  rows.forEach((row) => {
+    const normalizedPayload = asRecord(row.normalized_payload)
+    const biomarkers = extractBiomarkers(normalizedPayload)
+    for (const biomarker of biomarkers) {
+      const points = markerMap.get(biomarker.marker_key) || []
+      points.push({ row, biomarker })
+      markerMap.set(biomarker.marker_key, points)
+    }
   })
-}
 
-// ---------------------------------------------------------------------------
-// Longitudinal: build cross-exam trend analysis from ordered reports
-// Reports must be newest-first (as returned by getLabReportsForLongitudinal)
-// ---------------------------------------------------------------------------
-export function buildLongitudinalLabContext(reports: LabReportSummary[]): LongitudinalLabContext {
-  const empty: LongitudinalLabContext = {
-    totalReports: 0,
-    latestReportId: null,
-    latestReportDate: null,
-    previousReportId: null,
-    previousReportDate: null,
-    examTimeline: [],
-    worseningMarkers: [],
-    improvingMarkers: [],
-    stableMarkers: [],
-    persistentAbnormalMarkers: [],
-    newAlertMarkers: [],
-    globalTrendSummary: null,
-    narrativeSummary: "Sem exames anteriores para análise longitudinal.",
-    hasComparisonData: false,
-  }
+  const markerTimeline: LabBiomarkerTrend[] = Array.from(markerMap.entries())
+    .map(([markerKey, points]) => {
+      const latest = points[0]?.biomarker
+      const previous = points[1]?.biomarker ?? null
+      const latestRowForMarker = points[0]?.row || latestRow
+      const previousRowForMarker = points[1]?.row || null
+      const biomarkerPoints = points.map((item) => item.biomarker)
 
-  if (!reports.length) return empty
-
-  const latestReport = reports[0]
-  const previousReport = reports.length >= 2 ? reports[1] : null
-
-  // Build per-biomarker timeline in chronological order (oldest → newest)
-  const timelineMap = new Map<
-    string,
-    { markerName: string; unit: string | null; entries: BiomarkerTimelineEntry[] }
-  >()
-
-  for (const report of [...reports].reverse()) {
-    const reportDate = report.processedAt ?? report.createdAt
-    for (const bm of report.biomarkers) {
-      if (!bm.marker_key) continue
-      if (!timelineMap.has(bm.marker_key)) {
-        timelineMap.set(bm.marker_key, {
-          markerName: bm.marker_name,
-          unit: bm.unit,
-          entries: [],
-        })
+      return {
+        markerKey,
+        markerName: latest ? (latest.marker_name || markerKey) : markerKey,
+        unit: latest ? latest.unit : null,
+        status: classifyMarkerTrend(biomarkerPoints),
+        latestReportId: String(latestRowForMarker.id),
+        latestCreatedAt: typeof latestRowForMarker.processed_at === "string"
+          ? latestRowForMarker.processed_at
+          : typeof latestRowForMarker.created_at === "string"
+            ? latestRowForMarker.created_at
+            : null,
+        latestValueNumeric: latest ? latest.value_numeric : null,
+        latestValueText: latest ? latest.value_text : null,
+        latestFlag: latest ? latest.flag : null,
+        previousReportId: previousRowForMarker ? String(previousRowForMarker.id) : null,
+        previousCreatedAt: previousRowForMarker
+          ? (typeof previousRowForMarker.processed_at === "string"
+            ? previousRowForMarker.processed_at
+            : typeof previousRowForMarker.created_at === "string"
+              ? previousRowForMarker.created_at
+              : null)
+          : null,
+        previousValueNumeric: previous?.value_numeric ?? null,
+        previousValueText: previous?.value_text ?? null,
+        previousFlag: previous?.flag ?? null,
+        abnormalCount: biomarkerPoints.filter((item) => item.flag === "high" || item.flag === "low").length,
+        totalPoints: biomarkerPoints.length,
+        points: points.map((point) => ({
+          reportId: String(point.row.id),
+          createdAt: typeof point.row.processed_at === "string"
+            ? point.row.processed_at
+            : typeof point.row.created_at === "string"
+              ? point.row.created_at
+              : null,
+          valueNumeric: point.biomarker.value_numeric,
+          valueText: point.biomarker.value_text,
+          unit: point.biomarker.unit,
+          flag: point.biomarker.flag,
+        })),
       }
-      timelineMap.get(bm.marker_key)!.entries.push({
-        reportId: report.id,
-        date: reportDate,
-        value: bm.value_numeric,
-        flag: bm.flag,
-      })
-    }
-  }
-
-  // Classify trends per biomarker
-  const worsening: string[] = []
-  const improving: string[] = []
-  const stable: string[] = []
-  const persistentAbnormal: string[] = []
-  const newAlert: string[] = []
-  const examTimeline: BiomarkerTimeline[] = []
-
-  for (const [markerKey, data] of timelineMap.entries()) {
-    const { entries } = data
-    const last = entries[entries.length - 1]
-    const prev = entries.length >= 2 ? entries[entries.length - 2] : null
-    const latestFlag = last?.flag ?? null
-    let trend: BiomarkerTrend | null = null
-
-    // persistent_abnormal: flagged in 3+ consecutive most-recent entries
-    if (entries.length >= 3) {
-      const tail = entries.slice(-3)
-      if (tail.every((e) => e.flag === "high" || e.flag === "low")) {
-        trend = "persistent_abnormal"
-        persistentAbnormal.push(markerKey)
-      }
-    }
-
-    if (!trend && prev) {
-      const lastAbnormal = latestFlag === "high" || latestFlag === "low"
-      const prevAbnormal = prev.flag === "high" || prev.flag === "low"
-
-      if (lastAbnormal && !prevAbnormal) {
-        trend = "new_alert"
-        newAlert.push(markerKey)
-      } else if (!lastAbnormal && prevAbnormal) {
-        trend = "improving"
-        improving.push(markerKey)
-      } else if (lastAbnormal && prevAbnormal) {
-        trend = "worsening"
-        worsening.push(markerKey)
-      } else {
-        trend = "stable"
-        stable.push(markerKey)
-      }
-    } else if (!trend) {
-      if (latestFlag === "high" || latestFlag === "low") {
-        trend = "new_alert"
-        newAlert.push(markerKey)
-      } else if (latestFlag === "normal") {
-        trend = "stable"
-        stable.push(markerKey)
-      }
-    }
-
-    examTimeline.push({
-      markerKey,
-      markerName: data.markerName,
-      unit: data.unit,
-      entries,
-      trend,
-      latestFlag,
     })
-  }
+    .sort((a, b) => a.markerName.localeCompare(b.markerName, "pt-BR"))
 
-  const hasComparison = reports.length >= 2
-
-  // Global trend summary text
-  let globalTrendSummary: string | null = null
-  if (hasComparison) {
-    const parts: string[] = []
-    if (newAlert.length) parts.push(`${newAlert.length} novo(s) alerta(s)`)
-    if (worsening.length) parts.push(`${worsening.length} piorou(aram)`)
-    if (improving.length) parts.push(`${improving.length} melhorou(aram)`)
-    if (persistentAbnormal.length) parts.push(`${persistentAbnormal.length} alteração(ões) persistente(s)`)
-    if (stable.length) parts.push(`${stable.length} estável(is)`)
-    globalTrendSummary = parts.length ? parts.join(" | ") : "Sem alterações entre exames"
-  }
-
-  // Short narrative for KRONOS context
-  const summaryLines: string[] = []
-  summaryLines.push(`Total de exames válidos: ${reports.length}`)
-  const latestDate = latestReport.processedAt ?? latestReport.createdAt
-  summaryLines.push(`Último exame: ${latestDate ? latestDate.slice(0, 10) : "data desconhecida"}`)
-  if (previousReport) {
-    const prevDate = previousReport.processedAt ?? previousReport.createdAt
-    summaryLines.push(`Exame anterior: ${prevDate ? prevDate.slice(0, 10) : "data desconhecida"}`)
-  }
-  if (globalTrendSummary) summaryLines.push(`Tendência geral: ${globalTrendSummary}`)
-  if (newAlert.length) summaryLines.push(`Novos alertas: ${newAlert.slice(0, 6).join(", ")}`)
-  if (worsening.length) summaryLines.push(`Pioraram: ${worsening.slice(0, 6).join(", ")}`)
-  if (improving.length) summaryLines.push(`Melhoraram: ${improving.slice(0, 6).join(", ")}`)
-  if (persistentAbnormal.length)
-    summaryLines.push(`Alterações persistentes (3+ exames): ${persistentAbnormal.slice(0, 6).join(", ")}`)
+  const worseningMarkers = markerTimeline.filter((item) => item.status === "worsened").map((item) => item.markerName)
+  const improvingMarkers = markerTimeline.filter((item) => item.status === "improved").map((item) => item.markerName)
+  const stableMarkers = markerTimeline.filter((item) => item.status === "stable").map((item) => item.markerName)
+  const persistentAbnormalMarkers = markerTimeline
+    .filter((item) => item.abnormalCount >= 2 && (item.latestFlag === "high" || item.latestFlag === "low"))
+    .map((item) => item.markerName)
+  const newAlertMarkers = markerTimeline.filter((item) => item.status === "new_alert").map((item) => item.markerName)
+  const signals = buildLongitudinalSignals(reports)
 
   return {
     totalReports: reports.length,
-    latestReportId: latestReport.id,
-    latestReportDate: latestDate ?? null,
-    previousReportId: previousReport?.id ?? null,
-    previousReportDate: previousReport
-      ? (previousReport.processedAt ?? previousReport.createdAt ?? null)
-      : null,
-    examTimeline,
-    worseningMarkers: worsening,
-    improvingMarkers: improving,
-    stableMarkers: stable,
-    persistentAbnormalMarkers: persistentAbnormal,
-    newAlertMarkers: newAlert,
-    globalTrendSummary,
-    narrativeSummary: summaryLines.join("\n"),
-    hasComparisonData: hasComparison,
+    latestReportId: reports[0]?.id ?? null,
+    latestReportDate: reports[0]?.createdAt ?? null,
+    previousReportId: reports[1]?.id ?? null,
+    previousReportDate: reports[1]?.createdAt ?? null,
+    latestClinicalFlags: reports[0]?.clinicalFlags ?? [],
+    latestCriticalFlags: reports[0]?.criticalFlags ?? [],
+    markerTimeline,
+    worseningMarkers,
+    improvingMarkers,
+    stableMarkers,
+    persistentAbnormalMarkers,
+    newAlertMarkers,
+    signals,
+    summaryText: buildLongitudinalSummary({
+      totalReports: reports.length,
+      worseningMarkers,
+      improvingMarkers,
+      persistentAbnormalMarkers,
+      newAlertMarkers,
+      latestClinicalFlags: reports[0]?.clinicalFlags ?? [],
+      latestCriticalFlags: reports[0]?.criticalFlags ?? [],
+    }),
   }
 }

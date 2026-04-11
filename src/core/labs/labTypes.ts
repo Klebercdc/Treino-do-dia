@@ -161,55 +161,65 @@ export interface StoredLabContext {
   healthProfile?: HealthPerformanceProfile | null
 }
 
-// ---------------------------------------------------------------------------
-// Lab report summary — lightweight shape used for longitudinal analysis
-// ---------------------------------------------------------------------------
-export interface LabReportSummary {
-  id: string
-  createdAt: string | null
-  processedAt: string | null
-  isValid: boolean
-  biomarkers: BiomarkerEntry[]
-  healthProfile: HealthPerformanceProfile | null
-  clinicalFlags: string[]
-  criticalFlags: string[]
-  confidence: number
-}
+export type LabMarkerTrendStatus =
+  | 'improved'
+  | 'worsened'
+  | 'stable'
+  | 'persistent_abnormal'
+  | 'new_alert'
+  | 'insufficient_data'
 
-// ---------------------------------------------------------------------------
-// Longitudinal context — cross-exam trend analysis for AI context bundles
-// ---------------------------------------------------------------------------
-export type BiomarkerTrend = 'improving' | 'worsening' | 'stable' | 'persistent_abnormal' | 'new_alert'
-
-export interface BiomarkerTimelineEntry {
+export interface LabBiomarkerTrendPoint {
   reportId: string
-  date: string | null
-  value: number | null
+  createdAt: string | null
+  valueNumeric: number | null
+  valueText: string | null
+  unit: string | null
   flag: 'low' | 'high' | 'normal' | null
 }
 
-export interface BiomarkerTimeline {
+export interface LabBiomarkerTrend {
   markerKey: string
   markerName: string
   unit: string | null
-  entries: BiomarkerTimelineEntry[]
-  trend: BiomarkerTrend | null
+  status: LabMarkerTrendStatus
+  latestReportId: string
+  latestCreatedAt: string | null
+  latestValueNumeric: number | null
+  latestValueText: string | null
   latestFlag: 'low' | 'high' | 'normal' | null
+  previousReportId: string | null
+  previousCreatedAt: string | null
+  previousValueNumeric: number | null
+  previousValueText: string | null
+  previousFlag: 'low' | 'high' | 'normal' | null
+  abnormalCount: number
+  totalPoints: number
+  points: LabBiomarkerTrendPoint[]
 }
 
-export interface LongitudinalLabContext {
+export interface LabLongitudinalSignals {
+  recovery: string | null
+  trainingReadiness: string | null
+  metabolicRisk: string | null
+  hormonalTrend: string | null
+  clinicalPersistence: string | null
+}
+
+export interface LabLongitudinalContext {
   totalReports: number
   latestReportId: string | null
   latestReportDate: string | null
   previousReportId: string | null
   previousReportDate: string | null
-  examTimeline: BiomarkerTimeline[]
+  latestClinicalFlags: string[]
+  latestCriticalFlags: string[]
+  markerTimeline: LabBiomarkerTrend[]
   worseningMarkers: string[]
   improvingMarkers: string[]
   stableMarkers: string[]
   persistentAbnormalMarkers: string[]
   newAlertMarkers: string[]
-  globalTrendSummary: string | null
-  narrativeSummary: string
-  hasComparisonData: boolean
+  signals: LabLongitudinalSignals
+  summaryText: string | null
 }

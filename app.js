@@ -2814,73 +2814,6 @@ async function _handleLabsScreenUpload(file) {
   }
 }
 
-
-async function loadLabsScreenHistory(forceRefresh) {
-  var container = document.getElementById('labsHistoryContainer');
-  var bioContainer = document.getElementById('labsBiomarkersContainer');
-  if (!container) return;
-
-  if (!forceRefresh && _labsHistoryCache) {
-    renderLabReportHistory(_labsHistoryCache, container, null);
-    _renderLabsBiomarkers(_labsHistoryCache, bioContainer);
-    return;
-  }
-
-  container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Carregando…</div>';
-
-  try {
-    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
-    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports?limit=10'), { headers, credentials: 'same-origin' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var payload = await resp.json();
-    if (!payload.ok) throw new Error(payload.error || 'response not ok');
-    _labsHistoryCache = payload.reports || [];
-    renderLabReportHistory(_labsHistoryCache, container, null);
-    _renderLabsBiomarkers(_labsHistoryCache, bioContainer);
-  } catch (err) {
-    console.warn('[labs-history] erro:', err);
-    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Não foi possível carregar o histórico.</div>';
-  }
-}
-
-function _renderLabsBiomarkers(reports, container) {
-  if (!container) return;
-  var report = (reports || []).find(function(r) { return Array.isArray(r.biomarkers) && r.biomarkers.length > 0; });
-  if (!report) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Nenhum biomarcador extraído ainda. Envie um exame acima.</div>';
-    return;
-  }
-
-  var LABELS = {
-    glucose: 'Glicose', hba1c: 'HbA1c', creatinine: 'Creatinina', potassium: 'Potássio',
-    sodium: 'Sódio', cholesterol_total: 'Colesterol Total', hdl: 'HDL', ldl: 'LDL',
-    triglycerides: 'Triglicerídeos', hemoglobin: 'Hemoglobina', ferritin: 'Ferritina',
-    vitamin_d: 'Vitamina D', tsh: 'TSH', t4: 'T4 Livre', uric_acid: 'Ácido Úrico',
-    alt: 'ALT (TGP)', ast: 'AST (TGO)', urea: 'Ureia',
-  };
-  var FLAG_COLOR = { high: '#ef4444', low: '#f59e0b', normal: '#10b981' };
-
-  var date = report.createdAt ? new Date(report.createdAt).toLocaleDateString('pt-BR') : '—';
-  var rows = report.biomarkers.map(function(b) {
-    var key = b.marker_key || '';
-    var label = LABELS[key] || b.marker_name || key;
-    var val = b.value_numeric != null ? b.value_numeric : (b.value_text || '—');
-    var unit = b.unit ? ' ' + b.unit : '';
-    var color = FLAG_COLOR[b.flag] || 'var(--text)';
-    var ref = (b.reference_min != null || b.reference_max != null)
-      ? '<span style="font-size:0.65rem;color:var(--muted);font-weight:400"> (' + (b.reference_min != null ? b.reference_min : '') + '–' + (b.reference_max != null ? b.reference_max : '') + (b.unit ? ' ' + b.unit : '') + ')</span>'
-      : '';
-    return '<div class="labs-bm-row"><span class="labs-bm-label">' + escapeHTML(String(label)) + '</span>'
-      + '<span class="labs-bm-val" style="color:' + color + '">' + escapeHTML(String(val) + unit) + ref + '</span></div>';
-  }).join('');
-
-  container.innerHTML =
-    '<div class="labs-bm-header"><span class="labs-bm-date">Exame de ' + escapeHTML(date) + '</span>'
-    + '<span class="labs-bm-status">' + escapeHTML(String(report.status || '')) + '</span></div>'
-    + '<div class="labs-bm-list">' + rows + '</div>';
-}
-
-
 function renderLabsResult(payload, container) {
   if (!container) return;
   const biomarkersList = Array.isArray(payload.biomarkers) ? payload.biomarkers : [];
@@ -2905,6 +2838,287 @@ function renderLabsResult(payload, container) {
 }
 
 var _labsHistoryCache = null;
+var _labsSelectedReportId = null;
+var _labsReportDetailCache = Object.create(null);
+
+function _getLabStatusLabel(statusKey) {
+  var STATUS_LABELS = {
+    analyzed: '✅ Analisado',
+    extracted: '🧪 Extraído',
+    processing: '⏳ Processando',
+    uploaded: '📤 Enviado',
+    pending_upload: '📥 Aguardando upload',
+    queued: '🧾 Na fila',
+    processed: '✅ Processado',
+    needs_review: '🕵️ Revisão manual',
+    failed: '❌ Falhou',
+    parsed: '✅ Processado',
+    pending: '⏳ Aguardando'
+  };
+  return STATUS_LABELS[statusKey] || statusKey || '—';
+}
+
+function _pickInitialLabSelection(reports) {
+  if (!Array.isArray(reports) || !reports.length) return null;
+  if (_labsSelectedReportId && reports.some(function(item) { return item && item.id === _labsSelectedReportId; })) {
+    return _labsSelectedReportId;
+  }
+  var preferred = reports.find(function(item) { return item && item.status === 'analyzed'; });
+  return (preferred && preferred.id) || reports[0].id || null;
+}
+
+function _getClinicalFlags(report) {
+  if (!report) return [];
+  if (Array.isArray(report.clinicalFlags)) return report.clinicalFlags.filter(Boolean);
+  if (report.aiInsights && Array.isArray(report.aiInsights.clinical_flags)) return report.aiInsights.clinical_flags.filter(Boolean);
+  return [];
+}
+
+function _getCriticalFlags(report) {
+  if (!report) return [];
+  if (Array.isArray(report.criticalFlags)) return report.criticalFlags.filter(Boolean);
+  if (report.aiInsights && Array.isArray(report.aiInsights.critical_flags)) return report.aiInsights.critical_flags.filter(Boolean);
+  return [];
+}
+
+function _findLabReportSummary(reportId) {
+  return Array.isArray(_labsHistoryCache)
+    ? (_labsHistoryCache.find(function(item) { return item && item.id === reportId; }) || null)
+    : null;
+}
+
+function _renderLabDetailState(container, html) {
+  if (!container) return;
+  container.innerHTML = html;
+}
+
+function _renderLabsBiomarkers(detail, container, state) {
+  if (!container) return;
+
+  if (state === 'loading') {
+    return _renderLabDetailState(container, '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:18px 0">Carregando detalhe do exame…</div>');
+  }
+
+  if (!detail) {
+    return _renderLabDetailState(container, '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:18px 0">Selecione um exame no histórico para ver os dados individuais.</div>');
+  }
+
+  var report = detail.report || detail;
+  var biomarkers = Array.isArray(detail.biomarkers) ? detail.biomarkers : (Array.isArray(report.biomarkers) ? report.biomarkers : []);
+  var aiInsights = report.aiInsights || report.ai_insights || null;
+  var statusKey = String(report.status || report.parseStatus || report.parse_status || '').toLowerCase();
+  var statusLabel = _getLabStatusLabel(statusKey);
+  var date = report.processedAt || report.processed_at || report.createdAt || report.created_at;
+  var dateLabel = date ? new Date(date).toLocaleDateString('pt-BR') : '—';
+  var fileName = report.fileName || report.file_name || 'Exame';
+  var clinicalFlags = _getClinicalFlags(report);
+  var criticalFlags = _getCriticalFlags(report);
+  var deleteDisabled = statusKey === 'processing';
+
+  var actionHtml = '<div class="labs-detail-actions">'
+    + '<button class="labs-detail-btn labs-detail-btn--danger' + (deleteDisabled ? ' is-disabled' : '') + '"'
+    + ' onclick="' + (deleteDisabled ? 'void(0)' : ("deleteLabReport('" + String(report.id) + "')")) + '"'
+    + (deleteDisabled ? ' disabled' : '') + '>'
+    + (deleteDisabled ? 'Exclusão bloqueada durante processamento' : 'Excluir exame')
+    + '</button>'
+    + '</div>';
+
+  if (statusKey === 'pending_upload' || statusKey === 'uploaded') {
+    return _renderLabDetailState(container,
+      '<div class="labs-bm-header"><span class="labs-bm-date">' + escapeHTML(fileName) + '</span><span class="labs-bm-status">' + escapeHTML(statusLabel) + '</span></div>'
+      + '<div class="labs-detail-note">Arquivo enviado. O processamento ainda não terminou, então este exame ainda não tem biomarcadores individuais disponíveis.</div>'
+      + actionHtml
+    );
+  }
+
+  if (statusKey === 'processing' || statusKey === 'extracted') {
+    return _renderLabDetailState(container,
+      '<div class="labs-bm-header"><span class="labs-bm-date">' + escapeHTML(fileName) + ' · ' + escapeHTML(dateLabel) + '</span><span class="labs-bm-status">' + escapeHTML(statusLabel) + '</span></div>'
+      + '<div class="labs-detail-note">Este exame está em processamento. Assim que a extração terminar, os biomarcadores e a análise individual vão aparecer aqui.</div>'
+      + actionHtml
+    );
+  }
+
+  if (statusKey === 'failed') {
+    return _renderLabDetailState(container,
+      '<div class="labs-bm-header"><span class="labs-bm-date">' + escapeHTML(fileName) + ' · ' + escapeHTML(dateLabel) + '</span><span class="labs-bm-status">' + escapeHTML(statusLabel) + '</span></div>'
+      + '<div class="labs-detail-note">' + escapeHTML(report.processingError || report.processing_error || 'Falha no processamento deste exame.') + '</div>'
+      + actionHtml
+    );
+  }
+
+  var LABELS = {
+    glucose: 'Glicose', hba1c: 'HbA1c', creatinine: 'Creatinina', potassium: 'Potássio',
+    sodium: 'Sódio', cholesterol_total: 'Colesterol Total', total_cholesterol: 'Colesterol Total', hdl: 'HDL', hdl_cholesterol: 'HDL', ldl: 'LDL', ldl_cholesterol: 'LDL',
+    triglycerides: 'Triglicerídeos', hemoglobin: 'Hemoglobina', ferritin: 'Ferritina',
+    vitamin_d: 'Vitamina D', tsh: 'TSH', t4: 'T4 Livre', t4_free: 'T4 Livre', uric_acid: 'Ácido Úrico',
+    alt: 'ALT (TGP)', ast: 'AST (TGO)', urea: 'Ureia', cortisol: 'Cortisol', testosterone_total: 'Testosterona Total'
+  };
+  var FLAG_COLOR = { high: '#ef4444', low: '#f59e0b', normal: '#10b981' };
+
+  var rows = biomarkers.length
+    ? biomarkers.map(function(b) {
+        var key = b.marker_key || '';
+        var label = LABELS[key] || b.marker_name || key || 'Marcador';
+        var val = b.value_numeric != null ? b.value_numeric : (b.value_text || '—');
+        var unit = b.unit ? ' ' + b.unit : '';
+        var color = FLAG_COLOR[b.flag] || 'var(--text)';
+        var ref = (b.reference_min != null || b.reference_max != null)
+          ? '<span style="font-size:0.65rem;color:var(--muted);font-weight:400"> (' + (b.reference_min != null ? b.reference_min : '') + '–' + (b.reference_max != null ? b.reference_max : '') + (b.unit ? ' ' + b.unit : '') + ')</span>'
+          : '';
+        return '<div class="labs-bm-row"><span class="labs-bm-label">' + escapeHTML(String(label)) + '</span>'
+          + '<span class="labs-bm-val" style="color:' + color + '">' + escapeHTML(String(val) + unit) + ref + '</span></div>';
+      }).join('')
+    : '<div class="labs-detail-note">Nenhum biomarcador estruturado foi persistido para este exame.</div>';
+
+  var flagHtml = '';
+  if (criticalFlags.length || clinicalFlags.length) {
+    var chips = criticalFlags.map(function(flag) { return '<span class="labs-hist-flag labs-hist-flag--critical">' + escapeHTML(flag) + '</span>'; })
+      .concat(clinicalFlags.map(function(flag) { return '<span class="labs-hist-flag">' + escapeHTML(flag) + '</span>'; }));
+    flagHtml = '<div class="labs-hist-flags">' + chips.join('') + '</div>';
+  }
+
+  var insightsHtml = '';
+  if (aiInsights) {
+    var summary = aiInsights.summary ? '<div class="labs-detail-summary">' + escapeHTML(String(aiInsights.summary)) + '</div>' : '';
+    var safety = Array.isArray(aiInsights.safety_notes) && aiInsights.safety_notes.length
+      ? '<div class="labs-detail-block"><div class="labs-detail-block-title">Importância e urgência</div><ul class="labs-detail-list">' + aiInsights.safety_notes.slice(0, 3).map(function(item) { return '<li>' + escapeHTML(String(item)) + '</li>'; }).join('') + '</ul></div>'
+      : '';
+    var training = Array.isArray(aiInsights.impact_on_training) && aiInsights.impact_on_training.length
+      ? '<div class="labs-detail-block"><div class="labs-detail-block-title">Conduta em treino</div><ul class="labs-detail-list">' + aiInsights.impact_on_training.slice(0, 3).map(function(item) { return '<li>' + escapeHTML(String(item)) + '</li>'; }).join('') + '</ul></div>'
+      : '';
+    var nutrition = Array.isArray(aiInsights.impact_on_nutrition) && aiInsights.impact_on_nutrition.length
+      ? '<div class="labs-detail-block"><div class="labs-detail-block-title">Conduta em dieta</div><ul class="labs-detail-list">' + aiInsights.impact_on_nutrition.slice(0, 3).map(function(item) { return '<li>' + escapeHTML(String(item)) + '</li>'; }).join('') + '</ul></div>'
+      : '';
+    var recovery = Array.isArray(aiInsights.recovery_signals) && aiInsights.recovery_signals.length
+      ? '<div class="labs-detail-block"><div class="labs-detail-block-title">Recuperação</div><ul class="labs-detail-list">' + aiInsights.recovery_signals.slice(0, 3).map(function(item) { return '<li>' + escapeHTML(String(item)) + '</li>'; }).join('') + '</ul></div>'
+      : '';
+    insightsHtml = summary + safety + training + nutrition + recovery;
+  }
+
+  _renderLabDetailState(container,
+    '<div class="labs-bm-header"><span class="labs-bm-date">' + escapeHTML(fileName) + ' · ' + escapeHTML(dateLabel) + '</span><span class="labs-bm-status">' + escapeHTML(statusLabel) + '</span></div>'
+    + flagHtml
+    + '<div class="labs-bm-list">' + rows + '</div>'
+    + insightsHtml
+    + actionHtml
+  );
+}
+
+async function openLabReportDetail(reportId, forceRefresh) {
+  var container = document.getElementById('labsBiomarkersContainer');
+  if (!container || !reportId) {
+    _renderLabsBiomarkers(null, container);
+    return;
+  }
+
+  _labsSelectedReportId = reportId;
+  renderLabReportHistory(_labsHistoryCache, document.getElementById('labsHistoryContainer'), null);
+
+  var summary = _findLabReportSummary(reportId);
+  if (_labsReportDetailCache[reportId] && !forceRefresh) {
+    _renderLabsBiomarkers(_labsReportDetailCache[reportId], container);
+    return;
+  }
+
+  _renderLabsBiomarkers(summary, container, 'loading');
+
+  try {
+    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports/' + encodeURIComponent(reportId)), { headers: headers, credentials: 'same-origin' });
+    var payload = await resp.json().catch(function() { return null; });
+    if (!resp.ok || !payload || !payload.ok) throw new Error((payload && payload.error) || ('HTTP ' + resp.status));
+    _labsReportDetailCache[reportId] = payload;
+    _renderLabsBiomarkers(payload, container);
+  } catch (err) {
+    console.warn('[labs-detail] erro:', err);
+    if (summary) {
+      _renderLabsBiomarkers(summary, container);
+      showToast('Não foi possível carregar o detalhe completo deste exame agora.', 'warning', 3500);
+    } else {
+      _renderLabDetailState(container, '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:18px 0">Não foi possível carregar o detalhe deste exame.</div>');
+    }
+  }
+}
+
+async function deleteLabReport(reportId) {
+  var summary = _findLabReportSummary(reportId);
+  var statusKey = String((summary && (summary.status || summary.parseStatus)) || '').toLowerCase();
+  if (statusKey === 'processing') {
+    showToast('Este exame ainda está em processamento e não pode ser excluído agora.', 'warning', 3800);
+    return;
+  }
+
+  if (!confirm('Excluir este exame permanentemente do seu histórico?')) return;
+
+  try {
+    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports/' + encodeURIComponent(reportId)), {
+      method: 'DELETE',
+      headers: headers,
+      credentials: 'same-origin'
+    });
+    var payload = await resp.json().catch(function() { return null; });
+    if (!resp.ok || !payload || !payload.ok) throw new Error((payload && payload.error) || ('HTTP ' + resp.status));
+
+    delete _labsReportDetailCache[reportId];
+    _labsHistoryCache = Array.isArray(_labsHistoryCache)
+      ? _labsHistoryCache.filter(function(item) { return item && item.id !== reportId; })
+      : [];
+    _labsSelectedReportId = _pickInitialLabSelection(_labsHistoryCache);
+
+    renderLabReportHistory(_labsHistoryCache, document.getElementById('labsHistoryContainer'), null);
+    if (_labsSelectedReportId) {
+      await openLabReportDetail(_labsSelectedReportId, false);
+    } else {
+      _renderLabsBiomarkers(null, document.getElementById('labsBiomarkersContainer'));
+    }
+
+    showToast('Exame excluído com sucesso.', 'success', 3000);
+  } catch (err) {
+    console.warn('[labs-delete] erro:', err);
+    showToast('Não foi possível excluir o exame agora.', 'error', 3500);
+  }
+}
+
+async function loadLabsScreenHistory(forceRefresh) {
+  var container = document.getElementById('labsHistoryContainer');
+  var bioContainer = document.getElementById('labsBiomarkersContainer');
+  if (!container) return;
+
+  if (!forceRefresh && _labsHistoryCache) {
+    _labsSelectedReportId = _pickInitialLabSelection(_labsHistoryCache);
+    renderLabReportHistory(_labsHistoryCache, container, null);
+    if (_labsSelectedReportId) {
+      openLabReportDetail(_labsSelectedReportId, false);
+    } else {
+      _renderLabsBiomarkers(null, bioContainer);
+    }
+    return;
+  }
+
+  container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Carregando…</div>';
+
+  try {
+    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports?limit=10'), { headers: headers, credentials: 'same-origin' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var payload = await resp.json();
+    if (!payload.ok) throw new Error(payload.error || 'response not ok');
+    _labsHistoryCache = payload.reports || [];
+    _labsSelectedReportId = _pickInitialLabSelection(_labsHistoryCache);
+    renderLabReportHistory(_labsHistoryCache, container, null);
+    if (_labsSelectedReportId) {
+      openLabReportDetail(_labsSelectedReportId, forceRefresh);
+    } else {
+      _renderLabsBiomarkers(null, bioContainer);
+    }
+  } catch (err) {
+    console.warn('[labs-history] erro:', err);
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Não foi possível carregar o histórico.</div>';
+    _renderLabsBiomarkers(null, bioContainer);
+  }
+}
 
 function renderLabReportHistory(reports, container, emptyEl) {
   if (!container) return;
@@ -2913,53 +3127,45 @@ function renderLabReportHistory(reports, container, emptyEl) {
     return;
   }
 
-  const BIOMARKER_LABELS = {
+  var BIOMARKER_LABELS = {
     glucose: 'Glicose', hba1c: 'HbA1c', creatinine: 'Creatinina',
     potassium: 'Potássio', sodium: 'Sódio', cholesterol_total: 'Colesterol Total',
-    hdl: 'HDL', ldl: 'LDL', triglycerides: 'Triglicerídeos',
-  };
-
-  const STATUS_LABELS = {
-    analyzed: '✅ Analisado',
-    extracted: '🧪 Extraído',
-    processing: '⏳ Processando',
-    uploaded: '📤 Enviado',
-    pending_upload: '📥 Aguardando upload',
-    queued: '🧾 Na fila',
-    processed: '✅ Processado',
-    needs_review: '🕵️ Revisão',
-    failed: '❌ Falhou',
-    parsed: '✅ Processado',
-    pending: '⏳ Aguardando'
+    total_cholesterol: 'Colesterol Total', hdl: 'HDL', hdl_cholesterol: 'HDL', ldl: 'LDL', ldl_cholesterol: 'LDL', triglycerides: 'Triglicerídeos',
   };
 
   container.innerHTML = reports.map(function(r) {
-    var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '—';
+    var date = r.processedAt || r.createdAt ? new Date(r.processedAt || r.createdAt).toLocaleDateString('pt-BR') : '—';
     var statusKey = r.status || r.parseStatus;
-    var statusLabel = STATUS_LABELS[statusKey] || statusKey || '—';
+    var statusLabel = _getLabStatusLabel(statusKey);
     var fileName = r.fileName ? escapeHTML(r.fileName.replace(/^\d+-/, '')) : 'Exame';
+    var isSelected = _labsSelectedReportId === r.id;
 
     var biomarkersHtml = '';
     if (Array.isArray(r.biomarkers) && r.biomarkers.length) {
-      var items = r.biomarkers.slice(0, 8).map(function(b) {
+      var items = r.biomarkers.slice(0, 6).map(function(b) {
         var key = b.marker_key || b.marker_name || '';
         var val = b.value_numeric != null ? b.value_numeric : b.value_text;
-        return '<span class="labs-hist-bm"><span class="labs-hist-bm-key">' + escapeHTML(BIOMARKER_LABELS[key] || key) + '</span><span class="labs-hist-bm-val">' + escapeHTML(String(val || '—')) + '</span></span>';
+        return '<span class="labs-hist-bm"><span class="labs-hist-bm-key">' + escapeHTML(BIOMARKER_LABELS[key] || key || 'Marcador') + '</span><span class="labs-hist-bm-val">' + escapeHTML(String(val || '—')) + '</span></span>';
       });
       if (items.length) biomarkersHtml = '<div class="labs-hist-bms">' + items.join('') + '</div>';
     }
 
+    var flags = _getClinicalFlags(r).slice(0, 3);
+    var criticalFlags = _getCriticalFlags(r).slice(0, 2);
     var flagsHtml = '';
-    if (r.clinicalFlags && r.clinicalFlags.length) {
-      flagsHtml = '<div class="labs-hist-flags">' + r.clinicalFlags.map(function(f) { return '<span class="labs-hist-flag">' + escapeHTML(f) + '</span>'; }).join('') + '</div>';
+    if (criticalFlags.length || flags.length) {
+      flagsHtml = '<div class="labs-hist-flags">'
+        + criticalFlags.map(function(f) { return '<span class="labs-hist-flag labs-hist-flag--critical">' + escapeHTML(f) + '</span>'; }).join('')
+        + flags.map(function(f) { return '<span class="labs-hist-flag">' + escapeHTML(f) + '</span>'; }).join('')
+        + '</div>';
     }
 
-    return '<div class="labs-hist-card">' +
+    return '<div class="labs-hist-card' + (isSelected ? ' is-selected' : '') + '" role="button" tabindex="0" onclick="openLabReportDetail(\'' + String(r.id) + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLabReportDetail(\'' + String(r.id) + '\')}">' +
       '<div class="labs-hist-header">' +
         '<span class="labs-hist-name">' + fileName + '</span>' +
-        '<span class="labs-hist-meta">' + date + ' · ' + statusLabel + (r.confidence ? ' · ' + Math.round(r.confidence * 100) + '%' : '') + '</span>' +
+        '<span class="labs-hist-meta">' + date + ' · ' + statusLabel + '</span>' +
       '</div>' +
-      (biomarkersHtml || '') +
+      (biomarkersHtml || '<div class="labs-detail-note" style="margin-top:8px">Toque para ver o status e a análise individual deste exame.</div>') +
       (flagsHtml || '') +
     '</div>';
   }).join('');

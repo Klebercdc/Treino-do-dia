@@ -55,6 +55,17 @@ test('handler de detalhe usa colunas reais de extração e fallback para normali
   assert.match(handlerSrc, /confidence_summary/);
   assert.match(handlerSrc, /buildFallbackExtraction/);
   assert.match(handlerSrc, /extractBiomarkersFromNormalizedPayload/);
+  assert.match(handlerSrc, /clinicalFlags/);
+  assert.match(handlerSrc, /criticalFlags/);
+});
+
+test('handler de detalhe suporta DELETE com ownership e bloqueio de processing', () => {
+  const detailSection = handlerSrc.slice(handlerSrc.indexOf('function handleReportById'));
+  assert.match(detailSection, /req\.method === 'DELETE'/);
+  assert.match(detailSection, /\.eq\('user_id', user\.id\)/);
+  assert.match(detailSection, /REPORT_STILL_PROCESSING/);
+  assert.match(detailSection, /storage\.from\(storageBucket\)\.remove/);
+  assert.match(detailSection, /DB_DELETE_ERROR/);
 });
 
 // ── Critical parse_status fix ─────────────────────────────────────────────────
