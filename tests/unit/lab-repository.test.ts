@@ -192,3 +192,104 @@ test("getUserLabLongitudinalContext compara exames válidos e classifica melhora
   assert.ok(context?.improvingMarkers.includes("Vitamina D"))
   assert.match(String(context?.summaryText), /Histórico com 2 exame/)
 })
+
+test("getUserLabLongitudinalContext não marca persistência clínica quando as flags mudam entre exames", async () => {
+  const admin = {
+    from() {
+      return createListQueryResult([
+        {
+          id: "lab-current",
+          parsed: null,
+          normalized_payload: {
+            biomarkers: [
+              { marker_key: "glucose", marker_name: "Glicose", value_numeric: 108, reference_min: 70, reference_max: 99, flag: "high" },
+            ],
+          },
+          ai_insights: {
+            health_profile: {
+              metabolic_health: { level: "attention", flags: ["glucose_elevated"], notes: [] },
+              lipid_health: { level: "ok", flags: [], notes: [] },
+              liver_health: { level: "ok", flags: [], notes: [] },
+              kidney_hydration: { level: "ok", flags: [], notes: [] },
+              hematologic_status: { level: "ok", flags: [], notes: [] },
+              thyroid_status: { level: "ok", flags: [], notes: [] },
+              androgen_status: { level: "ok", flags: [], notes: [] },
+              inflammation_status: { level: "ok", flags: [], notes: [] },
+              micronutrient_status: { level: "ok", flags: [], notes: [] },
+              training_readiness: { level: "attention", flags: [], notes: [] },
+              recovery_risk: { level: "attention", flags: [], notes: [] },
+              dietary_attention_points: { level: "attention", flags: [], notes: [] },
+              safety_flags: { level: "ok", flags: [], notes: [] },
+              scores: {
+                metabolic_score: 70,
+                recovery_score: 70,
+                hematologic_score: 90,
+                hormonal_score: 88,
+                safety_score: 84,
+                lipid_score: 91,
+                liver_score: 94,
+                kidney_score: 93,
+              },
+            },
+            clinical_flags: ["pre_diabetes"],
+            critical_flags: [],
+          },
+          confidence: 0.91,
+          is_valid: true,
+          clinical_flags: [],
+          critical_flags: [],
+          created_at: "2026-04-10T10:00:00.000Z",
+          processed_at: "2026-04-10T10:05:00.000Z",
+        },
+        {
+          id: "lab-previous-other-flag",
+          parsed: null,
+          normalized_payload: {
+            biomarkers: [
+              { marker_key: "ferritin", marker_name: "Ferritina", value_numeric: 20, reference_min: 30, reference_max: 400, flag: "low" },
+            ],
+          },
+          ai_insights: {
+            health_profile: {
+              metabolic_health: { level: "ok", flags: [], notes: [] },
+              lipid_health: { level: "ok", flags: [], notes: [] },
+              liver_health: { level: "ok", flags: [], notes: [] },
+              kidney_hydration: { level: "ok", flags: [], notes: [] },
+              hematologic_status: { level: "attention", flags: ["ferritin_low"], notes: [] },
+              thyroid_status: { level: "ok", flags: [], notes: [] },
+              androgen_status: { level: "ok", flags: [], notes: [] },
+              inflammation_status: { level: "ok", flags: [], notes: [] },
+              micronutrient_status: { level: "ok", flags: [], notes: [] },
+              training_readiness: { level: "ok", flags: [], notes: [] },
+              recovery_risk: { level: "ok", flags: [], notes: [] },
+              dietary_attention_points: { level: "attention", flags: [], notes: [] },
+              safety_flags: { level: "ok", flags: [], notes: [] },
+              scores: {
+                metabolic_score: 84,
+                recovery_score: 80,
+                hematologic_score: 61,
+                hormonal_score: 88,
+                safety_score: 84,
+                lipid_score: 91,
+                liver_score: 94,
+                kidney_score: 93,
+              },
+            },
+            clinical_flags: ["low_ferritin"],
+            critical_flags: [],
+          },
+          confidence: 0.9,
+          is_valid: true,
+          clinical_flags: [],
+          critical_flags: [],
+          created_at: "2026-03-10T10:00:00.000Z",
+          processed_at: "2026-03-10T10:05:00.000Z",
+        },
+      ])
+    },
+  } as never
+
+  const context = await getUserLabLongitudinalContext(admin, "user-longitudinal-mismatch")
+  assert.ok(context)
+  assert.equal(context?.signals.clinicalPersistence, "alerta recente")
+})

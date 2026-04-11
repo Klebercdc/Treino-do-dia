@@ -2858,6 +2858,14 @@ function _getLabStatusLabel(statusKey) {
   return STATUS_LABELS[statusKey] || statusKey || '—';
 }
 
+function _isLabDeletionBlocked(statusKey) {
+  return statusKey === 'pending_upload'
+    || statusKey === 'uploaded'
+    || statusKey === 'queued'
+    || statusKey === 'processing'
+    || statusKey === 'extracted';
+}
+
 function _pickInitialLabSelection(reports) {
   if (!Array.isArray(reports) || !reports.length) return null;
   if (_labsSelectedReportId && reports.some(function(item) { return item && item.id === _labsSelectedReportId; })) {
@@ -2913,7 +2921,7 @@ function _renderLabsBiomarkers(detail, container, state) {
   var fileName = report.fileName || report.file_name || 'Exame';
   var clinicalFlags = _getClinicalFlags(report);
   var criticalFlags = _getCriticalFlags(report);
-  var deleteDisabled = statusKey === 'processing';
+  var deleteDisabled = _isLabDeletionBlocked(statusKey);
 
   var actionHtml = '<div class="labs-detail-actions">'
     + '<button class="labs-detail-btn labs-detail-btn--danger' + (deleteDisabled ? ' is-disabled' : '') + '"'
@@ -3044,7 +3052,7 @@ async function openLabReportDetail(reportId, forceRefresh) {
 async function deleteLabReport(reportId) {
   var summary = _findLabReportSummary(reportId);
   var statusKey = String((summary && (summary.status || summary.parseStatus)) || '').toLowerCase();
-  if (statusKey === 'processing') {
+  if (_isLabDeletionBlocked(statusKey)) {
     showToast('Este exame ainda está em processamento e não pode ser excluído agora.', 'warning', 3800);
     return;
   }
