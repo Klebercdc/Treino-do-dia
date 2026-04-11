@@ -84,6 +84,8 @@ export async function GET(req: NextRequest) {
     const timeline = await getUserLabReportTimeline(admin, auth.user.id);
     return NextResponse.json({ ok: true, reports, timeline, total: reports.length });
   } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    console.error('[labs/reports] erro interno:', reason.slice(0, 300))
     return NextResponse.json({ ok: false, error: 'Erro interno.' }, { status: 500 });
   }
 }
