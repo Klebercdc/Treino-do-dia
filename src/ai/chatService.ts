@@ -1,5 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { GroqClient } from "./modelClient"
 import { KroniaOrchestrator } from "./orchestrator"
+import { getLatestValidLabReport } from "../core/labs/labRepository"
 import type {
   ChatMessage,
   RetrievedContextItem,
@@ -23,6 +25,7 @@ export class KroniaChatService {
     private readonly ragProvider: RagProvider,
     repository?: PlanRepository,
     memoryRepository?: MemoryRepository,
+    private readonly adminClient?: SupabaseClient,
   ) {
     const modelClient = new GroqClient()
     this.orchestrator = new KroniaOrchestrator(modelClient, repository, memoryRepository)
@@ -42,11 +45,22 @@ export class KroniaChatService {
       // sem contexto recuperado — o modelo continuará com perfil e memória
     }
 
+    let labHealthProfile = null
+    if (input.userId && this.adminClient) {
+      try {
+        const latestLabReport = await getLatestValidLabReport(this.adminClient, input.userId)
+        labHealthProfile = latestLabReport?.healthProfile ?? null
+      } catch {
+        // falha ao carregar exames não derruba o chat
+      }
+    }
+
     return this.orchestrator.run({
       userId: input.userId,
       userMessage: input.userMessage,
       history: input.history,
       userProfile: input.userProfile,
+      labHealthProfile,
       retrievedContext,
       sourceOfTruthMode: retrievedContext.length ? "rag_required" : "rag_preferred",
     })
