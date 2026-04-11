@@ -10,7 +10,8 @@
  * - serializeHealthProfile output format
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 import type { BiomarkerEntry } from '../../src/core/labs/labTypes'
 import { buildHealthPerformanceProfile } from '../../src/core/labs/labHealthProfile'
 import {
@@ -18,6 +19,51 @@ import {
   parsedFromBiomarkers,
   serializeHealthProfile,
 } from '../../src/core/labs/labRules'
+
+function expect(value: unknown) {
+  return {
+    toBe(expected: unknown) {
+      assert.equal(value, expected)
+    },
+    toEqual(expected: unknown) {
+      assert.deepEqual(value, expected)
+    },
+    toContain(expected: unknown) {
+      assert.ok(
+        (Array.isArray(value) || typeof value === 'string') && value.includes(expected as never),
+        `Expected value to contain ${String(expected)}`,
+      )
+    },
+    toHaveLength(expected: number) {
+      assert.equal((value as { length: number } | null | undefined)?.length, expected)
+    },
+    toBeNull() {
+      assert.equal(value, null)
+    },
+    toBeGreaterThan(expected: number) {
+      assert.ok(typeof value === 'number' && value > expected)
+    },
+    toBeGreaterThanOrEqual(expected: number) {
+      assert.ok(typeof value === 'number' && value >= expected)
+    },
+    toBeLessThan(expected: number) {
+      assert.ok(typeof value === 'number' && value < expected)
+    },
+    toBeLessThanOrEqual(expected: number) {
+      assert.ok(typeof value === 'number' && value <= expected)
+    },
+    get not() {
+      return {
+        toContain(expected: unknown) {
+          assert.ok(
+            !((Array.isArray(value) || typeof value === 'string') && value.includes(expected as never)),
+            `Expected value not to contain ${String(expected)}`,
+          )
+        },
+      }
+    },
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -16,7 +16,7 @@ export function resolveDietMode(
  * Apply conservative clinical rules from the legacy ParsedLabReport shape.
  * Expanded to cover all key marker groups.
  */
-export function applyClinicalRules(parsed?: ParsedLabReport | null): ClinicalRuleResult {
+export function applyClinicalRules(parsed?: Partial<ParsedLabReport> | null): ClinicalRuleResult {
   if (!parsed) {
     return { mode: 'standard', clinicalFlags: [], criticalFlags: [] }
   }

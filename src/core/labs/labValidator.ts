@@ -12,6 +12,47 @@ const FIELD_NAMES: Array<keyof ParsedLabReport> = [
   "triglycerides",
 ]
 
+const EMPTY_PARSED_LAB_REPORT: ParsedLabReport = {
+  glucose: null,
+  hba1c: null,
+  insulin: null,
+  cholesterol_total: null,
+  hdl: null,
+  ldl: null,
+  vldl: null,
+  triglycerides: null,
+  ast: null,
+  alt: null,
+  ggt: null,
+  creatinine: null,
+  urea: null,
+  uric_acid: null,
+  egfr: null,
+  potassium: null,
+  sodium: null,
+  magnesium: null,
+  calcium: null,
+  hemoglobin: null,
+  hematocrit: null,
+  ferritin: null,
+  tsh: null,
+  t4_free: null,
+  testosterone_total: null,
+  testosterone_free: null,
+  shbg: null,
+  estradiol: null,
+  cortisol: null,
+  dhea_s: null,
+  crp: null,
+  homocysteine: null,
+  vitamin_d: null,
+  vitamin_b12: null,
+  folate: null,
+  zinc: null,
+  psa_total: null,
+  psa_free: null,
+}
+
 function normalizeNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null
   const parsed = Number(value)
@@ -21,6 +62,7 @@ function normalizeNumber(value: unknown): number | null {
 export function normalizeParsedLabReport(value: unknown): ParsedLabReport {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
   return {
+    ...EMPTY_PARSED_LAB_REPORT,
     glucose: normalizeNumber(source.glucose),
     hba1c: normalizeNumber(source.hba1c),
     creatinine: normalizeNumber(source.creatinine),

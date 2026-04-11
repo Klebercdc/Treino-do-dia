@@ -29,7 +29,6 @@ function info(label, msg) { console.log(`  ${CYAN}·${RESET} ${label}${msg ? ': 
 function heading(title)   { console.log(`\n${BOLD}${CYAN}── ${title}${RESET}`); }
 
 const LAB_REPORTS_BUCKET = 'lab-reports';
-const SYNTHETIC_USER_ID  = '00000000-0000-0000-0000-000000000000';
 
 // ── 1. Environment ────────────────────────────────────────────────────────────
 
@@ -86,6 +85,28 @@ try {
   process.exit(1);
 }
 
+heading('2.5. Diagnostic user');
+
+let diagnosticUserId = '';
+try {
+  const { data: profile, error: profileErr } = await admin
+    .from('profiles')
+    .select('id')
+    .limit(1)
+    .maybeSingle();
+
+  if (profileErr || !profile?.id) {
+    fail('diagnostic user', profileErr?.message || 'nenhum profile disponível para teste');
+    process.exit(1);
+  }
+
+  diagnosticUserId = String(profile.id);
+  ok('diagnostic user', diagnosticUserId);
+} catch (err) {
+  fail('diagnostic user', err.message);
+  process.exit(1);
+}
+
 // ── 3. createSignedUploadUrl availability ─────────────────────────────────────
 
 heading('3. SDK: createSignedUploadUrl');
@@ -127,7 +148,7 @@ try {
 
 heading('5. createSignedUploadUrl (path sintético)');
 
-const syntheticPath = `${SYNTHETIC_USER_ID}/${crypto.randomUUID()}.pdf`;
+const syntheticPath = `${diagnosticUserId}/${crypto.randomUUID()}.pdf`;
 info('path sintético', syntheticPath);
 
 let signedUrlOk = false;
@@ -156,12 +177,12 @@ if (bucketOk) {
 
 heading('6. DB insert em public.lab_reports (parse_status=pending_upload)');
 
-const testStoragePath = `${SYNTHETIC_USER_ID}/${crypto.randomUUID()}.pdf`;
+const testStoragePath = `${diagnosticUserId}/${crypto.randomUUID()}.pdf`;
 let insertedId = null;
 
 try {
   const insertPayload = {
-    user_id:        SYNTHETIC_USER_ID,
+    user_id:        diagnosticUserId,
     storage_bucket: LAB_REPORTS_BUCKET,
     storage_path:   testStoragePath,
     file_url:       testStoragePath,
@@ -226,8 +247,8 @@ try {
   const { error: badInsErr } = await admin
     .from('lab_reports')
     .insert({
-      user_id:      SYNTHETIC_USER_ID,
-      file_url:     `${SYNTHETIC_USER_ID}/${crypto.randomUUID()}.pdf`,
+      user_id:      diagnosticUserId,
+      file_url:     `${diagnosticUserId}/${crypto.randomUUID()}.pdf`,
       status:       'pending_upload',
       parse_status: 'pending',   // valor legado — deve ser rejeitado
     });
