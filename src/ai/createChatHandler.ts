@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
 import type { PlanRepository } from "./persistence"
 import type { RagProvider } from "./rag"
 import type { MemoryRepository } from "./memory"
@@ -29,8 +30,9 @@ export function createChatHandler(args: {
   ragProvider: RagProvider
   repository?: PlanRepository
   memoryRepository?: MemoryRepository
+  adminClient?: SupabaseClient
 }) {
-  const service = new KroniaChatService(args.ragProvider, args.repository, args.memoryRepository)
+  const service = new KroniaChatService(args.ragProvider, args.repository, args.memoryRepository, args.adminClient)
 
   return async function handleChat(body: ChatApiRequestBody): Promise<ChatApiSuccessResponse | ChatApiErrorResponse> {
     try {

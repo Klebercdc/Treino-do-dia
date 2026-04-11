@@ -1,3 +1,5 @@
+import type { HealthPerformanceProfile } from "../core/labs/labTypes"
+
 export type AssistantIntent =
   | "chat"
   | "treino"
@@ -137,6 +139,7 @@ export interface AIRequestInput {
   userMessage: string
   history: ChatMessage[]
   userProfile?: UserProfile | null
+  labHealthProfile?: HealthPerformanceProfile | null
   retrievedContext?: RetrievedContextItem[]
   memoryItems?: MemoryItem[]
   sourceOfTruthMode?: "rag_required" | "rag_preferred"

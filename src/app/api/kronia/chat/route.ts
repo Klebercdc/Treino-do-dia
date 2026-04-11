@@ -10,8 +10,8 @@ import { createClient } from "@supabase/supabase-js"
 import { AI_ENV } from "../../../../ai/env"
 import type { ChatMessage, UserProfile } from "../../../../ai/types"
 
-function firstString() {
-  for (const value of arguments) {
+function firstString(...values: unknown[]) {
+  for (const value of values) {
     if (typeof value === "string") {
       const trimmed = value.trim()
       if (trimmed) return trimmed
@@ -20,8 +20,8 @@ function firstString() {
   return undefined
 }
 
-function firstNumber() {
-  for (const value of arguments) {
+function firstNumber(...values: unknown[]) {
+  for (const value of values) {
     if (value === undefined || value === null || value === "") continue
     const parsed = Number(value)
     if (Number.isFinite(parsed)) return parsed
@@ -69,8 +69,9 @@ function mapProfileRowToUserProfile(userId: string, profileRow: Record<string, u
 export async function POST(req: NextRequest) {
   try {
     // 1. Autenticação
-    const auth = await requireBearerAuth(req)
-    if (!auth.ok) return auth.response
+    const authResult = await requireBearerAuth(req)
+    if ("response" in authResult) return authResult.response
+    const auth = authResult
 
     const userId = auth.user.id
 
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest) {
       new SupabaseRagProvider(createEmbeddingProvider()),
       new SupabasePlanRepository(),
       new SupabaseMemoryRepository(),
+      adminClient,
     )
 
     const result = await service.run({

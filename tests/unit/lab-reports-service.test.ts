@@ -402,6 +402,16 @@ test('edge function de labs usa fallback canônico de OCR na própria app', () =
   assert.match(source, /api\/exam_ocr/);
 });
 
+test('system-check usa fallback canônico de OCR antes de alertar degradação', () => {
+  const source = readFileSync('scripts/system-check.ts', 'utf-8');
+  assert.match(source, /process\.env\.EXAM_OCR_SERVICE_URL/);
+  assert.match(source, /process\.env\.NEXT_PUBLIC_APP_URL \|\| process\.env\.APP_URL \|\| 'https:\/\/kronia\.app\.br'/);
+  assert.match(source, /api\/exam_ocr/);
+  assert.match(source, /const healthUrl = resolvedViaFallback/);
+  assert.match(source, /serviceUrl\.replace\(\/\\\/\$\/, ''\)/);
+  assert.doesNotMatch(source, /EXAM_OCR_SERVICE_URL não configurada; pipeline de exames ficará degradado\./);
+});
+
 test('edge function trata tabelas auxiliares de labs como opcionais', () => {
   const source = readFileSync('supabase/functions/lab-report-orchestrator/index.ts', 'utf-8');
   assert.match(source, /lab_report_extractions/);

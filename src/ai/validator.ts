@@ -26,6 +26,88 @@ const validActions: AssistantAction[] = [
 ]
 
 const validDepths: ResponseDepth[] = ["curta", "normal", "detalhada"]
+const trainingActions = new Set<AssistantAction>(["abrir_config_treino", "abrir_tela_treino_com_payload"])
+const dietActions = new Set<AssistantAction>(["abrir_config_dieta", "gerar_pdf_dieta"])
+
+function hasWorkoutPayload(response: AssistantStructuredResponse): boolean {
+  return Boolean(response.workoutPayload && Array.isArray(response.workoutPayload.exercicios) && response.workoutPayload.exercicios.length > 0)
+}
+
+function hasDietPayload(response: AssistantStructuredResponse): boolean {
+  return Boolean(response.dietPayload && Array.isArray(response.dietPayload.refeicoes) && response.dietPayload.refeicoes.length > 0)
+}
+
+function downgradeDomainCta(response: AssistantStructuredResponse): AssistantStructuredResponse {
+  return {
+    ...response,
+    action: "responder_chat",
+    shouldCreateButton: false,
+    buttonType: null,
+    workoutPayload: null,
+    dietPayload: null,
+  }
+}
+
+function sanitizeDomainCoherence(response: AssistantStructuredResponse): AssistantStructuredResponse {
+  const normalized: AssistantStructuredResponse = {
+    ...response,
+    workoutPayload: response.workoutPayload ?? null,
+    dietPayload: response.dietPayload ?? null,
+    supplementPayload: response.supplementPayload ?? null,
+    mobilityPayload: response.mobilityPayload ?? null,
+    buttonType: response.buttonType ?? null,
+  }
+
+  if (trainingActions.has(normalized.action)) {
+    const coherent =
+      normalized.intent === "treino" &&
+      (
+        (normalized.action === "abrir_config_treino"
+          && normalized.shouldCreateButton === false
+          && normalized.buttonType === null
+          && !hasWorkoutPayload(normalized))
+        || (normalized.action === "abrir_tela_treino_com_payload"
+          && normalized.shouldCreateButton === true
+          && normalized.buttonType === "treino"
+          && hasWorkoutPayload(normalized))
+      )
+
+    return coherent ? { ...normalized, dietPayload: null } : downgradeDomainCta(normalized)
+  }
+
+  if (dietActions.has(normalized.action)) {
+    if (normalized.action === "abrir_config_dieta") {
+      return downgradeDomainCta(normalized)
+    }
+
+    const coherent =
+      normalized.intent === "dieta" &&
+      (
+        normalized.action === "gerar_pdf_dieta"
+          && normalized.shouldCreateButton === true
+          && normalized.buttonType === "dieta"
+          && hasDietPayload(normalized)
+      )
+
+    return coherent ? { ...normalized, workoutPayload: null } : downgradeDomainCta(normalized)
+  }
+
+  if (normalized.buttonType === "treino" || normalized.buttonType === "dieta") {
+    return {
+      ...normalized,
+      shouldCreateButton: false,
+      buttonType: null,
+      workoutPayload: normalized.buttonType === "treino" ? null : normalized.workoutPayload,
+      dietPayload: normalized.buttonType === "dieta" ? null : normalized.dietPayload,
+    }
+  }
+
+  return {
+    ...normalized,
+    workoutPayload: normalized.action === "abrir_tela_treino_com_payload" ? normalized.workoutPayload : null,
+    dietPayload: normalized.action === "gerar_pdf_dieta" || normalized.action === "abrir_config_dieta" ? normalized.dietPayload : null,
+  }
+}
 
 export function validateAssistantResponse(response: unknown): AssistantStructuredResponse {
   if (!response || typeof response !== "object") {
@@ -45,24 +127,14 @@ export function validateAssistantResponse(response: unknown): AssistantStructure
     throw new Error("buttonType inválido")
   }
 
-  if (r.action === "abrir_tela_treino_com_payload") {
-    if (!r.workoutPayload || !Array.isArray(r.workoutPayload.exercicios) || r.workoutPayload.exercicios.length === 0) {
-      throw new Error("Workout payload obrigatório e inválido")
-    }
-  }
-
-  if (r.action === "gerar_pdf_dieta") {
-    if (!r.dietPayload || !Array.isArray(r.dietPayload.refeicoes) || r.dietPayload.refeicoes.length === 0) {
-      throw new Error("Diet payload obrigatório e inválido")
-    }
-  }
-
-  return {
+  const normalized = sanitizeDomainCoherence({
     ...r,
     workoutPayload: r.workoutPayload ?? null,
     dietPayload: r.dietPayload ?? null,
     supplementPayload: r.supplementPayload ?? null,
     mobilityPayload: r.mobilityPayload ?? null,
     buttonType: r.buttonType ?? null,
-  }
+  })
+
+  return normalized
 }
