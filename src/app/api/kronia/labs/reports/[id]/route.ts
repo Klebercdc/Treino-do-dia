@@ -32,13 +32,39 @@ function normalizeStringArray(input: unknown): string[] {
     : []
 }
 
+function isMissingOptionalRelation(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+  table: string,
+): boolean {
+  const code = String(error?.code || '');
+  const message = String(error?.message || '');
+  return (code === 'PGRST205' || code === '42P01' || !code)
+    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
+}
+
+function extractBiomarkersFromPayload(report: Record<string, unknown>): Array<Record<string, unknown>> {
+  const normalizedPayload = report.normalized_payload && typeof report.normalized_payload === 'object'
+    ? report.normalized_payload as { biomarkers?: Array<Record<string, unknown>> }
+    : {};
+  return Array.isArray(normalizedPayload.biomarkers) ? normalizedPayload.biomarkers : [];
+}
+
+function buildFallbackExtractions(report: Record<string, unknown>, id: string) {
+  const normalizedPayload = report.normalized_payload && typeof report.normalized_payload === 'object'
+    ? report.normalized_payload as { extraction?: Record<string, unknown> }
+    : {};
+  return normalizedPayload.extraction
+    ? [{
+        id: 'lab-report-inline-extraction',
+        lab_report_id: id,
+        ...normalizedPayload.extraction,
+        created_at: report.processed_at || report.created_at || null,
+      }]
+    : [];
+}
+
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const isMissingOptionalTable = (error: { code?: string | null; message?: string | null } | null | undefined, table: string) => (
-      error?.code === 'PGRST205'
-      && new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(String(error.message || ''))
-    );
-
     const auth = await requireBearerAuth(req);
     if (!auth.ok) return auth.response;
 
@@ -58,23 +84,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       admin.from('lab_report_biomarkers').select('*').eq('lab_report_id', id).order('created_at', { ascending: true }),
     ]);
 
-    const missingExtractions = isMissingOptionalTable(extractions.error, 'lab_report_extractions');
-    const missingBiomarkers = isMissingOptionalTable(biomarkers.error, 'lab_report_biomarkers');
+    const missingExtractions = isMissingOptionalRelation(extractions.error, 'lab_report_extractions');
+    const missingBiomarkers = isMissingOptionalRelation(biomarkers.error, 'lab_report_biomarkers');
     if (extractions.error && !missingExtractions) return NextResponse.json({ ok: false, error: 'Erro ao consultar extrações.' }, { status: 500 });
     if (biomarkers.error && !missingBiomarkers) return NextResponse.json({ ok: false, error: 'Erro ao consultar biomarcadores.' }, { status: 500 });
 
-    const normalizedPayload = report.normalized_payload && typeof report.normalized_payload === 'object'
-      ? report.normalized_payload as { extraction?: Record<string, unknown>; biomarkers?: Array<Record<string, unknown>> }
-      : {};
-    const fallbackExtractions = normalizedPayload.extraction
-      ? [{
-          id: 'lab-report-inline-extraction',
-          lab_report_id: id,
-          ...normalizedPayload.extraction,
-          created_at: report.processed_at || report.created_at || null,
-        }]
-      : [];
-    const fallbackBiomarkers = Array.isArray(normalizedPayload.biomarkers) ? normalizedPayload.biomarkers : [];
+    const fallbackExtractions = buildFallbackExtractions(report as Record<string, unknown>, id);
+    const fallbackBiomarkers = extractBiomarkersFromPayload(report as Record<string, unknown>);
 
     return NextResponse.json({
       ok: true,
@@ -83,8 +99,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         clinicalFlags: normalizeStringArray((report.ai_insights as { clinical_flags?: unknown[] } | null)?.clinical_flags || report.clinical_flags),
         criticalFlags: normalizeStringArray((report.ai_insights as { critical_flags?: unknown[] } | null)?.critical_flags || report.critical_flags),
       },
-      extractions: extractions.data || fallbackExtractions,
-      biomarkers: biomarkers.data || fallbackBiomarkers,
+      extractions: Array.isArray(extractions.data) && extractions.data.length > 0 ? extractions.data : fallbackExtractions,
+      biomarkers: Array.isArray(biomarkers.data) && biomarkers.data.length > 0 ? biomarkers.data : fallbackBiomarkers,
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown';

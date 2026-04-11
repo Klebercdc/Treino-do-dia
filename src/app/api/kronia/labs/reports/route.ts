@@ -6,13 +6,26 @@ import { getUserLabReportTimeline } from '../../../../../server/internal/labRepo
 
 export const runtime = 'nodejs';
 
+function isMissingOptionalRelation(
+  error: { code?: string | null; message?: string | null } | null | undefined,
+  table: string,
+) {
+  const code = String(error?.code || '');
+  const message = String(error?.message || '');
+  return (code === 'PGRST205' || code === '42P01' || !code)
+    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
+}
+
+function extractBiomarkersFromPayload(row: Record<string, unknown>) {
+  const payload = row.normalized_payload;
+  if (!payload || typeof payload !== 'object' || !Array.isArray((payload as { biomarkers?: unknown[] }).biomarkers)) {
+    return [];
+  }
+  return (payload as { biomarkers: Array<Record<string, unknown>> }).biomarkers;
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const isMissingOptionalTable = (error: { code?: string | null; message?: string | null } | null | undefined, table: string) => (
-      error?.code === 'PGRST205'
-      && new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(String(error.message || ''))
-    );
-
     const auth = await requireBearerAuth(req);
     if (!auth.ok) return auth.response as Response;
 
@@ -22,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,clinical_flags,critical_flags,created_at,processed_at')
+      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -33,13 +46,6 @@ export async function GET(req: NextRequest) {
 
     const ids = (data || []).map((row) => row.id).filter(Boolean);
     const biomarkerMap = new Map<string, Array<Record<string, unknown>>>();
-    const extractBiomarkersFromPayload = (row: Record<string, unknown>) => {
-      const payload = row.normalized_payload;
-      if (!payload || typeof payload !== 'object' || !Array.isArray((payload as { biomarkers?: unknown[] }).biomarkers)) {
-        return [];
-      }
-      return (payload as { biomarkers: Array<Record<string, unknown>> }).biomarkers;
-    };
     if (ids.length) {
       const { data: biomarkers, error: biomarkersError } = await admin
         .from('lab_report_biomarkers')
@@ -53,10 +59,7 @@ export async function GET(req: NextRequest) {
           if (!biomarkerMap.has(key)) biomarkerMap.set(key, []);
           biomarkerMap.get(key)?.push(row as Record<string, unknown>);
         }
-      } else if (isMissingOptionalTable(biomarkersError, 'lab_report_biomarkers')) {
-        for (const row of data || []) {
-          biomarkerMap.set(String(row.id), extractBiomarkersFromPayload(row as Record<string, unknown>));
-        }
+      } else if (isMissingOptionalRelation(biomarkersError, 'lab_report_biomarkers')) {
       } else if (biomarkersError) {
         return NextResponse.json({ ok: false, error: 'Erro ao buscar biomarcadores do histórico.' }, { status: 500 });
       }
@@ -75,17 +78,13 @@ export async function GET(req: NextRequest) {
       aiInsights: row.ai_insights || null,
       isValid: row.is_valid,
       processingError: row.processing_error,
-      biomarkers: biomarkerMap.get(String(row.id)) || [],
+      biomarkers: biomarkerMap.get(String(row.id)) || extractBiomarkersFromPayload(row as Record<string, unknown>),
       clinicalFlags: Array.isArray((row.ai_insights as { clinical_flags?: unknown[] } | null)?.clinical_flags)
         ? ((row.ai_insights as { clinical_flags?: unknown[] }).clinical_flags || []).map((item) => String(item || '')).filter(Boolean)
-        : Array.isArray(row.clinical_flags)
-          ? row.clinical_flags.map((item) => String(item || '')).filter(Boolean)
-          : [],
+        : [],
       criticalFlags: Array.isArray((row.ai_insights as { critical_flags?: unknown[] } | null)?.critical_flags)
         ? ((row.ai_insights as { critical_flags?: unknown[] }).critical_flags || []).map((item) => String(item || '')).filter(Boolean)
-        : Array.isArray(row.critical_flags)
-          ? row.critical_flags.map((item) => String(item || '')).filter(Boolean)
-          : [],
+        : [],
       createdAt: row.created_at,
       processedAt: row.processed_at,
     }));

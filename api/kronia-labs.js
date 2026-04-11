@@ -1,6 +1,7 @@
 var crypto = require('crypto');
 var createClient = require('@supabase/supabase-js').createClient;
 var auth = require('../src/server/apihelpers/_auth');
+var labReadModel = require('../src/server/internal/labReports/readModel');
 
 var LAB_REPORTS_BUCKET = 'lab-reports';
 var MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -103,36 +104,14 @@ function withAuth(req, res, handler) {
   });
 }
 
-function isMissingOptionalTable(error, tableName) {
-  if (!error) return false;
-  var code = String(error.code || '');
-  var message = String(error.message || '');
-  return code === 'PGRST205' && new RegExp("table ['\"]?public\\." + tableName + "['\"]?", 'i').test(message);
-}
-
-function extractBiomarkersFromNormalizedPayload(report) {
-  var payload = report && report.normalized_payload && typeof report.normalized_payload === 'object'
-    ? report.normalized_payload
-    : null;
-  return payload && Array.isArray(payload.biomarkers) ? payload.biomarkers : [];
-}
-
-function normalizeStringArray(input) {
-  return Array.isArray(input)
-    ? input.map(function(item) { return String(item || '').trim(); }).filter(Boolean)
-    : [];
-}
-
-function buildClinicalFlags(row) {
-  var aiInsights = row && row.ai_insights && typeof row.ai_insights === 'object'
-    ? row.ai_insights
-    : null;
-
-  return {
-    clinicalFlags: normalizeStringArray((aiInsights && aiInsights.clinical_flags) || row.clinical_flags),
-    criticalFlags: normalizeStringArray((aiInsights && aiInsights.critical_flags) || row.critical_flags)
-  };
-}
+var isMissingOptionalTable = labReadModel.isMissingOptionalRelation;
+var extractBiomarkersFromNormalizedPayload = labReadModel.extractBiomarkersFromNormalizedPayload;
+var normalizeStringArray = labReadModel.normalizeStringArray;
+var buildClinicalFlags = labReadModel.buildClinicalFlags;
+var buildFallbackExtraction = labReadModel.buildFallbackExtraction;
+var groupRowsByReportId = labReadModel.groupRowsByReportId;
+var resolveReportBiomarkers = labReadModel.resolveReportBiomarkers;
+var resolveReportExtractions = labReadModel.resolveReportExtractions;
 
 function shapeReportSummary(row, biomarkers) {
   var flags = buildClinicalFlags(row);
@@ -155,31 +134,6 @@ function shapeReportSummary(row, biomarkers) {
     createdAt: row.created_at,
     processedAt: row.processed_at
   };
-}
-
-function buildFallbackExtraction(report) {
-  var payload = report && report.normalized_payload && typeof report.normalized_payload === 'object'
-    ? report.normalized_payload
-    : null;
-  var extraction = payload && payload.extraction && typeof payload.extraction === 'object'
-    ? payload.extraction
-    : null;
-  if (!extraction) return [];
-
-  return [{
-    id: 'lab-report-inline-extraction',
-    lab_report_id: report.id,
-    engine: extraction.engine || 'exam_ocr_python',
-    extraction_mode: extraction.extraction_mode || report.extraction_mode || null,
-    raw_text: extraction.raw_text || null,
-    pages: extraction.pages || [],
-    blocks: extraction.blocks || [],
-    rows: extraction.rows || [],
-    warnings: extraction.warnings || [],
-    metadata: extraction.metadata || {},
-    confidence_summary: extraction.confidence_summary || report.confidence_summary || {},
-    created_at: report.processed_at || report.created_at || null
-  }];
 }
 
 function isDeletionBlockedStatus(statusKey) {
@@ -442,6 +396,20 @@ function handleRegister(req, res) {
       });
     }
 
+    var dispatch = await admin.rpc('dispatch_lab_report_to_edge', {
+      p_lab_report_id: labReportId,
+      p_source: 'api_register_uploaded',
+      p_expected_updated_at: null
+    });
+    if (dispatch.error) {
+      console.warn('[labs/register] dispatch rpc failed after upload confirmation', {
+        labReportId: labReportId,
+        errorMessage: dispatch.error.message,
+        errorCode: dispatch.error.code,
+        errorHint: dispatch.error.hint
+      });
+    }
+
     return res.status(200).json({ ok: true, labReportId: updated.data.id, status: 'processing' });
   });
 }
@@ -454,7 +422,7 @@ function handleReports(req, res) {
 
     var reportsResult = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,clinical_flags,critical_flags,created_at,processed_at')
+      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -479,32 +447,20 @@ function handleReports(req, res) {
         .order('created_at', { ascending: true });
 
       if (!biomarkersResult.error && Array.isArray(biomarkersResult.data)) {
-        biomarkersResult.data.forEach(function(row) {
-          var key = String(row.lab_report_id);
-          if (!biomarkerMap.has(key)) biomarkerMap.set(key, []);
-          biomarkerMap.get(key).push(row);
-        });
-        // For any report that returned no rows from the table, fall back to
-        // normalized_payload.biomarkers — happens when the table INSERT failed
-        // but the JSONB column was written (or on first-load before table is populated).
+        biomarkerMap = groupRowsByReportId(biomarkersResult.data);
         rows.forEach(function(row) {
           if (!biomarkerMap.has(String(row.id))) {
             var fallback = extractBiomarkersFromNormalizedPayload(row);
-            if (fallback.length > 0) {
-              biomarkerMap.set(String(row.id), fallback);
-            }
+            if (fallback.length > 0) biomarkerMap.set(String(row.id), fallback);
           }
         });
-      } else if (isMissingOptionalTable(biomarkersResult.error, 'lab_report_biomarkers')) {
-        rows.forEach(function(row) {
-          biomarkerMap.set(String(row.id), extractBiomarkersFromNormalizedPayload(row));
-        });
-      } else if (biomarkersResult.error) {
-        // Non-PGRST205 error on biomarker table: log and gracefully fall back to payload
-        console.error('[labs/reports] erro ao buscar biomarcadores:', {
-          code: biomarkersResult.error.code,
-          message: String(biomarkersResult.error.message || '').slice(0, 200)
-        });
+      } else {
+        if (biomarkersResult.error && !isMissingOptionalTable(biomarkersResult.error, 'lab_report_biomarkers')) {
+          console.error('[labs/reports] erro ao buscar biomarcadores:', {
+            code: biomarkersResult.error.code,
+            message: String(biomarkersResult.error.message || '').slice(0, 200)
+          });
+        }
         rows.forEach(function(row) {
           biomarkerMap.set(String(row.id), extractBiomarkersFromNormalizedPayload(row));
         });
@@ -512,7 +468,7 @@ function handleReports(req, res) {
     }
 
     var reports = rows.map(function(row) {
-      return shapeReportSummary(row, biomarkerMap.get(String(row.id)) || []);
+      return shapeReportSummary(row, resolveReportBiomarkers(row, biomarkerMap));
     });
 
     return res.status(200).json({ ok: true, reports: reports, total: reports.length });
@@ -527,7 +483,7 @@ function handleReportById(req, res) {
     var admin = createAdminSupabaseClient();
     var reportResult = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,clinical_flags,critical_flags,storage_bucket,storage_path,created_at,processed_at')
+      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,storage_bucket,storage_path,created_at,processed_at')
       .eq('id', id)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -598,17 +554,14 @@ function handleReportById(req, res) {
       return res.status(500).json({ ok: false, error: 'Erro ao consultar biomarcadores.' });
     }
 
-    // biomarkers.data is [] (truthy!) when the table exists but has no rows for this
-    // report. Use explicit length check so we can fall back to normalized_payload.
-    var biomarkerList = (Array.isArray(biomarkers.data) && biomarkers.data.length > 0)
-      ? biomarkers.data
-      : extractBiomarkersFromNormalizedPayload(reportResult.data);
+    var resolvedExtractions = resolveReportExtractions(reportResult.data, extractions.data);
+    var resolvedBiomarkers = resolveReportBiomarkers(reportResult.data, groupRowsByReportId(biomarkers.data));
 
     return res.status(200).json({
       ok: true,
-      report: shapeReportSummary(reportResult.data, biomarkerList),
-      extractions: extractions.data || buildFallbackExtraction(reportResult.data),
-      biomarkers: biomarkerList
+      report: shapeReportSummary(reportResult.data, resolvedBiomarkers),
+      extractions: resolvedExtractions,
+      biomarkers: resolvedBiomarkers
     });
   });
 }

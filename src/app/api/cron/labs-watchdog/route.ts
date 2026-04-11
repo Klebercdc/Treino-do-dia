@@ -1,5 +1,5 @@
 /**
- * Endpoint de watchdog manual para exames presos em "processing".
+ * Endpoint de watchdog manual para exames presos em "uploaded" ou "processing".
  *
  * USO CORRETO: trigger pontual via curl/admin para recuperar exames após
  * incidente — ex: falha de OCR em lote, degradação de serviço externo.

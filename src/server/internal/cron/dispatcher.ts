@@ -3,7 +3,7 @@ import { syncExercisesWeekly } from '../../../lib/exercises/sync-core';
 import { LAB_REPORTS_BUCKET } from '../../../core/labs/labRepository';
 import {
   acquireLabReportProcessingLock,
-  listStaleProcessingLabReports,
+  listRecoverableLabReports,
   processLabReportUploadSafely,
 } from '../labReports/service';
 import { logger } from '../../../lib/utils/logger';
@@ -42,7 +42,7 @@ export async function runLabsWatchdogTask(
 ): Promise<CronTaskResult> {
   const startedAt = Date.now();
   try {
-    const candidates = await listStaleProcessingLabReports(admin, limit);
+    const candidates = await listRecoverableLabReports(admin, limit);
     const processed: Array<Record<string, unknown>> = [];
 
     for (const report of candidates) {
@@ -131,7 +131,7 @@ export async function runLabsWatchdogDispatchTask(
   }
 
   try {
-    const candidates = await listStaleProcessingLabReports(admin, limit);
+    const candidates = await listRecoverableLabReports(admin, limit);
     let dispatched = 0;
 
     if (candidates.length > 0) {

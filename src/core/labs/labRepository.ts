@@ -22,13 +22,13 @@ const EXTENSION_TO_MIME: Record<string, string> = {
 
 type LabReportRow = {
   id: unknown
-  parsed: unknown
+  parsed?: unknown
   normalized_payload: unknown
   ai_insights: unknown
-  confidence: unknown
+  confidence?: unknown
   is_valid: unknown
-  clinical_flags: unknown
-  critical_flags: unknown
+  clinical_flags?: unknown
+  critical_flags?: unknown
   created_at: unknown
   processed_at: unknown
 }
@@ -122,7 +122,7 @@ async function listValidLabReports(
 ): Promise<LabReportRow[]> {
   const { data, error } = await admin
     .from("lab_reports")
-    .select("id, parsed, normalized_payload, ai_insights, confidence, is_valid, clinical_flags, critical_flags, created_at, processed_at")
+    .select("id, normalized_payload, ai_insights, is_valid, created_at, processed_at")
     .eq("user_id", userId)
     .eq("is_valid", true)
     .order("processed_at", { ascending: false, nullsFirst: false })

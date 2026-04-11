@@ -6,6 +6,7 @@ import { buildHealthPerformanceProfile, applyClinicalRulesFromBiomarkers } from 
 const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
 const PROCESSING_STALE_MINUTES = 20;
+const UPLOADED_RECOVERY_MINUTES = 3;
 
 export type LabReportStatus = 'pending_upload' | 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
 
@@ -30,8 +31,8 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: unknown }).code || '') : '';
   const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
-  if (code !== 'PGRST205') return false;
-  return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+  return (code === 'PGRST205' || code === '42P01' || !code)
+    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
 }
 
 function isParseStatusConstraintViolation(error: unknown): boolean {
@@ -143,6 +144,11 @@ function getProcessingStaleBeforeIso(now = new Date()): string {
   return new Date(now.getTime() - staleMs).toISOString();
 }
 
+function getUploadedRecoveryBeforeIso(now = new Date()): string {
+  const staleMs = UPLOADED_RECOVERY_MINUTES * 60 * 1000;
+  return new Date(now.getTime() - staleMs).toISOString();
+}
+
 function canAcquireProcessingLock(status: string | null | undefined, updatedAt: string | null | undefined): boolean {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'uploaded' || normalized === 'failed' || normalized === 'needs_review') {
@@ -188,21 +194,59 @@ export async function acquireLabReportProcessingLock(
   return Array.isArray(data) && data.length === 1;
 }
 
-export async function listStaleProcessingLabReports(
+export async function listRecoverableLabReports(
   admin: SupabaseClient,
   limit = 10,
 ): Promise<Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>> {
-  const staleBefore = getProcessingStaleBeforeIso();
-  const { data, error } = await admin
-    .from('lab_reports')
-    .select('id,storage_bucket,storage_path,mime_type,file_type,status,updated_at')
-    .eq('status', 'processing')
-    .lt('updated_at', staleBefore)
-    .order('updated_at', { ascending: true })
-    .limit(Math.min(Math.max(limit, 1), 50));
+  const processingStaleBefore = getProcessingStaleBeforeIso();
+  const uploadedRecoveryBefore = getUploadedRecoveryBeforeIso();
+  const cappedLimit = Math.min(Math.max(limit, 1), 50);
+  const baseQuery = 'id,storage_bucket,storage_path,mime_type,file_type,status,updated_at';
+  const [uploadedResult, processingResult] = await Promise.all([
+    admin
+      .from('lab_reports')
+      .select(baseQuery)
+      .eq('status', 'uploaded')
+      .lt('updated_at', uploadedRecoveryBefore)
+      .order('updated_at', { ascending: true })
+      .limit(cappedLimit),
+    admin
+      .from('lab_reports')
+      .select(baseQuery)
+      .eq('status', 'processing')
+      .lt('updated_at', processingStaleBefore)
+      .order('updated_at', { ascending: true })
+      .limit(cappedLimit),
+  ]);
 
-  if (error) throw new Error(`Falha ao listar exames presos em processing: ${error.message}`);
-  return (data || []) as Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>;
+  if (uploadedResult.error) throw new Error(`Falha ao listar exames uploaded para recuperação: ${uploadedResult.error.message}`);
+  if (processingResult.error) throw new Error(`Falha ao listar exames presos em processing: ${processingResult.error.message}`);
+
+  const merged = [...(uploadedResult.data || []), ...(processingResult.data || [])]
+    .sort((a, b) => String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
+    .slice(0, cappedLimit);
+
+  return merged as Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>;
+}
+
+export async function dispatchLabReportToEdgeBestEffort(
+  admin: SupabaseClient,
+  input: { labReportId: string; source: string; expectedUpdatedAt?: string | null },
+): Promise<void> {
+  const { error } = await admin.rpc('dispatch_lab_report_to_edge', {
+    p_lab_report_id: input.labReportId,
+    p_source: input.source,
+    p_expected_updated_at: input.expectedUpdatedAt ?? null,
+  });
+
+  if (!error) return;
+
+  logger.warn('labs_dispatch_rpc_failed', {
+    labReportId: input.labReportId,
+    source: input.source,
+    code: error.code,
+    message: error.message,
+  });
 }
 
 export async function downloadLabReportFromStorage(

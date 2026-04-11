@@ -12,6 +12,7 @@ const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('AI_CHAT_MODEL') ?? 'llama-3.3-70b-versatile';
 const LAB_REPORTS_BUCKET = 'lab-reports';
 const STALE_MINUTES = 20;
+const UPLOADED_RECOVERY_MINUTES = 3;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY obrigatórias para lab-report-orchestrator');
@@ -125,8 +126,8 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
   const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
-  if (code !== 'PGRST205') return false;
-  return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+  return (code === 'PGRST205' || code === '42P01' || !code)
+    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
 }
 
 function buildNormalizedPayload(ocr: OcrResponse, biomarkers: Biomarker[]) {
@@ -842,37 +843,32 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
 }
 
 async function dispatchWatchdog(limit: number, dispatchSource: string) {
-  const rowLimit = Math.max(1, Math.min(limit, 25));
-  const halfLimit = Math.ceil(rowLimit / 2);
-
-  // Reports stuck in 'processing' are stale after STALE_MINUTES (20 min).
-  const staleProcessingBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
-  // Reports stuck in 'uploaded' are stale after 5 min — enough time for the DB
-  // trigger (via pg_net) to have fired. If they're still 'uploaded' after that,
-  // the trigger dispatch failed silently and we must rescue them here.
-  const staleUploadedBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-  const [processingResult, uploadedResult] = await Promise.all([
-    supabase
-      .from('lab_reports')
-      .select('id,updated_at')
-      .eq('status', 'processing')
-      .lt('updated_at', staleProcessingBefore)
-      .order('updated_at', { ascending: true })
-      .limit(halfLimit),
+  const processingStaleBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
+  const uploadedRecoveryBefore = new Date(Date.now() - UPLOADED_RECOVERY_MINUTES * 60 * 1000).toISOString();
+  const cappedLimit = Math.max(1, Math.min(limit, 25));
+  const [uploadedResult, processingResult] = await Promise.all([
     supabase
       .from('lab_reports')
       .select('id,updated_at')
       .eq('status', 'uploaded')
-      .lt('updated_at', staleUploadedBefore)
+      .lt('updated_at', uploadedRecoveryBefore)
       .order('updated_at', { ascending: true })
-      .limit(halfLimit),
+      .limit(cappedLimit),
+    supabase
+      .from('lab_reports')
+      .select('id,updated_at')
+      .eq('status', 'processing')
+      .lt('updated_at', processingStaleBefore)
+      .order('updated_at', { ascending: true })
+      .limit(cappedLimit),
   ]);
 
-  if (processingResult.error) throw new Error(`Falha ao listar stale processing: ${processingResult.error.message}`);
-  if (uploadedResult.error) throw new Error(`Falha ao listar stale uploaded: ${uploadedResult.error.message}`);
+  if (uploadedResult.error) throw new Error(`Falha ao listar uploaded para recuperação: ${uploadedResult.error.message}`);
+  if (processingResult.error) throw new Error(`Falha ao listar processing preso: ${processingResult.error.message}`);
 
-  const data = [...(processingResult.data ?? []), ...(uploadedResult.data ?? [])];
+  const data = [...(uploadedResult.data ?? []), ...(processingResult.data ?? [])]
+    .sort((a, b) => String(a.updated_at ?? '').localeCompare(String(b.updated_at ?? '')))
+    .slice(0, cappedLimit);
 
   const baseUrl = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/lab-report-orchestrator`;
   const headers = {
