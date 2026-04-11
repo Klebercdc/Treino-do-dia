@@ -324,6 +324,23 @@ export async function persistBiomarkers(
     };
   }).filter((row) => row.marker_key);
 
+  // Deduplicate by the unique index key: (marker_key, marker_name, coalesce(unit, '')).
+  // OCR can return the same marker twice (e.g. two reference ranges). Keep the entry with
+  // the higher confidence score; fall back to last-seen when confidence is unavailable.
+  const seen = new Map<string, typeof cleaned[number]>();
+  for (const row of cleaned) {
+    const dedupeKey = `${row.marker_key}\0${row.marker_name}\0${row.unit ?? ''}`;
+    const existing = seen.get(dedupeKey);
+    if (!existing) {
+      seen.set(dedupeKey, row);
+    } else {
+      const newConf = row.confidence ?? -1;
+      const oldConf = existing.confidence ?? -1;
+      if (newConf >= oldConf) seen.set(dedupeKey, row);
+    }
+  }
+  const deduped = Array.from(seen.values());
+
   // If the auxiliary table is not deployed, the canonical fallback becomes
   // lab_reports.normalized_payload and history endpoints read from there.
   const deleteResult = await admin.from('lab_report_biomarkers').delete().eq('lab_report_id', input.labReportId);
@@ -331,14 +348,14 @@ export async function persistBiomarkers(
     throw new Error(`Falha ao limpar biomarcadores: ${deleteResult.error.message}`);
   }
 
-  if (cleaned.length) {
-    const { error } = await admin.from('lab_report_biomarkers').insert(cleaned);
+  if (deduped.length) {
+    const { error } = await admin.from('lab_report_biomarkers').insert(deduped);
     if (error && !isMissingOptionalTable(error, 'lab_report_biomarkers')) {
       throw new Error(`Falha ao persistir biomarcadores: ${error.message}`);
     }
   }
 
-  return cleaned;
+  return deduped;
 }
 
 export function computeReadinessForAI(input: {

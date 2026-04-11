@@ -248,7 +248,7 @@ async function callOcr(input: { sourceId: string; mimeType: string; fileUrl: str
 }
 
 function cleanBiomarkers(items: Array<Record<string, unknown>>): Biomarker[] {
-  return (items ?? []).map((item) => {
+  const mapped = (items ?? []).map((item) => {
     const markerKey = String(item.marker_key ?? item.marker ?? item.name ?? '').trim().toLowerCase();
     const markerName = String(item.marker_name ?? item.name ?? markerKey ?? 'Marcador');
     const valueNumeric = toNumber(item.value_numeric ?? item.value);
@@ -268,6 +268,22 @@ function cleanBiomarkers(items: Array<Record<string, unknown>>): Biomarker[] {
       confidence: toNumber(item.confidence),
     };
   }).filter((row) => row.marker_key);
+
+  // Deduplicate by the unique index key: (marker_key, marker_name, coalesce(unit, '')).
+  // OCR can return the same marker twice. Keep the entry with higher confidence score.
+  const seen = new Map<string, typeof mapped[number]>();
+  for (const row of mapped) {
+    const dedupeKey = `${row.marker_key}\0${row.marker_name}\0${row.unit ?? ''}`;
+    const existing = seen.get(dedupeKey);
+    if (!existing) {
+      seen.set(dedupeKey, row);
+    } else {
+      const newConf = row.confidence ?? -1;
+      const oldConf = existing.confidence ?? -1;
+      if (newConf >= oldConf) seen.set(dedupeKey, row);
+    }
+  }
+  return Array.from(seen.values());
 }
 
 async function persistExtraction(labReportId: string, ocr: OcrResponse) {
