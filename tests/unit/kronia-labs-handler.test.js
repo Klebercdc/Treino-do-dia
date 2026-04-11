@@ -55,6 +55,28 @@ test('handler de detalhe usa colunas reais de extração e fallback para normali
   assert.match(handlerSrc, /confidence_summary/);
   assert.match(handlerSrc, /buildFallbackExtraction/);
   assert.match(handlerSrc, /extractBiomarkersFromNormalizedPayload/);
+  assert.match(handlerSrc, /clinicalFlags/);
+  assert.match(handlerSrc, /criticalFlags/);
+});
+
+test('handler de detalhe suporta DELETE com ownership, bloqueio assíncrono e cleanup pós-delete', () => {
+  const detailSection = handlerSrc.slice(handlerSrc.indexOf('function handleReportById'));
+  assert.match(detailSection, /req\.method === 'DELETE'/);
+  assert.match(detailSection, /\.eq\('user_id', user\.id\)/);
+  assert.match(handlerSrc, /function isDeletionBlockedStatus/);
+  assert.match(handlerSrc, /pending_upload/);
+  assert.match(handlerSrc, /uploaded/);
+  assert.match(handlerSrc, /queued/);
+  assert.match(detailSection, /REPORT_STILL_PROCESSING/);
+  assert.match(detailSection, /storage\.from\(storageBucket\)\.remove/);
+  assert.match(detailSection, /DB_DELETE_ERROR/);
+  assert.match(detailSection, /storage cleanup failed after db delete/);
+
+  const deletePos = detailSection.indexOf(".delete()");
+  const storagePos = detailSection.indexOf("storage.from(storageBucket).remove");
+  assert.ok(deletePos !== -1, 'delete no banco não encontrado');
+  assert.ok(storagePos !== -1, 'remoção de storage não encontrada');
+  assert.ok(deletePos < storagePos, 'o delete no banco deve acontecer antes da remoção do storage');
 });
 
 // ── Critical parse_status fix ─────────────────────────────────────────────────

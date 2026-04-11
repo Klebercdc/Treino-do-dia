@@ -1,5 +1,5 @@
 import type { ChatMessage, MemoryItem, RetrievedContextItem, UserProfile } from './types'
-import type { HealthPerformanceProfile, LongitudinalLabContext } from '../core/labs/labTypes'
+import type { HealthPerformanceProfile, LabLongitudinalContext } from '../core/labs/labTypes'
 import { serializeHealthProfile } from '../core/labs/labRules'
 
 function serializeProfile(profile?: UserProfile | null): string {
@@ -63,37 +63,74 @@ function serializeLabContext(healthProfile?: HealthPerformanceProfile | null): s
   }
 }
 
-/**
- * Serialize a LongitudinalLabContext into AI-ready text showing evolution
- * across multiple exams. Only included when comparison data is available.
- */
-function serializeLongitudinalContext(ctx?: LongitudinalLabContext | null): string | null {
-  if (!ctx) return null
-  try {
-    const lines: string[] = []
-    lines.push('=== HISTÓRICO LONGITUDINAL DE EXAMES ===')
-    lines.push(ctx.narrativeSummary)
+function serializeLabLongitudinalContext(context?: LabLongitudinalContext | null): string | null {
+  if (!context || context.totalReports <= 0) return null
 
-    if (ctx.newAlertMarkers.length) {
-      lines.push(`\n⚠ Novo(s) alerta(s) — apareceram pela 1ª vez: ${ctx.newAlertMarkers.slice(0, 8).join(', ')}`)
-    }
-    if (ctx.persistentAbnormalMarkers.length) {
-      lines.push(`⚠⚠ Alterações persistentes (3+ exames consecutivos): ${ctx.persistentAbnormalMarkers.slice(0, 8).join(', ')}`)
-    }
-    if (ctx.worseningMarkers.length) {
-      lines.push(`↓ Pioraram entre o último e o anterior: ${ctx.worseningMarkers.slice(0, 8).join(', ')}`)
-    }
-    if (ctx.improvingMarkers.length) {
-      lines.push(`↑ Melhoraram entre o último e o anterior: ${ctx.improvingMarkers.slice(0, 8).join(', ')}`)
-    }
+  const lines: string[] = [
+    '=== HISTÓRICO LONGITUDINAL DE EXAMES ===',
+    `total_exames_validos: ${context.totalReports}`,
+    `ultimo_exame_id: ${context.latestReportId ?? 'n/a'}`,
+    `ultimo_exame_data: ${context.latestReportDate ?? 'n/a'}`,
+  ]
 
-    lines.push('')
-    lines.push('INSTRUÇÃO: use a evolução histórica para contextualizar orientações de treino, dieta e recuperação. Não faça diagnóstico. Quando houver marcadores com alerta novo ou persistência, sinalize importância e urgência de acompanhamento profissional de forma clara.')
-
-    return lines.join('\n')
-  } catch {
-    return null
+  if (context.previousReportId) {
+    lines.push(`exame_anterior_id: ${context.previousReportId}`)
+    lines.push(`exame_anterior_data: ${context.previousReportDate ?? 'n/a'}`)
   }
+
+  if (context.summaryText) {
+    lines.push(`resumo_longitudinal: ${context.summaryText}`)
+  }
+
+  if (context.newAlertMarkers.length) {
+    lines.push(`novos_alertas: ${context.newAlertMarkers.slice(0, 6).join(', ')}`)
+  }
+  if (context.persistentAbnormalMarkers.length) {
+    lines.push(`alteracoes_persistentes: ${context.persistentAbnormalMarkers.slice(0, 6).join(', ')}`)
+  }
+  if (context.worseningMarkers.length) {
+    lines.push(`marcadores_piorando: ${context.worseningMarkers.slice(0, 6).join(', ')}`)
+  }
+  if (context.improvingMarkers.length) {
+    lines.push(`marcadores_melhorando: ${context.improvingMarkers.slice(0, 6).join(', ')}`)
+  }
+  if (context.stableMarkers.length) {
+    lines.push(`marcadores_estaveis: ${context.stableMarkers.slice(0, 6).join(', ')}`)
+  }
+  if (context.latestClinicalFlags.length) {
+    lines.push(`flags_clinicas_atuais: ${context.latestClinicalFlags.slice(0, 6).join(', ')}`)
+  }
+  if (context.latestCriticalFlags.length) {
+    lines.push(`flags_criticas_atuais: ${context.latestCriticalFlags.slice(0, 6).join(', ')}`)
+  }
+
+  const signals = context.signals || {}
+  const signalEntries = [
+    ['recuperacao', signals.recovery],
+    ['prontidao_treino', signals.trainingReadiness],
+    ['risco_metabolico', signals.metabolicRisk],
+    ['tendencia_hormonal', signals.hormonalTrend],
+    ['persistencia_clinica', signals.clinicalPersistence],
+  ].filter((entry): entry is [string, string] => Boolean(entry[1]))
+
+  if (signalEntries.length) {
+    lines.push('sinais_globais:')
+    for (const [label, value] of signalEntries) {
+      lines.push(`  • ${label}: ${value}`)
+    }
+  }
+
+  const trendRows = context.markerTimeline.slice(0, 12)
+  if (trendRows.length) {
+    lines.push('comparacoes_por_biomarcador:')
+    for (const marker of trendRows) {
+      const latestValue = marker.latestValueNumeric != null ? String(marker.latestValueNumeric) : (marker.latestValueText || 'n/a')
+      const previousValue = marker.previousValueNumeric != null ? String(marker.previousValueNumeric) : (marker.previousValueText || 'n/a')
+      lines.push(`  • ${marker.markerName}: ${marker.status} | atual=${latestValue}${marker.unit ? ' ' + marker.unit : ''} | anterior=${previousValue}${marker.unit ? ' ' + marker.unit : ''}`)
+    }
+  }
+
+  return lines.join('\n')
 }
 
 export function buildUserMessageBundle(args: {
@@ -105,11 +142,10 @@ export function buildUserMessageBundle(args: {
   sourceOfTruthMode?: 'rag_required' | 'rag_preferred'
   /** Structured health & performance profile derived from latest valid lab report */
   labHealthProfile?: HealthPerformanceProfile | null
-  /** Cross-exam longitudinal trend context when user has 2+ valid reports */
-  labLongitudinalContext?: LongitudinalLabContext | null
+  labLongitudinalContext?: LabLongitudinalContext | null
 }): string {
   const labSection = serializeLabContext(args.labHealthProfile)
-  const longitudinalSection = serializeLongitudinalContext(args.labLongitudinalContext)
+  const longitudinalSection = serializeLabLongitudinalContext(args.labLongitudinalContext)
 
   const parts = [
     'MODO DE CONHECIMENTO:',
@@ -138,7 +174,7 @@ export function buildUserMessageBundle(args: {
 
   if (longitudinalSection) {
     parts.push('')
-    parts.push('EVOLUÇÃO HISTÓRICA DE EXAMES (comparação com exames anteriores):')
+    parts.push('HISTÓRICO LONGITUDINAL DE EXAMES (comparar evolução real sem diagnosticar):')
     parts.push(longitudinalSection)
   }
 
