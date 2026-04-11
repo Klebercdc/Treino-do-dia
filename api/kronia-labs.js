@@ -460,6 +460,10 @@ function handleReports(req, res) {
       .limit(limit);
 
     if (reportsResult.error) {
+      console.error('[labs/reports] erro ao buscar reports:', {
+        code: reportsResult.error.code,
+        message: String(reportsResult.error.message || '').slice(0, 300)
+      });
       return res.status(500).json({ ok: false, error: 'Erro ao buscar histórico de exames.' });
     }
 
@@ -480,7 +484,27 @@ function handleReports(req, res) {
           if (!biomarkerMap.has(key)) biomarkerMap.set(key, []);
           biomarkerMap.get(key).push(row);
         });
+        // For any report that returned no rows from the table, fall back to
+        // normalized_payload.biomarkers — happens when the table INSERT failed
+        // but the JSONB column was written (or on first-load before table is populated).
+        rows.forEach(function(row) {
+          if (!biomarkerMap.has(String(row.id))) {
+            var fallback = extractBiomarkersFromNormalizedPayload(row);
+            if (fallback.length > 0) {
+              biomarkerMap.set(String(row.id), fallback);
+            }
+          }
+        });
       } else if (isMissingOptionalTable(biomarkersResult.error, 'lab_report_biomarkers')) {
+        rows.forEach(function(row) {
+          biomarkerMap.set(String(row.id), extractBiomarkersFromNormalizedPayload(row));
+        });
+      } else if (biomarkersResult.error) {
+        // Non-PGRST205 error on biomarker table: log and gracefully fall back to payload
+        console.error('[labs/reports] erro ao buscar biomarcadores:', {
+          code: biomarkersResult.error.code,
+          message: String(biomarkersResult.error.message || '').slice(0, 200)
+        });
         rows.forEach(function(row) {
           biomarkerMap.set(String(row.id), extractBiomarkersFromNormalizedPayload(row));
         });
@@ -574,11 +598,17 @@ function handleReportById(req, res) {
       return res.status(500).json({ ok: false, error: 'Erro ao consultar biomarcadores.' });
     }
 
+    // biomarkers.data is [] (truthy!) when the table exists but has no rows for this
+    // report. Use explicit length check so we can fall back to normalized_payload.
+    var biomarkerList = (Array.isArray(biomarkers.data) && biomarkers.data.length > 0)
+      ? biomarkers.data
+      : extractBiomarkersFromNormalizedPayload(reportResult.data);
+
     return res.status(200).json({
       ok: true,
-      report: shapeReportSummary(reportResult.data, biomarkers.data || extractBiomarkersFromNormalizedPayload(reportResult.data)),
+      report: shapeReportSummary(reportResult.data, biomarkerList),
       extractions: extractions.data || buildFallbackExtraction(reportResult.data),
-      biomarkers: biomarkers.data || extractBiomarkersFromNormalizedPayload(reportResult.data)
+      biomarkers: biomarkerList
     });
   });
 }
