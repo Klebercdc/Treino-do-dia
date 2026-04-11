@@ -160,3 +160,56 @@ export interface StoredLabContext {
   criticalFlags: string[]
   healthProfile?: HealthPerformanceProfile | null
 }
+
+// ---------------------------------------------------------------------------
+// Lab report summary — lightweight shape used for longitudinal analysis
+// ---------------------------------------------------------------------------
+export interface LabReportSummary {
+  id: string
+  createdAt: string | null
+  processedAt: string | null
+  isValid: boolean
+  biomarkers: BiomarkerEntry[]
+  healthProfile: HealthPerformanceProfile | null
+  clinicalFlags: string[]
+  criticalFlags: string[]
+  confidence: number
+}
+
+// ---------------------------------------------------------------------------
+// Longitudinal context — cross-exam trend analysis for AI context bundles
+// ---------------------------------------------------------------------------
+export type BiomarkerTrend = 'improving' | 'worsening' | 'stable' | 'persistent_abnormal' | 'new_alert'
+
+export interface BiomarkerTimelineEntry {
+  reportId: string
+  date: string | null
+  value: number | null
+  flag: 'low' | 'high' | 'normal' | null
+}
+
+export interface BiomarkerTimeline {
+  markerKey: string
+  markerName: string
+  unit: string | null
+  entries: BiomarkerTimelineEntry[]
+  trend: BiomarkerTrend | null
+  latestFlag: 'low' | 'high' | 'normal' | null
+}
+
+export interface LongitudinalLabContext {
+  totalReports: number
+  latestReportId: string | null
+  latestReportDate: string | null
+  previousReportId: string | null
+  previousReportDate: string | null
+  examTimeline: BiomarkerTimeline[]
+  worseningMarkers: string[]
+  improvingMarkers: string[]
+  stableMarkers: string[]
+  persistentAbnormalMarkers: string[]
+  newAlertMarkers: string[]
+  globalTrendSummary: string | null
+  narrativeSummary: string
+  hasComparisonData: boolean
+}

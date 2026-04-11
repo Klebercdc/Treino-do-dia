@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { GroqClient } from "./modelClient"
 import { KroniaOrchestrator } from "./orchestrator"
-import { getLatestValidLabReport } from "../core/labs/labRepository"
+import { buildLongitudinalLabContext, getLabReportsForLongitudinal, getLatestValidLabReport } from "../core/labs/labRepository"
 import type {
   ChatMessage,
   RetrievedContextItem,
@@ -46,12 +46,21 @@ export class KroniaChatService {
     }
 
     let labHealthProfile = null
+    let labLongitudinalContext = null
     if (input.userId && this.adminClient) {
       try {
         const latestLabReport = await getLatestValidLabReport(this.adminClient, input.userId)
         labHealthProfile = latestLabReport?.healthProfile ?? null
       } catch {
         // falha ao carregar exames não derruba o chat
+      }
+      try {
+        const allReports = await getLabReportsForLongitudinal(this.adminClient, input.userId, 10)
+        if (allReports.length >= 1) {
+          labLongitudinalContext = buildLongitudinalLabContext(allReports)
+        }
+      } catch {
+        // falha longitudinal não derruba o chat
       }
     }
 
@@ -61,6 +70,7 @@ export class KroniaChatService {
       history: input.history,
       userProfile: input.userProfile,
       labHealthProfile,
+      labLongitudinalContext,
       retrievedContext,
       sourceOfTruthMode: retrievedContext.length ? "rag_required" : "rag_preferred",
     })

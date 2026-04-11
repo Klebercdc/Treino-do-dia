@@ -406,7 +406,7 @@ function handleReports(req, res) {
 
     var reportsResult = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
+      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,clinical_flags,critical_flags,is_valid,processing_error,created_at,processed_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -440,6 +440,14 @@ function handleReports(req, res) {
     }
 
     var reports = rows.map(function(row) {
+      var aiInsights = row.ai_insights && typeof row.ai_insights === 'object' ? row.ai_insights : null;
+      var clinicalFlags = (aiInsights && Array.isArray(aiInsights.clinical_flags))
+        ? aiInsights.clinical_flags
+        : (Array.isArray(row.clinical_flags) ? row.clinical_flags : []);
+      var criticalFlags = (aiInsights && Array.isArray(aiInsights.critical_flags))
+        ? aiInsights.critical_flags
+        : (Array.isArray(row.critical_flags) ? row.critical_flags : []);
+
       return {
         id: row.id,
         fileName: row.file_name,
@@ -450,11 +458,12 @@ function handleReports(req, res) {
         sourceType: row.source_type,
         confidenceSummary: row.confidence_summary || {},
         normalizedPayload: row.normalized_payload || null,
-        aiInsights: row.ai_insights || null,
+        aiInsights: aiInsights,
         isValid: row.is_valid,
         processingError: row.processing_error,
         biomarkers: biomarkerMap.get(String(row.id)) || [],
-        clinicalFlags: [],
+        clinicalFlags: clinicalFlags,
+        criticalFlags: criticalFlags,
         createdAt: row.created_at,
         processedAt: row.processed_at
       };
@@ -510,11 +519,93 @@ function handleReportById(req, res) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// DELETE /api/kronia/labs/reports/:id
+// Safe deletion: validates ownership, blocks while processing, cleans storage.
+// ---------------------------------------------------------------------------
+function handleDeleteReport(req, res) {
+  if (req.method !== 'DELETE') return res.status(405).json({ ok: false, error: 'Método não permitido.' });
+
+  return withAuth(req, res, async function(user) {
+    var id = String((req.query && req.query.id) || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'id é obrigatório.' });
+
+    var admin = createAdminSupabaseClient();
+
+    // Verify ownership and fetch minimal fields needed
+    var existing = await admin
+      .from('lab_reports')
+      .select('id,user_id,status,parse_status,storage_path,storage_bucket')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existing.error) {
+      console.error('[labs/delete] erro ao verificar exame:', existing.error.message);
+      return res.status(500).json({ ok: false, error: 'Erro ao verificar exame.' });
+    }
+    if (!existing.data) {
+      return res.status(404).json({ ok: false, error: 'Exame não encontrado.' });
+    }
+
+    var report = existing.data;
+
+    // Block deletion while processing to avoid orphaned pipeline state
+    if (report.status === 'processing' || report.parse_status === 'processing') {
+      return res.status(409).json({
+        ok: false,
+        error: 'Exame em processamento. Aguarde a conclusão antes de excluir.',
+        code: 'REPORT_PROCESSING'
+      });
+    }
+
+    // Clean up storage object (best-effort — do not block DB deletion on failure)
+    var bucket = String(report.storage_bucket || LAB_REPORTS_BUCKET);
+    var storagePath = report.storage_path ? String(report.storage_path) : null;
+    if (storagePath) {
+      var storageDelete = await admin.storage.from(bucket).remove([storagePath]);
+      if (storageDelete.error) {
+        console.warn('[labs/delete] aviso ao remover arquivo do storage:', {
+          path: storagePath,
+          reason: storageDelete.error.message
+        });
+      }
+    }
+
+    // Delete child records first (FK without cascade)
+    // Each is best-effort — missing optional tables are ignored
+    var childTables = ['lab_report_pipeline_events', 'lab_report_biomarkers', 'lab_report_extractions'];
+    for (var t = 0; t < childTables.length; t++) {
+      var tableName = childTables[t];
+      var childDel = await admin.from(tableName).delete().eq('lab_report_id', id);
+      if (childDel.error && !isMissingOptionalTable(childDel.error, tableName)) {
+        console.warn('[labs/delete] erro ao excluir tabela filha ' + tableName + ':', childDel.error.message);
+      }
+    }
+
+    // Delete parent record (scoped to user_id for safety)
+    var dbDelete = await admin
+      .from('lab_reports')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (dbDelete.error) {
+      console.error('[labs/delete] erro ao excluir lab_report:', dbDelete.error.message);
+      return res.status(500).json({ ok: false, error: 'Erro ao excluir exame da base de dados.' });
+    }
+
+    console.log('[labs/delete] exame excluído com sucesso', { id: id, userId: user.id });
+    return res.status(200).json({ ok: true, deletedId: id });
+  });
+}
+
 module.exports = {
   handleInitUpload: handleInitUpload,
   handleRegister: handleRegister,
   handleReports: handleReports,
   handleReportById: handleReportById,
+  handleDeleteReport: handleDeleteReport,
   buildCanonicalLabStoragePath: buildCanonicalLabStoragePath,
   getExtensionFromMimeOrName: getExtensionFromMimeOrName,
   SAFE_STORAGE_PATH_RE: SAFE_STORAGE_PATH_RE,

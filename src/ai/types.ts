@@ -1,4 +1,4 @@
-import type { HealthPerformanceProfile } from "../core/labs/labTypes"
+import type { HealthPerformanceProfile, LongitudinalLabContext } from "../core/labs/labTypes"
 
 export type AssistantIntent =
   | "chat"
@@ -139,7 +139,10 @@ export interface AIRequestInput {
   userMessage: string
   history: ChatMessage[]
   userProfile?: UserProfile | null
+  /** Structured health & performance profile from the latest valid lab report */
   labHealthProfile?: HealthPerformanceProfile | null
+  /** Cross-exam longitudinal trend context when user has 2+ valid reports */
+  labLongitudinalContext?: LongitudinalLabContext | null
   retrievedContext?: RetrievedContextItem[]
   memoryItems?: MemoryItem[]
   sourceOfTruthMode?: "rag_required" | "rag_preferred"

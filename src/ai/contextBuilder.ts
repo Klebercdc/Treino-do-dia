@@ -1,5 +1,5 @@
 import type { ChatMessage, MemoryItem, RetrievedContextItem, UserProfile } from './types'
-import type { HealthPerformanceProfile } from '../core/labs/labTypes'
+import type { HealthPerformanceProfile, LongitudinalLabContext } from '../core/labs/labTypes'
 import { serializeHealthProfile } from '../core/labs/labRules'
 
 function serializeProfile(profile?: UserProfile | null): string {
@@ -63,6 +63,39 @@ function serializeLabContext(healthProfile?: HealthPerformanceProfile | null): s
   }
 }
 
+/**
+ * Serialize a LongitudinalLabContext into AI-ready text showing evolution
+ * across multiple exams. Only included when comparison data is available.
+ */
+function serializeLongitudinalContext(ctx?: LongitudinalLabContext | null): string | null {
+  if (!ctx) return null
+  try {
+    const lines: string[] = []
+    lines.push('=== HISTÓRICO LONGITUDINAL DE EXAMES ===')
+    lines.push(ctx.narrativeSummary)
+
+    if (ctx.newAlertMarkers.length) {
+      lines.push(`\n⚠ Novo(s) alerta(s) — apareceram pela 1ª vez: ${ctx.newAlertMarkers.slice(0, 8).join(', ')}`)
+    }
+    if (ctx.persistentAbnormalMarkers.length) {
+      lines.push(`⚠⚠ Alterações persistentes (3+ exames consecutivos): ${ctx.persistentAbnormalMarkers.slice(0, 8).join(', ')}`)
+    }
+    if (ctx.worseningMarkers.length) {
+      lines.push(`↓ Pioraram entre o último e o anterior: ${ctx.worseningMarkers.slice(0, 8).join(', ')}`)
+    }
+    if (ctx.improvingMarkers.length) {
+      lines.push(`↑ Melhoraram entre o último e o anterior: ${ctx.improvingMarkers.slice(0, 8).join(', ')}`)
+    }
+
+    lines.push('')
+    lines.push('INSTRUÇÃO: use a evolução histórica para contextualizar orientações de treino, dieta e recuperação. Não faça diagnóstico. Quando houver marcadores com alerta novo ou persistência, sinalize importância e urgência de acompanhamento profissional de forma clara.')
+
+    return lines.join('\n')
+  } catch {
+    return null
+  }
+}
+
 export function buildUserMessageBundle(args: {
   userMessage: string
   history: ChatMessage[]
@@ -72,8 +105,11 @@ export function buildUserMessageBundle(args: {
   sourceOfTruthMode?: 'rag_required' | 'rag_preferred'
   /** Structured health & performance profile derived from latest valid lab report */
   labHealthProfile?: HealthPerformanceProfile | null
+  /** Cross-exam longitudinal trend context when user has 2+ valid reports */
+  labLongitudinalContext?: LongitudinalLabContext | null
 }): string {
   const labSection = serializeLabContext(args.labHealthProfile)
+  const longitudinalSection = serializeLongitudinalContext(args.labLongitudinalContext)
 
   const parts = [
     'MODO DE CONHECIMENTO:',
@@ -98,6 +134,12 @@ export function buildUserMessageBundle(args: {
     parts.push('')
     parts.push('DADOS DE EXAMES LABORATORIAIS (usar para personalização de treino, dieta e recuperação):')
     parts.push(labSection)
+  }
+
+  if (longitudinalSection) {
+    parts.push('')
+    parts.push('EVOLUÇÃO HISTÓRICA DE EXAMES (comparação com exames anteriores):')
+    parts.push(longitudinalSection)
   }
 
   parts.push('')
