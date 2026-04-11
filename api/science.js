@@ -2,9 +2,30 @@ var cors   = require('../src/server/apihelpers/_cors');
 var auth   = require('../src/server/apihelpers/_auth');
 var rl     = require('../src/server/apihelpers/_ratelimit');
 var crypto = require('crypto');
-var science = require('../src/lib/science/scienceSyncService');
-var scienceInsight = require('../src/lib/science/scienceInsightService');
-var nutritionService = require('../src/lib/nutrition/nutritionService');
+
+// Lazy-loaded to prevent top-level require from crashing the process when
+// transitive dependencies (e.g. @supabase/supabase-js) are not resolvable
+// from the src/ scope at cold-start in Vercel's runtime-install mode.
+var _science = null;
+var _scienceInsight = null;
+var _nutritionService = null;
+var _lazyLoadAttempted = false;
+var _lazyLoadError = null;
+
+function ensureModulesLoaded() {
+  if (_lazyLoadAttempted) return _lazyLoadError;
+  _lazyLoadAttempted = true;
+  try {
+    _science = require('../src/lib/science/scienceSyncService');
+    _scienceInsight = require('../src/lib/science/scienceInsightService');
+    _nutritionService = require('../src/lib/nutrition/nutritionService');
+    return null;
+  } catch (err) {
+    _lazyLoadError = err;
+    console.error('[api/science] dependency load failed:', err && err.message ? err.message : String(err));
+    return err;
+  }
+}
 
 function isJsonContentType(req) {
   var contentType = req && req.headers ? req.headers['content-type'] || req.headers['Content-Type'] : '';
@@ -145,7 +166,7 @@ function detectRoute(req) {
 function handleNutritionCalc(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   var payload = req.body || {};
-  var result = nutritionService.calculateNutrition(payload);
+  var result = _nutritionService.calculateNutrition(payload);
 
   if (result.failSafe) {
     return res.status(200).json({
@@ -203,7 +224,7 @@ async function handleNutritionPlan(req, res) {
     forwardedKeys: forwardedKeys
   });
 
-  var result = nutritionService.generateNutritionPlan(payloadFinal);
+  var result = _nutritionService.generateNutritionPlan(payloadFinal);
 
   if (result.failSafe) {
     return res.status(200).json({
@@ -215,7 +236,7 @@ async function handleNutritionPlan(req, res) {
 
   var scienceEvidence = [];
   try {
-    scienceEvidence = await science.listEvidenceByObjective(payloadFinal.objetivo, 3);
+    scienceEvidence = await _science.listEvidenceByObjective(payloadFinal.objetivo, 3);
   } catch (_) {
     scienceEvidence = [];
   }
@@ -231,6 +252,16 @@ async function handleNutritionPlan(req, res) {
 module.exports = async function(req, res) {
   cors.setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  var loadErr = ensureModulesLoaded();
+  if (loadErr) {
+    return res.status(503).json({
+      ok: false,
+      error: 'SCIENCE_DEPENDENCY_UNAVAILABLE',
+      warning: String(loadErr.message || loadErr)
+    });
+  }
+
   req.body = parseJsonBodyIfNeeded(req);
 
   var route = detectRoute(req);
@@ -247,7 +278,7 @@ module.exports = async function(req, res) {
   if (route === 'science-sync' && hasValidCronSecret) {
     if (req.method !== 'POST') return res.status(405).end();
     try {
-      var cronResult = await science.syncScientificTopics();
+      var cronResult = await _science.syncScientificTopics();
       return res.status(200).json(cronResult);
     } catch (error) {
       return res.status(500).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error), error: 'SCIENCE_SYNC_FAILED' });
@@ -258,7 +289,7 @@ module.exports = async function(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
     try {
       var cronLimit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
-      var cronClassifyResult = await science.classifyScientificArticlesBatch(cronLimit);
+      var cronClassifyResult = await _science.classifyScientificArticlesBatch(cronLimit);
       return res.status(200).json(cronClassifyResult);
     } catch (error) {
       return res.status(500).json({
@@ -281,9 +312,9 @@ module.exports = async function(req, res) {
       nivelAtividade: 'moderado', objetivo: 'hipertrofia', refeicoesPorDia: 4
     };
     try {
-      var selfTestResult = nutritionService.generateNutritionPlan(selfTestPayload);
+      var selfTestResult = _nutritionService.generateNutritionPlan(selfTestPayload);
       var selfTestEvidence = [];
-      try { selfTestEvidence = await science.listEvidenceByObjective('hipertrofia', 3); } catch (_) {}
+      try { selfTestEvidence = await _science.listEvidenceByObjective('hipertrofia', 3); } catch (_) {}
       return res.status(200).json({
         ok: true,
         test: true,
@@ -304,7 +335,7 @@ module.exports = async function(req, res) {
         var query = String((req.body && req.body.query) || '').trim();
         if (!query) return res.status(400).json({ error: 'query é obrigatório' });
 
-        var items = await science.searchScientificArticles(query);
+        var items = await _science.searchScientificArticles(query);
         return res.status(200).json({ query: query, items: items });
       } catch (error) {
         return res.status(500).json({ query: req.body && req.body.query, items: [], warning: String(error.message || error), error: 'SCIENCE_SEARCH_FAILED' });
@@ -314,7 +345,7 @@ module.exports = async function(req, res) {
     if (route === 'science-sync') {
       if (req.method !== 'POST') return res.status(405).end();
       try {
-        var syncResult = await science.syncScientificTopics();
+        var syncResult = await _science.syncScientificTopics();
         return res.status(200).json(syncResult);
       } catch (error) {
         return res.status(500).json({ ok: false, inserted_articles: 0, inserted_evidence: 0, needs_review: 0, warning: String(error.message || error), error: 'SCIENCE_SYNC_FAILED' });
@@ -324,7 +355,7 @@ module.exports = async function(req, res) {
     if (route === 'science-review') {
       if (req.method !== 'GET') return res.status(405).end();
       try {
-        var reviewItems = await science.listPendingReviews();
+        var reviewItems = await _science.listPendingReviews();
         return res.status(200).json({ items: reviewItems });
       } catch (error) {
         return res.status(500).json({ items: [], warning: String(error.message || error), error: 'SCIENCE_REVIEW_FAILED' });
@@ -337,7 +368,7 @@ module.exports = async function(req, res) {
         var topic = String((req.body && req.body.topic) || '').trim();
         if (!topic) return res.status(400).json({ error: 'topic é obrigatório' });
 
-        var insight = await scienceInsight.getScienceInsightByTopic(topic);
+        var insight = await _scienceInsight.getScienceInsightByTopic(topic);
         if (!insight.found) return res.status(404).json(insight);
 
         return res.status(200).json({
@@ -364,7 +395,7 @@ module.exports = async function(req, res) {
       if (req.method !== 'POST') return res.status(405).end();
       try {
         var classifyLimit = Number((req.body && req.body.limit) || (req.query && req.query.limit) || 25);
-        var classifyResult = await science.classifyScientificArticlesBatch(classifyLimit);
+        var classifyResult = await _science.classifyScientificArticlesBatch(classifyLimit);
         return res.status(200).json(classifyResult);
       } catch (error) {
         return res.status(500).json({
