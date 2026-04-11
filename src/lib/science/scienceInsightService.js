@@ -1,4 +1,4 @@
-const { createSupabaseAdminClient } = require('../supabase/admin');
+const { createSupabaseAdminClient } = require('../supabase/admin.js');
 const { synthesizeTopic } = require('./topicSynthesizer');
 
 function encode(value) {

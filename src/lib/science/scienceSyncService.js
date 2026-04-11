@@ -1,6 +1,6 @@
 const { searchPubmedArticles } = require('./pubmedClient');
 const { searchCrossrefByTitle } = require('./crossrefClient');
-const { createSupabaseAdminClient } = require('../supabase/admin');
+const { createSupabaseAdminClient } = require('../supabase/admin.js');
 const { classifyScientificEvidence } = require('./evidenceClassifier');
 
 function tokenize(text) {
