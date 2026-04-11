@@ -479,37 +479,56 @@ function checkClientPrivilegeIsolation(): CheckResult {
 
 
 async function checkExamOcrService(): Promise<CheckResult> {
-  const serviceUrl = process.env.EXAM_OCR_SERVICE_URL;
-  if (!serviceUrl) {
-    return {
-      name: 'exam_ocr_service',
-      status: 'WARNING',
-      summary: 'EXAM_OCR_SERVICE_URL não configurada; pipeline de exames ficará degradado.',
-      suggestion: 'Configure EXAM_OCR_SERVICE_URL e EXAM_OCR_TIMEOUT_MS para habilitar OCR/parser estruturado.',
-    };
-  }
+  const explicitServiceUrl = String(process.env.EXAM_OCR_SERVICE_URL || '').trim();
+  const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://kronia.app.br').trim();
+  const serviceUrl = explicitServiceUrl || `${appUrl.replace(/\/$/, '')}/api/exam_ocr`;
+  const resolvedViaFallback = !explicitServiceUrl;
+  const healthUrl = resolvedViaFallback
+    ? serviceUrl.replace(/\/$/, '')
+    : `${serviceUrl.replace(/\/$/, '')}/health`;
 
   try {
-    const response = await fetch(`${serviceUrl.replace(/\/$/, '')}/health`);
+    const response = await fetch(healthUrl);
     if (!response.ok) {
       return {
         name: 'exam_ocr_service',
         status: 'WARNING',
         summary: `OCR service respondeu ${response.status}.`,
+        details: {
+          serviceUrl,
+          healthUrl,
+          mode: resolvedViaFallback ? 'app_route_fallback' : 'dedicated_service',
+        },
       };
     }
     return {
       name: 'exam_ocr_service',
       status: 'OK',
-      summary: 'OCR service disponível.',
-      details: { serviceUrl },
+      summary: resolvedViaFallback
+        ? 'OCR disponível via rota canônica da app.'
+        : 'OCR service dedicado disponível.',
+      details: {
+        serviceUrl,
+        healthUrl,
+        mode: resolvedViaFallback ? 'app_route_fallback' : 'dedicated_service',
+      },
+      suggestion: resolvedViaFallback
+        ? 'Configure EXAM_OCR_SERVICE_URL apenas se quiser separar o OCR em serviço dedicado; o fallback atual está operacional.'
+        : undefined,
     };
   } catch (error) {
     return {
       name: 'exam_ocr_service',
       status: 'WARNING',
-      summary: 'Não foi possível alcançar OCR service.',
+      summary: resolvedViaFallback
+        ? 'Não foi possível alcançar OCR pela rota canônica da app.'
+        : 'Não foi possível alcançar OCR service dedicado.',
       error: error instanceof Error ? error.message : String(error),
+      details: {
+        serviceUrl,
+        healthUrl,
+        mode: resolvedViaFallback ? 'app_route_fallback' : 'dedicated_service',
+      },
     };
   }
 }
