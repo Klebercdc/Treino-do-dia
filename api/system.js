@@ -225,6 +225,9 @@ module.exports = function(req, res) {
     case 'kronia-labs-reports':
       return kroniaLabsHandler.handleReports(req, res);
     case 'kronia-labs-report-by-id':
+      if (req.method === 'DELETE') {
+        return kroniaLabsHandler.handleDeleteReport(req, res);
+      }
       return kroniaLabsHandler.handleReportById(req, res);
     default:
       return res.status(404).json({ error: 'rota não encontrada' });
