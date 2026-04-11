@@ -409,3 +409,16 @@ test('edge function trata tabelas auxiliares de labs como opcionais', () => {
   assert.match(source, /PGRST205/);
   assert.match(source, /buildNormalizedPayload/);
 });
+
+test('service interna define o shape canônico de ai_insights usado como fonte de verdade', () => {
+  const source = readFileSync('src/server/internal/labReports/service.ts', 'utf-8');
+  assert.match(source, /health_profile/);
+  assert.match(source, /clinical_flags/);
+  assert.match(source, /critical_flags/);
+  assert.match(source, /impact_on_training/);
+  assert.match(source, /impact_on_nutrition/);
+  assert.match(source, /impact_on_supplementation/);
+  assert.match(source, /recovery_signals/);
+  assert.match(source, /safety_notes/);
+  assert.match(source, /recommended_follow_up/);
+});

@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { BiomarkerEntry } from '../../../src/core/labs/labTypes.ts';
+import { buildHealthPerformanceProfile, applyClinicalRulesFromBiomarkers } from '../../../src/core/labs/labRules.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -271,6 +273,127 @@ function computeReadiness(confidenceSummary: Record<string, unknown>, biomarkers
   return { ready: true, reason: null, meanConfidence };
 }
 
+function toBiomarkerEntries(biomarkers: Biomarker[]): BiomarkerEntry[] {
+  return biomarkers.map((item) => ({
+    marker_key: String(item.marker_key || '').toLowerCase(),
+    marker_name: String(item.marker_name || item.marker_key || 'Marcador'),
+    value_numeric: toNumber(item.value_numeric),
+    value_text: item.value_text != null ? String(item.value_text) : null,
+    unit: item.unit != null ? String(item.unit) : null,
+    reference_min: toNumber(item.reference_min),
+    reference_max: toNumber(item.reference_max),
+    reference_text: item.reference_text != null ? String(item.reference_text) : null,
+    flag: item.flag === 'low' || item.flag === 'high' || item.flag === 'normal' ? item.flag : null,
+    source_line: item.source_line != null ? String(item.source_line) : null,
+    confidence: toNumber(item.confidence),
+  })).filter((row) => row.marker_key);
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+}
+
+function resolveStringArray(
+  ...candidates: unknown[]
+): string[] {
+  for (const candidate of candidates) {
+    const normalized = normalizeStringArray(candidate);
+    if (normalized.length) return normalized;
+  }
+  return [];
+}
+
+function normalizeScores(value: unknown, fallback: Record<string, number>) {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+
+  return {
+    metabolic_score: toNumber(source.metabolic_score) ?? fallback.metabolic_score,
+    recovery_score: toNumber(source.recovery_score) ?? fallback.recovery_score,
+    hematologic_score: toNumber(source.hematologic_score) ?? fallback.hematologic_score,
+    hormonal_score: toNumber(source.hormonal_score) ?? fallback.hormonal_score,
+    safety_score: toNumber(source.safety_score) ?? fallback.safety_score,
+    lipid_score: toNumber(source.lipid_score) ?? fallback.lipid_score,
+    liver_score: toNumber(source.liver_score) ?? fallback.liver_score,
+    kidney_score: toNumber(source.kidney_score) ?? fallback.kidney_score,
+  };
+}
+
+function buildCanonicalAiInsights(biomarkers: Biomarker[], rawInsights: Record<string, unknown>) {
+  const typedBiomarkers = toBiomarkerEntries(biomarkers);
+  const healthProfile = buildHealthPerformanceProfile(typedBiomarkers);
+  const clinical = applyClinicalRulesFromBiomarkers(typedBiomarkers);
+
+  const fallbackTraining = healthProfile.training_readiness.level === 'critical'
+    ? ['Sinais críticos detectados: reduzir volume e intensidade imediatamente; avaliação médica recomendada.']
+    : healthProfile.training_readiness.level === 'caution'
+      ? ['Sinais de cautela: modular volume; evitar falha muscular; priorizar recuperação ativa.']
+      : healthProfile.training_readiness.level === 'attention'
+        ? ['Monitorar fadiga e recuperação; ajuste conservador de progressão de carga.']
+        : ['Sem limitações clínicas identificadas. Progressão normal conforme periodização planejada.'];
+
+  const fallbackNutrition = healthProfile.dietary_attention_points.notes.length
+    ? healthProfile.dietary_attention_points.notes.slice(0, 5)
+    : ['Distribuição equilibrada de macronutrientes conforme objetivo e composição corporal.'];
+
+  const fallbackSupplementation = ['Manter stack base: proteína, creatina e ômega-3 quando compatíveis com objetivos e perfil clínico.'];
+  const fallbackRecovery = healthProfile.recovery_risk.notes.length
+    ? healthProfile.recovery_risk.notes.slice(0, 4)
+    : ['Marcadores de recuperação dentro dos limites esperados.'];
+  const fallbackSafety = [
+    'Sem diagnóstico médico. Análise orientada a treino e produto. Alterações relevantes devem ser avaliadas por médico.',
+    ...healthProfile.safety_flags.notes.slice(0, 3),
+  ];
+  const fallbackFollowUp = ['Repetir exame no intervalo recomendado pelo profissional de saúde.'];
+
+  const summary = String(rawInsights.summary ?? '').trim()
+    || 'Interpretação clínica estruturada gerada a partir dos biomarcadores do exame.';
+  const impactOnTraining = resolveStringArray(rawInsights.impact_on_training, rawInsights.training_adjustments, fallbackTraining);
+  const impactOnNutrition = resolveStringArray(rawInsights.impact_on_nutrition, rawInsights.nutrition_adjustments, fallbackNutrition);
+  const impactOnSupplementation = resolveStringArray(rawInsights.impact_on_supplementation, rawInsights.supplementation_notes, fallbackSupplementation);
+  const recoverySignals = resolveStringArray(rawInsights.recovery_signals, fallbackRecovery);
+  const safetyNotes = resolveStringArray(rawInsights.safety_notes, fallbackSafety);
+  const recommendedFollowUp = resolveStringArray(rawInsights.recommended_follow_up, rawInsights.follow_up_actions, fallbackFollowUp);
+
+  return {
+    provider: String(rawInsights.provider ?? 'local'),
+    model: rawInsights.model != null ? String(rawInsights.model) : null,
+    generation_mode: String(rawInsights.generation_mode ?? 'canonical_health_profile'),
+    fallback_reason: rawInsights.fallback_reason != null ? String(rawInsights.fallback_reason) : null,
+    summary,
+    scores: normalizeScores(rawInsights.scores, healthProfile.scores),
+    health_profile: {
+      metabolic_health: healthProfile.metabolic_health,
+      lipid_health: healthProfile.lipid_health,
+      liver_health: healthProfile.liver_health,
+      kidney_hydration: healthProfile.kidney_hydration,
+      hematologic_status: healthProfile.hematologic_status,
+      thyroid_status: healthProfile.thyroid_status,
+      androgen_status: healthProfile.androgen_status,
+      inflammation_status: healthProfile.inflammation_status,
+      micronutrient_status: healthProfile.micronutrient_status,
+      training_readiness: healthProfile.training_readiness,
+      recovery_risk: healthProfile.recovery_risk,
+      dietary_attention_points: healthProfile.dietary_attention_points,
+      safety_flags: healthProfile.safety_flags,
+    },
+    clinical_flags: clinical.clinicalFlags,
+    critical_flags: clinical.criticalFlags,
+    clinical_mode: clinical.mode,
+    impact_on_training: impactOnTraining,
+    impact_on_nutrition: impactOnNutrition,
+    impact_on_supplementation: impactOnSupplementation,
+    recovery_signals: recoverySignals,
+    safety_notes: safetyNotes,
+    recommended_follow_up: recommendedFollowUp,
+    // Legacy aliases preserved for compatibility with older readers.
+    training_adjustments: impactOnTraining,
+    nutrition_adjustments: impactOnNutrition,
+    supplementation_notes: impactOnSupplementation,
+    follow_up_actions: recommendedFollowUp,
+  };
+}
+
 function buildRuleBasedFallback(biomarkers: Biomarker[], reason: string) {
   const byKey = new Map<string, number>();
   for (const biomarker of biomarkers) {
@@ -490,7 +613,8 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
     });
   }
 
-  await finalizeAnalyzed(input.labReportId, ocr, biomarkers, insights, fallback);
+  const canonicalInsights = buildCanonicalAiInsights(biomarkers, insights);
+  await finalizeAnalyzed(input.labReportId, ocr, biomarkers, canonicalInsights, fallback);
   await logEvent(input.labReportId, 'analyzed', 'info', {
     dispatchSource: input.dispatchSource,
     biomarkers: biomarkers.length,

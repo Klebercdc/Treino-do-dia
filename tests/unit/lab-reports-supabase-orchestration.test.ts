@@ -21,7 +21,27 @@ test('Edge Function de exames usa Groq server-side e OCR separado', () => {
   assert.match(source, /callGroqInsights/);
   assert.match(source, /callOcr/);
   assert.match(source, /buildRuleBasedFallback/);
+  assert.match(source, /buildCanonicalAiInsights/);
   assert.match(source, /structured_biomarkers/);
+});
+
+test('Edge Function normaliza ai_insights no shape clínico canônico antes de persistir', () => {
+  const source = readFileSync('supabase/functions/lab-report-orchestrator/index.ts', 'utf-8');
+  assert.match(source, /health_profile/);
+  assert.match(source, /clinical_flags/);
+  assert.match(source, /critical_flags/);
+  assert.match(source, /impact_on_training/);
+  assert.match(source, /impact_on_nutrition/);
+  assert.match(source, /impact_on_supplementation/);
+  assert.match(source, /recovery_signals/);
+  assert.match(source, /safety_notes/);
+  assert.match(source, /recommended_follow_up/);
+  assert.match(source, /training_adjustments/);
+  assert.match(source, /nutrition_adjustments/);
+  assert.match(source, /supplementation_notes/);
+  assert.match(source, /follow_up_actions/);
+  assert.match(source, /const canonicalInsights = buildCanonicalAiInsights\(biomarkers, insights\)/);
+  assert.match(source, /finalizeAnalyzed\(input\.labReportId, ocr, biomarkers, canonicalInsights, fallback\)/);
 });
 
 test('Edge Function processa watchdog sem OCR inline no SQL cron', () => {
