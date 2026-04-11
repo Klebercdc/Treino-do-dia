@@ -729,10 +729,38 @@ async function finalizeAnalyzed(
   );
 }
 
+async function finalizeAsFailed(labReportId: string, reason: string) {
+  await supabase
+    .from('lab_reports')
+    .update({
+      status: 'failed',
+      parse_status: 'failed',
+      processing_error: reason.slice(0, 280),
+      processed_at: new Date().toISOString(),
+      is_valid: false,
+      last_orchestrator_note: 'failed',
+    })
+    .eq('id', labReportId);
+}
+
 async function processSingleReport(input: { labReportId: string; expectedUpdatedAt?: string | null; dispatchSource: string }) {
   const report = await fetchLabReport(input.labReportId);
   if (!report) {
     return { ok: false, status: 404, error: 'lab_report_not_found' };
+  }
+
+  // Guard: prevent infinite retry loop when OCR or downstream steps fail repeatedly.
+  const MAX_PROCESSING_ATTEMPTS = 5;
+  if ((report.processing_attempts ?? 0) >= MAX_PROCESSING_ATTEMPTS) {
+    await finalizeAsFailed(
+      input.labReportId,
+      `max_retries_exceeded_after_${report.processing_attempts}_attempts`,
+    );
+    await logEvent(input.labReportId, 'max_retries_exceeded', 'error', {
+      dispatchSource: input.dispatchSource,
+      attempts: report.processing_attempts,
+    });
+    return { ok: false, error: 'max_retries_exceeded' };
   }
 
   if (String(report.status) === 'analyzed') {
@@ -752,65 +780,99 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
 
   await logEvent(input.labReportId, 'processing_started', 'info', { dispatchSource: input.dispatchSource });
 
-  const signedUrl = await createSignedUrl(String(report.storage_bucket || LAB_REPORTS_BUCKET), String(report.storage_path || ''));
-  const ocr = await callOcr({
-    sourceId: input.labReportId,
-    mimeType: String(report.mime_type || report.file_type || ''),
-    fileUrl: signedUrl,
-  });
-
-  await persistExtraction(input.labReportId, ocr);
-  const biomarkers = cleanBiomarkers(ocr.biomarkers_detected || []);
-  await persistBiomarkers(input.labReportId, biomarkers);
-
-  const readiness = computeReadiness(ocr.confidence_summary || {}, biomarkers, ocr.warnings || []);
-  if (!readiness.ready) {
-    await finalizeNeedsReview(input.labReportId, ocr, String(readiness.reason || 'needs_review'), biomarkers);
-    await logEvent(input.labReportId, 'needs_review', 'warn', {
-      dispatchSource: input.dispatchSource,
-      reason: readiness.reason,
-      biomarkers: biomarkers.length,
-      meanConfidence: readiness.meanConfidence,
-    });
-    return { ok: true, status: 'needs_review', biomarkers: biomarkers.length };
-  }
-
-  let insights: Record<string, unknown>;
-  let fallback = false;
+  // Wrap the entire pipeline so that any crash after lock acquisition
+  // always leaves the report in 'failed' — never stuck in 'processing'.
   try {
-    if (!GROQ_API_KEY) throw new Error('missing_groq_api_key');
-    insights = await callGroqInsights({ biomarkers, confidenceSummary: ocr.confidence_summary || {} });
-  } catch (error) {
-    fallback = true;
-    insights = buildRuleBasedFallback(biomarkers, error instanceof Error ? error.message : 'groq_failed');
-    await logEvent(input.labReportId, 'groq_fallback_used', 'warn', {
-      dispatchSource: input.dispatchSource,
-      reason: error instanceof Error ? error.message : 'groq_failed',
+    const signedUrl = await createSignedUrl(String(report.storage_bucket || LAB_REPORTS_BUCKET), String(report.storage_path || ''));
+    const ocr = await callOcr({
+      sourceId: input.labReportId,
+      mimeType: String(report.mime_type || report.file_type || ''),
+      fileUrl: signedUrl,
     });
+
+    await persistExtraction(input.labReportId, ocr);
+    const biomarkers = cleanBiomarkers(ocr.biomarkers_detected || []);
+    await persistBiomarkers(input.labReportId, biomarkers);
+
+    const readiness = computeReadiness(ocr.confidence_summary || {}, biomarkers, ocr.warnings || []);
+    if (!readiness.ready) {
+      await finalizeNeedsReview(input.labReportId, ocr, String(readiness.reason || 'needs_review'), biomarkers);
+      await logEvent(input.labReportId, 'needs_review', 'warn', {
+        dispatchSource: input.dispatchSource,
+        reason: readiness.reason,
+        biomarkers: biomarkers.length,
+        meanConfidence: readiness.meanConfidence,
+      });
+      return { ok: true, status: 'needs_review', biomarkers: biomarkers.length };
+    }
+
+    let insights: Record<string, unknown>;
+    let fallback = false;
+    try {
+      if (!GROQ_API_KEY) throw new Error('missing_groq_api_key');
+      insights = await callGroqInsights({ biomarkers, confidenceSummary: ocr.confidence_summary || {} });
+    } catch (error) {
+      fallback = true;
+      insights = buildRuleBasedFallback(biomarkers, error instanceof Error ? error.message : 'groq_failed');
+      await logEvent(input.labReportId, 'groq_fallback_used', 'warn', {
+        dispatchSource: input.dispatchSource,
+        reason: error instanceof Error ? error.message : 'groq_failed',
+      });
+    }
+
+    const canonicalInsights = buildCanonicalAiInsights(biomarkers, insights);
+    await finalizeAnalyzed(input.labReportId, ocr, biomarkers, canonicalInsights, fallback);
+    await logEvent(input.labReportId, 'analyzed', 'info', {
+      dispatchSource: input.dispatchSource,
+      biomarkers: biomarkers.length,
+      fallback,
+    });
+
+    return { ok: true, status: 'analyzed', biomarkers: biomarkers.length, fallback };
+  } catch (pipelineError) {
+    // Any error after lock acquisition → mark failed so the report is never stranded.
+    const reason = pipelineError instanceof Error ? pipelineError.message : 'pipeline_error';
+    await finalizeAsFailed(input.labReportId, reason);
+    await logEvent(input.labReportId, 'pipeline_failed', 'error', {
+      dispatchSource: input.dispatchSource,
+      reason: reason.slice(0, 200),
+    });
+    return { ok: false, status: 'failed', reason };
   }
-
-  const canonicalInsights = buildCanonicalAiInsights(biomarkers, insights);
-  await finalizeAnalyzed(input.labReportId, ocr, biomarkers, canonicalInsights, fallback);
-  await logEvent(input.labReportId, 'analyzed', 'info', {
-    dispatchSource: input.dispatchSource,
-    biomarkers: biomarkers.length,
-    fallback,
-  });
-
-  return { ok: true, status: 'analyzed', biomarkers: biomarkers.length, fallback };
 }
 
 async function dispatchWatchdog(limit: number, dispatchSource: string) {
-  const staleBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from('lab_reports')
-    .select('id,updated_at')
-    .eq('status', 'processing')
-    .lt('updated_at', staleBefore)
-    .order('updated_at', { ascending: true })
-    .limit(Math.max(1, Math.min(limit, 25)));
+  const rowLimit = Math.max(1, Math.min(limit, 25));
+  const halfLimit = Math.ceil(rowLimit / 2);
 
-  if (error) throw new Error(`Falha ao listar stale processing: ${error.message}`);
+  // Reports stuck in 'processing' are stale after STALE_MINUTES (20 min).
+  const staleProcessingBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
+  // Reports stuck in 'uploaded' are stale after 5 min — enough time for the DB
+  // trigger (via pg_net) to have fired. If they're still 'uploaded' after that,
+  // the trigger dispatch failed silently and we must rescue them here.
+  const staleUploadedBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+  const [processingResult, uploadedResult] = await Promise.all([
+    supabase
+      .from('lab_reports')
+      .select('id,updated_at')
+      .eq('status', 'processing')
+      .lt('updated_at', staleProcessingBefore)
+      .order('updated_at', { ascending: true })
+      .limit(halfLimit),
+    supabase
+      .from('lab_reports')
+      .select('id,updated_at')
+      .eq('status', 'uploaded')
+      .lt('updated_at', staleUploadedBefore)
+      .order('updated_at', { ascending: true })
+      .limit(halfLimit),
+  ]);
+
+  if (processingResult.error) throw new Error(`Falha ao listar stale processing: ${processingResult.error.message}`);
+  if (uploadedResult.error) throw new Error(`Falha ao listar stale uploaded: ${uploadedResult.error.message}`);
+
+  const data = [...(processingResult.data ?? []), ...(uploadedResult.data ?? [])];
 
   const baseUrl = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/lab-report-orchestrator`;
   const headers = {
@@ -819,7 +881,7 @@ async function dispatchWatchdog(limit: number, dispatchSource: string) {
   };
 
   let dispatched = 0;
-  for (const row of data ?? []) {
+  for (const row of data) {
     const body = JSON.stringify({
       labReportId: row.id,
       expectedUpdatedAt: row.updated_at,
@@ -827,7 +889,24 @@ async function dispatchWatchdog(limit: number, dispatchSource: string) {
     });
 
     if (SUPABASE_ANON_KEY) {
-      fetch(baseUrl, { method: 'POST', headers, body }).catch(() => null);
+      // Fire-and-forget, but capture errors in pipeline_events for observability.
+      fetch(baseUrl, { method: 'POST', headers, body })
+        .then(async (resp) => {
+          if (!resp.ok) {
+            const text = await resp.text().catch(() => '');
+            await logEvent(String(row.id), 'watchdog_dispatch_http_error', 'warn', {
+              dispatchSource,
+              httpStatus: resp.status,
+              body: text.slice(0, 200),
+            }).catch(() => null);
+          }
+        })
+        .catch(async (err) => {
+          await logEvent(String(row.id), 'watchdog_dispatch_network_error', 'warn', {
+            dispatchSource,
+            reason: err instanceof Error ? err.message : 'unknown',
+          }).catch(() => null);
+        });
       dispatched += 1;
       await logEvent(String(row.id), 'watchdog_dispatched', 'info', { dispatchSource, mode: 'async' });
       continue;
@@ -841,7 +920,7 @@ async function dispatchWatchdog(limit: number, dispatchSource: string) {
     dispatched += 1;
   }
 
-  return { scanned: (data ?? []).length, dispatched };
+  return { scanned: data.length, dispatched };
 }
 
 Deno.serve(async (req) => {
