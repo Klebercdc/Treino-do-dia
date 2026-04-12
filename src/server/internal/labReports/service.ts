@@ -623,7 +623,14 @@ export async function getUserLabReportTimeline(
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50);
-  if (error) throw new Error(`Falha ao carregar timeline: ${error.message}`);
+  if (error) {
+    console.warn('[labs-timeline] fallback para lista vazia:', {
+      userId,
+      code: error.code || null,
+      message: error.message || 'unknown_error',
+    });
+    return [];
+  }
   return (data || []) as Array<Record<string, unknown>>;
 }
 
