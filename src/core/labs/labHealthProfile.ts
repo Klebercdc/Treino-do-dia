@@ -30,8 +30,16 @@ function numOf(map: Map<string, BiomarkerEntry>, key: string): number | null {
   return map.get(key)?.value_numeric ?? null
 }
 
+function entryOf(map: Map<string, BiomarkerEntry>, key: string): BiomarkerEntry | null {
+  return map.get(key) ?? null
+}
+
 function flagOf(map: Map<string, BiomarkerEntry>, key: string): string | null {
-  return map.get(key)?.flag ?? null
+  return map.get(key)?.lab_flag ?? map.get(key)?.flag ?? null
+}
+
+function contextFlagOf(map: Map<string, BiomarkerEntry>, key: string): string | null {
+  return map.get(key)?.context_flag ?? null
 }
 
 function hasValue(v: number | null | undefined): v is number {
@@ -244,14 +252,26 @@ function buildThyroidStatus(bm: Map<string, BiomarkerEntry>): SignalGroup {
   const g = emptyGroup()
   const tsh = numOf(bm, 'tsh')
   const t4f = numOf(bm, 't4_free')
+  const tshFlag = flagOf(bm, 'tsh')
+  const t4fFlag = flagOf(bm, 't4_free')
 
-  if (hasValue(tsh)) {
+  if (tshFlag === 'high' && hasValue(tsh) && tsh > 10) {
+    addFlag(g, 'tsh_very_high', 'caution', 'TSH acima da faixa laboratorial em magnitude relevante; correlacionar com T4 livre, sintomas e contexto clínico.')
+  } else if (tshFlag === 'high') {
+    addFlag(g, 'tsh_high', 'attention', 'TSH acima da faixa laboratorial selecionada; monitorar energia, metabolismo e recuperação.')
+  } else if (tshFlag === 'low') {
+    addFlag(g, 'tsh_low', 'caution', 'TSH abaixo da faixa laboratorial selecionada; correlacionar com frequência cardíaca, composição corporal e sintomas.')
+  } else if (tshFlag == null && hasValue(tsh)) {
     if (tsh > 10) addFlag(g, 'tsh_very_high', 'caution', 'TSH muito elevado: hipotireoidismo provável; metabolismo lento pode impactar composição corporal e recuperação.')
     else if (tsh > 4.5) addFlag(g, 'tsh_high', 'attention', 'TSH levemente elevado: monitorar energia, metabolismo e recuperação; consultar médico.')
     else if (tsh < 0.4) addFlag(g, 'tsh_low', 'caution', 'TSH baixo: possível hipertireoidismo; pode impactar frequência cardíaca e composição muscular.')
   }
 
-  if (hasValue(t4f)) {
+  if (t4fFlag === 'low') {
+    addFlag(g, 't4_free_low', 'attention', 'T4 livre abaixo da faixa laboratorial selecionada; correlacionar com TSH e sintomas.')
+  } else if (t4fFlag === 'high') {
+    addFlag(g, 't4_free_high', 'attention', 'T4 livre acima da faixa laboratorial selecionada; correlacionar com TSH e sintomas.')
+  } else if (t4fFlag == null && hasValue(t4f)) {
     if (t4f < 0.8) addFlag(g, 't4_free_low', 'attention', 'T4 livre baixo: suporte tireoidiano potencialmente reduzido.')
     else if (t4f > 1.8) addFlag(g, 't4_free_high', 'attention', 'T4 livre elevado: verificar hipertireoidismo com médico.')
   }
@@ -267,19 +287,64 @@ function buildAndrogenStatus(bm: Map<string, BiomarkerEntry>): SignalGroup {
   const cortisol = numOf(bm, 'cortisol')
   const dheaS = numOf(bm, 'dhea_s')
   const estradiol = numOf(bm, 'estradiol')
+  const lh = numOf(bm, 'lh')
+  const fsh = numOf(bm, 'fsh')
+  const testosteroneFlag = flagOf(bm, 'testosterone_total')
+  const freeTestosteroneFlag = flagOf(bm, 'testosterone_free')
+  const shbgFlag = flagOf(bm, 'shbg')
+  const estradiolFlag = flagOf(bm, 'estradiol')
+  const lhFlag = flagOf(bm, 'lh')
+  const fshFlag = flagOf(bm, 'fsh')
+  const testosteroneContextFlag = contextFlagOf(bm, 'testosterone_total')
+  const lhContextFlag = contextFlagOf(bm, 'lh')
+  const fshContextFlag = contextFlagOf(bm, 'fsh')
 
-  if (hasValue(testTotal)) {
+  if (testosteroneFlag === 'low' && hasValue(testTotal) && testTotal < 200) {
+    addFlag(g, 'testosterone_very_low', 'caution', 'Testosterona total abaixo da faixa laboratorial em magnitude relevante; correlacionar com sintomas e contexto hormonal.')
+  } else if (testosteroneFlag === 'low') {
+    addFlag(g, 'testosterone_low', 'attention', 'Testosterona total abaixo da faixa laboratorial selecionada; correlacionar com sono, estresse e composição corporal.')
+  } else if (testosteroneFlag === 'high') {
+    if (testosteroneContextFlag === 'compatible_with_declared_exogenous_testosterone_use') {
+      addFlag(g, 'testosterone_high_contextualized', 'attention', 'Testosterona total acima da faixa laboratorial, compatível com uso declarado de testosterona exógena; priorizar correlação com estradiol, SHBG, hematócrito, HDL e PSA.')
+    } else {
+      addFlag(g, 'testosterone_high', 'attention', 'Testosterona total acima da faixa laboratorial selecionada; verificar contexto clínico e esportivo.')
+    }
+  } else if (hasValue(testTotal)) {
     if (testTotal < 200) addFlag(g, 'testosterone_very_low', 'caution', 'Testosterona total muito baixa: recuperação e hipertrofia comprometidas; necessária avaliação médica.')
     else if (testTotal < 350) addFlag(g, 'testosterone_low', 'attention', 'Testosterona total abaixo do ideal: monitorar sono, estresse e composição corporal.')
     else if (testTotal > 1000) addFlag(g, 'testosterone_high', 'attention', 'Testosterona total acima do esperado: verificar contexto clínico.')
   }
 
-  if (hasValue(testFree) && testFree < 3) {
+  if (freeTestosteroneFlag === 'low') {
+    addFlag(g, 'free_testosterone_low', 'attention', 'Testosterona livre baixa: verificar SHBG e status androgênico geral.')
+  } else if (hasValue(testFree) && testFree < 3) {
     addFlag(g, 'free_testosterone_low', 'attention', 'Testosterona livre baixa: verificar SHBG e status androgênico geral.')
   }
 
-  if (hasValue(shbg) && shbg > 80) {
+  if (shbgFlag === 'low') {
+    addFlag(g, 'shbg_low', 'attention', 'SHBG abaixo da faixa laboratorial; correlacionar com testosterona livre, estradiol e contexto hormonal.')
+  } else if (shbgFlag === 'high' || (hasValue(shbg) && shbg > 80)) {
     addFlag(g, 'shbg_high', 'attention', 'SHBG muito elevado: reduz biodisponibilidade de testosterona; monitorar sinalização androgênica.')
+  }
+
+  if (estradiolFlag === 'high') {
+    addFlag(g, 'estradiol_high', 'attention', 'Estradiol acima da faixa laboratorial; correlacionar com SHBG, sintomas e segurança hematometabólica.')
+  }
+
+  if (lhFlag === 'low') {
+    if (lhContextFlag === 'expected_axis_suppression_under_declared_testosterone_use') {
+      addFlag(g, 'lh_suppressed_expected_context', 'attention', 'LH suprimido, achado compatível com uso declarado de testosterona exógena; em usuário natural o peso interpretativo seria diferente.')
+    } else {
+      addFlag(g, 'lh_low', 'attention', 'LH abaixo da faixa laboratorial fora de contexto esperado; correlacionar com FSH, testosterona e sintomas.')
+    }
+  }
+
+  if (fshFlag === 'low') {
+    if (fshContextFlag === 'expected_axis_suppression_under_declared_testosterone_use') {
+      addFlag(g, 'fsh_suppressed_expected_context', 'attention', 'FSH suprimido, achado compatível com uso declarado de testosterona exógena; em usuário natural o peso interpretativo seria diferente.')
+    } else {
+      addFlag(g, 'fsh_low', 'attention', 'FSH abaixo da faixa laboratorial fora de contexto esperado; correlacionar com LH, testosterona e fertilidade reprodutiva.')
+    }
   }
 
   if (hasValue(cortisol)) {
@@ -325,8 +390,15 @@ function buildMicronutrientStatus(bm: Map<string, BiomarkerEntry>): SignalGroup 
   const b12 = numOf(bm, 'vitamin_b12')
   const folate = numOf(bm, 'folate')
   const zinc = numOf(bm, 'zinc')
+  const vitDFlag = flagOf(bm, 'vitamin_d')
 
-  if (hasValue(vitD)) {
+  if (vitDFlag === 'low' && hasValue(vitD) && vitD < 20) {
+    addFlag(g, 'vitamin_d_deficient', 'caution', 'Vitamina D abaixo da faixa laboratorial em nível compatível com deficiência; correlacionar com exposição solar, ingestão e monitoramento.')
+  } else if (vitDFlag === 'low') {
+    addFlag(g, 'vitamin_d_insufficient', 'attention', 'Vitamina D abaixo da faixa laboratorial selecionada; otimizar exposição solar, ingestão e reavaliação.')
+  } else if (vitDFlag === 'high') {
+    addFlag(g, 'vitamin_d_high', 'attention', 'Vitamina D acima da faixa laboratorial; revisar suplementação e risco de excesso.')
+  } else if (vitDFlag == null && hasValue(vitD)) {
     if (vitD < 20) addFlag(g, 'vitamin_d_deficient', 'caution', 'Vitamina D deficiente (<20 ng/mL): impacta força, imunidade e recuperação; suplementar após avaliação.')
     else if (vitD < 30) addFlag(g, 'vitamin_d_insufficient', 'attention', 'Vitamina D insuficiente (20–29 ng/mL): otimizar com exposição solar ou suplementação conservadora.')
     else if (vitD > 100) addFlag(g, 'vitamin_d_high', 'attention', 'Vitamina D >100 ng/mL: possível toxicidade; não suplementar; avaliar com médico.')

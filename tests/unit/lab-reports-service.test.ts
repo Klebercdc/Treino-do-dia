@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   acquireLabReportProcessingLock,
   computeReadinessForAI,
+  generateExamInsights,
   invokeExamOcrService,
   processLabReportUploadSafely,
 } from '../../src/server/internal/labReports/service';
@@ -30,6 +31,43 @@ test('computeReadinessForAI permite IA com confiança e biomarcadores', () => {
   });
   assert.equal(result.ready, true);
   assert.equal(result.needsReview, false);
+});
+
+test('generateExamInsights expõe contexto hormonal e resumo contextual sem perder biomarcadores', async () => {
+  const insights = await generateExamInsights({
+    profileRow: {
+      sex: 'male',
+      birth_date: '1993-01-20',
+      hormone_context_type: 'assisted',
+      uses_exogenous_hormones: true,
+      declared_compounds: ['testosterone enanthate'],
+      monitoring_mode: 'assisted',
+    },
+    biomarkers: [
+      {
+        marker_key: 'testosterone_total',
+        marker_name: 'Testosterona Total',
+        value_numeric: 1231.75,
+        unit: 'ng/dL',
+        reference_text: 'Homens 18 a 66 anos: 175,00 a 781,00 ng/dL | Mulheres 21 a 73 anos: 10,00 a 75,00 ng/dL',
+        reference_text_raw: 'Homens 18 a 66 anos: 175,00 a 781,00 ng/dL | Mulheres 21 a 73 anos: 10,00 a 75,00 ng/dL',
+        reference_min: 175,
+        reference_max: 781,
+        flag: 'high',
+        lab_flag: 'high',
+        context_flag: 'compatible_with_declared_exogenous_testosterone_use',
+        interpretation_mode: 'assisted',
+        monitor_priority: 'medium',
+        safety_relevance: false,
+        feedback_summary: 'Testosterona total acima da faixa laboratorial. Em uso declarado, o achado pode ser compatível com a intervenção.',
+        source_reference_kind: 'sex_age',
+      },
+    ],
+  })
+
+  assert.equal((insights.hormone_context as { hormone_context_type: string }).hormone_context_type, 'assisted')
+  assert.match(String(insights.contextual_summary), /compatível com a intervenção/i)
+  assert.equal(Array.isArray(insights.marker_interpretations), true)
 });
 
 test('invokeExamOcrService falha quando OCR retorna success=false em HTTP 200', async () => {
