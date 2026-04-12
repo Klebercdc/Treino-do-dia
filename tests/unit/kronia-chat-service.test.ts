@@ -154,6 +154,7 @@ test("KroniaChatService injeta labHealthProfile do último exame válido no inpu
 
   assert.equal(captured.length, 1)
   assert.equal((captured[0].labHealthProfile as { scores: { metabolic_score: number } }).scores.metabolic_score, 62)
+  assert.equal((captured[0].labLatestContext as { id: string }).id, "lab-1")
   assert.equal((captured[0].labLongitudinalContext as { totalReports: number }).totalReports, 2)
   assert.ok(((captured[0].labLongitudinalContext as { newAlertMarkers: string[] }).newAlertMarkers || []).includes("Glicose"))
 })
@@ -202,5 +203,6 @@ test("KroniaChatService mantém chat estável sem exame válido", async () => {
 
   assert.equal(captured.length, 1)
   assert.equal(captured[0].labHealthProfile, null)
+  assert.equal(captured[0].labLatestContext, null)
   assert.equal(captured[0].labLongitudinalContext, null)
 })

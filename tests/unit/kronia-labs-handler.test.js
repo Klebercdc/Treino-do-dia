@@ -59,6 +59,21 @@ test('handler de detalhe usa colunas reais de extração e fallback para normali
   assert.match(handlerSrc, /criticalFlags/);
 });
 
+test('handler de histórico não depende de clinical_flags\/critical_flags no select de lab_reports', () => {
+  const reportsSection = handlerSrc.slice(
+    handlerSrc.indexOf('function handleReports'),
+    handlerSrc.indexOf('function handleReportById')
+  );
+  assert.doesNotMatch(reportsSection, /clinical_flags/);
+  assert.doesNotMatch(reportsSection, /critical_flags/);
+});
+
+test('handler dispara dispatch_lab_report_to_edge após register para cobrir ausência de trigger', () => {
+  const regSection = handlerSrc.slice(handlerSrc.indexOf('function handleRegister'));
+  assert.match(regSection, /dispatch_lab_report_to_edge/);
+  assert.match(regSection, /api_register_uploaded/);
+});
+
 test('handler de detalhe suporta DELETE com ownership, bloqueio assíncrono e cleanup pós-delete', () => {
   const detailSection = handlerSrc.slice(handlerSrc.indexOf('function handleReportById'));
   assert.match(detailSection, /req\.method === 'DELETE'/);

@@ -1,4 +1,4 @@
-import type { HealthPerformanceProfile, LabLongitudinalContext } from "../core/labs/labTypes"
+import type { HealthPerformanceProfile, HormoneContextType, LabLongitudinalContext, StoredLabContext } from "../core/labs/labTypes"
 
 export type AssistantIntent =
   | "chat"
@@ -44,6 +44,11 @@ export interface UserProfile {
   lesoes?: string[]
   rotina?: string
   observacoes?: string
+  usesExogenousHormones?: boolean
+  hormoneContextType?: HormoneContextType
+  declaredCompounds?: string[]
+  lastAdministrationAt?: string | null
+  monitoringMode?: 'natural' | 'assisted'
 }
 
 export interface RetrievedContextItem {
@@ -140,6 +145,7 @@ export interface AIRequestInput {
   history: ChatMessage[]
   userProfile?: UserProfile | null
   labHealthProfile?: HealthPerformanceProfile | null
+  labLatestContext?: StoredLabContext | null
   labLongitudinalContext?: LabLongitudinalContext | null
   retrievedContext?: RetrievedContextItem[]
   memoryItems?: MemoryItem[]

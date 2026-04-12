@@ -2,10 +2,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../../../lib/utils/logger';
 import type { BiomarkerEntry } from '../../../core/labs/labTypes';
 import { buildHealthPerformanceProfile, applyClinicalRulesFromBiomarkers } from '../../../core/labs/labRules';
+import {
+  enrichBiomarkerEntries,
+  extractHormoneContextFromProfileRow,
+  summarizeMarkerInterpretations,
+} from '../../../core/labs/labInterpretation';
 
 const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
 const PROCESSING_STALE_MINUTES = 20;
+const UPLOADED_RECOVERY_MINUTES = 3;
 
 export type LabReportStatus = 'pending_upload' | 'uploaded' | 'processing' | 'extracted' | 'needs_review' | 'analyzed' | 'failed';
 
@@ -25,13 +31,14 @@ export interface ExamOcrResponse {
 
 type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
 type LabReportMutableFields = Record<string, unknown>;
+type ProfileRow = Record<string, unknown> | null;
 
 function isMissingOptionalTable(error: unknown, table: OptionalTableName): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: unknown }).code || '') : '';
   const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
-  if (code !== 'PGRST205') return false;
-  return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+  return (code === 'PGRST205' || code === '42P01' || !code)
+    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
 }
 
 function isParseStatusConstraintViolation(error: unknown): boolean {
@@ -72,6 +79,46 @@ function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(String(value).replace(',', '.'));
   return Number.isFinite(n) ? n : null;
+}
+
+async function fetchProfileRow(admin: SupabaseClient, userId: string): Promise<ProfileRow> {
+  const { data, error } = await admin
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    logger.warn('labs_profile_lookup_failed', {
+      userId,
+      code: error.code,
+      message: error.message,
+    })
+    return null
+  }
+
+  return data as ProfileRow
+}
+
+async function fetchProfileRowForLabReport(admin: SupabaseClient, labReportId: string): Promise<ProfileRow> {
+  const { data, error } = await admin
+    .from('lab_reports')
+    .select('user_id')
+    .eq('id', labReportId)
+    .maybeSingle()
+
+  if (error || !data?.user_id) {
+    if (error) {
+      logger.warn('labs_report_owner_lookup_failed', {
+        labReportId,
+        code: error.code,
+        message: error.message,
+      })
+    }
+    return null
+  }
+
+  return fetchProfileRow(admin, String(data.user_id))
 }
 
 function normalizeFlag(value: number | null, min: number | null, max: number | null): string | null {
@@ -143,6 +190,11 @@ function getProcessingStaleBeforeIso(now = new Date()): string {
   return new Date(now.getTime() - staleMs).toISOString();
 }
 
+function getUploadedRecoveryBeforeIso(now = new Date()): string {
+  const staleMs = UPLOADED_RECOVERY_MINUTES * 60 * 1000;
+  return new Date(now.getTime() - staleMs).toISOString();
+}
+
 function canAcquireProcessingLock(status: string | null | undefined, updatedAt: string | null | undefined): boolean {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'uploaded' || normalized === 'failed' || normalized === 'needs_review') {
@@ -188,21 +240,59 @@ export async function acquireLabReportProcessingLock(
   return Array.isArray(data) && data.length === 1;
 }
 
-export async function listStaleProcessingLabReports(
+export async function listRecoverableLabReports(
   admin: SupabaseClient,
   limit = 10,
 ): Promise<Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>> {
-  const staleBefore = getProcessingStaleBeforeIso();
-  const { data, error } = await admin
-    .from('lab_reports')
-    .select('id,storage_bucket,storage_path,mime_type,file_type,status,updated_at')
-    .eq('status', 'processing')
-    .lt('updated_at', staleBefore)
-    .order('updated_at', { ascending: true })
-    .limit(Math.min(Math.max(limit, 1), 50));
+  const processingStaleBefore = getProcessingStaleBeforeIso();
+  const uploadedRecoveryBefore = getUploadedRecoveryBeforeIso();
+  const cappedLimit = Math.min(Math.max(limit, 1), 50);
+  const baseQuery = 'id,storage_bucket,storage_path,mime_type,file_type,status,updated_at';
+  const [uploadedResult, processingResult] = await Promise.all([
+    admin
+      .from('lab_reports')
+      .select(baseQuery)
+      .eq('status', 'uploaded')
+      .lt('updated_at', uploadedRecoveryBefore)
+      .order('updated_at', { ascending: true })
+      .limit(cappedLimit),
+    admin
+      .from('lab_reports')
+      .select(baseQuery)
+      .eq('status', 'processing')
+      .lt('updated_at', processingStaleBefore)
+      .order('updated_at', { ascending: true })
+      .limit(cappedLimit),
+  ]);
 
-  if (error) throw new Error(`Falha ao listar exames presos em processing: ${error.message}`);
-  return (data || []) as Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>;
+  if (uploadedResult.error) throw new Error(`Falha ao listar exames uploaded para recuperação: ${uploadedResult.error.message}`);
+  if (processingResult.error) throw new Error(`Falha ao listar exames presos em processing: ${processingResult.error.message}`);
+
+  const merged = [...(uploadedResult.data || []), ...(processingResult.data || [])]
+    .sort((a, b) => String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
+    .slice(0, cappedLimit);
+
+  return merged as Array<{ id: string; storage_bucket: string | null; storage_path: string | null; mime_type: string | null; file_type: string | null; status: string | null; updated_at: string | null }>;
+}
+
+export async function dispatchLabReportToEdgeBestEffort(
+  admin: SupabaseClient,
+  input: { labReportId: string; source: string; expectedUpdatedAt?: string | null },
+): Promise<void> {
+  const { error } = await admin.rpc('dispatch_lab_report_to_edge', {
+    p_lab_report_id: input.labReportId,
+    p_source: input.source,
+    p_expected_updated_at: input.expectedUpdatedAt ?? null,
+  });
+
+  if (!error) return;
+
+  logger.warn('labs_dispatch_rpc_failed', {
+    labReportId: input.labReportId,
+    source: input.source,
+    code: error.code,
+    message: error.message,
+  });
 }
 
 export async function downloadLabReportFromStorage(
@@ -300,9 +390,10 @@ export async function persistBiomarkers(
   input: {
     labReportId: string;
     biomarkers: Array<Record<string, unknown>>;
+    profileRow?: ProfileRow;
   },
 ): Promise<Array<Record<string, unknown>>> {
-  const cleaned = (input.biomarkers || []).map((item) => {
+  const cleanedEntries = (input.biomarkers || []).map((item) => {
     const markerKey = String(item.marker_key || item.marker || item.name || '').trim().toLowerCase();
     const markerName = String(item.marker_name || item.name || markerKey || 'Marcador');
     const valueNumeric = toNumber(item.value_numeric ?? item.value);
@@ -323,6 +414,25 @@ export async function persistBiomarkers(
       confidence: toNumber(item.confidence),
     };
   }).filter((row) => row.marker_key);
+
+  const cleaned = enrichBiomarkerEntries(
+    cleanedEntries.map((item): BiomarkerEntry => ({
+      marker_key: item.marker_key,
+      marker_name: item.marker_name,
+      value_numeric: item.value_numeric,
+      value_text: item.value_text,
+      unit: item.unit,
+      reference_min: item.reference_min,
+      reference_max: item.reference_max,
+      reference_text: item.reference_text,
+      flag: item.flag === 'low' || item.flag === 'high' || item.flag === 'normal' ? item.flag : null,
+      source_line: item.source_line,
+      confidence: item.confidence,
+      reference_text_raw: item.reference_text,
+      lab_flag: item.flag === 'low' || item.flag === 'high' || item.flag === 'normal' ? item.flag : null,
+    })),
+    input.profileRow ?? null,
+  )
 
   // Deduplicate by the unique index key: (marker_key, marker_name, coalesce(unit, '')).
   // OCR can return the same marker twice (e.g. two reference ranges). Keep the entry with
@@ -349,13 +459,24 @@ export async function persistBiomarkers(
   }
 
   if (deduped.length) {
-    const { error } = await admin.from('lab_report_biomarkers').insert(deduped);
+    const { error } = await admin.from('lab_report_biomarkers').insert(deduped.map((item) => ({
+      ...item,
+      normalized_reference: item.normalized_reference ?? null,
+      reference_text_raw: item.reference_text_raw ?? null,
+      lab_flag: item.lab_flag ?? item.flag ?? null,
+      context_flag: item.context_flag ?? null,
+      interpretation_mode: item.interpretation_mode ?? null,
+      monitor_priority: item.monitor_priority ?? null,
+      safety_relevance: item.safety_relevance ?? null,
+      feedback_summary: item.feedback_summary ?? null,
+      source_reference_kind: item.source_reference_kind ?? null,
+    })));
     if (error && !isMissingOptionalTable(error, 'lab_report_biomarkers')) {
       throw new Error(`Falha ao persistir biomarcadores: ${error.message}`);
     }
   }
 
-  return deduped;
+  return deduped as unknown as Array<Record<string, unknown>>;
 }
 
 export function computeReadinessForAI(input: {
@@ -391,16 +512,32 @@ function toBiomarkerEntries(biomarkers: Array<Record<string, unknown>>): Biomark
     flag: b.flag != null ? String(b.flag) as BiomarkerEntry['flag'] : null,
     source_line: b.source_line != null ? String(b.source_line) : null,
     confidence: toNumber(b.confidence),
+    reference_text_raw: b.reference_text_raw != null ? String(b.reference_text_raw) : null,
+    normalized_reference: (b.normalized_reference && typeof b.normalized_reference === 'object' ? b.normalized_reference : null) as BiomarkerEntry['normalized_reference'],
+    lab_flag: b.lab_flag === 'low' || b.lab_flag === 'high' || b.lab_flag === 'normal' ? b.lab_flag as BiomarkerEntry['lab_flag'] : null,
+    context_flag: b.context_flag != null ? String(b.context_flag) : null,
+    interpretation_mode: b.interpretation_mode === 'natural' || b.interpretation_mode === 'trt' || b.interpretation_mode === 'assisted' || b.interpretation_mode === 'unknown'
+      ? b.interpretation_mode as BiomarkerEntry['interpretation_mode']
+      : null,
+    monitor_priority: b.monitor_priority === 'low' || b.monitor_priority === 'medium' || b.monitor_priority === 'high'
+      ? b.monitor_priority as BiomarkerEntry['monitor_priority']
+      : null,
+    safety_relevance: typeof b.safety_relevance === 'boolean' ? b.safety_relevance : null,
+    feedback_summary: b.feedback_summary != null ? String(b.feedback_summary) : null,
+    source_reference_kind: b.source_reference_kind != null ? String(b.source_reference_kind) : null,
   })).filter((b) => b.marker_key);
 }
 
 export async function generateExamInsights(input: {
   biomarkers: Array<Record<string, unknown>>;
   confidenceSummary?: Record<string, unknown>;
+  profileRow?: ProfileRow;
 }): Promise<Record<string, unknown>> {
   const typedBiomarkers = toBiomarkerEntries(input.biomarkers);
   const profile = buildHealthPerformanceProfile(typedBiomarkers);
   const clinical = applyClinicalRulesFromBiomarkers(typedBiomarkers);
+  const hormoneContext = extractHormoneContextFromProfileRow(input.profileRow ?? null)
+  const contextualSummary = summarizeMarkerInterpretations(typedBiomarkers)
 
   // Build actionable training adjustments from profile
   const trainingAdjustments: string[] = [];
@@ -475,6 +612,9 @@ export async function generateExamInsights(input: {
 
   return {
     scores: profile.scores,
+    hormone_context: hormoneContext,
+    contextual_summary: contextualSummary,
+    marker_interpretations: typedBiomarkers,
     health_profile: {
       metabolic_health: profile.metabolic_health,
       lipid_health: profile.lipid_health,
@@ -522,6 +662,7 @@ export async function analyzeLabReportForUserContext(
   admin: SupabaseClient,
   input: { labReportId: string; biomarkers: Array<Record<string, unknown>>; confidenceSummary?: Record<string, unknown> },
 ): Promise<{ status: LabReportStatus; aiInsights: Record<string, unknown> | null }> {
+  const profileRow = await fetchProfileRowForLabReport(admin, input.labReportId)
   const readiness = computeReadinessForAI({
     biomarkers: input.biomarkers,
     confidenceSummary: input.confidenceSummary,
@@ -546,6 +687,7 @@ export async function analyzeLabReportForUserContext(
   const aiInsights = await generateExamInsights({
     biomarkers: input.biomarkers,
     confidenceSummary: input.confidenceSummary,
+    profileRow,
   });
 
   await updateLabReportWithParseStatusFallback(
@@ -588,9 +730,11 @@ export async function processLabReportUpload(
   });
 
   await persistLabExtraction(admin, { labReportId: input.labReportId, ocr });
+  const profileRow = await fetchProfileRowForLabReport(admin, input.labReportId)
   const normalizedBiomarkers = await persistBiomarkers(admin, {
     labReportId: input.labReportId,
     biomarkers: ocr.biomarkers_detected || [],
+    profileRow,
   });
 
   await updateLabReportWithParseStatusFallback(

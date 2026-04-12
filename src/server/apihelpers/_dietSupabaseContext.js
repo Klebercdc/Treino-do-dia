@@ -169,7 +169,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
       .eq('active', true);
     var labReportsQuery = adminClient
       .from('lab_reports')
-      .select('id,parsed,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,clinical_flags,critical_flags,created_at,processed_at')
+      .select('id,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,created_at,processed_at')
       .eq('user_id', userId)
       .eq('is_valid', true)
       .order('created_at', { ascending: false })
@@ -208,7 +208,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
 
         return {
           id: d.id || null,
-          parsed: d.parsed || null,
+          parsed: null,
           biomarkers: biomarkers,
           healthProfile: healthProfile,
           scores: scores,
@@ -216,7 +216,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
           confidence: Number(d.confidence || 0),
           confidenceSummary: d.confidence_summary || null,
           isValid: Boolean(d.is_valid),
-          mode: 'clinical',
+          mode: criticalFlags.length || clinicalFlags.length ? 'clinical' : 'standard',
           clinicalFlags: clinicalFlags,
           criticalFlags: criticalFlags,
           createdAt: d.created_at || null,

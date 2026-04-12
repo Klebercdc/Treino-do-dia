@@ -13,6 +13,36 @@ export interface BiomarkerEntry {
   flag: 'low' | 'high' | 'normal' | null
   source_line: string | null
   confidence: number | null
+  reference_text_raw?: string | null
+  normalized_reference?: NormalizedReference | null
+  lab_flag?: 'low' | 'high' | 'normal' | null
+  context_flag?: string | null
+  interpretation_mode?: HormoneContextType | null
+  monitor_priority?: 'low' | 'medium' | 'high' | null
+  safety_relevance?: boolean | null
+  feedback_summary?: string | null
+  source_reference_kind?: string | null
+}
+
+export type HormoneContextType = 'natural' | 'trt' | 'assisted' | 'unknown'
+
+export interface HormoneContextProfile {
+  uses_exogenous_hormones: boolean
+  hormone_context_type: HormoneContextType
+  declared_compounds: string[]
+  last_administration_at: string | null
+  monitoring_mode: 'natural' | 'assisted'
+}
+
+export interface NormalizedReference {
+  kind: 'range' | 'less_than' | 'greater_than' | 'text'
+  min: number | null
+  max: number | null
+  raw_text: string
+  matched_by: 'sex_age' | 'sex' | 'age' | 'adult' | 'generic' | 'ocr_numeric' | 'text_only'
+  sex: 'male' | 'female' | 'any'
+  min_age: number | null
+  max_age: number | null
 }
 
 // ---------------------------------------------------------------------------
@@ -54,8 +84,12 @@ export interface ParsedLabReport {
   // Hormonal
   testosterone_total: number | null
   testosterone_free: number | null
+  lh: number | null
+  fsh: number | null
   shbg: number | null
   estradiol: number | null
+  dht: number | null
+  prolactin: number | null
   cortisol: number | null
   dhea_s: number | null
   // Inflammation
@@ -159,6 +193,9 @@ export interface StoredLabContext {
   clinicalFlags: string[]
   criticalFlags: string[]
   healthProfile?: HealthPerformanceProfile | null
+  markerInterpretations?: BiomarkerEntry[]
+  interpretationSummary?: string | null
+  hormoneContext?: HormoneContextProfile | null
 }
 
 export type LabMarkerTrendStatus =

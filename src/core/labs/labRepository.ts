@@ -22,13 +22,13 @@ const EXTENSION_TO_MIME: Record<string, string> = {
 
 type LabReportRow = {
   id: unknown
-  parsed: unknown
+  parsed?: unknown
   normalized_payload: unknown
   ai_insights: unknown
-  confidence: unknown
+  confidence?: unknown
   is_valid: unknown
-  clinical_flags: unknown
-  critical_flags: unknown
+  clinical_flags?: unknown
+  critical_flags?: unknown
   created_at: unknown
   processed_at: unknown
 }
@@ -57,26 +57,42 @@ function extractBiomarkers(normalizedPayload: Record<string, unknown> | null): B
   const raw = normalizedPayload?.biomarkers
   if (!Array.isArray(raw)) return []
 
-  return raw
-    .map((item) => {
-      const row = asRecord(item)
-      if (!row) return null
+  const biomarkers: BiomarkerEntry[] = []
+  for (const item of raw) {
+    const row = asRecord(item)
+    if (!row) continue
 
-      return {
-        marker_key: String(row.marker_key ?? row.marker ?? row.name ?? "").trim().toLowerCase(),
-        marker_name: String(row.marker_name ?? row.name ?? row.marker_key ?? "Marcador").trim(),
-        value_numeric: toNullableNumber(row.value_numeric),
-        value_text: row.value_text == null ? null : String(row.value_text),
-        unit: row.unit == null ? null : String(row.unit),
-        reference_min: toNullableNumber(row.reference_min),
-        reference_max: toNullableNumber(row.reference_max),
-        reference_text: row.reference_text == null ? null : String(row.reference_text),
-        flag: row.flag === "low" || row.flag === "high" || row.flag === "normal" ? row.flag : null,
-        source_line: row.source_line == null ? null : String(row.source_line),
-        confidence: toNullableNumber(row.confidence),
-      } satisfies BiomarkerEntry
-    })
-    .filter((item): item is BiomarkerEntry => Boolean(item && item.marker_key))
+    const biomarker: BiomarkerEntry = {
+      marker_key: String(row.marker_key ?? row.marker ?? row.name ?? "").trim().toLowerCase(),
+      marker_name: String(row.marker_name ?? row.name ?? row.marker_key ?? "Marcador").trim(),
+      value_numeric: toNullableNumber(row.value_numeric),
+      value_text: row.value_text == null ? null : String(row.value_text),
+      unit: row.unit == null ? null : String(row.unit),
+      reference_min: toNullableNumber(row.reference_min),
+      reference_max: toNullableNumber(row.reference_max),
+      reference_text: row.reference_text == null ? null : String(row.reference_text),
+      flag: row.flag === "low" || row.flag === "high" || row.flag === "normal" ? row.flag : null,
+      source_line: row.source_line == null ? null : String(row.source_line),
+      confidence: toNullableNumber(row.confidence),
+      reference_text_raw: row.reference_text_raw == null ? null : String(row.reference_text_raw),
+      normalized_reference: asRecord(row.normalized_reference) as BiomarkerEntry["normalized_reference"],
+      lab_flag: row.lab_flag === "low" || row.lab_flag === "high" || row.lab_flag === "normal" ? row.lab_flag : null,
+      context_flag: row.context_flag == null ? null : String(row.context_flag),
+      interpretation_mode: row.interpretation_mode === "natural" || row.interpretation_mode === "trt" || row.interpretation_mode === "assisted" || row.interpretation_mode === "unknown"
+        ? row.interpretation_mode
+        : null,
+      monitor_priority: row.monitor_priority === "low" || row.monitor_priority === "medium" || row.monitor_priority === "high"
+        ? row.monitor_priority
+        : null,
+      safety_relevance: typeof row.safety_relevance === "boolean" ? row.safety_relevance : null,
+      feedback_summary: row.feedback_summary == null ? null : String(row.feedback_summary),
+      source_reference_kind: row.source_reference_kind == null ? null : String(row.source_reference_kind),
+    }
+
+    if (biomarker.marker_key) biomarkers.push(biomarker)
+  }
+
+  return biomarkers
 }
 
 function resolveHealthProfile(
@@ -97,6 +113,7 @@ function mapStoredLabContext(data: LabReportRow): StoredLabContext {
   const fallbackClinical = biomarkers.length ? applyClinicalRulesFromBiomarkers(biomarkers) : applyClinicalRules(parsed)
   const clinicalFlags = normalizeStringArray(aiInsights?.clinical_flags ?? data.clinical_flags)
   const criticalFlags = normalizeStringArray(aiInsights?.critical_flags ?? data.critical_flags)
+  const insightHormoneContext = asRecord(aiInsights?.hormone_context)
 
   return {
     id: String(data.id),
@@ -112,6 +129,17 @@ function mapStoredLabContext(data: LabReportRow): StoredLabContext {
     clinicalFlags: clinicalFlags.length ? clinicalFlags : fallbackClinical.clinicalFlags,
     criticalFlags: criticalFlags.length ? criticalFlags : fallbackClinical.criticalFlags,
     healthProfile: resolveHealthProfile(aiInsights, biomarkers),
+    markerInterpretations: biomarkers,
+    interpretationSummary: aiInsights?.contextual_summary == null ? null : String(aiInsights.contextual_summary),
+    hormoneContext: insightHormoneContext ? {
+      uses_exogenous_hormones: Boolean(insightHormoneContext.uses_exogenous_hormones),
+      hormone_context_type: insightHormoneContext.hormone_context_type === "natural" || insightHormoneContext.hormone_context_type === "trt" || insightHormoneContext.hormone_context_type === "assisted" || insightHormoneContext.hormone_context_type === "unknown"
+        ? insightHormoneContext.hormone_context_type
+        : "unknown",
+      declared_compounds: normalizeStringArray(insightHormoneContext.declared_compounds),
+      last_administration_at: typeof insightHormoneContext.last_administration_at === "string" ? insightHormoneContext.last_administration_at : null,
+      monitoring_mode: insightHormoneContext.monitoring_mode === "assisted" ? "assisted" : "natural",
+    } : null,
   }
 }
 
@@ -122,7 +150,7 @@ async function listValidLabReports(
 ): Promise<LabReportRow[]> {
   const { data, error } = await admin
     .from("lab_reports")
-    .select("id, parsed, normalized_payload, ai_insights, confidence, is_valid, clinical_flags, critical_flags, created_at, processed_at")
+    .select("id, normalized_payload, ai_insights, is_valid, created_at, processed_at")
     .eq("user_id", userId)
     .eq("is_valid", true)
     .order("processed_at", { ascending: false, nullsFirst: false })

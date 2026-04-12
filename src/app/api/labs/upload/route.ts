@@ -4,7 +4,7 @@ import { requireBearerAuth } from '../../_shared/requireBearerAuth';
 import { createAdminSupabaseClient } from '../../../../lib/supabase/admin';
 import { logger } from '../../../../lib/utils/logger';
 import { LAB_REPORTS_BUCKET, resolveAllowedLabMimeType, uploadLabReportFile } from '../../../../core/labs/labRepository';
-import { createLabReportRecord } from '../../../../server/internal/labReports/service';
+import { createLabReportRecord, dispatchLabReportToEdgeBestEffort } from '../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
       storagePath: uploaded.path,
       fileName: file.name,
       mimeType: normalizedMimeType,
+    });
+
+    await dispatchLabReportToEdgeBestEffort(admin, {
+      labReportId: created.id,
+      source: 'app_router_upload_created',
     });
 
     logger.info('labs_upload_enqueued_via_supabase', {

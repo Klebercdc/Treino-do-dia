@@ -46,6 +46,7 @@ export class KroniaChatService {
     }
 
     let labHealthProfile = null
+    let labLatestContext = null
     let labLongitudinalContext = null
     if (input.userId && this.adminClient) {
       try {
@@ -53,6 +54,7 @@ export class KroniaChatService {
           getLatestValidLabReport(this.adminClient, input.userId),
           getUserLabLongitudinalContext(this.adminClient, input.userId),
         ])
+        labLatestContext = latestLabReport ?? null
         labHealthProfile = latestLabReport?.healthProfile ?? null
         labLongitudinalContext = longitudinalContext
       } catch {
@@ -66,6 +68,7 @@ export class KroniaChatService {
       history: input.history,
       userProfile: input.userProfile,
       labHealthProfile,
+      labLatestContext,
       labLongitudinalContext,
       retrievedContext,
       sourceOfTruthMode: retrievedContext.length ? "rag_required" : "rag_preferred",

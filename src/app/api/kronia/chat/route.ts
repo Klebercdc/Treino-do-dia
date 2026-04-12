@@ -9,6 +9,7 @@ import { createEmbeddingProvider } from "../../../../ai/embeddings"
 import { createClient } from "@supabase/supabase-js"
 import { AI_ENV } from "../../../../ai/env"
 import type { ChatMessage, UserProfile } from "../../../../ai/types"
+import { extractHormoneContextFromProfileRow } from "../../../../core/labs/labInterpretation"
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -48,6 +49,7 @@ function mapProfileRowToUserProfile(userId: string, profileRow: Record<string, u
   const config = profileRow.config && typeof profileRow.config === "object"
     ? (profileRow.config as Record<string, unknown>)
     : {}
+  const hormoneContext = extractHormoneContextFromProfileRow(profileRow)
 
   return {
     id: userId,
@@ -63,6 +65,11 @@ function mapProfileRowToUserProfile(userId: string, profileRow: Record<string, u
     lesoes: toStringArray(profileRow.lesoes ?? config.lesoes ?? config.injuries),
     rotina: firstString(profileRow.rotina, profileRow.activity_level, config.rotina, config.activity_level),
     observacoes: firstString(profileRow.observacoes, profileRow.clinical_notes, config.observacoes, config.clinical_notes),
+    usesExogenousHormones: hormoneContext.uses_exogenous_hormones,
+    hormoneContextType: hormoneContext.hormone_context_type,
+    declaredCompounds: hormoneContext.declared_compounds,
+    lastAdministrationAt: hormoneContext.last_administration_at,
+    monitoringMode: hormoneContext.monitoring_mode,
   }
 }
 

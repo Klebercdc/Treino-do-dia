@@ -1,6 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { BiomarkerEntry } from '../../../src/core/labs/labTypes.ts';
 import { buildHealthPerformanceProfile } from '../../../src/core/labs/labHealthProfile.ts';
+import {
+  enrichBiomarkerEntries,
+  extractHormoneContextFromProfileRow,
+  summarizeMarkerInterpretations,
+} from '../../../src/core/labs/labInterpretation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -12,6 +17,7 @@ const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('AI_CHAT_MODEL') ?? 'llama-3.3-70b-versatile';
 const LAB_REPORTS_BUCKET = 'lab-reports';
 const STALE_MINUTES = 20;
+const UPLOADED_RECOVERY_MINUTES = 3;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY obrigatórias para lab-report-orchestrator');
@@ -33,6 +39,15 @@ type Biomarker = {
   flag: string | null;
   source_line: string | null;
   confidence: number | null;
+  reference_text_raw?: string | null;
+  normalized_reference?: Record<string, unknown> | null;
+  lab_flag?: string | null;
+  context_flag?: string | null;
+  interpretation_mode?: string | null;
+  monitor_priority?: string | null;
+  safety_relevance?: boolean | null;
+  feedback_summary?: string | null;
+  source_reference_kind?: string | null;
 };
 
 type OcrResponse = {
@@ -125,8 +140,8 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
   const message = 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
-  if (code !== 'PGRST205') return false;
-  return new RegExp(`table ['"]?public\\.${table}['"]?`, 'i').test(message);
+  return (code === 'PGRST205' || code === '42P01' || !code)
+    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
 }
 
 function buildNormalizedPayload(ocr: OcrResponse, biomarkers: Biomarker[]) {
@@ -199,6 +214,25 @@ async function fetchLabReport(labReportId: string) {
   return data;
 }
 
+async function fetchProfileRow(userId: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[lab-report-orchestrator] profile lookup failed', {
+      userId,
+      code: error.code,
+      message: error.message,
+    });
+    return null;
+  }
+
+  return data as Record<string, unknown> | null;
+}
+
 async function acquireEdgeLock(labReportId: string, expectedUpdatedAt: string | null, source: string) {
   const { data, error } = await supabase.rpc('acquire_lab_report_edge_lock', {
     p_lab_report_id: labReportId,
@@ -247,7 +281,7 @@ async function callOcr(input: { sourceId: string; mimeType: string; fileUrl: str
   }
 }
 
-function cleanBiomarkers(items: Array<Record<string, unknown>>): Biomarker[] {
+function cleanBiomarkers(items: Array<Record<string, unknown>>, profileRow: Record<string, unknown> | null): Biomarker[] {
   const mapped = (items ?? []).map((item) => {
     const markerKey = String(item.marker_key ?? item.marker ?? item.name ?? '').trim().toLowerCase();
     const markerName = String(item.marker_name ?? item.name ?? markerKey ?? 'Marcador');
@@ -283,7 +317,14 @@ function cleanBiomarkers(items: Array<Record<string, unknown>>): Biomarker[] {
       if (newConf >= oldConf) seen.set(dedupeKey, row);
     }
   }
-  return Array.from(seen.values());
+  return enrichBiomarkerEntries(
+    Array.from(seen.values()).map((row) => ({
+      ...row,
+      reference_text_raw: row.reference_text,
+      lab_flag: row.flag === 'low' || row.flag === 'high' || row.flag === 'normal' ? row.flag : null,
+    })),
+    profileRow,
+  ) as Biomarker[];
 }
 
 async function persistExtraction(labReportId: string, ocr: OcrResponse) {
@@ -346,6 +387,17 @@ function toBiomarkerEntries(biomarkers: Biomarker[]): BiomarkerEntry[] {
     flag: item.flag === 'low' || item.flag === 'high' || item.flag === 'normal' ? item.flag : null,
     source_line: item.source_line != null ? String(item.source_line) : null,
     confidence: toNumber(item.confidence),
+    reference_text_raw: item.reference_text_raw != null ? String(item.reference_text_raw) : null,
+    normalized_reference: item.normalized_reference && typeof item.normalized_reference === 'object'
+      ? item.normalized_reference as Record<string, unknown>
+      : null,
+    lab_flag: item.lab_flag === 'low' || item.lab_flag === 'high' || item.lab_flag === 'normal' ? item.lab_flag : null,
+    context_flag: item.context_flag != null ? String(item.context_flag) : null,
+    interpretation_mode: item.interpretation_mode != null ? String(item.interpretation_mode) : null,
+    monitor_priority: item.monitor_priority != null ? String(item.monitor_priority) : null,
+    safety_relevance: typeof item.safety_relevance === 'boolean' ? item.safety_relevance : null,
+    feedback_summary: item.feedback_summary != null ? String(item.feedback_summary) : null,
+    source_reference_kind: item.source_reference_kind != null ? String(item.source_reference_kind) : null,
   })).filter((row) => row.marker_key);
 }
 
@@ -495,10 +547,16 @@ function normalizeScores(value: unknown, fallback: Record<string, number>) {
   };
 }
 
-function buildCanonicalAiInsights(biomarkers: Biomarker[], rawInsights: Record<string, unknown>) {
+function buildCanonicalAiInsights(
+  biomarkers: Biomarker[],
+  rawInsights: Record<string, unknown>,
+  profileRow: Record<string, unknown> | null,
+) {
   const typedBiomarkers = toBiomarkerEntries(biomarkers);
   const healthProfile = buildHealthPerformanceProfile(typedBiomarkers);
   const clinical = applyClinicalRulesFromBiomarkers(typedBiomarkers);
+  const hormoneContext = extractHormoneContextFromProfileRow(profileRow);
+  const contextualSummary = summarizeMarkerInterpretations(typedBiomarkers);
 
   const fallbackTraining = healthProfile.training_readiness.level === 'critical'
     ? ['Sinais críticos detectados: reduzir volume e intensidade imediatamente; avaliação médica recomendada.']
@@ -537,6 +595,9 @@ function buildCanonicalAiInsights(biomarkers: Biomarker[], rawInsights: Record<s
     generation_mode: String(rawInsights.generation_mode ?? 'canonical_health_profile'),
     fallback_reason: rawInsights.fallback_reason != null ? String(rawInsights.fallback_reason) : null,
     summary,
+    hormone_context: hormoneContext,
+    contextual_summary: contextualSummary,
+    marker_interpretations: typedBiomarkers,
     scores: normalizeScores(rawInsights.scores, healthProfile.scores),
     health_profile: {
       metabolic_health: healthProfile.metabolic_health,
@@ -620,7 +681,7 @@ function extractJsonObject(text: string) {
   return JSON.parse(text.slice(first, last + 1));
 }
 
-async function callGroqInsights(input: { biomarkers: Biomarker[]; confidenceSummary: Record<string, unknown> }) {
+async function callGroqInsights(input: { biomarkers: Biomarker[]; confidenceSummary: Record<string, unknown>; profileRow: Record<string, unknown> | null }) {
   const biomarkerPayload = input.biomarkers.map((item) => ({
     marker_key: item.marker_key,
     marker_name: item.marker_name,
@@ -631,7 +692,11 @@ async function callGroqInsights(input: { biomarkers: Biomarker[]; confidenceSumm
     reference_max: item.reference_max,
     flag: item.flag,
     confidence: item.confidence,
+    lab_flag: item.lab_flag ?? item.flag,
+    context_flag: item.context_flag,
+    feedback_summary: item.feedback_summary,
   }));
+  const hormoneContext = extractHormoneContextFromProfileRow(input.profileRow);
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -651,6 +716,7 @@ async function callGroqInsights(input: { biomarkers: Biomarker[]; confidenceSumm
             'Use APENAS os biomarcadores estruturados recebidos.',
             'Nunca invente biomarcadores, valores, ranges ou diagnósticos.',
             'Sem ler PDF bruto. Sem mencionar OCR. Sem citar ausência de dados não presentes.',
+            'Use a referência laboratorial como fonte primária e o contexto hormonal/esportivo apenas como camada secundária de interpretação.',
             'Retorne JSON estrito com as chaves: summary, scores, training_adjustments, nutrition_adjustments, supplementation_notes, recovery_signals, safety_notes, follow_up_actions.',
             'scores deve conter metabolic_score, recovery_score, hematologic_score, hormonal_score, safety_score de 0 a 100.',
             'Todos os arrays devem conter textos curtos em português do Brasil.',
@@ -660,6 +726,7 @@ async function callGroqInsights(input: { biomarkers: Biomarker[]; confidenceSumm
         {
           role: 'user',
           content: JSON.stringify({
+            hormone_context: hormoneContext,
             confidence_summary: input.confidenceSummary,
             biomarkers: biomarkerPayload,
           }),
@@ -783,6 +850,7 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
   // Wrap the entire pipeline so that any crash after lock acquisition
   // always leaves the report in 'failed' — never stuck in 'processing'.
   try {
+    const profileRow = await fetchProfileRow(String(report.user_id));
     const signedUrl = await createSignedUrl(String(report.storage_bucket || LAB_REPORTS_BUCKET), String(report.storage_path || ''));
     const ocr = await callOcr({
       sourceId: input.labReportId,
@@ -791,7 +859,7 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
     });
 
     await persistExtraction(input.labReportId, ocr);
-    const biomarkers = cleanBiomarkers(ocr.biomarkers_detected || []);
+    const biomarkers = cleanBiomarkers(ocr.biomarkers_detected || [], profileRow);
     await persistBiomarkers(input.labReportId, biomarkers);
 
     const readiness = computeReadiness(ocr.confidence_summary || {}, biomarkers, ocr.warnings || []);
@@ -810,7 +878,7 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
     let fallback = false;
     try {
       if (!GROQ_API_KEY) throw new Error('missing_groq_api_key');
-      insights = await callGroqInsights({ biomarkers, confidenceSummary: ocr.confidence_summary || {} });
+      insights = await callGroqInsights({ biomarkers, confidenceSummary: ocr.confidence_summary || {}, profileRow });
     } catch (error) {
       fallback = true;
       insights = buildRuleBasedFallback(biomarkers, error instanceof Error ? error.message : 'groq_failed');
@@ -820,7 +888,7 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
       });
     }
 
-    const canonicalInsights = buildCanonicalAiInsights(biomarkers, insights);
+    const canonicalInsights = buildCanonicalAiInsights(biomarkers, insights, profileRow);
     await finalizeAnalyzed(input.labReportId, ocr, biomarkers, canonicalInsights, fallback);
     await logEvent(input.labReportId, 'analyzed', 'info', {
       dispatchSource: input.dispatchSource,
@@ -842,37 +910,32 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
 }
 
 async function dispatchWatchdog(limit: number, dispatchSource: string) {
-  const rowLimit = Math.max(1, Math.min(limit, 25));
-  const halfLimit = Math.ceil(rowLimit / 2);
-
-  // Reports stuck in 'processing' are stale after STALE_MINUTES (20 min).
-  const staleProcessingBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
-  // Reports stuck in 'uploaded' are stale after 5 min — enough time for the DB
-  // trigger (via pg_net) to have fired. If they're still 'uploaded' after that,
-  // the trigger dispatch failed silently and we must rescue them here.
-  const staleUploadedBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-  const [processingResult, uploadedResult] = await Promise.all([
-    supabase
-      .from('lab_reports')
-      .select('id,updated_at')
-      .eq('status', 'processing')
-      .lt('updated_at', staleProcessingBefore)
-      .order('updated_at', { ascending: true })
-      .limit(halfLimit),
+  const processingStaleBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString();
+  const uploadedRecoveryBefore = new Date(Date.now() - UPLOADED_RECOVERY_MINUTES * 60 * 1000).toISOString();
+  const cappedLimit = Math.max(1, Math.min(limit, 25));
+  const [uploadedResult, processingResult] = await Promise.all([
     supabase
       .from('lab_reports')
       .select('id,updated_at')
       .eq('status', 'uploaded')
-      .lt('updated_at', staleUploadedBefore)
+      .lt('updated_at', uploadedRecoveryBefore)
       .order('updated_at', { ascending: true })
-      .limit(halfLimit),
+      .limit(cappedLimit),
+    supabase
+      .from('lab_reports')
+      .select('id,updated_at')
+      .eq('status', 'processing')
+      .lt('updated_at', processingStaleBefore)
+      .order('updated_at', { ascending: true })
+      .limit(cappedLimit),
   ]);
 
-  if (processingResult.error) throw new Error(`Falha ao listar stale processing: ${processingResult.error.message}`);
-  if (uploadedResult.error) throw new Error(`Falha ao listar stale uploaded: ${uploadedResult.error.message}`);
+  if (uploadedResult.error) throw new Error(`Falha ao listar uploaded para recuperação: ${uploadedResult.error.message}`);
+  if (processingResult.error) throw new Error(`Falha ao listar processing preso: ${processingResult.error.message}`);
 
-  const data = [...(processingResult.data ?? []), ...(uploadedResult.data ?? [])];
+  const data = [...(uploadedResult.data ?? []), ...(processingResult.data ?? [])]
+    .sort((a, b) => String(a.updated_at ?? '').localeCompare(String(b.updated_at ?? '')))
+    .slice(0, cappedLimit);
 
   const baseUrl = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/lab-report-orchestrator`;
   const headers = {

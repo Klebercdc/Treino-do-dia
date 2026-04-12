@@ -7,7 +7,7 @@ import { LAB_REPORTS_BUCKET } from '../../../../../core/labs/labRepository';
 import {
   createLabReportRecord,
   deleteLabReportRecord,
-  enqueueLabReportProcessing,
+  dispatchLabReportToEdgeBestEffort,
 } from '../../../../../server/internal/labReports/service';
 
 export const runtime = 'nodejs';
@@ -89,18 +89,10 @@ export async function POST(req: NextRequest) {
     });
     createdLabReportId = created.id;
 
-    await enqueueLabReportProcessing(admin, created.id);
-
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      void fetch(new URL('/api/labs/process', req.url), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
-        body: JSON.stringify({ labReportId: created.id }),
-      })
-        .then((res) => { if (!res.ok) logger.warn('labs_register_dispatch_http_error', { httpStatus: res.status }); })
-        .catch((e) => { logger.warn('labs_register_dispatch_failed', { reason: e instanceof Error ? e.message : 'unknown' }); });
-    }
+    await dispatchLabReportToEdgeBestEffort(admin, {
+      labReportId: created.id,
+      source: 'app_router_register_uploaded',
+    });
 
     logger.info('labs_register_ok', { userId: auth.user.id, labReportId: created.id, mimeType });
     return NextResponse.json({ ok: true, labReportId: created.id, status: 'processing' });

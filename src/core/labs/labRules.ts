@@ -142,8 +142,12 @@ export function parsedFromBiomarkers(biomarkers: BiomarkerEntry[]): ParsedLabRep
     t4_free: get('t4_free'),
     testosterone_total: get('testosterone_total'),
     testosterone_free: get('testosterone_free'),
+    lh: get('lh'),
+    fsh: get('fsh'),
     shbg: get('shbg'),
     estradiol: get('estradiol'),
+    dht: get('dht'),
+    prolactin: get('prolactin'),
     cortisol: get('cortisol'),
     dhea_s: get('dhea_s'),
     crp: get('crp'),
@@ -163,7 +167,45 @@ export function parsedFromBiomarkers(biomarkers: BiomarkerEntry[]): ParsedLabRep
  */
 export function applyClinicalRulesFromBiomarkers(biomarkers: BiomarkerEntry[]): ClinicalRuleResult {
   const parsed = parsedFromBiomarkers(biomarkers)
-  return applyClinicalRules(parsed)
+  const fallback = applyClinicalRules(parsed)
+  const byKey = new Map(biomarkers.map((item) => [item.marker_key, item] as const))
+  const clinicalFlags = new Set<string>(fallback.clinicalFlags)
+  const criticalFlags = new Set<string>(fallback.criticalFlags)
+
+  const labFlagOf = (key: string) => byKey.get(key)?.lab_flag ?? byKey.get(key)?.flag ?? null
+  const contextFlagOf = (key: string) => byKey.get(key)?.context_flag ?? null
+
+  if (labFlagOf('vitamin_d') !== 'low') {
+    clinicalFlags.delete('low_vitamin_d')
+  }
+
+  if (labFlagOf('testosterone_total') === 'low') {
+    clinicalFlags.add('low_testosterone')
+  } else {
+    clinicalFlags.delete('low_testosterone')
+  }
+
+  if (labFlagOf('estradiol') === 'high') clinicalFlags.add('high_estradiol')
+  if (labFlagOf('shbg') === 'low') clinicalFlags.add('low_shbg')
+  if (labFlagOf('shbg') === 'high') clinicalFlags.add('high_shbg')
+
+  if (labFlagOf('lh') === 'low' && contextFlagOf('lh') !== 'expected_axis_suppression_under_declared_testosterone_use') {
+    clinicalFlags.add('low_lh')
+  }
+  if (labFlagOf('fsh') === 'low' && contextFlagOf('fsh') !== 'expected_axis_suppression_under_declared_testosterone_use') {
+    clinicalFlags.add('low_fsh')
+  }
+
+  if (contextFlagOf('testosterone_total') === 'unexpected_for_declared_natural_context') {
+    clinicalFlags.add('unexpected_testosterone_for_declared_context')
+  }
+
+  const mode = clinicalFlags.size > 0 || criticalFlags.size > 0 ? 'clinical' : 'standard'
+  return {
+    mode,
+    clinicalFlags: Array.from(clinicalFlags),
+    criticalFlags: Array.from(criticalFlags),
+  }
 }
 
 /**
