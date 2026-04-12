@@ -396,19 +396,45 @@ function handleRegister(req, res) {
       });
     }
 
-    var dispatch = await admin.rpc('dispatch_lab_report_to_edge', {
+    // Camada 1: disparo direto para a Edge Function via HTTP (não depende de pg_net/vault).
+    // O DB trigger (trg_lab_reports_dispatch_uploaded) e o watchdog pg_cron são backups.
+    var edgeUrl = readSupabaseUrl().replace(/\/$/, '') + '/functions/v1/lab-report-orchestrator';
+    var edgeKey = readSupabaseServiceKey();
+    if (edgeUrl && edgeKey) {
+      fetch(edgeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + edgeKey,
+        },
+        body: JSON.stringify({
+          labReportId: updated.data.id,
+          dispatchSource: 'register_direct_dispatch',
+        }),
+      }).catch(function(edgeErr) {
+        console.warn('[labs/register] direct edge dispatch failed (non-blocking):', edgeErr && edgeErr.message);
+      });
+      console.log('[labs/register] direct edge dispatch initiated', { labReportId: updated.data.id });
+    } else {
+      console.warn('[labs/register] direct edge dispatch skipped: missing supabase url or service key');
+    }
+
+    // Camada 2: RPC do BD cria audit trail em pipeline_events e dispara via pg_net.
+    admin.rpc('dispatch_lab_report_to_edge', {
       p_lab_report_id: labReportId,
       p_source: 'api_register_uploaded',
       p_expected_updated_at: null
+    }).then(function(dispatch) {
+      if (dispatch.error) {
+        console.warn('[labs/register] dispatch rpc failed (non-blocking)', {
+          labReportId: labReportId,
+          errorMessage: dispatch.error.message,
+          errorCode: dispatch.error.code,
+        });
+      }
+    }).catch(function(rpcErr) {
+      console.warn('[labs/register] dispatch rpc exception (non-blocking):', rpcErr && rpcErr.message);
     });
-    if (dispatch.error) {
-      console.warn('[labs/register] dispatch rpc failed after upload confirmation', {
-        labReportId: labReportId,
-        errorMessage: dispatch.error.message,
-        errorCode: dispatch.error.code,
-        errorHint: dispatch.error.hint
-      });
-    }
 
     return res.status(200).json({ ok: true, labReportId: updated.data.id, status: 'processing' });
   });
