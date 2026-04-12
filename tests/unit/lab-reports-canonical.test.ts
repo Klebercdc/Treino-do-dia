@@ -66,8 +66,8 @@ test('gate clínico libera apenas caso com referência resolvida e confiança ad
   assert.equal(decision.reviewStatus, 'released')
 })
 
-test('migration 045 adiciona status canônico, review_status e snapshots append-only', () => {
-  const source = readFileSync('supabase/migrations/045_lab_reports_canonical_clinical_consolidation.sql', 'utf-8')
+test('migration 046 adiciona status canônico, review_status e snapshots append-only', () => {
+  const source = readFileSync('supabase/migrations/046_lab_reports_canonical_clinical_consolidation.sql', 'utf-8')
   assert.match(source, /canonical_status/)
   assert.match(source, /review_status/)
   assert.match(source, /machine_snapshot/)
