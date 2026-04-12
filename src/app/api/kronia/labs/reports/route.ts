@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (ids.length) {
       const { data: biomarkers, error: biomarkersError } = await admin
         .from('lab_report_biomarkers')
-        .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
+        .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,reference_text,reference_text_raw,normalized_reference,flag,lab_flag,context_flag,interpretation_mode,monitor_priority,safety_relevance,feedback_summary,source_reference_kind,confidence,created_at')
         .in('lab_report_id', ids)
         .order('created_at', { ascending: true });
 
