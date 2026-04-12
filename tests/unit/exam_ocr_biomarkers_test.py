@@ -679,6 +679,16 @@ Mulheres 21 a 73 anos: 10 a 75 ng/dL
         # But reference_text should still capture the range
         self.assertIsNotNone(by_key['testosterone_total']['reference_text'])
 
+    def test_ca_19_9_is_not_misclassified_as_calcium(self):
+        snippet = """
+CA 19-9
+Resultado: 4,5 U/mL
+Valor de referência: Inferior a 37,0 U/mL
+        """
+        biomarkers = parse_biomarkers([], raw_text=snippet)
+        keys = {item['marker_key'] for item in biomarkers}
+        self.assertNotIn('calcium', keys)
+
 
 class ExamOcrExtractPayloadIntegrationTest(unittest.TestCase):
     """Integration: extract_payload service function uses parser correctly."""

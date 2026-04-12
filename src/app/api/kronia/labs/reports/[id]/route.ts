@@ -91,16 +91,25 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     const fallbackExtractions = buildFallbackExtractions(report as Record<string, unknown>, id);
     const fallbackBiomarkers = extractBiomarkersFromPayload(report as Record<string, unknown>);
+    const reviewStatus = String((report as { review_status?: unknown }).review_status || '');
+    const releasedSnapshot = (report as { released_snapshot?: unknown }).released_snapshot || null;
+    const safeReport = {
+      ...report,
+      machine_snapshot: reviewStatus === 'released' ? (report as { machine_snapshot?: unknown }).machine_snapshot || null : null,
+      reviewed_snapshot: reviewStatus === 'released' ? (report as { reviewed_snapshot?: unknown }).reviewed_snapshot || null : null,
+      released_snapshot: releasedSnapshot,
+    };
 
     return NextResponse.json({
       ok: true,
       report: {
-        ...report,
+        ...safeReport,
         clinicalFlags: normalizeStringArray((report.ai_insights as { clinical_flags?: unknown[] } | null)?.clinical_flags || report.clinical_flags),
         criticalFlags: normalizeStringArray((report.ai_insights as { critical_flags?: unknown[] } | null)?.critical_flags || report.critical_flags),
       },
       extractions: Array.isArray(extractions.data) && extractions.data.length > 0 ? extractions.data : fallbackExtractions,
       biomarkers: Array.isArray(biomarkers.data) && biomarkers.data.length > 0 ? biomarkers.data : fallbackBiomarkers,
+      releasedSnapshot,
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown';

@@ -7,6 +7,12 @@ import {
   extractHormoneContextFromProfileRow,
   summarizeMarkerInterpretations,
 } from '../../../core/labs/labInterpretation';
+import {
+  buildNormalizedPayload,
+  isMissingOptionalRelation as isMissingOptionalTable,
+  persistCanonicalMachineResult,
+  updateLabReportWithParseStatusFallback,
+} from './canonical';
 
 const DEFAULT_ENGINE = 'exam_ocr_python';
 const REVIEW_CONFIDENCE_THRESHOLD = 0.6;
@@ -29,51 +35,7 @@ export interface ExamOcrResponse {
   metadata: Record<string, unknown>;
 }
 
-type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
-type LabReportMutableFields = Record<string, unknown>;
 type ProfileRow = Record<string, unknown> | null;
-
-function isMissingOptionalTable(error: unknown, table: OptionalTableName): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code || '') : '';
-  const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
-  return (code === 'PGRST205' || code === '42P01' || !code)
-    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
-}
-
-function isParseStatusConstraintViolation(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code || '') : '';
-  const message = 'message' in error ? String((error as { message?: unknown }).message || '') : '';
-  return code === '23514' && /lab_reports_parse_status_check/i.test(message);
-}
-
-async function updateLabReportWithParseStatusFallback(
-  admin: SupabaseClient,
-  labReportId: string,
-  values: LabReportMutableFields,
-  failureLabel: string,
-): Promise<void> {
-  const first = await admin
-    .from('lab_reports')
-    .update(values)
-    .eq('id', labReportId);
-
-  if (!isParseStatusConstraintViolation(first.error)) {
-    if (first.error) throw new Error(`${failureLabel}: ${first.error.message}`);
-    return;
-  }
-
-  const fallbackValues = { ...values };
-  delete fallbackValues.parse_status;
-
-  const fallback = await admin
-    .from('lab_reports')
-    .update(fallbackValues)
-    .eq('id', labReportId);
-
-  if (fallback.error) throw new Error(`${failureLabel}: ${fallback.error.message}`);
-}
 
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -461,6 +423,7 @@ export async function persistBiomarkers(
   if (deduped.length) {
     const { error } = await admin.from('lab_report_biomarkers').insert(deduped.map((item) => ({
       ...item,
+      extraction_confidence: item.confidence ?? null,
       normalized_reference: item.normalized_reference ?? null,
       reference_text_raw: item.reference_text_raw ?? null,
       lab_flag: item.lab_flag ?? item.flag ?? null,
@@ -470,6 +433,12 @@ export async function persistBiomarkers(
       safety_relevance: item.safety_relevance ?? null,
       feedback_summary: item.feedback_summary ?? null,
       source_reference_kind: item.source_reference_kind ?? null,
+      review_status: 'machine_only',
+      reviewed_value_override: null,
+      reviewed_reference_override: null,
+      reviewer_note: null,
+      released_value: null,
+      released_flag: null,
     })));
     if (error && !isMissingOptionalTable(error, 'lab_report_biomarkers')) {
       throw new Error(`Falha ao persistir biomarcadores: ${error.message}`);
@@ -748,42 +717,38 @@ export async function processLabReportUpload(
       parse_status: 'processed',
       extraction_mode: ocr.extraction_mode,
       source_type: ocr.source_type,
-      normalized_payload: {
-        biomarkers: normalizedBiomarkers,
-        extraction: {
-          engine: DEFAULT_ENGINE,
-          extraction_mode: ocr.extraction_mode,
-          raw_text: ocr.raw_text || null,
-          pages: ocr.pages || [],
-          blocks: ocr.blocks || [],
-          rows: ocr.rows || [],
-          warnings: ocr.warnings || [],
-          metadata: ocr.metadata || {},
-          confidence_summary: ocr.confidence_summary || {},
-        },
-      },
+      normalized_payload: buildNormalizedPayload(ocr, normalizedBiomarkers),
       confidence_summary: ocr.confidence_summary || {},
       processing_error: null,
     },
     'Falha ao atualizar lab_report após OCR',
   );
 
-  const analysis = await analyzeLabReportForUserContext(admin, {
-    labReportId: input.labReportId,
+  const aiInsights = await generateExamInsights({
     biomarkers: normalizedBiomarkers,
     confidenceSummary: ocr.confidence_summary || {},
+    profileRow,
+  });
+  const finalized = await persistCanonicalMachineResult({
+    admin,
+    labReportId: input.labReportId,
+    ocr,
+    biomarkers: normalizedBiomarkers,
+    aiInsights,
+    releasedByRule: 'auto_machine_release',
   });
 
   logger.info('labs_pipeline_finished', {
     labReportId: input.labReportId,
-    status: analysis.status,
+    status: finalized.decision.legacyStatus,
+    canonicalStatus: finalized.decision.canonicalStatus,
     extractionMode: ocr.extraction_mode,
     sourceType: ocr.source_type,
     biomarkersCount: normalizedBiomarkers.length,
     durationMs: Date.now() - startedAt,
   });
 
-  return { status: analysis.status, biomarkersCount: normalizedBiomarkers.length };
+  return { status: finalized.decision.legacyStatus, biomarkersCount: normalizedBiomarkers.length };
 }
 
 export async function processLabReportUploadSafely(

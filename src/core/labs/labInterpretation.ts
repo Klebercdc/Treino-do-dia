@@ -17,6 +17,7 @@ type ReferenceCandidate = {
 const RANGE_RE = /(-?\d+(?:[.,]\d+)?)\s*(?:a|até|-)\s*(-?\d+(?:[.,]\d+)?)/i
 const LESS_THAN_RE = /(?:inferior|menor|abaixo|less than|below)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
 const GREATER_THAN_RE = /(?:superior|maior|acima|greater than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
+const PHASE_REFERENCE_RE = /\b(folicular|lutea|luteal|ovulatoria|ovulat|gestante|gravidez|trimestre|menopausa|pos-menopausa|pós-menopausa|fase)\b/i
 
 const HORMONE_MARKERS = new Set([
   'testosterone_total',
@@ -316,13 +317,68 @@ function selectNormalizedReference(
     .map((segment) => parseReferenceCandidate(segment))
     .filter((candidate): candidate is ReferenceCandidate => Boolean(candidate))
 
+  const hasPhaseSpecificReference = Boolean(referenceTextRaw && PHASE_REFERENCE_RE.test(referenceTextRaw))
+  const hasSexSpecificReference = candidates.some((candidate) => candidate.sex !== 'any')
+  const hasAgeSpecificReference = candidates.some((candidate) => candidate.minAge != null || candidate.maxAge != null)
+
+  if (
+    referenceTextRaw
+    && (
+      hasPhaseSpecificReference
+      || (hasSexSpecificReference && input.sex !== 'male' && input.sex !== 'female')
+      || (hasAgeSpecificReference && input.age == null)
+    )
+  ) {
+    return {
+      normalizedReference: {
+        kind: 'text',
+        min: null,
+        max: null,
+        raw_text: referenceTextRaw,
+        matched_by: 'ambiguous',
+        sex: 'any',
+        min_age: null,
+        max_age: null,
+      },
+      referenceMin: null,
+      referenceMax: null,
+      referenceTextRaw,
+      labFlag: biomarker.flag ?? biomarker.lab_flag ?? null,
+      sourceReferenceKind: 'ambiguous',
+    }
+  }
+
   let selected: ReferenceCandidate | null = null
   let selectedScore = Number.NEGATIVE_INFINITY
+  let selectedCount = 0
   for (const candidate of candidates) {
     const score = normalizeCandidateMatch(candidate, input)
     if (score > selectedScore) {
       selected = candidate
       selectedScore = score
+      selectedCount = 1
+    } else if (score === selectedScore && score !== Number.NEGATIVE_INFINITY) {
+      selectedCount += 1
+    }
+  }
+
+  if (referenceTextRaw && selected && selectedCount > 1) {
+    return {
+      normalizedReference: {
+        kind: 'text',
+        min: null,
+        max: null,
+        raw_text: referenceTextRaw,
+        matched_by: 'ambiguous',
+        sex: 'any',
+        min_age: null,
+        max_age: null,
+      },
+      referenceMin: null,
+      referenceMax: null,
+      referenceTextRaw,
+      labFlag: biomarker.flag ?? biomarker.lab_flag ?? null,
+      sourceReferenceKind: 'ambiguous',
     }
   }
 
