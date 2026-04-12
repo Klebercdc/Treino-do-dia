@@ -33,6 +33,8 @@ npm-debug.log*
 etl/scrapers/.cache/
 etl/scrapers/output/
 .tmp-system-check/
+.tmp/
+*.save
 .vercel
 .env*.local
 __pycache__/
