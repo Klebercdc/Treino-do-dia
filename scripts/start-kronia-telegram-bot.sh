@@ -20,9 +20,10 @@ load_env_from_bashrc() {
 
 load_env_from_bashrc
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_STATE_DIR="${KRONIA_STATE_DIR:-$HOME/.kronia}"
 STATE_DIR="$ROOT_STATE_DIR/run"
-BOT_BIN="$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh"
+BOT_BIN="$SCRIPT_DIR/kronia_telegram_bot.sh"
 PID_FILE="$STATE_DIR/telegram-bot.pid"
 LOG_FILE="$STATE_DIR/telegram-bot.log"
 

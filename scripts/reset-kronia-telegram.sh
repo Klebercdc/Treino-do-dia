@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_STATE_DIR="${KRONIA_STATE_DIR:-$HOME/.kronia}"
 RUN_DIR="$ROOT_STATE_DIR/run"
 BOOT_LOG="${KRONIA_BOT_BOOT_LOG:-$HOME/kronia_bot.log}"
-BOT_LAUNCHER="$HOME/Treino-do-dia/kronia_telegram_bot.sh"
-START_SCRIPT="$HOME/Treino-do-dia/scripts/start-kronia-telegram-bot.sh"
-STOP_SCRIPT="$HOME/Treino-do-dia/scripts/stop-kronia-telegram-bot.sh"
+BOT_LAUNCHER="$SCRIPT_DIR/kronia_telegram_bot.sh"
+START_SCRIPT="$SCRIPT_DIR/start-kronia-telegram-bot.sh"
+STOP_SCRIPT="$SCRIPT_DIR/stop-kronia-telegram-bot.sh"
 
 mkdir -p "$RUN_DIR"
 
@@ -41,7 +42,6 @@ set -u
 echo "1) Parando processos antigos..."
 "$STOP_SCRIPT" >/dev/null 2>&1 || true
 pkill -f "$BOT_LAUNCHER" >/dev/null 2>&1 || true
-pkill -f "$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh" >/dev/null 2>&1 || true
 
 echo "2) Limpando estado antigo..."
 rm -f "$RUN_DIR/telegram.offset" "$RUN_DIR/telegram.dispatch" "$RUN_DIR/telegram-bot.pid"
@@ -63,8 +63,7 @@ printf '%s\n' "$DELETE_WEBHOOK_RESPONSE"
 
 echo "5) Garantindo permissões..."
 chmod +x "$BOT_LAUNCHER" \
-  "$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh" \
-  "$HOME/Treino-do-dia/scripts/send_telegram.sh" \
+  "$SCRIPT_DIR/send_telegram.sh" \
   "$START_SCRIPT" \
   "$STOP_SCRIPT"
 

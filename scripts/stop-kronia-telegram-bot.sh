@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT_STATE_DIR="${KRONIA_STATE_DIR:-$HOME/.kronia}"
 STATE_DIR="$ROOT_STATE_DIR/run"
 PID_FILE="$STATE_DIR/telegram-bot.pid"
-BOT_LAUNCHER="$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh"
-LEGACY_NODE_ENTRY="$HOME/Treino-do-dia/telegram-enterprise/bot.js"
+BOT_LAUNCHER="$SCRIPT_DIR/kronia_telegram_bot.sh"
+LEGACY_NODE_ENTRY="$REPO_ROOT/telegram-enterprise/bot.js"
 
 if [ ! -f "$PID_FILE" ]; then
   echo "telegram bot não está rodando"

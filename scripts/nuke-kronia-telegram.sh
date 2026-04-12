@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_STATE_DIR="${KRONIA_STATE_DIR:-$HOME/.kronia}"
 RUN_DIR="$ROOT_STATE_DIR/run"
 BOOT_LOG="${KRONIA_BOT_BOOT_LOG:-$HOME/kronia_bot.log}"
-BOT_LAUNCHER="$HOME/Treino-do-dia/kronia_telegram_bot.sh"
-STOP_SCRIPT="$HOME/Treino-do-dia/scripts/stop-kronia-telegram-bot.sh"
+BOT_LAUNCHER="$SCRIPT_DIR/kronia_telegram_bot.sh"
+STOP_SCRIPT="$SCRIPT_DIR/stop-kronia-telegram-bot.sh"
 
 echo "1) Parando bot atual..."
 "$STOP_SCRIPT" >/dev/null 2>&1 || true
 pkill -f "$BOT_LAUNCHER" >/dev/null 2>&1 || true
-pkill -f "$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh" >/dev/null 2>&1 || true
 
 echo "2) Limpando estado local..."
 rm -f "$RUN_DIR/telegram.offset" \
