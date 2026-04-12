@@ -3161,8 +3161,18 @@ async function loadLabsScreenHistory(forceRefresh) {
       _renderLabsBiomarkers(null, bioContainer);
     }
   } catch (err) {
-    console.warn('[labs-history] erro:', err);
-    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:12px 0">Não foi possível carregar o histórico.</div>';
+    console.warn('[labs-history] falha ao carregar histórico de exames:', err);
+    container.innerHTML = ''
+      + '<div style="display:grid;gap:8px;justify-items:center;padding:12px 0">'
+      + '<div style="color:var(--muted);font-size:0.75rem;text-align:center">Não foi possível carregar o histórico.</div>'
+      + '<button id="labsHistoryRetryButton" type="button" class="btn btn-secondary" style="min-width:140px">Tentar novamente</button>'
+      + '</div>';
+    var retryButton = document.getElementById('labsHistoryRetryButton');
+    if (retryButton) {
+      retryButton.onclick = function() {
+        loadLabsScreenHistory(true);
+      };
+    }
     _renderLabsBiomarkers(null, bioContainer);
   }
 }

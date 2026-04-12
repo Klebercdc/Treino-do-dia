@@ -28,47 +28,54 @@ begin
   end if;
 end $$;
 
-alter table if exists public.lab_report_biomarkers
-  add column if not exists reference_text_raw text,
-  add column if not exists normalized_reference jsonb,
-  add column if not exists lab_flag text,
-  add column if not exists context_flag text,
-  add column if not exists interpretation_mode text,
-  add column if not exists monitor_priority text,
-  add column if not exists safety_relevance boolean,
-  add column if not exists feedback_summary text,
-  add column if not exists source_reference_kind text;
-
 do $$
 begin
-  if not exists (
+  if exists (
     select 1
-    from pg_constraint
-    where conname = 'lab_report_biomarkers_lab_flag_check'
+      from information_schema.tables
+     where table_schema = 'public'
+       and table_name = 'lab_report_biomarkers'
   ) then
     alter table public.lab_report_biomarkers
-      add constraint lab_report_biomarkers_lab_flag_check
-      check (lab_flag is null or lab_flag in ('low', 'high', 'normal'));
-  end if;
+      add column if not exists reference_text_raw text,
+      add column if not exists normalized_reference jsonb,
+      add column if not exists lab_flag text,
+      add column if not exists context_flag text,
+      add column if not exists interpretation_mode text,
+      add column if not exists monitor_priority text,
+      add column if not exists safety_relevance boolean,
+      add column if not exists feedback_summary text,
+      add column if not exists source_reference_kind text;
 
-  if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'lab_report_biomarkers_interpretation_mode_check'
-  ) then
-    alter table public.lab_report_biomarkers
-      add constraint lab_report_biomarkers_interpretation_mode_check
-      check (interpretation_mode is null or interpretation_mode in ('natural', 'trt', 'assisted', 'unknown'));
-  end if;
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lab_report_biomarkers_lab_flag_check'
+    ) then
+      alter table public.lab_report_biomarkers
+        add constraint lab_report_biomarkers_lab_flag_check
+        check (lab_flag is null or lab_flag in ('low', 'high', 'normal'));
+    end if;
 
-  if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'lab_report_biomarkers_monitor_priority_check'
-  ) then
-    alter table public.lab_report_biomarkers
-      add constraint lab_report_biomarkers_monitor_priority_check
-      check (monitor_priority is null or monitor_priority in ('low', 'medium', 'high'));
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lab_report_biomarkers_interpretation_mode_check'
+    ) then
+      alter table public.lab_report_biomarkers
+        add constraint lab_report_biomarkers_interpretation_mode_check
+        check (interpretation_mode is null or interpretation_mode in ('natural', 'trt', 'assisted', 'unknown'));
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lab_report_biomarkers_monitor_priority_check'
+    ) then
+      alter table public.lab_report_biomarkers
+        add constraint lab_report_biomarkers_monitor_priority_check
+        check (monitor_priority is null or monitor_priority in ('low', 'medium', 'high'));
+    end if;
   end if;
 end $$;
 
@@ -78,6 +85,16 @@ comment on column public.profiles.declared_compounds is 'Compostos declarados pe
 comment on column public.profiles.last_administration_at is 'Última administração hormonal declarada, quando houver.';
 comment on column public.profiles.monitoring_mode is 'Modo de monitoramento esportivo/laboratorial para personalização segura.';
 
-comment on column public.lab_report_biomarkers.normalized_reference is 'Faixa laboratorial selecionada por sexo/idade/contexto a partir do texto bruto do laudo.';
-comment on column public.lab_report_biomarkers.lab_flag is 'Classificação baseada exclusivamente na referência laboratorial selecionada.';
-comment on column public.lab_report_biomarkers.context_flag is 'Classificação contextual esportiva complementar, sem sobrescrever o laudo.';
+do $$
+begin
+  if exists (
+    select 1
+      from information_schema.tables
+     where table_schema = 'public'
+       and table_name = 'lab_report_biomarkers'
+  ) then
+    comment on column public.lab_report_biomarkers.normalized_reference is 'Faixa laboratorial selecionada por sexo/idade/contexto a partir do texto bruto do laudo.';
+    comment on column public.lab_report_biomarkers.lab_flag is 'Classificação baseada exclusivamente na referência laboratorial selecionada.';
+    comment on column public.lab_report_biomarkers.context_flag is 'Classificação contextual esportiva complementar, sem sobrescrever o laudo.';
+  end if;
+end $$;

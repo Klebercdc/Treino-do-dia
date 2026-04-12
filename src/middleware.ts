@@ -23,7 +23,5 @@ export const config = {
     '/api/kronia/exercises/details',
     '/api/kronia/exercises/catalog-admin',
     '/api/kronia/labs/register',
-    '/api/kronia/labs/reports',
-    '/api/kronia/labs/reports/:id*',
   ],
 };
