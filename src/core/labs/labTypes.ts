@@ -39,7 +39,7 @@ export interface NormalizedReference {
   min: number | null
   max: number | null
   raw_text: string
-  matched_by: 'sex_age' | 'sex' | 'age' | 'adult' | 'generic' | 'ocr_numeric' | 'text_only'
+  matched_by: 'sex_age' | 'sex' | 'age' | 'adult' | 'generic' | 'ocr_numeric' | 'text_only' | 'ambiguous'
   sex: 'male' | 'female' | 'any'
   min_age: number | null
   max_age: number | null

@@ -80,7 +80,10 @@ export async function POST(req: NextRequest) {
       ok: true,
       uploaded: true,
       labReportId: created.id,
-      status: 'processing',
+      status: 'uploaded',
+      persistedStatus: 'uploaded',
+      processingQueued: true,
+      poll: { reportId: created.id },
       orchestration: 'supabase_db_trigger',
     });
   } catch (error) {

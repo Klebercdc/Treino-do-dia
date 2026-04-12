@@ -94,8 +94,15 @@ export async function POST(req: NextRequest) {
       source: 'app_router_register_uploaded',
     });
 
-    logger.info('labs_register_ok', { userId: auth.user.id, labReportId: created.id, mimeType });
-    return NextResponse.json({ ok: true, labReportId: created.id, status: 'processing' });
+    logger.info('labs_register_ok', { userId: auth.user.id, labReportId: created.id, mimeType, persistedStatus: 'uploaded' });
+    return NextResponse.json({
+      ok: true,
+      labReportId: created.id,
+      status: 'uploaded',
+      persistedStatus: 'uploaded',
+      processingQueued: true,
+      poll: { reportId: created.id },
+    });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown';
     try {

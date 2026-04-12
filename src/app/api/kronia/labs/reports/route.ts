@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
+      .select('*')
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     if (ids.length) {
       const { data: biomarkers, error: biomarkersError } = await admin
         .from('lab_report_biomarkers')
-        .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,reference_text,reference_text_raw,normalized_reference,flag,lab_flag,context_flag,interpretation_mode,monitor_priority,safety_relevance,feedback_summary,source_reference_kind,confidence,created_at')
+        .select('*')
         .in('lab_report_id', ids)
         .order('created_at', { ascending: true });
 
@@ -76,6 +76,10 @@ export async function GET(req: NextRequest) {
       confidenceSummary: row.confidence_summary || {},
       normalizedPayload: row.normalized_payload || null,
       aiInsights: row.ai_insights || null,
+      canonicalStatus: row.canonical_status || null,
+      reviewStatus: row.review_status || null,
+      releasedSnapshot: row.released_snapshot || null,
+      version: row.version || null,
       isValid: row.is_valid,
       processingError: row.processing_error,
       biomarkers: biomarkerMap.get(String(row.id)) || extractBiomarkersFromPayload(row as Record<string, unknown>),

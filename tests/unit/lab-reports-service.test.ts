@@ -140,6 +140,123 @@ test('processLabReportUploadSafely marca failed em falha operacional', async () 
   global.fetch = originalFetch;
 });
 
+test('processLabReportUploadSafely projeta release compatível pelo writer canônico compartilhado', async () => {
+  const originalFetch = global.fetch;
+  process.env.EXAM_OCR_SERVICE_URL = 'http://ocr.local';
+  global.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        success: true,
+        source_type: 'pdf',
+        extraction_mode: 'native_pdf',
+        raw_text: 'GLICOSE Resultado: 92 mg/dL Valor(es) de referência: 70 a 99 mg/dL',
+        pages: [{ page: 1, text: 'ok' }],
+        blocks: [],
+        rows: [],
+        biomarkers_detected: [{
+          marker_key: 'glucose',
+          marker_name: 'Glicose',
+          value_numeric: 92,
+          value_text: '92',
+          unit: 'mg/dL',
+          reference_text: 'Adultos: 70 a 99 mg/dL',
+          confidence: 0.98,
+          source_line: 'GLICOSE Resultado: 92 mg/dL',
+        }],
+        confidence_summary: { mean_confidence: 0.98 },
+        warnings: [],
+        metadata: {},
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )) as typeof fetch;
+
+  const reportUpdates: Array<Record<string, unknown>> = [];
+  const snapshotInserts: Array<Record<string, unknown>> = [];
+  const biomarkerInserts: Array<Record<string, unknown>> = [];
+  const biomarkerUpdates: Array<Record<string, unknown>> = [];
+
+  const makeChain = (result: unknown) => {
+    const chain: any = {
+      eq: () => chain,
+      select: () => chain,
+      maybeSingle: async () => result,
+      limit: async () => ({ data: [{ id: 'lab-7' }], error: null }),
+      order: () => chain,
+    };
+    return chain;
+  };
+
+  const admin = {
+    storage: {
+      from: () => ({
+        createSignedUrl: async () => ({ data: { signedUrl: 'http://file.local/report.pdf' }, error: null }),
+      }),
+    },
+    from: (table: string) => {
+      if (table === 'profiles') return { select: () => makeChain({ data: null, error: null }) };
+      if (table === 'lab_reports') {
+        return {
+          select: () => makeChain({ data: { user_id: 'user-1', version: 0 }, error: null }),
+          update: (payload: Record<string, unknown>) => ({
+            eq: async () => {
+              reportUpdates.push(payload);
+              return { error: null };
+            },
+          }),
+        };
+      }
+      if (table === 'lab_report_extractions') {
+        return { insert: async () => ({ error: null }) };
+      }
+      if (table === 'lab_report_biomarkers') {
+        return {
+          delete: () => ({ eq: async () => ({ error: null }) }),
+          insert: async (payload: Record<string, unknown>[]) => {
+            biomarkerInserts.push(...payload);
+            return { error: null };
+          },
+          update: (payload: Record<string, unknown>) => ({
+            eq: async () => {
+              biomarkerUpdates.push(payload);
+              return { error: null };
+            },
+          }),
+        };
+      }
+      if (table === 'lab_report_snapshot_versions') {
+        return {
+          insert: async (payload: Record<string, unknown>) => {
+            snapshotInserts.push(payload);
+            return { error: null };
+          },
+        };
+      }
+      return {
+        select: () => makeChain({ data: null, error: null }),
+        insert: async () => ({ error: null }),
+        delete: () => ({ eq: async () => ({ error: null }) }),
+      };
+    },
+  } as any;
+
+  const result = await processLabReportUploadSafely(admin, {
+    labReportId: 'lab-7',
+    storageBucket: 'lab-reports',
+    storagePath: 'u/file.pdf',
+    mimeType: 'application/pdf',
+  });
+
+  assert.equal(result.status, 'analyzed');
+  assert.equal(reportUpdates.some((item) => item.canonical_status === 'released_to_patient'), true);
+  assert.equal(reportUpdates.some((item) => item.status === 'analyzed'), true);
+  assert.equal(snapshotInserts.some((item) => item.snapshot_kind === 'machine'), true);
+  assert.equal(snapshotInserts.some((item) => item.snapshot_kind === 'released'), true);
+  assert.equal(biomarkerInserts.some((item) => item.review_status === 'machine_only'), true);
+  assert.equal(biomarkerUpdates.some((item) => item.review_status === 'released'), true);
+
+  global.fetch = originalFetch;
+});
+
 test('acquireLabReportProcessingLock impede corrida quando status mudou', async () => {
   const chain = {
     eq: () => chain,
@@ -366,6 +483,9 @@ test('rota register exige auth, valida MIME, bloqueia path traversal e dispara d
   assert.match(source, /dispatchLabReportToEdgeBestEffort/);
   assert.doesNotMatch(source, /enqueueLabReportProcessing\(/);
   assert.doesNotMatch(source, /labs\/process/);
+  assert.match(source, /status:\s*'uploaded'/);
+  assert.match(source, /persistedStatus:\s*'uploaded'/);
+  assert.match(source, /processingQueued:\s*true/);
 });
 
 test('frontend labs usa init-upload + upload assinado + register (sem multipart backend)', () => {
@@ -373,6 +493,8 @@ test('frontend labs usa init-upload + upload assinado + register (sem multipart 
   assert.match(source, /\/api\/kronia\/labs\/init-upload/);
   assert.match(source, /uploadToSignedUrl/);
   assert.match(source, /\/api\/kronia\/labs\/register/);
+  assert.match(source, /startLabReportPolling/);
+  assert.match(source, /fetchLabReportDetail/);
   assert.doesNotMatch(source, /\/api\/kronia\/labs\/upload/);
 });
 

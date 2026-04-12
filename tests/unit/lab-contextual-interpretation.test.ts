@@ -188,3 +188,20 @@ test('sumário contextual prioriza feedback esportivo sem perder o laudo', () =>
   assert.match(String(summary), /compatível com a intervenção/i)
   assert.match(String(summary), /Hematócrito/)
 })
+
+test('referência ambígua sem sexo/idade disponível fica marcada como ambígua e sem range resolvido', () => {
+  const [result] = enrichBiomarkerEntries([
+    biomarker({
+      marker_key: 'testosterone_total',
+      marker_name: 'Testosterona Total',
+      value_numeric: 310,
+      unit: 'ng/dL',
+      reference_text: 'Homens 18 a 66 anos: 175,00 a 781,00 ng/dL | Mulheres 21 a 73 anos: 10,00 a 75,00 ng/dL',
+    }),
+  ], null)
+
+  assert.equal(result.reference_min, null)
+  assert.equal(result.reference_max, null)
+  assert.equal(result.source_reference_kind, 'ambiguous')
+  assert.equal(result.normalized_reference?.matched_by, 'ambiguous')
+})

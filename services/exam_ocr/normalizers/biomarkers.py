@@ -378,7 +378,6 @@ MARKERS = [
             'cálcio',
             'serum calcium',
             'calcium',
-            'ca',
         ],
     },
     {
