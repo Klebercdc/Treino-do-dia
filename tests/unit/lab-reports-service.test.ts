@@ -516,7 +516,7 @@ test('frontend labs usa rota interna same-origin para register/history e cleanup
   assert.match(source, /_sb\.storage\.from\('lab-reports'\)\.remove\(\[storagePath\]\)/);
 });
 
-test('register valida existência de objeto no storage e middleware não intercepta labs', () => {
+test('register segue protegido no middleware e rotas de leitura de labs não são interceptadas no edge', () => {
   const registerSource = readFileSync('src/app/api/kronia/labs/register/route.ts', 'utf-8');
   const middlewareSource = readFileSync('src/middleware.ts', 'utf-8');
 
@@ -526,7 +526,7 @@ test('register valida existência de objeto no storage e middleware não interce
   assert.match(registerSource, /requireBearerAuth/);
 
   assert.match(middlewareSource, /\/api\/kronia\/labs\/register/);
-  assert.match(middlewareSource, /\/api\/kronia\/labs\/reports/);
+  assert.doesNotMatch(middlewareSource, /\/api\/kronia\/labs\/reports/);
   assert.doesNotMatch(middlewareSource, /\/api\/kronia\/labs\/upload/);
   assert.doesNotMatch(middlewareSource, /\/api\/labs\/upload/);
 });

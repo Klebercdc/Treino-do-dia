@@ -624,7 +624,11 @@ export async function getUserLabReportTimeline(
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) {
-    console.warn('[getUserLabReportTimeline] DB error (non-fatal):', error.message);
+    console.warn('[labs-timeline] fallback para lista vazia:', {
+      userId,
+      code: error.code || null,
+      message: error.message || 'unknown_error',
+    });
     return [];
   }
   return (data || []) as Array<Record<string, unknown>>;
