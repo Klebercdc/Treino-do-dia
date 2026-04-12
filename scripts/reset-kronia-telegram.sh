@@ -45,6 +45,8 @@ pkill -f "$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh" >/dev/null 2>&1 ||
 
 echo "2) Limpando estado antigo..."
 rm -f "$RUN_DIR/telegram.offset" "$RUN_DIR/telegram.dispatch" "$RUN_DIR/telegram-bot.pid"
+rm -f "$HOME/.kronia_offset"
+rm -f "$HOME/.kronia-supervisor"/running_*.json 2>/dev/null || true
 rm -f "$BOOT_LOG"
 
 echo "3) Validando BOT_TOKEN com getMe..."

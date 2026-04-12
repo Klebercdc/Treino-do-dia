@@ -22,9 +22,9 @@ load_env_from_bashrc
 
 ROOT_STATE_DIR="${KRONIA_STATE_DIR:-$HOME/.kronia}"
 STATE_DIR="$ROOT_STATE_DIR/run"
-BOT_BIN="$HOME/Treino-do-dia/telegram-enterprise/bot.js"
+BOT_BIN="$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh"
 PID_FILE="$STATE_DIR/telegram-bot.pid"
-LOG_FILE="$HOME/kronia_bot.log"
+LOG_FILE="$STATE_DIR/telegram-bot.log"
 
 mkdir -p "$STATE_DIR"
 
@@ -34,9 +34,10 @@ if [ -f "$PID_FILE" ]; then
     echo "telegram bot já está rodando com PID $EXISTING_PID"
     exit 0
   fi
+  rm -f "$PID_FILE"
 fi
 
-setsid node "$BOT_BIN" >> "$LOG_FILE" 2>&1 < /dev/null &
+setsid "$BOT_BIN" >> "$LOG_FILE" 2>&1 < /dev/null &
 BOT_PID=$!
 printf '%s' "$BOT_PID" > "$PID_FILE"
 

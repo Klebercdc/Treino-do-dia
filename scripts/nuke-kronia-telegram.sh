@@ -17,6 +17,8 @@ rm -f "$RUN_DIR/telegram.offset" \
       "$RUN_DIR/telegram.dispatch" \
       "$RUN_DIR/telegram-bot.pid" \
       "$RUN_DIR/telegram-bot.log"
+rm -f "$HOME/.kronia_offset"
+rm -f "$HOME/.kronia-supervisor"/running_*.json 2>/dev/null || true
 rm -f "$BOOT_LOG"
 
 echo "3) Removendo variáveis do ~/.bashrc..."
