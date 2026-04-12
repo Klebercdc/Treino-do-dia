@@ -1,6 +1,7 @@
 -- ============================================================================
--- Migration 045: canonical clinical status + append-only snapshots + review
+-- Migration 046: canonical clinical status + append-only snapshots + review
 -- model, preserving legacy status/parse_status contracts.
+-- (renamed from 045_ to avoid duplicate prefix with 045_contextual_interpretation)
 -- ============================================================================
 
 alter table if exists public.lab_reports
