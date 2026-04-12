@@ -227,10 +227,12 @@ test('init-upload retorna labReportId, storagePath, uploadUrl, uploadToken, buck
   assert.match(initSection, /status: 'pending_upload'/);
 });
 
-test('register retorna labReportId e status processing em sucesso', () => {
+test('register retorna labReportId e status persistido uploaded em sucesso', () => {
   const regSection = handlerSrc.slice(handlerSrc.indexOf('function handleRegister'));
   assert.match(regSection, /labReportId/);
-  assert.match(regSection, /status: 'processing'/);
+  assert.match(regSection, /status: 'uploaded'/);
+  assert.match(regSection, /persistedStatus: 'uploaded'/);
+  assert.match(regSection, /processingQueued: true/);
 });
 
 // ── storagePath canonical format ──────────────────────────────────────────────

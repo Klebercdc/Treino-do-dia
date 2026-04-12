@@ -6,6 +6,7 @@ import {
   extractHormoneContextFromProfileRow,
   summarizeMarkerInterpretations,
 } from '../../../src/core/labs/labInterpretation.ts';
+import { persistCanonicalMachineResult } from '../../../src/server/internal/labReports/canonical.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -353,7 +354,17 @@ async function persistBiomarkers(labReportId: string, biomarkers: Biomarker[]) {
 
   if (biomarkers.length > 0) {
     const { error } = await supabase.from('lab_report_biomarkers').insert(
-      biomarkers.map((item) => ({ lab_report_id: labReportId, ...item })),
+      biomarkers.map((item) => ({
+        lab_report_id: labReportId,
+        ...item,
+        extraction_confidence: item.confidence ?? null,
+        review_status: 'machine_only',
+        reviewed_value_override: null,
+        reviewed_reference_override: null,
+        reviewer_note: null,
+        released_value: null,
+        released_flag: null,
+      })),
     );
     if (error && !isMissingOptionalTable(error, 'lab_report_biomarkers')) {
       throw new Error(`Falha ao salvar biomarcadores: ${error.message}`);
@@ -862,18 +873,6 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
     const biomarkers = cleanBiomarkers(ocr.biomarkers_detected || [], profileRow);
     await persistBiomarkers(input.labReportId, biomarkers);
 
-    const readiness = computeReadiness(ocr.confidence_summary || {}, biomarkers, ocr.warnings || []);
-    if (!readiness.ready) {
-      await finalizeNeedsReview(input.labReportId, ocr, String(readiness.reason || 'needs_review'), biomarkers);
-      await logEvent(input.labReportId, 'needs_review', 'warn', {
-        dispatchSource: input.dispatchSource,
-        reason: readiness.reason,
-        biomarkers: biomarkers.length,
-        meanConfidence: readiness.meanConfidence,
-      });
-      return { ok: true, status: 'needs_review', biomarkers: biomarkers.length };
-    }
-
     let insights: Record<string, unknown>;
     let fallback = false;
     try {
@@ -889,14 +888,25 @@ async function processSingleReport(input: { labReportId: string; expectedUpdated
     }
 
     const canonicalInsights = buildCanonicalAiInsights(biomarkers, insights, profileRow);
-    await finalizeAnalyzed(input.labReportId, ocr, biomarkers, canonicalInsights, fallback);
-    await logEvent(input.labReportId, 'analyzed', 'info', {
+    const finalized = await persistCanonicalMachineResult({
+      admin: supabase,
+      labReportId: input.labReportId,
+      ocr,
+      biomarkers,
+      aiInsights: canonicalInsights,
+      processingNote: fallback ? 'groq_unavailable_fallback_used' : null,
+      releasedByRule: 'auto_machine_release',
+    });
+    await logEvent(input.labReportId, finalized.decision.legacyStatus === 'analyzed' ? 'released_to_patient' : 'needs_clinical_review', finalized.decision.releaseAllowed ? 'info' : 'warn', {
       dispatchSource: input.dispatchSource,
       biomarkers: biomarkers.length,
       fallback,
+      canonicalStatus: finalized.decision.canonicalStatus,
+      reviewStatus: finalized.decision.reviewStatus,
+      warnings: finalized.decision.warnings,
     });
 
-    return { ok: true, status: 'analyzed', biomarkers: biomarkers.length, fallback };
+    return { ok: true, status: finalized.decision.legacyStatus, canonicalStatus: finalized.decision.canonicalStatus, biomarkers: biomarkers.length, fallback };
   } catch (pipelineError) {
     // Any error after lock acquisition → mark failed so the report is never stranded.
     const reason = pipelineError instanceof Error ? pipelineError.message : 'pipeline_error';

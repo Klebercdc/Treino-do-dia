@@ -126,6 +126,10 @@ function shapeReportSummary(row, biomarkers) {
     confidenceSummary: row.confidence_summary || {},
     normalizedPayload: row.normalized_payload || null,
     aiInsights: row.ai_insights || null,
+    canonicalStatus: row.canonical_status || null,
+    reviewStatus: row.review_status || null,
+    releasedSnapshot: row.released_snapshot || null,
+    version: row.version || null,
     isValid: row.is_valid,
     processingError: row.processing_error,
     biomarkers: biomarkers || [],
@@ -410,7 +414,14 @@ function handleRegister(req, res) {
       });
     }
 
-    return res.status(200).json({ ok: true, labReportId: updated.data.id, status: 'processing' });
+    return res.status(200).json({
+      ok: true,
+      labReportId: updated.data.id,
+      status: 'uploaded',
+      persistedStatus: 'uploaded',
+      processingQueued: true,
+      poll: { reportId: updated.data.id }
+    });
   });
 }
 
@@ -422,7 +433,7 @@ function handleReports(req, res) {
 
     var reportsResult = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,created_at,processed_at')
+      .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -442,7 +453,7 @@ function handleReports(req, res) {
     if (ids.length > 0) {
       var biomarkersResult = await admin
         .from('lab_report_biomarkers')
-        .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
+        .select('*')
         .in('lab_report_id', ids)
         .order('created_at', { ascending: true });
 
@@ -483,7 +494,7 @@ function handleReportById(req, res) {
     var admin = createAdminSupabaseClient();
     var reportResult = await admin
       .from('lab_reports')
-      .select('id,file_name,mime_type,file_type,status,parse_status,extraction_mode,source_type,confidence_summary,normalized_payload,ai_insights,is_valid,processing_error,storage_bucket,storage_path,created_at,processed_at')
+      .select('*')
       .eq('id', id)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -546,7 +557,7 @@ function handleReportById(req, res) {
 
     var biomarkers = await admin
       .from('lab_report_biomarkers')
-      .select('lab_report_id,marker_key,marker_name,value_numeric,value_text,unit,reference_min,reference_max,flag,confidence,created_at')
+      .select('*')
       .eq('lab_report_id', id)
       .order('created_at', { ascending: true });
 
@@ -556,12 +567,23 @@ function handleReportById(req, res) {
 
     var resolvedExtractions = resolveReportExtractions(reportResult.data, extractions.data);
     var resolvedBiomarkers = resolveReportBiomarkers(reportResult.data, groupRowsByReportId(biomarkers.data));
+    var reviewStatus = String(reportResult.data.review_status || '');
+    var releasedSnapshot = reportResult.data.released_snapshot || null;
+    var safeReport = Object.assign({}, reportResult.data, {
+      machine_snapshot: reviewStatus === 'released' ? (reportResult.data.machine_snapshot || null) : null,
+      reviewed_snapshot: reviewStatus === 'released' ? (reportResult.data.reviewed_snapshot || null) : null,
+      released_snapshot: releasedSnapshot
+    });
 
     return res.status(200).json({
       ok: true,
-      report: shapeReportSummary(reportResult.data, resolvedBiomarkers),
+      report: Object.assign({}, shapeReportSummary(safeReport, resolvedBiomarkers), {
+        reviewStatus: reviewStatus || null,
+        releasedSnapshot: releasedSnapshot
+      }),
       extractions: resolvedExtractions,
-      biomarkers: resolvedBiomarkers
+      biomarkers: resolvedBiomarkers,
+      releasedSnapshot: releasedSnapshot
     });
   });
 }

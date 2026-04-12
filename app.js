@@ -2802,8 +2802,9 @@ async function _handleLabsScreenUpload(file) {
       return;
     }
 
-    setStatus('Exame enviado! Processando biomarcadores…', 'success');
+    setStatus('Exame enviado. Acompanhando processamento do laudo…', 'success');
     renderLabsResult(payload, resultEl);
+    startLabReportPolling(String(payload.labReportId || payload.poll?.reportId || labReportId || ''), resultEl);
     setTimeout(function() { loadLabsScreenHistory(true); }, 2000);
   } catch (err) {
     console.error('[labs-upload] erro:', err);
@@ -2832,9 +2833,42 @@ function renderLabsResult(payload, container) {
 
   container.innerHTML =
     '<div class="labs-result-card">' +
-      '<div class="labs-result-confidence">Status: ' + escapeHTML(String(payload.status || 'processing')) + '</div>' +
+      '<div class="labs-result-confidence">Status: ' + escapeHTML(String(payload.persistedStatus || payload.status || 'uploaded')) + '</div>' +
       (biomarkers ? '<div class="labs-result-biomarkers">' + biomarkers + '</div>' : '') +
     '</div>';
+}
+
+function startLabReportPolling(reportId, container) {
+  if (!reportId) return;
+
+  var attempts = 0;
+  var maxAttempts = 15;
+  var intervalMs = 4000;
+
+  function poll() {
+    attempts += 1;
+    fetchLabReportDetail(reportId).then(function(detail) {
+      if (!detail || !detail.ok || !detail.report) return;
+      renderLabsResult({
+        status: detail.report.status || detail.report.parse_status,
+        persistedStatus: detail.report.status || detail.report.parse_status,
+        biomarkers: detail.biomarkers || [],
+      }, container);
+
+      var statusKey = String(detail.report.status || detail.report.parse_status || '').toLowerCase();
+      if (statusKey === 'uploaded' || statusKey === 'processing' || statusKey === 'extracted' || statusKey === 'queued' || statusKey === 'pending_upload') {
+        if (attempts < maxAttempts) setTimeout(poll, intervalMs);
+        return;
+      }
+
+      loadLabsScreenHistory(true);
+    }).catch(function(err) {
+      console.warn('[labs-poll] erro ao acompanhar exame:', err);
+      if (attempts < maxAttempts) setTimeout(poll, intervalMs);
+    });
+  }
+
+  setTimeout(poll, intervalMs);
 }
 
 var _labsHistoryCache = null;
@@ -3032,10 +3066,7 @@ async function openLabReportDetail(reportId, forceRefresh) {
   _renderLabsBiomarkers(summary, container, 'loading');
 
   try {
-    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
-    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports/' + encodeURIComponent(reportId)), { headers: headers, credentials: 'same-origin' });
-    var payload = await resp.json().catch(function() { return null; });
-    if (!resp.ok || !payload || !payload.ok) throw new Error((payload && payload.error) || ('HTTP ' + resp.status));
+    var payload = await fetchLabReportDetail(reportId);
     _labsReportDetailCache[reportId] = payload;
     _renderLabsBiomarkers(payload, container);
   } catch (err) {
@@ -3047,6 +3078,14 @@ async function openLabReportDetail(reportId, forceRefresh) {
       _renderLabDetailState(container, '<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:18px 0">Não foi possível carregar o detalhe deste exame.</div>');
     }
   }
+}
+
+async function fetchLabReportDetail(reportId) {
+  var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+  var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports/' + encodeURIComponent(reportId)), { headers: headers, credentials: 'same-origin' });
+  var payload = await resp.json().catch(function() { return null; });
+  if (!resp.ok || !payload || !payload.ok) throw new Error((payload && payload.error) || ('HTTP ' + resp.status));
+  return payload;
 }
 
 async function deleteLabReport(reportId) {

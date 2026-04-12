@@ -40,8 +40,10 @@ test('Edge Function normaliza ai_insights no shape clínico canônico antes de p
   assert.match(source, /nutrition_adjustments/);
   assert.match(source, /supplementation_notes/);
   assert.match(source, /follow_up_actions/);
-  assert.match(source, /const canonicalInsights = buildCanonicalAiInsights\(biomarkers, insights\)/);
-  assert.match(source, /finalizeAnalyzed\(input\.labReportId, ocr, biomarkers, canonicalInsights, fallback\)/);
+  assert.match(source, /const canonicalInsights = buildCanonicalAiInsights\(biomarkers,\s*insights,\s*profileRow\)/);
+  assert.match(source, /persistCanonicalMachineResult/);
+  assert.match(source, /canonicalStatus/);
+  assert.match(source, /reviewStatus/);
 });
 
 test('Edge Function processa watchdog sem OCR inline no SQL cron', () => {
