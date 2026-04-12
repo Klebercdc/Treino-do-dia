@@ -938,7 +938,18 @@ MARKERS = [
 # REGEX PATTERNS
 # ---------------------------------------------------------------------------
 
-NUMBER_RE = re.compile(r'(?<![\d/])(-?\d{1,4}(?:[.,]\d{1,4})?)(?![\d/])')
+# Number pattern: handles Brazilian/European formats:
+#   - 1.231,75  → European: thousands(.) + decimal(,) → 1231.75
+#   - 8.300     → Brazilian thousands separator → 8300
+#   - 0,75 / 247,34 → comma decimal
+#   - 0.09 / 8.5    → period decimal (1-2 digits only, to avoid ambiguity with thousands sep)
+# Lookbehind excludes digits, slash, comma and period so we don't re-match
+# partial tokens (e.g. the "231,75" tail of "1.231,75").
+NUMBER_RE = re.compile(
+    r'(?<![\d/,.])'
+    r'(-?\d{1,4}(?:\.\d{3}(?:,\d{1,4})?|[,]\d{1,4}|\.\d{1,2})?)'
+    r'(?![\d/])',
+)
 
 UNIT_RE = re.compile(
     r'\b('
@@ -972,6 +983,26 @@ GREATER_THAN_RE = re.compile(
     r'(?:superior|maior|acima|greater than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\d)(?!\s*anos\b)',
     re.IGNORECASE,
 )
+
+# Comparator detection in result segments
+# These differ from LESS_THAN_RE/GREATER_THAN_RE (which target reference ranges) because
+# here we want to detect comparators in the result value portion itself.
+RESULT_LESS_THAN_RE = re.compile(
+    r'(?:inferior|menor|abaixo|less\s+than|below)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\d)(?!\s*anos\b)'
+    r'|(?<!\d)(<|<=)\s*(-?\d+(?:[.,]\d+)?)',
+    re.IGNORECASE,
+)
+RESULT_GREATER_THAN_RE = re.compile(
+    r'(?:superior|maior|acima|greater\s+than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\d)(?!\s*anos\b)'
+    r'|(?<!\d)(>|>=)\s*(-?\d+(?:[.,]\d+)?)',
+    re.IGNORECASE,
+)
+
+# Differential count markers — these carry both relative (%) and absolute (/mm³) values.
+_DIFFERENTIAL_KEYS = frozenset({
+    'neutrophils', 'lymphocytes', 'monocytes', 'eosinophils', 'basophils',
+    'band_neutrophils', 'metamyelocytes', 'myelocytes',
+})
 
 STOP_PATTERNS = [
     'material',
@@ -1073,7 +1104,17 @@ def _to_float(raw):
     text = str(raw).strip()
     try:
         if ',' in text and '.' in text and text.find('.') < text.find(','):
+            # European format: 1.231,75 → 1231.75 (period=thousands, comma=decimal)
             text = text.replace('.', '').replace(',', '.')
+        elif '.' in text and ',' not in text:
+            # Only period present — determine if it's a thousands separator.
+            # Heuristic: exactly 3 digits after the period AND integer part is non-zero
+            # → Brazilian thousands sep (8.300 → 8300, 11.000 → 11000).
+            # Otherwise treat as decimal point (0.75, 8.5, etc.).
+            parts = text.lstrip('-').split('.')
+            if len(parts) == 2 and len(parts[1]) == 3 and parts[0].lstrip('0') != '':
+                text = text.replace('.', '')
+            # else: leave as-is (decimal point)
         else:
             text = text.replace(',', '.')
         return float(text)
@@ -1178,6 +1219,75 @@ def _line_is_reference(line):
 # VALUE EXTRACTION
 # ---------------------------------------------------------------------------
 
+def _detect_comparator(segment):
+    """Return ('<', value_text) or ('>', value_text) if a comparator is found, else (None, None)."""
+    m = RESULT_LESS_THAN_RE.search(segment)
+    if m:
+        val_text = m.group(1) or m.group(3)
+        return '<', val_text
+    m = RESULT_GREATER_THAN_RE.search(segment)
+    if m:
+        val_text = m.group(1) or m.group(3)
+        return '>', val_text
+    return None, None
+
+
+def _extract_from_tabular_line(line, next_line=None):
+    """Handle single-line tabular format: MARKER VALUE UNIT REFERENCE_RANGE.
+    Extracts value from the portion before the reference range begins."""
+    # Find earliest reference pattern position
+    ref_start = len(line)
+    for pattern in (RANGE_RE, LESS_THAN_RE, GREATER_THAN_RE):
+        m = pattern.search(line)
+        if m and m.start() < ref_start:
+            ref_start = m.start()
+
+    pre_ref = line[:ref_start]
+    if not pre_ref.strip():
+        return None
+
+    # Check comparator in pre-reference segment
+    comparator, cmp_value_text = _detect_comparator(pre_ref)
+    if comparator and cmp_value_text:
+        numeric = _to_float(cmp_value_text)
+        if numeric is not None:
+            trailing = pre_ref[pre_ref.rfind(cmp_value_text) + len(cmp_value_text): pre_ref.rfind(cmp_value_text) + len(cmp_value_text) + 30]
+            combined = f'{pre_ref} {line[ref_start:ref_start + 30]}'
+            unit_match = UNIT_RE.search(trailing) or UNIT_RE.search(combined)
+            unit = (unit_match.group(1) or unit_match.group(2)).lower() if unit_match else None
+            return {
+                'value_numeric': numeric,
+                'value_text': cmp_value_text,
+                'unit': unit,
+                'source_line': _normalize_space(line),
+                'raw_result_text': _normalize_space(pre_ref),
+                'comparator': comparator,
+                'value_kind': 'below_detection' if comparator == '<' else 'above_detection',
+            }
+
+    for match in NUMBER_RE.finditer(pre_ref):
+        value_text = match.group(1)
+        numeric = _to_float(value_text)
+        if numeric is None:
+            continue
+        trailing = pre_ref[match.end(): match.end() + 30]
+        combined = f'{pre_ref} {line[ref_start:ref_start + 30]}'
+        if next_line:
+            combined += f' {next_line}'
+        unit_match = UNIT_RE.search(trailing) or UNIT_RE.search(combined[match.start(): match.start() + 80])
+        unit = (unit_match.group(1) or unit_match.group(2)).lower() if unit_match else None
+        return {
+            'value_numeric': numeric,
+            'value_text': value_text,
+            'unit': unit,
+            'source_line': _normalize_space(line),
+            'raw_result_text': _normalize_space(pre_ref),
+            'comparator': None,
+            'value_kind': 'numeric',
+        }
+    return None
+
+
 def _extract_value_and_unit(block_lines):
     indexed = list(enumerate(block_lines))
     result_line_indexes = [idx for idx, line in indexed if 'resultado' in _normalize_text(line)]
@@ -1200,6 +1310,13 @@ def _extract_value_and_unit(block_lines):
 
         normalized = _normalize_text(line)
         if not prioritized and _line_is_reference(line):
+            # Special case: idx=0 (marker line) may be a tabular entry with
+            # value + reference on the same line. Try extracting pre-reference portion.
+            if idx == 0:
+                next_line = block_lines[1] if len(block_lines) > 1 else None
+                result = _extract_from_tabular_line(line, next_line)
+                if result:
+                    return result
             continue
 
         search_segment = line
@@ -1207,6 +1324,26 @@ def _extract_value_and_unit(block_lines):
             pos = normalized.find('resultado')
             if pos >= 0:
                 search_segment = line[pos:]
+
+        # Check for comparator result (e.g. "Inferior a 0,20 mUI/mL")
+        comparator, cmp_value_text = _detect_comparator(search_segment)
+        if comparator and cmp_value_text:
+            numeric = _to_float(cmp_value_text)
+            if numeric is not None:
+                cmp_pos = search_segment.find(cmp_value_text)
+                trailing = search_segment[cmp_pos + len(cmp_value_text): cmp_pos + len(cmp_value_text) + 30]
+                combined_for_unit = f'{search_segment} {block_lines[idx + 1]}' if idx + 1 < len(block_lines) else search_segment
+                unit_match = UNIT_RE.search(trailing) or UNIT_RE.search(combined_for_unit)
+                unit = (unit_match.group(1) or unit_match.group(2)).lower() if unit_match else None
+                return {
+                    'value_numeric': numeric,
+                    'value_text': cmp_value_text,
+                    'unit': unit,
+                    'source_line': _normalize_space(line),
+                    'raw_result_text': _normalize_space(search_segment),
+                    'comparator': comparator,
+                    'value_kind': 'below_detection' if comparator == '<' else 'above_detection',
+                }
 
         for match in NUMBER_RE.finditer(search_segment):
             value_text = match.group(1)
@@ -1225,6 +1362,9 @@ def _extract_value_and_unit(block_lines):
                 'value_text': value_text,
                 'unit': unit,
                 'source_line': _normalize_space(line),
+                'raw_result_text': _normalize_space(search_segment),
+                'comparator': None,
+                'value_kind': 'numeric',
             }
     return None
 
@@ -1246,28 +1386,30 @@ def _reference_lines(block_lines):
 
 
 def _extract_reference(block_lines):
+    """Returns (ref_min, ref_max, reference_text, raw_reference_text)."""
     lines = _reference_lines(block_lines)
     if not lines:
-        return None, None, None
+        return None, None, None, None
 
     reference_text = ' | '.join(lines[:8]).strip() or None
+    raw_reference_text = reference_text  # preserve original before any mutation
     normalized_text = _normalize_text(reference_text)
     ambiguous = any(hint in normalized_text for hint in AMBIGUOUS_REFERENCE_HINTS)
 
     if not ambiguous:
         range_match = RANGE_RE.search(reference_text)
         if range_match:
-            return _to_float(range_match.group(1)), _to_float(range_match.group(2)), reference_text
+            return _to_float(range_match.group(1)), _to_float(range_match.group(2)), reference_text, raw_reference_text
 
         less_match = LESS_THAN_RE.search(reference_text)
         if less_match:
-            return None, _to_float(less_match.group(1)), reference_text
+            return None, _to_float(less_match.group(1)), reference_text, raw_reference_text
 
         greater_match = GREATER_THAN_RE.search(reference_text)
         if greater_match:
-            return _to_float(greater_match.group(1)), None, reference_text
+            return _to_float(greater_match.group(1)), None, reference_text, raw_reference_text
 
-    return None, None, reference_text
+    return None, None, reference_text, raw_reference_text
 
 
 # ---------------------------------------------------------------------------
@@ -1298,6 +1440,37 @@ def _confidence(unit, reference_text, source_line):
 
 
 # ---------------------------------------------------------------------------
+# DIFFERENTIAL PAIR EXTRACTION
+# ---------------------------------------------------------------------------
+
+# Percentage pattern that may precede an absolute count
+_PERCENT_RE = re.compile(r'(-?\d{1,4}(?:[.,]\d{1,2})?)\s*%')
+# Absolute count pattern: number followed by absolute-count unit or parentheses
+_ABS_COUNT_RE = re.compile(
+    r'[\(\[\s](-?\d{1,4}(?:[.,]\d{1,3})?)\s*(?:/mm[³3]|/mm3|/µl|/ul)?[\)\]\s]|'
+    r'(-?\d{1,4}(?:[.,]\d{1,3})?)\s*/mm[³3]',
+    re.IGNORECASE,
+)
+
+
+def _extract_differential_pair(block_lines):
+    """For differential-count markers (neutrophils, lymphocytes, etc.) that report
+    both a relative percentage and an absolute count on the same line.
+
+    Returns (relative_value, absolute_value) or (None, None).
+    """
+    for line in block_lines[:6]:
+        pct_match = _PERCENT_RE.search(line)
+        abs_match = _ABS_COUNT_RE.search(line)
+        if pct_match and abs_match:
+            rel = _to_float(pct_match.group(1))
+            abs_val = _to_float(abs_match.group(1) or abs_match.group(2))
+            if rel is not None and abs_val is not None:
+                return rel, abs_val
+    return None, None
+
+
+# ---------------------------------------------------------------------------
 # MAIN ENTRY POINT
 # ---------------------------------------------------------------------------
 
@@ -1312,6 +1485,13 @@ def parse_biomarkers(lines, raw_text=None, pages=None):
     Returns:
         list of normalized biomarker dicts, one per detected marker_key
         (duplicates resolved by highest confidence + longest source_line)
+
+    Each entry includes the rich shape:
+        marker_key, marker_name, value_numeric, value_text, unit,
+        reference_min, reference_max, reference_text, raw_reference_text,
+        flag, source_line, confidence,
+        raw_result_text, comparator, value_kind, parse_status,
+        relative_value, absolute_value
     """
     del pages  # not used
 
@@ -1332,8 +1512,32 @@ def parse_biomarkers(lines, raw_text=None, pages=None):
         if not value_payload:
             continue
 
-        ref_min, ref_max, ref_text = _extract_reference(block_lines)
+        ref_min, ref_max, ref_text, raw_ref_text = _extract_reference(block_lines)
         evidence = ' | '.join(_normalize_space(item) for item in block_lines[:8])
+
+        # Determine parse_status
+        comparator = value_payload.get('comparator')
+        value_kind = value_payload.get('value_kind', 'numeric')
+        if comparator:
+            parse_status = 'parsed'
+        elif ref_text and not ref_min and not ref_max:
+            parse_status = 'ambiguous'
+        else:
+            parse_status = 'parsed'
+
+        # Differential pair (relative % + absolute count)
+        relative_value = None
+        absolute_value = None
+        if marker['marker_key'] in _DIFFERENTIAL_KEYS:
+            relative_value, absolute_value = _extract_differential_pair(block_lines)
+            if relative_value is not None and absolute_value is not None:
+                value_kind = 'relative_absolute_pair'
+                # Prefer absolute for value_numeric when available
+                if absolute_value is not None:
+                    value_payload = dict(value_payload)
+                    value_payload['value_numeric'] = absolute_value
+                    value_payload['value_text'] = str(absolute_value)
+
         item = {
             'marker_key': marker['marker_key'],
             'marker_name': marker['marker_name'],
@@ -1343,9 +1547,16 @@ def parse_biomarkers(lines, raw_text=None, pages=None):
             'reference_min': ref_min,
             'reference_max': ref_max,
             'reference_text': ref_text,
+            'raw_reference_text': raw_ref_text,
             'flag': _normalize_flag(value_payload['value_numeric'], ref_min, ref_max),
             'source_line': evidence or value_payload['source_line'],
             'confidence': _confidence(value_payload['unit'], ref_text, value_payload['source_line']),
+            'raw_result_text': value_payload.get('raw_result_text'),
+            'comparator': comparator,
+            'value_kind': value_kind,
+            'parse_status': parse_status,
+            'relative_value': relative_value,
+            'absolute_value': absolute_value,
         }
 
         previous = parsed.get(marker['marker_key'])
