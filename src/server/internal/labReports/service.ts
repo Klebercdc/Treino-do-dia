@@ -654,7 +654,10 @@ export async function getUserLabReportTimeline(
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50);
-  if (error) throw new Error(`Falha ao carregar timeline: ${error.message}`);
+  if (error) {
+    console.warn('[getUserLabReportTimeline] DB error (non-fatal):', error.message);
+    return [];
+  }
   return (data || []) as Array<Record<string, unknown>>;
 }
 
