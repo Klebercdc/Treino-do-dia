@@ -62,6 +62,19 @@ function extractBiomarkers(normalizedPayload: Record<string, unknown> | null): B
     const row = asRecord(item)
     if (!row) continue
 
+    const comparatorRaw = row.comparator
+    const comparator = comparatorRaw === "<" || comparatorRaw === "<=" || comparatorRaw === ">" || comparatorRaw === ">=" || comparatorRaw === "="
+      ? comparatorRaw as BiomarkerEntry["comparator"]
+      : null
+    const valueKindRaw = row.value_kind
+    const valueKind = valueKindRaw === "numeric" || valueKindRaw === "below_detection" || valueKindRaw === "above_detection" || valueKindRaw === "relative_absolute_pair" || valueKindRaw === "text_only"
+      ? valueKindRaw as BiomarkerEntry["value_kind"]
+      : null
+    const parseStatusRaw = row.parse_status
+    const parseStatus = parseStatusRaw === "parsed" || parseStatusRaw === "ambiguous" || parseStatusRaw === "review_required" || parseStatusRaw === "failed"
+      ? parseStatusRaw as BiomarkerEntry["parse_status"]
+      : null
+
     const biomarker: BiomarkerEntry = {
       marker_key: String(row.marker_key ?? row.marker ?? row.name ?? "").trim().toLowerCase(),
       marker_name: String(row.marker_name ?? row.name ?? row.marker_key ?? "Marcador").trim(),
@@ -74,6 +87,13 @@ function extractBiomarkers(normalizedPayload: Record<string, unknown> | null): B
       flag: row.flag === "low" || row.flag === "high" || row.flag === "normal" ? row.flag : null,
       source_line: row.source_line == null ? null : String(row.source_line),
       confidence: toNullableNumber(row.confidence),
+      raw_result_text: row.raw_result_text == null ? null : String(row.raw_result_text),
+      raw_reference_text: row.raw_reference_text == null ? null : String(row.raw_reference_text),
+      comparator,
+      value_kind: valueKind,
+      parse_status: parseStatus,
+      relative_value: toNullableNumber(row.relative_value),
+      absolute_value: toNullableNumber(row.absolute_value),
       reference_text_raw: row.reference_text_raw == null ? null : String(row.reference_text_raw),
       normalized_reference: asRecord(row.normalized_reference) as BiomarkerEntry["normalized_reference"],
       lab_flag: row.lab_flag === "low" || row.lab_flag === "high" || row.lab_flag === "normal" ? row.lab_flag : null,

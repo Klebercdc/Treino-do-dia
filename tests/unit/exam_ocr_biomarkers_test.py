@@ -729,5 +729,177 @@ class ExamOcrExtractPayloadIntegrationTest(unittest.TestCase):
         self.assertIn('psa_total', {item['marker_key'] for item in payload['biomarkers_detected']})
 
 
+# ---------------------------------------------------------------------------
+# GOLDEN SAMPLE BEHAVIORS — validate fixes for real PDF divergences
+# ---------------------------------------------------------------------------
+
+# Tabular hemogram format: MARKER VALUE UNIT REFERENCE (no "Resultado:" keyword)
+HEMOGRAM_TABULAR_SNIPPET = """
+Hemograma Completo
+
+LEUCÓCITOS                                    8.300           /mm³      4.500 - 11.000
+ERITRÓCITOS                                    4.800.000      /mm³      4.000.000 - 5.500.000
+HEMOGLOBINA                                   14,8            g/dL      13,5 a 17,5
+HEMATÓCRITO                                   44              %         41 a 53
+
+NEUTRÓFILOS         68%  (3.644 /mm³)
+LINFÓCITOS          26%  (2.158 /mm³)
+MONÓCITOS            5%  (415 /mm³)
+EOSINÓFILOS          1%  (83 /mm³)
+
+PLAQUETAS                                    198.000          /mm³      150.000 - 400.000
+""".strip()
+
+# LH with comparator result
+LH_COMPARATOR_SNIPPET = """
+LH - HORMÔNIO LUTEINIZANTE
+Resultado: Inferior a 0,20 mUI/mL
+Valor(es) de referência:
+Homens adultos: 1,5 a 9,3 mUI/mL
+""".strip()
+
+# Thyroid with Brazilian decimal comma
+THYROID_COMMA_SNIPPET = """
+TSH - HORMÔNIO TIREOESTIMULANTE
+Resultado: 1,88 µUI/mL
+Valor(es) de referência: 0,38 a 5,33 µUI/mL
+
+T4 LIVRE
+Resultado: 0,69 ng/dL
+Valor(es) de referência: 0,54 a 1,24 ng/dL
+""".strip()
+
+# Testosterona with large value (thousands + decimal)
+TESTOSTERONE_LARGE_SNIPPET = """
+TESTOSTERONA TOTAL
+Resultado: 1.231,75 ng/dL
+Valor(es) de referência:
+Homens 18 a 66 anos: 175,00 a 781,00 ng/dL
+""".strip()
+
+
+class ExamOcrGoldenSampleBehaviorsTest(unittest.TestCase):
+    """Validate specific parsing behaviors from real-PDF golden sample."""
+
+    def test_thousands_separator_wbc(self):
+        """WBC 8.300 /mm³ must parse as 8300 (Brazilian thousands sep), not 8.3."""
+        biomarkers = parse_biomarkers([], raw_text=HEMOGRAM_TABULAR_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('wbc', by_key, 'Leucócitos (wbc) not found in tabular format')
+        self.assertEqual(by_key['wbc']['value_numeric'], 8300.0,
+                         f'Expected 8300 (thousands sep), got {by_key["wbc"]["value_numeric"]}')
+
+    def test_thousands_separator_platelets(self):
+        """Plaquetas 198.000 must parse as 198000."""
+        biomarkers = parse_biomarkers([], raw_text=HEMOGRAM_TABULAR_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('platelets', by_key, 'Plaquetas not found')
+        self.assertEqual(by_key['platelets']['value_numeric'], 198000.0,
+                         f'Expected 198000, got {by_key["platelets"]["value_numeric"]}')
+
+    def test_hemoglobin_tabular_format(self):
+        """Hemoglobina in tabular format (no Resultado:) must still parse."""
+        biomarkers = parse_biomarkers([], raw_text=HEMOGRAM_TABULAR_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('hemoglobin', by_key, 'Hemoglobina not found in tabular format')
+        self.assertEqual(by_key['hemoglobin']['value_numeric'], 14.8)
+
+    def test_lh_comparator_below_detection(self):
+        """LH 'Inferior a 0,20' must set comparator='<' and value_numeric=0.20."""
+        biomarkers = parse_biomarkers([], raw_text=LH_COMPARATOR_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('lh', by_key, 'LH not found')
+        lh = by_key['lh']
+        self.assertEqual(lh['value_numeric'], 0.20,
+                         f'Expected 0.20, got {lh["value_numeric"]}')
+        self.assertEqual(lh['comparator'], '<',
+                         f'Expected comparator="<", got {lh["comparator"]}')
+        self.assertIn(lh['value_kind'], ('below_detection',),
+                      f'Expected value_kind="below_detection", got {lh["value_kind"]}')
+
+    def test_lh_parse_status_set(self):
+        """LH parse_status must be 'parsed' when comparator is resolved."""
+        biomarkers = parse_biomarkers([], raw_text=LH_COMPARATOR_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+        self.assertIn('lh', by_key)
+        self.assertEqual(by_key['lh']['parse_status'], 'parsed')
+
+    def test_lymphocytes_differential_pair(self):
+        """Linfócitos 26% (2.158 /mm³) must set relative_value=26 and absolute_value=2158."""
+        biomarkers = parse_biomarkers([], raw_text=HEMOGRAM_TABULAR_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('lymphocytes', by_key, 'Linfócitos not found')
+        lymph = by_key['lymphocytes']
+        self.assertEqual(lymph['relative_value'], 26.0,
+                         f'Expected relative_value=26, got {lymph["relative_value"]}')
+        self.assertEqual(lymph['absolute_value'], 2158.0,
+                         f'Expected absolute_value=2158, got {lymph["absolute_value"]}')
+        self.assertEqual(lymph['value_kind'], 'relative_absolute_pair')
+
+    def test_tsh_comma_decimal(self):
+        """TSH 1,88 with comma decimal separator."""
+        biomarkers = parse_biomarkers([], raw_text=THYROID_COMMA_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('tsh', by_key)
+        tsh = by_key['tsh']
+        self.assertEqual(tsh['value_numeric'], 1.88)
+        self.assertAlmostEqual(tsh['reference_min'], 0.38, places=2)
+        self.assertAlmostEqual(tsh['reference_max'], 5.33, places=2)
+        self.assertEqual(tsh['flag'], 'normal')
+
+    def test_t4_free_comma_decimal(self):
+        """T4 Livre 0,69 with comma decimal separator."""
+        biomarkers = parse_biomarkers([], raw_text=THYROID_COMMA_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('t4_free', by_key)
+        t4 = by_key['t4_free']
+        self.assertEqual(t4['value_numeric'], 0.69)
+        self.assertAlmostEqual(t4['reference_min'], 0.54, places=2)
+        self.assertAlmostEqual(t4['reference_max'], 1.24, places=2)
+
+    def test_testosterone_large_value_european_format(self):
+        """Testosterona 1.231,75 must parse as 1231.75 (European thousands+decimal)."""
+        biomarkers = parse_biomarkers([], raw_text=TESTOSTERONE_LARGE_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('testosterone_total', by_key)
+        t = by_key['testosterone_total']
+        self.assertEqual(t['value_numeric'], 1231.75,
+                         f'Expected 1231.75, got {t["value_numeric"]}')
+
+    def test_raw_result_text_preserved(self):
+        """raw_result_text must be populated for all parsed biomarkers."""
+        biomarkers = parse_biomarkers([], raw_text=THYROID_COMMA_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('tsh', by_key)
+        self.assertIsNotNone(by_key['tsh']['raw_result_text'],
+                             'raw_result_text should not be None for TSH')
+
+    def test_raw_reference_text_preserved(self):
+        """raw_reference_text must be populated when reference is present."""
+        biomarkers = parse_biomarkers([], raw_text=THYROID_COMMA_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('tsh', by_key)
+        self.assertIsNotNone(by_key['tsh']['raw_reference_text'],
+                             'raw_reference_text should not be None when reference exists')
+
+    def test_value_kind_numeric_for_standard_markers(self):
+        """Standard markers without comparator must have value_kind='numeric'."""
+        biomarkers = parse_biomarkers([], raw_text=THYROID_COMMA_SNIPPET)
+        by_key = {item['marker_key']: item for item in biomarkers}
+
+        self.assertIn('tsh', by_key)
+        self.assertEqual(by_key['tsh']['value_kind'], 'numeric')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -361,6 +361,18 @@ export async function persistBiomarkers(
     const valueNumeric = toNumber(item.value_numeric ?? item.value);
     const referenceMin = toNumber(item.reference_min);
     const referenceMax = toNumber(item.reference_max);
+    const comparatorRaw = item.comparator;
+    const comparator = comparatorRaw === '<' || comparatorRaw === '<=' || comparatorRaw === '>' || comparatorRaw === '>=' || comparatorRaw === '='
+      ? comparatorRaw as '<' | '<=' | '>' | '>=' | '='
+      : null;
+    const valueKindRaw = item.value_kind;
+    const valueKind = valueKindRaw === 'numeric' || valueKindRaw === 'below_detection' || valueKindRaw === 'above_detection' || valueKindRaw === 'relative_absolute_pair' || valueKindRaw === 'text_only'
+      ? valueKindRaw as 'numeric' | 'below_detection' | 'above_detection' | 'relative_absolute_pair' | 'text_only'
+      : null;
+    const parseStatusRaw = item.parse_status;
+    const parseStatus = parseStatusRaw === 'parsed' || parseStatusRaw === 'ambiguous' || parseStatusRaw === 'review_required' || parseStatusRaw === 'failed'
+      ? parseStatusRaw as 'parsed' | 'ambiguous' | 'review_required' | 'failed'
+      : null;
     return {
       lab_report_id: input.labReportId,
       marker_key: markerKey,
@@ -374,6 +386,13 @@ export async function persistBiomarkers(
       flag: item.flag != null ? String(item.flag) : normalizeFlag(valueNumeric, referenceMin, referenceMax),
       source_line: item.source_line != null ? String(item.source_line) : null,
       confidence: toNumber(item.confidence),
+      raw_result_text: item.raw_result_text != null ? String(item.raw_result_text) : null,
+      raw_reference_text: item.raw_reference_text != null ? String(item.raw_reference_text) : null,
+      comparator,
+      value_kind: valueKind,
+      parse_status: parseStatus,
+      relative_value: toNumber(item.relative_value),
+      absolute_value: toNumber(item.absolute_value),
     };
   }).filter((row) => row.marker_key);
 
@@ -392,6 +411,13 @@ export async function persistBiomarkers(
       confidence: item.confidence,
       reference_text_raw: item.reference_text,
       lab_flag: item.flag === 'low' || item.flag === 'high' || item.flag === 'normal' ? item.flag : null,
+      raw_result_text: item.raw_result_text,
+      raw_reference_text: item.raw_reference_text,
+      comparator: item.comparator,
+      value_kind: item.value_kind,
+      parse_status: item.parse_status,
+      relative_value: item.relative_value,
+      absolute_value: item.absolute_value,
     })),
     input.profileRow ?? null,
   )

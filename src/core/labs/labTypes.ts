@@ -13,6 +13,22 @@ export interface BiomarkerEntry {
   flag: 'low' | 'high' | 'normal' | null
   source_line: string | null
   confidence: number | null
+  // --- Rich extraction fields (populated by OCR pipeline) ---
+  /** Original result text as extracted from PDF before numeric parsing */
+  raw_result_text?: string | null
+  /** Original reference text as extracted from PDF */
+  raw_reference_text?: string | null
+  /** Comparator for threshold values: '<' or '>' (e.g. LH < 0.20) */
+  comparator?: '<' | '<=' | '>' | '>=' | '=' | null
+  /** Semantic kind of the value */
+  value_kind?: 'numeric' | 'below_detection' | 'above_detection' | 'relative_absolute_pair' | 'text_only' | null
+  /** Parse reliability status from OCR pipeline */
+  parse_status?: 'parsed' | 'ambiguous' | 'review_required' | 'failed' | null
+  /** For differential count markers: relative percentage value (e.g. lymphocytes 26%) */
+  relative_value?: number | null
+  /** For differential count markers: absolute count value (e.g. lymphocytes 2158 /mm³) */
+  absolute_value?: number | null
+  // --- Interpretation fields (populated by enrichBiomarkerEntries) ---
   reference_text_raw?: string | null
   normalized_reference?: NormalizedReference | null
   lab_flag?: 'low' | 'high' | 'normal' | null
