@@ -4,6 +4,8 @@ set -Eeuo pipefail
 ROOT_STATE_DIR="${KRONIA_STATE_DIR:-$HOME/.kronia}"
 STATE_DIR="$ROOT_STATE_DIR/run"
 PID_FILE="$STATE_DIR/telegram-bot.pid"
+BOT_LAUNCHER="$HOME/Treino-do-dia/scripts/kronia_telegram_bot.sh"
+LEGACY_NODE_ENTRY="$HOME/Treino-do-dia/telegram-enterprise/bot.js"
 
 if [ ! -f "$PID_FILE" ]; then
   echo "telegram bot não está rodando"
@@ -17,5 +19,8 @@ if [ -n "$BOT_PID" ] && kill -0 "$BOT_PID" 2>/dev/null; then
 else
   echo "telegram bot já não estava rodando"
 fi
+
+pkill -f "$BOT_LAUNCHER" >/dev/null 2>&1 || true
+pkill -f "$LEGACY_NODE_ENTRY" >/dev/null 2>&1 || true
 
 rm -f "$PID_FILE"
