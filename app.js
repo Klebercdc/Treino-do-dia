@@ -2636,6 +2636,7 @@ function openLabsScreen() {
 }
 
 function closeLabsScreen() {
+  stopLabsPolling();
   document.getElementById('labsScreen').classList.remove('show');
   document.body.classList.remove('overlay-open');
   var footer = document.querySelector('.footer-actions');
@@ -2805,6 +2806,7 @@ async function _handleLabsScreenUpload(file) {
     setStatus('Exame enviado! Processando biomarcadores…', 'success');
     renderLabsResult(payload, resultEl);
     setTimeout(function() { loadLabsScreenHistory(true); }, 2000);
+    startLabsPolling(labReportId); // Atualiza automaticamente até o status final (máx. 5 min)
   } catch (err) {
     console.error('[labs-upload] erro:', err);
     setStatus('Falha na conexão: ' + (err.message || err), 'error');
@@ -2840,6 +2842,37 @@ function renderLabsResult(payload, container) {
 var _labsHistoryCache = null;
 var _labsSelectedReportId = null;
 var _labsReportDetailCache = Object.create(null);
+var _labsPollingInterval = null;
+var _labsPollingLabReportId = null;
+var _labsPollingCount = 0;
+var LABS_POLL_MAX = 15;       // 15 × 20 s = 5 minutos máximo
+var LABS_POLL_MS  = 20000;    // intervalo entre polls
+
+// Statuses que indicam processamento em andamento (não-final)
+var LABS_PROCESSING_STATUSES = { pending_upload: 1, uploaded: 1, queued: 1, processing: 1, extracted: 1 };
+
+function stopLabsPolling() {
+  if (_labsPollingInterval) { clearInterval(_labsPollingInterval); _labsPollingInterval = null; }
+  _labsPollingLabReportId = null;
+  _labsPollingCount = 0;
+}
+
+function startLabsPolling(labReportId) {
+  stopLabsPolling();
+  if (!labReportId) return;
+  _labsPollingLabReportId = labReportId;
+  _labsPollingInterval = setInterval(async function() {
+    _labsPollingCount++;
+    if (_labsPollingCount >= LABS_POLL_MAX) { stopLabsPolling(); return; }
+    await loadLabsScreenHistory(true);
+    // Para o polling quando o exame atingir status final
+    var reports = _labsHistoryCache || [];
+    var target = reports.find(function(r) { return r.id === _labsPollingLabReportId; });
+    if (target && !LABS_PROCESSING_STATUSES[String(target.status || target.parseStatus || '').toLowerCase()]) {
+      stopLabsPolling();
+    }
+  }, LABS_POLL_MS);
+}
 
 function _getLabStatusLabel(statusKey) {
   var STATUS_LABELS = {

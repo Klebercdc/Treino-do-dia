@@ -442,6 +442,31 @@ function handleRegister(req, res) {
       });
     }
 
+    // Fire-and-forget: dispatch diretamente para a Edge Function como camada primária.
+    // O trigger de BD (trg_lab_reports_dispatch_uploaded via pg_net) e o watchdog de
+    // pg_cron são camadas de backup — se a Edge Function não estiver disponível ou o
+    // pg_net não estiver configurado, o watchdog resgata após 5 min.
+    var edgeUrl = readSupabaseUrl().replace(/\/$/, '') + '/functions/v1/lab-report-orchestrator';
+    var edgeKey = readSupabaseServiceKey();
+    if (edgeUrl && edgeKey) {
+      fetch(edgeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + edgeKey,
+        },
+        body: JSON.stringify({
+          labReportId: updated.data.id,
+          dispatchSource: 'register_direct_dispatch',
+        }),
+      }).catch(function(edgeErr) {
+        console.warn('[labs/register] direct edge dispatch failed (non-blocking):', edgeErr && edgeErr.message);
+      });
+      console.log('[labs/register] direct edge dispatch initiated', { labReportId: updated.data.id });
+    } else {
+      console.warn('[labs/register] direct edge dispatch skipped: missing supabase url or service key');
+    }
+
     return res.status(200).json({ ok: true, labReportId: updated.data.id, status: 'processing' });
   });
 }
