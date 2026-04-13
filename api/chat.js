@@ -22,6 +22,7 @@ var diagnostics = require('../src/server/apihelpers/_diagnosticTracker');
 var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants');
 var aiContracts = require('../src/server/apihelpers/_aiContracts');
 var userMemory = require('../src/server/apihelpers/_userMemory');
+var kronosHub = require('../src/server/apihelpers/_kronosContextHub');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;
@@ -495,7 +496,7 @@ module.exports = function(req, res) {
         decision.action = 'open_diet_flow';
         decision.reason = 'isDietDirect flag forces diet pipeline.';
       }
-      if (classification.topic === 'diet' && decision.action !== 'open_diet_flow') {
+      if (classification.topic === 'diet' && decision.action !== 'open_diet_flow' && classification.topic !== 'labs') {
         decision.action = 'open_diet_flow';
         decision.reason = 'Diet topic always uses diet pipeline.';
       }
@@ -610,20 +611,34 @@ module.exports = function(req, res) {
 
       Promise.resolve()
         .then(function() {
-          if (classification.topic === 'general') return null;
-          return scienceInsight.buildScienceContextFromText(lastContent);
+          // Build Context Hub + optional science in parallel
+          var sciencePromise = (classification.topic !== 'general')
+            ? Promise.resolve(scienceInsight.buildScienceContextFromText(lastContent)).catch(function() { return null; })
+            : Promise.resolve(null);
+          var hubPromise = Promise.resolve(kronosHub.buildKronosContextHub(user.id, lastContent)).catch(function() { return null; });
+          return Promise.all([sciencePromise, hubPromise]);
         })
-        .then(function(scienceContext) {
-          return Promise.resolve(userMemory.getCoachingSummary(user.id)).catch(function() { return null; }).then(function(memorySummary) {
+        .then(function(results) {
+          var scienceContext = results[0];
+          var hub = results[1];
+
+          // Derive kronos intent from classification
+          var kronosIntent = kronosHub.deriveKronosIntent(classification.topic, classification.kind);
+          var selectedContext = kronosHub.selectContextForIntent(hub, kronosIntent);
+          var contextBlock = kronosHub.formatContextForPrompt(selectedContext);
+
           var context = Object.assign({}, b.context || {});
           if (scienceContext) context.science_context = scienceContext;
-          if (memorySummary && memorySummary.text) {
-            context.coaching_summary = memorySummary.text;
-            context.memory_status = memorySummary.status;
+          if (contextBlock) context.kronosContextBlock = contextBlock;
+
+          // Legacy fallback: also set coaching_summary if memory is available
+          if (hub && hub.memory && hub.memory.coachingSummary) {
+            context.coaching_summary = hub.memory.coachingSummary;
           }
 
           safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { layer: 'ai', nodeKey: 'Recomendacao', inputSummary: lastContent }); });
           safeTrack(function() { tracker.captureMetric({ key: 'promptSizeEstimate', value: String(lastContent || '').length, unit: 'chars' }); });
+          safeTrack(function() { tracker.captureMetric({ key: 'kronosIntent', value: kronosIntent }); });
           runPaidAiCall(function(nextCall) {
             if (decision.action === 'call_llm_full' && classification.topic === 'workout' && !process.env.GROQ_API_KEY) {
               var workoutStartFallback = workoutflow.startWorkoutFlow();
@@ -681,7 +696,6 @@ module.exports = function(req, res) {
               data: { content: [{ type: 'text', text: payload }], conversationState: { memory: nextShortState } },
               meta: { decision: process.env.NODE_ENV === 'development' ? decision : undefined }
             });
-          });
           });
         })
         .catch(function(err) {

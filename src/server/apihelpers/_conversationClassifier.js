@@ -84,7 +84,7 @@ function triageMessage(input) {
   if (/\b(quero|monta|montar|cria|criar|gere|gera|ajusta|revisa|preciso|me ajuda|troco|corto|subo|desco|planeja|estruture|organiza)\b/.test(text)) return 'direct_request';
   if (/\b(esse treino|essa dieta|ajusta|mudar|corrigir|mudar volume|mudar frequencia)\b/.test(text)) return 'adjustment_request';
   if (/\b(progresso|evolui|evolucao|plato|travei|resultado|deload agora)\b/.test(text)) return 'progress_question';
-  if (/\b(treino|dieta|creatina|suplemento|cutting|bulking|dor)\b/.test(text) && tokens.length <= 3 && !/\?/.test(text)) return 'topic_mention';
+  if (/\b(treino|dieta|creatina|suplemento|cutting|bulking|dor|exame|exames|laboratorial|hemograma)\b/.test(text) && tokens.length <= 3 && !/\?/.test(text)) return 'topic_mention';
   if (/\b(exercicio|fisiologia|periodizacao|macros|tdee|dosagem)\b/.test(text)) return 'technical_question';
   return 'unknown';
 }
@@ -110,7 +110,7 @@ function classifyIntent(input, continuationContext) {
 
   var scores = {
     action: { request: 0, question: 0, adjust: 0, vent: 0, complaint: 0 },
-    topic: { workout: 0, diet: 0, supplement: 0, exercise: 0, recovery: 0, progress: 0, motivation: 0, general: 0 },
+    topic: { workout: 0, diet: 0, supplement: 0, exercise: 0, recovery: 0, progress: 0, motivation: 0, labs: 0, general: 0 },
     emotion: 0,
     clarity: Math.max(0, Math.min(1, (input.tokenCount || 0) / 8))
   };
@@ -130,6 +130,13 @@ function classifyIntent(input, continuationContext) {
   if (/\b(exercicio|agachamento|supino|remada|dor)\b/.test(text)) scores.topic.exercise += 1.5;
   if (/\b(recuperacao|sono|fadiga|deload|cansado)\b/.test(text)) scores.topic.recovery += 1.5;
   if (/\b(progresso|evolui|plato|resultado|estagnado)\b/.test(text)) scores.topic.progress += 1.5;
+  if (/\b(exame|exames|laboratorial|hemograma|sangue|testosterona|creatinina|tsh|ferritina|vitamina d|vitamina b|colesterol|triglicerides|hemoglobina|hematocrito|glicose|glicemia|insulina|cortisol|igf|biomarcador|resultado do exame|meu exame|meus exames|laudo|laudos|ferritina|pcr|proteina c reativa|eosinofilo|leucocito|eritrocito|plaqueta|vhs|ldl|hdl|tgp|tgo|ggt|creatinina|ureia|acido urico|albumina|globulina|bilirrubina|tsh|t3|t4|psa)\b/.test(text)) {
+    scores.topic.labs += 2.5;
+  }
+  // Strong labs signals — named exam types
+  if (/\b(hemograma completo|painel hormonal|perfil lipidico|metabolismo osseo|funcao renal|funcao hepatica|funcao tireoidiana|painel metabolico|vitaminas e minerais)\b/.test(text)) {
+    scores.topic.labs += 2;
+  }
   if (scores.topic.supplement >= 2 && !/\b(monta|montar|cria|criar|gera|gerar)\b.*\b(treino|ficha|divisao)\b/.test(text)) {
     scores.topic.workout = Math.max(0, scores.topic.workout - 1);
   }

@@ -672,6 +672,18 @@ async function getProgressAnalysis(userId) {
   };
 }
 
+// RISCO 1 — lazy require to avoid circular dependency:
+// _kronosContextHub → _userMemory → _kronosContextHub would loop.
+// Requiring inside the function body resolves it after both modules are loaded.
+function _bustHubCache(userId) {
+  try {
+    var hub = require('./_kronosContextHub');
+    hub.invalidateHubCache(userId);
+  } catch (e) {
+    // not critical — cache will expire naturally after TTL
+  }
+}
+
 function captureEventAndEnqueue(params) {
   var validation = memoryValidation.validateMemoryEventInput(params || {});
   if (!validation.ok) {
@@ -682,6 +694,9 @@ function captureEventAndEnqueue(params) {
     eventType: validation.eventType,
     payload: validation.payload
   });
+
+  // RISCO 1 — invalidate hub cache so next request rebuilds with fresh data
+  if (normalizedParams.userId) _bustHubCache(normalizedParams.userId);
 
   return appendUserMemoryEvent(normalizedParams)
     .then(function(result) {
