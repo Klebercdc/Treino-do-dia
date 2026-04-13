@@ -1047,11 +1047,11 @@ function showToast(msg, type="info", duration=3500) {
   if (!toast) {
     toast = document.createElement("div");
     toast.id = "titanToast";
-    toast.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+    toast.style.cssText = `position:fixed;bottom:calc(58px + env(safe-area-inset-bottom,0px) + 16px);left:50%;transform:translateX(-50%) translateY(20px);
       background:var(--card);border:1px solid var(--border);color:var(--text);
       padding:12px 20px;border-radius:24px;font-size:0.85rem;font-weight:600;
       box-shadow:var(--shadow-lg);z-index:9998;opacity:0;transition:opacity .25s,transform .25s;
-      white-space:nowrap;max-width:90vw;text-align:center;`;
+      white-space:normal;overflow-wrap:break-word;max-width:min(90vw,400px);text-align:center;pointer-events:none;`;
     document.body.appendChild(toast);
   }
   const colors = { info:"var(--accent)", success:"var(--green)", warning:"#f59e0b", error:"var(--red)" };
