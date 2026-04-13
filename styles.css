@@ -109,17 +109,21 @@ body {
 #customModal.show { display: flex; }
 #customModal .cm-box {
   background: var(--card); border: 1px solid var(--border); border-radius: 20px;
-  padding: 28px 22px 20px; width: 88%; max-width: 340px; text-align: center;
+  padding: 28px 22px 20px; width: min(88vw, 340px); text-align: center;
   box-shadow: var(--shadow-lg); animation: popIn .2s cubic-bezier(.34,1.56,.64,1);
 }
-#customModal .cm-msg { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 18px; line-height: 1.45; }
+#customModal .cm-msg {
+  font-size: clamp(0.875rem, 4.2vw, 1rem); font-weight: 600; color: var(--text);
+  margin-bottom: 18px; line-height: 1.5;
+  white-space: pre-line; overflow-wrap: break-word;
+}
 #customModal input {
   width: 100%; padding: 11px 14px; border-radius: var(--r-sm); border: 1px solid var(--border);
   background: var(--bg2); color: var(--text); font-size: 1rem; font-family: var(--font);
   margin-bottom: 16px; outline: none; text-align: center; transition: border-color .2s;
 }
 #customModal input:focus { border-color: var(--accent); }
-#customModal .cm-btns { display: flex; gap: 10px; }
+#customModal .cm-btns { display: flex; gap: 10px; flex-wrap: wrap; }
 #customModal .cm-btn {
   flex: 1; padding: 13px; border-radius: var(--r-sm); font-family: var(--font);
   font-weight: 700; font-size: 0.88rem; cursor: pointer; text-align: center; user-select: none;
@@ -128,6 +132,11 @@ body {
 #customModal .cm-btn:active { transform: scale(.97); opacity:.85; }
 #customModal .cm-ok  { background: var(--accent); color: #fff; border-radius: var(--r-sm); box-shadow: 0 4px 16px var(--accent-glow); }
 #customModal .cm-no  { background: var(--bg2); color: var(--text-2); border: 1px solid var(--border); border-radius: var(--r-sm); }
+/* Viewport muito estreito: empilha botões verticalmente */
+@media (max-width: 320px) {
+  #customModal .cm-btns { flex-direction: column; }
+  #customModal .cm-btn  { flex: none; width: 100%; }
+}
 
 /* ══════════════════════════════════════════
    HEADER
