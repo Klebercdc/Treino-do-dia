@@ -32,7 +32,7 @@ function evaluateComplexity(classification) {
   signals.mixedIntent = hasAny(text, [/\b(treino|dieta)\b/]) && hasAny(text, [/\b(e|junto|ao mesmo tempo|ou)\b/]);
   signals.comparison = hasAny(text, [/\b(vs|comparar|melhor que|diferen[çc]a)\b/]);
   signals.constraints = hasAny(text, [/\b(sem|evitar|nao posso|restri[cç][aã]o|alergia|les[ãa]o|dor)\b/]);
-  signals.clinicalContext = hasAny(text, [/\b(diabetes|hipertens[aã]o|ansiedade|ins[ôo]nia|exame|medic[ao][cç][aã]o)\b/]);
+  signals.clinicalContext = hasAny(text, [/\b(diabetes|hipertens[aã]o|ansiedade|ins[ôo]nia|exame|exames|laboratorial|hemograma|sangue|medic[ao][cç][aã]o|testosterona|colesterol|ferritina|tsh|vitamina d)\b/]);
   signals.compositeGoal = hasAny(text, [/\b(secar sem perder massa|ganhar massa e perder gordura|recomposi[cç][aã]o|secar agora|deload agora)\b/]);
   signals.causalNeed = hasAny(text, [/\b(por que|porque|causa|motivo)\b/]);
   signals.strategicRequest = hasAny(text, [/\b(estrat[eé]gia|plano|protocolo|periodiza[cç][aã]o|microciclo)\b/]);
@@ -204,6 +204,15 @@ function decideAction(classification, conversationState) {
     decision.action = 'ask_clarifying';
     decision.topic = 'diet';
     decision.depth = 'micro';
+    decision.tokenLimit = resolveTokenLimit(decision);
+    return decision;
+  }
+
+  // Lab analysis: never reroute to workout/diet flows
+  if (classification.topic === 'labs') {
+    decision.action = classification.confidence >= 0.6 ? 'call_llm_full' : 'call_llm_short';
+    decision.depth = complexity.level === 'high' ? 'full' : 'normal';
+    decision.topic = 'labs';
     decision.tokenLimit = resolveTokenLimit(decision);
     return decision;
   }

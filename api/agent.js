@@ -13,6 +13,7 @@ var intent = require('../src/server/apihelpers/_intent');
 var access = require('../src/server/apihelpers/_access');
 var aiContracts = require('../src/server/apihelpers/_aiContracts');
 var userMemory = require('../src/server/apihelpers/_userMemory');
+var kronosHub = require('../src/server/apihelpers/_kronosContextHub');
 
 // ══════════════════════════════════════════
 // FERRAMENTAS DOS AGENTS
@@ -389,13 +390,16 @@ function callAgent(messages, tools, callback) {
 // ══════════════════════════════════════════
 
 function buildAgentSystem(userData) {
-  var profile = Object.assign({}, userData.profile || {});
-  if (userData.memorySummary && userData.memorySummary.text) {
-    profile.coaching_summary = userData.memorySummary.text;
-    profile.memory_status = userData.memorySummary.status;
-    profile.memory_confidence = userData.memorySummary.confidence;
+  var context = Object.assign({}, userData.profile || {});
+  // Prefer Context Hub block if available
+  if (userData.kronosContextBlock) {
+    context.kronosContextBlock = userData.kronosContextBlock;
+  } else if (userData.memorySummary && userData.memorySummary.text) {
+    context.coaching_summary = userData.memorySummary.text;
+    context.memory_status = userData.memorySummary.status;
+    context.memory_confidence = userData.memorySummary.confidence;
   }
-  return prompts.buildAgentSystem(profile);
+  return prompts.buildAgentSystem(context);
 }
 
 function agentLoop(userMessages, userData, callback) {
@@ -624,8 +628,26 @@ module.exports = function(req, res) {
         });
       }
 
-      Promise.resolve(userMemory.getCoachingSummary(user.id)).catch(function() { return null; }).then(function(memorySummary) {
-      userData.memorySummary = memorySummary;
+      Promise.resolve(kronosHub.buildKronosContextHub(user.id, lastContent)).catch(function() { return null; }).then(function(hub) {
+      if (hub) {
+        var kronosIntent = kronosHub.deriveKronosIntent(
+          lastContent && /\b(exame|exames|laboratorial|hemograma)\b/i.test(lastContent) ? 'labs' : 'general',
+          'question'
+        );
+        var selectedCtx = kronosHub.selectContextForIntent(hub, kronosHub.KRONOS_INTENT.MIXED_CONTEXT);
+        userData.kronosContextBlock = kronosHub.formatContextForPrompt(selectedCtx);
+        userData.memorySummary = hub.memory ? { text: hub.memory.coachingSummary, status: null, confidence: null } : null;
+        // Enrich profile from hub if request body profile is sparse
+        if (hub.profile && (!userData.profile || !userData.profile.objetivo)) {
+          userData.profile = Object.assign({}, userData.profile || {}, {
+            objetivo: hub.profile.goal,
+            peso: hub.profile.weightKg,
+            altura: hub.profile.heightCm,
+            sexo: hub.profile.sex,
+            nivel: hub.profile.athleteLevel
+          });
+        }
+      }
       plans.getQuotaInfo(user.id, function(qErr, quota) {
         if (qErr) { var quotaErr = aiContracts.buildAiErrorContract({ status: 503, code: 'PLAN_CHECK_UNAVAILABLE', state: 'provider_unavailable', message: 'Não foi possível validar seu plano agora. Tente novamente em instantes.', retryable: true, suggestion: 'Tente novamente em alguns segundos.', meta: { reason: 'quota_check_failed', requestId: requestId, usageCategory: usageCategory } }); quotaErr.body.requestId = requestId; quotaErr.body.userId = user.id; return responseUtil.sendJson(res, quotaErr.status, quotaErr.body); }
         if (!quota.allowed) {
