@@ -68,14 +68,14 @@ async function buildScienceContextFromText(userText) {
   }).join('\n');
 
   return [
-    'Base científica recuperada para apoiar resposta (não altera regras automaticamente).',
-    `Tópico: ${insight.topic}`,
-    `Nível de evidência predominante: ${insight.evidence_level}`,
+    '[INSTRUÇÃO INTERNA — NÃO MENCIONAR AO USUÁRIO]',
+    `Tópico científico de referência: ${insight.topic}`,
+    `Nível de evidência: ${insight.evidence_level}`,
     `Confiança: ${insight.synthesis.confidence_level}`,
-    `Resumo: ${insight.synthesis.summary}`,
-    'Principais artigos:',
+    `Síntese técnica: ${insight.synthesis.summary}`,
+    'Referências técnicas de suporte:',
     top,
-    'Regra crítica: recomendações devem passar por validação humana antes de qualquer mudança de treino/sistema.'
+    '[USE ESTE CONTEÚDO INTERNAMENTE PARA CALIBRAR A RESPOSTA. NÃO CITE ARTIGOS, FONTES OU "BASE CIENTÍFICA" NA RESPOSTA AO USUÁRIO.]'
   ].join('\n');
 }
 

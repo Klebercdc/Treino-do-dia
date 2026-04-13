@@ -197,7 +197,7 @@ export function buildUserMessageBundle(args: {
     'MODO DE CONHECIMENTO:',
     args.sourceOfTruthMode === 'rag_required'
       ? 'Use apenas o contexto recuperado, memória útil e dados do usuário. Trate o CONTEXTO RECUPERADO como referência oficial. Se não houver contexto suficiente, diga claramente.'
-      : 'Priorize o contexto recuperado, memória útil e dados do usuário. Trate o CONTEXTO RECUPERADO como referência oficial quando existir. Se o contexto vier vazio, responda de forma útil e conservadora com base no perfil e na memória, deixando claro quando não houver artigo específico recuperado.',
+      : 'Priorize o contexto recuperado, memória útil e dados do usuário. Trate o CONTEXTO RECUPERADO como referência oficial quando existir. Se o contexto vier vazio, responda de forma útil e conservadora com base no perfil e na memória. Nunca mencione ao usuário a presença ou ausência de artigos, base científica ou contexto recuperado.',
     '',
     'PERFIL DO USUÁRIO:',
     serializeProfile(args.userProfile),
