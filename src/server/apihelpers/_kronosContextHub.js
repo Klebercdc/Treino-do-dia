@@ -32,6 +32,41 @@ function supabase(method, path, body) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// RISCO 1 — In-memory hub cache (per warm instance, TTL 5 min)
+//
+// Eliminates 6–7 parallel DB queries for back-to-back requests
+// from the same user within the same Vercel function instance.
+// invalidateHubCache(userId) must be called after any event that
+// changes the user's data (workouts, labs, diet, weight, etc.).
+// ─────────────────────────────────────────────────────────────
+
+var _hubCache = new Map(); // userId → { hub, expiresAt }
+var HUB_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedHub(userId) {
+  var entry = _hubCache.get(userId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    _hubCache.delete(userId);
+    return null;
+  }
+  return entry.hub;
+}
+
+function setCachedHub(userId, hub) {
+  _hubCache.set(userId, { hub: hub, expiresAt: Date.now() + HUB_CACHE_TTL_MS });
+}
+
+/**
+ * Invalidate the cached hub for a user.
+ * Call this after any event that changes user data:
+ *   workout_completed, diet_generated, lab_processed, weight_update, etc.
+ */
+function invalidateHubCache(userId) {
+  if (userId) _hubCache.delete(userId);
+}
+
+// ─────────────────────────────────────────────────────────────
 // A. INVENTORY — fast, parallel presence checks
 // ─────────────────────────────────────────────────────────────
 
@@ -86,12 +121,16 @@ async function buildKronosInventory(userId) {
 // ─────────────────────────────────────────────────────────────
 
 async function loadProfile(userId) {
+  // RISCO 2 — select every known alias so mapProfile never silently misses a field.
+  // New aliases discovered in the codebase: peso, altura, age, weight, height,
+  // pesoKg, alturaCm, weightKg, heightCm.  config (JSONB) covers anything else.
   var rows = await supabase(
     'GET',
     'profiles?id=eq.' + userId +
-    '&select=id,nome,full_name,objetivo,objective,nivel,idade,sexo,sex,' +
-    'peso_kg,current_weight_kg,altura_cm,height_cm,activity_level,rotina,' +
-    'restricoes,intolerances,lesoes,config&limit=1',
+    '&select=id,nome,full_name,objetivo,objective,nivel,idade,age,sexo,sex,' +
+    'peso_kg,current_weight_kg,peso,weight,weight_kg,pesoKg,' +
+    'altura_cm,height_cm,altura,height,height_cm,alturaCm,' +
+    'activity_level,rotina,restricoes,intolerances,lesoes,config&limit=1',
     null
   ).catch(function () { return []; });
   return (rows && rows[0]) ? rows[0] : null;
@@ -108,11 +147,13 @@ async function loadNutritionGoal(userId) {
 }
 
 async function loadLatestLabSummary(userId) {
+  // RISCO 3 — include parse_status so mapLabs can distinguish
+  // "valid but still processing" from "valid and fully interpreted".
   var rows = await supabase(
     'GET',
     'lab_reports?user_id=eq.' + userId +
     '&is_valid=eq.true' +
-    '&select=id,created_at,processed_at,clinical_flags,critical_flags,ai_insights,normalized_payload,confidence' +
+    '&select=id,created_at,processed_at,parse_status,clinical_flags,critical_flags,ai_insights,normalized_payload,confidence' +
     '&order=processed_at.desc.nullslast,created_at.desc&limit=1',
     null
   ).catch(function () { return []; });
@@ -162,23 +203,62 @@ function mapProfile(row) {
   var config = (row.config && typeof row.config === 'object' && !Array.isArray(row.config))
     ? row.config
     : {};
-  var goal = firstStr(row.objetivo, row.objective, config.objetivo, config.objective);
-  var level = firstStr(row.nivel, config.nivel, config.level);
+
+  // RISCO 2 — cover every alias variant seen across the codebase so a new
+  // column name never silently drops a field.
+  var goal = firstStr(
+    row.objetivo, row.objective,
+    config.objetivo, config.objective
+  );
+  var level = firstStr(
+    row.nivel, row.level,
+    config.nivel, config.level
+  );
   var athleteLevel = null;
-  if (/iniciante|beginner/i.test(level)) athleteLevel = 'iniciante';
-  else if (/avan[cç]ado|advanced/i.test(level)) athleteLevel = 'avancado';
-  else if (/intermediar/i.test(level)) athleteLevel = 'intermediario';
+  if (level) {
+    if (/iniciante|beginner/i.test(level)) athleteLevel = 'iniciante';
+    else if (/avan[cç]ado|advanced/i.test(level)) athleteLevel = 'avancado';
+    else if (/intermediar/i.test(level)) athleteLevel = 'intermediario';
+  }
 
   return {
-    name: firstStr(row.nome, row.full_name, config.nome, config.full_name),
-    age: firstNum(row.idade, config.idade, config.age),
-    sex: firstStr(row.sexo, row.sex, config.sexo, config.sex),
-    weightKg: firstNum(row.peso_kg, row.current_weight_kg, config.peso_kg, config.current_weight_kg, config.pesoKg),
-    heightCm: firstNum(row.altura_cm, row.height_cm, config.altura_cm, config.height_cm, config.alturaCm),
+    name: firstStr(
+      row.nome, row.full_name, row.name,
+      config.nome, config.full_name, config.name
+    ),
+    age: firstNum(
+      row.idade, row.age,
+      config.idade, config.age
+    ),
+    sex: firstStr(
+      row.sexo, row.sex, row.gender,
+      config.sexo, config.sex, config.gender
+    ),
+    // RISCO 2 — weight aliases: peso_kg, current_weight_kg, peso, weight,
+    // weight_kg, pesoKg, weightKg (all from real codebase references)
+    weightKg: firstNum(
+      row.peso_kg, row.current_weight_kg, row.peso,
+      row.weight, row.weight_kg, row.pesoKg, row.weightKg,
+      config.peso_kg, config.current_weight_kg, config.peso,
+      config.weight, config.pesoKg, config.weightKg
+    ),
+    // RISCO 2 — height aliases: altura_cm, height_cm, altura, height, alturaCm, heightCm
+    heightCm: firstNum(
+      row.altura_cm, row.height_cm, row.altura,
+      row.height, row.alturaCm, row.heightCm,
+      config.altura_cm, config.height_cm, config.altura,
+      config.height, config.alturaCm, config.heightCm
+    ),
     goal: goal,
-    activityLevel: firstStr(row.activity_level, row.rotina, config.activity_level, config.rotina),
+    activityLevel: firstStr(
+      row.activity_level, row.rotina, row.activityLevel,
+      config.activity_level, config.rotina, config.activityLevel
+    ),
     athleteLevel: athleteLevel,
-    restrictions: toStrArr(row.restricoes || row.intolerances || config.restricoes || config.intolerances)
+    restrictions: toStrArr(
+      row.restricoes || row.intolerances || row.restrictions ||
+      config.restricoes || config.intolerances || config.restrictions
+    )
   };
 }
 
@@ -212,10 +292,36 @@ function safeStrArr(v) {
   return [];
 }
 
+// RISCO 3 — parse_status values seen in the codebase
+var LAB_PROCESSING_STATUSES = new Set(['uploaded', 'processing', 'pending', 'pending_upload', 'queued']);
+var LAB_FAILED_STATUSES = new Set(['failed', 'error']);
+
+/**
+ * Derive labsStatus from the row.
+ *
+ * 'ready'      — ai_insights present and has interpretable content
+ * 'processing' — is_valid=true but parse_status indicates async job still running
+ * 'partial'    — is_valid=true, parse_status looks done, but ai_insights is empty
+ * 'failed'     — parse_status explicitly failed
+ */
+function deriveLabsStatus(labRow, ai) {
+  var parseStatus = String(labRow.parse_status || '').toLowerCase();
+  var hasAiInsights = !!(ai && (ai.contextual_summary || ai.clinical_flags || ai.health_profile || ai.summary));
+
+  if (LAB_FAILED_STATUSES.has(parseStatus)) return 'failed';
+  if (LAB_PROCESSING_STATUSES.has(parseStatus)) return 'processing';
+  if (hasAiInsights) return 'ready';
+  // is_valid=true but ai_insights empty — async interpretation pending
+  return 'partial';
+}
+
 function mapLabs(labRow) {
   if (!labRow) return null;
   var ai = (labRow.ai_insights && typeof labRow.ai_insights === 'object') ? labRow.ai_insights : {};
   var payload = (labRow.normalized_payload && typeof labRow.normalized_payload === 'object') ? labRow.normalized_payload : {};
+
+  // RISCO 3 — status-aware interpretation
+  var labsStatus = deriveLabsStatus(labRow, ai);
 
   // Clinical / critical flags from row or ai_insights
   var clinicalFlags = safeStrArr(ai.clinical_flags || labRow.clinical_flags);
@@ -244,7 +350,6 @@ function mapLabs(labRow) {
   var keyMarkers = biomarkers
     .filter(function (b) { return b && b.marker_key; })
     .sort(function (a, b) {
-      // flagged markers first
       var af = (a.flag === 'high' || a.flag === 'low') ? 0 : 1;
       var bf = (b.flag === 'high' || b.flag === 'low') ? 0 : 1;
       return af - bf;
@@ -263,6 +368,7 @@ function mapLabs(labRow) {
   var reportDate = firstStr(labRow.processed_at, labRow.created_at);
 
   return {
+    labsStatus: labsStatus,          // RISCO 3 — explicit status
     lastReportAt: reportDate,
     summaryText: summaryText,
     clinicalFlags: clinicalFlags,
@@ -341,7 +447,13 @@ function buildMissingData(inventory, profile, training, nutrition, labs) {
   }
   if (!inventory.hasTrainingHistory || !training) missing.push('histórico de treino');
   if (!inventory.hasNutritionPlan || !nutrition || !nutrition.targetCalories) missing.push('plano nutricional');
-  if (!inventory.hasLabReports || !labs) missing.push('exames laboratoriais');
+  // RISCO 3 — labs processing/partial means the report EXISTS; don't flag as missing.
+  // Only flag as missing when the inventory says no valid report exists at all.
+  if (!inventory.hasLabReports || !labs) {
+    missing.push('exames laboratoriais');
+  } else if (labs.labsStatus === 'processing' || labs.labsStatus === 'partial') {
+    missing.push('interpretação de exames em andamento');
+  }
   if (!inventory.hasMemoryState) missing.push('memória longitudinal');
   return missing;
 }
@@ -354,6 +466,7 @@ function buildMissingData(inventory, profile, training, nutrition, labs) {
  * buildKronosContextHub(userId, queryText?)
  *
  * Fetches all available context for a user in parallel.
+ * RISCO 1 — Results are cached per userId for HUB_CACHE_TTL_MS (5 min).
  * Never throws — always returns at least { inventory, missingData }.
  */
 async function buildKronosContextHub(userId, queryText) {
@@ -370,6 +483,10 @@ async function buildKronosContextHub(userId, queryText) {
       missingData: ['userId ausente']
     };
   }
+
+  // RISCO 1 — serve from cache when available
+  var cached = getCachedHub(userId);
+  if (cached) return cached;
 
   // 1. Inventory + all data loaders in parallel
   var settled = await Promise.allSettled([
@@ -420,7 +537,7 @@ async function buildKronosContextHub(userId, queryText) {
 
   var missingData = buildMissingData(inventory, profileSlice, trainingSlice, nutritionSlice, labsSlice);
 
-  return {
+  var hub = {
     inventory: inventory,
     profile: profileSlice,
     training: trainingSlice,
@@ -431,6 +548,13 @@ async function buildKronosContextHub(userId, queryText) {
     science: null, // populated on-demand by scienceInsightService
     missingData: missingData
   };
+
+  // RISCO 1 — only cache successful, non-empty hubs
+  if (inventory.hasProfile || inventory.hasTrainingHistory || inventory.hasLabReports) {
+    setCachedHub(userId, hub);
+  }
+
+  return hub;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -634,25 +758,39 @@ function formatContextForPrompt(selected) {
     }
   }
 
-  // ── Labs
+  // ── Labs (RISCO 3 — status-aware rendering)
   var l = selected.labs;
   if (l) {
     if (l.lastReportAt) lines.push('[EXAMES] Último resultado: ' + l.lastReportAt.slice(0, 10));
-    if (l.summaryText) lines.push('[EXAMES RESUMO] ' + l.summaryText);
-    if (l.readinessSignal) lines.push('[EXAMES PRONTIDÃO TREINO] ' + l.readinessSignal);
-    if (l.hormonalSignal) lines.push('[EXAMES HORMONAL] ' + l.hormonalSignal);
-    if (l.metabolicSignal) lines.push('[EXAMES METABÓLICO] ' + l.metabolicSignal);
-    if (l.criticalFlags && l.criticalFlags.length) {
-      lines.push('[EXAMES ALERTA CRÍTICO] ' + l.criticalFlags.join('; '));
-    } else if (l.clinicalFlags && l.clinicalFlags.length) {
-      lines.push('[EXAMES ATENÇÃO CLÍNICA] ' + l.clinicalFlags.slice(0, 3).join('; '));
+
+    // RISCO 3 — inform KRONOS of the processing state so it doesn't pretend
+    // to have full data when ai_insights is still being computed.
+    if (l.labsStatus === 'processing') {
+      lines.push('[EXAMES STATUS] Processamento em andamento — interpretação ainda não disponível. Informe o usuário que o resultado estará pronto em instantes, sem inventar valores.');
+    } else if (l.labsStatus === 'partial') {
+      lines.push('[EXAMES STATUS] Exame registrado mas interpretação automática incompleta — use apenas os dados presentes abaixo, não invente valores ausentes.');
+    } else if (l.labsStatus === 'failed') {
+      lines.push('[EXAMES STATUS] Falha no processamento do exame — não usar dados de labs para esta resposta.');
     }
-    if (l.keyMarkers && l.keyMarkers.length) {
-      var flagged = l.keyMarkers.filter(function (k) { return k.flag === 'high' || k.flag === 'low'; });
-      if (flagged.length) {
-        lines.push('[EXAMES MARCADORES ALTERADOS] ' + flagged.map(function (k) {
-          return k.name + ' ' + k.value + (k.unit ? ' ' + k.unit : '') + ' (' + k.flag + ')';
-        }).join('; '));
+
+    // Only render detailed content when ready or partial (some data may exist)
+    if (l.labsStatus !== 'processing' && l.labsStatus !== 'failed') {
+      if (l.summaryText) lines.push('[EXAMES RESUMO] ' + l.summaryText);
+      if (l.readinessSignal) lines.push('[EXAMES PRONTIDÃO TREINO] ' + l.readinessSignal);
+      if (l.hormonalSignal) lines.push('[EXAMES HORMONAL] ' + l.hormonalSignal);
+      if (l.metabolicSignal) lines.push('[EXAMES METABÓLICO] ' + l.metabolicSignal);
+      if (l.criticalFlags && l.criticalFlags.length) {
+        lines.push('[EXAMES ALERTA CRÍTICO] ' + l.criticalFlags.join('; '));
+      } else if (l.clinicalFlags && l.clinicalFlags.length) {
+        lines.push('[EXAMES ATENÇÃO CLÍNICA] ' + l.clinicalFlags.slice(0, 3).join('; '));
+      }
+      if (l.keyMarkers && l.keyMarkers.length) {
+        var flagged = l.keyMarkers.filter(function (k) { return k.flag === 'high' || k.flag === 'low'; });
+        if (flagged.length) {
+          lines.push('[EXAMES MARCADORES ALTERADOS] ' + flagged.map(function (k) {
+            return k.name + ' ' + k.value + (k.unit ? ' ' + k.unit : '') + ' (' + k.flag + ')';
+          }).join('; '));
+        }
       }
     }
   }
@@ -689,5 +827,6 @@ module.exports = {
   deriveKronosIntent: deriveKronosIntent,
   selectContextForIntent: selectContextForIntent,
   formatContextForPrompt: formatContextForPrompt,
+  invalidateHubCache: invalidateHubCache,  // RISCO 1
   KRONOS_INTENT: KRONOS_INTENT
 };
