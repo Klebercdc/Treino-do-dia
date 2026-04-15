@@ -818,3 +818,31 @@ async function teRunFullAnalysis() {
     .catch(() => 'local') || 'local';
   await kmRunMachineUI('kronia.full_analysis', uid);
 }
+
+/**
+ * Wrapper genérico para chamar a inteligência do KRONOS via API de Chat.
+ */
+async function teRunKronosCoach(userPrompt, systemPrompt) {
+  if (!userPrompt) return '';
+  try {
+    let headers = { 'Content-Type': 'application/json' };
+    try { if (typeof getAuthHeaders === 'function') headers = await getAuthHeaders(); } catch(e) {}
+
+    const resp = await fetch(location.origin + '/api/chat', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: userPrompt }],
+        system: systemPrompt || 'Você é KRONOS, o coach de alta performance do KRONIA. Dê recomendações diretas, práticas e baseadas em evidências.',
+      }),
+    });
+
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    // Usa o contrato estável (payload.message) para maior robustez
+    return data.message || data.reply || data.text || data.content?.[0]?.text || '';
+  } catch (err) {
+    console.error('[te-kronos] falha ao chamar coach:', err);
+    return '';
+  }
+}

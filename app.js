@@ -1556,6 +1556,45 @@ function showSummary(state, prs, durationMin) {
 }
 function closeSummary() { document.getElementById("summaryModal")?.classList.remove("show"); }
 
+function runAICoachPostWorkout(state, prs, durationMin) {
+  // Se não houver dados, não rodar
+  if (!state || !state.sections || state.sections.length === 0) return;
+  
+  // Localizar container de análise na UI de resumo
+  const aiSection = document.getElementById("aiCoachSummary");
+  const aiContent = document.getElementById("aiCoachContent");
+  if (!aiSection || !aiContent) return;
+
+  aiSection.style.display = "block";
+  aiContent.innerHTML = `<div class="ai-typing-summary"><div class="ai-dots"><span></span><span></span><span></span></div> Analisando sua performance...</div>`;
+
+  // Construir prompt curto de análise
+  const vol = Math.round(calcVolumeTotal(state));
+  const dateStr = new Date().toLocaleDateString("pt-BR", {day:"numeric",month:"short"});
+  const exCount = state.sections.reduce((acc,s)=>acc+(s.cards||[]).length,0);
+  
+  const prompt = `Analise meu treino de hoje (${dateStr}): volume total ${vol}kg em ${exCount} exercícios durante ${durationMin||'—'}min. ${prs.length > 0 ? 'Conquistei ' + prs.length + ' novos recordes!' : ''} Me dê um feedback curto e uma sugestão prática de progressão para o próximo treino.`;
+
+  // Enviar para o KRONOS
+  if (typeof teRunKronosCoach === 'function') {
+    teRunKronosCoach(prompt).then(reply => {
+      if (reply) {
+        aiContent.innerHTML = renderMarkdown(reply);
+        // Salvar no histórico de mensagens do coach para o usuário ver quando abrir o chat
+        _aiHistory.push({ role: "user", content: prompt });
+        _aiHistory.push({ role: "assistant", content: reply });
+      } else {
+        aiSection.style.display = "none";
+      }
+    }).catch(err => {
+      console.error('[ai-coach] falha na análise pós-treino:', err);
+      aiSection.style.display = "none";
+    });
+  } else {
+    aiSection.style.display = "none";
+  }
+}
+
 /* ═══════════════════════════════════════════════════
    CONFIG SHEET
 ═══════════════════════════════════════════════════ */
