@@ -400,6 +400,13 @@ module.exports = function(req, res) {
         normalizedPayload.requestId = normalizedPayload.requestId || (b.requestId || b.correlationId || null);
         normalizedPayload.meta = Object.assign({}, normalizedPayload.meta || {}, { usageCategory: usageCategory });
         if (user && user.id && !normalizedPayload.userId) normalizedPayload.userId = user.id;
+
+        // Retrocompatibilidade para consumidores que esperam 'reply' ou 'text' no nível superior (ex: motor de alertas)
+        if (normalizedPayload.message) {
+          normalizedPayload.reply = normalizedPayload.message;
+          normalizedPayload.text = normalizedPayload.message;
+        }
+
         tracker.finishExecution(function(err) {
           if (err) console.error('[diagnostics] failed to persist execution', err);
           return responseUtil.sendJson(res, statusCode, normalizedPayload);
