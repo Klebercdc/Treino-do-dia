@@ -150,7 +150,7 @@ test('textual inference from Groq response generates open_training CTA', () => {
     type: 'text',
     action: null,
     shouldCreateButton: false,
-    message: 'Claro! Posso montar um treino personalizado para você agora.',
+    message: 'Claro! Vou montar um treino personalizado para você agora.',
   });
   assert.ok(cta, 'should produce a CTA from textual inference');
   assert.equal(cta.type, 'open_training');
@@ -197,6 +197,18 @@ test('vague Groq offer ("posso ajudar com treino") without action verb does not 
   });
   // "ajudar" is not an action verb in the pattern → no textual CTA
   assert.equal(cta, null, 'vague offer without action verb must not trigger CTA');
+});
+
+test('textual inference does not trigger CTA for assistant offer-only training reply', () => {
+  const rt = loadInferenceRuntime();
+  const cta = rt.inferConversationCtaFromApiResponse({
+    success: true,
+    type: 'text',
+    action: null,
+    shouldCreateButton: false,
+    message: 'Posso criar um treino personalizado para você. Você gostaria de começar com um treino de peito?',
+  });
+  assert.equal(cta, null, 'assistant offer-only text must not generate training CTA');
 });
 
 // ── 4. frontend classifier coverage (kronia-application.js) ──────────────────

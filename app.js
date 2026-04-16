@@ -3941,17 +3941,18 @@ function inferConversationCtaFromApiResponse(payload) {
   var messageText = String(payload.message || '').toLowerCase();
   var inferredAction = null;
   var wasTextuallyInferred = false;
+  var isOfferOnlyText = /\b(posso|poderia|consigo)\b.{0,32}\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText);
 
   if (action === 'abrir_tela_treino_com_payload' || action === 'open_workout_flow' || buttonType === 'treino') inferredAction = 'open_training';
   if (action === 'gerar_pdf_dieta' || action === 'abrir_config_dieta') inferredAction = inferredAction || 'open_diet';
   if (action === 'open_diet_flow') inferredAction = inferredAction || 'generate_diet';
   if (buttonType === 'dieta' && shouldCreateButton) inferredAction = inferredAction || 'generate_diet';
   if (buttonType === 'dieta') inferredAction = inferredAction || 'open_diet';
-  if (!inferredAction && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
+  if (!inferredAction && !isOfferOnlyText && /\btreino\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
     inferredAction = 'open_training';
     wasTextuallyInferred = true;
   }
-  if (!inferredAction && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
+  if (!inferredAction && !isOfferOnlyText && /\bdieta\b/.test(messageText) && /\b(abrir|gerar|montar|criar|monte|crie)\b/.test(messageText)) {
     inferredAction = /\b(gerar|montar|criar|monte|crie)\b/.test(messageText) ? 'generate_diet' : 'open_diet';
     wasTextuallyInferred = true;
   }

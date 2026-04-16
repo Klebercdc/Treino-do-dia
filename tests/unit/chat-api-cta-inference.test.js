@@ -66,7 +66,7 @@ test('inferConversationCtaFromApiResponse infers dieta CTA from textual fallback
   const runtime = loadInferenceRuntime();
   const cta = runtime.inferConversationCtaFromApiResponse({
     shouldCreateButton: false,
-    message: 'Perfeito, posso abrir a dieta oficial para você agora.',
+    message: 'Perfeito, vou abrir a dieta oficial para você agora.',
     dietPayload: { objective: 'cut' },
   });
 
