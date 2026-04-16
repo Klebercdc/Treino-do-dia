@@ -19,6 +19,8 @@ function createApiEnvelope(partial) {
     requestId: p.requestId ? String(p.requestId) : null,
     userId: p.userId ? String(p.userId) : null,
     data: data,
+    actions: Array.isArray(p.actions) ? p.actions : [],
+    conversationIntent: p.conversationIntent && typeof p.conversationIntent === 'object' ? p.conversationIntent : null,
     error: p.error ? String(p.error) : null,
     meta: p.meta && typeof p.meta === 'object' ? p.meta : {}
   };

@@ -84,6 +84,50 @@ function buildDietErrorPayload() {
   };
 }
 
+function normalizeCentralAction(action) {
+  var raw = String(action || '').trim();
+  if (raw === 'open_workout_flow' || raw === 'abrir_tela_treino_com_payload') return 'open_training';
+  if (raw === 'open_diet_flow' || raw === 'abrir_config_dieta') return 'open_diet';
+  if (raw === 'gerar_pdf_dieta') return 'generate_diet';
+  return null;
+}
+
+function buildConversationIntent(action, payload, source) {
+  var canonical = normalizeCentralAction(action);
+  if (!canonical) return null;
+  return {
+    type: canonical,
+    eligible: true,
+    label: canonical === 'open_training' ? 'Abrir treino' : (canonical === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'),
+    target: canonical === 'open_training' ? 'home_training_card' : 'home_diet_card',
+    source: source || 'kronos_central',
+    payload: payload && typeof payload === 'object' ? payload : {},
+    meta: { inferred_from: 'kronos_central_engine' }
+  };
+}
+
+function normalizeCentralContract(payload) {
+  var normalized = payload && typeof payload === 'object' ? payload : {};
+  var intent = normalized.conversationIntent || buildConversationIntent(normalized.action, normalized.workoutPayload || normalized.dietPayload || null);
+  if (intent) normalized.conversationIntent = intent;
+  if (!Array.isArray(normalized.actions)) {
+    normalized.actions = intent ? [{
+      type: intent.type,
+      label: intent.label,
+      target: intent.target,
+      payload: intent.payload,
+      meta: intent.meta
+    }] : [];
+  }
+  if (!normalized.data || typeof normalized.data !== 'object') normalized.data = { content: [] };
+  if (!Array.isArray(normalized.data.content)) normalized.data.content = [];
+  normalized.meta = Object.assign({
+    canonicalBackend: 'api/chat',
+    contract: 'kronos_central_v1'
+  }, normalized.meta || {});
+  return normalized;
+}
+
 function sanitizeDietShape(payload) {
   if (!payload || typeof payload !== 'object') return { payloadType: typeof payload };
   var data = payload.data && typeof payload.data === 'object' ? payload.data : null;
@@ -223,10 +267,10 @@ function buildWorkoutSuccessPayload(data, extraMeta, memoryState) {
   var isFailSafe = !!(data && data.failSafe);
   return {
     success: !isFailSafe,
-    type: 'workout_json',
+    type: 'workout_primary',
     message: isFailSafe ? 'Treino não gerado por falta de referência válida.' : 'Treino gerado com sucesso.',
     data: {
-      content: [{ type: 'workout_json', data: data }],
+      content: [{ type: isFailSafe ? 'workout_failsafe' : 'workout_primary', data: data }],
       conversationState: { memory: memoryState || null }
     },
     meta: Object.assign({}, extraMeta || {})
@@ -254,7 +298,7 @@ module.exports = function(req, res) {
 
   auth.requireAuth(req, res, function(user) {
     var requestBody = req.body || {};
-    var usageCategory = requestBody && requestBody.isDietDirect ? 'ai_heavy_operation' : 'chat_light';
+    var usageCategory = requestBody && (requestBody.isDietDirect || requestBody.isWorkoutDirect) ? 'ai_heavy_operation' : 'chat_light';
     rl.rateLimit(req, res, function() {
       access.buildAccessProfileWithDb(user, function(_accessErr, accessProfile) {
       accessProfile = accessProfile || access.buildAccessProfile(user, { profileLookupPerformed: true, profileIsAdmin: false });
@@ -409,7 +453,46 @@ module.exports = function(req, res) {
 
         tracker.finishExecution(function(err) {
           if (err) console.error('[diagnostics] failed to persist execution', err);
+          normalizedPayload = normalizeCentralContract(normalizedPayload);
           return responseUtil.sendJson(res, statusCode, normalizedPayload);
+        });
+      }
+
+      if (b && b.isWorkoutDirect) {
+        var workoutDirectPayload = (b.workoutProfile && typeof b.workoutProfile === 'object')
+          ? b.workoutProfile
+          : ((b.payload && typeof b.payload === 'object') ? b.payload : {});
+        safeTrack(function() { tracker.captureDecision({
+          graphNode: 'Treino',
+          reason: 'isWorkoutDirect flag routes workout generation through KRONOS central.',
+          pipelineSelected: 'workout_direct_service',
+          fallbackUsed: false
+        }); });
+        return runPaidAiCall(function(nextCall) {
+          Promise.resolve(workoutService.execute('GENERATE_WORKOUT', workoutDirectPayload))
+            .then(function(result) {
+              var plan = result && result.payload && result.payload.plan ? result.payload.plan : null;
+              if (plan) return nextCall(null, plan);
+              return buildReferencedWorkoutFallback(workoutDirectPayload, nextCall);
+            })
+            .catch(function() {
+              return buildReferencedWorkoutFallback(workoutDirectPayload, nextCall);
+            });
+        }, function(err, data) {
+          if (err) {
+            var workoutError = toProviderErrorContract(err, { operation: 'workout_direct' });
+            return sendTracked(workoutError.status, workoutError.body, 'failure');
+          }
+          fireAndForgetMemoryEvent({
+            userId: user.id,
+            eventType: 'workout_generated',
+            eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':direct',
+            payload: { source: 'kronos_central_direct', sections: Array.isArray(data && data.treinos) ? data.treinos.length : 0 },
+            requestId: b.requestId || b.correlationId || null,
+            component: 'api/chat',
+            source: 'kronos_central'
+          });
+          return sendTracked(200, buildWorkoutSuccessPayload(data, { local: true, flow: 'workout_direct', canonicalBackend: 'api/chat' }, shortState));
         });
       }
 
@@ -605,15 +688,27 @@ module.exports = function(req, res) {
 
       if (decision.action === 'call_agent_tools') {
         emitDecisionTelemetry(user.id, classification, decision, false, false);
-        safeTrack(function() { tracker.addStep({ layer: 'router', nodeKey: 'Recomendacao', stepName: 'agent_tools_routed', status: 'success', success: true, outputSummary: '/api/agent' }); });
-        return sendTracked(200, {
-          success: true,
-          type: 'text',
-          action: 'call_agent_tools',
-          message: 'Para essa análise, usa o modo agent para buscar seus dados reais.',
-          data: { route: '/api/agent', conversationState: { memory: nextShortState } },
-          meta: { local: true, decision: process.env.NODE_ENV === 'development' ? decision : undefined }
-        });
+        safeTrack(function() { tracker.addStep({ layer: 'memory', nodeKey: 'Evolucao', stepName: 'progress_memory_resolved', status: 'success', success: true, outputSummary: 'api/chat central memory analysis' }); });
+        return userMemory.getProgressAnalysis(user.id)
+          .then(function(progress) {
+            var msg = progress && progress.explanation ? progress.explanation : 'Ainda não há dados suficientes para análise longitudinal completa.';
+            return sendTracked(200, {
+              success: true,
+              type: 'progress_analysis',
+              action: null,
+              message: msg,
+              data: {
+                progress: progress,
+                content: [{ type: 'text', text: msg }],
+                conversationState: { memory: nextShortState }
+              },
+              meta: { local: true, source: 'kronos_central_memory', decision: process.env.NODE_ENV === 'development' ? decision : undefined }
+            });
+          })
+          .catch(function(err) {
+            var progressError = toProviderErrorContract(err, { operation: 'progress_memory' });
+            return sendTracked(progressError.status, progressError.body, 'failure');
+          });
       }
 
       Promise.resolve()

@@ -1737,11 +1737,13 @@ async function requestWorkoutRoute(payload, timeoutMs) {
   const timeout = Number(timeoutMs);
   const supportsAbort = typeof AbortController === "function";
   const controller = supportsAbort ? new AbortController() : null;
-  const requestPromise = apiFetch(resolveAppApiUrl("/api/kronia/workout"), {
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/chat"), {
     method: "POST",
     body: JSON.stringify({
-      action: "GENERATE_WORKOUT",
       requestId: "workout_" + Date.now(),
+      messages: [{ role: "user", content: "Gerar treino pelo KRONOS central." }],
+      isWorkoutDirect: true,
+      workoutProfile: payload,
       payload: payload,
     }),
     signal: controller ? controller.signal : undefined,
@@ -4365,56 +4367,23 @@ async function sendAI(overrideText, isGerarTreino = false) {
   var startedAt = Date.now();
 
   try {
-    var flow = await resolveKronosConversation(text);
-    removeThinking();
-
-    if (flow.type === 'answer_with_cta') {
-      addAIMessage('assistant', flow.message || 'Posso te direcionar pelo botao abaixo.');
-      renderConversationCta('aiMessages', flow.cta, Object.assign({}, flow.payload || {}, { _targetModule: flow.targetModule || null }));
-      try {
-        window.KroniaIntelligence?.track?.({
-          module: 'conversation',
-          action: 'chat_cta_rendered',
-          status: 'success',
-          correlationId: correlationId,
-          source: 'app_send_ai',
-          metadata: {
-            ctaAction: flow?.cta?.action || null,
-            targetModule: flow?.targetModule || null,
-            sourceOfTruth: flow?.sourceOfTruth || null,
-            evidenceCount: flow?.evidenceCount || 0,
-          },
-        });
-      } catch (_) {}
-      return;
-    }
-
-    if (flow.type === 'analysis_answer') {
-      try {
-        var progressResp = await apiFetch('/api/memory?action=progress', { method: 'GET' });
-        var progressData = await parseApiJsonSafely(progressResp);
-        if (progressResp.ok && progressData && progressData.success && progressData.data && progressData.data.progress) {
-          addAIMessage('assistant', progressData.data.progress.explanation || flow.message || 'Análise concluída.');
-          return;
-        }
-      } catch (_memoryErr) {}
-      addAIMessage('assistant', flow.message || 'Analise concluida.');
-      return;
-    }
-
-    if (flow.intent === 'supplement_question') {
-      addAIMessage('assistant', flow.message || 'Analise concluida.');
-      return;
-    }
-
     var userData = buildUserData();
     var messages = _aiHistory.slice(-12);
-    var response = await apiFetch('/api/agent', {
+    var response = await apiFetch('/api/chat', {
       method: 'POST',
       body: JSON.stringify({ messages: messages, history: userData.history, profile: userData.profile, requestId: correlationId }),
     });
+    removeThinking();
     var data = await parseApiJsonSafely(response);
     if (!response.ok || data?.success === false || data?.ok === false) {
+      try {
+        var fallbackFlow = await resolveKronosConversation(text);
+        if (fallbackFlow && fallbackFlow.type === 'answer_with_cta') {
+          addAIMessage('assistant', fallbackFlow.message || 'Posso te direcionar pelo botao abaixo.');
+          renderConversationCta('aiMessages', fallbackFlow.cta, Object.assign({}, fallbackFlow.payload || {}, { _targetModule: fallbackFlow.targetModule || null }));
+          return;
+        }
+      } catch (_) {}
       var friendlyError = resolveAiFriendlyError(data, response.status);
       addAIMessage('assistant', `${_ico('alert-triangle', 16)} ${friendlyError}`);
       return;
@@ -5969,7 +5938,7 @@ function _kronosHealthCheck() {
   const today = new Date().toDateString();
   if (localStorage.getItem('_kronosHCDate') === today) return; // já verificou hoje
 
-  apiFetch("/api/agent", {
+  apiFetch("/api/chat", {
     method: "POST",
     body: JSON.stringify({ messages: [{ role: "user", content: "ping" }], stream: false })
   })
@@ -6042,7 +6011,7 @@ Abra a conversa como ARIA analisando o status atual:
 Seja direta, use o nome se disponível. Máximo 3 linhas. Destaque 1 alerta real ou conquista. Finalize com uma pergunta curta ou call to action.`;
 
   const typing = addOrientMsg("orientExpertMessages", "assistant", "...");
-  apiFetch("/api/agent", {
+  apiFetch("/api/chat", {
     method: "POST",
     body: JSON.stringify({
       messages: [{ role: "user", content: prompt }],
@@ -6994,61 +6963,26 @@ function addOrientMsg(containerId, role, text) {
   return wrap.querySelector(".ai-bubble");
 }
 
-// ─── Auto-healing agent call ────────────────────────────────────────────────
-// Tenta streaming → se vazio, cai para JSON → se falhar, aguarda e tenta 1x mais.
-// Retorna a string de resposta ou lança erro após esgotar as tentativas.
+// ─── KRONOS central call ────────────────────────────────────────────────────
+// /api/chat é o backend canônico JSON; mantém uma repetição curta para falhas transitórias.
 async function _kronosCall(messages, userData, onChunk) {
-  async function tryStream() {
-    const resp = await apiFetch("/api/agent", {
-      method: "POST",
-      body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: true })
-    });
-    if (!resp.headers.get('content-type')?.includes('text/event-stream')) return null;
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '', fullText = '', hadError = false;
-    outer: while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n'); buf = lines.pop();
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (raw === '[DONE]') break outer;
-        try {
-          const json = JSON.parse(raw);
-          if (json.d) { fullText += json.d; onChunk && onChunk(fullText); }
-          if (json.error) { hadError = true; break outer; }
-        } catch (e) {}
-      }
-    }
-    if (hadError || !fullText.trim()) return null; // força fallback
-    return fullText.replace(/\s*\{\s*\}\s*$/, '').trim();
-  }
-
   async function tryJson() {
-    const resp = await apiFetch("/api/agent", {
+    const resp = await apiFetch("/api/chat", {
       method: "POST",
       body: JSON.stringify({ messages, history: userData.history, profile: userData.profile, stream: false })
     });
     if (!resp.ok) return null;
     const data = await parseApiJsonSafely(resp);
     const text = (data.message || data.data?.content?.[0]?.text || data.content?.[0]?.text || '').trim();
+    if (text && onChunk) onChunk(text);
     return text || null;
   }
 
-  // 1ª tentativa: streaming
-  let result = await tryStream();
+  let result = await tryJson();
   if (result) return result;
 
-  // 2ª tentativa: JSON sem stream (imediata)
-  result = await tryJson();
-  if (result) return result;
-
-  // 3ª tentativa: aguarda 2s e tenta streaming novamente
   await new Promise(r => setTimeout(r, 2000));
-  result = await tryStream();
+  result = await tryJson();
   if (result) return result;
 
   throw new Error('sem_resposta');
@@ -7067,20 +7001,29 @@ async function sendOrientExpert() {
   }
 
   addOrientMsg('orientExpertMessages', 'user', text);
-  var result = await resolveKronosConversation(text);
-
-  if (result.type === 'analysis_answer') {
-    renderAI(result.message);
-    return;
+  try {
+    var userData = buildUserData();
+    var response = await apiFetch('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: text }],
+        history: userData.history,
+        profile: userData.profile,
+        requestId: 'orient_' + Date.now()
+      })
+    });
+    var data = await parseApiJsonSafely(response);
+    renderAI(data.message || data.data?.content?.[0]?.text || 'Ok');
+    renderInferredConversationCta('orientExpertMessages', data);
+  } catch (_err) {
+    var result = await resolveKronosConversation(text);
+    if (result.type === 'answer_with_cta') {
+      renderAI(result.message);
+      renderConversationCta('orientExpertMessages', result.cta, Object.assign({}, result.payload || {}, { _targetModule: result.targetModule || null }));
+      return;
+    }
+    renderAI(result.message || 'Ok');
   }
-
-  if (result.type === 'answer_with_cta') {
-    renderAI(result.message);
-    renderConversationCta('orientExpertMessages', result.cta, Object.assign({}, result.payload || {}, { _targetModule: result.targetModule || null }));
-    return;
-  }
-
-  renderAI(result.message || 'Ok');
 }
 
 
@@ -9018,11 +8961,13 @@ async function requestDietRoute(payload, timeoutMs) {
   const timeout = Number(timeoutMs);
   const supportsAbort = typeof AbortController === "function";
   const controller = supportsAbort ? new AbortController() : null;
-  const requestPromise = apiFetch(resolveAppApiUrl("/api/kronia/diet"), {
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/chat"), {
     method: "POST",
     body: JSON.stringify({
-      action: "GENERATE_DIET",
       requestId: "diet_" + Date.now(),
+      messages: [{ role: "user", content: "Gerar dieta pelo KRONOS central." }],
+      isDietDirect: true,
+      dietProfile: payload,
       payload: payload,
     }),
     signal: controller ? controller.signal : undefined,

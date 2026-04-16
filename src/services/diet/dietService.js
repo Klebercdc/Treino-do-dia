@@ -243,11 +243,13 @@ async function generateDiet(payload) {
 
   try {
     if (typeof window !== 'undefined' && typeof fetch === 'function') {
-      const res = await fetch('/api/kronia/diet', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'GENERATE_DIET',
+          messages: [{ role: 'user', content: 'Gerar dieta pelo KRONOS central.' }],
+          isDietDirect: true,
+          dietProfile: normalizedInput,
           payload: normalizedInput,
         }),
       });
