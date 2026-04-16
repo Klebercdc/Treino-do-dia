@@ -44,6 +44,7 @@ var EXPLICIT_FLOW_PREFIX = /\b(quero|preciso|pode|consegue|vamos|bora|me ajuda a
 
 function hasExplicitFlowIntent(message) {
   if (!message) return false;
+  if (/\bcomo\s+fazer\b/i.test(message)) return false;
   if (EXPLICIT_FLOW_VERB.test(message)) return true;
   return EXPLICIT_FLOW_PREFIX.test(message) && /\b(treino|ficha|programa|dieta|plano alimentar|cardapio|macros?)\b/i.test(message);
 }

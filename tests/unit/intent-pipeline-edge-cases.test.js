@@ -305,6 +305,13 @@ test('frontend classifier does not open flows with context phrase and no explici
   assert.equal(r2.cta, null);
 });
 
+test('frontend classifier does not open training flow for instructional exercise question', async () => {
+  const app = loadClassifierRuntime();
+  const result = await app.resolveConversationFlow({ message: 'como fazer exercício de peito?' });
+  assert.notEqual(result.type, 'answer_with_cta');
+  assert.equal(result.cta, null);
+});
+
 test('frontend classifier does NOT trigger CTA for analysis questions about treino', async () => {
   const app = loadClassifierRuntime();
   // "evolução" triggers analysis → should NOT return workout CTA
@@ -319,6 +326,11 @@ test('backend detectIntent does not trigger flow on keyword alone', () => {
   assert.equal(detectIntent('dieta'), 'general');
   assert.equal(detectIntent('musculacao'), 'general');
   assert.equal(detectIntent('cardapio'), 'general');
+});
+
+test('backend detectIntent does not trigger flow for instructional exercise question', () => {
+  const { detectIntent } = loadIntentDetector();
+  assert.equal(detectIntent('como fazer exercício de peito?'), 'general');
 });
 
 test('backend detectIntent still returns greeting for short greetings', () => {

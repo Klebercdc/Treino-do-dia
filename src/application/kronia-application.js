@@ -30,6 +30,7 @@
 
   function classifyConversationIntent(input) {
     var text = normalizeText(input?.message);
+    var instructionalQuestion = /\bcomo\s+fazer\b/.test(text);
 
     // Análise e suplemento são verificados primeiro para não serem engolidos
     // por perguntas que mencionam treino/dieta em contexto diferente.
@@ -45,10 +46,10 @@
       /\b(montar|monta|monte|criar|cria|crie|gerar|gera|gere|fazer|faz|faca|abrir|abre|ajustar|ajusta|ajuste|continuar|continua|continue|revisar|revisa|revise)\b.{0,40}\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina|dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/
     ]);
 
-    var workout = !analysis && explicitFlowIntent &&
+    var workout = !analysis && !instructionalQuestion && explicitFlowIntent &&
       hasAny(text, [/\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina)\b/]);
 
-    var diet = !analysis && explicitFlowIntent &&
+    var diet = !analysis && !instructionalQuestion && explicitFlowIntent &&
       hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
 
     var labUpload = hasAny(text, [
