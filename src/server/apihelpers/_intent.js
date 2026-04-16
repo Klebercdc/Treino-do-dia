@@ -37,11 +37,16 @@ function safeExtractLastUserMessage(messages) {
 }
 
 var GREETING_REGEX = /^(oi+|ola+|ol[áa]|opa|e ai|eae|hey|hello|bom dia|boa tarde|boa noite)(\b.*)?$/i;
-// Qualquer mensagem que contenha uma palavra-chave de treino ou dieta
-// — independentemente de verbo de ação — sinaliza intenção de criação.
-// A detecção semântica profunda fica no LLM; aqui queremos máxima cobertura.
 var WORKOUT_REQUEST = /\b(treino|ficha|divisao|rotina de treino|exercicio|musculacao|programa)\b/i;
 var DIET_REQUEST = /\b(dieta|plano alimentar|cardapio|alimentacao|refeicoes|macros?|calorias?|nutricao)\b/i;
+var EXPLICIT_FLOW_VERB = /\b(montar|monta|monte|criar|cria|crie|gerar|gera|gere|fazer|faz|faca|abrir|abre|ajustar|ajusta|ajuste|continuar|continua|continue|revisar|revisa|revise)\b/i;
+var EXPLICIT_FLOW_PREFIX = /\b(quero|preciso|pode|consegue|vamos|bora|me ajuda a|me ajuda com)\b/i;
+
+function hasExplicitFlowIntent(message) {
+  if (!message) return false;
+  if (EXPLICIT_FLOW_VERB.test(message)) return true;
+  return EXPLICIT_FLOW_PREFIX.test(message) && /\b(treino|ficha|programa|dieta|plano alimentar|cardapio|macros?)\b/i.test(message);
+}
 
 function detectIntent(message) {
   var raw = String(message || '');
@@ -52,8 +57,8 @@ function detectIntent(message) {
   if (words.length <= 4 && GREETING_REGEX.test(msg)) return 'greeting';
   if (/^(oi|ola|olá)\s+tudo bem/.test(msg)) return 'greeting';
 
-  if (WORKOUT_REQUEST.test(msg)) return 'workout';
-  if (DIET_REQUEST.test(msg)) return 'diet';
+  if (hasExplicitFlowIntent(msg) && WORKOUT_REQUEST.test(msg)) return 'workout';
+  if (hasExplicitFlowIntent(msg) && DIET_REQUEST.test(msg)) return 'diet';
   return 'general';
 }
 

@@ -39,12 +39,16 @@
 
     var supplement = hasAny(text, [/\b(creatina|whey|cafeina|pre treino|beta alanina|suplement)\b/]);
 
-    // Qualquer menção a treino ou dieta abre o CTA — sem exigir verbo de ação.
-    // Perguntas de análise ficam de fora (analysis=true) para não conflitar.
-    var workout = !analysis &&
+    var explicitFlowIntent = hasAny(text, [
+      /\b(quero|preciso|pode|consegue|vamos|bora|me ajuda a|me ajuda com)\b.{0,40}\b(montar|monta|monte|criar|cria|crie|gerar|gera|gere|fazer|faz|faca|abrir|abre|ajustar|ajusta|ajuste|continuar|continua|continue|revisar|revisa|revise)\b/,
+      /\b(quero|preciso|pode|consegue|vamos|bora|me ajuda com)\b.{0,40}\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina|dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/,
+      /\b(montar|monta|monte|criar|cria|crie|gerar|gera|gere|fazer|faz|faca|abrir|abre|ajustar|ajusta|ajuste|continuar|continua|continue|revisar|revisa|revise)\b.{0,40}\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina|dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/
+    ]);
+
+    var workout = !analysis && explicitFlowIntent &&
       hasAny(text, [/\b(treino|ficha|programa|periodizacao|exercicio|musculacao|rotina)\b/]);
 
-    var diet = !analysis &&
+    var diet = !analysis && explicitFlowIntent &&
       hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
 
     var labUpload = hasAny(text, [
@@ -423,7 +427,7 @@
             decision.validationStatus = science?.validationStatus || 'blocked_unsafe_request';
             decision.blockedReason = science?.blockedReason || 'unsafe_request';
           } else if (!hasEvidence) {
-            decision.message = 'Vou seguir com a melhor lógica esportiva disponível no seu perfil e no contexto atual. Se houver artigos específicos recuperados, eu uso como reforço.';
+            decision.message = 'Não encontrei evidência específica suficiente para esse pedido. Posso seguir com um protocolo conservador usando seu perfil e o contexto atual.';
             decision.validationStatus = science?.validationStatus || 'fallback_safe_protocol';
             decision.blockedReason = null;
             decision.usedFallback = true;

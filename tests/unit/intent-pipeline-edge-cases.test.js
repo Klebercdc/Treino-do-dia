@@ -280,27 +280,29 @@ test('explicit conversationIntent contract still takes priority over textual inf
 
 // ── 7. single-keyword detection (user just says "dieta" or "treino") ──────────
 
-test('frontend classifier triggers open_training with just the word "treino"', async () => {
+test('frontend classifier does not open training flow with just the word "treino"', async () => {
   const app = loadClassifierRuntime();
   const result = await app.resolveConversationFlow({ message: 'treino' });
-  assert.equal(result.type, 'answer_with_cta');
-  assert.equal(result.cta.action, 'open_training');
+  assert.notEqual(result.type, 'answer_with_cta');
+  assert.equal(result.cta, null);
 });
 
-test('frontend classifier triggers open_diet with just the word "dieta"', async () => {
+test('frontend classifier does not open diet flow with just the word "dieta"', async () => {
   const app = loadClassifierRuntime();
   const result = await app.resolveConversationFlow({ message: 'dieta' });
-  assert.equal(result.type, 'answer_with_cta');
-  assert.equal(result.cta.action, 'generate_diet');
+  assert.notEqual(result.type, 'answer_with_cta');
+  assert.equal(result.cta, null);
 });
 
-test('frontend classifier triggers open_training with context phrase (no action verb)', async () => {
+test('frontend classifier does not open flows with context phrase and no explicit action verb', async () => {
   const app = loadClassifierRuntime();
   const r1 = await app.resolveConversationFlow({ message: 'não consigo seguir meu treino' });
-  assert.equal(r1.cta?.action, 'open_training');
+  assert.notEqual(r1.type, 'answer_with_cta');
+  assert.equal(r1.cta, null);
 
   const r2 = await app.resolveConversationFlow({ message: 'minha dieta está difícil' });
-  assert.equal(r2.cta?.action, 'generate_diet');
+  assert.notEqual(r2.type, 'answer_with_cta');
+  assert.equal(r2.cta, null);
 });
 
 test('frontend classifier does NOT trigger CTA for analysis questions about treino', async () => {
@@ -311,12 +313,12 @@ test('frontend classifier does NOT trigger CTA for analysis questions about trei
   assert.notEqual(result.type, 'answer_with_cta', 'progress analysis question must not generate training CTA');
 });
 
-test('backend detectIntent triggers workout on keyword alone', () => {
+test('backend detectIntent does not trigger flow on keyword alone', () => {
   const { detectIntent } = loadIntentDetector();
-  assert.equal(detectIntent('treino'), 'workout');
-  assert.equal(detectIntent('dieta'), 'diet');
-  assert.equal(detectIntent('musculacao'), 'workout');
-  assert.equal(detectIntent('cardapio'), 'diet');
+  assert.equal(detectIntent('treino'), 'general');
+  assert.equal(detectIntent('dieta'), 'general');
+  assert.equal(detectIntent('musculacao'), 'general');
+  assert.equal(detectIntent('cardapio'), 'general');
 });
 
 test('backend detectIntent still returns greeting for short greetings', () => {
