@@ -76,6 +76,28 @@ test('nutritionService personaliza plano com padrao alimentar e alimentos evitad
   assert.ok(foods.includes('tofu firme'));
   assert.ok(!foods.includes('frango grelhado'));
   assert.ok(!foods.includes('brocolis cozido'));
+  assert.ok(!foods.includes('mel'));
+});
+
+test('nutritionService não usa rótulos de treino para perfil sedentário', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'F',
+    idade: 38,
+    peso: 72,
+    altura: 164,
+    objetivo: 'emagrecimento',
+    nivelAtividade: 'sedentario',
+    refeicoesPorDia: 5,
+    padraoAlimentar: 'onívoro',
+  });
+
+  assert.equal(result.failSafe, false);
+  const mealTypes = result.plan.refeicoes.map((meal) => normalizeText(meal.tipo));
+  const mealNames = result.plan.refeicoes.map((meal) => normalizeText(meal.nome));
+
+  assert.ok(!mealTypes.some((type) => /treino/.test(type)));
+  assert.ok(!mealNames.some((name) => /treino/.test(name)));
+  assert.ok(mealNames.some((name) => /lanche da tarde/.test(name)));
 });
 
 test('nutritionService returns daily totals aligned with meal subtotals and realistic breakfast', () => {

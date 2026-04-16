@@ -77,7 +77,8 @@ var FOOD_LIBRARY = {
   fastCarbs: [
     { code: 'banana_1_fast', name: 'Banana', portionLabel: '1 un média', grams: 90, calories: 80, protein: 1, carbs: 20.7, fat: 0.2, fiber: 2.1, source: 'TACO (adaptado)' },
     { code: 'fruta_vermelha_140', name: 'Frutas vermelhas', portionLabel: '140 g', grams: 140, calories: 70, protein: 1, carbs: 16, fat: 0.5, fiber: 4, source: 'USDA FoodData Central (adaptado)' },
-    { code: 'granola_30', name: 'Granola', portionLabel: '30 g', grams: 30, calories: 128, protein: 3, carbs: 20, fat: 4, fiber: 2.5, source: 'USDA FoodData Central (adaptado)' }
+    { code: 'granola_30', name: 'Granola', portionLabel: '30 g', grams: 30, calories: 128, protein: 3, carbs: 20, fat: 4, fiber: 2.5, source: 'USDA FoodData Central (adaptado)' },
+    { code: 'tapioca_70', name: 'Tapioca', portionLabel: '70 g', grams: 70, calories: 168, protein: 0.3, carbs: 42, fat: 0, fiber: 0.2, source: 'TACO (adaptado)' }
   ],
   mealCarbs: [
     { code: 'arroz_120', name: 'Arroz cozido', portionLabel: '120 g', grams: 120, calories: 156, protein: 3, carbs: 34, fat: 0.4, fiber: 0.4, source: 'TACO/USDA (adaptado)' },
@@ -88,7 +89,8 @@ var FOOD_LIBRARY = {
   supportCarbs: [
     { code: 'banana_1_support', name: 'Banana', portionLabel: '1 un média', grams: 90, calories: 80, protein: 1, carbs: 20.7, fat: 0.2, fiber: 2.1, source: 'TACO (adaptado)' },
     { code: 'maca_1', name: 'Maçã', portionLabel: '1 un média', grams: 130, calories: 72, protein: 0.3, carbs: 19, fat: 0.2, fiber: 3, source: 'TACO (adaptado)' },
-    { code: 'mel_20', name: 'Mel', portionLabel: '20 g', grams: 20, calories: 61, protein: 0, carbs: 17, fat: 0, fiber: 0, source: 'USDA FoodData Central (adaptado)' }
+    { code: 'mel_20', name: 'Mel', portionLabel: '20 g', grams: 20, calories: 61, protein: 0, carbs: 17, fat: 0, fiber: 0, source: 'USDA FoodData Central (adaptado)' },
+    { code: 'uva_100', name: 'Uva', portionLabel: '100 g', grams: 100, calories: 68, protein: 0.6, carbs: 17, fat: 0.2, fiber: 0.9, source: 'TACO/USDA (adaptado)' }
   ],
   breakfastFats: [
     { code: 'pasta_amendoim_20', name: 'Pasta de amendoim', portionLabel: '20 g', grams: 20, calories: 118, protein: 5, carbs: 4, fat: 10, fiber: 1.8, source: 'USDA FoodData Central (adaptado)' },
@@ -102,7 +104,8 @@ var FOOD_LIBRARY = {
   veggies: [
     { code: 'brocolis_100', name: 'Brócolis cozido', portionLabel: '100 g', grams: 100, calories: 25, protein: 3, carbs: 4.4, fat: 0.5, fiber: 3.4, source: 'TACO (adaptado)' },
     { code: 'salada_1', name: 'Salada verde', portionLabel: '1 prato', grams: 100, calories: 20, protein: 1, carbs: 3, fat: 0.2, fiber: 2, source: 'TACO (adaptado)' },
-    { code: 'legumes_100', name: 'Legumes cozidos', portionLabel: '100 g', grams: 100, calories: 35, protein: 1.5, carbs: 7, fat: 0.3, fiber: 2.8, source: 'TACO/USDA (adaptado)' }
+    { code: 'legumes_100', name: 'Legumes cozidos', portionLabel: '100 g', grams: 100, calories: 35, protein: 1.5, carbs: 7, fat: 0.3, fiber: 2.8, source: 'TACO/USDA (adaptado)' },
+    { code: 'cenoura_100', name: 'Cenoura cozida', portionLabel: '100 g', grams: 100, calories: 35, protein: 0.8, carbs: 8.2, fat: 0.2, fiber: 2.9, source: 'TACO (adaptado)' }
   ]
 };
 
@@ -335,7 +338,7 @@ function calculateMacroTargets(profile, targetCalories) {
 function isRestricted(food, restrictions, dislikes) {
   var text = normalizeFreeText((restrictions || []).join(' '));
   if (/vegetarian|vegetariano/.test(text) && /frango|patinho|tilapia/.test(normalizeFreeText(food.name))) return true;
-  if (/vegano|vegan/.test(text) && /frango|patinho|tilapia|ovo|iogurte|whey/.test(normalizeFreeText(food.name))) return true;
+  if (/vegano|vegan/.test(text) && /frango|patinho|tilapia|ovo|iogurte|whey|mel/.test(normalizeFreeText(food.name))) return true;
   if (/lactose|latic/.test(text) && /iogurte|whey/.test(normalizeFreeText(food.name))) return true;
   if (dislikes && textIncludesAny(food.name, dislikes)) return true;
   return false;
@@ -609,7 +612,24 @@ function buildMealItems(template, profile, macros, index) {
 }
 
 function getMealTemplates(profile) {
-  return MEAL_TEMPLATES[profile.refeicoesPorDia] || MEAL_TEMPLATES[5];
+  var templates = MEAL_TEMPLATES[profile.refeicoesPorDia] || MEAL_TEMPLATES[5];
+  if (profile.nivelAtividade !== 'sedentario') return templates;
+
+  return templates.map(function(template) {
+    if (template.tipo === 'lanche_pre_treino') {
+      return Object.assign({}, template, {
+        tipo: 'lanche_tarde',
+        nome: 'Lanche da tarde'
+      });
+    }
+    if (template.tipo === 'jantar_pos_treino') {
+      return Object.assign({}, template, {
+        tipo: 'jantar',
+        nome: 'Jantar'
+      });
+    }
+    return template;
+  });
 }
 
 function distributeMacrosAcrossMeals(profile, macros) {
@@ -678,6 +698,63 @@ function buildInitialNutritionPlan(profile, calc) {
   };
 }
 
+function recalculatePlanTotals(plan) {
+  var meals = (plan.refeicoes || []).map(function(meal) {
+    var subtotal = sumMeal(meal.itens || []);
+    return Object.assign({}, meal, {
+      subtotal: {
+        calorias: round(subtotal.calories),
+        proteinas: round(subtotal.protein, 1),
+        carboidratos: round(subtotal.carbs, 1),
+        gorduras: round(subtotal.fat, 1)
+      }
+    });
+  });
+  var totals = meals.reduce(function(acc, meal) {
+    acc.calories += meal.subtotal.calorias;
+    acc.protein += meal.subtotal.proteinas;
+    acc.carbs += meal.subtotal.carboidratos;
+    acc.fat += meal.subtotal.gorduras;
+    return acc;
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+  return Object.assign({}, plan, {
+    caloriasMeta: round(totals.calories),
+    macrosMeta: {
+      protein: round(totals.protein, 1),
+      carbs: round(totals.carbs, 1),
+      fat: round(totals.fat, 1)
+    },
+    resumoDiario: {
+      calorias: round(totals.calories),
+      proteinas: round(totals.protein, 1),
+      carboidratos: round(totals.carbs, 1),
+      gorduras: round(totals.fat, 1)
+    },
+    refeicoes: meals
+  });
+}
+
+function capPlanCalories(plan, maxCalories) {
+  var currentCalories = Number(plan && plan.resumoDiario && plan.resumoDiario.calorias);
+  var targetCalories = Number(maxCalories);
+  if (!Number.isFinite(currentCalories) || !Number.isFinite(targetCalories) || currentCalories <= targetCalories) {
+    return plan;
+  }
+
+  var factor = Math.max(0.85, (targetCalories - 1) / currentCalories);
+  var scaled = Object.assign({}, plan, {
+    refeicoes: (plan.refeicoes || []).map(function(meal) {
+      return Object.assign({}, meal, {
+        itens: (meal.itens || []).map(function(item) {
+          return cloneScaledMealItem(item, factor);
+        })
+      });
+    })
+  });
+  return recalculatePlanTotals(scaled);
+}
+
 function limitedOrientation(profile, validation) {
   return {
     limited: true,
@@ -734,6 +811,9 @@ function generateNutritionPlan(profileInput) {
   if (calc.failSafe) return calc;
 
   var plan = buildInitialNutritionPlan(calc.profile, calc.result);
+  if (hasCriticalLabFlag(calc.profile)) {
+    plan = capPlanCalories(plan, calc.result.targetCalories);
+  }
   var clinicalNotes = [];
   if (calc.profile.labContext && calc.profile.labContext.mode === 'clinical') {
     clinicalNotes.push('Plano ajustado com base no seu exame recente.');

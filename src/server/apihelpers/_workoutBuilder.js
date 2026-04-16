@@ -147,16 +147,89 @@ function normalizeEnvironment(raw) {
 
 function buildPrescription(goal, level) {
   if (goal === 'forca') {
-    if (level === 'iniciante') return { series: 3, reps: '5-8' };
-    if (level === 'avancado') return { series: 5, reps: '3-5' };
-    return { series: 4, reps: '4-6' };
+    if (level === 'iniciante') return { series: 3, reps: '5-8', descanso: '120-180s', rir: '2-3 RIR' };
+    if (level === 'avancado') return { series: 5, reps: '3-5', descanso: '180-240s', rir: '1-2 RIR' };
+    return { series: 4, reps: '4-6', descanso: '150-210s', rir: '1-2 RIR' };
   }
   if (goal === 'definicao') {
-    return { series: 3, reps: '12-15' };
+    return { series: 3, reps: '12-15', descanso: '45-75s', rir: '2 RIR' };
   }
-  if (level === 'iniciante') return { series: 3, reps: '10-12' };
-  if (level === 'avancado') return { series: 5, reps: '6-10' };
-  return { series: 4, reps: '8-12' };
+  if (level === 'iniciante') return { series: 3, reps: '10-12', descanso: '75-120s', rir: '2-3 RIR' };
+  if (level === 'avancado') return { series: 5, reps: '6-10', descanso: '90-150s', rir: '1-2 RIR' };
+  return { series: 4, reps: '8-12', descanso: '75-120s', rir: '1-2 RIR' };
+}
+
+function classifyExercise(name) {
+  var text = String(name || '').toLowerCase();
+  if (/prancha|superman|toque no ombro/.test(text)) return 'core_time';
+  if (/elevacao de pernas|abdominal|mountain climber|bicicleta/.test(text)) return 'core_reps';
+  if (/rosca|triceps|elevacao lateral|elevacao frontal|crucifixo inverso|coice/.test(text)) return 'isolation';
+  return 'compound';
+}
+
+function adaptPrescriptionForExercise(base, goal, level, exerciseName) {
+  var type = classifyExercise(exerciseName);
+  var prescription = {
+    series: base.series,
+    reps: base.reps,
+    descanso: base.descanso,
+    rir: base.rir,
+    tipo: type
+  };
+
+  if (type === 'core_time') {
+    prescription.series = goal === 'forca' ? 3 : base.series;
+    prescription.reps = level === 'iniciante' ? '20-30s' : '30-45s';
+    prescription.descanso = '45-75s';
+    prescription.rir = 'manter técnica estável';
+    return prescription;
+  }
+
+  if (type === 'core_reps') {
+    prescription.series = goal === 'forca' ? 3 : base.series;
+    prescription.reps = level === 'iniciante' ? '8-12' : '10-15';
+    prescription.descanso = '45-75s';
+    prescription.rir = '1-2 reps limpas em reserva';
+    return prescription;
+  }
+
+  if (type === 'isolation' && goal === 'forca') {
+    prescription.series = Math.max(3, base.series - 1);
+    prescription.reps = level === 'avancado' ? '6-10' : '8-12';
+    prescription.descanso = '75-120s';
+    prescription.rir = '1-2 RIR';
+  }
+
+  return prescription;
+}
+
+function buildProgression(goal, level) {
+  if (goal === 'forca') {
+    return {
+      modelo: level === 'iniciante' ? 'progressao_linear_conservadora' : 'progressao_dupla_com_autorregulacao',
+      regra: 'Quando completar todas as séries no topo da faixa com técnica sólida, aumente 2-5% de carga na próxima sessão.',
+      deload: 'Reduza 30-40% do volume por 1 semana se houver queda de performance por 2 sessões seguidas.'
+    };
+  }
+  if (goal === 'definicao') {
+    return {
+      modelo: 'densidade_progressiva',
+      regra: 'Mantenha carga e técnica; reduza 5-10s de descanso ou adicione 1-2 reps quando fechar a faixa prescrita.',
+      deload: 'Mantenha volume e reduza intensidade se recuperação ou sono piorarem por 3 dias.'
+    };
+  }
+  return {
+    modelo: level === 'iniciante' ? 'progressao_linear_tecnica' : 'progressao_dupla',
+    regra: 'Suba reps até o topo da faixa em todas as séries; depois aumente a carga mínima disponível e volte ao início da faixa.',
+    deload: 'A cada 4-6 semanas, reduza 25-35% do volume se fadiga acumulada estiver alta.'
+  };
+}
+
+function buildSubstitutionOptions(group, catalog, selectedName, limitations) {
+  var pool = (catalog[group] || EXERCISES_BY_ENV.academia[group] || []).filter(function(name) {
+    return name !== selectedName && !isRestricted(name, limitations);
+  });
+  return pool.slice(0, 2);
 }
 
 function isRestricted(exerciseName, limitations) {
@@ -170,7 +243,7 @@ function isRestricted(exerciseName, limitations) {
   return false;
 }
 
-function pickExercises(groups, environment, prescription, limitations) {
+function pickExercises(groups, environment, prescription, limitations, goal, level) {
   var catalog = EXERCISES_BY_ENV[environment] || EXERCISES_BY_ENV.academia;
   var maxPerGroup = environment === 'academia' ? 2 : 1;
   var exercises = [];
@@ -180,10 +253,15 @@ function pickExercises(groups, environment, prescription, limitations) {
       return !isRestricted(name, limitations);
     });
     pool.slice(0, maxPerGroup).forEach(function(name) {
+      var exercisePrescription = adaptPrescriptionForExercise(prescription, goal, level, name);
       exercises.push({
         nome: name,
-        series: prescription.series,
-        reps: prescription.reps
+        series: exercisePrescription.series,
+        reps: exercisePrescription.reps,
+        descanso: exercisePrescription.descanso,
+        rir: exercisePrescription.rir,
+        tipo: exercisePrescription.tipo,
+        substituicoes: buildSubstitutionOptions(group, catalog, name, limitations)
       });
     });
   });
@@ -204,7 +282,7 @@ function buildStandaloneWorkout(input, goal, level, days, environment) {
     return {
       nome: day.nome,
       grupo: day.grupos.join('/'),
-      exercicios: pickExercises(day.grupos, environment, prescription, limitations),
+      exercicios: pickExercises(day.grupos, environment, prescription, limitations, goal, level),
     };
   }).filter(function(t) { return t.exercicios.length > 0; });
 
@@ -219,7 +297,8 @@ function buildStandaloneWorkout(input, goal, level, days, environment) {
       frequencia: days + 'x por semana',
       sessoes: String(input.tempo || '60 min'),
       ambiente: environment,
-      observacao: 'Plano gerado a partir do catálogo de exercícios. Para prescrição referenciada, configure um template em workout_templates.',
+      progressao: buildProgression(goal, level),
+      observacao: 'Plano gerado a partir do catálogo de exercícios com progressão e substituições básicas. Para prescrição referenciada, configure um template em workout_templates.',
     },
   };
 }

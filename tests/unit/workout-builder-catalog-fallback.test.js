@@ -77,6 +77,9 @@ test('buildWorkoutPlan gera via catálogo com objetivo forca', () => {
   const firstEx = result.treinos[0].exercicios[0];
   assert.equal(firstEx.series, 5, 'Avançado forca → 5 séries');
   assert.equal(firstEx.reps, '3-5');
+  assert.equal(firstEx.descanso, '180-240s');
+  assert.ok(result.orientacoes.progressao);
+  assert.match(result.orientacoes.progressao.regra, /carga/i);
 });
 
 test('buildWorkoutPlan gera via catálogo com ambiente casa_sem_equipamento', () => {
@@ -114,6 +117,48 @@ test('buildWorkoutPlan respeita limitação de joelho no modo catálogo', () => 
   const allNames = result.treinos.flatMap(t => t.exercicios.map(e => e.nome.toLowerCase()));
   const hasRestricted = allNames.some(n => /agachamento|avanco|leg press/.test(n));
   assert.equal(hasRestricted, false, 'Exercícios de joelho não devem aparecer com restrição de joelho');
+});
+
+test('buildWorkoutPlan adapta prescrição de core no objetivo força', () => {
+  const result = builder.buildWorkoutPlan({
+    objetivo: 'forca',
+    nivel: 'intermediario',
+    dias: '3',
+    equipamentos: 'academia',
+  });
+
+  assert.equal(result.failSafe, false);
+  const core = result.treinos
+    .flatMap(t => t.exercicios)
+    .find(e => /prancha/i.test(e.nome));
+
+  assert.ok(core, 'Plano de força deve manter core quando split pedir abdomen');
+  assert.equal(core.tipo, 'core_time');
+  assert.equal(core.reps, '30-45s');
+  assert.equal(core.descanso, '45-75s');
+  assert.notEqual(core.reps, '4-6');
+});
+
+test('buildWorkoutPlan inclui descanso, RIR, progressão e substituições no catálogo', () => {
+  const result = builder.buildWorkoutPlan({
+    objetivo: 'hipertrofia',
+    nivel: 'intermediario',
+    dias: '4',
+    equipamentos: 'academia',
+  });
+
+  assert.equal(result.failSafe, false);
+  assert.ok(result.orientacoes.progressao);
+  assert.match(result.orientacoes.progressao.modelo, /progressao/i);
+
+  const exercises = result.treinos.flatMap(t => t.exercicios);
+  assert.ok(exercises.length > 0);
+  exercises.forEach((exercise) => {
+    assert.ok(exercise.descanso, `${exercise.nome} deve ter descanso`);
+    assert.ok(exercise.rir, `${exercise.nome} deve ter RIR/orientação de esforço`);
+    assert.ok(Array.isArray(exercise.substituicoes), `${exercise.nome} deve ter substituições`);
+  });
+  assert.ok(exercises.some((exercise) => exercise.substituicoes.length > 0));
 });
 
 test('workoutService.execute também usa catálogo quando sem templates', async () => {
