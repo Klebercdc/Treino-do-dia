@@ -21,6 +21,8 @@ function loadDietHelpers() {
     extract(code, /function splitDietList\(value\) \{[\s\S]*?\n\}/, 'splitDietList'),
     extract(code, /function mergeUniqueDietList\(\) \{[\s\S]*?\n\}/, 'mergeUniqueDietList'),
     extract(code, /function parseDietAgeFromBirthDate\(birthDate\) \{[\s\S]*?\n\}/, 'parseDietAgeFromBirthDate'),
+    extract(code, /var NUTRITION_FOOD_CATALOG = \[[\s\S]*?\n\];/, 'NUTRITION_FOOD_CATALOG'),
+    extract(code, /function getNutritionCatalogItems\(group\) \{[\s\S]*?\n\}/, 'getNutritionCatalogItems'),
     extract(code, /function buildMergedDietInput\(input\) \{[\s\S]*?\n\}/, 'buildMergedDietInput'),
     extract(code, /function buildLocalDietFoodCatalog\(input\) \{[\s\S]*?\n\}/, 'buildLocalDietFoodCatalog'),
     extract(code, /function buildLocalDietPlan\(input\) \{[\s\S]*?\n\}/, 'buildLocalDietPlan'),

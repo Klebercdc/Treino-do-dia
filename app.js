@@ -4352,10 +4352,18 @@ function renderDietModelAsText(model) {
     "##RESUMO",
     "TOTAL||" + (meta.calorias ?? "") + "|" + (meta.proteina ?? "") + "|" + (meta.carbo ?? "") + "|" + (meta.gordura ?? "")
   ].join("\n");
+  const substitutionNotes = meals.reduce(function(acc, meal) {
+    (Array.isArray(meal.substituicoes) ? meal.substituicoes : []).slice(0, 3).forEach(function(entry) {
+      if (entry && entry.item && Array.isArray(entry.opcoes) && entry.opcoes.length) {
+        acc.push((meal.nome || "Refeição") + " · " + entry.item + ": " + entry.opcoes.slice(0, 3).join(", "));
+      }
+    });
+    return acc;
+  }, []);
   const orientBlock = [
     "##ORIENTACOES",
     "Água|" + ((model.hidratacao && model.hidratacao.litros) ? (model.hidratacao.litros + " L/dia") : "Hidrate-se ao longo do dia.")
-  ].concat(orientacoes.map(function(obs) { return "Nota|" + obs; })).join("\n");
+  ].concat(substitutionNotes.map(function(note) { return "Substituição|" + note; })).concat(orientacoes.map(function(obs) { return "Nota|" + obs; })).join("\n");
   return [metaBlock, mealBlocks, resumoBlock, orientBlock].filter(Boolean).join("\n\n");
 }
 
@@ -7415,7 +7423,7 @@ function dietMasterCheckIn() {
 
 var KRONIA_NUTRITION_SNAPSHOT_KEY = "kronia_nutrition_snapshot_v1";
 var NUTRITION_FLOW_STEPS = [
-  { key: "entrada", title: "Dieta IA", subtitle: "O KRONOS vai usar seu perfil, treino, progresso, exames e preferências para montar um plano alimentar real." },
+  { key: "entrada", title: "Dieta IA com KRONOS", subtitle: "Seu plano começa com leitura do corpo, treino, exames, progresso e rotina que já existem no KRONIA." },
   { key: "objetivo", title: "Qual é seu objetivo?", subtitle: "Escolha a meta principal para calibrar calorias e macros." },
   { key: "sexo", title: "Sexo biológico", subtitle: "Usado somente para estimar metabolismo basal com mais precisão." },
   { key: "medidas", title: "Dados corporais", subtitle: "Peso, altura e idade são obrigatórios. % de gordura melhora a estimativa." },
@@ -7430,17 +7438,78 @@ var NUTRITION_FLOW_STEPS = [
   { key: "proteinas", title: "Escolha proteínas", subtitle: "Selecione pelo menos 3 fontes que você aceita usar no plano." },
   { key: "carboidratos", title: "Escolha carboidratos", subtitle: "Selecione pelo menos 3 fontes principais de energia." },
   { key: "gorduras", title: "Gorduras e extras", subtitle: "Selecione pelo menos 3 opções para completar refeições e aderência." },
+  { key: "frutas", title: "Escolha frutas", subtitle: "Selecione pelo menos 2 frutas para energia, fibras e aderência." },
+  { key: "vegetais", title: "Escolha vegetais", subtitle: "Selecione pelo menos 2 vegetais para micronutrientes e volume alimentar." },
+  { key: "laticinios", title: "Laticínios e substitutos", subtitle: "Escolha opções compatíveis com suas restrições." },
+  { key: "temperos", title: "Temperos e molhos", subtitle: "Escolha itens que deixam o plano mais fácil de seguir." },
   { key: "resultado", title: "Calorias e macros", subtitle: "Revise a conta antes de gerar o plano." },
   { key: "gerar", title: "Gerar plano", subtitle: "O KRONOS vai montar o plano usando o contexto completo do app." },
   { key: "hoje", title: "Hoje", subtitle: "Sua base operacional de nutrição para o dia." },
+  { key: "semana", title: "Semana", subtitle: "Veja como o plano se distribui nos próximos dias." },
+  { key: "refeicao", title: "Refeição detalhada", subtitle: "Revise itens, quantidades, macros e substituições." },
   { key: "checkin", title: "Check-in", subtitle: "Registre aderência, fome e energia para orientar ajustes." },
   { key: "coach", title: "KRONOS Coach da dieta", subtitle: "Converse com o KRONOS usando seu plano alimentar, treino e exames como contexto." },
 ];
 
-var NUTRITION_FOOD_OPTIONS = {
-  proteinas: ["Frango grelhado", "Ovos", "Patinho", "Tilápia", "Atum", "Whey protein", "Iogurte grego", "Tofu", "Grão-de-bico", "Lentilha"],
-  carboidratos: ["Arroz", "Feijão", "Batata-doce", "Aveia", "Banana", "Macarrão", "Tapioca", "Pão integral", "Mandioca", "Frutas vermelhas"],
-  gorduras: ["Azeite de oliva", "Abacate", "Castanhas", "Pasta de amendoim", "Sementes", "Gema de ovo", "Chocolate 70%", "Coco", "Tahine", "Queijo branco"],
+var NUTRITION_FOOD_CATALOG = [
+  { id: "prot_frango", nome: "Frango grelhado", grupo: "proteinas", subgrupo: "aves", porcao: "120 g", unidade: "g", kcal: 198, proteina: 37, carboidrato: 0, gordura: 4, fibra: 0, tags: ["força", "prático"], restricoes: [], practicalScore: 5, costScore: 4 },
+  { id: "prot_ovos", nome: "Ovos mexidos", grupo: "proteinas", subgrupo: "ovos", porcao: "3 un", unidade: "un", kcal: 210, proteina: 18, carboidrato: 1, gordura: 15, fibra: 0, tags: ["café da manhã"], restricoes: ["ovo"], practicalScore: 5, costScore: 5 },
+  { id: "prot_patinho", nome: "Patinho grelhado", grupo: "proteinas", subgrupo: "bovinos", porcao: "120 g", unidade: "g", kcal: 225, proteina: 34, carboidrato: 0, gordura: 10, fibra: 0, tags: ["principal"], restricoes: [], practicalScore: 4, costScore: 3 },
+  { id: "prot_tilapia", nome: "Tilápia grelhada", grupo: "proteinas", subgrupo: "peixes", porcao: "140 g", unidade: "g", kcal: 180, proteina: 33, carboidrato: 0, gordura: 4, fibra: 0, tags: ["leve"], restricoes: ["peixe"], practicalScore: 4, costScore: 3 },
+  { id: "prot_atum", nome: "Atum em lata", grupo: "proteinas", subgrupo: "peixes", porcao: "1 lata", unidade: "lata", kcal: 170, proteina: 30, carboidrato: 0, gordura: 5, fibra: 0, tags: ["rápido"], restricoes: ["peixe"], practicalScore: 5, costScore: 3 },
+  { id: "prot_whey", nome: "Whey protein", grupo: "proteinas", subgrupo: "suplementos", porcao: "30 g", unidade: "g", kcal: 120, proteina: 24, carboidrato: 3, gordura: 2, fibra: 0, tags: ["rápido", "pós-treino"], restricoes: ["lactose"], practicalScore: 5, costScore: 2 },
+  { id: "prot_tofu", nome: "Tofu firme", grupo: "proteinas", subgrupo: "vegetais proteicos", porcao: "200 g", unidade: "g", kcal: 192, proteina: 20, carboidrato: 5, gordura: 11, fibra: 2, tags: ["vegano"], restricoes: ["soja"], practicalScore: 4, costScore: 3 },
+  { id: "prot_graobico", nome: "Grão-de-bico cozido", grupo: "proteinas", subgrupo: "vegetais proteicos", porcao: "130 g", unidade: "g", kcal: 213, proteina: 11, carboidrato: 35, gordura: 3.5, fibra: 10, tags: ["vegano", "fibra"], restricoes: [], practicalScore: 3, costScore: 4 },
+  { id: "prot_lentilha", nome: "Lentilha cozida", grupo: "proteinas", subgrupo: "vegetais proteicos", porcao: "140 g", unidade: "g", kcal: 162, proteina: 12.6, carboidrato: 28, gordura: 0.6, fibra: 11, tags: ["vegano", "fibra"], restricoes: [], practicalScore: 3, costScore: 5 },
+
+  { id: "carb_arroz", nome: "Arroz cozido", grupo: "carboidratos", subgrupo: "arroz e grãos", porcao: "120 g", unidade: "g", kcal: 156, proteina: 3, carboidrato: 34, gordura: 0.4, fibra: 1, tags: ["base"], restricoes: [], practicalScore: 5, costScore: 5 },
+  { id: "carb_feijao", nome: "Feijão cozido", grupo: "carboidratos", subgrupo: "leguminosas", porcao: "100 g", unidade: "g", kcal: 76, proteina: 4.8, carboidrato: 13.6, gordura: 0.5, fibra: 8.5, tags: ["fibra"], restricoes: [], practicalScore: 4, costScore: 5 },
+  { id: "carb_batatadoce", nome: "Batata-doce cozida", grupo: "carboidratos", subgrupo: "tubérculos", porcao: "130 g", unidade: "g", kcal: 112, proteina: 2, carboidrato: 26, gordura: 0.1, fibra: 3.9, tags: ["pré-treino"], restricoes: [], practicalScore: 4, costScore: 4 },
+  { id: "carb_aveia", nome: "Aveia", grupo: "carboidratos", subgrupo: "cereais", porcao: "40 g", unidade: "g", kcal: 156, proteina: 6.8, carboidrato: 26.5, gordura: 3.4, fibra: 4.2, tags: ["café da manhã"], restricoes: ["glúten"], practicalScore: 5, costScore: 4 },
+  { id: "carb_macarrao", nome: "Macarrão cozido", grupo: "carboidratos", subgrupo: "massas", porcao: "120 g", unidade: "g", kcal: 188, proteina: 6, carboidrato: 37, gordura: 1.2, fibra: 2, tags: ["energia"], restricoes: ["glúten"], practicalScore: 4, costScore: 4 },
+  { id: "carb_pao", nome: "Pão integral", grupo: "carboidratos", subgrupo: "pães", porcao: "2 fatias", unidade: "fatias", kcal: 128, proteina: 6, carboidrato: 24, gordura: 2, fibra: 4, tags: ["rápido"], restricoes: ["glúten"], practicalScore: 5, costScore: 4 },
+  { id: "carb_tapioca", nome: "Tapioca", grupo: "carboidratos", subgrupo: "cereais", porcao: "60 g", unidade: "g", kcal: 150, proteina: 0.2, carboidrato: 37, gordura: 0, fibra: 0.3, tags: ["rápido"], restricoes: [], practicalScore: 5, costScore: 4 },
+  { id: "carb_mandioca", nome: "Mandioca cozida", grupo: "carboidratos", subgrupo: "tubérculos", porcao: "120 g", unidade: "g", kcal: 150, proteina: 1.2, carboidrato: 36, gordura: 0.3, fibra: 2, tags: ["energia"], restricoes: [], practicalScore: 3, costScore: 4 },
+
+  { id: "fat_azeite", nome: "Azeite de oliva", grupo: "gorduras", subgrupo: "azeites e óleos", porcao: "10 g", unidade: "g", kcal: 88, proteina: 0, carboidrato: 0, gordura: 10, fibra: 0, tags: ["molho"], restricoes: [], practicalScore: 5, costScore: 3 },
+  { id: "fat_abacate", nome: "Abacate", grupo: "gorduras", subgrupo: "abacate / azeitona", porcao: "100 g", unidade: "g", kcal: 96, proteina: 1.2, carboidrato: 6, gordura: 8.4, fibra: 6, tags: ["saciedade"], restricoes: [], practicalScore: 4, costScore: 3 },
+  { id: "fat_castanhas", nome: "Castanhas", grupo: "gorduras", subgrupo: "oleaginosas", porcao: "20 g", unidade: "g", kcal: 120, proteina: 3, carboidrato: 4, gordura: 10, fibra: 2, tags: ["lanche"], restricoes: ["oleaginosas"], practicalScore: 5, costScore: 2 },
+  { id: "fat_pasta_amendoim", nome: "Pasta de amendoim", grupo: "gorduras", subgrupo: "pastas", porcao: "20 g", unidade: "g", kcal: 118, proteina: 5, carboidrato: 4, gordura: 10, fibra: 1.6, tags: ["café da manhã"], restricoes: ["amendoim"], practicalScore: 5, costScore: 4 },
+  { id: "fat_sementes", nome: "Sementes de chia", grupo: "gorduras", subgrupo: "sementes", porcao: "15 g", unidade: "g", kcal: 73, proteina: 2.5, carboidrato: 6.3, gordura: 4.6, fibra: 5.2, tags: ["fibra"], restricoes: [], practicalScore: 4, costScore: 3 },
+  { id: "fat_tahine", nome: "Tahine", grupo: "gorduras", subgrupo: "pastas", porcao: "20 g", unidade: "g", kcal: 119, proteina: 3.4, carboidrato: 4.2, gordura: 10.7, fibra: 1.8, tags: ["vegano"], restricoes: ["gergelim"], practicalScore: 3, costScore: 2 },
+
+  { id: "fruit_banana", nome: "Banana", grupo: "frutas", subgrupo: "mais energéticas", porcao: "1 un", unidade: "un", kcal: 80, proteina: 1, carboidrato: 20.7, gordura: 0.2, fibra: 2.6, tags: ["pré-treino"], restricoes: [], practicalScore: 5, costScore: 5 },
+  { id: "fruit_maca", nome: "Maçã", grupo: "frutas", subgrupo: "neutras", porcao: "1 un", unidade: "un", kcal: 72, proteina: 0.3, carboidrato: 19, gordura: 0.2, fibra: 3.3, tags: ["lanche"], restricoes: [], practicalScore: 5, costScore: 4 },
+  { id: "fruit_vermelhas", nome: "Frutas vermelhas", grupo: "frutas", subgrupo: "menor impacto glicêmico", porcao: "140 g", unidade: "g", kcal: 70, proteina: 1, carboidrato: 16, gordura: 0.5, fibra: 5, tags: ["diabetes"], restricoes: [], practicalScore: 3, costScore: 2 },
+  { id: "fruit_laranja", nome: "Laranja", grupo: "frutas", subgrupo: "neutras", porcao: "1 un", unidade: "un", kcal: 62, proteina: 1.2, carboidrato: 15.4, gordura: 0.2, fibra: 3.1, tags: ["vitamina c"], restricoes: [], practicalScore: 4, costScore: 5 },
+  { id: "fruit_mamao", nome: "Mamão", grupo: "frutas", subgrupo: "neutras", porcao: "160 g", unidade: "g", kcal: 69, proteina: 0.8, carboidrato: 17, gordura: 0.4, fibra: 2.7, tags: ["digestivo"], restricoes: [], practicalScore: 4, costScore: 4 },
+
+  { id: "veg_brocolis", nome: "Brócolis cozido", grupo: "vegetais", subgrupo: "crucíferos", porcao: "100 g", unidade: "g", kcal: 25, proteina: 3, carboidrato: 4.4, gordura: 0.5, fibra: 3.4, tags: ["volume"], restricoes: [], practicalScore: 4, costScore: 4 },
+  { id: "veg_salada", nome: "Salada verde", grupo: "vegetais", subgrupo: "folhas", porcao: "1 prato", unidade: "prato", kcal: 20, proteina: 1, carboidrato: 3, gordura: 0.2, fibra: 2, tags: ["baixo amido"], restricoes: [], practicalScore: 5, costScore: 5 },
+  { id: "veg_cenoura", nome: "Cenoura cozida", grupo: "vegetais", subgrupo: "legumes", porcao: "100 g", unidade: "g", kcal: 30, proteina: 1, carboidrato: 7, gordura: 0.2, fibra: 2.8, tags: ["legume"], restricoes: [], practicalScore: 4, costScore: 5 },
+  { id: "veg_abobrinha", nome: "Abobrinha refogada", grupo: "vegetais", subgrupo: "vegetais de baixo amido", porcao: "120 g", unidade: "g", kcal: 32, proteina: 1.4, carboidrato: 5.6, gordura: 0.6, fibra: 1.8, tags: ["baixo amido"], restricoes: [], practicalScore: 4, costScore: 4 },
+  { id: "veg_tomate", nome: "Tomate", grupo: "vegetais", subgrupo: "aromáticos", porcao: "100 g", unidade: "g", kcal: 18, proteina: 0.9, carboidrato: 3.9, gordura: 0.2, fibra: 1.2, tags: ["salada"], restricoes: [], practicalScore: 5, costScore: 5 },
+
+  { id: "lac_iogurte_grego", nome: "Iogurte grego natural", grupo: "laticinios", subgrupo: "iogurtes", porcao: "170 g", unidade: "g", kcal: 130, proteina: 17, carboidrato: 6, gordura: 4, fibra: 0, tags: ["café da manhã"], restricoes: ["lactose"], practicalScore: 5, costScore: 3 },
+  { id: "lac_iogurte", nome: "Iogurte natural", grupo: "laticinios", subgrupo: "iogurtes", porcao: "170 g", unidade: "g", kcal: 104, proteina: 6, carboidrato: 8, gordura: 5, fibra: 0, tags: ["lanche"], restricoes: ["lactose"], practicalScore: 5, costScore: 4 },
+  { id: "lac_queijo", nome: "Queijo branco", grupo: "laticinios", subgrupo: "queijos", porcao: "40 g", unidade: "g", kcal: 98, proteina: 7.2, carboidrato: 1.2, gordura: 7.2, fibra: 0, tags: ["lanche"], restricoes: ["lactose"], practicalScore: 4, costScore: 3 },
+  { id: "lac_leite", nome: "Leite", grupo: "laticinios", subgrupo: "leite", porcao: "200 ml", unidade: "ml", kcal: 122, proteina: 6.4, carboidrato: 9.6, gordura: 6.6, fibra: 0, tags: ["vitamina"], restricoes: ["lactose"], practicalScore: 5, costScore: 4 },
+  { id: "lac_bebida_soja", nome: "Bebida vegetal de soja", grupo: "laticinios", subgrupo: "bebidas vegetais", porcao: "200 ml", unidade: "ml", kcal: 82, proteina: 6.6, carboidrato: 4.6, gordura: 4, fibra: 1.2, tags: ["vegano"], restricoes: ["soja"], practicalScore: 4, costScore: 3 },
+
+  { id: "temp_ervas", nome: "Ervas secas", grupo: "temperos", subgrupo: "secos", porcao: "1 colher chá", unidade: "colher", kcal: 3, proteina: 0.1, carboidrato: 0.5, gordura: 0, fibra: 0.2, tags: ["sabor"], restricoes: [], practicalScore: 5, costScore: 5 },
+  { id: "temp_mostarda", nome: "Mostarda", grupo: "temperos", subgrupo: "pastosos", porcao: "10 g", unidade: "g", kcal: 7, proteina: 0.4, carboidrato: 0.5, gordura: 0.4, fibra: 0.3, tags: ["molho"], restricoes: [], practicalScore: 5, costScore: 4 },
+  { id: "temp_vinagrete", nome: "Vinagrete", grupo: "temperos", subgrupo: "molhos", porcao: "30 g", unidade: "g", kcal: 22, proteina: 0.4, carboidrato: 2.5, gordura: 1, fibra: 0.7, tags: ["salada"], restricoes: [], practicalScore: 4, costScore: 5 },
+  { id: "temp_alho_cebola", nome: "Alho e cebola", grupo: "temperos", subgrupo: "secos", porcao: "20 g", unidade: "g", kcal: 16, proteina: 0.5, carboidrato: 3.4, gordura: 0.1, fibra: 0.5, tags: ["base"], restricoes: [], practicalScore: 5, costScore: 5 },
+];
+
+var NUTRITION_GROUP_LABELS = {
+  proteinas: "Proteínas",
+  carboidratos: "Carboidratos",
+  gorduras: "Gorduras / extras",
+  frutas: "Frutas",
+  vegetais: "Vegetais",
+  laticinios: "Laticínios e substitutos",
+  temperos: "Temperos / molhos",
 };
 
 function defaultNutritionFlowState() {
@@ -7464,10 +7533,16 @@ function defaultNutritionFlowState() {
     proteinas: ["Frango grelhado", "Ovos", "Whey protein"],
     carboidratos: ["Arroz", "Feijão", "Banana"],
     gorduras: ["Azeite de oliva", "Abacate", "Castanhas"],
+    frutas: ["Banana", "Maçã"],
+    vegetais: ["Brócolis cozido", "Salada verde"],
+    laticinios: ["Iogurte grego natural", "Bebida vegetal de soja"],
+    temperos: ["Ervas secas", "Mostarda"],
     preferencias: "",
     alimentosEvitar: "",
     generatedPlan: null,
     generatedText: "",
+    selectedMealIndex: 0,
+    registeredMeals: {},
     checkin: { aderencia: "parcial", fome: "controlada", energia: "boa", observacoes: "" },
   };
 }
@@ -7551,7 +7626,7 @@ function syncNutritionFlowToLegacyDietForm() {
   setValue("dietaIdade", state.idade);
   setValue("dietaGordura", state.gorduraCorporal);
   setValue("dietaRefeicoes", state.refeicoesPorDia);
-  setValue("dietaPrefs", mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras).join(", "));
+  setValue("dietaPrefs", mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras, state.frutas, state.vegetais, state.laticinios, state.temperos).join(", "));
   setValue("dietaDislikes", state.alimentosEvitar);
   setValue("dietaMedicamentos", state.medicamentos);
   setValue("dietaRestric", state.sinaisClinicos);
@@ -7584,7 +7659,7 @@ function buildNutritionFlowInput() {
     patologia: pathologies.join(", ") || "nenhuma",
     medicamentos: state.medicamentos || "",
     padraoAlimentar: state.padraoAlimentar,
-    preferencias: mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras).join(", "),
+    preferencias: mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras, state.frutas, state.vegetais, state.laticinios, state.temperos).join(", "),
     alimentosEvitar: state.alimentosEvitar || "",
     aderencia: Object.assign({}, collectDietGenerationInput().aderencia || {}, {
       modoAjuste: state.sugestao,
@@ -7600,6 +7675,10 @@ function buildNutritionFlowInput() {
       proteinas: state.proteinas,
       carboidratos: state.carboidratos,
       gorduras: state.gorduras,
+      frutas: state.frutas,
+      vegetais: state.vegetais,
+      laticinios: state.laticinios,
+      temperos: state.temperos,
     },
   });
 }
@@ -7616,9 +7695,12 @@ function computeNutritionFlowResult(input) {
     "atleta": 1.9,
   }[String(input.nivelAtividade || "").toLowerCase()] || 1.375;
   var neatImpact = { baixo: -120, moderado: 0, alto: 180 }[getNutritionFlowState().neat] || 0;
+  var clinical = summarizeDietMasterClinical(input);
+  var clinicalImpact = clinical.hasDiabetes ? -80 : 0;
+  var sinaisImpact = input && input.supabaseSnapshot && input.supabaseSnapshot.latestLabReport ? -40 : 0;
   var trainingImpact = Math.round(Math.max(0, baseline.tdee - baseline.tmb) * 0.55);
   var activityImpact = Math.round(Math.max(0, baseline.tdee - baseline.tmb) * 0.45);
-  var adjustedTarget = Math.max(1200, Math.round(baseline.metaCalorias + neatImpact));
+  var adjustedTarget = Math.max(1200, Math.round(baseline.metaCalorias + neatImpact + clinicalImpact + sinaisImpact));
   var protein = baseline.proteinaMeta;
   var fat = baseline.gorduraMeta;
   var carbs = Math.max(70, Math.round((adjustedTarget - protein * 4 - fat * 9) / 4));
@@ -7627,6 +7709,8 @@ function computeNutritionFlowResult(input) {
     treinoImpacto: trainingImpact,
     atividadeImpacto: activityImpact,
     neatImpacto: neatImpact,
+    clinicaImpacto: clinicalImpact,
+    sinaisImpacto: sinaisImpact,
     metaCalorias: adjustedTarget,
     proteinaMeta: protein,
     gorduraMeta: fat,
@@ -7665,6 +7749,10 @@ function persistCanonicalNutritionSnapshot(meta) {
         proteinas: state.proteinas,
         carboidratos: state.carboidratos,
         gorduras: state.gorduras,
+        frutas: state.frutas,
+        vegetais: state.vegetais,
+        laticinios: state.laticinios,
+        temperos: state.temperos,
       },
       activePlan: state.generatedPlan || null,
       checkin: state.checkin || null,
@@ -7740,6 +7828,8 @@ function validateNutritionFlowStep() {
   if (key === "proteinas" && (!Array.isArray(state.proteinas) || state.proteinas.length < 3)) return { ok: false, message: "Selecione pelo menos 3 proteínas." };
   if (key === "carboidratos" && (!Array.isArray(state.carboidratos) || state.carboidratos.length < 3)) return { ok: false, message: "Selecione pelo menos 3 carboidratos." };
   if (key === "gorduras" && (!Array.isArray(state.gorduras) || state.gorduras.length < 3)) return { ok: false, message: "Selecione pelo menos 3 gorduras ou extras." };
+  if (key === "frutas" && (!Array.isArray(state.frutas) || state.frutas.length < 2)) return { ok: false, message: "Selecione pelo menos 2 frutas." };
+  if (key === "vegetais" && (!Array.isArray(state.vegetais) || state.vegetais.length < 2)) return { ok: false, message: "Selecione pelo menos 2 vegetais." };
   return { ok: true };
 }
 
@@ -7756,14 +7846,51 @@ function renderNutritionChipArray(key, value, label, exclusiveValue) {
   return `<button type="button" class="nutrition-chip ${selected ? "active" : ""}" onclick="nutritionToggleArray('${key}', '${escapeAttr(value)}', ${exclusiveValue ? "'" + escapeAttr(exclusiveValue) + "'" : "null"})">${escapeHTML(label || value)}</button>`;
 }
 
-function renderNutritionFoodStep(key, options) {
+function getNutritionCatalogItems(group) {
+  return NUTRITION_FOOD_CATALOG.filter(function(item) { return item.grupo === group; });
+}
+
+function getNutritionCatalogNameOptions(group) {
+  return getNutritionCatalogItems(group).map(function(item) { return item.nome; });
+}
+
+function renderNutritionFoodStep(key, options, minRequired) {
   var state = getNutritionFlowState();
   var selected = Array.isArray(state[key]) ? state[key] : [];
-  return `<div class="nutrition-card">
-    <div class="nutrition-chip-grid">
-      ${(options || []).map(function(item) { return renderNutritionChipArray(key, item, item); }).join("")}
-    </div>
-    <div style="margin-top:12px;color:var(--text-2);font-size:.78rem">${selected.length}/3 selecionados no mínimo</div>
+  var items = Array.isArray(options) && options.length && typeof options[0] === "object"
+    ? options
+    : getNutritionCatalogItems(key);
+  var grouped = items.reduce(function(acc, item) {
+    var group = item.subgrupo || "opções";
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {});
+  var minimum = Number(minRequired || (key === "frutas" || key === "vegetais" ? 2 : 1));
+  return `<div class="nutrition-food-head">
+    <strong>${selected.length}/${minimum} selecionados</strong>
+    <span>${escapeHTML(NUTRITION_GROUP_LABELS[key] || "Alimentos")}</span>
+  </div>
+  <div class="nutrition-food-sections">
+    ${Object.keys(grouped).map(function(subgroup) {
+      return `<section class="nutrition-food-section">
+        <div class="nutrition-food-subgroup">${escapeHTML(subgroup)}</div>
+        <div class="nutrition-chip-grid">
+          ${grouped[subgroup].map(function(item) {
+            var label = item.nome;
+            var detail = `${item.porcao} · ${Math.round(item.kcal)} kcal · P ${item.proteina}g · C ${item.carboidrato}g · G ${item.gordura}g`;
+            var selectedItem = nutritionSelected(key, item.nome);
+            return `<button type="button" class="nutrition-food-chip ${selectedItem ? "active" : ""}" onclick="nutritionToggleArray('${key}', '${escapeAttr(item.nome)}', null)">
+              <strong>${escapeHTML(label)}</strong>
+              <small>${escapeHTML(detail)}</small>
+            </button>`;
+          }).join("")}
+        </div>
+      </section>`;
+    }).join("")}
+  </div>
+  <div class="nutrition-card">
+    <div class="nutrition-metric"><span>Como o KRONOS usa isso</span><strong>Preferências viram regra de geração</strong><small>As opções escolhidas entram no snapshot canônico, nas refeições e nas substituições por macro.</small></div>
   </div>`;
 }
 
@@ -7773,13 +7900,24 @@ function renderNutritionFlowContent(key) {
     var snapshot = window._dietaSupabaseSnapshot || {};
     var hasLab = !!(snapshot.latestLabReport && snapshot.latestLabReport.isValid);
     var training = readDietMasterTrainingSnapshot();
-    return `<div class="nutrition-card">
-      <div class="nutrition-metric-grid">
-        <div class="nutrition-metric"><span>Perfil</span><strong>${snapshot.profile ? "Conectado" : "Local"}</strong><small>Dados corporais e objetivo serão reaproveitados.</small></div>
-        <div class="nutrition-metric"><span>Treino</span><strong>${training.sessions7d || training.plannedDays || 0}</strong><small>Sessões recentes ou dias planejados.</small></div>
-        <div class="nutrition-metric"><span>Exames</span><strong>${hasLab ? "Ativo" : "Pendente"}</strong><small>Biomarcadores entram quando existem.</small></div>
-        <div class="nutrition-metric"><span>KRONOS</span><strong>Central</strong><small>Sem lógica paralela de IA.</small></div>
+    return `<section class="nutrition-hero">
+      <div class="nutrition-hero-orbit" aria-hidden="true">
+        <div class="nutrition-hero-core"><i data-lucide="brain-circuit" class="lucide" width="30" height="30" stroke="currentColor" fill="none" stroke-width="1.8"></i></div>
+        <span class="nutrition-hero-node node-body"><i data-lucide="scan-heart" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
+        <span class="nutrition-hero-node node-workout"><i data-lucide="dumbbell" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
+        <span class="nutrition-hero-node node-labs"><i data-lucide="flask-conical" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
+        <span class="nutrition-hero-node node-progress"><i data-lucide="activity" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
       </div>
+      <div class="nutrition-hero-copy">
+        <strong>KRONOS está cruzando seu contexto</strong>
+        <span>Perfil corporal, treino, exames, progresso e preferências entram antes do primeiro cálculo.</span>
+      </div>
+    </section>
+    <div class="nutrition-status-row">
+      <span>${snapshot.profile ? "Perfil carregado" : "Perfil local"}</span>
+      <span>${training.sessions7d || training.plannedDays ? "Treino encontrado" : "Treino será informado"}</span>
+      <span>${hasLab ? "Exames ativos" : "Exames quando disponíveis"}</span>
+      <span>KRONOS ativo</span>
     </div>`;
   }
   if (key === "objetivo") return `<div class="nutrition-option-grid">
@@ -7829,7 +7967,7 @@ function renderNutritionFlowContent(key) {
     ${renderNutritionOption("padraoAlimentar", "onívoro", "Onívora", "Inclui fontes animais e vegetais")}
     ${renderNutritionOption("padraoAlimentar", "vegetariano", "Vegetariana", "Sem carnes")}
     ${renderNutritionOption("padraoAlimentar", "vegano", "Vegana", "Somente alimentos vegetais")}
-    ${renderNutritionOption("padraoAlimentar", "low carb", "Low carb", "Carboidrato mais controlado")}
+    ${renderNutritionOption("padraoAlimentar", "low carb", "Carboidrato reduzido", "Carboidrato mais controlado")}
     ${renderNutritionOption("padraoAlimentar", "mediterrâneo", "Mediterrânea", "Base simples e equilibrada")}
   </div>`;
   if (key === "refeicoes") return `<div class="nutrition-option-grid">
@@ -7840,12 +7978,18 @@ function renderNutritionFlowContent(key) {
     ${renderNutritionOption("sugestao", "variada", "Variada", "Mais opções de troca")}
     ${renderNutritionOption("sugestao", "automática", "Automática", "KRONOS sugere ajustes semanais")}
   </div>`;
-  if (key === "proteinas") return renderNutritionFoodStep("proteinas", NUTRITION_FOOD_OPTIONS.proteinas);
-  if (key === "carboidratos") return renderNutritionFoodStep("carboidratos", NUTRITION_FOOD_OPTIONS.carboidratos);
-  if (key === "gorduras") return renderNutritionFoodStep("gorduras", NUTRITION_FOOD_OPTIONS.gorduras);
+  if (key === "proteinas") return renderNutritionFoodStep("proteinas", getNutritionCatalogItems("proteinas"), 3);
+  if (key === "carboidratos") return renderNutritionFoodStep("carboidratos", getNutritionCatalogItems("carboidratos"), 3);
+  if (key === "gorduras") return renderNutritionFoodStep("gorduras", getNutritionCatalogItems("gorduras"), 3);
+  if (key === "frutas") return renderNutritionFoodStep("frutas", getNutritionCatalogItems("frutas"), 2);
+  if (key === "vegetais") return renderNutritionFoodStep("vegetais", getNutritionCatalogItems("vegetais"), 2);
+  if (key === "laticinios") return renderNutritionFoodStep("laticinios", getNutritionCatalogItems("laticinios"), 1);
+  if (key === "temperos") return renderNutritionFoodStep("temperos", getNutritionCatalogItems("temperos"), 1);
   if (key === "resultado") return renderNutritionResultScreen();
   if (key === "gerar") return renderNutritionGenerateScreen();
   if (key === "hoje") return renderNutritionTodayScreen();
+  if (key === "semana") return renderNutritionWeekScreen();
+  if (key === "refeicao") return renderNutritionMealDetailScreen();
   if (key === "checkin") return renderNutritionCheckinScreen();
   if (key === "coach") return `<div class="nutrition-card">
     <div class="nutrition-metric"><span>Contexto ativo</span><strong>Plano + treino + exames</strong><small>O KRONOS recebe a fotografia nutricional canônica antes de sugerir ajustes.</small></div>
@@ -7863,6 +8007,8 @@ function renderNutritionResultScreen() {
     <div class="nutrition-metric"><span>Impacto do treino</span><strong>${result.treinoImpacto.toLocaleString("pt-BR")} kcal</strong><small>${result.trainingSnapshot.sessions7d || 0} treino(s) recentes.</small></div>
     <div class="nutrition-metric"><span>Impacto atividade</span><strong>${result.atividadeImpacto.toLocaleString("pt-BR")} kcal</strong><small>${input.nivelAtividade}</small></div>
     <div class="nutrition-metric"><span>Impacto NEAT</span><strong>${result.neatImpacto > 0 ? "+" : ""}${result.neatImpacto.toLocaleString("pt-BR")} kcal</strong><small>Rotina fora do treino.</small></div>
+    <div class="nutrition-metric"><span>Impacto clínico</span><strong>${result.clinicaImpacto.toLocaleString("pt-BR")} kcal</strong><small>Diabetes e patologias reduzem agressividade.</small></div>
+    <div class="nutrition-metric"><span>Sinais clínicos</span><strong>${result.sinaisImpacto.toLocaleString("pt-BR")} kcal</strong><small>Exames válidos aplicam margem conservadora.</small></div>
     <div class="nutrition-metric"><span>Meta inicial</span><strong>${result.metaCalorias.toLocaleString("pt-BR")} kcal</strong><small>P ${result.proteinaMeta}g · C ${result.carboMeta}g · G ${result.gorduraMeta}g</small></div>
   </div>`;
 }
@@ -7890,12 +8036,197 @@ function renderNutritionTodayScreen() {
     <div class="nutrition-metric"><span>Gorduras</span><strong>${meta.gordura || 0}g</strong><small>Base hormonal e saciedade</small></div>
   </div>
   <div class="nutrition-meal-list" style="margin-top:14px">
-    ${meals.map(function(meal) {
+    ${meals.map(function(meal, index) {
       var subtotal = meal.subtotal || {};
-      return `<div class="nutrition-meal"><div class="nutrition-meal-head"><strong>${escapeHTML(meal.nome || "Refeição")}</strong><span>${escapeHTML(meal.horario || "Hoje")}</span></div><small>${subtotal.kcal || "--"} kcal · P ${subtotal.prot || "--"}g · C ${subtotal.carb || "--"}g · G ${subtotal.gord || "--"}g</small></div>`;
+      var registered = state.registeredMeals && state.registeredMeals[index];
+      return `<button type="button" class="nutrition-meal ${registered ? "registered" : ""}" onclick="setNutritionFlowState({ selectedMealIndex: ${index}, step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "refeicao"; })} }); renderNutritionFlow();">
+        <div class="nutrition-meal-head"><strong>${escapeHTML(meal.nome || "Refeição")}</strong><span>${escapeHTML(registered ? "Registrada" : (meal.horario || "Hoje"))}</span></div>
+        <small>${subtotal.kcal || "--"} kcal · P ${subtotal.prot || "--"}g · C ${subtotal.carb || "--"}g · G ${subtotal.gord || "--"}g</small>
+      </button>`;
     }).join("")}
   </div>
-  <div class="nutrition-inline-actions"><button class="nutrition-secondary" onclick="setNutritionFlowState({ step: 18 }); renderNutritionFlow();">Check-in</button><button class="nutrition-secondary" onclick="openKronosFromDieta('Preciso de uma troca para a dieta de hoje.')">KRONOS Coach</button></div>`;
+  <div class="nutrition-inline-actions">
+    <button class="nutrition-secondary" onclick="setNutritionFlowState({ step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "semana"; })} }); renderNutritionFlow();">Ver semana</button>
+    <button class="nutrition-secondary" onclick="setNutritionFlowState({ step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "checkin"; })} }); renderNutritionFlow();">Check-in</button>
+    <button class="nutrition-secondary" onclick="gerarDietaPDF()">Exportar PDF</button>
+    <button class="nutrition-secondary" onclick="openKronosFromDieta('Preciso de uma troca para a dieta de hoje.')">KRONOS Coach</button>
+  </div>`;
+}
+
+function renderNutritionWeekScreen() {
+  var state = getNutritionFlowState();
+  var plan = state.generatedPlan || buildLocalDietPlan(buildNutritionFlowInput());
+  var meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
+  var days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+  return `<div class="nutrition-week-list">
+    ${days.map(function(day, dayIndex) {
+      var treino = dayIndex < 5 ? "Dia com treino planejado" : "Dia de rotina livre";
+      return `<section class="nutrition-card nutrition-week-day">
+        <div class="nutrition-meal-head"><strong>${day}</strong><span>${treino}</span></div>
+        <small>${meals.length} refeições · mesmas metas, substituições liberadas por macro.</small>
+        <div class="nutrition-week-meals">${meals.slice(0, 4).map(function(meal, mealIndex) {
+          return `<button type="button" onclick="setNutritionFlowState({ selectedMealIndex: ${mealIndex}, step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "refeicao"; })} }); renderNutritionFlow();">${escapeHTML(meal.horario || "")} · ${escapeHTML(meal.nome || "Refeição")}</button>`;
+        }).join("")}</div>
+      </section>`;
+    }).join("")}
+  </div>`;
+}
+
+function renderNutritionMealDetailScreen() {
+  var state = getNutritionFlowState();
+  var plan = state.generatedPlan || buildLocalDietPlan(buildNutritionFlowInput());
+  var meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
+  var mealIndex = Math.max(0, Math.min(meals.length - 1, Number(state.selectedMealIndex || 0)));
+  var meal = meals[mealIndex] || meals[0] || {};
+  var alimentos = Array.isArray(meal.alimentos) ? meal.alimentos : [];
+  var subtotal = meal.subtotal || {};
+  return `<div class="nutrition-card">
+    <div class="nutrition-meal-head"><strong>${escapeHTML(meal.nome || "Refeição")}</strong><span>${escapeHTML(meal.horario || "Hoje")}</span></div>
+    <small>${subtotal.kcal || "--"} kcal · P ${subtotal.prot || "--"}g · C ${subtotal.carb || "--"}g · G ${subtotal.gord || "--"}g</small>
+  </div>
+  <div class="nutrition-meal-list" style="margin-top:12px">
+    ${alimentos.map(function(food, foodIndex) {
+      return `<div class="nutrition-meal-item">
+        <div><strong>${escapeHTML(food.nome || "Alimento")}</strong><small>${escapeHTML(food.qtde || "")} · ${food.kcal || 0} kcal · P ${food.prot || 0}g · C ${food.carb || 0}g · G ${food.gord || 0}g</small></div>
+        <button type="button" onclick="nutritionSubstituteFood(${mealIndex}, ${foodIndex})">Trocar</button>
+      </div>`;
+    }).join("")}
+  </div>
+  <div class="nutrition-inline-actions">
+    <button class="nutrition-secondary" onclick="nutritionRegisterMeal(${mealIndex})">Registrar refeição</button>
+    <button class="nutrition-secondary" onclick="setNutritionFlowState({ step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "hoje"; })} }); renderNutritionFlow();">Voltar para Hoje</button>
+  </div>`;
+}
+
+function normalizePlannerFood(item) {
+  if (!item) return null;
+  return {
+    nome: item.nome,
+    porcao: item.porcao,
+    kcal: Number(item.kcal || 0),
+    prot: Number(item.proteina != null ? item.proteina : item.prot || 0),
+    carb: Number(item.carboidrato != null ? item.carboidrato : item.carb || 0),
+    gord: Number(item.gordura != null ? item.gordura : item.gord || 0),
+    grupo: item.grupo || null,
+    subgrupo: item.subgrupo || null,
+  };
+}
+
+function classifyNutritionFoodGroup(food) {
+  var name = normalizeDietFoodText(food && food.nome);
+  var catalog = NUTRITION_FOOD_CATALOG.find(function(item) { return normalizeDietFoodText(item.nome) === name; });
+  if (catalog) return catalog.grupo;
+  if (Number(food && food.prot || 0) >= 8) return "proteinas";
+  if (Number(food && food.carb || 0) >= 8) return "carboidratos";
+  if (Number(food && food.gord || 0) >= 7) return "gorduras";
+  return "vegetais";
+}
+
+function sumNutritionFoods(items) {
+  return (Array.isArray(items) ? items : []).reduce(function(acc, item) {
+    acc.kcal += Number(item.kcal || 0);
+    acc.prot += Number(item.prot || 0);
+    acc.carb += Number(item.carb || 0);
+    acc.gord += Number(item.gord || 0);
+    return acc;
+  }, { kcal: 0, prot: 0, carb: 0, gord: 0 });
+}
+
+function buildNutritionSubstitutionOptions(food, group) {
+  var base = normalizeDietFoodText(food && food.nome);
+  var groupItems = getNutritionCatalogItems(group).map(normalizePlannerFood).filter(Boolean);
+  var currentKcal = Number(food && food.kcal || 0);
+  return groupItems
+    .filter(function(item) { return normalizeDietFoodText(item.nome) !== base; })
+    .sort(function(a, b) {
+      return Math.abs(Number(a.kcal || 0) - currentKcal) - Math.abs(Number(b.kcal || 0) - currentKcal);
+    })
+    .slice(0, 4);
+}
+
+function scaleReplacementFood(candidate, previous) {
+  var targetKcal = Math.max(1, Number(previous && previous.kcal || candidate.kcal || 1));
+  var factor = Math.max(0.5, Math.min(1.7, targetKcal / Math.max(Number(candidate.kcal || 1), 1)));
+  var cloned = {
+    nome: candidate.nome,
+    qtde: candidate.porcao,
+    kcal: Math.round(candidate.kcal * factor),
+    prot: Math.round(candidate.prot * factor * 10) / 10,
+    carb: Math.round(candidate.carb * factor * 10) / 10,
+    gord: Math.round(candidate.gord * factor * 10) / 10,
+  };
+  if (!/\bun\b|\bfatias\b|\blata\b|\bprato\b|\bml\b/i.test(String(candidate.porcao || ""))) {
+    cloned.qtde = Math.max(5, Math.round((parseFloat(String(candidate.porcao).replace(",", ".")) || 0) * factor)) + " g";
+  }
+  return cloned;
+}
+
+function nutritionSubstituteFood(mealIndex, foodIndex) {
+  var state = getNutritionFlowState();
+  var plan = state.generatedPlan || buildLocalDietPlan(buildNutritionFlowInput());
+  var meals = Array.isArray(plan.refeicoes) ? plan.refeicoes.slice() : [];
+  var meal = meals[mealIndex];
+  if (!meal || !Array.isArray(meal.alimentos) || !meal.alimentos[foodIndex]) return;
+  var foods = meal.alimentos.slice();
+  var previous = foods[foodIndex];
+  var group = classifyNutritionFoodGroup(previous);
+  var options = buildNutritionSubstitutionOptions(previous, group);
+  if (!options.length) {
+    showToast("Sem substituição compatível neste grupo.", "info", 2800);
+    return;
+  }
+  var used = state._lastSubstitutionByFood || {};
+  var key = mealIndex + ":" + foodIndex + ":" + normalizeDietFoodText(previous.nome);
+  var nextIndex = Number(used[key] || 0) % options.length;
+  foods[foodIndex] = scaleReplacementFood(options[nextIndex], previous);
+  used[key] = nextIndex + 1;
+  var subtotalRaw = sumNutritionFoods(foods);
+  meals[mealIndex] = Object.assign({}, meal, {
+    alimentos: foods,
+    subtotal: {
+      kcal: Math.round(subtotalRaw.kcal),
+      prot: Math.round(subtotalRaw.prot * 10) / 10,
+      carb: Math.round(subtotalRaw.carb * 10) / 10,
+      gord: Math.round(subtotalRaw.gord * 10) / 10,
+    },
+  });
+  var totals = meals.reduce(function(acc, currentMeal) {
+    var subtotal = currentMeal.subtotal || {};
+    acc.calorias += Number(subtotal.kcal || 0);
+    acc.proteina += Number(subtotal.prot || 0);
+    acc.carbo += Number(subtotal.carb || 0);
+    acc.gordura += Number(subtotal.gord || 0);
+    return acc;
+  }, { calorias: 0, proteina: 0, carbo: 0, gordura: 0 });
+  var nextPlan = Object.assign({}, plan, {
+    meta: Object.assign({}, plan.meta || {}, {
+      calorias: Math.round(totals.calorias),
+      proteina: Math.round(totals.proteina * 10) / 10,
+      carbo: Math.round(totals.carbo * 10) / 10,
+      gordura: Math.round(totals.gordura * 10) / 10,
+    }),
+    refeicoes: meals,
+  });
+  setNutritionFlowState({
+    generatedPlan: nextPlan,
+    generatedText: renderDietModelAsText(nextPlan),
+    _lastSubstitutionByFood: used,
+  });
+  try {
+    var txt = document.getElementById("dietaTexto");
+    if (txt) txt.textContent = renderDietModelAsText(nextPlan);
+  } catch (_) {}
+  showToast("Substituição aplicada mantendo o grupo e macros próximos.", "success", 2600);
+  renderNutritionFlow();
+}
+
+function nutritionRegisterMeal(mealIndex) {
+  var state = getNutritionFlowState();
+  var registered = Object.assign({}, state.registeredMeals || {});
+  registered[mealIndex] = new Date().toISOString();
+  setNutritionFlowState({ registeredMeals: registered });
+  showToast("Refeição registrada no plano de hoje.", "success", 2400);
+  renderNutritionFlow();
 }
 
 function renderNutritionCheckinScreen() {
@@ -7930,7 +8261,10 @@ function renderNutritionFlow() {
   if (primary) {
     primary.disabled = false;
     primary.textContent = step.key === "gerar" ? "Gerar plano" : (step.key === "coach" ? "Abrir KRONOS" : "Continuar");
-    if (step.key === "hoje") primary.textContent = "Ir para check-in";
+    if (step.key === "entrada") primary.textContent = "Montar meu plano";
+    if (step.key === "hoje") primary.textContent = "Ver semana";
+    if (step.key === "semana") primary.textContent = "Ver refeição";
+    if (step.key === "refeicao") primary.textContent = "Ir para check-in";
     if (step.key === "checkin") primary.textContent = "Ir para KRONOS Coach";
   }
   try { if (typeof lucide !== "undefined") lucide.createIcons(); } catch (_) {}
@@ -9176,6 +9510,7 @@ function persistDietGenerationPrefs(input) {
 function buildDietRequestPayloadFromInput(input) {
   const safeInput = input && typeof input === "object" ? input : {};
   const baseline = computeDietGenerationBaseline(safeInput);
+  const activeNutritionSnapshot = typeof window !== "undefined" ? (window._kroniaNutritionSnapshot || null) : null;
   const observacoes = [
     safeInput.orcamento ? ("orcamento: " + safeInput.orcamento) : "",
     safeInput.aderencia ? ("aderência: variedade " + safeInput.aderencia.variedade + " | ajuste " + safeInput.aderencia.modoAjuste + " | praticidade " + safeInput.aderencia.praticidade + " | treino " + (safeInput.aderencia.horarioTreino || "sem horário fixo")) : "",
@@ -9221,6 +9556,8 @@ function buildDietRequestPayloadFromInput(input) {
     trainingSnapshot: safeInput.trainingSnapshot || null,
     nutritionGoals: safeInput.nutritionGoals || null,
     supabaseSnapshot: safeInput.supabaseSnapshot || null,
+    nutritionSnapshot: activeNutritionSnapshot,
+    nutritionFlowSelections: safeInput.nutritionFlowSelections || null,
     profile: {
       objetivo: safeInput.objetivo,
       sexo: safeInput.sexo,
@@ -9255,6 +9592,8 @@ function buildDietRequestPayloadFromInput(input) {
       },
       adherenceContext: safeInput.aderencia || null,
       trainingSnapshot: safeInput.trainingSnapshot || null,
+      nutritionSnapshot: activeNutritionSnapshot,
+      nutritionFlowSelections: safeInput.nutritionFlowSelections || null,
     },
   };
 }
@@ -9436,17 +9775,56 @@ function buildLocalDietFoodCatalog(input) {
     extras.push({ nome: "Whey protein", porcao: "30 g", kcal: 120, prot: 24, carb: 3, gord: 2 });
   }
 
+  function fromCatalogNames(group, names) {
+    var list = Array.isArray(names) ? names : [];
+    return list.map(function(name) {
+      var item = NUTRITION_FOOD_CATALOG.find(function(catalogItem) {
+        return catalogItem.grupo === group && normalizeDietFoodText(catalogItem.nome) === normalizeDietFoodText(name);
+      });
+      return item ? {
+        nome: item.nome,
+        porcao: item.porcao,
+        kcal: Number(item.kcal || 0),
+        prot: Number(item.proteina || 0),
+        carb: Number(item.carboidrato || 0),
+        gord: Number(item.gordura || 0),
+      } : null;
+    }).filter(function(item) { return item && allowed(item); });
+  }
+
+  function uniqueFoods() {
+    var out = [];
+    var seen = Object.create(null);
+    for (var index = 0; index < arguments.length; index += 1) {
+      (Array.isArray(arguments[index]) ? arguments[index] : []).forEach(function(item) {
+        var key = normalizeDietFoodText(item && item.nome);
+        if (!key || seen[key]) return;
+        seen[key] = true;
+        out.push(item);
+      });
+    }
+    return out;
+  }
+
+  var selections = safeInput.nutritionFlowSelections && typeof safeInput.nutritionFlowSelections === "object" ? safeInput.nutritionFlowSelections : {};
+  var selectedProteins = fromCatalogNames("proteinas", selections.proteinas);
+  var selectedCarbs = fromCatalogNames("carboidratos", selections.carboidratos);
+  var selectedFats = fromCatalogNames("gorduras", selections.gorduras);
+  var selectedFruits = fromCatalogNames("frutas", selections.frutas);
+  var selectedVeggies = fromCatalogNames("vegetais", selections.vegetais);
+  var selectedDairy = fromCatalogNames("laticinios", selections.laticinios);
+
   return {
-    breakfastProteins: breakfastProteins.length ? breakfastProteins : [{ nome: "Tofu mexido", porcao: "180 g", kcal: 173, prot: 18, carb: 5, gord: 10 }],
-    fastProteins: fastProteins.length ? fastProteins : [{ nome: "Tofu firme", porcao: "150 g", kcal: 144, prot: 15, carb: 4, gord: 8 }],
-    mealProteins: mealProteins.length ? mealProteins : [{ nome: "Tofu firme", porcao: "200 g", kcal: 192, prot: 20, carb: 5, gord: 11 }],
-    breakfastCarbs: breakfastCarbs.length ? breakfastCarbs : [{ nome: "Aveia", porcao: "40 g", kcal: 156, prot: 6.8, carb: 26.5, gord: 3.4 }],
-    fastCarbs: fastCarbs.length ? fastCarbs : [{ nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 }],
-    mealCarbs: mealCarbs.length ? mealCarbs : [{ nome: "Arroz cozido", porcao: "120 g", kcal: 156, prot: 3, carb: 34, gord: 0.4 }],
-    supportCarbs: supportCarbs.length ? supportCarbs : [{ nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 }],
-    breakfastFats: breakfastFats.length ? breakfastFats : [{ nome: "Pasta de amendoim", porcao: "20 g", kcal: 118, prot: 5, carb: 4, gord: 10 }],
-    fats: fats.length ? fats : [{ nome: "Abacate", porcao: "100 g", kcal: 96, prot: 1.2, carb: 6, gord: 8.4 }],
-    veggies: veggies.length ? veggies : [{ nome: "Salada verde", porcao: "1 prato", kcal: 20, prot: 1, carb: 3, gord: 0.2 }],
+    breakfastProteins: uniqueFoods(selectedDairy, selectedProteins, breakfastProteins).length ? uniqueFoods(selectedDairy, selectedProteins, breakfastProteins) : [{ nome: "Tofu mexido", porcao: "180 g", kcal: 173, prot: 18, carb: 5, gord: 10 }],
+    fastProteins: uniqueFoods(selectedProteins, selectedDairy, fastProteins).length ? uniqueFoods(selectedProteins, selectedDairy, fastProteins) : [{ nome: "Tofu firme", porcao: "150 g", kcal: 144, prot: 15, carb: 4, gord: 8 }],
+    mealProteins: uniqueFoods(selectedProteins, mealProteins).length ? uniqueFoods(selectedProteins, mealProteins) : [{ nome: "Tofu firme", porcao: "200 g", kcal: 192, prot: 20, carb: 5, gord: 11 }],
+    breakfastCarbs: uniqueFoods(selectedCarbs, selectedFruits, breakfastCarbs).length ? uniqueFoods(selectedCarbs, selectedFruits, breakfastCarbs) : [{ nome: "Aveia", porcao: "40 g", kcal: 156, prot: 6.8, carb: 26.5, gord: 3.4 }],
+    fastCarbs: uniqueFoods(selectedFruits, selectedCarbs, fastCarbs).length ? uniqueFoods(selectedFruits, selectedCarbs, fastCarbs) : [{ nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 }],
+    mealCarbs: uniqueFoods(selectedCarbs, mealCarbs).length ? uniqueFoods(selectedCarbs, mealCarbs) : [{ nome: "Arroz cozido", porcao: "120 g", kcal: 156, prot: 3, carb: 34, gord: 0.4 }],
+    supportCarbs: uniqueFoods(selectedFruits, supportCarbs).length ? uniqueFoods(selectedFruits, supportCarbs) : [{ nome: "Banana", porcao: "1 un", kcal: 80, prot: 1, carb: 20.7, gord: 0.2 }],
+    breakfastFats: uniqueFoods(selectedFats, breakfastFats).length ? uniqueFoods(selectedFats, breakfastFats) : [{ nome: "Pasta de amendoim", porcao: "20 g", kcal: 118, prot: 5, carb: 4, gord: 10 }],
+    fats: uniqueFoods(selectedFats, fats).length ? uniqueFoods(selectedFats, fats) : [{ nome: "Abacate", porcao: "100 g", kcal: 96, prot: 1.2, carb: 6, gord: 8.4 }],
+    veggies: uniqueFoods(selectedVeggies, veggies).length ? uniqueFoods(selectedVeggies, veggies) : [{ nome: "Salada verde", porcao: "1 prato", kcal: 20, prot: 1, carb: 3, gord: 0.2 }],
     extras: extras,
     helpers: {
       isVegan: isVegan,
@@ -9457,7 +9835,19 @@ function buildLocalDietFoodCatalog(input) {
 
 function buildLocalDietPlan(input) {
   const safeInput = buildMergedDietInput(input);
-  const baseline = computeDietGenerationBaseline(safeInput);
+  let baseline = computeDietGenerationBaseline(safeInput);
+  const activeGoalCalories = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.calories_target);
+  const activeGoalProtein = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.protein_g);
+  const activeGoalCarbs = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.carbs_g);
+  const activeGoalFat = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.fat_g);
+  if (activeGoalCalories > 0 || activeGoalProtein > 0 || activeGoalCarbs > 0 || activeGoalFat > 0) {
+    baseline = Object.assign({}, baseline, {
+      metaCalorias: activeGoalCalories > 0 ? Math.round(activeGoalCalories) : baseline.metaCalorias,
+      proteinaMeta: activeGoalProtein > 0 ? Math.round(activeGoalProtein) : baseline.proteinaMeta,
+      carboMeta: activeGoalCarbs > 0 ? Math.round(activeGoalCarbs) : baseline.carboMeta,
+      gorduraMeta: activeGoalFat > 0 ? Math.round(activeGoalFat) : baseline.gorduraMeta,
+    });
+  }
   const refeicoesPorDia = Math.min(6, Math.max(3, Number(safeInput.refeicoesPorDia || 4)));
   const templateMap = {
     3: [
@@ -9489,6 +9879,17 @@ function buildLocalDietPlan(input) {
   };
   const templates = templateMap[refeicoesPorDia] || templateMap[5];
   const catalog = buildLocalDietFoodCatalog(safeInput);
+  const substitutionAvoid = splitDietList(safeInput.alimentosEvitar);
+  const substitutionRestrictions = splitDietList(safeInput.restricoes);
+  const substitutionPattern = normalizeDietFoodText(safeInput.padraoAlimentar);
+
+  function substitutionAllowed(item) {
+    if (!item || dietTextIncludesAny(item.nome, substitutionAvoid)) return false;
+    if (/vegano/.test(substitutionPattern) && /(frango|patinho|ovo|iogurte|atum|sardinha|queijo|leite|whey)/i.test(item.nome)) return false;
+    if (/vegetariano/.test(substitutionPattern) && /(frango|patinho|atum|sardinha)/i.test(item.nome)) return false;
+    if (dietTextIncludesAny("lactose", substitutionRestrictions) && /(iogurte|queijo|leite|whey)/i.test(item.nome)) return false;
+    return true;
+  }
 
   function cloneFood(item, factor) {
     const ratio = Number(factor || 1);
@@ -9593,6 +9994,19 @@ function buildLocalDietPlan(input) {
     return balanced;
   }
 
+  function buildFoodSubstitutions(food) {
+    var group = Number(food && food.prot || 0) >= 8
+      ? "proteinas"
+      : (Number(food && food.carb || 0) >= 8 ? "carboidratos" : (Number(food && food.gord || 0) >= 7 ? "gorduras" : "vegetais"));
+    var current = normalizeDietFoodText(food && food.nome);
+    var kcal = Number(food && food.kcal || 0);
+    return getNutritionCatalogItems(group)
+      .filter(function(item) { return normalizeDietFoodText(item.nome) !== current && substitutionAllowed(item); })
+      .sort(function(a, b) { return Math.abs(Number(a.kcal || 0) - kcal) - Math.abs(Number(b.kcal || 0) - kcal); })
+      .slice(0, 3)
+      .map(function(item) { return item.nome + " (" + item.porcao + ")"; });
+  }
+
   const refeicoes = templates.map(function (template, index) {
     const mealProteinTarget = Math.round(baseline.proteinaMeta * template.proteinShare * 10) / 10;
     const mealCarbTarget = Math.round(baseline.carboMeta * template.carbShare * 10) / 10;
@@ -9679,14 +10093,11 @@ function buildLocalDietPlan(input) {
       extras: alimentosBalanceados.filter(function(item) { return Number(item.gord || 0) >= 7 || (Number(item.prot || 0) < 8 && Number(item.carb || 0) < 8); }).map(function(item) { return item.nome + " (" + item.qtde + ")"; }),
       alimentos: alimentosBalanceados,
       subtotal: subtotal,
-      substituicoes: [],
+      substituicoes: alimentosBalanceados.map(function(item) {
+        return { item: item.nome, opcoes: buildFoodSubstitutions(item) };
+      }).filter(function(entry) { return entry.opcoes.length; }),
     };
   });
-
-  const goalCalories = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.calories_target);
-  const goalProtein = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.protein_g);
-  const goalCarbs = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.carbs_g);
-  const goalFat = Number(safeInput.nutritionGoals && safeInput.nutritionGoals.fat_g);
 
   const resumo = refeicoes.reduce(function(acc, meal) {
     acc.calorias += Number(meal.subtotal.kcal || 0);

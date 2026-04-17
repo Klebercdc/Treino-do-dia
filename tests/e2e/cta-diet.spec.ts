@@ -159,7 +159,7 @@ test.describe('CTA and Diet flows', () => {
         renderNutritionFlow?: () => void;
       };
       runtime.setNutritionFlowState?.({
-        step: 16,
+        step: 20,
         peso: '80',
         altura: '180',
         idade: '30',
@@ -167,6 +167,8 @@ test.describe('CTA and Diet flows', () => {
         proteinas: ['Frango grelhado', 'Ovos', 'Whey protein'],
         carboidratos: ['Arroz', 'Feijão', 'Banana'],
         gorduras: ['Azeite de oliva', 'Abacate', 'Castanhas'],
+        frutas: ['Banana', 'Maçã'],
+        vegetais: ['Brócolis cozido', 'Salada verde'],
       });
       runtime.renderNutritionFlow?.();
     });
