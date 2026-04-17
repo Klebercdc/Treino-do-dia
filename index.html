@@ -1337,6 +1337,32 @@
 </div>
 
 <!-- ══════════════════════════════════════════
+     DIETA IA — FLUXO NATIVO
+══════════════════════════════════════════ -->
+
+<div id="nutritionFlowScreen" aria-label="Dieta IA">
+  <div class="nutrition-flow-header">
+    <button class="btn-voltar nutrition-flow-back" onclick="nutritionFlowBack()" aria-label="Voltar">
+      <i data-lucide="chevron-left" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+    </button>
+    <div class="nutrition-flow-head-text">
+      <div class="nutrition-flow-kicker" id="nutritionFlowStepLabel">PASSO 1 DE 20</div>
+      <div class="nutrition-flow-title-small">Dieta IA</div>
+    </div>
+    <button type="button" class="nutrition-flow-kronos" onclick="openKronosFromDieta()" aria-label="Abrir KRONOS">
+      <i data-lucide="zap" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
+    </button>
+  </div>
+  <div class="nutrition-flow-progress">
+    <div id="nutritionFlowProgressBar"></div>
+  </div>
+  <div id="nutritionFlowBody" class="nutrition-flow-body app-scroll"></div>
+  <div class="nutrition-flow-footer">
+    <button id="nutritionFlowPrimary" type="button" class="nutrition-flow-primary" onclick="nutritionFlowNext()">Continuar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
      START WORKOUT SCREEN (VAMOS TREINAR?)
 ══════════════════════════════════════════ -->
 

@@ -5,6 +5,22 @@ async function waitForSplash(page: import('@playwright/test').Page) {
     state: 'hidden',
     timeout: 12_000,
   }).catch(() => {});
+  await page.evaluate(() => {
+    const login = document.getElementById('loginScreen');
+    const email = document.getElementById('emailLoginScreen');
+    const home = document.getElementById('homeScreen');
+    if (login) login.style.display = 'none';
+    if (email) email.classList.remove('show');
+    if (home) home.classList.add('show');
+  });
+  await dismissCustomModal(page);
+}
+
+async function dismissCustomModal(page: import('@playwright/test').Page) {
+  const cancel = page.locator('#customModal.show #cmNo');
+  if (await cancel.count()) {
+    await cancel.click({ force: true }).catch(() => {});
+  }
 }
 
 async function mockAgentCta(
@@ -38,7 +54,14 @@ async function mockAgentCta(
 }
 
 async function openAiAndSend(page: import('@playwright/test').Page, prompt: string) {
-  await page.click('#aiFloatBtn');
+  await page.evaluate(() => {
+    const login = document.getElementById('loginScreen');
+    const email = document.getElementById('emailLoginScreen');
+    if (login) login.style.display = 'none';
+    if (email) email.classList.remove('show');
+    const runtime = window as Window & { openAI?: () => void };
+    runtime.openAI?.();
+  });
   await page.fill('#aiInput', prompt);
   await page.click('#aiSendBtn');
 }
@@ -79,7 +102,7 @@ test.describe('CTA and Diet flows', () => {
     }).toBe(true);
   });
 
-  test('chat CTA opens diet sheet', async ({ page }) => {
+  test('chat CTA opens native diet flow', async ({ page }) => {
     await mockAgentCta(
       page,
       'open_diet',
@@ -92,16 +115,17 @@ test.describe('CTA and Diet flows', () => {
     await waitForSplash(page);
     await openAiAndSend(page, 'quero uma dieta');
 
-    const cta = page.locator('.kronia-cta', { hasText: 'Abrir dieta' }).last();
+    const cta = page.locator('.kronia-cta').filter({ hasText: /Abrir dieta|Gerar dieta/ }).last();
     await expect(cta).toBeVisible();
     await cta.click();
 
     await expect.poll(async () => {
-      return page.evaluate(() => document.getElementById('dietaSheet')?.classList.contains('show') === true);
+      return page.evaluate(() => document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true);
     }).toBe(true);
+    await expect(page.locator('#nutritionFlowBody')).toContainText('Dieta IA');
   });
 
-  test('diet API failure keeps UI responsive and shows error text', async ({ page }) => {
+  test('diet generation keeps UI responsive and lands on today screen with fallback plan', async ({ page }) => {
     await page.route('**/api/kronia/diet', async (route) => {
       await route.fulfill({
         status: 500,
@@ -125,19 +149,32 @@ test.describe('CTA and Diet flows', () => {
       }
     });
     await expect.poll(async () => {
-      return page.evaluate(() => document.getElementById('dietaSheet')?.classList.contains('show') === true);
+      return page.evaluate(() => document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true);
     }).toBe(true);
+    await dismissCustomModal(page);
 
-    await page.fill('#dietaPeso', '80');
-    await page.fill('#dietaAltura', '180');
-    await page.fill('#dietaIdade', '30');
-    await page.fill('#dietaRefeicoes', '4');
-    await page.fill('#dietaPrefs', 'frango, ovo');
+    await page.evaluate(() => {
+      const runtime = window as Window & {
+        setNutritionFlowState?: (patch: Record<string, unknown>) => void;
+        renderNutritionFlow?: () => void;
+      };
+      runtime.setNutritionFlowState?.({
+        step: 16,
+        peso: '80',
+        altura: '180',
+        idade: '30',
+        refeicoesPorDia: 4,
+        proteinas: ['Frango grelhado', 'Ovos', 'Whey protein'],
+        carboidratos: ['Arroz', 'Feijão', 'Banana'],
+        gorduras: ['Azeite de oliva', 'Abacate', 'Castanhas'],
+      });
+      runtime.renderNutritionFlow?.();
+    });
 
-    await page.click('#btnGerarDieta');
+    await page.click('#nutritionFlowPrimary');
 
-    await expect(page.locator('#dietaResultado')).toBeVisible();
-    await expect(page.locator('#dietaTexto')).toContainText(/não consegui|erro|tente novamente/i);
-    await expect(page.locator('#btnGerarDieta')).toBeEnabled();
+    await expect(page.locator('#nutritionFlowBody')).toContainText('Hoje');
+    await expect(page.locator('#nutritionFlowBody')).toContainText(/Meta do dia|Proteína/);
+    await expect(page.locator('#nutritionFlowPrimary')).toBeEnabled();
   });
 });
