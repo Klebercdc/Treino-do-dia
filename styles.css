@@ -1852,6 +1852,192 @@ body.light-mode .instr-tip-text { color: rgba(0,0,0,0.5); }
 .bottom-sheet { position: fixed; inset: 0; z-index: 8500; background: rgba(0,0,0,0.65); display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .bottom-sheet.show { display: flex; }
 .bs-box { background: var(--bg2); border-radius: 22px 22px 0 0; border: 1px solid var(--border); border-bottom: none; width: 100%; max-width: 680px; max-height: 92dvh; overflow-y: auto; padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
+.diet-master-hero {
+  margin: 14px 0 20px;
+  padding: 16px;
+  background: #05030A;
+  border: 1px solid #2A1745;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(0,0,0,.34);
+}
+.diet-master-kicker {
+  font-size: .6rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #A855F7;
+  margin-bottom: 8px;
+}
+.diet-master-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.diet-master-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: .04em;
+  color: #fff;
+}
+.diet-master-subtitle {
+  margin: 5px 0 0;
+  color: rgba(255,255,255,.66);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+.diet-master-kronos-btn,
+.diet-master-actions button {
+  border: 1px solid rgba(139,92,246,.52);
+  background: rgba(109,40,217,.22);
+  color: #E9D5FF;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-weight: 850;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.diet-master-kronos-btn {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .72rem;
+}
+.diet-master-target-grid {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.diet-master-target-card,
+.diet-master-context-card,
+.diet-master-today {
+  background: #120A1F;
+  border: 1px solid #2A1745;
+  border-radius: 8px;
+}
+.diet-master-target-card {
+  padding: 12px;
+  min-width: 0;
+}
+.diet-master-target-card--main {
+  border-color: rgba(168,85,247,.58);
+}
+.diet-master-target-label,
+.diet-master-context-card span,
+.diet-master-section-head span {
+  display: block;
+  font-size: .58rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(233,213,255,.58);
+  margin-bottom: 5px;
+}
+.diet-master-target-card strong,
+.diet-master-context-card strong {
+  display: block;
+  color: #fff;
+  font-size: .98rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.diet-master-target-card--main strong {
+  color: #C4B5FD;
+  font-size: 1.35rem;
+}
+.diet-master-target-card small,
+.diet-master-context-card small,
+.diet-master-section-head small,
+.diet-master-meal-card small {
+  display: block;
+  color: rgba(255,255,255,.52);
+  font-size: .68rem;
+  line-height: 1.35;
+  margin-top: 4px;
+}
+.diet-master-context-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.diet-master-context-card {
+  padding: 11px;
+  min-height: 92px;
+}
+.diet-master-today {
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.diet-master-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.diet-master-section-head span { margin-bottom: 0; }
+.diet-master-meals {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+.diet-master-meal-card {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 8px;
+  color: #fff;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.diet-master-meal-card span {
+  display: block;
+  color: #A78BFA;
+  font-size: .63rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 3px;
+}
+.diet-master-meal-card strong {
+  display: block;
+  font-size: .85rem;
+  color: #fff;
+}
+.diet-master-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.diet-master-actions button {
+  min-height: 38px;
+  padding: 8px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: .68rem;
+}
+@media (max-width: 420px) {
+  .diet-master-title-row,
+  .diet-master-target-grid,
+  .diet-master-context-grid {
+    grid-template-columns: 1fr;
+  }
+  .diet-master-title-row { display: grid; }
+  .diet-master-kronos-btn { width: 100%; justify-content: center; }
+  .diet-master-actions { grid-template-columns: 1fr 1fr; }
+}
 .bs-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 20px; }
 .bs-title { font-family: var(--display); font-size: 1.25rem; letter-spacing: .05em; color: var(--text); margin-bottom: 3px; }
 .bs-sub { font-size: 0.78rem; color: var(--text-2); margin-bottom: 20px; }

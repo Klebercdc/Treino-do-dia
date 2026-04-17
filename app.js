@@ -3705,17 +3705,32 @@ function openAI() {
   document.getElementById("aiModal").classList.add("show");
   document.getElementById("aiModal").style.display = "flex";
   if (_aiHistory.length === 0) {
-    addAIMessage("assistant", `Olá! Sou o **KRONOS**, seu personal trainer com IA. ${_ico('dumbbell', 16)}\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
+    const fromDiet = window._kronosEntryContext && window._kronosEntryContext.origin === "dieta_ia";
+    addAIMessage("assistant", fromDiet
+      ? `Olá! Sou o **KRONOS IA**. Entrei pelo seu contexto de Dieta IA e vou considerar seu plano alimentar, treino, exames e aderência antes de sugerir ajustes.\n\nO que vamos ajustar agora?`
+      : `Olá! Sou o **KRONOS IA**, seu coach central de treino, dieta, exames e progresso.\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
     const container = document.getElementById("aiMessages");
     const sug = document.createElement("div");
     sug.id = "aiSuggestions";
     sug.style.cssText = "display:flex;flex-direction:column;gap:8px;padding-left:38px;";
-    sug.innerHTML = `
-      <button class="ai-suggest-btn" onclick="aiQuick('analise');document.getElementById('aiSuggestions')?.remove()">${_ico('bar-chart-3', 16)} Analisar meu treino de hoje</button>
-      <button class="ai-suggest-btn" onclick="aiQuick('gerar');document.getElementById('aiSuggestions')?.remove()">${_ico('zap', 16)} Gerar treino para hoje</button>
-      <button class="ai-suggest-btn" onclick="aiQuick('platô');document.getElementById('aiSuggestions')?.remove()">${_ico('trending-down', 16)} Estou em platô, o que fazer?</button>
-      <button class="ai-suggest-btn" onclick="aiQuick('dica');document.getElementById('aiSuggestions')?.remove()">💡 Me dá uma dica de hoje</button>
-    `;
+    const suggestions = fromDiet
+      ? [
+          { icon: "utensils", label: "Montar meu plano alimentar", msg: "Monte meu plano alimentar considerando meu treino, rotina, exames e aderência." },
+          { icon: "dumbbell", label: "Ajustar dieta para meu treino", msg: "Ajuste minha dieta para o treino de hoje e explique a distribuição de carboidratos." },
+          { icon: "replace", label: "Trocar uma refeição", msg: "Troque uma refeição mantendo meus macros, restrições e praticidade." },
+          { icon: "flask-conical", label: "Ver impacto dos exames na dieta", msg: "Explique o que meus exames mudam na minha dieta sem inventar diagnóstico." },
+          { icon: "shopping-cart", label: "Montar lista de compras", msg: "Monte uma lista de compras prática para seguir meu plano alimentar." },
+        ]
+      : [
+          { icon: "utensils", label: "Montar minha dieta", msg: "Montar minha dieta com base no meu treino, objetivo e rotina." },
+          { icon: "sliders-horizontal", label: "Ajustar meus macros", msg: "Ajustar meus macros e explicar o motivo." },
+          { icon: "dumbbell", label: "Explicar meu treino de hoje", msg: "Explique meu treino de hoje e os pontos de atenção." },
+          { icon: "flask-conical", label: "Ver o que meus exames mudam", msg: "Ver o que meus exames mudam na dieta e no treino." },
+          { icon: "trending-up", label: "Revisar meu progresso", msg: "Revisar meu progresso e sugerir o que mudar esta semana." },
+        ];
+    sug.innerHTML = suggestions.map(function(item) {
+      return `<button class="ai-suggest-btn" onclick="aiQuick(${JSON.stringify(item.msg).replace(/"/g, '&quot;')});document.getElementById('aiSuggestions')?.remove()">${_ico(item.icon, 16)} ${item.label}</button>`;
+    }).join("");
     container.appendChild(sug);
   }
   setTimeout(() => document.getElementById("aiInput")?.focus(), 300);
@@ -4439,6 +4454,7 @@ function aiQuick(tipo) {
   }
   const text = prompts[tipo];
   if (text) sendAI(text, false);
+  else if (typeof tipo === "string" && tipo.trim()) sendAI(tipo.trim(), false);
 }
 
 /* ── KRONOS Coach Questionnaire ─────────────────────── */
@@ -6189,7 +6205,17 @@ window.KroniaActions = {
     try { closeOrientacao?.(); } catch (_) {}
     try { openHome?.(); } catch (_) {}
     try { navTo?.('inicio'); } catch (_) {}
-    schedulePendingConversationIntentConsumption('kronia_action_diet');
+    try {
+      openDietaSheet?.(Object.assign({}, sanitizeCtaObject(context), {
+        source: context && context.source || 'kronia_action_diet',
+        origin: context && context.origin || 'dieta_ia',
+        fromChatIntent: !!(context && context.fromChatIntent),
+        autoGenerate: !!(context && context.autoGenerate),
+      }));
+      clearPendingConversationIntent();
+    } catch (_) {
+      schedulePendingConversationIntentConsumption('kronia_action_diet');
+    }
   },
 
   openLabsUpload: function (context) {
@@ -7253,6 +7279,145 @@ function exportarDietaChatPDF() {
 }
 
 // ── Dieta Sheet ──────────────────────────────────────
+function formatDietMasterKcal(value) {
+  var n = Number(value || 0);
+  return n > 0 ? n.toLocaleString("pt-BR") + " kcal" : "-- kcal";
+}
+
+function readDietMasterTrainingSnapshot() {
+  var hist = safeJSON(STORAGE.historyKey, []);
+  var draft = safeJSON(STORAGE.draftKey, null);
+  var sections = Array.isArray(draft && draft.sections) ? draft.sections : [];
+  var now = Date.now();
+  var sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  var recent = (Array.isArray(hist) ? hist : []).filter(function(item) {
+    var created = new Date(item && (item.createdAt || item.date || item.data)).getTime();
+    return Number.isFinite(created) && now - created <= sevenDaysMs;
+  });
+  var last = recent.length ? recent[recent.length - 1] : ((Array.isArray(hist) && hist.length) ? hist[hist.length - 1] : null);
+  var volume = recent.reduce(function(acc, item) {
+    try { return acc + Number(calcVolumeTotal(item.state) || 0); } catch (_) { return acc; }
+  }, 0);
+  return {
+    sessions7d: recent.length,
+    volume7d: Math.round(volume),
+    plannedDays: sections.length,
+    lastWorkoutAt: last && (last.createdAt || last.date || last.data) ? (last.createdAt || last.date || last.data) : null,
+    split: sections.map(function(sec) { return sec && (sec.treinoKey || sec.nome || sec.name); }).filter(Boolean).slice(0, 6),
+  };
+}
+
+function summarizeDietMasterClinical(input) {
+  var patologia = String(input && input.patologia || "").toLowerCase();
+  var lab = input && input.supabaseSnapshot && input.supabaseSnapshot.latestLabReport ? input.supabaseSnapshot.latestLabReport : null;
+  var flags = []
+    .concat(lab && Array.isArray(lab.clinicalFlags) ? lab.clinicalFlags : [])
+    .concat(lab && Array.isArray(lab.criticalFlags) ? lab.criticalFlags : []);
+  var flagsText = flags.join(" ").toLowerCase();
+  var hasDiabetes = /diabetes|resist[eê]ncia.*insulina|insulina|glycemic|hba1c|pre_diabetes|glic/.test(patologia + " " + flagsText);
+  var layers = [];
+  if (hasDiabetes) layers.push("Diabetes/glicemia priorizada");
+  if (/hipertens|pressao|pressão/.test(patologia + " " + flagsText)) layers.push("Pressão arterial");
+  if (/colesterol|dislipidem|ldl|lipid/.test(patologia + " " + flagsText)) layers.push("Perfil lipídico");
+  if (/renal|rim|creatin|kidney|drc/.test(patologia + " " + flagsText)) layers.push("Rim/DRC");
+  if (/esteatose|hepat|figado|fígado|liver/.test(patologia + " " + flagsText)) layers.push("Fígado/esteatose");
+  if (!layers.length && patologia && patologia !== "nenhuma") layers.push("Condição informada");
+  return {
+    label: layers.length ? layers.slice(0, 2).join(" + ") : (lab && lab.isValid ? "Exame validado" : "Sem exame validado"),
+    detail: flags.length ? (flags.length + " sinal(is) clínico(s) estruturados") : (layers.length ? "Restrições combinadas de forma conservadora" : "Aguardando exames ou condições"),
+    hasDiabetes: hasDiabetes,
+  };
+}
+
+function renderDietMasterMealPreview(plan) {
+  var container = document.getElementById("dietMasterMealPreview");
+  if (!container || !plan || !Array.isArray(plan.refeicoes)) return;
+  container.innerHTML = plan.refeicoes.slice(0, 6).map(function(meal) {
+    var subtotal = meal.subtotal || {};
+    return `<button type="button" onclick="openKronosFromDieta('Trocar uma refeição mantendo meu alvo do dia.')" class="diet-master-meal-card">
+      <span>${meal.horario || "Hoje"}</span>
+      <strong>${meal.nome || "Refeição"}</strong>
+      <small>${subtotal.kcal || "--"} kcal · P ${subtotal.prot || "--"}g · C ${subtotal.carb || "--"}g · G ${subtotal.gord || "--"}g</small>
+    </button>`;
+  }).join("");
+}
+
+function renderDietMasterSnapshot(input, baseline) {
+  var safeInput = input && typeof input === "object" ? input : {};
+  var safeBaseline = baseline || computeDietGenerationBaseline(safeInput);
+  var training = readDietMasterTrainingSnapshot();
+  window._dietaTrainingSnapshot = training;
+
+  var targetKcal = document.getElementById("dietMasterTargetKcal");
+  var targetDelta = document.getElementById("dietMasterTargetDelta");
+  var targetMacros = document.getElementById("dietMasterTargetMacros");
+  var targetProtein = document.getElementById("dietMasterTargetProtein");
+  var tmbEl = document.getElementById("dietMasterTmb");
+  var activitiesEl = document.getElementById("dietMasterActivities");
+  var activityImpactEl = document.getElementById("dietMasterActivityImpact");
+  var trainingEl = document.getElementById("dietMasterTraining");
+  var trainingImpactEl = document.getElementById("dietMasterTrainingImpact");
+  var clinicalEl = document.getElementById("dietMasterClinical");
+  var clinicalImpactEl = document.getElementById("dietMasterClinicalImpact");
+  var todayModeEl = document.getElementById("dietMasterTodayMode");
+
+  if (targetKcal) targetKcal.textContent = formatDietMasterKcal(safeBaseline.metaCalorias);
+  if (targetDelta) targetDelta.textContent = "Gasto total " + formatDietMasterKcal(safeBaseline.tdee) + " ajustado para " + String(safeInput.objetivo || "objetivo");
+  if (targetMacros) targetMacros.textContent = "P " + (safeBaseline.proteinaMeta || "--") + "g · C " + (safeBaseline.carboMeta || "--") + "g · G " + (safeBaseline.gorduraMeta || "--") + "g";
+  if (targetProtein) targetProtein.textContent = "Proteína e carboidrato calculados por peso, objetivo e treino";
+  if (tmbEl) tmbEl.textContent = formatDietMasterKcal(safeBaseline.tmb);
+  if (activitiesEl) activitiesEl.textContent = String(safeInput.nivelAtividade || "Rotina base");
+  if (activityImpactEl) activityImpactEl.textContent = "Multiplicador aplicado ao gasto diário";
+  if (trainingEl) trainingEl.textContent = training.sessions7d ? (training.sessions7d + " treino(s) em 7 dias") : (training.plannedDays ? (training.plannedDays + " dia(s) planejados") : String(safeInput.frequenciaTreino || "Sem histórico recente"));
+  if (trainingImpactEl) trainingImpactEl.textContent = training.volume7d ? (training.volume7d.toLocaleString("pt-BR") + " kg de volume recente") : [safeInput.frequenciaTreino, safeInput.duracaoTreino, safeInput.tipoTreino].filter(Boolean).join(" · ");
+  var clinical = summarizeDietMasterClinical(safeInput);
+  if (clinicalEl) clinicalEl.textContent = clinical.label;
+  if (clinicalImpactEl) clinicalImpactEl.textContent = clinical.detail;
+  if (todayModeEl) todayModeEl.textContent = /não treino|nao treino/i.test(String(safeInput.frequenciaTreino || "")) ? "Dia de descanso" : "Dia com demanda de treino";
+}
+
+function openKronosFromDieta(initialPrompt) {
+  var input = {};
+  try { input = collectDietGenerationInput(); } catch (_) {}
+  var baseline = computeDietGenerationBaseline(input);
+  window._kronosEntryContext = {
+    origin: "dieta_ia",
+    source: "diet_master_workspace",
+    dietSnapshot: {
+      targetCalories: baseline.metaCalorias,
+      macros: { protein: baseline.proteinaMeta, carbs: baseline.carboMeta, fat: baseline.gorduraMeta },
+      mealsPerDay: input.refeicoesPorDia,
+      objective: input.objetivo,
+      adherence: input.aderencia || null,
+    },
+    trainingContext: window._dietaTrainingSnapshot || readDietMasterTrainingSnapshot(),
+    labContext: input.supabaseSnapshot && input.supabaseSnapshot.latestLabReport ? input.supabaseSnapshot.latestLabReport : null,
+    healthContext: { patologia: input.patologia, medicamentos: input.medicamentos },
+  };
+  try { closeDietaSheet(); } catch (_) {}
+  openAI();
+  if (initialPrompt) {
+    setTimeout(function() {
+      var aiInput = document.getElementById("aiInput");
+      if (aiInput) aiInput.value = String(initialPrompt);
+      sendAI(String(initialPrompt), false);
+    }, 60);
+  }
+}
+
+function dietMasterRegisterMeal() {
+  showToast("Registro de refeição preparado. Use o plano gerado para concluir cada refeição.", "info", 3600);
+}
+
+function dietMasterCheckIn() {
+  openKronosFromDieta("Fazer check-in da minha dieta: avaliar aderência, fome, treino, exames e sugerir ajuste controlado para esta semana.");
+}
+
+function selDietaSingleChip(el, groupId) {
+  document.querySelectorAll("#" + groupId + " .bs-chip").forEach(function(chip) { chip.classList.remove("active"); });
+  el.classList.add("active");
+}
+
 // ══════════════════════════════════════════
 // EXERCISE DISCOVERY
 // ══════════════════════════════════════════
@@ -7615,6 +7780,11 @@ async function openDietaSheet(context) {
   document.getElementById("dietaSheet").classList.add("show");
   atualizarBasalDieta();
   await _preencherDietaDoSupabase();
+  try {
+    var initialInput = collectDietGenerationInput();
+    renderDietMasterSnapshot(initialInput, computeDietGenerationBaseline(initialInput));
+    renderDietMasterMealPreview(buildLocalDietPlan(initialInput));
+  } catch (_) {}
   if (context && typeof context === 'object') {
     var hydratedDiet = hydrateDietFromConversationIntent(context);
     if (context.fromChatIntent) {
@@ -7625,6 +7795,11 @@ async function openDietaSheet(context) {
       });
     }
     atualizarBasalDieta();
+    try {
+      var hydratedInput = collectDietGenerationInput();
+      renderDietMasterSnapshot(hydratedInput, computeDietGenerationBaseline(hydratedInput));
+      renderDietMasterMealPreview(buildLocalDietPlan(hydratedInput));
+    } catch (_) {}
   }
   if (context && context.autoGenerate === true) {
     var peso = parseFloat(document.getElementById("dietaPeso")?.value);
@@ -7658,23 +7833,38 @@ async function _preencherDietaDoSupabase() {
       ? window.KroniaAccessScope.resolveAccessScope(session.user, { ownershipColumn: 'id', purpose: 'diet_sheet_profile', allowAdminGlobalRead: false })
       : null;
 
-    const [profRes, metricRes, goalsRes, suplRes] = await Promise.all([
+    const [profRes, metricRes, goalsRes, suplRes, labsRes] = await Promise.all([
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes'), profileScope) : _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId)).maybeSingle(),
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('body_metrics').select('weight_kg,body_fat_percent'), scopeResolver) : _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId)).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g'), scopeResolver) : _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId)).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
-      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('supplement_protocols').select('supplement_name').eq('active', true), scopeResolver) : _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true))
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('supplement_protocols').select('supplement_name').eq('active', true), scopeResolver) : _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true)),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('lab_reports').select('id,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,clinical_flags,critical_flags,created_at,processed_at').eq('is_valid', true), scopeResolver) : _sb.from('lab_reports').select('id,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,clinical_flags,critical_flags,created_at,processed_at').eq('user_id', userId).eq('is_valid', true)).order('processed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(1).maybeSingle()
     ]);
 
     const p  = profRes.data;
     const bm = metricRes.data;
     const g  = goalsRes.data;
     const sp = suplRes.data || [];
+    const lab = labsRes.data || null;
+    const labInsights = lab && lab.ai_insights && typeof lab.ai_insights === 'object' ? lab.ai_insights : null;
 
     window._dietaSupabaseSnapshot = {
       profile: p || null,
       bodyMetrics: bm || null,
       nutritionGoals: g || null,
       supplementProtocols: sp.map(function(item) { return item?.supplement_name; }).filter(Boolean),
+      latestLabReport: lab ? {
+        id: lab.id || null,
+        isValid: Boolean(lab.is_valid),
+        confidence: Number(lab.confidence || 0),
+        confidenceSummary: lab.confidence_summary || null,
+        biomarkers: lab.normalized_payload && Array.isArray(lab.normalized_payload.biomarkers) ? lab.normalized_payload.biomarkers : [],
+        healthProfile: labInsights && labInsights.health_profile ? labInsights.health_profile : null,
+        clinicalFlags: Array.isArray(lab.clinical_flags) ? lab.clinical_flags : (labInsights && Array.isArray(labInsights.clinical_flags) ? labInsights.clinical_flags : []),
+        criticalFlags: Array.isArray(lab.critical_flags) ? lab.critical_flags : (labInsights && Array.isArray(labInsights.critical_flags) ? labInsights.critical_flags : []),
+        createdAt: lab.created_at || null,
+        processedAt: lab.processed_at || null,
+      } : null,
       hydratedAt: new Date().toISOString(),
     };
 
@@ -7866,6 +8056,19 @@ function atualizarBasalDieta() {
   document.getElementById("dietaBasalProtRange").textContent = `${protMin}–${protG}g/dia`;
 
   card.style.display = "";
+  try {
+    var snapshotInput = collectDietGenerationInput();
+    renderDietMasterSnapshot(snapshotInput, {
+      tmb: tmbPrincipal,
+      tdee: tdee,
+      metaCalorias: meta,
+      proteinaMeta: protG,
+      gorduraMeta: gordG,
+      carboMeta: carbG,
+      hidratacaoLitros: Number(hidrat),
+      massaMagra: massaMagra,
+    });
+  } catch (_) {}
 }
 
 function selDietaObj(el) {
@@ -8007,6 +8210,16 @@ function preencherDietaDosPerfil() {
   setV("dietaOutrosSupl",   prefs.dietaOutrosSupl   || "");
   if (prefs.dietaOrcamento) setV("dietaOrcamento", prefs.dietaOrcamento);
   if (prefs.dietaPadrao)    setV("dietaPadrao",    prefs.dietaPadrao);
+  if (prefs.dietaHorarioTreino) setV("dietaHorarioTreino", prefs.dietaHorarioTreino);
+  if (prefs.dietaPraticidade) setV("dietaPraticidade", prefs.dietaPraticidade);
+  if (prefs.dietaVariedade) {
+    const el = document.querySelector(`#dietaVariedadeChips [data-val="${prefs.dietaVariedade}"]`);
+    if (el) selDietaSingleChip(el, "dietaVariedadeChips");
+  }
+  if (prefs.dietaModoAjuste) {
+    const el = document.querySelector(`#dietaAjusteChips [data-val="${prefs.dietaModoAjuste}"]`);
+    if (el) selDietaSingleChip(el, "dietaAjusteChips");
+  }
   if (prefs.dietaObj)  { const el = document.querySelector(`#dietaObjChips [data-val="${prefs.dietaObj}"]`);   if (el) selDietaObj(el); }
   if (prefs.dietaSexo) selectDietaSexo(prefs.dietaSexo);
   if (prefs.dietaAtiv) { const el = document.querySelector(`#dietaAtivChips [data-val="${prefs.dietaAtiv}"]`); if (el) selDietaAtiv(el); }
@@ -8302,6 +8515,13 @@ function collectDietGenerationInput() {
     alimentosEvitar: document.getElementById("dietaDislikes")?.value.trim() || "",
     suplementos: suplementosAtivos.concat(outrosSuplementos ? [outrosSuplementos] : []),
     orcamento: document.getElementById("dietaOrcamento").value || "",
+    aderencia: {
+      variedade: document.querySelector("#dietaVariedadeChips .bs-chip.active")?.dataset.val || "equilibrada",
+      modoAjuste: document.querySelector("#dietaAjusteChips .bs-chip.active")?.dataset.val || "manual assistido",
+      horarioTreino: document.getElementById("dietaHorarioTreino")?.value || "",
+      praticidade: document.getElementById("dietaPraticidade")?.value || "equilibrada",
+    },
+    trainingSnapshot: window._dietaTrainingSnapshot || readDietMasterTrainingSnapshot(),
     nutritionGoals: window._dietaGoalsSupabase || null,
     supabaseSnapshot: window._dietaSupabaseSnapshot || null,
     fromChatDiet: !!window._kroniaChatDietHydratedContext,
@@ -8382,6 +8602,10 @@ function persistDietGenerationPrefs(input) {
     dietaOutrosSupl: Array.isArray(safeInput.suplementos) ? safeInput.suplementos.join(", ") : "",
     dietaOrcamento: safeInput.orcamento || "",
     dietaPadrao: safeInput.padraoAlimentar || "",
+    dietaHorarioTreino: safeInput.aderencia && safeInput.aderencia.horarioTreino || "",
+    dietaPraticidade: safeInput.aderencia && safeInput.aderencia.praticidade || "",
+    dietaVariedade: safeInput.aderencia && safeInput.aderencia.variedade || "",
+    dietaModoAjuste: safeInput.aderencia && safeInput.aderencia.modoAjuste || "",
   }));
 }
 
@@ -8390,11 +8614,13 @@ function buildDietRequestPayloadFromInput(input) {
   const baseline = computeDietGenerationBaseline(safeInput);
   const observacoes = [
     safeInput.orcamento ? ("orcamento: " + safeInput.orcamento) : "",
+    safeInput.aderencia ? ("aderência: variedade " + safeInput.aderencia.variedade + " | ajuste " + safeInput.aderencia.modoAjuste + " | praticidade " + safeInput.aderencia.praticidade + " | treino " + (safeInput.aderencia.horarioTreino || "sem horário fixo")) : "",
     safeInput.medicamentos ? ("medicamentos: " + safeInput.medicamentos) : "",
     safeInput.patologia && safeInput.patologia !== "nenhuma" ? ("patologia: " + safeInput.patologia) : "",
     "sono: " + (safeInput.sono || "7-8h"),
     "estresse: " + (safeInput.estresse || "moderado"),
     "treino: " + [safeInput.frequenciaTreino, safeInput.duracaoTreino, safeInput.tipoTreino].filter(Boolean).join(" | "),
+    safeInput.trainingSnapshot ? ("histórico_treino: " + (safeInput.trainingSnapshot.sessions7d || 0) + " sessões_7d | volume_7d " + (safeInput.trainingSnapshot.volume7d || 0) + "kg | dias_planejados " + (safeInput.trainingSnapshot.plannedDays || 0)) : "",
     "tdee_estimado: " + baseline.tdee,
     "meta_calorica_estimada: " + baseline.metaCalorias,
   ].filter(Boolean).join(" ; ");
@@ -8427,6 +8653,8 @@ function buildDietRequestPayloadFromInput(input) {
       sono: safeInput.sono,
       estresse: safeInput.estresse,
     },
+    aderencia: safeInput.aderencia || null,
+    trainingSnapshot: safeInput.trainingSnapshot || null,
     nutritionGoals: safeInput.nutritionGoals || null,
     supabaseSnapshot: safeInput.supabaseSnapshot || null,
     profile: {
@@ -8461,6 +8689,8 @@ function buildDietRequestPayloadFromInput(input) {
         sono: safeInput.sono,
         estresse: safeInput.estresse,
       },
+      adherenceContext: safeInput.aderencia || null,
+      trainingSnapshot: safeInput.trainingSnapshot || null,
     },
   };
 }
@@ -9001,6 +9231,10 @@ async function gerarDieta() {
   }
 
   const dietPayload = buildDietRequestPayloadFromInput(input);
+  try {
+    renderDietMasterSnapshot(input, computeDietGenerationBaseline(input));
+    renderDietMasterMealPreview(buildLocalDietPlan(input));
+  } catch (_) {}
   const guard = await validateScientificGenerationGuard(
     'diet',
     input.objetivo,
@@ -9045,6 +9279,7 @@ async function gerarDieta() {
     }
 
     txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || buildDietFallbackTextFromInput(input);
+    try { renderDietMasterMealPreview(renderModel); } catch (_) {}
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({
         type: "diet",

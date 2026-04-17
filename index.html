@@ -1016,7 +1016,7 @@
     </div>
 
     <!-- Card DIETA IA -->
-    <div class="home-hero-card home-hero-dieta" onclick="openDietaSheet()">
+    <div class="home-hero-card home-hero-dieta" onclick="executeKroniaQuickAction('open_diet', { source: 'home_dieta_ia', origin: 'dieta_ia', target: 'premium_diet_workspace' }, { label: 'Dieta IA', source: 'home_hero_card', targetModule: 'dieta' })">
       <div class="home-hero-glow home-hero-glow--green"></div>
       <div class="home-hero-body">
         <div class="home-hero-icon home-hero-icon--green">
@@ -2540,7 +2540,82 @@
       <div class="bs-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="clipboard-list" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i> ANAMNESE — DIETA</div>
       <button onclick="closeDietaSheet()" style="width:32px;height:32px;background:none;border:none;border-radius:8px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center"><i data-lucide="x" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></button>
     </div>
-    <div class="bs-sub">Preencha sua anamnese completa para uma dieta ultra-personalizada com IA</div>
+    <div class="bs-sub">Plano alimentar premium conectado ao seu treino, exames, rotina e progresso.</div>
+
+    <section class="diet-master-hero" aria-label="Dieta IA">
+      <div class="diet-master-kicker">KRONIA DIET MASTER ELITE</div>
+      <div class="diet-master-title-row">
+        <div>
+          <h2 class="diet-master-title">Hoje</h2>
+          <p class="diet-master-subtitle">O sistema cruza seu corpo, treino, exames e aderência antes de montar o plano.</p>
+        </div>
+        <button type="button" class="diet-master-kronos-btn" onclick="openKronosFromDieta()">
+          <i data-lucide="zap" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
+          KRONOS IA
+        </button>
+      </div>
+
+      <div class="diet-master-target-grid">
+        <div class="diet-master-target-card diet-master-target-card--main">
+          <span class="diet-master-target-label">Meta inicial</span>
+          <strong id="dietMasterTargetKcal">-- kcal</strong>
+          <small id="dietMasterTargetDelta">Preencha os dados para calcular</small>
+        </div>
+        <div class="diet-master-target-card">
+          <span class="diet-master-target-label">Macros</span>
+          <strong id="dietMasterTargetMacros">--</strong>
+          <small id="dietMasterTargetProtein">Proteína pendente</small>
+        </div>
+      </div>
+
+      <div class="diet-master-context-grid">
+        <div class="diet-master-context-card">
+          <span>Basal</span>
+          <strong id="dietMasterTmb">-- kcal</strong>
+          <small>Mifflin/Katch quando disponível</small>
+        </div>
+        <div class="diet-master-context-card">
+          <span>Atividades</span>
+          <strong id="dietMasterActivities">Rotina não calibrada</strong>
+          <small id="dietMasterActivityImpact">Impacto pendente</small>
+        </div>
+        <div class="diet-master-context-card">
+          <span>Treino</span>
+          <strong id="dietMasterTraining">Sem leitura ainda</strong>
+          <small id="dietMasterTrainingImpact">Carga semanal pendente</small>
+        </div>
+        <div class="diet-master-context-card">
+          <span>Exames e clinica</span>
+          <strong id="dietMasterClinical">Sem exame validado</strong>
+          <small id="dietMasterClinicalImpact">Diabetes permanece priorizado quando presente</small>
+        </div>
+      </div>
+
+      <div class="diet-master-today">
+        <div class="diet-master-section-head">
+          <span>Plano de hoje</span>
+          <small id="dietMasterTodayMode">Dia base</small>
+        </div>
+        <div class="diet-master-meals" id="dietMasterMealPreview">
+          <button type="button" onclick="gerarDieta()" class="diet-master-meal-card">
+            <span>Café da manhã</span><strong>Calcular refeição</strong><small>Meta, alimentos e macros aparecem após gerar.</small>
+          </button>
+          <button type="button" onclick="gerarDieta()" class="diet-master-meal-card">
+            <span>Almoco</span><strong>Montar prato</strong><small>Base brasileira ajustada ao objetivo.</small>
+          </button>
+          <button type="button" onclick="gerarDieta()" class="diet-master-meal-card">
+            <span>Pre/Pós-treino</span><strong>Ajustar carboidratos</strong><small>Depende do horario e demanda do treino.</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="diet-master-actions">
+        <button type="button" onclick="gerarDieta()"><i data-lucide="sparkles" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Montar plano</button>
+        <button type="button" onclick="openKronosFromDieta('Trocar uma refeição mantendo meus macros e minhas restrições.')"><i data-lucide="replace" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Trocar</button>
+        <button type="button" onclick="dietMasterRegisterMeal()"><i data-lucide="check-circle-2" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Registrar</button>
+        <button type="button" onclick="dietMasterCheckIn()"><i data-lucide="activity" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Check-in</button>
+      </div>
+    </section>
 
     <!-- ── 1. DADOS PESSOAIS ── -->
     <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="user" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 1. DADOS PESSOAIS</div>
@@ -2672,6 +2747,8 @@
       <div class="bs-chip active" data-val="musculação" onclick="selDietaTipoTreino(this)">Musculação</div>
       <div class="bs-chip" data-val="cardio" onclick="selDietaTipoTreino(this)">Cardio</div>
       <div class="bs-chip" data-val="crossfit/HIIT" onclick="selDietaTipoTreino(this)">CrossFit/HIIT</div>
+      <div class="bs-chip" data-val="caminhada" onclick="selDietaTipoTreino(this)">Caminhada</div>
+      <div class="bs-chip" data-val="trabalho ativo" onclick="selDietaTipoTreino(this)">Trabalho ativo</div>
       <div class="bs-chip" data-val="esporte coletivo" onclick="selDietaTipoTreino(this)">Esporte</div>
       <div class="bs-chip" data-val="funcional" onclick="selDietaTipoTreino(this)">Funcional</div>
       <div class="bs-chip" data-val="misto (musculação + cardio)" onclick="selDietaTipoTreino(this)">Misto</div>
@@ -2708,8 +2785,11 @@
       <div class="bs-chip" data-val="diabetes tipo 2" onclick="selDietaPatologia(this)">Diabetes</div>
       <div class="bs-chip" data-val="hipertensão arterial" onclick="selDietaPatologia(this)">Hipertensão</div>
       <div class="bs-chip" data-val="colesterol alto" onclick="selDietaPatologia(this)">Colesterol</div>
+      <div class="bs-chip" data-val="dislipidemia" onclick="selDietaPatologia(this)">Dislipidemia</div>
       <div class="bs-chip" data-val="hipotireoidismo" onclick="selDietaPatologia(this)">Tireoide</div>
       <div class="bs-chip" data-val="resistência à insulina" onclick="selDietaPatologia(this)">Res. Insulina</div>
+      <div class="bs-chip" data-val="doença renal crônica" onclick="selDietaPatologia(this)">DRC</div>
+      <div class="bs-chip" data-val="esteatose hepática" onclick="selDietaPatologia(this)">Esteatose</div>
       <div class="bs-chip" data-val="SOP" onclick="selDietaPatologia(this)">SOP</div>
       <div class="bs-chip" data-val="gastrite/refluxo" onclick="selDietaPatologia(this)">Gastrite</div>
     </div>
@@ -2740,8 +2820,40 @@
     <div class="bs-full"><label class="bs-label">Proteínas que gosta — serão usadas na dieta</label><input id="dietaPrefs" type="text" class="bs-input" placeholder="Ex: ovo, frango, patinho, atum, salmão..."></div>
     <div class="bs-full"><label class="bs-label">Alimentos que não gosta / evita</label><input id="dietaDislikes" type="text" class="bs-input" placeholder="Ex: brócolis, fígado, peixe..."></div>
 
-    <!-- ── 5. SUPLEMENTOS ── -->
-    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="pill" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 5. SUPLEMENTOS EM USO</div>
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="sliders-horizontal" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 5. ADERÊNCIA E ROTINA</div>
+    <label class="bs-label">Variedade do cardápio</label>
+    <div class="bs-chips" id="dietaVariedadeChips" style="margin-bottom:14px">
+      <div class="bs-chip" data-val="baixa" onclick="selDietaSingleChip(this,'dietaVariedadeChips')">Baixa</div>
+      <div class="bs-chip active" data-val="equilibrada" onclick="selDietaSingleChip(this,'dietaVariedadeChips')">Equilibrada</div>
+      <div class="bs-chip" data-val="alta" onclick="selDietaSingleChip(this,'dietaVariedadeChips')">Alta</div>
+    </div>
+    <label class="bs-label">Modo de ajuste</label>
+    <div class="bs-chips" id="dietaAjusteChips" style="margin-bottom:14px">
+      <div class="bs-chip active" data-val="manual assistido" onclick="selDietaSingleChip(this,'dietaAjusteChips')">Manual assistido</div>
+      <div class="bs-chip" data-val="automático" onclick="selDietaSingleChip(this,'dietaAjusteChips')">Automático</div>
+    </div>
+    <div class="bs-row">
+      <div>
+        <label class="bs-label">Horário do treino</label>
+        <select id="dietaHorarioTreino" class="bs-input">
+          <option value="">Sem horário fixo</option>
+          <option value="manha">Manhã</option>
+          <option value="tarde" selected>Tarde</option>
+          <option value="noite">Noite</option>
+        </select>
+      </div>
+      <div>
+        <label class="bs-label">Praticidade</label>
+        <select id="dietaPraticidade" class="bs-input">
+          <option value="alta">Alta</option>
+          <option value="equilibrada" selected>Equilibrada</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── 6. SUPLEMENTOS ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="pill" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 6. SUPLEMENTOS EM USO</div>
     <div class="bs-chips" id="dietaSuplChips" style="margin-bottom:10px">
       <div class="bs-chip" data-val="whey protein" onclick="selDietaSupl(this)">Whey</div>
       <div class="bs-chip" data-val="creatina" onclick="selDietaSupl(this)">Creatina</div>
@@ -2756,8 +2868,8 @@
     </div>
     <div class="bs-full"><label class="bs-label">Outros suplementos</label><input id="dietaOutrosSupl" type="text" class="bs-input" placeholder="Ex: ashwagandha 600mg, ZMA..."></div>
 
-    <!-- ── 6. ORÇAMENTO ── -->
-    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="wallet" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 6. ORÇAMENTO ALIMENTAR</div>
+    <!-- ── 7. ORÇAMENTO ── -->
+    <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:4px 0 12px;display:flex;align-items:center;gap:5px"><i data-lucide="wallet" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i> 7. ORÇAMENTO ALIMENTAR</div>
     <div class="bs-full">
       <select id="dietaOrcamento" class="bs-input">
         <option value="">Sem restrição de orçamento</option>
