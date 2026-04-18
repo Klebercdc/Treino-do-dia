@@ -57,8 +57,14 @@ async function openAiAndSend(page: import('@playwright/test').Page, prompt: stri
   await page.evaluate(() => {
     const login = document.getElementById('loginScreen');
     const email = document.getElementById('emailLoginScreen');
-    if (login) login.style.display = 'none';
-    if (email) email.classList.remove('show');
+    if (login) {
+      login.style.display = 'none';
+      login.style.pointerEvents = 'none';
+    }
+    if (email) {
+      email.classList.remove('show');
+      email.style.pointerEvents = 'none';
+    }
     const runtime = window as Window & { openAI?: () => void };
     runtime.openAI?.();
   });
@@ -125,7 +131,7 @@ test.describe('CTA and Diet flows', () => {
     await expect(page.locator('#nutritionFlowBody')).toContainText('Dieta IA');
   });
 
-  test('home diet card and bottom nav use the same diet CTA destination', async ({ page }) => {
+  test('home diet card opens generator and bottom nav opens diet workspace', async ({ page }) => {
     await page.goto('/');
     await waitForSplash(page);
 
@@ -157,7 +163,7 @@ test.describe('CTA and Diet flows', () => {
         dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
         nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
       }));
-    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: true });
+    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false });
   });
 
   test('diet generation keeps UI responsive and lands on today screen with fallback plan', async ({ page }) => {

@@ -50,6 +50,7 @@ function loadCtaRuntime() {
     openAI: 0,
     trainingAction: [],
     dietAction: [],
+    dietWorkspace: [],
     localStorage: new Map()
   };
 
@@ -64,7 +65,8 @@ function loadCtaRuntime() {
     window: {
       KroniaActions: {
         openTrainingBuilder(payload) { calls.trainingAction.push(payload); },
-        openDietGenerator(payload) { calls.dietAction.push(payload); }
+        openDietGenerator(payload) { calls.dietAction.push(payload); },
+        openDietWorkspace(payload) { calls.dietWorkspace.push(payload); }
       }
     },
     document,
@@ -123,7 +125,21 @@ test('delegation executes dieta CTA action correctly', () => {
   const { document, calls } = loadCtaRuntime();
   document.clickHandler({ target: makeTarget('open_diet', { source: 'test' }) });
   assert.equal(calls.dietAction.length, 1);
+  assert.equal(calls.dietWorkspace.length, 0);
   assert.equal(calls.trainingAction.length, 0);
+});
+
+test('bottom nav diet CTA opens workspace instead of generator flow', () => {
+  const { context, calls } = loadCtaRuntime();
+  const ok = context.window.handleKroniaCTA(
+    'open_diet',
+    { source: 'bottom_nav_dieta', origin: 'bottom_nav' },
+    { label: 'Dieta', source: 'bottom_nav' }
+  );
+
+  assert.equal(ok, true);
+  assert.equal(calls.dietWorkspace.length, 1);
+  assert.equal(calls.dietAction.length, 0);
 });
 
 test('delegation keeps working after re-render and multiple clicks', () => {
@@ -198,6 +214,7 @@ test('fallback works when KroniaActions is not ready', () => {
   assert.equal(trainingOk, true);
   assert.equal(dietOk, true);
   assert.ok(calls.navTo.includes('inicio'));
+  assert.ok(calls.navTo.includes('dieta'));
 });
 
 test('open_kronos falls back to chat entrypoint when no mapped executor exists', () => {

@@ -6380,8 +6380,6 @@ function runKroniaActionFallback(action, context) {
     try { navTo?.('dieta'); } catch (_) {}
     try { openDietDataScreen?.(); } catch (_) {}
     try { schedulePendingConversationIntentConsumption('fallback_diet'); } catch (_) {}
-    try { openDietaSheet?.(Object.assign({}, safeContext, { returnTab: safeContext.returnTab || 'dieta' })); return true; } catch (_) {}
-    try { openDieta?.(); return true; } catch (_) {}
     try { navTo?.('dieta'); return true; } catch (_) {}
   }
   if (action === 'generate_diet') {
@@ -6424,8 +6422,7 @@ window.KroniaActions = {
   openDietGenerator: function (context) {
     try { closeAI?.(); } catch (_) {}
     try { closeOrientacao?.(); } catch (_) {}
-    try { navTo?.('dieta'); } catch (_) {}
-    try { openDietDataScreen?.(); } catch (_) {}
+    try { this.openDietWorkspace(context); } catch (_) {}
     try {
       openDietaSheet?.(Object.assign({}, sanitizeCtaObject(context), {
         source: context && context.source || 'kronia_action_diet',
@@ -6438,6 +6435,15 @@ window.KroniaActions = {
     } catch (_) {
       schedulePendingConversationIntentConsumption('kronia_action_diet');
     }
+  },
+
+  openDietWorkspace: function (context) {
+    try { closeAI?.(); } catch (_) {}
+    try { closeOrientacao?.(); } catch (_) {}
+    try { closeNutritionFlow?.(); } catch (_) {}
+    try { navTo?.('dieta'); } catch (_) {}
+    try { openDietDataScreen?.(); } catch (_) {}
+    return true;
   },
 
   openLabsUpload: function (context) {
@@ -7024,6 +7030,12 @@ var KRONIA_CTA_EXECUTOR_MAP = Object.freeze({
     return false;
   },
   open_diet: function (context) {
+    if (context && (context.origin === 'bottom_nav' || context.source === 'bottom_nav_dieta')) {
+      if (window.KroniaActions && typeof window.KroniaActions.openDietWorkspace === 'function') {
+        window.KroniaActions.openDietWorkspace(context);
+        return true;
+      }
+    }
     if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
       window.KroniaActions.openDietGenerator(context);
       return true;
