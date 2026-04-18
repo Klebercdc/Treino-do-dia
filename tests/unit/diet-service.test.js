@@ -27,6 +27,23 @@ test('nutritionService accepts abbreviated sex values for diet generation', () =
   assert.ok(result.plan.refeicoes.length >= 3);
 });
 
+test('nutritionService exposes premium canonical food and recipe catalogs', () => {
+  assert.ok(Array.isArray(nutritionService.CANONICAL_FOODS));
+  assert.ok(Array.isArray(nutritionService.RECIPE_CATALOG));
+  assert.ok(nutritionService.CANONICAL_FOODS.length >= 150);
+  assert.ok(nutritionService.RECIPE_CATALOG.length >= 100);
+
+  const groups = new Set(nutritionService.CANONICAL_FOODS.map((food) => food.group_key));
+  ['proteinas', 'carboidratos', 'gorduras', 'frutas', 'vegetais', 'laticinios', 'temperos'].forEach((group) => {
+    assert.ok(groups.has(group), `grupo ausente: ${group}`);
+  });
+
+  const sample = nutritionService.CANONICAL_FOODS.find((food) => food.slug === 'frango_grelhado');
+  assert.equal(sample.canonical_name_pt, 'Frango grelhado');
+  assert.equal(sample.default_portion_g, 120);
+  assert.equal(sample.is_recipe_ingredient, true);
+});
+
 test('dietService normalizes mixed payload shapes and generates diet plan', async () => {
   const result = await dietService.execute('GENERATE_DIET', {
     objective: 'emagrecimento',
@@ -166,6 +183,27 @@ test('nutritionService keeps almoço brasileiro para onívoro e proteína vegeta
   assert.ok(veganLunchFoods.some((name) => /tofu/.test(name)));
   assert.ok(veganLunchFoods.some((name) => /arroz/.test(name)));
   assert.ok(veganLunchFoods.some((name) => /feij[aã]o/.test(name)));
+});
+
+test('nutritionService gera substituições por grupo alimentar equivalente', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 33,
+    peso: 82,
+    altura: 178,
+    objetivo: 'recomposicao',
+    refeicoesPorDia: 4,
+    padraoAlimentar: 'onívoro',
+  });
+
+  assert.equal(result.failSafe, false);
+  const allItems = result.plan.refeicoes.flatMap((meal) => meal.itens);
+  const proteinItem = allItems.find((item) => item.groupKey === 'proteinas' && item.substituicoes.length);
+  assert.ok(proteinItem);
+  const proteinCodes = new Set(nutritionService.FOOD_LIBRARY.mealProteins.concat(nutritionService.FOOD_LIBRARY.fastProteins).map((item) => item.code));
+  proteinItem.substituicoes.forEach((option) => {
+    assert.ok(proteinCodes.has(option.foodCode), `substituição fora de proteína: ${option.foodCode}`);
+  });
 });
 
 test('nutritionService evita café da manhã com vegetais e pré-treino com tofu para onívoro', () => {

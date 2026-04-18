@@ -137,6 +137,8 @@ function buildDietPlan(profile) {
     },
     refeicoes: legacyMeals,
     planoEstruturado: nutrition.plan,
+    catalogStats: nutrition.catalogStats || null,
+    recipeSuggestions: nutrition.recipeSuggestions || [],
     clinicalContext: nutrition.clinicalContext || null,
     hidratacao: { litros: round((Number(p.peso) || 75) * 0.035, 1) },
     observacoes: []

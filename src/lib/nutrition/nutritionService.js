@@ -1,5 +1,7 @@
 'use strict';
 
+var premiumCatalog = require('./premiumCatalog');
+
 function round(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 0;
   var factor = Math.pow(10, d);
@@ -108,6 +110,8 @@ var FOOD_LIBRARY = {
     { code: 'cenoura_100', name: 'Cenoura cozida', portionLabel: '100 g', grams: 100, calories: 35, protein: 0.8, carbs: 8.2, fat: 0.2, fiber: 2.9, source: 'TACO (adaptado)' }
   ]
 };
+
+FOOD_LIBRARY = premiumCatalog.buildPremiumFoodLibrary();
 
 function normalizeObjective(input) {
   var raw = String(input || '').toLowerCase();
@@ -337,8 +341,13 @@ function calculateMacroTargets(profile, targetCalories) {
 
 function isRestricted(food, restrictions, dislikes) {
   var text = normalizeFreeText((restrictions || []).join(' '));
-  if (/vegetarian|vegetariano/.test(text) && /frango|patinho|tilapia/.test(normalizeFreeText(food.name))) return true;
-  if (/vegano|vegan/.test(text) && /frango|patinho|tilapia|ovo|iogurte|whey|mel/.test(normalizeFreeText(food.name))) return true;
+  var name = normalizeFreeText(food.name);
+  var subgroup = normalizeFreeText(food.subgroupKey || '');
+  var group = normalizeFreeText(food.groupKey || '');
+  if (/vegetarian|vegetariano/.test(text) && group === 'proteinas' && !/ovos|laticinios|proteinas_vegetais|suplementos/.test(subgroup)) return true;
+  if (/vegano|vegan/.test(text) && (group === 'laticinios' || (group === 'proteinas' && !/proteinas_vegetais/.test(subgroup)))) return true;
+  if (/vegetarian|vegetariano/.test(text) && /frango|patinho|tilapia|atum|salmao|sardinha|camarao|lula|mexilhao|suino|peru|pescada|merluza|linguado|cavalinha/.test(name)) return true;
+  if (/vegano|vegan/.test(text) && /frango|patinho|tilapia|ovo|iogurte|whey|mel|queijo|leite|cottage|skyr|caseina|atum|salmao|sardinha|camarao|lula|mexilhao|suino|peru|pescada|merluza|linguado|cavalinha/.test(name)) return true;
   if (/lactose|latic/.test(text) && /iogurte|whey/.test(normalizeFreeText(food.name))) return true;
   if (dislikes && textIncludesAny(food.name, dislikes)) return true;
   return false;
@@ -373,6 +382,9 @@ function cloneScaledMealItem(item, factor) {
     gorduras: round(Number(item.gorduras || 0) * ratio, 1),
     fibras: round(Number(item.fibras || 0) * ratio, 1),
     source: item.source,
+    groupKey: item.groupKey || null,
+    subgroupKey: item.subgroupKey || null,
+    tags: item.tags || [],
     substituicoes: item.substituicoes || []
   };
 }
@@ -466,7 +478,7 @@ function chooseFood(listName, profile, fallbackIndex) {
     if (!isVeganProfile(profile) && !isVegetarianProfile(profile)) {
       if (aPlant !== bPlant) return aPlant - bPlant;
     }
-    return (bPref - aPref) || (aPlant - bPlant);
+    return (bPref - aPref) || (bPlant - aPlant);
   });
   if (!isVeganProfile(profile) && !isVegetarianProfile(profile) && isProteinList(listName) && !textIncludesAny('tofu', profile.preferencias)) {
     var animalFirst = items.filter(function(food) { return !isPlantProtein(food); });
@@ -488,7 +500,10 @@ function cloneFoodItem(food, factor) {
     carboidratos: round(food.carbs * ratio, 1),
     gorduras: round(food.fat * ratio, 1),
     fibras: round(food.fiber * ratio, 1),
-    source: food.source
+    source: food.source,
+    groupKey: food.groupKey || null,
+    subgroupKey: food.subgroupKey || null,
+    tags: food.tags || []
   };
 }
 
@@ -511,8 +526,10 @@ function buildSubstitutions(item, profile) {
       }
     });
   });
+  var sourceGroup = item.groupKey || null;
   return all
     .filter(function(candidate) {
+      if (sourceGroup && candidate.groupKey && candidate.groupKey !== sourceGroup) return false;
       var diff = Math.abs(candidate.protein - item.proteinas) + Math.abs(candidate.carbs - item.carboidratos) + Math.abs(candidate.fat - item.gorduras);
       return diff < 18;
     })
@@ -847,6 +864,17 @@ function generateNutritionPlan(profileInput) {
       objective: calc.result.objective
     },
     plan: plan,
+    catalogStats: {
+      canonicalFoods: premiumCatalog.CANONICAL_FOODS.length,
+      recipes: premiumCatalog.RECIPE_CATALOG.length,
+      aliases: premiumCatalog.FOOD_ALIASES.length,
+      portions: premiumCatalog.FOOD_PORTIONS.length
+    },
+    recipeSuggestions: premiumCatalog.RECIPE_CATALOG
+      .filter(function(recipe) {
+        return (plan.refeicoes || []).some(function(meal) { return recipe.meal_slot === meal.tipo; });
+      })
+      .slice(0, 8),
     clinicalContext: {
       mode: calc.profile.labContext.mode,
       clinicalFlags: calc.profile.labContext.clinicalFlags,
@@ -863,6 +891,8 @@ function generateNutritionPlan(profileInput) {
 module.exports = {
   ACTIVITY_FACTORS: ACTIVITY_FACTORS,
   FOOD_LIBRARY: FOOD_LIBRARY,
+  CANONICAL_FOODS: premiumCatalog.CANONICAL_FOODS,
+  RECIPE_CATALOG: premiumCatalog.RECIPE_CATALOG,
   buildNutritionProfile: buildNutritionProfile,
   resolveDietMode: resolveDietMode,
   applyClinicalRules: applyClinicalRules,
