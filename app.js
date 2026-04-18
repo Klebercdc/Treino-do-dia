@@ -2647,9 +2647,19 @@ function syncMainScrollArea() {
 function navTo(tab) {
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
-  document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
+  if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
+  if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
+  if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
+  if (tab !== "perfil") document.getElementById("perfilScreen")?.classList.remove("show");
+  document.querySelectorAll('.btn-nav').forEach(b => {
+    b.classList.remove('active');
+    b.classList.remove('diet-active');
+  });
   const el = document.getElementById('nav-' + tab);
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    el.classList.toggle('diet-active', tab === 'dieta');
+  }
   syncMainScrollArea();
 }
 
@@ -5215,6 +5225,9 @@ function kronaNotify(title, body, tag) {
 // TELA DE INÍCIO
 // ══════════════════════════════════════════
 function openHome() {
+  document.getElementById('dietDataScreen')?.classList.remove('show');
+  document.getElementById('evolutionDataScreen')?.classList.remove('show');
+  document.getElementById('perfilScreen')?.classList.remove('show');
   const el = document.getElementById("homeScreen");
   el.classList.add("show");
   // Atualiza dados no próximo frame — tela aparece antes de qualquer cálculo
@@ -5521,9 +5534,9 @@ function openPerfil() {
     }
   }).catch(() => {});
   document.getElementById("perfilScreen").classList.add("show");
-  document.body.classList.add('overlay-open');
+  document.body.classList.remove('overlay-open');
   const footer = document.querySelector('.footer-actions');
-  if (footer) footer.style.display = 'none';
+  if (footer) footer.style.display = '';
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
 }
 function closePerfil() {
@@ -5682,19 +5695,10 @@ function openEditarPerfil() {
   const hist = safeJSON(STORAGE?.historyKey || "kronia_history", []);
   const nivel = hist.length < 3 ? "Iniciante" : hist.length < 15 ? "Intermediário" : "Avançado";
   document.getElementById("epNivelDisplay").textContent = nivel;
-  // Aplica foto salva ao avatar da tela de edição
-  const savedPhoto = localStorage.getItem("userAvatarPhoto");
   const av = document.getElementById("epAvatar");
   const epIni = document.getElementById("epAvatarInicial");
-  if (savedPhoto) {
-    av.style.backgroundImage = `url(${savedPhoto})`;
-    av.style.backgroundSize = "cover";
-    av.style.backgroundPosition = "center";
-    if (epIni) epIni.textContent = "";
-  } else {
-    av.style.backgroundImage = "";
-    if (epIni) epIni.textContent = nome[0]?.toUpperCase() || "T";
-  }
+  if (av) av.style.backgroundImage = "";
+  if (epIni) epIni.textContent = nome[0]?.toUpperCase() || "T";
   const cta = document.getElementById("epCtaTreino");
   if (cta) cta.style.display = "none";
   document.getElementById("editarPerfilScreen").classList.add("show");
@@ -5711,28 +5715,12 @@ function closeEditarPerfil() {
 function epAtualizarNome(val) {
   const display = document.getElementById("epNomeDisplay");
   if (display) display.textContent = (val || "ATLETA").toUpperCase();
-  const savedPhoto = localStorage.getItem("userAvatarPhoto");
-  if (!savedPhoto) {
-    const ini = document.getElementById("epAvatarInicial");
-    if (ini) ini.textContent = (val[0] || "T").toUpperCase();
-  }
+  const ini = document.getElementById("epAvatarInicial");
+  if (ini) ini.textContent = (val[0] || "T").toUpperCase();
 }
 function epHandleAvatarUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    localStorage.setItem("userAvatarPhoto", dataUrl);
-    applyAvatarPhoto(dataUrl);
-    const av = document.getElementById("epAvatar");
-    av.style.backgroundImage = `url(${dataUrl})`;
-    av.style.backgroundSize = "cover";
-    av.style.backgroundPosition = "center";
-    const ini = document.getElementById("epAvatarInicial");
-    if (ini) ini.textContent = "";
-  };
-  reader.readAsDataURL(file);
+  if (event && event.target) event.target.value = "";
+  showToast("Perfil usa monograma. Upload desativado.", "info", 2200);
 }
 function salvarPerfilEdit() {
   const data = {
@@ -5758,15 +5746,16 @@ function salvarPerfilEdit() {
     ["epNomeDisplay",  el => el.textContent = nome.toUpperCase()],
   ];
   syncEls.forEach(([id, fn]) => { const el = document.getElementById(id); if (el) fn(el); });
-  const savedPhoto = localStorage.getItem("userAvatarPhoto");
-  if (!savedPhoto) {
-    const inicial = nome[0]?.toUpperCase() || "T";
-    ["perfilAvatar","homeCardAvatar"].forEach(id => {
-      const el = document.getElementById(id); if (el) el.textContent = inicial;
-    });
-    const ini = document.getElementById("epAvatarInicial");
-    if (ini) ini.textContent = inicial;
-  }
+  const inicial = nome[0]?.toUpperCase() || "T";
+  ["perfilAvatar","homeCardAvatar"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.backgroundImage = "";
+      el.textContent = inicial;
+    }
+  });
+  const ini = document.getElementById("epAvatarInicial");
+  if (ini) ini.textContent = inicial;
   const btn = document.querySelector("#editarPerfilScreen .ep-save");
   if (btn) { btn.textContent = "✓ Salvo!"; setTimeout(() => { btn.textContent = "Salvar Perfil"; }, 2000); }
   // CTA para configurar treino após salvar perfil
@@ -5791,12 +5780,16 @@ function salvarMedidas() {
   _dbSync.pushConfig(); // backup silencioso na nuvem
   const nome = data.nome || "ATLETA";
   document.getElementById("perfilNome").textContent = nome.toUpperCase();
-  const savedPhoto = localStorage.getItem('userAvatarPhoto');
-  if (!savedPhoto) document.getElementById("perfilAvatar").textContent = nome[0]?.toUpperCase() || "T";
+  document.getElementById("perfilAvatar").style.backgroundImage = "";
+  document.getElementById("perfilAvatar").textContent = nome[0]?.toUpperCase() || "T";
   const hc = document.getElementById("homeCardNome");
   if (hc) {
     hc.textContent = nome.toUpperCase();
-    if (!savedPhoto) document.getElementById("homeCardAvatar").textContent = nome[0]?.toUpperCase() || "T";
+    const homeAvatar = document.getElementById("homeCardAvatar");
+    if (homeAvatar) {
+      homeAvatar.style.backgroundImage = "";
+      homeAvatar.textContent = nome[0]?.toUpperCase() || "T";
+    }
   }
 }
 
@@ -5810,12 +5803,8 @@ function updatePerfilScreen() {
     document.getElementById("perfilNome").textContent = cfg.nome.toUpperCase();
     document.getElementById("perfilNomeInput").value = cfg.nome;
   }
-  const savedPhoto = localStorage.getItem('userAvatarPhoto');
-  if (savedPhoto) {
-    applyAvatarPhoto(savedPhoto);
-  } else {
-    document.getElementById("perfilAvatar").textContent = cfg.nome ? cfg.nome[0].toUpperCase() : "A";
-  }
+  document.getElementById("perfilAvatar").style.backgroundImage = "";
+  document.getElementById("perfilAvatar").textContent = cfg.nome ? cfg.nome[0].toUpperCase() : "A";
   if (cfg.peso)   document.getElementById("perfilPeso").value   = cfg.peso;
   if (cfg.altura) document.getElementById("perfilAltura").value = cfg.altura;
   if (cfg.idade)  document.getElementById("perfilIdade").value  = cfg.idade;
@@ -6139,6 +6128,230 @@ function closeDieta() {
   if (footer) footer.style.display = '';
   navTo("treino");
 }
+
+function asKroniaNumber(value, fallback) {
+  var n = Number(value);
+  return Number.isFinite(n) ? n : (arguments.length > 1 ? fallback : 0);
+}
+
+function formatKroniaNumber(value, unit) {
+  var n = asKroniaNumber(value, 0);
+  var rounded = Math.round(n * 10) / 10;
+  return rounded.toLocaleString('pt-BR') + (unit ? ' ' + unit : '');
+}
+
+function getTodayRangeISO() {
+  var start = new Date();
+  start.setHours(0, 0, 0, 0);
+  var end = new Date(start.getTime() + 86400000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function renderKroniaMetricCard(title, value, sub) {
+  return '<div class="kronia-card">'
+    + '<div class="kronia-card-title">' + escapeHTML(title) + '</div>'
+    + '<div class="kronia-card-value">' + escapeHTML(value) + '</div>'
+    + '<div class="kronia-card-sub">' + escapeHTML(sub || '') + '</div>'
+    + '</div>';
+}
+
+function renderKroniaProgress(label, consumed, target, cssClass, unit) {
+  var c = asKroniaNumber(consumed, 0);
+  var t = asKroniaNumber(target, 0);
+  var pct = t > 0 ? Math.min(100, Math.round((c / t) * 100)) : 0;
+  var right = t > 0
+    ? formatKroniaNumber(c, unit) + ' / ' + formatKroniaNumber(t, unit)
+    : formatKroniaNumber(c, unit);
+  return '<div>'
+    + '<div class="kronia-progress-head"><span>' + escapeHTML(label) + '</span><span>' + escapeHTML(right) + '</span></div>'
+    + '<div class="kronia-progress-track"><div class="kronia-progress-fill ' + (cssClass || '') + '" style="width:' + pct + '%"></div></div>'
+    + '</div>';
+}
+
+function openDietDataScreen() {
+  document.getElementById('dietDataScreen')?.classList.add('show');
+  document.body.classList.remove('overlay-open');
+  refreshDietDataScreen();
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+}
+
+async function refreshDietDataScreen() {
+  var summary = document.getElementById('dietDataSummary');
+  var progress = document.getElementById('dietDataProgress');
+  var meals = document.getElementById('dietDataMeals');
+  if (summary) summary.innerHTML = renderKroniaMetricCard('Calorias', '...', 'Carregando Supabase');
+  if (progress) progress.innerHTML = '<div class="kronia-empty">Sincronizando consumo do dia...</div>';
+  if (meals) meals.innerHTML = '<div class="kronia-card-title">Registros</div><div class="kronia-empty">Carregando...</div>';
+
+  var goal = null;
+  var logs = [];
+  try {
+    var sessionResp = await _sb.auth.getSession();
+    var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
+    if (userId) {
+      var range = getTodayRangeISO();
+      var results = await Promise.all([
+        _sb.from('nutrition_goals')
+          .select('calories_target,protein_g,carbs_g,fat_g,updated_at')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        _sb.from('user_food_logs')
+          .select('meal_type,food_name,quantity,estimated_calories,estimated_protein_g,estimated_carbs_g,estimated_fat_g,consumed_at')
+          .eq('user_id', userId)
+          .gte('consumed_at', range.start)
+          .lt('consumed_at', range.end)
+          .order('consumed_at', { ascending: false })
+      ]);
+      if (!results[0].error) goal = results[0].data || null;
+      if (!results[1].error && Array.isArray(results[1].data)) logs = results[1].data;
+    }
+  } catch (_) {}
+
+  if (!goal && window._dietaGoalsSupabase) goal = window._dietaGoalsSupabase;
+  if (!goal) {
+    var snap = safeJSON('kronia_nutrition_snapshot_v1', null);
+    var meta = snap && (snap.meta || snap.macros || snap);
+    if (meta) {
+      goal = {
+        calories_target: meta.calorias || meta.calories || meta.metaCalorias || null,
+        protein_g: meta.proteina || meta.protein || meta.protein_g || null,
+        carbs_g: meta.carbo || meta.carbs || meta.carbs_g || null,
+        fat_g: meta.gordura || meta.fat || meta.fat_g || null
+      };
+    }
+  }
+
+  var totals = logs.reduce(function(acc, row) {
+    acc.calories += asKroniaNumber(row.estimated_calories, 0);
+    acc.protein += asKroniaNumber(row.estimated_protein_g, 0);
+    acc.carbs += asKroniaNumber(row.estimated_carbs_g, 0);
+    acc.fat += asKroniaNumber(row.estimated_fat_g, 0);
+    return acc;
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+  var targetCalories = asKroniaNumber(goal && goal.calories_target, 0);
+  var targetProtein = asKroniaNumber(goal && goal.protein_g, 0);
+  var targetCarbs = asKroniaNumber(goal && goal.carbs_g, 0);
+  var targetFat = asKroniaNumber(goal && goal.fat_g, 0);
+
+  if (summary) {
+    summary.innerHTML = [
+      renderKroniaMetricCard('Calorias totais', formatKroniaNumber(targetCalories || totals.calories, 'kcal'), targetCalories ? 'Meta ativa' : 'Sem meta ativa'),
+      renderKroniaMetricCard('Proteína', formatKroniaNumber(targetProtein || totals.protein, 'g'), 'Alvo diário'),
+      renderKroniaMetricCard('Carbo', formatKroniaNumber(targetCarbs || totals.carbs, 'g'), 'Energia do treino'),
+      renderKroniaMetricCard('Gordura', formatKroniaNumber(targetFat || totals.fat, 'g'), 'Base hormonal')
+    ].join('');
+  }
+  if (progress) {
+    progress.innerHTML = [
+      renderKroniaProgress('Calorias', totals.calories, targetCalories, '', 'kcal'),
+      renderKroniaProgress('Proteína', totals.protein, targetProtein, 'green', 'g'),
+      renderKroniaProgress('Carbo', totals.carbs, targetCarbs, 'blue', 'g'),
+      renderKroniaProgress('Gordura', totals.fat, targetFat, 'amber', 'g')
+    ].join('');
+  }
+  if (meals) {
+    meals.innerHTML = '<div class="kronia-card-title">Registros do dia</div>'
+      + (logs.length ? '<div class="kronia-meal-list">'
+      + logs.slice(0, 6).map(function(row) {
+        return '<div class="kronia-row"><div><strong>' + escapeHTML(row.food_name || row.meal_type || 'Refeição') + '</strong><br><span>' + escapeHTML(row.quantity || row.meal_type || 'Hoje') + '</span></div><div>' + escapeHTML(formatKroniaNumber(row.estimated_calories, 'kcal')) + '</div></div>';
+      }).join('') + '</div>' : '<div class="kronia-empty">Nenhum alimento registrado hoje. As metas continuam visíveis a partir do Supabase.</div>');
+  }
+}
+
+function openEvolutionDataScreen() {
+  document.getElementById('evolutionDataScreen')?.classList.add('show');
+  document.body.classList.remove('overlay-open');
+  refreshEvolutionDataScreen();
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+}
+
+async function refreshEvolutionDataScreen() {
+  var stats = document.getElementById('evolutionDataStats');
+  var chart = document.getElementById('evolutionChart');
+  var measures = document.getElementById('evolutionMeasures');
+  if (stats) stats.innerHTML = renderKroniaMetricCard('Peso atual', '...', 'Carregando Supabase');
+  if (chart) chart.innerHTML = '<div class="kronia-empty">Sincronizando medidas...</div>';
+  if (measures) measures.innerHTML = '<div class="kronia-card-title">Medidas</div><div class="kronia-empty">Carregando...</div>';
+
+  var rows = [];
+  try {
+    var sessionResp = await _sb.auth.getSession();
+    var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
+    if (userId) {
+      var resp = await _sb.from('body_metrics')
+        .select('weight_kg,body_fat_percent,waist_cm,hip_cm,chest_cm,arm_cm,thigh_cm,measured_at')
+        .eq('user_id', userId)
+        .order('measured_at', { ascending: false })
+        .limit(12);
+      if (!resp.error && Array.isArray(resp.data)) rows = resp.data;
+    }
+  } catch (_) {}
+
+  if (!rows.length) {
+    var cfg = safeJSON('kronia_config', {});
+    if (cfg.peso) rows = [{ weight_kg: Number(cfg.peso), measured_at: new Date().toISOString(), body_fat_percent: cfg.gordura || null }];
+  }
+
+  var latest = rows[0] || {};
+  var ordered = rows.slice().reverse();
+  var firstWeight = asKroniaNumber(ordered[0] && ordered[0].weight_kg, 0);
+  var lastWeight = asKroniaNumber(latest.weight_kg, 0);
+  var delta = firstWeight && lastWeight ? Math.round((lastWeight - firstWeight) * 10) / 10 : 0;
+
+  if (stats) {
+    stats.innerHTML = [
+      renderKroniaMetricCard('Peso atual', lastWeight ? formatKroniaNumber(lastWeight, 'kg') : '-', 'Última medida'),
+      renderKroniaMetricCard('Variação', (delta > 0 ? '+' : '') + formatKroniaNumber(delta, 'kg'), 'No histórico carregado'),
+      renderKroniaMetricCard('Gordura', latest.body_fat_percent ? formatKroniaNumber(latest.body_fat_percent, '%') : '-', 'Percentual corporal'),
+      renderKroniaMetricCard('Registros', String(rows.length), 'Medições disponíveis')
+    ].join('');
+  }
+
+  if (chart) chart.innerHTML = renderEvolutionSvg(ordered);
+  if (measures) {
+    measures.innerHTML = '<div class="kronia-card-title">Medidas recentes</div>'
+      + (latest && latest.measured_at ? '<div class="kronia-measure-list">'
+      + [
+        ['Cintura', latest.waist_cm, 'cm'],
+        ['Quadril', latest.hip_cm, 'cm'],
+        ['Peito', latest.chest_cm, 'cm'],
+        ['Braço', latest.arm_cm, 'cm'],
+        ['Coxa', latest.thigh_cm, 'cm']
+      ].map(function(item) {
+        return '<div class="kronia-row"><strong>' + escapeHTML(item[0]) + '</strong><span>' + escapeHTML(item[1] ? formatKroniaNumber(item[1], item[2]) : '-') + '</span></div>';
+      }).join('') + '</div>' : '<div class="kronia-empty">Nenhuma medida corporal encontrada no Supabase.</div>');
+  }
+}
+
+function renderEvolutionSvg(rows) {
+  var points = rows
+    .map(function(row) { return { value: asKroniaNumber(row.weight_kg, NaN), date: row.measured_at }; })
+    .filter(function(row) { return Number.isFinite(row.value); });
+  if (points.length < 2) return '<div class="kronia-empty">Registre pelo menos duas medidas de peso para renderizar o gráfico.</div>';
+  var width = 320, height = 170, pad = 24;
+  var values = points.map(function(p) { return p.value; });
+  var min = Math.min.apply(null, values);
+  var max = Math.max.apply(null, values);
+  if (min === max) { min -= 1; max += 1; }
+  var coords = points.map(function(p, idx) {
+    var x = pad + (idx * ((width - pad * 2) / Math.max(1, points.length - 1)));
+    var y = height - pad - ((p.value - min) / (max - min)) * (height - pad * 2);
+    return { x: x, y: y, value: p.value, date: p.date };
+  });
+  var poly = coords.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+  var area = poly + ' ' + (width - pad) + ',' + (height - pad) + ' ' + pad + ',' + (height - pad);
+  return '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Gráfico de evolução de peso">'
+    + '<polyline points="' + area + '" fill="rgba(34,197,94,0.12)" stroke="none"></polyline>'
+    + '<polyline points="' + poly + '" fill="none" stroke="#22C55E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>'
+    + coords.map(function(p) { return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4.5" fill="#22C55E" stroke="#fff" stroke-width="2"></circle>'; }).join('')
+    + '<text x="' + pad + '" y="16" fill="#64748B" font-size="11" font-weight="700">' + escapeHTML(formatKroniaNumber(max, 'kg')) + '</text>'
+    + '<text x="' + pad + '" y="' + (height - 4) + '" fill="#64748B" font-size="11" font-weight="700">' + escapeHTML(formatKroniaNumber(min, 'kg')) + '</text>'
+    + '</svg>';
+}
+
 function toggleOrientSuggestions() {
   const row = document.querySelector(".orient-shortcuts-row");
   const btn = document.getElementById("orientSuggestBtn");
@@ -7992,7 +8205,7 @@ function renderNutritionFlowContent(key) {
   if (key === "refeicao") return renderNutritionMealDetailScreen();
   if (key === "checkin") return renderNutritionCheckinScreen();
   if (key === "coach") return `<div class="nutrition-card">
-    <div class="nutrition-metric"><span>Contexto ativo</span><strong>Plano + treino + exames</strong><small>O KRONOS recebe a fotografia nutricional canônica antes de sugerir ajustes.</small></div>
+    <div class="nutrition-metric"><span>Contexto ativo</span><strong>Plano + treino + exames</strong><small>O KRONOS recebe a visão nutricional canônica antes de sugerir ajustes.</small></div>
     <div class="nutrition-inline-actions"><button class="nutrition-secondary" onclick="openKronosFromDieta('Quero trocar uma refeição mantendo macros e restrições.')">Trocar refeição</button><button class="nutrition-secondary" onclick="openKronosFromDieta('Avalie meu check-in e ajuste minha dieta com segurança.')">Ajustar plano</button></div>
   </div>`;
   return "";

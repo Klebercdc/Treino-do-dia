@@ -1363,6 +1363,54 @@
 </div>
 
 <!-- ══════════════════════════════════════════
+     DIETA — PAINEL DE DADOS
+══════════════════════════════════════════ -->
+
+<div id="dietDataScreen" class="kronia-data-screen app-scroll" aria-label="Dieta">
+  <div class="kronia-data-header">
+    <div>
+      <div class="kronia-data-kicker">NUTRIÇÃO</div>
+      <h1>Dieta</h1>
+      <p>Macros e calorias do dia sincronizados com o Supabase.</p>
+    </div>
+    <button type="button" class="kronia-data-refresh" onclick="refreshDietDataScreen()" aria-label="Atualizar dieta">
+      <i data-lucide="refresh-cw" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
+    </button>
+  </div>
+  <div id="dietDataSummary" class="kronia-data-grid"></div>
+  <div class="kronia-card kronia-card-wide">
+    <div class="kronia-card-title">Consumo do dia</div>
+    <div id="dietDataProgress" class="kronia-progress-list"></div>
+  </div>
+  <div id="dietDataMeals" class="kronia-card kronia-card-wide"></div>
+  <div style="height:120px"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     EVOLUÇÃO — PAINEL DE DADOS
+══════════════════════════════════════════ -->
+
+<div id="evolutionDataScreen" class="kronia-data-screen app-scroll" aria-label="Evolução">
+  <div class="kronia-data-header">
+    <div>
+      <div class="kronia-data-kicker">PROGRESSO</div>
+      <h1>Evolução</h1>
+      <p>Peso e medidas corporais recuperados do Supabase.</p>
+    </div>
+    <button type="button" class="kronia-data-refresh" onclick="refreshEvolutionDataScreen()" aria-label="Atualizar evolução">
+      <i data-lucide="refresh-cw" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
+    </button>
+  </div>
+  <div id="evolutionDataStats" class="kronia-data-grid"></div>
+  <div class="kronia-card kronia-card-wide">
+    <div class="kronia-card-title">Histórico de peso</div>
+    <div id="evolutionChart" class="kronia-chart"></div>
+  </div>
+  <div id="evolutionMeasures" class="kronia-card kronia-card-wide"></div>
+  <div style="height:120px"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
      START WORKOUT SCREEN (VAMOS TREINAR?)
 ══════════════════════════════════════════ -->
 
@@ -1444,7 +1492,7 @@
         <div style="position:relative;flex-shrink:0">
           <div style="width:54px;height:54px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;background-size:cover;background-position:center" id="perfilAvatar">A</div>
           <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;background:#1C1C1E;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,0.12)">
-            <i data-lucide="camera" class="lucide" width="9" height="9" stroke="rgba(255,255,255,0.6)" fill="none" stroke-width="2"></i>
+            <i data-lucide="user-circle" class="lucide" width="11" height="11" stroke="rgba(255,255,255,0.6)" fill="none" stroke-width="2"></i>
           </div>
         </div>
         <div style="flex:1;min-width:0">
@@ -1791,13 +1839,9 @@
   </button>
 
   <div class="ep-avatar-wrap">
-    <div class="ep-avatar" id="epAvatar" onclick="document.getElementById('epAvatarInput').click()">
+    <div class="ep-avatar" id="epAvatar">
       <span id="epAvatarInicial">T</span>
-      <div class="ep-avatar-cam">
-        <i data-lucide="camera" class="lucide" width="16" height="16" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
     </div>
-    <input type="file" id="epAvatarInput" accept="image/*" style="display:none" onchange="epHandleAvatarUpload(event)"/>
     <div class="ep-name-display" id="epNomeDisplay">ATLETA</div>
     <div class="ep-level" id="epNivelDisplay">Iniciante</div>
   </div>
@@ -2401,7 +2445,7 @@
   <div class="instr-step"><div class="instr-step-num">2</div><div><div class="instr-step-title">Monte seu Programa</div><div class="instr-step-desc">Em <strong>Programa</strong>, escolha frequência, objetivo (hipertrofia, força…) e equipamentos. Use o <em>seletor de divisão</em> para escolher um template pronto (Manual) ou clique em <em>Gerar com IA</em> para criar uma divisão personalizada automaticamente.</div></div></div>
   <div class="instr-step"><div class="instr-step-num">3</div><div><div class="instr-step-title">Escolha o Modo de Treino</div><div class="instr-step-desc">Na aba <strong>Treino</strong>, use o modo <em>Manual</em> para adicionar exercícios livremente, ou <em>Com IA</em> para gerar o treino do dia automaticamente.</div></div></div>
   <div class="instr-step"><div class="instr-step-num">4</div><div><div class="instr-step-title">Registre Séries e Reps</div><div class="instr-step-desc">Toque na célula de cada série para marcar como feita. O app salva o histórico e mostra <strong>fantasmas</strong> com os valores da última sessão como referência.</div></div></div>
-  <div class="instr-step"><div class="instr-step-num">5</div><div><div class="instr-step-title">Salve o Treino</div><div class="instr-step-desc">Ao terminar, clique no botão <strong>✓ Salvar</strong> no rodapé. O app detecta PRs, calcula volume total e atualiza sua sequência.</div></div></div>
+  <div class="instr-step"><div class="instr-step-num">5</div><div><div class="instr-step-title">Salve o Treino</div><div class="instr-step-desc">Ao terminar, use <strong>Salvar Treino</strong> na área de pós-treino. O app detecta PRs, calcula volume total e atualiza sua sequência.</div></div></div>
 </div>
 
 <div class="instr-section">
@@ -2440,22 +2484,22 @@
 <div class="footer-actions">
   <button class="btn btn-nav active" id="nav-inicio" onclick="navTo('inicio');openHome()">
     <span class="btn-icon"><i data-lucide="home" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
-    <span class="btn-label">Home</span>
+    <span class="btn-label">Início</span>
   </button>
   <button class="btn btn-nav" id="nav-treino" onclick="navTo('treino');closeHome()">
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>
-  <button class="btn btn-save" onclick="salvarTreino()">
-    <span class="btn-icon"><i data-lucide="check" class="lucide" width="22" height="22" stroke="white" fill="none" stroke-width="1.75"></i></span>
-    <span class="btn-label" style="color:#fff;font-size:0.48rem">Salvar</span>
+  <button class="btn btn-nav" id="nav-dieta" onclick="navTo('dieta');openDietDataScreen()">
+    <span class="btn-icon"><i data-lucide="apple" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
+    <span class="btn-label">Dieta</span>
   </button>
-  <button class="btn btn-nav" id="nav-programa" onclick="navTo('programa');openConfig()">
-    <span class="btn-icon"><i data-lucide="clipboard-list" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
-    <span class="btn-label">Programa</span>
+  <button class="btn btn-nav" id="nav-evolucao" onclick="navTo('evolucao');openEvolutionDataScreen()">
+    <span class="btn-icon"><i data-lucide="trending-up" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
+    <span class="btn-label">Evolução</span>
   </button>
   <button class="btn btn-nav" id="nav-perfil" onclick="navTo('perfil');openPerfil()">
-    <span class="btn-icon"><i data-lucide="user" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
+    <span class="btn-icon"><i data-lucide="user-circle" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Perfil</span>
   </button>
 </div>

@@ -456,34 +456,15 @@ function handleAuthClick() {
 }
 
 function handleAvatarUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    localStorage.setItem('userAvatarPhoto', dataUrl);
-    applyAvatarPhoto(dataUrl);
-  };
-  reader.readAsDataURL(file);
+  if (event && event.target) event.target.value = '';
+  if (typeof showToast === 'function') showToast('Perfil usa monograma. Upload desativado.', 'info', 2200);
 }
 
 function applyAvatarPhoto(dataUrl) {
   const perfilEl = document.getElementById('perfilAvatar');
-  const homeEl   = document.getElementById('homeCardAvatar');
-  const navEl    = document.getElementById('userAvatar');
-  if (perfilEl) {
-    perfilEl.style.backgroundImage = `url(${dataUrl})`;
-    perfilEl.style.backgroundSize  = 'cover';
-    perfilEl.style.backgroundPosition = 'center';
-    perfilEl.textContent = '';
-  }
-  if (homeEl) {
-    homeEl.style.backgroundImage = `url(${dataUrl})`;
-    homeEl.style.backgroundSize  = 'cover';
-    homeEl.style.backgroundPosition = 'center';
-    homeEl.textContent = '';
-  }
-  if (navEl) { navEl.src = dataUrl; navEl.style.display = 'block'; }
+  const homeEl = document.getElementById('homeCardAvatar');
+  if (perfilEl) perfilEl.style.backgroundImage = '';
+  if (homeEl) homeEl.style.backgroundImage = '';
 }
 
 let _loginIsRegister = false;
