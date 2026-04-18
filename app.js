@@ -6377,20 +6377,20 @@ function runKroniaActionFallback(action, context) {
     try { navTo?.('treino'); return true; } catch (_) {}
   }
   if (action === 'open_diet') {
-    try { openHome?.(); } catch (_) {}
-    try { navTo?.('inicio'); } catch (_) {}
-    try { schedulePendingConversationIntentConsumption('fallback_diet'); return true; } catch (_) {}
-    try { openDietaSheet?.(safeContext); return true; } catch (_) {}
+    try { navTo?.('dieta'); } catch (_) {}
+    try { openDietDataScreen?.(); } catch (_) {}
+    try { schedulePendingConversationIntentConsumption('fallback_diet'); } catch (_) {}
+    try { openDietaSheet?.(Object.assign({}, safeContext, { returnTab: safeContext.returnTab || 'dieta' })); return true; } catch (_) {}
     try { openDieta?.(); return true; } catch (_) {}
-    try { navTo?.('treino'); return true; } catch (_) {}
+    try { navTo?.('dieta'); return true; } catch (_) {}
   }
   if (action === 'generate_diet') {
-    try { openHome?.(); } catch (_) {}
-    try { navTo?.('inicio'); } catch (_) {}
-    try { schedulePendingConversationIntentConsumption('fallback_generate_diet'); return true; } catch (_) {}
-    try { openDietaSheet?.(Object.assign({}, safeContext, { autoGenerate: true, fromChatIntent: true })); return true; } catch (_) {}
+    try { navTo?.('dieta'); } catch (_) {}
+    try { openDietDataScreen?.(); } catch (_) {}
+    try { schedulePendingConversationIntentConsumption('fallback_generate_diet'); } catch (_) {}
+    try { openDietaSheet?.(Object.assign({}, safeContext, { autoGenerate: true, fromChatIntent: true, returnTab: safeContext.returnTab || 'dieta' })); return true; } catch (_) {}
     try { openDieta?.(); return true; } catch (_) {}
-    try { navTo?.('treino'); return true; } catch (_) {}
+    try { navTo?.('dieta'); return true; } catch (_) {}
   }
   if (action === 'open_labs_upload') {
     try { openLabsUploadScreen(safeContext); return true; } catch (_) {}
@@ -6424,12 +6424,13 @@ window.KroniaActions = {
   openDietGenerator: function (context) {
     try { closeAI?.(); } catch (_) {}
     try { closeOrientacao?.(); } catch (_) {}
-    try { openHome?.(); } catch (_) {}
-    try { navTo?.('inicio'); } catch (_) {}
+    try { navTo?.('dieta'); } catch (_) {}
+    try { openDietDataScreen?.(); } catch (_) {}
     try {
       openDietaSheet?.(Object.assign({}, sanitizeCtaObject(context), {
         source: context && context.source || 'kronia_action_diet',
         origin: context && context.origin || 'dieta_ia',
+        returnTab: context && context.returnTab || 'dieta',
         fromChatIntent: !!(context && context.fromChatIntent),
         autoGenerate: !!(context && context.autoGenerate),
       }));
@@ -7981,6 +7982,7 @@ function persistCanonicalNutritionSnapshot(meta) {
 function openNutritionFlow(context) {
   var state = getNutritionFlowState();
   state.step = 0;
+  state.returnTab = context && context.returnTab || state.returnTab || "dieta";
   window._nutritionFlowState = state;
   var screen = document.getElementById("nutritionFlowScreen");
   if (screen) screen.classList.add("show");
@@ -8001,7 +8003,11 @@ function nutritionFlowBack() {
   var state = getNutritionFlowState();
   if (state.step <= 0) {
     closeNutritionFlow();
-    try { navTo("inicio"); } catch (_) {}
+    var returnTab = state.returnTab || "dieta";
+    try { navTo(returnTab); } catch (_) {}
+    if (returnTab === "dieta") {
+      try { openDietDataScreen(); } catch (_) {}
+    }
     return;
   }
   state.step -= 1;

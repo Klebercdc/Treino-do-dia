@@ -2490,7 +2490,7 @@
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>
-  <button class="btn btn-nav" id="nav-dieta" onclick="navTo('dieta');openDietDataScreen()">
+  <button class="btn btn-nav" id="nav-dieta" onclick="executeKroniaQuickAction('open_diet', { source: 'bottom_nav_dieta', origin: 'bottom_nav', target: 'premium_diet_workspace', returnTab: 'dieta' }, { label: 'Dieta', source: 'bottom_nav', targetModule: 'dieta' })">
     <span class="btn-icon"><i data-lucide="apple" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Dieta</span>
   </button>

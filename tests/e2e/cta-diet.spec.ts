@@ -125,6 +125,41 @@ test.describe('CTA and Diet flows', () => {
     await expect(page.locator('#nutritionFlowBody')).toContainText('Dieta IA');
   });
 
+  test('home diet card and bottom nav use the same diet CTA destination', async ({ page }) => {
+    await page.goto('/');
+    await waitForSplash(page);
+
+    await page.locator('.home-hero-dieta').click();
+
+    await expect.poll(async () => {
+      return page.evaluate(() => ({
+        dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
+        dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
+        nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+      }));
+    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: true });
+
+    await page.locator('.nutrition-flow-back').click();
+    await expect.poll(async () => {
+      return page.evaluate(() => ({
+        dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
+        dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
+        nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+      }));
+    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false });
+
+    await page.locator('#nav-inicio').click();
+    await page.locator('#nav-dieta').click();
+
+    await expect.poll(async () => {
+      return page.evaluate(() => ({
+        dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
+        dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
+        nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+      }));
+    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: true });
+  });
+
   test('diet generation keeps UI responsive and lands on today screen with fallback plan', async ({ page }) => {
     await page.route('**/api/kronia/diet', async (route) => {
       await route.fulfill({
