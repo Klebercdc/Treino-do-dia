@@ -8134,13 +8134,13 @@ function defaultNutritionFlowState() {
     step: 0,
     objetivo: "hipertrofia",
     sexo: "masculino",
-    peso: "",
-    altura: "",
+    peso: "82",
+    altura: "178",
     idade: "",
     gorduraCorporal: "",
-    cintura: "",
-    pescoco: "",
-    quadril: "",
+    cintura: "90",
+    pescoco: "38",
+    quadril: "100",
     treinoForca: "sim",
     nivelAtividade: "levemente ativo",
     frequenciaTreino: "5x",
@@ -8157,9 +8157,9 @@ function defaultNutritionFlowState() {
     sinaisClinicos: "",
     padraoAlimentar: "onívoro",
     refeicoesPorDia: 4,
-    sugestao: "prática",
-    proteinas: ["Frango grelhado", "Ovos", "Whey protein"],
-    carboidratos: ["Arroz", "Feijão", "Banana"],
+    sugestao: "variada",
+    proteinas: ["Frango grelhado"],
+    carboidratos: ["Arroz", "Feijão"],
     gorduras: ["Azeite de oliva", "Abacate", "Castanhas"],
     frutas: ["Banana", "Maçã"],
     vegetais: ["Brócolis cozido", "Salada verde"],
@@ -8581,6 +8581,67 @@ function getNutritionCatalogNameOptions(group) {
   return getNutritionCatalogItems(group).map(function(item) { return item.nome; });
 }
 
+function nutritionOfficialGoalLabel(value) {
+  var labels = { hipertrofia: "Hipertrofia", emagrecimento: "Emagrecimento", forca: "Performance", performance: "Performance" };
+  return labels[String(value || "").toLowerCase()] || String(value || "Hipertrofia");
+}
+
+function nutritionOfficialPlanStyleLabel(value) {
+  return value === "prática" ? "Prático" : "Brasileiro";
+}
+
+function nutritionOfficialLikeSelected(value) {
+  var state = getNutritionFlowState();
+  if (value === "Arroz/Feijão") {
+    return nutritionSelected("carboidratos", "Arroz") && nutritionSelected("carboidratos", "Feijão");
+  }
+  if (value === "Frango") return nutritionSelected("proteinas", "Frango grelhado");
+  if (value === "Ovos") return nutritionSelected("proteinas", "Ovos");
+  if (value === "Carne Vermelha") return nutritionSelected("proteinas", "Patinho grelhado");
+  return Array.isArray(state.proteinas) && state.proteinas.indexOf(value) !== -1;
+}
+
+function nutritionOfficialToggleLike(value) {
+  var state = getNutritionFlowState();
+  if (value === "Arroz/Feijão") {
+    var hasPair = nutritionOfficialLikeSelected(value);
+    var carbs = Array.isArray(state.carboidratos) ? state.carboidratos.slice() : [];
+    ["Arroz", "Feijão"].forEach(function(item) {
+      var idx = carbs.indexOf(item);
+      if (hasPair && idx >= 0) carbs.splice(idx, 1);
+      if (!hasPair && idx < 0) carbs.push(item);
+    });
+    setNutritionFlowState({ carboidratos: carbs });
+  } else {
+    var map = { Frango: "Frango grelhado", Ovos: "Ovos", "Carne Vermelha": "Patinho grelhado" };
+    var item = map[value] || value;
+    var proteins = Array.isArray(state.proteinas) ? state.proteinas.slice() : [];
+    var pidx = proteins.indexOf(item);
+    if (pidx >= 0) proteins.splice(pidx, 1); else proteins.push(item);
+    setNutritionFlowState({ proteinas: proteins });
+  }
+  renderNutritionFlow();
+}
+
+function nutritionOfficialSetAnthro(patch) {
+  setNutritionFlowState(patch || {});
+  var estimate = calculateNutritionNavyAnthro(getNutritionFlowState());
+  var bf = document.getElementById("nutritionOfficialBf");
+  var lean = document.getElementById("nutritionOfficialLeanMass");
+  if (bf) bf.textContent = estimate.bf ? formatKroniaNumber(estimate.bf, "%") : "--%";
+  if (lean) lean.textContent = estimate.leanMass ? formatKroniaNumber(estimate.leanMass, "kg") : "--";
+}
+
+function nutritionOfficialSetFatigue(value) {
+  setNutritionFlowState({ fadiga: value });
+  var el = document.getElementById("nutritionOfficialFatigueVal");
+  if (el) el.textContent = value;
+}
+
+function nutritionOfficialSummaryRow(label, value, extraClass) {
+  return `<div class="nutrition-official-summary-row"><span>${escapeHTML(label)}</span><strong class="${extraClass || ""}">${value}</strong></div>`;
+}
+
 function renderNutritionFoodStep(key, options, minRequired) {
   var state = getNutritionFlowState();
   var selected = Array.isArray(state[key]) ? state[key] : [];
@@ -8625,114 +8686,147 @@ function renderNutritionFlowContent(key) {
   var state = getNutritionFlowState();
   if (key === "contexto_corporal") {
     var estimate = syncNutritionAnthroEstimate();
-    return `<section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-status-row"><span>Perfil base</span><span>${escapeHTML(state.peso ? "Dados detectados" : "Aguardando confirmação")}</span></div>
-      <div class="nutrition-chip-grid intake-chip-grid">
-        ${renderNutritionSegment("objetivo", "hipertrofia", "Hipertrofia")}
-        ${renderNutritionSegment("objetivo", "emagrecimento", "Emagrecer")}
-        ${renderNutritionSegment("objetivo", "forca", "Performance")}
+    return `<section class="glass-card border-l-green">
+      <div class="nutrition-official-card-head">
+        <span class="sync-tag"><i data-lucide="badge-check" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"></i> Perfil Detectado</span>
       </div>
-      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
-        ${renderNutritionSegment("sexo", "masculino", "Masculino")}
-        ${renderNutritionSegment("sexo", "feminino", "Feminino")}
+      <h2 class="nutrition-official-label">Objetivo Primário</h2>
+      <div class="nutrition-official-grid-3 nutrition-official-divider">
+        <button class="chip ${nutritionSelected("objetivo", "hipertrofia") ? "active" : ""}" onclick="nutritionSet('objetivo','hipertrofia')">Hipertrofia</button>
+        <button class="chip ${nutritionSelected("objetivo", "emagrecimento") ? "active" : ""}" onclick="nutritionSet('objetivo','emagrecimento')">Emagrecer</button>
+        <button class="chip ${nutritionSelected("objetivo", "forca") ? "active" : ""}" onclick="nutritionSet('objetivo','forca')">Desempenho</button>
+      </div>
+      <h2 class="nutrition-official-label">Sexo Biológico</h2>
+      <div class="nutrition-official-row">
+        <button class="chip chip-compact ${nutritionSelected("sexo", "masculino") ? "active" : ""}" onclick="nutritionSet('sexo','masculino')">Masculino</button>
+        <button class="chip chip-compact ${nutritionSelected("sexo", "feminino") ? "active" : ""}" onclick="nutritionSet('sexo','feminino')">Feminino</button>
       </div>
     </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-card-title">Scanner corporal sem BIA</div>
-      <div class="nutrition-input-grid" style="margin-top:14px">
-        <div class="nutrition-input-wrap"><label>Cintura (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.cintura)}" oninput="setNutritionFlowState({ cintura: this.value })"></div>
-        <div class="nutrition-input-wrap"><label>Pescoço (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.pescoco)}" oninput="setNutritionFlowState({ pescoco: this.value })"></div>
-        ${state.sexo === "feminino" ? `<div class="nutrition-input-wrap"><label>Quadril (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.quadril)}" oninput="setNutritionFlowState({ quadril: this.value })"></div>` : ""}
-        <div class="nutrition-input-wrap"><label>Peso (kg)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.peso)}" oninput="setNutritionFlowState({ peso: this.value })"></div>
-        <div class="nutrition-input-wrap"><label>Altura (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.altura)}" oninput="setNutritionFlowState({ altura: this.value })"></div>
-        <div class="nutrition-input-wrap"><label>Idade</label><input inputmode="numeric" type="number" value="${escapeAttr(state.idade)}" oninput="setNutritionFlowState({ idade: this.value })"></div>
+
+    <section class="glass-card">
+      <h2 class="nutrition-official-label text-center">Validar Composição (Sem BIA)</h2>
+      <div class="nutrition-official-grid-2">
+        <div><label class="nutrition-official-input-label">Cintura (cm)</label><input type="number" class="input-dark text-center" value="${escapeAttr(state.cintura)}" oninput="nutritionOfficialSetAnthro({ cintura: this.value })"></div>
+        <div><label class="nutrition-official-input-label">Pescoço (cm)</label><input type="number" class="input-dark text-center" value="${escapeAttr(state.pescoco)}" oninput="nutritionOfficialSetAnthro({ pescoco: this.value })"></div>
       </div>
-      <div class="nutrition-metric-grid" style="margin-top:14px">
-        <div class="nutrition-metric"><span>Massa magra estimada</span><strong>${estimate.leanMass ? formatKroniaNumber(estimate.leanMass, "kg") : "--"}</strong><small>Usada como referência metabólica.</small></div>
-        <div class="nutrition-metric"><span>BF% calculado</span><strong>${estimate.bf ? formatKroniaNumber(estimate.bf, "%") : "--"}</strong><small>Fórmula US Navy, ajustável depois.</small></div>
+      ${state.sexo === "feminino" ? `<div class="nutrition-official-full-field"><label class="nutrition-official-input-label">Quadril (cm) - *Fórmula Feminina</label><input type="number" class="input-dark text-center" value="${escapeAttr(state.quadril)}" oninput="nutritionOfficialSetAnthro({ quadril: this.value })"></div>` : ""}
+      <div class="nutrition-official-grid-2 nutrition-official-top-divider">
+        <div><label class="nutrition-official-input-label">Peso Atual (kg)</label><input type="number" class="input-dark text-center" value="${escapeAttr(state.peso)}" oninput="nutritionOfficialSetAnthro({ peso: this.value })"></div>
+        <div><label class="nutrition-official-input-label">Altura (cm)</label><input type="number" class="input-dark text-center" value="${escapeAttr(state.altura)}" oninput="nutritionOfficialSetAnthro({ altura: this.value })"></div>
+      </div>
+      <div class="nutrition-official-metric-box">
+        <div><p>Massa Magra</p><strong id="nutritionOfficialLeanMass">${estimate.leanMass ? formatKroniaNumber(estimate.leanMass, "kg") : "--"}</strong></div>
+        <div class="nutrition-official-right"><p>BF% Estimado</p><strong id="nutritionOfficialBf">${estimate.bf ? formatKroniaNumber(estimate.bf, "%") : "--%"}</strong></div>
       </div>
     </section>`;
   }
   if (key === "contexto_treino") {
-    return `<section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-status-row"><span>Treino detectado</span><span>Demanda semanal</span></div>
-      <div class="nutrition-input-grid">
-        <div class="nutrition-input-wrap"><label>Frequência</label><select onchange="setNutritionFlowState({ frequenciaTreino: this.value })">
+    return `<section class="glass-card border-l-blue">
+      <div class="nutrition-official-card-head">
+        <span class="sync-tag sync-tag-blue"><i data-lucide="activity" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"></i> Treino Sincronizado</span>
+      </div>
+      <div class="nutrition-official-meta-grid">
+        <p>Frequência Base:</p>
+        <select onchange="setNutritionFlowState({ frequenciaTreino: this.value })">
           ${["3x", "4x", "5x", "6x"].map(function(item) { return `<option value="${item}" ${state.frequenciaTreino === item ? "selected" : ""}>${item} na semana</option>`; }).join("")}
-        </select></div>
-        <div class="nutrition-input-wrap"><label>Período</label><select onchange="setNutritionFlowState({ horarioTreino: this.value })">
+        </select>
+        <p>Horário Foco:</p>
+        <select onchange="setNutritionFlowState({ horarioTreino: this.value })">
           ${["Noite", "Manhã", "Tarde"].map(function(item) { return `<option value="${item}" ${state.horarioTreino === item ? "selected" : ""}>${item.toUpperCase()}</option>`; }).join("")}
-        </select></div>
+        </select>
       </div>
     </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-meal-head"><strong>Sinal de fadiga central</strong><span>${escapeHTML(String(state.fadiga || 0))}</span></div>
-      <input class="nutrition-slider" type="range" min="0" max="10" value="${escapeAttr(state.fadiga)}" oninput="setNutritionFlowState({ fadiga: this.value })">
-      <div class="nutrition-scale-row"><span>Leve</span><span>Crítica</span></div>
-    </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-card-title">Tendência de força</div>
-      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
-        ${renderNutritionSegment("tendenciaForca", "Caindo", "Cai")}
-        ${renderNutritionSegment("tendenciaForca", "Estável", "Estável")}
-        ${renderNutritionSegment("tendenciaForca", "Subindo", "Sobe")}
+
+    <section class="glass-card">
+      <div class="nutrition-official-between">
+        <h2 class="nutrition-official-label no-margin">Sinal de Fadiga Central</h2>
+        <span class="nutrition-official-fatigue" id="nutritionOfficialFatigueVal">${escapeHTML(String(state.fadiga || 0))}</span>
       </div>
-      <div class="nutrition-input-wrap" style="margin-top:14px"><label>Prioridade metabólica</label><select onchange="setNutritionFlowState({ prioridadeMetabolica: this.value })">
-        ${["Render Mais", "Recuperar", "Secar c/ Força"].map(function(item) { return `<option value="${item}" ${state.prioridadeMetabolica === item ? "selected" : ""}>${escapeHTML(item === "Render Mais" ? "Maximizar rendimento" : item === "Recuperar" ? "Otimizar recuperação" : "Secar mantendo força")}</option>`; }).join("")}
-      </select></div>
+      <input type="range" min="0" max="10" value="${escapeAttr(state.fadiga)}" class="slider" oninput="nutritionOfficialSetFatigue(this.value)">
+    </section>
+
+    <section class="glass-card">
+      <h2 class="nutrition-official-label">Tendência de Força</h2>
+      <div class="nutrition-official-grid-3">
+        <button class="chip ${nutritionSelected("tendenciaForca", "Caindo") ? "active" : ""}" onclick="nutritionSet('tendenciaForca','Caindo')"><i data-lucide="trending-down" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Cai</button>
+        <button class="chip ${nutritionSelected("tendenciaForca", "Estável") ? "active" : ""}" onclick="nutritionSet('tendenciaForca','Estável')"><i data-lucide="minus" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Estável</button>
+        <button class="chip ${nutritionSelected("tendenciaForca", "Subindo") ? "active" : ""}" onclick="nutritionSet('tendenciaForca','Subindo')"><i data-lucide="trending-up" class="lucide" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"></i>Sobe</button>
+      </div>
+    </section>
+
+    <section class="glass-card">
+      <h2 class="nutrition-official-label">Prioridade Metabólica</h2>
+      <select onchange="setNutritionFlowState({ prioridadeMetabolica: this.value })" class="input-dark text-center">
+        ${["Render Mais", "Recuperar", "Secar c/ Força"].map(function(item) { return `<option value="${item}" ${state.prioridadeMetabolica === item ? "selected" : ""}>${escapeHTML(item === "Render Mais" ? "Maximizar Rendimento" : item === "Recuperar" ? "Otimizar Recuperação" : "Secar mantendo Força")}</option>`; }).join("")}
+      </select>
     </section>`;
   }
   if (key === "aderencia_saude") {
-    return `<section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-card-title">Estilo do plano</div>
-      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
-        ${renderNutritionSegment("sugestao", "variada", "Brasileiro clássico")}
-        ${renderNutritionSegment("sugestao", "prática", "Alta praticidade")}
+    var hasNightHunger = nutritionSelected("sinaisRelevantes", "Fome noturna");
+    return `<section class="glass-card">
+      <h2 class="nutrition-official-label">Estilo do Plano</h2>
+      <div class="nutrition-official-grid-2">
+        <button class="chip ${nutritionSelected("sugestao", "variada") ? "active" : ""}" onclick="nutritionSet('sugestao','variada')">Brasileiro Clássico</button>
+        <button class="chip ${nutritionSelected("sugestao", "prática") ? "active" : ""}" onclick="nutritionSet('sugestao','prática')">Alta Praticidade</button>
       </div>
     </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-card-title">Gosto e quero no plano</div>
-      <div class="nutrition-chip-grid" style="margin-top:12px">
-        ${["Arroz", "Feijão", "Frango grelhado", "Ovos", "Patinho grelhado", "Banana"].map(function(item) { return renderNutritionChipArray(item === "Arroz" || item === "Feijão" || item === "Banana" ? "carboidratos" : "proteinas", item, item.replace(" grelhado", ""), null); }).join("")}
+
+    <section class="glass-card">
+      <h2 class="nutrition-official-label">Quero manter no plano</h2>
+      <div class="nutrition-official-wrap">
+        ${["Arroz/Feijão", "Frango", "Ovos", "Carne Vermelha"].map(function(item) {
+          return `<button class="chip ${nutritionOfficialLikeSelected(item) ? "active" : ""}" onclick="nutritionOfficialToggleLike('${escapeAttr(item)}')">${escapeHTML(item)}</button>`;
+        }).join("")}
       </div>
     </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-card-title">Sinais & restrições clínicas</div>
-      <div class="nutrition-chip-grid" style="margin-top:12px">
-        ${["Fome noturna", "Baixa energia", "Digestão ruim"].map(function(item) { return renderNutritionChipArray("sinaisRelevantes", item, item, null); }).join("")}
-      </div>
-      <div class="nutrition-chip-grid" style="margin-top:10px">
-        ${["Sem lactose", "Sem glúten"].map(function(item) { return renderNutritionChipArray("restricoesClinicas", item, item, null); }).join("")}
+
+    <section class="glass-card">
+      <h2 class="nutrition-official-label">Sinais & Restrições</h2>
+      <label class="check-container ${hasNightHunger ? "active" : ""}">
+        <input type="checkbox" ${hasNightHunger ? "checked" : ""} onchange="nutritionToggleArray('sinaisRelevantes','Fome noturna',null)">
+        <span>Fome Noturna Frequente</span>
+      </label>
+      <div class="nutrition-official-grid-2">
+        <button class="chip ${nutritionSelected("restricoesClinicas", "Sem lactose") ? "active" : ""}" onclick="nutritionToggleArray('restricoesClinicas','Sem lactose',null)">Sem Lactose</button>
+        <button class="chip ${nutritionSelected("restricoesClinicas", "Sem glúten") ? "active" : ""}" onclick="nutritionToggleArray('restricoesClinicas','Sem glúten',null)">Sem Glúten</button>
       </div>
     </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-card-title">Integração de laboratório</div>
-      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
-        ${renderNutritionSegment("labsStatus", "detected", "Usar exames")}
-        ${renderNutritionSegment("labsStatus", "missing", "Não tenho")}
-        ${renderNutritionSegment("labsStatus", "ignored", "Ignorar")}
+
+    <section class="glass-card">
+      <h2 class="nutrition-official-label">Integração de Laboratório</h2>
+      <div class="nutrition-official-grid-3">
+        <button class="chip ${nutritionSelected("labsStatus", "detected") ? "active" : ""}" onclick="nutritionSet('labsStatus','detected')">Usar Exames</button>
+        <button class="chip ${nutritionSelected("labsStatus", "missing") ? "active" : ""}" onclick="nutritionSet('labsStatus','missing')">Não Tenho</button>
+        <button class="chip ${nutritionSelected("labsStatus", "ignored") ? "active" : ""}" onclick="nutritionSet('labsStatus','ignored')">Ignorar</button>
       </div>
     </section>`;
   }
   if (key === "inteligencia_final") {
     var snapshot = buildNutritionIntakeSnapshot();
+    var goalLabel = nutritionOfficialGoalLabel(snapshot.objetivo);
+    var planStyle = nutritionOfficialPlanStyleLabel(state.sugestao);
+    var labStatusLabels = { detected: "Aplicados", missing: "Perfil Base", ignored: "Ignorados" };
+    var likes = [];
+    if (nutritionOfficialLikeSelected("Arroz/Feijão")) likes.push("Arroz/Feijão");
+    if (nutritionOfficialLikeSelected("Frango")) likes.push("Frango");
+    if (nutritionOfficialLikeSelected("Ovos")) likes.push("Ovos");
+    if (nutritionOfficialLikeSelected("Carne Vermelha")) likes.push("Carne Vermelha");
     var restrText = snapshot.aderencia.restricoes && snapshot.aderencia.restricoes !== "nenhuma" ? snapshot.aderencia.restricoes : "Nenhuma";
     var sigText = snapshot.aderencia.sinais.length ? snapshot.aderencia.sinais.join(", ") : "Nenhum";
-    return `<section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-summary-row"><span>Objetivo base</span><strong>${escapeHTML(snapshot.objetivo)}</strong></div>
-      <div class="nutrition-summary-row"><span>Corpo estimado</span><strong>${escapeHTML(formatKroniaNumber(snapshot.massaMagraEstimada || 0, "kg"))} magra (${escapeHTML(formatKroniaNumber(snapshot.gorduraCorporal || 0, "%"))})</strong></div>
-      <div class="nutrition-summary-row"><span>Treino & prioridade</span><strong>${escapeHTML(snapshot.treino.frequencia)} à ${escapeHTML(snapshot.treino.periodo)} · ${escapeHTML(snapshot.treino.prioridadeMetabolica)}</strong></div>
-      <div class="nutrition-summary-row"><span>Recuperação</span><strong>Fadiga ${escapeHTML(String(snapshot.treino.fadiga))} · Força ${escapeHTML(snapshot.treino.tendenciaForca)}</strong></div>
-      <div class="nutrition-summary-row"><span>Restrições / sinais</span><strong>${escapeHTML(restrText)} · ${escapeHTML(sigText)}</strong></div>
-      <div class="nutrition-summary-row"><span>Saúde & labs</span><strong>${escapeHTML(renderNutritionLabLabel(snapshot.aderencia.labsStatus))}</strong></div>
-      <div class="nutrition-summary-row"><span>Aderência</span><strong>${escapeHTML(snapshot.aderencia.estilo)} · ${escapeHTML(snapshot.aderencia.preferencias || "Preferências padrão")}</strong></div>
+    return `<p class="nutrition-official-final-kicker">O KRONOS vai gerar seu plano baseado em:</p>
+    <section class="glass-card">
+      ${nutritionOfficialSummaryRow("Objetivo Base", escapeHTML(goalLabel))}
+      ${nutritionOfficialSummaryRow("Corpo Est.", `${escapeHTML(formatKroniaNumber(snapshot.massaMagraEstimada || 0, "kg"))} Magra (${escapeHTML(formatKroniaNumber(snapshot.gorduraCorporal || 0, "%"))})`)}
+      ${nutritionOfficialSummaryRow("Treino & Prioridade", `${escapeHTML(snapshot.treino.frequencia)} à ${escapeHTML(snapshot.treino.periodo)}<br>Foco: ${escapeHTML(snapshot.treino.prioridadeMetabolica)}`)}
+      ${nutritionOfficialSummaryRow("Recuperação", `Fadiga ${escapeHTML(String(snapshot.treino.fadiga))} / Força ${escapeHTML(snapshot.treino.tendenciaForca)}`)}
+      ${nutritionOfficialSummaryRow("Restrições / Sinais", `${escapeHTML(restrText)}<br>${escapeHTML(sigText)}`, "danger")}
+      ${nutritionOfficialSummaryRow("Saúde & Labs", `Exames ${escapeHTML(labStatusLabels[state.labsStatus] || "Aplicados")}`, "info")}
+      ${nutritionOfficialSummaryRow("Aderência", `${escapeHTML(planStyle)}<br>${escapeHTML(likes.length ? likes.join(", ") : "Preferências padrão")}`)}
     </section>
-    <section class="nutrition-card nutrition-intake-card nutrition-kronos-note">
-      KRONOS: vou gerar a dieta a partir da massa magra estimada, do treino confirmado e dos sinais de aderência. A fonte final será o plano salvo, não o chat.
+    <section class="nutrition-official-reason">
+      KRONOS: Ajustando dieta para Massa Magra de ${escapeHTML(formatKroniaNumber(snapshot.massaMagraEstimada || 0, "kg"))}, visando ${escapeHTML(goalLabel.toLowerCase())} e controlando saciedade para tratar fome noturna.
     </section>
-    <section class="nutrition-card nutrition-intake-card">
-      <div class="nutrition-input-wrap"><label>Observações para o KRONOS</label><textarea oninput="setNutritionFlowState({ observacoesFinais: this.value })">${escapeHTML(state.observacoesFinais || "")}</textarea></div>
-    </section>`;
+    <textarea onchange="setNutritionFlowState({ observacoesFinais: this.value })" class="input-dark nutrition-official-notes" placeholder="Observações para o KRONOS (Opcional)">${escapeHTML(state.observacoesFinais || "")}</textarea>`;
   }
   return "";
 }
@@ -8992,23 +9086,40 @@ function renderNutritionFlow() {
   var step = NUTRITION_FLOW_STEPS[state.step] || NUTRITION_FLOW_STEPS[0];
   var body = document.getElementById("nutritionFlowBody");
   var label = document.getElementById("nutritionFlowStepLabel");
+  var title = document.getElementById("nutritionFlowStepTitle");
+  var percent = document.getElementById("nutritionFlowPercent");
   var bar = document.getElementById("nutritionFlowProgressBar");
   var primary = document.getElementById("nutritionFlowPrimary");
-  if (label) label.textContent = "CONFIRMAÇÃO " + (state.step + 1) + " DE " + NUTRITION_FLOW_STEPS.length;
-  if (bar) bar.style.width = Math.round(((state.step + 1) / NUTRITION_FLOW_STEPS.length) * 100) + "%";
-  if (body) body.innerHTML = `<h1 class="nutrition-screen-title">${escapeHTML(step.title)}</h1><p class="nutrition-screen-sub">${escapeHTML(step.subtitle)}</p>${renderNutritionFlowContent(step.key)}`;
+  var back = document.getElementById("nutritionFlowBackBtn");
+  var progress = Math.round(((state.step + 1) / NUTRITION_FLOW_STEPS.length) * 100);
+  if (label) label.textContent = "Confirmação " + (state.step + 1) + " de " + NUTRITION_FLOW_STEPS.length;
+  if (title) title.textContent = step.title;
+  if (percent) percent.textContent = progress + "%";
+  if (bar) bar.style.width = progress + "%";
+  if (body) body.innerHTML = renderNutritionFlowContent(step.key);
   if (primary) {
     primary.disabled = false;
-    primary.textContent = step.key === "inteligencia_final" ? "Confirmar e gerar" : "Confirmar";
+    primary.textContent = step.key === "inteligencia_final" ? "CONFIRMAR E GERAR" : "CONFIRMAR";
   }
+  if (back) back.style.display = state.step > 0 ? "block" : "none";
   try { if (typeof lucide !== "undefined") lucide.createIcons(); } catch (_) {}
+  var shell = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
+  if (shell) shell.scrollTop = 0;
 }
 
 async function nutritionFlowGeneratePlan() {
   var primary = document.getElementById("nutritionFlowPrimary");
   if (primary) {
     primary.disabled = true;
-    primary.textContent = "Gerando plano...";
+    primary.textContent = "PROCESSANDO";
+  }
+  var body = document.getElementById("nutritionFlowBody");
+  if (body) {
+    body.innerHTML = `<div class="nutrition-official-processing">
+      <div class="nutrition-official-spinner"></div>
+      <h2 class="font-kronia" style="color:#F97316;font-size:20px;margin:0 0 8px">Processando Plano</h2>
+      <p style="color:#94A3B8;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;line-height:1.5;margin:0">Cruzando motor físico, metabólico e bioquímico...</p>
+    </div>`;
   }
   var intakeSnapshot = buildNutritionIntakeSnapshot();
   var input = buildNutritionFlowInput();

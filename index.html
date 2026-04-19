@@ -9,7 +9,7 @@
   <meta name="vercel-toolbar" content="false"/>
   <title>KRONIA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@700&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@700&family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -1341,25 +1341,28 @@
 ══════════════════════════════════════════ -->
 
 <div id="nutritionFlowScreen" aria-label="Dieta IA">
-  <div class="nutrition-flow-header">
-    <button class="btn-voltar nutrition-flow-back" onclick="nutritionFlowBack()" aria-label="Voltar">
-      <i data-lucide="chevron-left" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-    </button>
-    <div class="nutrition-flow-head-text">
-      <div class="nutrition-flow-kicker" id="nutritionFlowStepLabel">CONFIRMAÇÃO 1 DE 4</div>
-      <div class="nutrition-flow-title-small">Intake de Dieta</div>
-    </div>
-    <div class="nutrition-flow-percent" id="nutritionFlowPercent">25%</div>
-    <button type="button" class="nutrition-flow-kronos" onclick="openKronosFromDieta()" aria-label="Abrir KRONOS">
-      <i data-lucide="zap" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
-    </button>
-  </div>
-  <div class="nutrition-flow-progress">
-    <div id="nutritionFlowProgressBar"></div>
-  </div>
-  <div id="nutritionFlowBody" class="nutrition-flow-body app-scroll"></div>
-  <div class="nutrition-flow-footer">
-    <button id="nutritionFlowPrimary" type="button" class="nutrition-flow-primary" onclick="nutritionFlowNext()">Confirmar</button>
+  <div class="nutrition-intake-shell">
+    <header class="nutrition-flow-header">
+      <div class="nutrition-flow-head-row">
+        <div>
+          <p id="nutritionFlowStepLabel" class="nutrition-flow-kicker">Confirmação 1 de 4</p>
+          <h1 id="nutritionFlowStepTitle" class="nutrition-flow-title-small font-kronia">Contexto Corporal</h1>
+        </div>
+        <div id="nutritionFlowPercent" class="nutrition-flow-percent">25%</div>
+      </div>
+      <div class="nutrition-flow-progress">
+        <div id="nutritionFlowProgressBar"></div>
+      </div>
+    </header>
+
+    <main id="nutritionFlowBody" class="nutrition-flow-body app-scroll"></main>
+
+    <footer class="nutrition-flow-footer">
+      <div class="nutrition-flow-footer-row">
+        <button id="nutritionFlowBackBtn" type="button" class="nutrition-flow-back" onclick="nutritionFlowBack()">Voltar</button>
+        <button id="nutritionFlowPrimary" type="button" class="nutrition-flow-primary" onclick="nutritionFlowNext()">Confirmar</button>
+      </div>
+    </footer>
   </div>
 </div>
 
