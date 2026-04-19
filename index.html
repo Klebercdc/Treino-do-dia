@@ -1016,7 +1016,7 @@
     </div>
 
     <!-- Card DIETA IA -->
-    <div class="home-hero-card home-hero-dieta" onclick="executeKroniaQuickAction('open_diet', { source: 'home_dieta_ia', origin: 'dieta_ia', target: 'premium_diet_workspace' }, { label: 'Dieta IA', source: 'home_hero_card', targetModule: 'dieta' })">
+    <div class="home-hero-card home-hero-dieta" onclick="navTo('dieta');openDietDataScreen()">
       <div class="home-hero-glow home-hero-glow--green"></div>
       <div class="home-hero-body">
         <div class="home-hero-icon home-hero-icon--green">
@@ -1371,7 +1371,7 @@
     <div>
       <div class="kronia-data-kicker">NUTRIÇÃO</div>
       <h1>Dieta</h1>
-      <p>Macros e calorias do dia sincronizados com o Supabase.</p>
+      <p>Plano alimentar salvo, editável e recalculado pelo KRONIA.</p>
     </div>
     <button type="button" class="kronia-data-refresh" onclick="refreshDietDataScreen()" aria-label="Atualizar dieta">
       <i data-lucide="refresh-cw" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
@@ -1379,7 +1379,16 @@
   </div>
   <div id="dietDataSummary" class="kronia-data-grid"></div>
   <div class="kronia-card kronia-card-wide">
-    <div class="kronia-card-title">Consumo do dia</div>
+    <div class="kronia-card-title">Ações da dieta</div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px">
+      <button type="button" class="nutrition-secondary" onclick="openDietaSheet({ source: 'diet_workspace_generate', returnTab: 'dieta' })">Gerar com KRONOS</button>
+      <button type="button" class="nutrition-secondary" onclick="saveActiveDietPlan()">Salvar versão ativa</button>
+      <button type="button" class="nutrition-secondary" onclick="openDietAddItemSheet()">Adicionar item</button>
+      <button type="button" class="nutrition-secondary" onclick="exportActiveDietPlanPDF()">Gerar prescrição PDF</button>
+    </div>
+  </div>
+  <div class="kronia-card kronia-card-wide">
+    <div class="kronia-card-title">Totais do plano</div>
     <div id="dietDataProgress" class="kronia-progress-list"></div>
   </div>
   <div id="dietDataMeals" class="kronia-card kronia-card-wide"></div>
@@ -1945,7 +1954,7 @@
           <span class="orient-chip-icon"><i data-lucide="flame" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
           <span class="orient-chip-name">Calculadora Basal</span>
         </div>
-        <div class="orient-chip" onclick="closeOrientacao();openDietaSheet()">
+        <div class="orient-chip" onclick="closeOrientacao();navTo('dieta');openDietDataScreen()">
           <span class="orient-chip-icon"><i data-lucide="utensils" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
           <span class="orient-chip-name">Gerar Dieta</span>
         </div>
@@ -2490,7 +2499,7 @@
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>
-  <button class="btn btn-nav" id="nav-dieta" onclick="executeKroniaQuickAction('open_diet', { source: 'bottom_nav_dieta', origin: 'bottom_nav', target: 'premium_diet_workspace', returnTab: 'dieta' }, { label: 'Dieta', source: 'bottom_nav', targetModule: 'dieta' })">
+  <button class="btn btn-nav" id="nav-dieta" onclick="navTo('dieta');openDietDataScreen()">
     <span class="btn-icon"><i data-lucide="apple" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Dieta</span>
   </button>
@@ -3116,7 +3125,7 @@
 <script src="src/core/intelligence/kronia-intelligence.js"></script>
 <script src="src/core/intelligence/adminBridge.js"></script>
 
-<script src="app.js?v=2026-04-18-cta-diet-1"></script>
+<script src="app.js?v=2026-04-18-diet-editor-1"></script>
 
 <script src="transforms_patch.js"></script>
 <script src="machine_engine.js"></script>

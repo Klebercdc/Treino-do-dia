@@ -124,22 +124,16 @@ test('delegation executes treino CTA action correctly', () => {
 test('delegation executes dieta CTA action correctly', () => {
   const { document, calls } = loadCtaRuntime();
   document.clickHandler({ target: makeTarget('open_diet', { source: 'test' }) });
-  assert.equal(calls.dietAction.length, 1);
-  assert.equal(calls.dietWorkspace.length, 0);
+  assert.equal(calls.dietWorkspace.length, 1);
+  assert.equal(calls.dietAction.length, 0);
   assert.equal(calls.trainingAction.length, 0);
 });
 
-test('bottom nav diet CTA opens workspace instead of generator flow', () => {
-  const { context, calls } = loadCtaRuntime();
-  const ok = context.window.handleKroniaCTA(
-    'open_diet',
-    { source: 'bottom_nav_dieta', origin: 'bottom_nav' },
-    { label: 'Dieta', source: 'bottom_nav' }
-  );
-
-  assert.equal(ok, true);
-  assert.equal(calls.dietWorkspace.length, 1);
-  assert.equal(calls.dietAction.length, 0);
+test('legacy diet generator alias still opens generator flow', () => {
+  const { document, calls } = loadCtaRuntime();
+  document.clickHandler({ target: makeTarget('open_diet_generator', { source: 'legacy-diet' }) });
+  assert.equal(calls.dietAction.length, 1);
+  assert.equal(calls.dietWorkspace.length, 0);
 });
 
 test('delegation keeps working after re-render and multiple clicks', () => {
@@ -159,6 +153,7 @@ test('legacy action aliases map to canonical actions', () => {
   document.clickHandler({ target: makeTarget('open_diet_generator', { source: 'legacy-diet' }) });
   assert.equal(calls.trainingAction.length, 1);
   assert.equal(calls.dietAction.length, 1);
+  assert.equal(calls.dietWorkspace.length, 0);
 });
 
 test('listener install is idempotent', () => {
@@ -174,6 +169,7 @@ test('invalid action is rejected by whitelist', () => {
   assert.equal(ok, false);
   assert.equal(calls.trainingAction.length, 0);
   assert.equal(calls.dietAction.length, 0);
+  assert.equal(calls.dietWorkspace.length, 0);
 });
 
 test('malformed payload does not break execution', () => {

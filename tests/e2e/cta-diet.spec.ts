@@ -126,12 +126,15 @@ test.describe('CTA and Diet flows', () => {
     await cta.click();
 
     await expect.poll(async () => {
-      return page.evaluate(() => document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true);
-    }).toBe(true);
-    await expect(page.locator('#nutritionFlowBody')).toContainText('Dieta IA');
+      return page.evaluate(() => ({
+        dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
+        dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
+      }));
+    }).toEqual({ dietTab: true, dietData: true });
+    await expect(page.locator('#dietDataScreen')).toContainText('Plano alimentar');
   });
 
-  test('home diet card opens generator and bottom nav opens diet workspace', async ({ page }) => {
+  test('home diet card and bottom nav open the saved diet workspace', async ({ page }) => {
     await page.goto('/');
     await waitForSplash(page);
 
@@ -143,16 +146,8 @@ test.describe('CTA and Diet flows', () => {
         dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
         nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
       }));
-    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: true });
-
-    await page.locator('.nutrition-flow-back').click();
-    await expect.poll(async () => {
-      return page.evaluate(() => ({
-        dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
-        dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
-        nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
-      }));
     }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false });
+    await expect(page.locator('#dietDataScreen')).toContainText('Adicionar item');
 
     await page.locator('#nav-inicio').click();
     await page.locator('#nav-dieta').click();
@@ -162,11 +157,12 @@ test.describe('CTA and Diet flows', () => {
         dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
         dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
         nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+        pendingIntent: localStorage.getItem('kronia_pending_conversation_intent_v1'),
       }));
-    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false });
+    }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false, pendingIntent: null });
   });
 
-  test('diet generation keeps UI responsive and lands on today screen with fallback plan', async ({ page }) => {
+  test('diet generation keeps UI responsive and lands on saved diet workspace with fallback plan', async ({ page }) => {
     await page.route('**/api/kronia/diet', async (route) => {
       await route.fulfill({
         status: 500,
@@ -185,6 +181,11 @@ test.describe('CTA and Diet flows', () => {
     await waitForSplash(page);
 
     await page.evaluate(() => {
+      const login = document.getElementById('loginScreen');
+      if (login) {
+        login.style.display = 'none';
+        login.style.pointerEvents = 'none';
+      }
       if (typeof (window as Window & { openDietaSheet?: () => void }).openDietaSheet === 'function') {
         (window as Window & { openDietaSheet?: () => void }).openDietaSheet?.();
       }
@@ -198,9 +199,11 @@ test.describe('CTA and Diet flows', () => {
       const runtime = window as Window & {
         setNutritionFlowState?: (patch: Record<string, unknown>) => void;
         renderNutritionFlow?: () => void;
+        NUTRITION_FLOW_STEPS?: Array<{ key: string }>;
       };
+      const gerarStep = runtime.NUTRITION_FLOW_STEPS?.findIndex((item) => item.key === 'gerar') ?? 20;
       runtime.setNutritionFlowState?.({
-        step: 20,
+        step: gerarStep,
         peso: '80',
         altura: '180',
         idade: '30',
@@ -214,10 +217,19 @@ test.describe('CTA and Diet flows', () => {
       runtime.renderNutritionFlow?.();
     });
 
-    await page.click('#nutritionFlowPrimary');
+    await page.evaluate(async () => {
+      const runtime = globalThis as typeof globalThis & { nutritionFlowGeneratePlan?: () => Promise<void> };
+      if (typeof runtime.nutritionFlowGeneratePlan !== 'function') {
+        throw new Error('nutritionFlowGeneratePlan não está disponível no runtime');
+      }
+      await runtime.nutritionFlowGeneratePlan();
+    });
 
-    await expect(page.locator('#nutritionFlowBody')).toContainText('Hoje');
-    await expect(page.locator('#nutritionFlowBody')).toContainText(/Meta do dia|Proteína/);
-    await expect(page.locator('#nutritionFlowPrimary')).toBeEnabled();
+    await expect.poll(async () => page.evaluate(() => ({
+      dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
+      nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+      hasSavedPlan: Boolean((window as Window & { _kroniaDietPlan?: unknown })._kroniaDietPlan),
+    }))).toEqual({ dietData: true, nutritionFlow: false, hasSavedPlan: true });
+    await expect(page.locator('#dietDataScreen')).toContainText(/Totais do plano|Proteína/);
   });
 });

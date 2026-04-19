@@ -6107,6 +6107,12 @@ function closeOrientacao() {
   _orientFromHome = false;
 }
 function openDieta() {
+  try { navTo("dieta"); } catch (_) {}
+  try { openDietDataScreen(); } catch (_) {}
+  return;
+}
+
+function openDietaLegacy() {
   const cfg = safeJSON("kronia_config", {});
   const prefs = safeJSON("kronia_calc_prefs", {});
   document.getElementById("davPeso").value    = prefs.davPeso    || cfg.peso    || "";
@@ -6175,90 +6181,460 @@ function openDietDataScreen() {
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
 }
 
-async function refreshDietDataScreen() {
-  var summary = document.getElementById('dietDataSummary');
-  var progress = document.getElementById('dietDataProgress');
-  var meals = document.getElementById('dietDataMeals');
-  if (summary) summary.innerHTML = renderKroniaMetricCard('Calorias', '...', 'Carregando Supabase');
-  if (progress) progress.innerHTML = '<div class="kronia-empty">Sincronizando consumo do dia...</div>';
-  if (meals) meals.innerHTML = '<div class="kronia-card-title">Registros</div><div class="kronia-empty">Carregando...</div>';
+var KRONIA_ACTIVE_DIET_PLAN_KEY = 'kronia_active_diet_plan_v2';
 
-  var goal = null;
-  var logs = [];
+function dietRound(value, decimals) {
+  var d = typeof decimals === 'number' ? decimals : 1;
+  var factor = Math.pow(10, d);
+  return Math.round(asKroniaNumber(value, 0) * factor) / factor;
+}
+
+function getDietItemName(item) {
+  return String(item && (item.nome || item.food_name || item.display_name || item.name) || 'Alimento');
+}
+
+function normalizeDietEditorItem(item, order) {
+  var grams = dietRound(item && (item.gramas || item.grams || item.porcao_gramas), 1);
+  var kcal = dietRound(item && (item.calorias || item.kcal || item.calories), 1);
+  var protein = dietRound(item && (item.proteinas || item.protein_g || item.protein || item.estimated_protein_g), 1);
+  var carbs = dietRound(item && (item.carboidratos || item.carbs_g || item.carbs || item.estimated_carbs_g), 1);
+  var fat = dietRound(item && (item.gorduras || item.fat_g || item.fat || item.estimated_fat_g), 1);
+  var fiber = dietRound(item && (item.fibras || item.fiber_g || item.fiber), 1);
+  var sodium = dietRound(item && (item.sodium_mg || item.sodio_mg || item.sodium), 1);
+  var baseGrams = grams || 100;
+  return {
+    id: item && item.id || ('item_' + Date.now() + '_' + order),
+    sourceType: item && (item.sourceType || item.source_type) || (item && item.foodCode ? 'catalog' : 'custom'),
+    sourceId: item && (item.sourceId || item.source_id || item.foodCode || item.code) || null,
+    name: getDietItemName(item),
+    slot: item && (item.slot || item.substitution_group || item.groupKey || item.group_key) || 'item',
+    quantity: String(item && (item.porcao || item.quantity || item.household_measure || item.default_unit) || (grams ? (grams + ' g') : '1 porção')),
+    grams: grams || null,
+    kcal: kcal,
+    protein: protein,
+    carbs: carbs,
+    fat: fat,
+    fiber: fiber,
+    sodium: sodium,
+    locked: Boolean(item && (item.locked || item.is_locked)),
+    order: Number(order || item && (item.ordem || item.sort_order) || 0),
+    notes: item && item.notes || '',
+    per100: {
+      kcal: baseGrams ? dietRound(kcal / baseGrams * 100, 3) : 0,
+      protein: baseGrams ? dietRound(protein / baseGrams * 100, 3) : 0,
+      carbs: baseGrams ? dietRound(carbs / baseGrams * 100, 3) : 0,
+      fat: baseGrams ? dietRound(fat / baseGrams * 100, 3) : 0,
+      fiber: baseGrams ? dietRound(fiber / baseGrams * 100, 3) : 0,
+      sodium: baseGrams ? dietRound(sodium / baseGrams * 100, 3) : 0
+    },
+    substitutions: Array.isArray(item && item.substituicoes) ? item.substituicoes : []
+  };
+}
+
+function recalculateDietPlan(plan) {
+  var safePlan = plan && typeof plan === 'object' ? Object.assign({}, plan) : {};
+  safePlan.meals = (safePlan.meals || []).map(function(meal, mealIndex) {
+    var items = (meal.items || []).map(function(item, itemIndex) {
+      return Object.assign({}, item, { order: itemIndex + 1 });
+    });
+    var subtotal = items.reduce(function(acc, item) {
+      acc.kcal += asKroniaNumber(item.kcal, 0);
+      acc.protein += asKroniaNumber(item.protein, 0);
+      acc.carbs += asKroniaNumber(item.carbs, 0);
+      acc.fat += asKroniaNumber(item.fat, 0);
+      acc.fiber += asKroniaNumber(item.fiber, 0);
+      acc.sodium += asKroniaNumber(item.sodium, 0);
+      return acc;
+    }, { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 });
+    return Object.assign({}, meal, {
+      order: mealIndex + 1,
+      items: items,
+      subtotal: {
+        kcal: dietRound(subtotal.kcal, 0),
+        protein: dietRound(subtotal.protein, 1),
+        carbs: dietRound(subtotal.carbs, 1),
+        fat: dietRound(subtotal.fat, 1),
+        fiber: dietRound(subtotal.fiber, 1),
+        sodium: dietRound(subtotal.sodium, 0)
+      }
+    });
+  });
+  var totals = safePlan.meals.reduce(function(acc, meal) {
+    acc.kcal += asKroniaNumber(meal.subtotal && meal.subtotal.kcal, 0);
+    acc.protein += asKroniaNumber(meal.subtotal && meal.subtotal.protein, 0);
+    acc.carbs += asKroniaNumber(meal.subtotal && meal.subtotal.carbs, 0);
+    acc.fat += asKroniaNumber(meal.subtotal && meal.subtotal.fat, 0);
+    acc.fiber += asKroniaNumber(meal.subtotal && meal.subtotal.fiber, 0);
+    acc.sodium += asKroniaNumber(meal.subtotal && meal.subtotal.sodium, 0);
+    return acc;
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 });
+  safePlan.totals = {
+    kcal: dietRound(totals.kcal, 0),
+    protein: dietRound(totals.protein, 1),
+    carbs: dietRound(totals.carbs, 1),
+    fat: dietRound(totals.fat, 1),
+    fiber: dietRound(totals.fiber, 1),
+    sodium: dietRound(totals.sodium, 0)
+  };
+  safePlan.updatedAt = new Date().toISOString();
+  return safePlan;
+}
+
+function normalizeDietGeneratedPlan(plan, meta) {
+  var safePlan = plan && typeof plan === 'object' ? plan : {};
+  var meals = Array.isArray(safePlan.refeicoes) ? safePlan.refeicoes : [];
+  return recalculateDietPlan({
+    id: safePlan.id || null,
+    title: safePlan.title || 'Plano alimentar KRONIA',
+    status: 'active',
+    objective: safePlan.objetivo || meta && meta.objective || 'hipertrofia',
+    source: meta && meta.source || 'kronia_generated_plan',
+    targets: {
+      kcal: asKroniaNumber(safePlan.caloriasMeta || safePlan.resumoDiario && safePlan.resumoDiario.calorias, 0),
+      protein: asKroniaNumber(safePlan.macrosMeta && safePlan.macrosMeta.protein || safePlan.resumoDiario && safePlan.resumoDiario.proteinas, 0),
+      carbs: asKroniaNumber(safePlan.macrosMeta && safePlan.macrosMeta.carbs || safePlan.resumoDiario && safePlan.resumoDiario.carboidratos, 0),
+      fat: asKroniaNumber(safePlan.macrosMeta && safePlan.macrosMeta.fat || safePlan.resumoDiario && safePlan.resumoDiario.gorduras, 0)
+    },
+    meals: meals.map(function(meal, mealIndex) {
+      return {
+        id: meal.id || ('meal_' + (mealIndex + 1)),
+        name: meal.nome || meal.meal_name || 'Refeição',
+        slot: meal.tipo || meal.meal_slot || normalizeDietFoodText(meal.nome || 'refeicao'),
+        time: meal.horario || meal.time_hint || '',
+        notes: meal.observacoes || '',
+        items: (meal.itens || []).map(function(item, itemIndex) { return normalizeDietEditorItem(item, itemIndex + 1); })
+      };
+    })
+  });
+}
+
+function buildFallbackActiveDietPlan() {
+  var statePlan = window._nutritionFlowState && window._nutritionFlowState.generatedPlan;
+  if (statePlan) return normalizeDietGeneratedPlan(statePlan, { source: 'nutrition_flow_state' });
+  var snapshot = safeJSON(KRONIA_NUTRITION_SNAPSHOT_KEY, null);
+  if (snapshot && snapshot.activePlan) return normalizeDietGeneratedPlan(snapshot.activePlan, { source: 'nutrition_snapshot' });
+  var input = {};
+  try { input = buildNutritionFlowInput(); } catch (_) {}
+  if (!input || !input.peso) {
+    input = {
+      objetivo: 'hipertrofia',
+      sexo: 'masculino',
+      peso: 75,
+      altura: 175,
+      idade: 30,
+      refeicoesPorDia: 4,
+      nivelAtividade: 'moderadamente ativo',
+      proteinas: ['Frango grelhado', 'Ovos', 'Whey protein'],
+      carboidratos: ['Arroz', 'Feijão', 'Banana'],
+      gorduras: ['Azeite de oliva', 'Abacate', 'Castanhas'],
+      frutas: ['Banana', 'Maçã'],
+      vegetais: ['Brócolis cozido', 'Salada verde']
+    };
+  }
+  return normalizeDietGeneratedPlan(buildLocalDietPlan(input), { source: 'local_deterministic_fallback' });
+}
+
+function readLocalActiveDietPlan() {
+  var plan = safeJSON(KRONIA_ACTIVE_DIET_PLAN_KEY, null);
+  return plan && plan.meals ? recalculateDietPlan(plan) : null;
+}
+
+function setActiveDietPlan(plan, options) {
+  window._kroniaDietPlan = recalculateDietPlan(plan);
+  try { localStorage.setItem(KRONIA_ACTIVE_DIET_PLAN_KEY, JSON.stringify(window._kroniaDietPlan)); } catch (_) {}
+  if (!options || options.render !== false) renderActiveDietPlan();
+  return window._kroniaDietPlan;
+}
+
+async function loadActiveDietPlanFromSupabase() {
+  try {
+    if (!_sb || !_sb.auth) return null;
+    var sessionResp = await _sb.auth.getSession();
+    var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
+    if (!userId) return null;
+    var planResp = await _sb.from('meal_plans')
+      .select('id,title,description,status,created_at,updated_at')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (planResp.error || !planResp.data) return null;
+    var itemsResp = await _sb.from('meal_plan_items')
+      .select('id,meal_name,time_hint,food_name,quantity,unit,calories,protein_g,carbs_g,fat_g,notes,sort_order')
+      .eq('meal_plan_id', planResp.data.id)
+      .order('sort_order', { ascending: true });
+    if (itemsResp.error) return null;
+    var grouped = {};
+    (itemsResp.data || []).forEach(function(row, idx) {
+      var key = row.meal_name || 'Refeição';
+      if (!grouped[key]) grouped[key] = { name: key, time: row.time_hint || '', slot: normalizeDietFoodText(key), items: [] };
+      grouped[key].items.push(normalizeDietEditorItem({
+        id: row.id,
+        nome: row.food_name,
+        quantity: [row.quantity, row.unit].filter(Boolean).join(' '),
+        calorias: row.calories,
+        proteinas: row.protein_g,
+        carboidratos: row.carbs_g,
+        gorduras: row.fat_g,
+        notes: row.notes,
+        sourceType: 'saved'
+      }, idx + 1));
+    });
+    return recalculateDietPlan({
+      id: planResp.data.id,
+      title: planResp.data.title || 'Plano alimentar ativo',
+      status: 'active',
+      source: 'supabase_meal_plans',
+      meals: Object.keys(grouped).map(function(key, idx) { return Object.assign({ id: 'meal_' + (idx + 1) }, grouped[key]); })
+    });
+  } catch (_) {
+    return null;
+  }
+}
+
+async function saveActiveDietPlan() {
+  var plan = recalculateDietPlan(window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
+  setActiveDietPlan(plan, { render: false });
+  var savedRemote = false;
   try {
     var sessionResp = await _sb.auth.getSession();
     var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
     if (userId) {
-      var range = getTodayRangeISO();
-      var results = await Promise.all([
-        _sb.from('nutrition_goals')
-          .select('calories_target,protein_g,carbs_g,fat_g,updated_at')
-          .eq('user_id', userId)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        _sb.from('user_food_logs')
-          .select('meal_type,food_name,quantity,estimated_calories,estimated_protein_g,estimated_carbs_g,estimated_fat_g,consumed_at')
-          .eq('user_id', userId)
-          .gte('consumed_at', range.start)
-          .lt('consumed_at', range.end)
-          .order('consumed_at', { ascending: false })
-      ]);
-      if (!results[0].error) goal = results[0].data || null;
-      if (!results[1].error && Array.isArray(results[1].data)) logs = results[1].data;
+      await _sb.from('meal_plans').update({ status: 'archived' }).eq('user_id', userId).eq('status', 'active');
+      var planInsert = await _sb.from('meal_plans').insert({
+        user_id: userId,
+        title: plan.title || 'Plano alimentar KRONIA',
+        description: 'Plano editável salvo pelo editor de dieta KRONIA',
+        status: 'active'
+      }).select('id').single();
+      if (!planInsert.error && planInsert.data) {
+        var rows = [];
+        plan.meals.forEach(function(meal, mealIndex) {
+          (meal.items || []).forEach(function(item, itemIndex) {
+            rows.push({
+              meal_plan_id: planInsert.data.id,
+              meal_name: meal.name,
+              time_hint: meal.time || null,
+              food_name: item.name,
+              quantity: item.quantity || (item.grams ? String(item.grams) : null),
+              unit: item.grams ? 'g' : null,
+              calories: item.kcal,
+              protein_g: item.protein,
+              carbs_g: item.carbs,
+              fat_g: item.fat,
+              notes: item.notes || null,
+              sort_order: (mealIndex + 1) * 100 + itemIndex
+            });
+          });
+        });
+        if (rows.length) await _sb.from('meal_plan_items').insert(rows);
+        plan.id = planInsert.data.id;
+        savedRemote = true;
+      }
     }
   } catch (_) {}
+  setActiveDietPlan(Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' }));
+  showToast(savedRemote ? 'Dieta salva como versão ativa.' : 'Dieta salva localmente. Entre na conta para sincronizar.', savedRemote ? 'success' : 'info', 3200);
+}
 
-  if (!goal && window._dietaGoalsSupabase) goal = window._dietaGoalsSupabase;
-  if (!goal) {
-    var snap = safeJSON('kronia_nutrition_snapshot_v1', null);
-    var meta = snap && (snap.meta || snap.macros || snap);
-    if (meta) {
-      goal = {
-        calories_target: meta.calorias || meta.calories || meta.metaCalorias || null,
-        protein_g: meta.proteina || meta.protein || meta.protein_g || null,
-        carbs_g: meta.carbo || meta.carbs || meta.carbs_g || null,
-        fat_g: meta.gordura || meta.fat || meta.fat_g || null
-      };
-    }
-  }
+function renderDietMealCard(meal, mealIndex) {
+  var items = (meal.items || []).map(function(item, itemIndex) {
+    return '<div class="kronia-row" style="align-items:flex-start;gap:10px">'
+      + '<div style="flex:1;min-width:0"><strong>' + escapeHTML(item.name) + '</strong><br><span>' + escapeHTML(item.slot || 'item') + ' · ' + escapeHTML(item.quantity || '-') + '</span>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">'
+      + '<input class="bs-input" style="height:34px;padding:7px 9px" value="' + escapeAttr(item.quantity || '') + '" onchange="updateDietPlanItem(' + mealIndex + ',' + itemIndex + ',&quot;quantity&quot;,this.value)" aria-label="Medida caseira">'
+      + '<input class="bs-input" style="height:34px;padding:7px 9px" type="number" inputmode="decimal" value="' + escapeAttr(item.grams || '') + '" onchange="updateDietPlanItem(' + mealIndex + ',' + itemIndex + ',&quot;grams&quot;,this.value)" aria-label="Gramas">'
+      + '</div></div>'
+      + '<div style="text-align:right;min-width:88px"><strong>' + escapeHTML(formatKroniaNumber(item.kcal, 'kcal')) + '</strong><br><span>P ' + escapeHTML(formatKroniaNumber(item.protein, 'g')) + '</span><br><button type="button" class="nutrition-secondary" style="margin-top:6px;padding:7px 8px" onclick="removeDietPlanItem(' + mealIndex + ',' + itemIndex + ')">Remover</button></div>'
+      + '</div>';
+  }).join('');
+  return '<section class="kronia-card kronia-card-wide" style="margin-top:12px">'
+    + '<div class="kronia-card-title">' + escapeHTML(meal.name || 'Refeição') + '</div>'
+    + '<div style="font-size:0.72rem;color:var(--muted);margin-top:4px">' + escapeHTML(meal.time || 'Horário livre') + ' · ' + escapeHTML(formatKroniaNumber(meal.subtotal && meal.subtotal.kcal, 'kcal')) + ' · P ' + escapeHTML(formatKroniaNumber(meal.subtotal && meal.subtotal.protein, 'g')) + ' · C ' + escapeHTML(formatKroniaNumber(meal.subtotal && meal.subtotal.carbs, 'g')) + ' · G ' + escapeHTML(formatKroniaNumber(meal.subtotal && meal.subtotal.fat, 'g')) + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="nutrition-secondary" onclick="openDietAddItemSheet(' + mealIndex + ')">Adicionar item</button><button type="button" class="nutrition-secondary" onclick="openKronosFromDieta(&quot;Ajustar esta refeição mantendo os macros do plano salvo.&quot;)">KRONOS</button></div>'
+    + '<div class="kronia-meal-list" style="margin-top:10px">' + (items || '<div class="kronia-empty">Nenhum item nesta refeição.</div>') + '</div>'
+    + '</section>';
+}
 
-  var totals = logs.reduce(function(acc, row) {
-    acc.calories += asKroniaNumber(row.estimated_calories, 0);
-    acc.protein += asKroniaNumber(row.estimated_protein_g, 0);
-    acc.carbs += asKroniaNumber(row.estimated_carbs_g, 0);
-    acc.fat += asKroniaNumber(row.estimated_fat_g, 0);
-    return acc;
-  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
-
-  var targetCalories = asKroniaNumber(goal && goal.calories_target, 0);
-  var targetProtein = asKroniaNumber(goal && goal.protein_g, 0);
-  var targetCarbs = asKroniaNumber(goal && goal.carbs_g, 0);
-  var targetFat = asKroniaNumber(goal && goal.fat_g, 0);
-
+function renderActiveDietPlan() {
+  var plan = recalculateDietPlan(window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
+  window._kroniaDietPlan = plan;
+  var summary = document.getElementById('dietDataSummary');
+  var progress = document.getElementById('dietDataProgress');
+  var meals = document.getElementById('dietDataMeals');
   if (summary) {
     summary.innerHTML = [
-      renderKroniaMetricCard('Calorias totais', formatKroniaNumber(targetCalories || totals.calories, 'kcal'), targetCalories ? 'Meta ativa' : 'Sem meta ativa'),
-      renderKroniaMetricCard('Proteína', formatKroniaNumber(targetProtein || totals.protein, 'g'), 'Alvo diário'),
-      renderKroniaMetricCard('Carbo', formatKroniaNumber(targetCarbs || totals.carbs, 'g'), 'Energia do treino'),
-      renderKroniaMetricCard('Gordura', formatKroniaNumber(targetFat || totals.fat, 'g'), 'Base hormonal')
+      renderKroniaMetricCard('Calorias', formatKroniaNumber(plan.totals.kcal, 'kcal'), 'Plano ativo'),
+      renderKroniaMetricCard('Proteína', formatKroniaNumber(plan.totals.protein, 'g'), 'Total diário'),
+      renderKroniaMetricCard('Carbo', formatKroniaNumber(plan.totals.carbs, 'g'), 'Total diário'),
+      renderKroniaMetricCard('Gordura', formatKroniaNumber(plan.totals.fat, 'g'), 'Total diário')
     ].join('');
   }
   if (progress) {
+    var target = plan.targets || {};
     progress.innerHTML = [
-      renderKroniaProgress('Calorias', totals.calories, targetCalories, '', 'kcal'),
-      renderKroniaProgress('Proteína', totals.protein, targetProtein, 'green', 'g'),
-      renderKroniaProgress('Carbo', totals.carbs, targetCarbs, 'blue', 'g'),
-      renderKroniaProgress('Gordura', totals.fat, targetFat, 'amber', 'g')
+      renderKroniaProgress('Calorias', plan.totals.kcal, target.kcal || plan.totals.kcal, '', 'kcal'),
+      renderKroniaProgress('Proteína', plan.totals.protein, target.protein || plan.totals.protein, 'green', 'g'),
+      renderKroniaProgress('Carbo', plan.totals.carbs, target.carbs || plan.totals.carbs, 'blue', 'g'),
+      renderKroniaProgress('Gordura', plan.totals.fat, target.fat || plan.totals.fat, 'amber', 'g')
     ].join('');
   }
   if (meals) {
-    meals.innerHTML = '<div class="kronia-card-title">Registros do dia</div>'
-      + (logs.length ? '<div class="kronia-meal-list">'
-      + logs.slice(0, 6).map(function(row) {
-        return '<div class="kronia-row"><div><strong>' + escapeHTML(row.food_name || row.meal_type || 'Refeição') + '</strong><br><span>' + escapeHTML(row.quantity || row.meal_type || 'Hoje') + '</span></div><div>' + escapeHTML(formatKroniaNumber(row.estimated_calories, 'kcal')) + '</div></div>';
-      }).join('') + '</div>' : '<div class="kronia-empty">Nenhum alimento registrado hoje. As metas continuam visíveis a partir do Supabase.</div>');
+    meals.innerHTML = '<div class="kronia-card-title">Plano salvo editável</div>'
+      + '<div style="font-size:0.74rem;color:var(--muted);margin-top:4px">' + escapeHTML(plan.title || 'Plano alimentar KRONIA') + ' · fonte: ' + escapeHTML(plan.source || 'local') + '</div>'
+      + (plan.meals || []).map(renderDietMealCard).join('');
   }
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+}
+
+async function refreshDietDataScreen() {
+  var summary = document.getElementById('dietDataSummary');
+  var progress = document.getElementById('dietDataProgress');
+  var meals = document.getElementById('dietDataMeals');
+  if (summary) summary.innerHTML = renderKroniaMetricCard('Dieta', '...', 'Carregando plano');
+  if (progress) progress.innerHTML = '<div class="kronia-empty">Sincronizando plano salvo...</div>';
+  if (meals) meals.innerHTML = '<div class="kronia-card-title">Plano</div><div class="kronia-empty">Carregando...</div>';
+  var remotePlan = await loadActiveDietPlanFromSupabase();
+  setActiveDietPlan(remotePlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
+}
+
+function updateDietPlanItem(mealIndex, itemIndex, field, value) {
+  var plan = recalculateDietPlan(window._kroniaDietPlan || buildFallbackActiveDietPlan());
+  var item = plan.meals && plan.meals[mealIndex] && plan.meals[mealIndex].items && plan.meals[mealIndex].items[itemIndex];
+  if (!item) return;
+  if (field === 'grams') {
+    var grams = Math.max(0, asKroniaNumber(value, 0));
+    item.grams = grams || null;
+    if (grams && item.per100) {
+      item.kcal = dietRound(item.per100.kcal * grams / 100, 1);
+      item.protein = dietRound(item.per100.protein * grams / 100, 1);
+      item.carbs = dietRound(item.per100.carbs * grams / 100, 1);
+      item.fat = dietRound(item.per100.fat * grams / 100, 1);
+      item.fiber = dietRound(item.per100.fiber * grams / 100, 1);
+      item.sodium = dietRound(item.per100.sodium * grams / 100, 1);
+      item.quantity = grams + ' g';
+    }
+  } else {
+    item[field] = value;
+  }
+  setActiveDietPlan(plan);
+}
+
+function removeDietPlanItem(mealIndex, itemIndex) {
+  var plan = recalculateDietPlan(window._kroniaDietPlan || buildFallbackActiveDietPlan());
+  if (plan.meals && plan.meals[mealIndex] && plan.meals[mealIndex].items) {
+    plan.meals[mealIndex].items.splice(itemIndex, 1);
+    setActiveDietPlan(plan);
+  }
+}
+
+function findDietCatalogItems(query) {
+  var q = normalizeDietFoodText(query || '');
+  var catalog = Array.isArray(NUTRITION_FOOD_CATALOG) ? NUTRITION_FOOD_CATALOG : [];
+  return catalog.filter(function(item) {
+    return !q || normalizeDietFoodText(item.nome).indexOf(q) >= 0 || normalizeDietFoodText(item.grupo).indexOf(q) >= 0;
+  }).slice(0, 20);
+}
+
+function addDietPlanItemFromCatalog(mealIndex, catalogIndex) {
+  var query = document.getElementById('dietAddSearch')?.value || '';
+  var item = findDietCatalogItems(query)[catalogIndex];
+  if (!item) return;
+  addDietPlanItem(mealIndex || 0, normalizeDietEditorItem({
+    nome: item.nome,
+    sourceType: 'catalog',
+    source_id: item.id || item.nome,
+    slot: item.grupo,
+    gramas: item.porcao_gramas || item.gramas || 100,
+    porcao: item.medida || item.default_unit || ((item.porcao_gramas || 100) + ' g'),
+    calorias: item.kcal || item.calorias || 0,
+    proteinas: item.proteina || item.proteinas || 0,
+    carboidratos: item.carbo || item.carboidratos || 0,
+    gorduras: item.gordura || item.gorduras || 0,
+    fibras: item.fibra || item.fibras || 0
+  }, 99));
+}
+
+function addDietPlanItem(mealIndex, item) {
+  var plan = recalculateDietPlan(window._kroniaDietPlan || buildFallbackActiveDietPlan());
+  if (!plan.meals.length) plan.meals.push({ name: 'Refeição', slot: 'refeicao', items: [] });
+  var targetMeal = plan.meals[mealIndex] || plan.meals[0];
+  targetMeal.items = targetMeal.items || [];
+  targetMeal.items.push(item);
+  setActiveDietPlan(plan);
+  closeDietAddItemSheet();
+}
+
+function renderDietAddCatalog(mealIndex) {
+  var list = document.getElementById('dietAddCatalogList');
+  if (!list) return;
+  var query = document.getElementById('dietAddSearch')?.value || '';
+  var items = findDietCatalogItems(query);
+  list.innerHTML = items.map(function(item, idx) {
+    return '<button type="button" class="kronia-row" style="width:100%;text-align:left;background:transparent;color:var(--text);border:0;border-bottom:1px solid var(--border);padding:10px 0" onclick="addDietPlanItemFromCatalog(' + (mealIndex || 0) + ',' + idx + ')"><div><strong>' + escapeHTML(item.nome) + '</strong><br><span>' + escapeHTML(item.grupo || 'catálogo') + '</span></div><div>' + escapeHTML(formatKroniaNumber(item.kcal || item.calorias || 0, 'kcal')) + '</div></button>';
+  }).join('') || '<div class="kronia-empty">Nenhum alimento encontrado.</div>';
+}
+
+function closeDietAddItemSheet() {
+  document.getElementById('dietAddItemSheet')?.remove();
+}
+
+function openDietAddItemSheet(mealIndex) {
+  closeDietAddItemSheet();
+  var plan = window._kroniaDietPlan || buildFallbackActiveDietPlan();
+  var selectedMeal = Number.isFinite(Number(mealIndex)) ? Number(mealIndex) : 0;
+  var sheet = document.createElement('div');
+  sheet.id = 'dietAddItemSheet';
+  sheet.className = 'bottom-sheet show';
+  sheet.onclick = function(event) { if (event.target === sheet) closeDietAddItemSheet(); };
+  sheet.innerHTML = '<div class="bs-box" style="max-height:88vh;overflow-y:auto"><div class="bs-handle"></div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div class="bs-title">Adicionar item</div><div class="bs-sub">Catálogo, busca, produto escaneado ou alimento manual.</div></div><button class="bs-close" onclick="closeDietAddItemSheet()">×</button></div>'
+    + '<label class="bs-label">Refeição</label><select id="dietAddMeal" class="bs-input" onchange="renderDietAddCatalog(Number(this.value))">' + (plan.meals || []).map(function(meal, idx) { return '<option value="' + idx + '" ' + (idx === selectedMeal ? 'selected' : '') + '>' + escapeHTML(meal.name || ('Refeição ' + (idx + 1))) + '</option>'; }).join('') + '</select>'
+    + '<label class="bs-label" style="margin-top:12px">Buscar alimento</label><input id="dietAddSearch" class="bs-input" placeholder="Ex: arroz, frango, banana" oninput="renderDietAddCatalog(Number(document.getElementById(&quot;dietAddMeal&quot;).value))">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0"><button class="nutrition-secondary" onclick="scanDietBarcode()">Escanear produto</button><button class="nutrition-secondary" onclick="addManualDietItem()">Criar manualmente</button></div>'
+    + '<div id="dietAddCatalogList"></div></div>';
+  document.body.appendChild(sheet);
+  renderDietAddCatalog(selectedMeal);
+}
+
+function addManualDietItem() {
+  var mealIndex = Number(document.getElementById('dietAddMeal')?.value || 0);
+  var name = prompt('Nome do alimento');
+  if (!name) return;
+  var grams = asKroniaNumber(prompt('Quantidade em gramas', '100'), 100);
+  var kcal = asKroniaNumber(prompt('Calorias da porção', '0'), 0);
+  var protein = asKroniaNumber(prompt('Proteína em g', '0'), 0);
+  var carbs = asKroniaNumber(prompt('Carboidrato em g', '0'), 0);
+  var fat = asKroniaNumber(prompt('Gordura em g', '0'), 0);
+  addDietPlanItem(mealIndex, normalizeDietEditorItem({ nome: name, sourceType: 'custom', gramas: grams, porcao: grams + ' g', calorias: kcal, proteinas: protein, carboidratos: carbs, gorduras: fat }, 99));
+}
+
+async function scanDietBarcode() {
+  var code = prompt('Escaneamento de produto: informe ou cole o código de barras. Em navegadores compatíveis, a leitura por câmera será ativada em próxima etapa.');
+  if (!code) return;
+  var mealIndex = Number(document.getElementById('dietAddMeal')?.value || 0);
+  addDietPlanItem(mealIndex, normalizeDietEditorItem({ nome: 'Produto ' + code, sourceType: 'barcode', source_id: code, gramas: 100, porcao: '100 g', calorias: 0, proteinas: 0, carboidratos: 0, gorduras: 0 }, 99));
+  showToast('Produto adicionado para preenchimento manual de macros.', 'info', 3200);
+}
+
+function exportActiveDietPlanPDF() {
+  var plan = recalculateDietPlan(window._kroniaDietPlan || buildFallbackActiveDietPlan());
+  setActiveDietPlan(plan, { render: false });
+  var cfg = safeJSON('kronia_config', {});
+  var nome = cfg.nome || 'Atleta';
+  var data = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  var mealsHtml = (plan.meals || []).map(function(meal) {
+    var rows = (meal.items || []).map(function(item) {
+      return '<tr><td>' + escapeHTML(item.name) + '</td><td>' + escapeHTML(item.quantity || '-') + '</td><td>' + escapeHTML(formatKroniaNumber(item.kcal, 'kcal')) + '</td><td>' + escapeHTML(formatKroniaNumber(item.protein, 'g')) + '</td><td>' + escapeHTML(formatKroniaNumber(item.carbs, 'g')) + '</td><td>' + escapeHTML(formatKroniaNumber(item.fat, 'g')) + '</td></tr>';
+    }).join('');
+    return '<section><h2>' + escapeHTML(meal.name) + ' <small>' + escapeHTML(meal.time || '') + '</small></h2><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th></tr></thead><tbody>' + rows + '</tbody></table></section>';
+  }).join('');
+  var html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Prescrição alimentar KRONIA</title><style>body{font-family:Arial,sans-serif;color:#111;padding:32px;max-width:920px;margin:auto}.header{background:#111;color:#fff;padding:22px;border-radius:10px;border-bottom:5px solid #f97316}.kicker{font-size:11px;letter-spacing:.14em;color:#f97316;text-transform:uppercase}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.metric{border:1px solid #ddd;border-radius:8px;padding:12px}.metric span{display:block;font-size:11px;color:#666;text-transform:uppercase}.metric strong{font-size:20px}section{margin:22px 0;border:1px solid #ddd;border-radius:8px;overflow:hidden}h2{margin:0;padding:12px 14px;background:#111;color:#fff;font-size:16px}h2 small{color:#f97316;font-size:12px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:12px}th{background:#f3f4f6;text-transform:uppercase;font-size:10px}.footer{margin-top:26px;color:#666;font-size:11px}@media print{.header,h2{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="header"><div class="kicker">KRONIA · Prescrição alimentar</div><h1>' + escapeHTML(plan.title || 'Plano alimentar') + '</h1><p>' + escapeHTML(nome) + ' · ' + escapeHTML(data) + '</p></div><div class="meta"><div class="metric"><span>Calorias</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.kcal, 'kcal')) + '</strong></div><div class="metric"><span>Proteína</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.protein, 'g')) + '</strong></div><div class="metric"><span>Carboidrato</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.carbs, 'g')) + '</strong></div><div class="metric"><span>Gordura</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.fat, 'g')) + '</strong></div></div>' + mealsHtml + '<div class="footer">Documento gerado a partir da versão ativa salva da dieta. Não substitui acompanhamento de nutricionista.</div><script>window.onload=function(){window.print()}<\/script></body></html>';
+  var win = window.open('', '_blank');
+  if (!win) { showToast('Permita pop-ups para gerar o PDF.', 'warning', 3000); return; }
+  win.document.write(html);
+  win.document.close();
 }
 
 function openEvolutionDataScreen() {
@@ -7030,14 +7406,8 @@ var KRONIA_CTA_EXECUTOR_MAP = Object.freeze({
     return false;
   },
   open_diet: function (context) {
-    if (context && (context.origin === 'bottom_nav' || context.source === 'bottom_nav_dieta')) {
-      if (window.KroniaActions && typeof window.KroniaActions.openDietWorkspace === 'function') {
-        window.KroniaActions.openDietWorkspace(context);
-        return true;
-      }
-    }
-    if (window.KroniaActions && typeof window.KroniaActions.openDietGenerator === 'function') {
-      window.KroniaActions.openDietGenerator(context);
+    if (window.KroniaActions && typeof window.KroniaActions.openDietWorkspace === 'function') {
+      window.KroniaActions.openDietWorkspace(context);
       return true;
     }
     return false;
@@ -7307,7 +7677,8 @@ function orientExpertQuick(tipo) {
     return;
   }
   if (tipo === 'dieta') {
-    executeKroniaQuickAction('open_diet', { source: 'orient_quick_dieta' }, { label: 'Abrir dieta' });
+    try { closeOrientacao(); } catch (_) {}
+    try { navTo('dieta'); openDietDataScreen(); } catch (_) {}
     return;
   }
   const msgs = {
@@ -8534,6 +8905,9 @@ async function nutritionFlowGeneratePlan() {
     step: NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "hoje"; }),
   });
   try {
+    setActiveDietPlan(normalizeDietGeneratedPlan(finalPlan, { source: "nutrition_flow_generated" }), { render: false });
+  } catch (_) {}
+  try {
     var txt = document.getElementById("dietaTexto");
     var res = document.getElementById("dietaResultado");
     if (txt) txt.textContent = finalText;
@@ -8541,6 +8915,11 @@ async function nutritionFlowGeneratePlan() {
   } catch (_) {}
   persistDietGenerationPrefs(input);
   persistCanonicalNutritionSnapshot({ source: "nutrition_plan_generated" });
+  if (getNutritionFlowState().returnTab === "dieta") {
+    closeNutritionFlow();
+    try { navTo("dieta"); openDietDataScreen(); } catch (_) {}
+    return;
+  }
   renderNutritionFlow();
 }
 
