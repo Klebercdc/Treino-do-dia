@@ -6353,13 +6353,29 @@ async function loadActiveDietPlanFromSupabase() {
     var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
     if (!userId) return null;
     var planResp = await _sb.from('meal_plans')
-      .select('id,title,description,status,created_at,updated_at')
+      .select('id,title,description,status,created_at,updated_at,plan_data,context_snapshot')
       .eq('user_id', userId)
       .eq('status', 'active')
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (planResp.error && /plan_data|context_snapshot/i.test(String(planResp.error.message || ''))) {
+      planResp = await _sb.from('meal_plans')
+        .select('id,title,description,status,created_at,updated_at')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    }
     if (planResp.error || !planResp.data) return null;
+    if (planResp.data.plan_data && typeof planResp.data.plan_data === 'object' && Array.isArray(planResp.data.plan_data.meals)) {
+      return recalculateDietPlan(Object.assign({}, planResp.data.plan_data, {
+        id: planResp.data.id,
+        source: 'supabase_meal_plans',
+        contextSnapshot: planResp.data.context_snapshot || planResp.data.plan_data.contextSnapshot || null
+      }));
+    }
     var itemsResp = await _sb.from('meal_plan_items')
       .select('id,meal_name,time_hint,food_name,quantity,unit,calories,protein_g,carbs_g,fat_g,notes,sort_order')
       .eq('meal_plan_id', planResp.data.id)
@@ -6393,8 +6409,11 @@ async function loadActiveDietPlanFromSupabase() {
   }
 }
 
-async function saveActiveDietPlan() {
+async function saveActiveDietPlan(options) {
+  var opts = options && typeof options === 'object' ? options : {};
   var plan = recalculateDietPlan(window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
+  if (opts.contextSnapshot) plan.contextSnapshot = opts.contextSnapshot;
+  if (opts.generatedPlan) plan.rawGeneratedPlan = opts.generatedPlan;
   setActiveDietPlan(plan, { render: false });
   var savedRemote = false;
   try {
@@ -6402,12 +6421,20 @@ async function saveActiveDietPlan() {
     var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
     if (userId) {
       await _sb.from('meal_plans').update({ status: 'archived' }).eq('user_id', userId).eq('status', 'active');
-      var planInsert = await _sb.from('meal_plans').insert({
+      var planPayload = {
         user_id: userId,
         title: plan.title || 'Plano alimentar KRONIA',
         description: 'Plano editável salvo pelo editor de dieta KRONIA',
-        status: 'active'
-      }).select('id').single();
+        status: 'active',
+        plan_data: plan,
+        context_snapshot: opts.contextSnapshot || plan.contextSnapshot || null
+      };
+      var planInsert = await _sb.from('meal_plans').insert(planPayload).select('id').single();
+      if (planInsert.error && /plan_data|context_snapshot/i.test(String(planInsert.error.message || ''))) {
+        delete planPayload.plan_data;
+        delete planPayload.context_snapshot;
+        planInsert = await _sb.from('meal_plans').insert(planPayload).select('id').single();
+      }
       if (!planInsert.error && planInsert.data) {
         var rows = [];
         plan.meals.forEach(function(meal, mealIndex) {
@@ -6435,7 +6462,8 @@ async function saveActiveDietPlan() {
     }
   } catch (_) {}
   setActiveDietPlan(Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' }));
-  showToast(savedRemote ? 'Dieta salva como versão ativa.' : 'Dieta salva localmente. Entre na conta para sincronizar.', savedRemote ? 'success' : 'info', 3200);
+  if (!opts.silent) showToast(savedRemote ? 'Dieta salva como versão ativa.' : 'Dieta salva localmente. Entre na conta para sincronizar.', savedRemote ? 'success' : 'info', 3200);
+  return Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' });
 }
 
 function renderDietMealCard(meal, mealIndex) {
@@ -8020,32 +8048,10 @@ function dietMasterCheckIn() {
 
 var KRONIA_NUTRITION_SNAPSHOT_KEY = "kronia_nutrition_snapshot_v1";
 var NUTRITION_FLOW_STEPS = [
-  { key: "entrada", title: "Dieta IA com KRONOS", subtitle: "Seu plano começa com leitura do corpo, treino, exames, progresso e rotina que já existem no KRONIA." },
-  { key: "objetivo", title: "Qual é seu objetivo?", subtitle: "Escolha a meta principal para calibrar calorias e macros." },
-  { key: "sexo", title: "Sexo biológico", subtitle: "Usado somente para estimar metabolismo basal com mais precisão." },
-  { key: "medidas", title: "Dados corporais", subtitle: "Peso, altura e idade são obrigatórios. % de gordura melhora a estimativa." },
-  { key: "forca", title: "Você faz treino de força?", subtitle: "O plano considera demanda muscular, recuperação e distribuição de carboidratos." },
-  { key: "atividade", title: "Atividade física", subtitle: "Informe o nível geral para estimar seu gasto diário." },
-  { key: "neat", title: "Rotina fora do treino", subtitle: "Passos, trabalho e deslocamento mudam bastante o gasto calórico." },
-  { key: "clinica", title: "Condições clínicas", subtitle: "Diabetes, patologias e medicamentos entram como regras de segurança." },
-  { key: "exames", title: "Exames e sinais clínicos", subtitle: "O KRONOS cruza os exames já enviados e os sinais informados aqui." },
-  { key: "tipo", title: "Tipo de dieta", subtitle: "Selecione o padrão alimentar que você consegue seguir." },
-  { key: "refeicoes", title: "Refeições por dia", subtitle: "A distribuição das refeições será montada a partir desta escolha." },
-  { key: "sugestao", title: "Tipo de sugestão", subtitle: "Defina como prefere receber trocas e ajustes no dia a dia." },
-  { key: "proteinas", title: "Escolha proteínas", subtitle: "Selecione pelo menos 3 fontes que você aceita usar no plano." },
-  { key: "carboidratos", title: "Escolha carboidratos", subtitle: "Selecione pelo menos 3 fontes principais de energia." },
-  { key: "gorduras", title: "Gorduras e extras", subtitle: "Selecione pelo menos 3 opções para completar refeições e aderência." },
-  { key: "frutas", title: "Escolha frutas", subtitle: "Selecione pelo menos 2 frutas para energia, fibras e aderência." },
-  { key: "vegetais", title: "Escolha vegetais", subtitle: "Selecione pelo menos 2 vegetais para micronutrientes e volume alimentar." },
-  { key: "laticinios", title: "Laticínios e substitutos", subtitle: "Escolha opções compatíveis com suas restrições." },
-  { key: "temperos", title: "Temperos e molhos", subtitle: "Escolha itens que deixam o plano mais fácil de seguir." },
-  { key: "resultado", title: "Calorias e macros", subtitle: "Revise a conta antes de gerar o plano." },
-  { key: "gerar", title: "Gerar plano", subtitle: "O KRONOS vai montar o plano usando o contexto completo do app." },
-  { key: "hoje", title: "Hoje", subtitle: "Sua base operacional de nutrição para o dia." },
-  { key: "semana", title: "Semana", subtitle: "Veja como o plano se distribui nos próximos dias." },
-  { key: "refeicao", title: "Refeição detalhada", subtitle: "Revise itens, quantidades, macros e substituições." },
-  { key: "checkin", title: "Check-in", subtitle: "Registre aderência, fome e energia para orientar ajustes." },
-  { key: "coach", title: "KRONOS Coach da dieta", subtitle: "Converse com o KRONOS usando seu plano alimentar, treino e exames como contexto." },
+  { key: "contexto_corporal", title: "Contexto Corporal", subtitle: "Confirme o perfil detectado e ajuste medidas para estimar BF% e massa magra." },
+  { key: "contexto_treino", title: "Contexto de Treino", subtitle: "Confirme demanda semanal, fadiga, força e prioridade metabólica." },
+  { key: "aderencia_saude", title: "Aderência & Saúde", subtitle: "Confirme estilo alimentar, preferências, restrições, sinais e exames." },
+  { key: "inteligencia_final", title: "Inteligência Final", subtitle: "Revise o snapshot canônico antes de gerar e salvar a dieta." },
 ];
 
 var NUTRITION_FOOD_CATALOG = [
@@ -8118,10 +8124,21 @@ function defaultNutritionFlowState() {
     altura: "",
     idade: "",
     gorduraCorporal: "",
+    cintura: "",
+    pescoco: "",
+    quadril: "",
     treinoForca: "sim",
     nivelAtividade: "levemente ativo",
+    frequenciaTreino: "5x",
+    horarioTreino: "Noite",
+    fadiga: 7,
+    tendenciaForca: "Estável",
+    prioridadeMetabolica: "Render Mais",
     neat: "moderado",
     patologia: ["nenhuma"],
+    restricoesClinicas: [],
+    sinaisRelevantes: ["Fome noturna"],
+    labsStatus: "detected",
     medicamentos: "",
     sinaisClinicos: "",
     padraoAlimentar: "onívoro",
@@ -8198,6 +8215,9 @@ function hydrateNutritionFlowFromLegacyForm(context) {
     altura: document.getElementById("dietaAltura")?.value || profile.height_cm || current.altura,
     idade: document.getElementById("dietaIdade")?.value || age || current.idade,
     gorduraCorporal: document.getElementById("dietaGordura")?.value || bodyMetrics.body_fat_percent || current.gorduraCorporal,
+    cintura: bodyMetrics.waist_cm || current.cintura,
+    pescoco: current.pescoco || "",
+    quadril: bodyMetrics.hip_cm || current.quadril,
     nivelAtividade: document.querySelector("#dietaAtivChips .bs-chip.active")?.dataset.val || profile.activity_level || current.nivelAtividade,
     padraoAlimentar: document.getElementById("dietaPadrao")?.value || profile.dietary_pattern || current.padraoAlimentar,
     refeicoesPorDia: meals || Number(document.getElementById("dietaRefeicoes")?.value || 0) || current.refeicoesPorDia,
@@ -8222,6 +8242,8 @@ function syncNutritionFlowToLegacyDietForm() {
   setValue("dietaAltura", state.altura);
   setValue("dietaIdade", state.idade);
   setValue("dietaGordura", state.gorduraCorporal);
+  setValue("dietaFreqTreino", state.frequenciaTreino === "não treino" ? "" : state.frequenciaTreino);
+  setValue("dietaHorarioTreino", state.horarioTreino);
   setValue("dietaRefeicoes", state.refeicoesPorDia);
   setValue("dietaPrefs", mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras, state.frutas, state.vegetais, state.laticinios, state.temperos).join(", "));
   setValue("dietaDislikes", state.alimentosEvitar);
@@ -8242,6 +8264,8 @@ function buildNutritionFlowInput() {
   syncNutritionFlowToLegacyDietForm();
   var state = getNutritionFlowState();
   var pathologies = Array.isArray(state.patologia) ? state.patologia : [];
+  var restrictionText = mergeUniqueDietList(state.sinaisClinicos, state.restricoesClinicas, pathologies.filter(function(item) { return item !== "nenhuma"; })).join(", ") || "nenhuma";
+  var preferenceText = mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras, state.frutas, state.vegetais, state.laticinios, state.temperos).join(", ");
   return Object.assign({}, collectDietGenerationInput(), {
     objetivo: state.objetivo,
     sexo: state.sexo,
@@ -8249,24 +8273,36 @@ function buildNutritionFlowInput() {
     altura: Number(state.altura || 0) || 175,
     idade: Number(state.idade || 0) || 25,
     gorduraCorporal: state.gorduraCorporal ? Number(state.gorduraCorporal) : null,
+    cintura: state.cintura ? Number(state.cintura) : null,
+    pescoco: state.pescoco ? Number(state.pescoco) : null,
+    quadril: state.quadril ? Number(state.quadril) : null,
+    massaMagraEstimada: state.massaMagraEstimada ? Number(state.massaMagraEstimada) : null,
     refeicoesPorDia: Number(state.refeicoesPorDia || 4),
     nivelAtividade: state.nivelAtividade,
-    frequenciaTreino: state.treinoForca === "sim" ? (document.getElementById("dietaFreqTreino")?.value || "3x por semana") : "não treino",
+    frequenciaTreino: state.treinoForca === "sim" ? (state.frequenciaTreino || document.getElementById("dietaFreqTreino")?.value || "3x por semana") : "não treino",
+    horarioTreino: state.horarioTreino || "",
     tipoTreino: state.treinoForca === "sim" ? "musculação" : "não treino",
     patologia: pathologies.join(", ") || "nenhuma",
     medicamentos: state.medicamentos || "",
     padraoAlimentar: state.padraoAlimentar,
-    preferencias: mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras, state.frutas, state.vegetais, state.laticinios, state.temperos).join(", "),
+    restricoes: restrictionText,
+    preferencias: preferenceText,
     alimentosEvitar: state.alimentosEvitar || "",
     aderencia: Object.assign({}, collectDietGenerationInput().aderencia || {}, {
       modoAjuste: state.sugestao,
       praticidade: state.sugestao,
       neat: state.neat,
+      fadiga: Number(state.fadiga || 0),
+      tendenciaForca: state.tendenciaForca,
+      prioridadeMetabolica: state.prioridadeMetabolica,
+      horarioTreino: state.horarioTreino || "",
     }),
     clinicalFlow: {
       patologias: pathologies,
       diabetes: pathologies.some(function(item) { return /diabetes|insulina/i.test(String(item)); }),
       sinaisClinicos: state.sinaisClinicos,
+      sinaisRelevantes: state.sinaisRelevantes,
+      labsStatus: state.labsStatus,
     },
     nutritionFlowSelections: {
       proteinas: state.proteinas,
@@ -8276,6 +8312,9 @@ function buildNutritionFlowInput() {
       vegetais: state.vegetais,
       laticinios: state.laticinios,
       temperos: state.temperos,
+      restricoesClinicas: state.restricoesClinicas,
+      sinaisRelevantes: state.sinaisRelevantes,
+      labsStatus: state.labsStatus,
     },
   });
 }
@@ -8406,12 +8445,8 @@ function nutritionFlowNext() {
   }
   var state = getNutritionFlowState();
   var current = NUTRITION_FLOW_STEPS[state.step] || {};
-  if (current.key === "gerar") {
+  if (current.key === "inteligencia_final") {
     nutritionFlowGeneratePlan();
-    return;
-  }
-  if (current.key === "coach") {
-    openKronosFromDieta("Quero ajustar minha dieta considerando meu plano atual, treino, exames e check-in.");
     return;
   }
   state.step = Math.min(NUTRITION_FLOW_STEPS.length - 1, state.step + 1);
@@ -8422,16 +8457,11 @@ function nutritionFlowNext() {
 function validateNutritionFlowStep() {
   var state = getNutritionFlowState();
   var key = (NUTRITION_FLOW_STEPS[state.step] || {}).key;
-  if (key === "medidas") {
-    if (!(Number(state.peso) > 0 && Number(state.altura) > 0 && Number(state.idade) > 0)) {
-      return { ok: false, message: "Preencha peso, altura e idade com valores válidos." };
+  if (key === "contexto_corporal") {
+    if (!(Number(state.peso) > 0 && Number(state.altura) > 0)) {
+      return { ok: false, message: "Confirme peso e altura com valores válidos." };
     }
   }
-  if (key === "proteinas" && (!Array.isArray(state.proteinas) || state.proteinas.length < 3)) return { ok: false, message: "Selecione pelo menos 3 proteínas." };
-  if (key === "carboidratos" && (!Array.isArray(state.carboidratos) || state.carboidratos.length < 3)) return { ok: false, message: "Selecione pelo menos 3 carboidratos." };
-  if (key === "gorduras" && (!Array.isArray(state.gorduras) || state.gorduras.length < 3)) return { ok: false, message: "Selecione pelo menos 3 gorduras ou extras." };
-  if (key === "frutas" && (!Array.isArray(state.frutas) || state.frutas.length < 2)) return { ok: false, message: "Selecione pelo menos 2 frutas." };
-  if (key === "vegetais" && (!Array.isArray(state.vegetais) || state.vegetais.length < 2)) return { ok: false, message: "Selecione pelo menos 2 vegetais." };
   return { ok: true };
 }
 
@@ -8446,6 +8476,86 @@ function renderNutritionOption(key, value, title, subtitle) {
 function renderNutritionChipArray(key, value, label, exclusiveValue) {
   var selected = nutritionSelected(key, value);
   return `<button type="button" class="nutrition-chip ${selected ? "active" : ""}" onclick="nutritionToggleArray('${key}', '${escapeAttr(value)}', ${exclusiveValue ? "'" + escapeAttr(exclusiveValue) + "'" : "null"})">${escapeHTML(label || value)}</button>`;
+}
+
+function calculateNutritionNavyAnthro(state) {
+  var safe = state && typeof state === "object" ? state : {};
+  var sex = String(safe.sexo || "masculino").toLowerCase();
+  var weight = Number(safe.peso || 0);
+  var height = Number(safe.altura || 0);
+  var waist = Number(safe.cintura || 0);
+  var neck = Number(safe.pescoco || 0);
+  var hip = Number(safe.quadril || 0);
+  var bf = Number(safe.gorduraCorporal || 0);
+  if (!(bf > 2 && bf < 60) && height > 0 && waist > neck) {
+    if (sex === "feminino" && hip > 0 && (waist + hip) > neck) {
+      bf = 163.205 * Math.log10(waist + hip - neck) - 97.684 * Math.log10(height) - 78.387;
+    } else if (sex !== "feminino") {
+      bf = 86.010 * Math.log10(waist - neck) - 70.041 * Math.log10(height) + 36.76;
+    }
+  }
+  bf = Number.isFinite(bf) ? Math.max(0, Math.min(60, Math.round(bf * 10) / 10)) : 0;
+  var leanMass = weight > 0 && bf > 0 ? Math.round(weight * (1 - bf / 100) * 10) / 10 : 0;
+  return { bf: bf, leanMass: leanMass };
+}
+
+function syncNutritionAnthroEstimate() {
+  var state = getNutritionFlowState();
+  var estimate = calculateNutritionNavyAnthro(state);
+  if (estimate.bf > 0 && String(state.gorduraCorporal || "") !== String(estimate.bf)) {
+    window._nutritionFlowState = Object.assign({}, state, {
+      gorduraCorporal: String(estimate.bf),
+      massaMagraEstimada: String(estimate.leanMass || ""),
+    });
+    syncNutritionFlowToLegacyDietForm();
+    persistCanonicalNutritionSnapshot({ source: "nutrition_anthro_estimate" });
+  }
+  return calculateNutritionNavyAnthro(getNutritionFlowState());
+}
+
+function renderNutritionSegment(key, value, label) {
+  var active = nutritionSelected(key, value);
+  return `<button type="button" class="nutrition-chip ${active ? "active" : ""}" onclick="nutritionSet('${key}', '${escapeAttr(value)}')">${escapeHTML(label || value)}</button>`;
+}
+
+function renderNutritionLabLabel(value) {
+  var labels = { detected: "Exames detectados", missing: "Não tenho exames", ignored: "Ignorar exames" };
+  return labels[value] || "Exames detectados";
+}
+
+function buildNutritionIntakeSnapshot() {
+  var state = getNutritionFlowState();
+  var estimate = calculateNutritionNavyAnthro(state);
+  var input = buildNutritionFlowInput();
+  return {
+    objetivo: input.objetivo,
+    sexo: input.sexo,
+    peso: input.peso,
+    altura: input.altura,
+    idade: input.idade,
+    cintura: input.cintura,
+    pescoco: input.pescoco,
+    quadril: input.quadril,
+    gorduraCorporal: estimate.bf || input.gorduraCorporal,
+    massaMagraEstimada: estimate.leanMass || input.massaMagraEstimada,
+    treino: {
+      frequencia: input.frequenciaTreino,
+      periodo: state.horarioTreino,
+      fadiga: Number(state.fadiga || 0),
+      tendenciaForca: state.tendenciaForca,
+      prioridadeMetabolica: state.prioridadeMetabolica,
+    },
+    aderencia: {
+      estilo: state.sugestao === "prática" ? "Alta praticidade" : "Brasileiro clássico",
+      preferencias: input.preferencias,
+      restricoes: input.restricoes,
+      sinais: Array.isArray(state.sinaisRelevantes) ? state.sinaisRelevantes : [],
+      labsStatus: state.labsStatus,
+      observacoes: state.observacoesFinais || "",
+    },
+    supabaseSnapshot: input.supabaseSnapshot || null,
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 function getNutritionCatalogItems(group) {
@@ -8498,105 +8608,117 @@ function renderNutritionFoodStep(key, options, minRequired) {
 
 function renderNutritionFlowContent(key) {
   var state = getNutritionFlowState();
-  if (key === "entrada") {
-    var snapshot = window._dietaSupabaseSnapshot || {};
-    var hasLab = !!(snapshot.latestLabReport && snapshot.latestLabReport.isValid);
-    var training = readDietMasterTrainingSnapshot();
-    return `<section class="nutrition-hero">
-      <div class="nutrition-hero-orbit" aria-hidden="true">
-        <div class="nutrition-hero-core"><i data-lucide="brain-circuit" class="lucide" width="30" height="30" stroke="currentColor" fill="none" stroke-width="1.8"></i></div>
-        <span class="nutrition-hero-node node-body"><i data-lucide="scan-heart" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
-        <span class="nutrition-hero-node node-workout"><i data-lucide="dumbbell" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
-        <span class="nutrition-hero-node node-labs"><i data-lucide="flask-conical" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
-        <span class="nutrition-hero-node node-progress"><i data-lucide="activity" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i></span>
+  if (key === "contexto_corporal") {
+    var estimate = syncNutritionAnthroEstimate();
+    return `<section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-status-row"><span>Perfil base</span><span>${escapeHTML(state.peso ? "Dados detectados" : "Aguardando confirmação")}</span></div>
+      <div class="nutrition-chip-grid intake-chip-grid">
+        ${renderNutritionSegment("objetivo", "hipertrofia", "Hipertrofia")}
+        ${renderNutritionSegment("objetivo", "emagrecimento", "Emagrecer")}
+        ${renderNutritionSegment("objetivo", "forca", "Performance")}
       </div>
-      <div class="nutrition-hero-copy">
-        <strong>KRONOS está cruzando seu contexto</strong>
-        <span>Perfil corporal, treino, exames, progresso e preferências entram antes do primeiro cálculo.</span>
+      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
+        ${renderNutritionSegment("sexo", "masculino", "Masculino")}
+        ${renderNutritionSegment("sexo", "feminino", "Feminino")}
       </div>
     </section>
-    <div class="nutrition-status-row">
-      <span>${snapshot.profile ? "Perfil carregado" : "Perfil local"}</span>
-      <span>${training.sessions7d || training.plannedDays ? "Treino encontrado" : "Treino será informado"}</span>
-      <span>${hasLab ? "Exames ativos" : "Exames quando disponíveis"}</span>
-      <span>KRONOS ativo</span>
-    </div>`;
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-card-title">Scanner corporal sem BIA</div>
+      <div class="nutrition-input-grid" style="margin-top:14px">
+        <div class="nutrition-input-wrap"><label>Cintura (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.cintura)}" oninput="setNutritionFlowState({ cintura: this.value })"></div>
+        <div class="nutrition-input-wrap"><label>Pescoço (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.pescoco)}" oninput="setNutritionFlowState({ pescoco: this.value })"></div>
+        ${state.sexo === "feminino" ? `<div class="nutrition-input-wrap"><label>Quadril (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.quadril)}" oninput="setNutritionFlowState({ quadril: this.value })"></div>` : ""}
+        <div class="nutrition-input-wrap"><label>Peso (kg)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.peso)}" oninput="setNutritionFlowState({ peso: this.value })"></div>
+        <div class="nutrition-input-wrap"><label>Altura (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.altura)}" oninput="setNutritionFlowState({ altura: this.value })"></div>
+        <div class="nutrition-input-wrap"><label>Idade</label><input inputmode="numeric" type="number" value="${escapeAttr(state.idade)}" oninput="setNutritionFlowState({ idade: this.value })"></div>
+      </div>
+      <div class="nutrition-metric-grid" style="margin-top:14px">
+        <div class="nutrition-metric"><span>Massa magra estimada</span><strong>${estimate.leanMass ? formatKroniaNumber(estimate.leanMass, "kg") : "--"}</strong><small>Usada como referência metabólica.</small></div>
+        <div class="nutrition-metric"><span>BF% calculado</span><strong>${estimate.bf ? formatKroniaNumber(estimate.bf, "%") : "--"}</strong><small>Fórmula US Navy, ajustável depois.</small></div>
+      </div>
+    </section>`;
   }
-  if (key === "objetivo") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("objetivo", "emagrecimento", "Emagrecer", "Déficit moderado e proteína alta")}
-    ${renderNutritionOption("objetivo", "hipertrofia", "Hipertrofia", "Superávit controlado para ganho de massa")}
-    ${renderNutritionOption("objetivo", "manutencao", "Manutenção", "Equilíbrio calórico")}
-    ${renderNutritionOption("objetivo", "forca", "Força", "Energia para performance")}
-    ${renderNutritionOption("objetivo", "recomposicao", "Recomposição", "Alta proteína com controle calórico")}
-  </div>`;
-  if (key === "sexo") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("sexo", "masculino", "Masculino", "Usado no cálculo basal")}
-    ${renderNutritionOption("sexo", "feminino", "Feminino", "Usado no cálculo basal")}
-  </div>`;
-  if (key === "medidas") return `<div class="nutrition-card"><div class="nutrition-input-grid">
-    <div class="nutrition-input-wrap"><label>Peso (kg)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.peso)}" oninput="setNutritionFlowState({ peso: this.value })"></div>
-    <div class="nutrition-input-wrap"><label>Altura (cm)</label><input inputmode="decimal" type="number" value="${escapeAttr(state.altura)}" oninput="setNutritionFlowState({ altura: this.value })"></div>
-    <div class="nutrition-input-wrap"><label>Idade</label><input inputmode="numeric" type="number" value="${escapeAttr(state.idade)}" oninput="setNutritionFlowState({ idade: this.value })"></div>
-    <div class="nutrition-input-wrap"><label>% gordura opcional</label><input inputmode="decimal" type="number" value="${escapeAttr(state.gorduraCorporal)}" oninput="setNutritionFlowState({ gorduraCorporal: this.value })"></div>
-  </div></div>`;
-  if (key === "forca") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("treinoForca", "sim", "Sim", "Usar treino de força como eixo do plano")}
-    ${renderNutritionOption("treinoForca", "nao", "Não", "Plano sem demanda de musculação")}
-  </div>`;
-  if (key === "atividade") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("nivelAtividade", "sedentário", "Sedentário", "Pouco deslocamento e sem rotina ativa")}
-    ${renderNutritionOption("nivelAtividade", "levemente ativo", "Leve", "Treino leve ou caminhada ocasional")}
-    ${renderNutritionOption("nivelAtividade", "moderadamente ativo", "Moderado", "Treino regular durante a semana")}
-    ${renderNutritionOption("nivelAtividade", "muito ativo", "Intenso", "Treino frequente e rotina ativa")}
-    ${renderNutritionOption("nivelAtividade", "atleta", "Atleta", "Alta demanda semanal")}
-  </div>`;
-  if (key === "neat") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("neat", "baixo", "Baixo", "Trabalho sentado e poucos passos")}
-    ${renderNutritionOption("neat", "moderado", "Moderado", "Rotina mista com algum deslocamento")}
-    ${renderNutritionOption("neat", "alto", "Alto", "Muitos passos, escadas ou trabalho ativo")}
-  </div>`;
-  if (key === "clinica") return `<div class="nutrition-card">
-    <div class="nutrition-chip-grid">
-      ${["nenhuma", "diabetes tipo 2", "resistência à insulina", "hipertensão arterial", "colesterol alto", "doença renal crônica", "esteatose hepática", "gastrite/refluxo"].map(function(item) { return renderNutritionChipArray("patologia", item, item === "nenhuma" ? "Nenhuma" : item, "nenhuma"); }).join("")}
-    </div>
-    <div class="nutrition-input-wrap" style="margin-top:14px"><label>Medicamentos ou observações</label><textarea oninput="setNutritionFlowState({ medicamentos: this.value })">${escapeHTML(state.medicamentos)}</textarea></div>
-  </div>`;
-  if (key === "exames") return `<div class="nutrition-card">
-    <div class="nutrition-input-wrap"><label>Sinais clínicos, exames ou alertas</label><textarea oninput="setNutritionFlowState({ sinaisClinicos: this.value })">${escapeHTML(state.sinaisClinicos)}</textarea></div>
-    <div style="margin-top:12px;color:var(--text-2);font-size:.78rem;line-height:1.45">Se houver exame válido no KRONIA, ele será lido automaticamente pelo KRONOS.</div>
-  </div>`;
-  if (key === "tipo") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("padraoAlimentar", "onívoro", "Onívora", "Inclui fontes animais e vegetais")}
-    ${renderNutritionOption("padraoAlimentar", "vegetariano", "Vegetariana", "Sem carnes")}
-    ${renderNutritionOption("padraoAlimentar", "vegano", "Vegana", "Somente alimentos vegetais")}
-    ${renderNutritionOption("padraoAlimentar", "low carb", "Carboidrato reduzido", "Carboidrato mais controlado")}
-    ${renderNutritionOption("padraoAlimentar", "mediterrâneo", "Mediterrânea", "Base simples e equilibrada")}
-  </div>`;
-  if (key === "refeicoes") return `<div class="nutrition-option-grid">
-    ${[3,4,5,6].map(function(n) { return renderNutritionOption("refeicoesPorDia", String(n), n + " refeições", n === 4 ? "Padrão prático para treino" : "Distribuição em " + n + " momentos"); }).join("")}
-  </div>`;
-  if (key === "sugestao") return `<div class="nutrition-option-grid">
-    ${renderNutritionOption("sugestao", "prática", "Prática", "Poucas preparações e compras simples")}
-    ${renderNutritionOption("sugestao", "variada", "Variada", "Mais opções de troca")}
-    ${renderNutritionOption("sugestao", "automática", "Automática", "KRONOS sugere ajustes semanais")}
-  </div>`;
-  if (key === "proteinas") return renderNutritionFoodStep("proteinas", getNutritionCatalogItems("proteinas"), 3);
-  if (key === "carboidratos") return renderNutritionFoodStep("carboidratos", getNutritionCatalogItems("carboidratos"), 3);
-  if (key === "gorduras") return renderNutritionFoodStep("gorduras", getNutritionCatalogItems("gorduras"), 3);
-  if (key === "frutas") return renderNutritionFoodStep("frutas", getNutritionCatalogItems("frutas"), 2);
-  if (key === "vegetais") return renderNutritionFoodStep("vegetais", getNutritionCatalogItems("vegetais"), 2);
-  if (key === "laticinios") return renderNutritionFoodStep("laticinios", getNutritionCatalogItems("laticinios"), 1);
-  if (key === "temperos") return renderNutritionFoodStep("temperos", getNutritionCatalogItems("temperos"), 1);
-  if (key === "resultado") return renderNutritionResultScreen();
-  if (key === "gerar") return renderNutritionGenerateScreen();
-  if (key === "hoje") return renderNutritionTodayScreen();
-  if (key === "semana") return renderNutritionWeekScreen();
-  if (key === "refeicao") return renderNutritionMealDetailScreen();
-  if (key === "checkin") return renderNutritionCheckinScreen();
-  if (key === "coach") return `<div class="nutrition-card">
-    <div class="nutrition-metric"><span>Contexto ativo</span><strong>Plano + treino + exames</strong><small>O KRONOS recebe a visão nutricional canônica antes de sugerir ajustes.</small></div>
-    <div class="nutrition-inline-actions"><button class="nutrition-secondary" onclick="openKronosFromDieta('Quero trocar uma refeição mantendo macros e restrições.')">Trocar refeição</button><button class="nutrition-secondary" onclick="openKronosFromDieta('Avalie meu check-in e ajuste minha dieta com segurança.')">Ajustar plano</button></div>
-  </div>`;
+  if (key === "contexto_treino") {
+    return `<section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-status-row"><span>Treino detectado</span><span>Demanda semanal</span></div>
+      <div class="nutrition-input-grid">
+        <div class="nutrition-input-wrap"><label>Frequência</label><select onchange="setNutritionFlowState({ frequenciaTreino: this.value })">
+          ${["3x", "4x", "5x", "6x"].map(function(item) { return `<option value="${item}" ${state.frequenciaTreino === item ? "selected" : ""}>${item} na semana</option>`; }).join("")}
+        </select></div>
+        <div class="nutrition-input-wrap"><label>Período</label><select onchange="setNutritionFlowState({ horarioTreino: this.value })">
+          ${["Noite", "Manhã", "Tarde"].map(function(item) { return `<option value="${item}" ${state.horarioTreino === item ? "selected" : ""}>${item.toUpperCase()}</option>`; }).join("")}
+        </select></div>
+      </div>
+    </section>
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-meal-head"><strong>Sinal de fadiga central</strong><span>${escapeHTML(String(state.fadiga || 0))}</span></div>
+      <input class="nutrition-slider" type="range" min="0" max="10" value="${escapeAttr(state.fadiga)}" oninput="setNutritionFlowState({ fadiga: this.value })">
+      <div class="nutrition-scale-row"><span>Leve</span><span>Crítica</span></div>
+    </section>
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-card-title">Tendência de força</div>
+      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
+        ${renderNutritionSegment("tendenciaForca", "Caindo", "Cai")}
+        ${renderNutritionSegment("tendenciaForca", "Estável", "Estável")}
+        ${renderNutritionSegment("tendenciaForca", "Subindo", "Sobe")}
+      </div>
+      <div class="nutrition-input-wrap" style="margin-top:14px"><label>Prioridade metabólica</label><select onchange="setNutritionFlowState({ prioridadeMetabolica: this.value })">
+        ${["Render Mais", "Recuperar", "Secar c/ Força"].map(function(item) { return `<option value="${item}" ${state.prioridadeMetabolica === item ? "selected" : ""}>${escapeHTML(item === "Render Mais" ? "Maximizar rendimento" : item === "Recuperar" ? "Otimizar recuperação" : "Secar mantendo força")}</option>`; }).join("")}
+      </select></div>
+    </section>`;
+  }
+  if (key === "aderencia_saude") {
+    return `<section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-card-title">Estilo do plano</div>
+      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
+        ${renderNutritionSegment("sugestao", "variada", "Brasileiro clássico")}
+        ${renderNutritionSegment("sugestao", "prática", "Alta praticidade")}
+      </div>
+    </section>
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-card-title">Gosto e quero no plano</div>
+      <div class="nutrition-chip-grid" style="margin-top:12px">
+        ${["Arroz", "Feijão", "Frango grelhado", "Ovos", "Patinho grelhado", "Banana"].map(function(item) { return renderNutritionChipArray(item === "Arroz" || item === "Feijão" || item === "Banana" ? "carboidratos" : "proteinas", item, item.replace(" grelhado", ""), null); }).join("")}
+      </div>
+    </section>
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-card-title">Sinais & restrições clínicas</div>
+      <div class="nutrition-chip-grid" style="margin-top:12px">
+        ${["Fome noturna", "Baixa energia", "Digestão ruim"].map(function(item) { return renderNutritionChipArray("sinaisRelevantes", item, item, null); }).join("")}
+      </div>
+      <div class="nutrition-chip-grid" style="margin-top:10px">
+        ${["Sem lactose", "Sem glúten"].map(function(item) { return renderNutritionChipArray("restricoesClinicas", item, item, null); }).join("")}
+      </div>
+    </section>
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-card-title">Integração de laboratório</div>
+      <div class="nutrition-chip-grid intake-chip-grid" style="margin-top:12px">
+        ${renderNutritionSegment("labsStatus", "detected", "Usar exames")}
+        ${renderNutritionSegment("labsStatus", "missing", "Não tenho")}
+        ${renderNutritionSegment("labsStatus", "ignored", "Ignorar")}
+      </div>
+    </section>`;
+  }
+  if (key === "inteligencia_final") {
+    var snapshot = buildNutritionIntakeSnapshot();
+    var restrText = snapshot.aderencia.restricoes && snapshot.aderencia.restricoes !== "nenhuma" ? snapshot.aderencia.restricoes : "Nenhuma";
+    var sigText = snapshot.aderencia.sinais.length ? snapshot.aderencia.sinais.join(", ") : "Nenhum";
+    return `<section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-summary-row"><span>Objetivo base</span><strong>${escapeHTML(snapshot.objetivo)}</strong></div>
+      <div class="nutrition-summary-row"><span>Corpo estimado</span><strong>${escapeHTML(formatKroniaNumber(snapshot.massaMagraEstimada || 0, "kg"))} magra (${escapeHTML(formatKroniaNumber(snapshot.gorduraCorporal || 0, "%"))})</strong></div>
+      <div class="nutrition-summary-row"><span>Treino & prioridade</span><strong>${escapeHTML(snapshot.treino.frequencia)} à ${escapeHTML(snapshot.treino.periodo)} · ${escapeHTML(snapshot.treino.prioridadeMetabolica)}</strong></div>
+      <div class="nutrition-summary-row"><span>Recuperação</span><strong>Fadiga ${escapeHTML(String(snapshot.treino.fadiga))} · Força ${escapeHTML(snapshot.treino.tendenciaForca)}</strong></div>
+      <div class="nutrition-summary-row"><span>Restrições / sinais</span><strong>${escapeHTML(restrText)} · ${escapeHTML(sigText)}</strong></div>
+      <div class="nutrition-summary-row"><span>Saúde & labs</span><strong>${escapeHTML(renderNutritionLabLabel(snapshot.aderencia.labsStatus))}</strong></div>
+      <div class="nutrition-summary-row"><span>Aderência</span><strong>${escapeHTML(snapshot.aderencia.estilo)} · ${escapeHTML(snapshot.aderencia.preferencias || "Preferências padrão")}</strong></div>
+    </section>
+    <section class="nutrition-card nutrition-intake-card nutrition-kronos-note">
+      KRONOS: vou gerar a dieta a partir da massa magra estimada, do treino confirmado e dos sinais de aderência. A fonte final será o plano salvo, não o chat.
+    </section>
+    <section class="nutrition-card nutrition-intake-card">
+      <div class="nutrition-input-wrap"><label>Observações para o KRONOS</label><textarea oninput="setNutritionFlowState({ observacoesFinais: this.value })">${escapeHTML(state.observacoesFinais || "")}</textarea></div>
+    </section>`;
+  }
   return "";
 }
 
@@ -8641,15 +8763,15 @@ function renderNutritionTodayScreen() {
     ${meals.map(function(meal, index) {
       var subtotal = meal.subtotal || {};
       var registered = state.registeredMeals && state.registeredMeals[index];
-      return `<button type="button" class="nutrition-meal ${registered ? "registered" : ""}" onclick="setNutritionFlowState({ selectedMealIndex: ${index}, step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "refeicao"; })} }); renderNutritionFlow();">
+      return `<button type="button" class="nutrition-meal ${registered ? "registered" : ""}" onclick="setNutritionFlowState({ selectedMealIndex: ${index} }); openDietDataScreen();">
         <div class="nutrition-meal-head"><strong>${escapeHTML(meal.nome || "Refeição")}</strong><span>${escapeHTML(registered ? "Registrada" : (meal.horario || "Hoje"))}</span></div>
         <small>${subtotal.kcal || "--"} kcal · P ${subtotal.prot || "--"}g · C ${subtotal.carb || "--"}g · G ${subtotal.gord || "--"}g</small>
       </button>`;
     }).join("")}
   </div>
   <div class="nutrition-inline-actions">
-    <button class="nutrition-secondary" onclick="setNutritionFlowState({ step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "semana"; })} }); renderNutritionFlow();">Ver semana</button>
-    <button class="nutrition-secondary" onclick="setNutritionFlowState({ step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "checkin"; })} }); renderNutritionFlow();">Check-in</button>
+    <button class="nutrition-secondary" onclick="openDietDataScreen()">Abrir plano salvo</button>
+    <button class="nutrition-secondary" onclick="dietMasterCheckIn()">Check-in</button>
     <button class="nutrition-secondary" onclick="gerarDietaPDF()">Exportar PDF</button>
     <button class="nutrition-secondary" onclick="openKronosFromDieta('Preciso de uma troca para a dieta de hoje.')">KRONOS Coach</button>
   </div>`;
@@ -8667,7 +8789,7 @@ function renderNutritionWeekScreen() {
         <div class="nutrition-meal-head"><strong>${day}</strong><span>${treino}</span></div>
         <small>${meals.length} refeições · mesmas metas, substituições liberadas por macro.</small>
         <div class="nutrition-week-meals">${meals.slice(0, 4).map(function(meal, mealIndex) {
-          return `<button type="button" onclick="setNutritionFlowState({ selectedMealIndex: ${mealIndex}, step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "refeicao"; })} }); renderNutritionFlow();">${escapeHTML(meal.horario || "")} · ${escapeHTML(meal.nome || "Refeição")}</button>`;
+          return `<button type="button" onclick="setNutritionFlowState({ selectedMealIndex: ${mealIndex} }); openDietDataScreen();">${escapeHTML(meal.horario || "")} · ${escapeHTML(meal.nome || "Refeição")}</button>`;
         }).join("")}</div>
       </section>`;
     }).join("")}
@@ -8696,7 +8818,7 @@ function renderNutritionMealDetailScreen() {
   </div>
   <div class="nutrition-inline-actions">
     <button class="nutrition-secondary" onclick="nutritionRegisterMeal(${mealIndex})">Registrar refeição</button>
-    <button class="nutrition-secondary" onclick="setNutritionFlowState({ step: ${NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "hoje"; })} }); renderNutritionFlow();">Voltar para Hoje</button>
+    <button class="nutrition-secondary" onclick="openDietDataScreen()">Voltar para o plano salvo</button>
   </div>`;
 }
 
@@ -8857,17 +8979,12 @@ function renderNutritionFlow() {
   var label = document.getElementById("nutritionFlowStepLabel");
   var bar = document.getElementById("nutritionFlowProgressBar");
   var primary = document.getElementById("nutritionFlowPrimary");
-  if (label) label.textContent = "PASSO " + (state.step + 1) + " DE " + NUTRITION_FLOW_STEPS.length;
+  if (label) label.textContent = "CONFIRMAÇÃO " + (state.step + 1) + " DE " + NUTRITION_FLOW_STEPS.length;
   if (bar) bar.style.width = Math.round(((state.step + 1) / NUTRITION_FLOW_STEPS.length) * 100) + "%";
   if (body) body.innerHTML = `<h1 class="nutrition-screen-title">${escapeHTML(step.title)}</h1><p class="nutrition-screen-sub">${escapeHTML(step.subtitle)}</p>${renderNutritionFlowContent(step.key)}`;
   if (primary) {
     primary.disabled = false;
-    primary.textContent = step.key === "gerar" ? "Gerar plano" : (step.key === "coach" ? "Abrir KRONOS" : "Continuar");
-    if (step.key === "entrada") primary.textContent = "Montar meu plano";
-    if (step.key === "hoje") primary.textContent = "Ver semana";
-    if (step.key === "semana") primary.textContent = "Ver refeição";
-    if (step.key === "refeicao") primary.textContent = "Ir para check-in";
-    if (step.key === "checkin") primary.textContent = "Ir para KRONOS Coach";
+    primary.textContent = step.key === "inteligencia_final" ? "Confirmar e gerar" : "Confirmar";
   }
   try { if (typeof lucide !== "undefined") lucide.createIcons(); } catch (_) {}
 }
@@ -8876,10 +8993,13 @@ async function nutritionFlowGeneratePlan() {
   var primary = document.getElementById("nutritionFlowPrimary");
   if (primary) {
     primary.disabled = true;
-    primary.textContent = "Gerando...";
+    primary.textContent = "Gerando plano...";
   }
+  var intakeSnapshot = buildNutritionIntakeSnapshot();
   var input = buildNutritionFlowInput();
   var dietPayload = buildDietRequestPayloadFromInput(input);
+  dietPayload.context = Object.assign({}, dietPayload.context || {}, { intakeSnapshot: intakeSnapshot, source: "nutrition_intake_v2" });
+  dietPayload.intakeSnapshot = intakeSnapshot;
   var localPlan = buildLocalDietPlan(input);
   var finalPlan = localPlan;
   var finalText = buildLocalDietRenderText(input, "Plano inicial gerado localmente pelo KRONOS.");
@@ -8902,10 +9022,13 @@ async function nutritionFlowGeneratePlan() {
   setNutritionFlowState({
     generatedPlan: finalPlan,
     generatedText: finalText,
-    step: NUTRITION_FLOW_STEPS.findIndex(function(item) { return item.key === "hoje"; }),
+    step: NUTRITION_FLOW_STEPS.length - 1,
   });
   try {
-    setActiveDietPlan(normalizeDietGeneratedPlan(finalPlan, { source: "nutrition_flow_generated" }), { render: false });
+    setActiveDietPlan(Object.assign(normalizeDietGeneratedPlan(finalPlan, { source: "nutrition_intake_generated" }), {
+      contextSnapshot: intakeSnapshot,
+      rawGeneratedPlan: finalPlan,
+    }), { render: false });
   } catch (_) {}
   try {
     var txt = document.getElementById("dietaTexto");
@@ -8915,12 +9038,9 @@ async function nutritionFlowGeneratePlan() {
   } catch (_) {}
   persistDietGenerationPrefs(input);
   persistCanonicalNutritionSnapshot({ source: "nutrition_plan_generated" });
-  if (getNutritionFlowState().returnTab === "dieta") {
-    closeNutritionFlow();
-    try { navTo("dieta"); openDietDataScreen(); } catch (_) {}
-    return;
-  }
-  renderNutritionFlow();
+  try { await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
+  closeNutritionFlow();
+  try { navTo("dieta"); openDietDataScreen(); } catch (_) {}
 }
 
 function selDietaSingleChip(el, groupId) {
@@ -9343,7 +9463,7 @@ async function _preencherDietaDoSupabase() {
 
     const [profRes, metricRes, goalsRes, suplRes, labsRes] = await Promise.all([
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes'), profileScope) : _sb.from('profiles').select('full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes').eq('id', userId)).maybeSingle(),
-      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('body_metrics').select('weight_kg,body_fat_percent'), scopeResolver) : _sb.from('body_metrics').select('weight_kg,body_fat_percent').eq('user_id', userId)).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+      (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('body_metrics').select('weight_kg,body_fat_percent,waist_cm,hip_cm'), scopeResolver) : _sb.from('body_metrics').select('weight_kg,body_fat_percent,waist_cm,hip_cm').eq('user_id', userId)).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g'), scopeResolver) : _sb.from('nutrition_goals').select('calories_target,protein_g,carbs_g,fat_g').eq('user_id', userId)).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('supplement_protocols').select('supplement_name').eq('active', true), scopeResolver) : _sb.from('supplement_protocols').select('supplement_name').eq('user_id', userId).eq('active', true)),
       (window.KroniaAccessScope ? window.KroniaAccessScope.applyScopedQuery(_sb.from('lab_reports').select('id,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,clinical_flags,critical_flags,created_at,processed_at').eq('is_valid', true), scopeResolver) : _sb.from('lab_reports').select('id,normalized_payload,ai_insights,confidence,confidence_summary,is_valid,clinical_flags,critical_flags,created_at,processed_at').eq('user_id', userId).eq('is_valid', true)).order('processed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(1).maybeSingle()
@@ -9745,6 +9865,10 @@ function copiarDieta() {
 }
 
 function gerarDietaPDF() {
+  if (typeof exportActiveDietPlanPDF === "function") {
+    exportActiveDietPlanPDF();
+    return;
+  }
   const conteudo = document.getElementById("dietaTexto").textContent;
   if (!conteudo || conteudo.includes("Calculando")) return;
 
@@ -10776,13 +10900,11 @@ async function requestDietRoute(payload, timeoutMs) {
   const timeout = Number(timeoutMs);
   const supportsAbort = typeof AbortController === "function";
   const controller = supportsAbort ? new AbortController() : null;
-  const requestPromise = apiFetch(resolveAppApiUrl("/api/chat"), {
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/kronia/diet"), {
     method: "POST",
     body: JSON.stringify({
       requestId: "diet_" + Date.now(),
-      messages: [{ role: "user", content: "Gerar dieta pelo KRONOS central." }],
-      isDietDirect: true,
-      dietProfile: payload,
+      action: "GENERATE_DIET",
       payload: payload,
     }),
     signal: controller ? controller.signal : undefined,
