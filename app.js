@@ -6106,13 +6106,44 @@ function closeOrientacao() {
   if (_orientFromHome) { navTo("inicio"); openHome(); } else { navTo("treino"); }
   _orientFromHome = false;
 }
+function resolveKroniaThemeForDieta() {
+  var root = document.documentElement;
+  var body = document.body;
+  var raw = (root && root.dataset && root.dataset.theme) || (body && body.dataset && body.dataset.theme) || "";
+  if (raw === "light" || raw === "dark") return raw;
+  if ((root && root.classList && root.classList.contains("light-mode")) || (body && body.classList && body.classList.contains("light-mode"))) return "light";
+  if ((root && root.classList && root.classList.contains("dark-mode")) || (body && body.classList && body.classList.contains("dark-mode"))) return "dark";
+  return "dark";
+}
+function syncDietaTheme(theme) {
+  var resolved = theme === "light" ? "light" : "dark";
+  [
+    "dietaScreen",
+    "dietDataScreen",
+    "modalBackdrop",
+    "bottomSheet",
+    "dietAddItemSheet"
+  ].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.dataset.theme = resolved;
+    el.classList.toggle("light-mode", resolved === "light");
+    el.classList.toggle("dark-mode", resolved === "dark");
+  });
+  return resolved;
+}
+window.addEventListener("kronia:theme-changed", function(event) {
+  syncDietaTheme(event && event.detail && event.detail.theme || resolveKroniaThemeForDieta());
+});
 function openDieta() {
+  syncDietaTheme(resolveKroniaThemeForDieta());
   try { navTo("dieta"); } catch (_) {}
   try { openDietDataScreen(); } catch (_) {}
   return;
 }
 
 function openDietaLegacy() {
+  syncDietaTheme(resolveKroniaThemeForDieta());
   const cfg = safeJSON("kronia_config", {});
   const prefs = safeJSON("kronia_calc_prefs", {});
   document.getElementById("davPeso").value    = prefs.davPeso    || cfg.peso    || "";
@@ -6175,6 +6206,7 @@ function renderKroniaProgress(label, consumed, target, cssClass, unit) {
 }
 
 function openDietDataScreen() {
+  syncDietaTheme(resolveKroniaThemeForDieta());
   document.getElementById('dietDataScreen')?.classList.add('show');
   document.body.classList.remove('overlay-open');
   refreshDietDataScreen();
@@ -6599,6 +6631,7 @@ function showDietSheetDetails() {
 }
 
 function abrirBottomSheet(mealIndex, itemIndex, nome, subtitulo, peso) {
+  syncDietaTheme(resolveKroniaThemeForDieta());
   var backdrop = document.getElementById('modalBackdrop');
   var bottomSheet = document.getElementById('bottomSheet');
   var title = document.getElementById('bs-title');
@@ -6717,7 +6750,8 @@ function openDietAddItemSheet(mealIndex) {
   var selectedMeal = Number.isFinite(Number(mealIndex)) ? Number(mealIndex) : 0;
   var sheet = document.createElement('div');
   sheet.id = 'dietAddItemSheet';
-  sheet.className = 'bottom-sheet show';
+  sheet.className = 'bottom-sheet show diet-add-item-sheet';
+  sheet.dataset.theme = resolveKroniaThemeForDieta();
   sheet.onclick = function(event) { if (event.target === sheet) closeDietAddItemSheet(); };
   sheet.innerHTML = '<div class="bs-box" style="max-height:88vh;overflow-y:auto"><div class="bs-handle"></div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div class="bs-title">Adicionar item</div><div class="bs-sub">Catálogo, busca, produto escaneado ou alimento manual.</div></div><button class="bs-close" onclick="closeDietAddItemSheet()">×</button></div>'
@@ -6726,6 +6760,7 @@ function openDietAddItemSheet(mealIndex) {
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0"><button class="nutrition-secondary" onclick="scanDietBarcode()">Escanear produto</button><button class="nutrition-secondary" onclick="addManualDietItem()">Criar manualmente</button></div>'
     + '<div id="dietAddCatalogList"></div></div>';
   document.body.appendChild(sheet);
+  syncDietaTheme(resolveKroniaThemeForDieta());
   renderDietAddCatalog(selectedMeal);
 }
 
@@ -8641,6 +8676,170 @@ function renderNutritionLabLabel(value) {
   return labels[value] || "Exames detectados";
 }
 
+var NUTRITION_PATHOLOGY_CATALOG = [
+  {
+    id: "metabolicas",
+    label: "Metabólicas",
+    items: [
+      { id: "obesidade", label: "Obesidade" },
+      { id: "sobrepeso", label: "Sobrepeso" },
+      { id: "pre_diabetes", label: "Pré-diabetes" },
+      { id: "diabetes_tipo_2", label: "Diabetes tipo 2" },
+      { id: "resistencia_insulina", label: "Resistência à insulina" },
+      { id: "sindrome_metabolica", label: "Síndrome metabólica" },
+      { id: "esteatose_hepatica", label: "Esteatose hepática" },
+      { id: "dislipidemia", label: "Dislipidemia" },
+      { id: "hipercolesterolemia", label: "Hipercolesterolemia" },
+      { id: "hipertrigliceridemia", label: "Hipertrigliceridemia" },
+    ],
+  },
+  {
+    id: "cardiovasculares",
+    label: "Cardiovasculares",
+    items: [
+      { id: "hipertensao_arterial", label: "Hipertensão arterial" },
+    ],
+  },
+  {
+    id: "endocrinas_hormonais",
+    label: "Endócrinas e hormonais",
+    items: [
+      { id: "hipotireoidismo", label: "Hipotireoidismo" },
+      { id: "hipertireoidismo", label: "Hipertireoidismo" },
+      { id: "sop", label: "SOP" },
+      { id: "menopausa", label: "Menopausa" },
+    ],
+  },
+  {
+    id: "gastrointestinais",
+    label: "Gastrointestinais",
+    items: [
+      { id: "refluxo_gastroesofagico", label: "Refluxo gastroesofágico" },
+      { id: "gastrite", label: "Gastrite" },
+      { id: "ulcera_peptica", label: "Úlcera péptica" },
+      { id: "sindrome_intestino_irritavel", label: "Síndrome do intestino irritável" },
+      { id: "constipacao_intestinal", label: "Constipação intestinal" },
+      { id: "diarreia_cronica", label: "Diarreia crônica" },
+      { id: "doenca_celiaca", label: "Doença celíaca" },
+      { id: "sensibilidade_gluten", label: "Sensibilidade ao glúten" },
+      { id: "intolerancia_lactose", label: "Intolerância à lactose" },
+      { id: "doenca_crohn", label: "Doença de Crohn" },
+      { id: "retocolite_ulcerativa", label: "Retocolite ulcerativa" },
+    ],
+  },
+  {
+    id: "renais",
+    label: "Renais",
+    items: [
+      { id: "doenca_renal_cronica", label: "Doença renal crônica" },
+      { id: "hiperuricemia", label: "Hiperuricemia" },
+      { id: "gota", label: "Gota" },
+    ],
+  },
+  {
+    id: "carenciais_nutricionais",
+    label: "Carenciais e nutricionais",
+    items: [
+      { id: "desnutricao", label: "Desnutrição" },
+      { id: "baixo_peso", label: "Baixo peso" },
+      { id: "sarcopenia", label: "Sarcopenia" },
+      { id: "caquexia", label: "Caquexia" },
+      { id: "anemia_ferropriva", label: "Anemia ferropriva" },
+      { id: "anemia_megaloblastica", label: "Anemia megaloblástica" },
+      { id: "deficiencia_vitamina_d", label: "Deficiência de vitamina D" },
+    ],
+  },
+  {
+    id: "osseas",
+    label: "Ósseas",
+    items: [
+      { id: "osteopenia", label: "Osteopenia" },
+      { id: "osteoporose", label: "Osteoporose" },
+    ],
+  },
+  {
+    id: "ginecologicas",
+    label: "Ginecológicas",
+    items: [
+      { id: "endometriose", label: "Endometriose" },
+    ],
+  },
+  {
+    id: "alergias_alimentares",
+    label: "Alergias alimentares",
+    items: [
+      { id: "alergia_proteina_leite", label: "Alergia à proteína do leite" },
+      { id: "alergia_ovo", label: "Alergia ao ovo" },
+      { id: "alergia_amendoim", label: "Alergia ao amendoim" },
+      { id: "alergia_oleaginosas", label: "Alergia a oleaginosas" },
+      { id: "alergia_frutos_mar", label: "Alergia a frutos do mar" },
+      { id: "alergia_peixe", label: "Alergia a peixe" },
+    ],
+  },
+];
+
+var openNutritionPathologyCategories = new Set(["metabolicas", "gastrointestinais"]);
+
+function getNutritionPathologyLabel(value) {
+  for (var i = 0; i < NUTRITION_PATHOLOGY_CATALOG.length; i += 1) {
+    var items = NUTRITION_PATHOLOGY_CATALOG[i].items || [];
+    for (var j = 0; j < items.length; j += 1) {
+      if (items[j].id === value) return items[j].label;
+    }
+  }
+  return value === "nenhuma" ? "Nenhuma" : String(value || "");
+}
+
+function renderNutritionPathologySection() {
+  var state = getNutritionFlowState();
+  var selected = Array.isArray(state.patologia) ? state.patologia : ["nenhuma"];
+  return `<section class="glass-card border-l-rose">
+    <div class="nutrition-official-card-head">
+      <div>
+        <h2 class="nutrition-official-label no-margin">Contexto Clínico</h2>
+        <p class="nutrition-official-hint">Selecione para ajuste fino do KRONOS</p>
+      </div>
+      <i data-lucide="stethoscope" class="lucide nutrition-official-rose" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
+    </div>
+    <div class="nutrition-pathology-list">
+      ${NUTRITION_PATHOLOGY_CATALOG.map(function(category) {
+        var isOpen = openNutritionPathologyCategories.has(category.id);
+        return `<div class="nutrition-pathology-category">
+          <button type="button" class="nutrition-pathology-category-btn" onclick="toggleNutritionPathologyCategory('${escapeAttr(category.id)}')">
+            <span>${escapeHTML(category.label)}</span>
+            <i data-lucide="chevron-down" class="lucide ${isOpen ? "rotate-180" : ""}" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"></i>
+          </button>
+          <div class="nutrition-pathology-items ${isOpen ? "show" : ""}">
+            ${(category.items || []).map(function(item) {
+              var active = selected.indexOf(item.id) !== -1;
+              return `<button type="button" class="chip nutrition-pathology-chip ${active ? "active" : ""}" onclick="toggleNutritionPathology('${escapeAttr(item.id)}')">${escapeHTML(item.label)}</button>`;
+            }).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </section>`;
+}
+
+function toggleNutritionPathologyCategory(categoryId) {
+  if (openNutritionPathologyCategories.has(categoryId)) {
+    openNutritionPathologyCategories.delete(categoryId);
+  } else {
+    openNutritionPathologyCategories.add(categoryId);
+  }
+  renderNutritionFlow();
+}
+
+function toggleNutritionPathology(pathologyId) {
+  var state = getNutritionFlowState();
+  var current = Array.isArray(state.patologia) ? state.patologia.slice() : ["nenhuma"];
+  current = current.filter(function(item) { return item && item !== "nenhuma"; });
+  var index = current.indexOf(pathologyId);
+  if (index >= 0) current.splice(index, 1); else current.push(pathologyId);
+  setNutritionFlowState({ patologia: current.length ? current : ["nenhuma"] });
+  renderNutritionFlow();
+}
+
 function buildNutritionIntakeSnapshot() {
   var state = getNutritionFlowState();
   var estimate = calculateNutritionNavyAnthro(state);
@@ -8895,6 +9094,8 @@ function renderNutritionFlowContent(key) {
       </div>
     </section>
 
+    ${renderNutritionPathologySection()}
+
     <section class="glass-card">
       <h2 class="nutrition-official-label">Integração de Laboratório</h2>
       <div class="nutrition-official-grid-3">
@@ -8914,8 +9115,10 @@ function renderNutritionFlowContent(key) {
     if (nutritionOfficialLikeSelected("Frango")) likes.push("Frango");
     if (nutritionOfficialLikeSelected("Ovos")) likes.push("Ovos");
     if (nutritionOfficialLikeSelected("Carne Vermelha")) likes.push("Carne Vermelha");
+    var pathologies = Array.isArray(state.patologia) ? state.patologia.filter(function(item) { return item !== "nenhuma"; }) : [];
     var restrText = snapshot.aderencia.restricoes && snapshot.aderencia.restricoes !== "nenhuma" ? snapshot.aderencia.restricoes : "Nenhuma";
     var sigText = snapshot.aderencia.sinais.length ? snapshot.aderencia.sinais.join(", ") : "Nenhum";
+    var pathologyText = pathologies.length ? pathologies.map(getNutritionPathologyLabel).join(", ") : "Nenhuma";
     return `<p class="nutrition-official-final-kicker">O KRONOS vai gerar seu plano baseado em:</p>
     <section class="glass-card">
       ${nutritionOfficialSummaryRow("Objetivo Base", escapeHTML(goalLabel))}
@@ -8923,7 +9126,7 @@ function renderNutritionFlowContent(key) {
       ${nutritionOfficialSummaryRow("Treino & Prioridade", `${escapeHTML(snapshot.treino.frequencia)} à ${escapeHTML(snapshot.treino.periodo)}<br>Foco: ${escapeHTML(snapshot.treino.prioridadeMetabolica)}`)}
       ${nutritionOfficialSummaryRow("Recuperação", `Fadiga ${escapeHTML(String(snapshot.treino.fadiga))} / Força ${escapeHTML(snapshot.treino.tendenciaForca)}`)}
       ${nutritionOfficialSummaryRow("Restrições / Sinais", `${escapeHTML(restrText)}<br>${escapeHTML(sigText)}`, "danger")}
-      ${nutritionOfficialSummaryRow("Saúde & Labs", `Exames ${escapeHTML(labStatusLabels[state.labsStatus] || "Aplicados")}`, "info")}
+      ${nutritionOfficialSummaryRow("Saúde & Labs", `${escapeHTML(pathologyText)}<br>Exames ${escapeHTML(labStatusLabels[state.labsStatus] || "Aplicados")}`, "info")}
       ${nutritionOfficialSummaryRow("Aderência", `${escapeHTML(planStyle)}<br>${escapeHTML(likes.length ? likes.join(", ") : "Preferências padrão")}`)}
     </section>
     <section class="nutrition-official-reason">
@@ -9625,6 +9828,7 @@ function formatMuscleLabel(value) {
 
 
 async function openDietaSheet(context) {
+  syncDietaTheme(resolveKroniaThemeForDieta());
   if (context && typeof context === 'object') {
     var safeContext = sanitizeCtaObject(context);
     window._kroniaLastDietContext = safeContext;
