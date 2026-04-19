@@ -7724,6 +7724,11 @@ function orientExpertQuick(tipo) {
 var _wdRespostas = {};
 
 function iniciarFluxoDietaNutri() {
+  try {
+    closeOrientacao();
+    openDietaSheet({ source: "legacy_chat_diet_intake_redirect", returnTab: "dieta" });
+    return;
+  } catch (_) {}
   // Garante que a tela de orientação está aberta
   const screen = document.getElementById('orientacaoScreen');
   if (screen && !screen.classList.contains('show')) screen.classList.add('show');
@@ -7839,6 +7844,11 @@ function wdSelect(btn, campo, valor) {
 }
 
 async function gerarDietaComRespostas() {
+  try {
+    closeOrientacao();
+    await openDietaSheet({ source: "legacy_chat_answers_redirect", returnTab: "dieta", autoGenerate: true });
+    return;
+  } catch (_) {}
   document.getElementById('wdCard')?.remove();
 
   const r = _wdRespostas;
@@ -7882,6 +7892,10 @@ async function gerarDietaComRespostas() {
 }
 
 function exportarDietaChatPDF() {
+  if (typeof exportActiveDietPlanPDF === "function") {
+    exportActiveDietPlanPDF();
+    return;
+  }
   // Pega o último bubble de assistente do chat de orientação
   const container = document.getElementById('orientExpertMessages');
   if (!container) return;
@@ -8223,6 +8237,7 @@ function hydrateNutritionFlowFromLegacyForm(context) {
     refeicoesPorDia: meals || Number(document.getElementById("dietaRefeicoes")?.value || 0) || current.refeicoesPorDia,
     preferencias: document.getElementById("dietaPrefs")?.value || (Array.isArray(profile.liked_foods) ? profile.liked_foods.join(", ") : current.preferencias),
     alimentosEvitar: document.getElementById("dietaDislikes")?.value || (Array.isArray(profile.disliked_foods) ? profile.disliked_foods.join(", ") : current.alimentosEvitar),
+    labsStatus: snapshot.latestLabReport ? "detected" : current.labsStatus,
   });
   var restrictions = []
     .concat(Array.isArray(profile.allergies) ? profile.allergies : [])
@@ -9006,15 +9021,9 @@ async function nutritionFlowGeneratePlan() {
   try {
     var guard = await validateScientificGenerationGuard("diet", input.objetivo, dietPayload, { respectedCardContext: true, respectedAnamnesisContext: true });
     if (guard && guard.ok) {
-      var resp = await requestDietRoute(dietPayload, 12000);
-      var data = await parseApiJsonSafely(resp);
-      if (resp.ok && data.success !== false) {
-        var renderModel = extractDietRenderModel(data);
-        if (renderModel) {
-          finalPlan = renderModel;
-          finalText = renderDietModelAsText(renderModel) || finalText;
-        }
-      }
+      var renderModel = await generateDietWithModernEngine(input, dietPayload, 12000);
+      finalPlan = renderModel;
+      finalText = renderDietModelAsText(renderModel) || finalText;
     }
   } catch (err) {
     finalText = buildLocalDietRenderText(input, err && err.message ? err.message : "Falha temporária ao sincronizar dieta. Plano local aplicado.");
@@ -10929,6 +10938,116 @@ async function requestDietRoute(payload, timeoutMs) {
   }
 }
 
+async function requestModernNutritionPlan(payload, timeoutMs) {
+  const timeout = Number(timeoutMs);
+  const supportsAbort = typeof AbortController === "function";
+  const controller = supportsAbort ? new AbortController() : null;
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/nutrition-plan"), {
+    method: "POST",
+    body: JSON.stringify(payload || {}),
+    signal: controller ? controller.signal : undefined,
+  });
+
+  if (!supportsAbort || !Number.isFinite(timeout) || timeout <= 0) {
+    return requestPromise;
+  }
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise(function(_, reject) {
+    timeoutId = setTimeout(function() {
+      try { controller.abort(); } catch (_) {}
+      reject(new Error("Tempo limite da rota moderna de dieta excedido."));
+    }, timeout);
+  });
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+function extractModernNutritionRenderModel(payload) {
+  const safePayload = payload && typeof payload === "object" ? payload : {};
+  const serviceResult = safePayload.data && typeof safePayload.data === "object" ? safePayload.data : safePayload;
+  const plan = serviceResult.plan && typeof serviceResult.plan === "object" ? serviceResult.plan : serviceResult;
+  if (!plan || !Array.isArray(plan.refeicoes) || !plan.refeicoes.length) return null;
+  const calculation = serviceResult.calculation && typeof serviceResult.calculation === "object" ? serviceResult.calculation : {};
+  const resumo = plan.resumoDiario && typeof plan.resumoDiario === "object" ? plan.resumoDiario : {};
+  const clinicalNotes = Array.isArray(serviceResult.clinicalNotes) ? serviceResult.clinicalNotes : [];
+  const meta = {
+    calorias: resumo.calorias || calculation.targetCalories || 0,
+    proteina: resumo.proteinas || calculation.macros && calculation.macros.protein || 0,
+    carbo: resumo.carboidratos || calculation.macros && calculation.macros.carbs || 0,
+    gordura: resumo.gorduras || calculation.macros && calculation.macros.fat || 0,
+    tmb: calculation.tmb || 0,
+    get: calculation.get || 0,
+  };
+  const refeicoes = plan.refeicoes.map(function(meal) {
+    const safeMeal = meal && typeof meal === "object" ? meal : {};
+    const itens = Array.isArray(safeMeal.itens) ? safeMeal.itens : [];
+    const subtotal = safeMeal.subtotal && typeof safeMeal.subtotal === "object" ? safeMeal.subtotal : {};
+    return Object.assign({}, safeMeal, {
+      subtotal: Object.assign({}, subtotal, {
+        kcal: subtotal.kcal || subtotal.calorias || 0,
+        prot: subtotal.prot || subtotal.proteinas || 0,
+        carb: subtotal.carb || subtotal.carboidratos || 0,
+        gord: subtotal.gord || subtotal.gorduras || 0,
+      }),
+      alimentos: Array.isArray(safeMeal.alimentos) && safeMeal.alimentos.length
+        ? safeMeal.alimentos
+        : itens.map(function(item) {
+          const safeItem = item && typeof item === "object" ? item : {};
+          return {
+            nome: safeItem.nome || safeItem.name || "Alimento",
+            qtde: safeItem.porcao || safeItem.quantity || (safeItem.gramas ? (safeItem.gramas + " g") : ""),
+            kcal: safeItem.kcal || safeItem.calorias || 0,
+            prot: safeItem.prot || safeItem.proteinas || 0,
+            carb: safeItem.carb || safeItem.carboidratos || 0,
+            gord: safeItem.gord || safeItem.gorduras || 0,
+          };
+        }),
+    });
+  });
+  return {
+    text: "Plano alimentar gerado pelo motor moderno de nutrição.",
+    flowState: null,
+    failSafe: false,
+    limitedOrientation: null,
+    meta: meta,
+    objetivo: plan.objetivo || calculation.objective || null,
+    caloriasMeta: plan.caloriasMeta || meta.calorias,
+    macrosMeta: plan.macrosMeta || {
+      protein: meta.proteina,
+      carbs: meta.carbo,
+      fat: meta.gordura,
+    },
+    resumoDiario: plan.resumoDiario || {
+      calorias: meta.calorias,
+      proteinas: meta.proteina,
+      carboidratos: meta.carbo,
+      gorduras: meta.gordura,
+    },
+    refeicoes: refeicoes,
+    hidratacao: plan.hidratacao || {},
+    observacoes: []
+      .concat(Array.isArray(plan.observacoes) ? plan.observacoes : [])
+      .concat(clinicalNotes)
+      .filter(Boolean),
+  };
+}
+
+async function generateDietWithModernEngine(input, dietPayload, timeoutMs) {
+  const resp = await requestModernNutritionPlan(dietPayload, timeoutMs || 12000);
+  const data = await resp.json().catch(function() { return null; });
+  if (!resp.ok || !data || data.ok === false || data.failSafe === true) {
+    throw new Error(data && (data.message || data.warning || data.error) || "A rota moderna de dieta retornou erro.");
+  }
+  const renderModel = extractModernNutritionRenderModel(data);
+  if (!renderModel) throw new Error("Contrato inválido da rota moderna de dieta.");
+  return renderModel;
+}
+
 async function gerarDieta() {
   const input = collectDietGenerationInput();
   if (input.fromChatDiet) {
@@ -10967,26 +11086,22 @@ async function gerarDieta() {
   }
 
   try {
-    const resp = await requestDietRoute(dietPayload, 12000);
-    const data = await parseApiJsonSafely(resp);
-    if (!resp.ok || data.success === false) {
-      logUiEvent("diet_pipeline_failed", { status: resp.status, error: data.error || "unknown_error" });
-      txt.textContent = resolveDietRuntimeErrorMessage(data, resp.status, input, "A rota de dieta retornou erro.");
-      return;
-    }
-
-    const renderModel = extractDietRenderModel(data);
-    if (!renderModel) {
-      logUiEvent("diet_response_invalid_contract", {
-        context: "gerarDieta.extractDietRenderModel",
-        keys: Object.keys(data || {}),
-      });
-      txt.textContent = buildLocalDietRenderText(input, "A resposta da dieta veio em formato inválido; aplicando plano local.");
-      return;
-    }
+    const renderModel = await generateDietWithModernEngine(input, dietPayload, 12000);
 
     txt.textContent = renderDietModelAsText(renderModel) || renderModel.text || buildDietFallbackTextFromInput(input);
     try { renderDietMasterMealPreview(renderModel); } catch (_) {}
+    try {
+      var intakeSnapshot = buildNutritionIntakeSnapshot();
+      setNutritionFlowState({ generatedPlan: renderModel, generatedText: txt.textContent });
+      setActiveDietPlan(Object.assign(normalizeDietGeneratedPlan(renderModel, { source: "nutrition_legacy_generate_redirect" }), {
+        contextSnapshot: intakeSnapshot,
+        rawGeneratedPlan: renderModel,
+      }), { render: false });
+      await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
+      closeDietaSheet();
+      navTo("dieta");
+      openDietDataScreen();
+    } catch (_) {}
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({
         type: "diet",

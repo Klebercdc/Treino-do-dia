@@ -1349,6 +1349,7 @@
       <div class="nutrition-flow-kicker" id="nutritionFlowStepLabel">CONFIRMAÇÃO 1 DE 4</div>
       <div class="nutrition-flow-title-small">Intake de Dieta</div>
     </div>
+    <div class="nutrition-flow-percent" id="nutritionFlowPercent">25%</div>
     <button type="button" class="nutrition-flow-kronos" onclick="openKronosFromDieta()" aria-label="Abrir KRONOS">
       <i data-lucide="zap" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
     </button>
@@ -2610,9 +2611,10 @@
   </div>
 </div>
 
-<!-- Sheet: Gerar Dieta — Anamnese Completa -->
+<!-- Compatibilidade: campos legados usados apenas como backing store do intake canônico de 4 etapas.
+     A anamnese longa foi aposentada como UI principal; openDietaSheet() abre nutritionFlowScreen. -->
 
-<div id="dietaSheet" class="bottom-sheet" onclick="if(event.target===this)closeDietaSheet()">
+<div id="dietaSheet" class="bottom-sheet diet-legacy-compat" aria-hidden="true" inert onclick="if(event.target===this)closeDietaSheet()">
   <div class="bs-box">
     <div class="bs-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
