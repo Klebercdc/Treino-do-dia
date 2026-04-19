@@ -1340,27 +1340,27 @@
      DIETA IA — FLUXO NATIVO
 ══════════════════════════════════════════ -->
 
-<div id="nutritionFlowScreen" aria-label="Dieta IA">
-  <div class="nutrition-intake-shell">
-    <header class="nutrition-flow-header">
-      <div class="nutrition-flow-head-row">
+<div id="nutritionFlowScreen" aria-label="KRONIA - Intake Oficial">
+  <div class="nutrition-intake-shell max-w-md mx-auto min-h-screen relative pb-32">
+    <header class="nutrition-flow-header p-6 sticky top-0 bg-[#0F172A]/90 backdrop-blur-md z-50">
+      <div class="nutrition-flow-head-row flex justify-between items-end mb-3">
         <div>
-          <p id="nutritionFlowStepLabel" class="nutrition-flow-kicker">Confirmação 1 de 4</p>
-          <h1 id="nutritionFlowStepTitle" class="nutrition-flow-title-small font-kronia">Contexto Corporal</h1>
+          <p id="nutritionFlowStepLabel" class="nutrition-flow-kicker text-orange-500 font-black text-[10px] uppercase tracking-widest">Confirmação 1 de 4</p>
+          <h1 id="nutritionFlowStepTitle" class="nutrition-flow-title-small text-xl font-kronia italic uppercase">Contexto Corporal</h1>
         </div>
-        <div id="nutritionFlowPercent" class="nutrition-flow-percent">25%</div>
+        <div id="nutritionFlowPercent" class="nutrition-flow-percent text-slate-500 font-bold text-xs">25%</div>
       </div>
-      <div class="nutrition-flow-progress">
-        <div id="nutritionFlowProgressBar"></div>
+      <div class="nutrition-flow-progress w-full h-1.5 bg-slate-800 rounded-full">
+        <div id="nutritionFlowProgressBar" class="w-1/4 h-full bg-orange-500 shadow-[0_0_10px_#F97316] transition-all duration-500"></div>
       </div>
     </header>
 
-    <main id="nutritionFlowBody" class="nutrition-flow-body app-scroll"></main>
+    <main id="nutritionFlowBody" class="nutrition-flow-body app-scroll px-6 space-y-6 pt-2"></main>
 
-    <footer class="nutrition-flow-footer">
-      <div class="nutrition-flow-footer-row">
-        <button id="nutritionFlowBackBtn" type="button" class="nutrition-flow-back" onclick="nutritionFlowBack()">Voltar</button>
-        <button id="nutritionFlowPrimary" type="button" class="nutrition-flow-primary" onclick="nutritionFlowNext()">Confirmar</button>
+    <footer class="nutrition-flow-footer fixed bottom-0 left-0 right-0 p-6 bg-[#0F172A]/90 backdrop-blur-md border-t border-white/5 z-50">
+      <div class="nutrition-flow-footer-row max-w-md mx-auto flex gap-3">
+        <button id="nutritionFlowBackBtn" type="button" class="nutrition-flow-back hidden w-1/4 bg-slate-800 text-white py-5 rounded-2xl font-kronia text-[10px] uppercase tracking-widest transition-all active:scale-95" onclick="nutritionFlowBack()">Voltar</button>
+        <button id="nutritionFlowPrimary" type="button" class="nutrition-flow-primary flex-1 bg-orange-500 text-white py-5 rounded-2xl font-kronia text-sm shadow-[0_0_20px_rgba(249,115,22,0.3)] tracking-widest transition-all active:scale-95" onclick="nutritionFlowNext()">CONFIRMAR</button>
       </div>
     </footer>
   </div>
@@ -1371,32 +1371,69 @@
 ══════════════════════════════════════════ -->
 
 <div id="dietDataScreen" class="kronia-data-screen app-scroll" aria-label="Dieta">
-  <div class="kronia-data-header">
-    <div>
-      <div class="kronia-data-kicker">NUTRIÇÃO</div>
-      <h1>Dieta</h1>
-      <p>Plano alimentar salvo, editável e recalculado pelo KRONIA.</p>
+  <header class="diet-premium-header">
+    <div class="diet-premium-header-row">
+      <div>
+        <h1>Plano Alimentar</h1>
+        <p>Versão Atual • Atualizado hoje</p>
+      </div>
+      <div class="diet-premium-actions">
+        <button type="button" title="Gerar PDF" onclick="exportActiveDietPlanPDF()">
+          <i data-lucide="file-text" stroke-width="1.5" width="20" height="20"></i>
+        </button>
+        <button type="button" class="diet-premium-save" title="Salvar versão ativa" onclick="saveActiveDietPlan()">
+          <i data-lucide="save" stroke-width="1.5" width="20" height="20"></i>
+        </button>
+      </div>
     </div>
-    <button type="button" class="kronia-data-refresh" onclick="refreshDietDataScreen()" aria-label="Atualizar dieta">
-      <i data-lucide="refresh-cw" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
+  </header>
+
+  <div id="dietDataPremium" class="diet-premium-content">
+    <div id="dietDataSummary"></div>
+    <div id="dietDataProgress"></div>
+    <div id="dietDataMeals"></div>
+  </div>
+
+  <div class="diet-premium-floating">
+    <button type="button" onclick="openDietaSheet({ source: 'diet_workspace_generate', returnTab: 'dieta' })">
+      <i data-lucide="sparkles" class="text-orange-400" stroke-width="1.5"></i>
+      <span>Recalcular Dieta com KRONOS</span>
     </button>
   </div>
-  <div id="dietDataSummary" class="kronia-data-grid"></div>
-  <div class="kronia-card kronia-card-wide">
-    <div class="kronia-card-title">Ações da dieta</div>
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px">
-      <button type="button" class="nutrition-secondary" onclick="openDietaSheet({ source: 'diet_workspace_generate', returnTab: 'dieta' })">Gerar com KRONOS</button>
-      <button type="button" class="nutrition-secondary" onclick="saveActiveDietPlan()">Salvar versão ativa</button>
-      <button type="button" class="nutrition-secondary" onclick="openDietAddItemSheet()">Adicionar item</button>
-      <button type="button" class="nutrition-secondary" onclick="exportActiveDietPlanPDF()">Gerar prescrição PDF</button>
+</div>
+
+<div id="modalBackdrop" class="diet-premium-backdrop">
+  <div class="diet-premium-backdrop-hit" onclick="fecharBottomSheet()"></div>
+  <div id="bottomSheet" class="diet-premium-bottom-sheet">
+    <div class="diet-premium-handle"></div>
+    <h3 id="bs-title">Nome</h3>
+    <p id="bs-subtitle">Macros</p>
+    <div class="diet-premium-sheet-actions">
+      <button type="button" onclick="replaceDietSheetItem()">
+        <div><i data-lucide="refresh-cw" stroke-width="1.5"></i></div>
+        <span>Substituir</span>
+      </button>
+      <button type="button" onclick="showDietSheetDetails()">
+        <div><i data-lucide="info" stroke-width="1.5"></i></div>
+        <span>Detalhes</span>
+      </button>
+      <button type="button" class="diet-premium-sheet-kronos" onclick="openKronosFromDieta('Ajustar este alimento mantendo os macros do plano salvo.');fecharBottomSheet();">
+        <div><i data-lucide="sparkles" stroke-width="1.5"></i></div>
+        <span>KRONOS</span>
+      </button>
+      <button type="button" class="diet-premium-sheet-remove" onclick="removeDietSheetItem()">
+        <div><i data-lucide="trash-2" stroke-width="1.5"></i></div>
+        <span>Remover</span>
+      </button>
     </div>
+    <p class="diet-premium-quantity-label">Quantidade</p>
+    <div class="diet-premium-quantity">
+      <button type="button" onclick="adjustDietSheetWeight(-10)"><i data-lucide="minus"></i></button>
+      <div><span id="bs-peso">100</span><span>g</span></div>
+      <button type="button" onclick="adjustDietSheetWeight(10)"><i data-lucide="plus"></i></button>
+    </div>
+    <button type="button" class="diet-premium-sheet-save" onclick="saveDietSheetItem()">Salvar Alteração</button>
   </div>
-  <div class="kronia-card kronia-card-wide">
-    <div class="kronia-card-title">Totais do plano</div>
-    <div id="dietDataProgress" class="kronia-progress-list"></div>
-  </div>
-  <div id="dietDataMeals" class="kronia-card kronia-card-wide"></div>
-  <div style="height:120px"></div>
 </div>
 
 <!-- ══════════════════════════════════════════

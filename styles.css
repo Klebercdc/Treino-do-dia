@@ -4047,12 +4047,218 @@ body.light-mode #aiModal #aiSendBtn i {
 #nutritionFlowScreen .nutrition-official-processing { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center; }
 #nutritionFlowScreen .nutrition-official-spinner { width:64px; height:64px; border:4px solid #F97316; border-top-color:transparent; border-radius:50%; animation:nutritionOfficialSpin 1s linear infinite; margin-bottom:24px; }
 
+/* ── Plano Alimentar Premium ─────────────────────────────── */
+#dietDataScreen.kronia-data-screen {
+  background:#f9fafb;
+  color:#111827;
+  font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  padding:0 0 112px;
+  min-height:100%;
+  overflow-y:auto;
+}
+body.light-mode #dietDataScreen.kronia-data-screen { background:#f9fafb; color:#111827; }
+#dietDataScreen .diet-premium-header {
+  position:sticky;
+  top:0;
+  z-index:30;
+  background:#fff;
+  padding:32px 20px 16px;
+  border-bottom:1px solid #f3f4f6;
+  box-shadow:0 1px 2px rgba(15,23,42,.05);
+}
+#dietDataScreen .diet-premium-header-row { display:flex; justify-content:space-between; align-items:center; gap:16px; max-width:448px; margin:0 auto; }
+#dietDataScreen .diet-premium-header h1 { margin:0; color:#111827; font-size:24px; line-height:1.2; font-weight:800; letter-spacing:0; }
+#dietDataScreen .diet-premium-header p { margin:3px 0 0; color:#6b7280; font-size:14px; line-height:1.3; font-weight:600; }
+#dietDataScreen .diet-premium-actions { display:flex; gap:8px; flex-shrink:0; }
+#dietDataScreen .diet-premium-actions button {
+  width:40px;
+  height:40px;
+  border:0;
+  border-radius:999px;
+  background:#f9fafb;
+  color:#4b5563;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+#dietDataScreen .diet-premium-actions button:hover { background:#f3f4f6; }
+#dietDataScreen .diet-premium-actions .diet-premium-save { color:#ea580c; background:#fff7ed; }
+#dietDataScreen .diet-premium-actions .diet-premium-save:hover { background:#ffedd5; }
+#dietDataScreen .diet-premium-content { max-width:448px; margin:0 auto; padding:24px 20px 40px; }
+#dietDataSummary { margin-bottom:24px; }
+#dietDataScreen .diet-premium-total-card {
+  background:#fff;
+  padding:20px;
+  border-radius:32px;
+  border:1px solid #f3f4f6;
+  box-shadow:0 1px 2px rgba(15,23,42,.05);
+}
+#dietDataScreen .diet-premium-total-head { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:24px; }
+#dietDataScreen .diet-premium-total-head p { margin:0 0 4px; color:#9ca3af; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+#dietDataScreen .diet-premium-total-head strong { display:block; color:#111827; font-size:40px; line-height:1; font-weight:800; letter-spacing:0; }
+#dietDataScreen .diet-premium-total-head strong span { color:#9ca3af; font-size:18px; font-weight:500; }
+#dietDataScreen .diet-premium-flame { width:48px; height:48px; border-radius:999px; background:#fff7ed; color:#f97316; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#dietDataScreen .diet-premium-macros { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+#dietDataScreen .diet-premium-macro { padding:12px; border-radius:16px; border:1px solid; }
+#dietDataScreen .diet-premium-macro-head { display:flex; justify-content:space-between; gap:6px; font-size:12px; margin-bottom:8px; }
+#dietDataScreen .diet-premium-macro-head span:first-child { font-weight:800; }
+#dietDataScreen .diet-premium-macro-head span:last-child { font-weight:600; white-space:nowrap; }
+#dietDataScreen .diet-premium-track { width:100%; height:6px; border-radius:999px; overflow:hidden; }
+#dietDataScreen .diet-premium-fill { height:100%; border-radius:999px; }
+#dietDataScreen .diet-premium-macro.protein { background:rgba(239,246,255,.5); border-color:#eff6ff; }
+#dietDataScreen .diet-premium-macro.protein span:first-child { color:#1e3a8a; }
+#dietDataScreen .diet-premium-macro.protein span:last-child { color:#2563eb; }
+#dietDataScreen .diet-premium-macro.protein .diet-premium-track { background:#dbeafe; }
+#dietDataScreen .diet-premium-macro.protein .diet-premium-fill { background:#3b82f6; }
+#dietDataScreen .diet-premium-macro.carbs { background:rgba(240,253,244,.5); border-color:#f0fdf4; }
+#dietDataScreen .diet-premium-macro.carbs span:first-child { color:#14532d; }
+#dietDataScreen .diet-premium-macro.carbs span:last-child { color:#16a34a; }
+#dietDataScreen .diet-premium-macro.carbs .diet-premium-track { background:#dcfce7; }
+#dietDataScreen .diet-premium-macro.carbs .diet-premium-fill { background:#22c55e; }
+#dietDataScreen .diet-premium-macro.fat { background:rgba(254,252,232,.5); border-color:#fefce8; }
+#dietDataScreen .diet-premium-macro.fat span:first-child { color:#713f12; }
+#dietDataScreen .diet-premium-macro.fat span:last-child { color:#ca8a04; }
+#dietDataScreen .diet-premium-macro.fat .diet-premium-track { background:#fef9c3; }
+#dietDataScreen .diet-premium-macro.fat .diet-premium-fill { background:#eab308; }
+#dietDataMeals { display:flex; flex-direction:column; gap:24px; }
+#dietDataScreen .diet-premium-meal {
+  background:#fff;
+  border:1px solid #f3f4f6;
+  border-radius:32px;
+  padding:20px;
+  box-shadow:0 1px 2px rgba(15,23,42,.05);
+}
+#dietDataScreen .diet-premium-meal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid #f9fafb; }
+#dietDataScreen .diet-premium-meal-head h2 { margin:0; color:#111827; font-size:20px; line-height:1.2; font-weight:800; letter-spacing:0; }
+#dietDataScreen .diet-premium-meal-head p { margin:4px 0 0; color:#9ca3af; font-size:14px; font-weight:600; }
+#dietDataScreen .diet-premium-meal-menu { width:36px; height:36px; border:0; border-radius:999px; background:#f9fafb; color:#9ca3af; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+#dietDataScreen .diet-premium-food-row {
+  width:calc(100% + 24px);
+  margin:0 -12px;
+  padding:12px;
+  border:0;
+  border-radius:16px;
+  background:transparent;
+  color:#374151;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  cursor:pointer;
+  text-align:left;
+}
+#dietDataScreen .diet-premium-food-row:hover { background:#f9fafb; }
+#dietDataScreen .diet-premium-food-left { display:flex; align-items:center; gap:16px; min-width:0; }
+#dietDataScreen .diet-premium-food-emoji { width:40px; height:40px; border-radius:999px; background:#f9fafb; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:inset 0 2px 4px rgba(15,23,42,.04); flex-shrink:0; }
+#dietDataScreen .diet-premium-food-name { margin:0; color:#1f2937; font-size:14px; font-weight:800; line-height:1.2; }
+#dietDataScreen .diet-premium-food-qty { margin:3px 0 0; color:#6b7280; font-size:12px; font-weight:600; }
+#dietDataScreen .diet-premium-food-kcal { color:#374151; font-size:14px; font-weight:800; white-space:nowrap; }
+#dietDataScreen .diet-premium-empty { text-align:center; padding:24px 0; }
+#dietDataScreen .diet-premium-empty-icon { width:48px; height:48px; border-radius:999px; background:#f9fafb; color:#d1d5db; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+#dietDataScreen .diet-premium-empty p { margin:0; color:#6b7280; font-size:14px; }
+#dietDataScreen .diet-premium-add {
+  width:100%;
+  margin-top:16px;
+  min-height:48px;
+  border:1px dashed #fed7aa;
+  border-radius:12px;
+  background:rgba(255,247,237,.5);
+  color:#ea580c;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:800;
+  cursor:pointer;
+}
+#dietDataScreen .diet-premium-add:hover { background:#fff7ed; }
+#dietDataScreen .diet-premium-floating {
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:calc(92px + env(safe-area-inset-bottom, 0px));
+  z-index:40;
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+}
+#dietDataScreen .diet-premium-floating button {
+  pointer-events:auto;
+  border:0;
+  border-radius:999px;
+  background:#111827;
+  color:#fff;
+  padding:16px 24px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.01em;
+  box-shadow:0 8px 30px rgba(0,0,0,.3);
+  cursor:pointer;
+}
+#dietDataScreen .diet-premium-floating button:active { transform:scale(.95); }
+.diet-premium-backdrop {
+  opacity:0;
+  pointer-events:none;
+  position:fixed;
+  inset:0;
+  z-index:9000;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  background:rgba(17,24,39,.4);
+  backdrop-filter:blur(4px);
+  transition:opacity .3s ease-out;
+}
+.diet-premium-backdrop.open { opacity:1; pointer-events:auto; }
+.diet-premium-backdrop-hit { position:absolute; inset:0; }
+.diet-premium-bottom-sheet {
+  position:relative;
+  width:100%;
+  max-width:448px;
+  background:#fff;
+  color:#111827;
+  padding:24px;
+  border-radius:40px 40px 0 0;
+  box-shadow:0 -24px 60px rgba(15,23,42,.22);
+  transform:translateY(100%);
+  transition:transform .3s ease-out;
+  font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.diet-premium-bottom-sheet.open { transform:translateY(0); }
+.diet-premium-handle { width:48px; height:6px; border-radius:999px; background:#e5e7eb; margin:0 auto 32px; }
+.diet-premium-bottom-sheet h3 { margin:0 0 4px; text-align:center; color:#111827; font-size:24px; font-weight:800; letter-spacing:0; }
+.diet-premium-bottom-sheet > p { margin:0 0 32px; text-align:center; color:#6b7280; font-size:14px; font-weight:600; }
+.diet-premium-sheet-actions { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:32px; }
+.diet-premium-sheet-actions button { border:0; background:transparent; color:#6b7280; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; font-weight:800; }
+.diet-premium-sheet-actions button div { width:56px; height:56px; border-radius:16px; background:#f9fafb; display:flex; align-items:center; justify-content:center; }
+.diet-premium-sheet-actions button span { font-size:12px; }
+.diet-premium-sheet-actions .diet-premium-sheet-kronos { color:#f97316; }
+.diet-premium-sheet-actions .diet-premium-sheet-kronos div { background:#fff7ed; }
+.diet-premium-sheet-actions .diet-premium-sheet-remove { color:#ef4444; }
+.diet-premium-sheet-actions .diet-premium-sheet-remove div { background:#fef2f2; }
+.diet-premium-bottom-sheet .diet-premium-quantity-label { margin:0 0 12px 4px; text-align:left; color:#111827; font-size:14px; font-weight:800; }
+.diet-premium-quantity { background:#f9fafb; border:1px solid #f3f4f6; border-radius:24px; padding:12px; display:flex; justify-content:space-between; align-items:center; }
+.diet-premium-quantity button { width:56px; height:56px; border:0; border-radius:16px; background:#fff; color:#4b5563; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(15,23,42,.08); cursor:pointer; }
+.diet-premium-quantity div { display:flex; align-items:baseline; justify-content:center; }
+.diet-premium-quantity div span:first-child { color:#111827; font-size:40px; line-height:1; font-weight:800; letter-spacing:0; }
+.diet-premium-quantity div span:last-child { color:#6b7280; font-weight:800; margin-left:4px; }
+.diet-premium-sheet-save { width:100%; margin-top:24px; min-height:58px; border:0; border-radius:16px; background:#ea580c; color:#fff; font-size:18px; font-weight:800; box-shadow:0 10px 20px rgba(234,88,12,.3); cursor:pointer; }
+.diet-premium-sheet-save:hover { background:#c2410c; }
+
 @media (max-width:390px) {
   #nutritionFlowScreen .nutrition-flow-header,
   #nutritionFlowScreen .nutrition-flow-body,
   #nutritionFlowScreen .nutrition-flow-footer { padding-left:18px; padding-right:18px; }
   #nutritionFlowScreen .nutrition-official-grid-2 { gap:12px; }
   #nutritionFlowScreen .chip { font-size:9px; padding:9px 7px; }
+  #dietDataScreen .diet-premium-macros { gap:10px; }
+  #dietDataScreen .diet-premium-macro { padding:10px; }
+  #dietDataScreen .diet-premium-floating button { max-width:calc(100vw - 32px); padding:14px 18px; }
 }
 
 body.light-mode #nutritionFlowScreen,
