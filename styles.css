@@ -4073,19 +4073,19 @@ body.light-mode #aiModal #aiSendBtn i {
 #nutritionFlowScreen .check-container.active { border-color:#F97316; background:rgba(249,115,22,.1); }
 #nutritionFlowScreen .check-container input { width:16px; height:16px; accent-color:#F97316; }
 #nutritionFlowScreen .check-container span { color:#E2E8F0; font-size:10px; font-weight:700; text-transform:uppercase; font-style:italic; }
-#nutritionFlowScreen .nutrition-pathology-list { max-height:400px; overflow-y:auto; padding-right:8px; display:flex; flex-direction:column; gap:8px; scrollbar-width:thin; scrollbar-color:rgba(249,115,22,.55) rgba(255,255,255,.04); }
+#nutritionFlowScreen .nutrition-pathology-list { max-height:400px; overflow-y:auto; padding-right:8px; display:flex; flex-direction:column; gap:12px; scrollbar-width:thin; scrollbar-color:rgba(249,115,22,.55) rgba(255,255,255,.04); }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar { width:6px; }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar-track { background:rgba(255,255,255,.04); border-radius:999px; }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar-thumb { background:rgba(249,115,22,.45); border-radius:999px; }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar-thumb:hover { background:rgba(249,115,22,.7); }
 #nutritionFlowScreen .nutrition-pathology-category { background:rgba(15,23,42,.45); border:1px solid rgba(255,255,255,.05); border-radius:18px; overflow:hidden; }
-#nutritionFlowScreen .nutrition-pathology-category-btn { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:0; background:transparent; color:#CBD5E1; font-family:'Inter', var(--font), sans-serif; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; text-align:left; }
+#nutritionFlowScreen .nutrition-pathology-category-btn { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px; border:0; background:transparent; color:#CBD5E1; font-family:'Inter', var(--font), sans-serif; font-size:.875rem; font-weight:900; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; text-align:left; }
 #nutritionFlowScreen .nutrition-pathology-category-btn:hover { background:rgba(255,255,255,.05); }
 #nutritionFlowScreen .nutrition-pathology-category-btn .lucide { transition:transform .2s ease; flex-shrink:0; }
 #nutritionFlowScreen .nutrition-pathology-category-btn .rotate-180 { transform:rotate(180deg); }
-#nutritionFlowScreen .nutrition-pathology-items { display:none; flex-wrap:wrap; gap:8px; padding:12px; border-top:1px solid rgba(255,255,255,.05); background:rgba(15,23,42,.25); }
+#nutritionFlowScreen .nutrition-pathology-items { display:none; flex-wrap:wrap; gap:12px; padding:16px; border-top:1px solid rgba(255,255,255,.05); background:rgba(15,23,42,.25); }
 #nutritionFlowScreen .nutrition-pathology-items.show { display:flex; }
-#nutritionFlowScreen .nutrition-pathology-chip { min-height:30px; padding:7px 9px; font-size:8px; border-radius:12px; }
+#nutritionFlowScreen .nutrition-pathology-chip { min-height:40px; padding:8px 12px; font-size:.875rem; border-radius:12px; }
 #nutritionFlowScreen .nutrition-official-final-kicker { margin:0 0 8px; text-align:center; color:#F97316; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; font-style:italic; }
 #nutritionFlowScreen .nutrition-official-summary-row { display:flex; justify-content:space-between; gap:14px; border-bottom:1px solid rgba(255,255,255,.05); padding:0 0 10px; margin-bottom:10px; }
 #nutritionFlowScreen .nutrition-official-summary-row:last-child { border-bottom:0; padding-bottom:0; margin-bottom:0; }
@@ -4553,6 +4553,7 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
   #nutritionFlowScreen .nutrition-flow-footer { padding-left:18px; padding-right:18px; }
   #nutritionFlowScreen .nutrition-official-grid-2 { gap:12px; }
   #nutritionFlowScreen .chip { font-size:9px; padding:9px 7px; }
+  #nutritionFlowScreen .nutrition-pathology-chip { font-size:.875rem; padding:8px 12px; }
   #dietDataScreen .diet-premium-macros { gap:10px; }
   #dietDataScreen .diet-premium-macro { padding:10px; }
   #dietDataScreen .diet-premium-floating button { padding:14px 16px; }

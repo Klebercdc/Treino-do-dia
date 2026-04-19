@@ -8807,7 +8807,7 @@ function renderNutritionPathologySection() {
         return `<div class="nutrition-pathology-category">
           <button type="button" class="nutrition-pathology-category-btn" onclick="toggleNutritionPathologyCategory('${escapeAttr(category.id)}')">
             <span>${escapeHTML(category.label)}</span>
-            <i data-lucide="chevron-down" class="lucide ${isOpen ? "rotate-180" : ""}" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"></i>
+            <i data-lucide="chevron-down" class="lucide ${isOpen ? "rotate-180" : ""}" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
           </button>
           <div class="nutrition-pathology-items ${isOpen ? "show" : ""}">
             ${(category.items || []).map(function(item) {
@@ -8822,6 +8822,10 @@ function renderNutritionPathologySection() {
 }
 
 function toggleNutritionPathologyCategory(categoryId) {
+  var exists = NUTRITION_PATHOLOGY_CATALOG.some(function(category) {
+    return category && category.id === categoryId;
+  });
+  if (!exists) return;
   if (openNutritionPathologyCategories.has(categoryId)) {
     openNutritionPathologyCategories.delete(categoryId);
   } else {
