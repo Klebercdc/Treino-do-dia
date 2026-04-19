@@ -4495,3 +4495,439 @@ body.light-mode .settings-plan-badge {
 .kronia-chart { margin-top: 14px; min-height: 180px; }
 .kronia-chart svg { display: block; width: 100%; height: auto; }
 .kronia-empty { color: var(--text-soft); font-size: .84rem; line-height: 1.45; margin-top: 10px; }
+
+/* =====================================================================
+   KRONIA THEME NORMALIZATION LAYER
+   append-only · compatível com app.js theme engine existente
+   ===================================================================== */
+
+:root {
+  --kr-bg: #0b0b0f;
+  --kr-bg-elevated: #12131a;
+  --kr-surface: #171923;
+  --kr-surface-2: #1d2130;
+  --kr-surface-3: #252a3a;
+  --kr-border: rgba(255,255,255,.09);
+  --kr-border-strong: rgba(255,255,255,.16);
+  --kr-text: #f5f7fb;
+  --kr-text-soft: #c2c8d4;
+  --kr-text-muted: #96a0b2;
+  --kr-accent: #7c3aed;
+  --kr-accent-2: #8b5cf6;
+  --kr-accent-contrast: #ffffff;
+  --kr-success: #16a34a;
+  --kr-warning: #d97706;
+  --kr-danger: #dc2626;
+  --kr-info: #2563eb;
+  --kr-shadow: 0 10px 30px rgba(0,0,0,.22);
+  --kr-input-bg: rgba(255,255,255,.04);
+  --kr-chip-bg: rgba(255,255,255,.05);
+  --kr-overlay: rgba(6,8,14,.72);
+  --kr-nav-bg: rgba(10,11,16,.92);
+  --kr-divider: rgba(255,255,255,.08);
+  --kr-card-radius: 20px;
+  --kr-control-radius: 16px;
+}
+
+:root[data-theme="light"], html.light-mode, body.light-mode {
+  --kr-bg: #f6f7fb;
+  --kr-bg-elevated: #ffffff;
+  --kr-surface: #ffffff;
+  --kr-surface-2: #f8fafc;
+  --kr-surface-3: #eef2f7;
+  --kr-border: rgba(15,23,42,.08);
+  --kr-border-strong: rgba(15,23,42,.14);
+  --kr-text: #0f172a;
+  --kr-text-soft: #334155;
+  --kr-text-muted: #64748b;
+  --kr-accent: #6d28d9;
+  --kr-accent-2: #7c3aed;
+  --kr-accent-contrast: #ffffff;
+  --kr-success: #15803d;
+  --kr-warning: #b45309;
+  --kr-danger: #b91c1c;
+  --kr-info: #1d4ed8;
+  --kr-shadow: 0 10px 24px rgba(15,23,42,.08);
+  --kr-input-bg: #ffffff;
+  --kr-chip-bg: #f1f5f9;
+  --kr-overlay: rgba(15,23,42,.38);
+  --kr-nav-bg: rgba(255,255,255,.94);
+  --kr-divider: rgba(15,23,42,.08);
+}
+
+html, body {
+  background: var(--kr-bg);
+  color: var(--kr-text);
+}
+
+body, button, input, textarea, select {
+  color: var(--kr-text);
+}
+
+::placeholder {
+  color: var(--kr-text-muted);
+  opacity: 1;
+}
+
+hr, .divider, .separator, [class*="divider"], [class*="separator"] {
+  border-color: var(--kr-divider) !important;
+  background-color: var(--kr-divider) !important;
+}
+
+/* superfícies principais */
+:where(
+  .card,
+  .glass-card,
+  .panel,
+  .sheet,
+  .modal,
+  .drawer,
+  .bottom-sheet,
+  .tile,
+  .widget,
+  .box,
+  .stat-card,
+  .summary-card,
+  .exercise-card,
+  .meal-card,
+  .kronos-card,
+  .home-card,
+  .section-card,
+  .list-card,
+  .premium-card,
+  .plan-card,
+  .pricing-card,
+  .upload-card,
+  .history-card,
+  .settings-card,
+  .account-card,
+  .chart-card,
+  .report-card
+) {
+  background: var(--kr-surface);
+  color: var(--kr-text);
+  border-color: var(--kr-border);
+  box-shadow: var(--kr-shadow);
+}
+
+:where(
+  .card-secondary,
+  .card-soft,
+  .surface-2,
+  .subcard,
+  .mini-card,
+  .inner-card,
+  .nested-card,
+  .list-row,
+  .row-card,
+  .option-card,
+  .choice-card,
+  .action-card,
+  .metric-card,
+  .insight-card
+) {
+  background: var(--kr-surface-2);
+  color: var(--kr-text);
+  border-color: var(--kr-border);
+}
+
+/* cabeçalhos, shells e navegação */
+:where(
+  header,
+  .topbar,
+  .app-header,
+  .screen-header,
+  .modal-header,
+  .sheet-header,
+  .bottom-nav,
+  .footer-actions,
+  .tab-bar,
+  nav,
+  .navbar,
+  .nav-shell,
+  .home-shell,
+  .screen-shell
+) {
+  background: var(--kr-nav-bg);
+  color: var(--kr-text);
+  border-color: var(--kr-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* tipografia */
+:where(
+  h1,h2,h3,h4,h5,h6,
+  .title,
+  .screen-title,
+  .section-title,
+  .card-title,
+  .modal-title,
+  .sheet-title,
+  .value,
+  .big-number,
+  .kpi-value
+) {
+  color: var(--kr-text);
+}
+
+:where(
+  p,
+  small,
+  label,
+  .subtitle,
+  .description,
+  .helper,
+  .hint,
+  .muted,
+  .eyebrow,
+  .caption,
+  .meta,
+  .secondary-text,
+  .field-help,
+  .card-subtitle,
+  .screen-subtitle,
+  .legend,
+  .empty-state-text
+) {
+  color: var(--kr-text-soft);
+}
+
+:where(.text-muted, .muted-2, .placeholder-text) {
+  color: var(--kr-text-muted) !important;
+}
+
+/* formulários */
+:where(
+  input,
+  textarea,
+  select,
+  .input,
+  .textarea,
+  .select,
+  .field,
+  .control,
+  .search-input,
+  .form-control
+) {
+  background: var(--kr-input-bg);
+  color: var(--kr-text);
+  border: 1px solid var(--kr-border);
+}
+
+:where(
+  input:focus,
+  textarea:focus,
+  select:focus,
+  .input:focus,
+  .textarea:focus,
+  .select:focus,
+  .field:focus,
+  .control:focus,
+  .search-input:focus,
+  .form-control:focus
+) {
+  outline: none;
+  border-color: color-mix(in srgb, var(--kr-accent) 55%, var(--kr-border-strong));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--kr-accent) 18%, transparent);
+}
+
+/* botões e CTAs */
+:where(
+  .btn-primary,
+  .button-primary,
+  .primary-btn,
+  .cta-primary,
+  .action-primary,
+  [data-variant="primary"],
+  [data-tone="primary"]
+) {
+  background: linear-gradient(135deg, var(--kr-accent), var(--kr-accent-2));
+  color: var(--kr-accent-contrast) !important;
+  border-color: transparent;
+}
+
+:where(
+  .btn-secondary,
+  .button-secondary,
+  .secondary-btn,
+  .cta-secondary,
+  .action-secondary,
+  [data-variant="secondary"],
+  [data-tone="secondary"]
+) {
+  background: var(--kr-surface-2);
+  color: var(--kr-text) !important;
+  border-color: var(--kr-border);
+}
+
+:where(
+  .btn-ghost,
+  .button-ghost,
+  .ghost-btn,
+  [data-variant="ghost"],
+  [data-tone="ghost"]
+) {
+  background: transparent;
+  color: var(--kr-text) !important;
+  border-color: var(--kr-border);
+}
+
+:where(button, .btn, .button, .chip, .pill, .tab, .nav-item, .action) {
+  border-radius: var(--kr-control-radius);
+}
+
+/* chips, pills e toggles */
+:where(
+  .chip,
+  .pill,
+  .tag,
+  .badge-soft,
+  .segment,
+  .toggle-item,
+  .quick-filter,
+  .select-chip,
+  .option-pill
+) {
+  background: var(--kr-chip-bg);
+  color: var(--kr-text);
+  border: 1px solid var(--kr-border);
+}
+
+:where(
+  .active,
+  .is-active,
+  .selected,
+  .chip.active,
+  .pill.active,
+  .segment.active,
+  .toggle-item.active,
+  .tab.active,
+  .nav-item.active
+) {
+  border-color: color-mix(in srgb, var(--kr-accent) 50%, var(--kr-border));
+}
+
+/* overlays */
+:where(
+  .modal-backdrop,
+  .sheet-backdrop,
+  .overlay,
+  .scrim,
+  .dialog-backdrop
+) {
+  background: var(--kr-overlay);
+}
+
+/* tabelas e listas */
+:where(table, .table, .list, .list-group, .history-list, .records-list) {
+  color: var(--kr-text);
+}
+
+:where(th, td, .list-item, .history-row, .table-row) {
+  border-color: var(--kr-divider);
+}
+
+/* estados */
+:where(.success, .ok, .status-success, .text-success) { color: var(--kr-success); }
+:where(.warning, .status-warning, .text-warning) { color: var(--kr-warning); }
+:where(.danger, .error, .status-danger, .text-danger) { color: var(--kr-danger); }
+:where(.info, .status-info, .text-info) { color: var(--kr-info); }
+
+/* ícones em botões claros/escuros */
+:where(button svg, .btn svg, .button svg, .chip svg, .pill svg, .tab svg, .nav-item svg) {
+  color: currentColor;
+  stroke: currentColor;
+}
+
+/* scrollbars compatíveis */
+* {
+  scrollbar-color: color-mix(in srgb, var(--kr-text-muted) 60%, transparent) transparent;
+}
+
+/* contraste extra em cards translúcidos */
+:where(.glass-card, .frosted, .blur-card) {
+  background: color-mix(in srgb, var(--kr-surface) 88%, transparent);
+  border-color: color-mix(in srgb, var(--kr-border) 88%, transparent);
+}
+
+/* telas claras: evitar CTA branco com texto claro */
+:root[data-theme="light"] :where(
+  .btn-primary,
+  .button-primary,
+  .primary-btn,
+  .cta-primary,
+  .action-primary,
+  [data-variant="primary"],
+  [data-tone="primary"]
+) {
+  color: #ffffff !important;
+}
+
+/* telas escuras: evitar cards cinza lavado */
+:root[data-theme="dark"] :where(
+  .card,
+  .glass-card,
+  .panel,
+  .sheet,
+  .modal,
+  .drawer,
+  .tile,
+  .widget,
+  .box,
+  .stat-card,
+  .summary-card,
+  .exercise-card,
+  .meal-card,
+  .kronos-card,
+  .home-card,
+  .section-card,
+  .list-card,
+  .premium-card,
+  .plan-card,
+  .pricing-card,
+  .upload-card,
+  .history-card,
+  .settings-card,
+  .account-card,
+  .chart-card,
+  .report-card
+) {
+  background: var(--kr-surface);
+}
+
+/* focus visível acessível */
+:where(button, a, input, textarea, select, .chip, .pill, .tab, .nav-item):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--kr-accent) 42%, transparent);
+  outline-offset: 2px;
+}
+
+/* ponte para superfícies reais legadas com especificidade maior que :where() */
+:root[data-theme="dark"] .footer-actions,
+html.dark-mode .footer-actions,
+body.dark-mode .footer-actions {
+  background: var(--kr-nav-bg) !important;
+  border-top-color: var(--kr-border) !important;
+  box-shadow: 0 -12px 34px rgba(0,0,0,.32) !important;
+}
+
+:root[data-theme="dark"] .exercise-card,
+html.dark-mode .exercise-card,
+body.dark-mode .exercise-card {
+  background: var(--kr-surface) !important;
+  color: var(--kr-text) !important;
+  border-color: var(--kr-border) !important;
+  box-shadow: var(--kr-shadow) !important;
+}
+
+:root[data-theme="dark"] .exercise-card .ex-title,
+html.dark-mode .exercise-card .ex-title,
+body.dark-mode .exercise-card .ex-title {
+  color: var(--kr-text) !important;
+}
+
+:root[data-theme="dark"] .settings-row-value,
+html.dark-mode .settings-row-value,
+body.dark-mode .settings-row-value {
+  color: var(--kr-text-soft) !important;
+}

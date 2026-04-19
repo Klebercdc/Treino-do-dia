@@ -47,6 +47,38 @@
   <meta name="twitter:description" content="App de musculação com IA. Treinos científicos, análise de progresso e coach inteligente."/>
   <meta name="twitter:image" content="https://www.kronia.app.br/Kronia.png"/>
 
+  <script>
+  (() => {
+    try {
+      const THEME_KEY = 'kronia_theme';
+      const LEGACY_THEME_KEY = 'kronia_light';
+      const LIGHT = 'light';
+      const DARK = 'dark';
+
+      const safeGet = (key) => {
+        try { return localStorage.getItem(key); } catch { return null; }
+      };
+
+      const stored = safeGet(THEME_KEY);
+      const legacy = safeGet(LEGACY_THEME_KEY);
+
+      const resolved =
+        stored === LIGHT || stored === DARK
+          ? stored
+          : legacy === '1'
+            ? LIGHT
+            : legacy === '0'
+              ? DARK
+              : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? LIGHT : DARK);
+
+      const root = document.documentElement;
+      root.dataset.theme = resolved;
+      root.classList.toggle('light-mode', resolved === LIGHT);
+      root.classList.toggle('dark-mode', resolved !== LIGHT);
+      root.style.colorScheme = resolved;
+    } catch {}
+  })();
+  </script>
   <link rel="stylesheet" href="styles.css?v=20260322d">
 
 </head>
