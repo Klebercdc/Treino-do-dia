@@ -8793,6 +8793,9 @@ function getNutritionPathologyLabel(value) {
 function renderNutritionPathologySection() {
   var state = getNutritionFlowState();
   var selected = Array.isArray(state.patologia) ? state.patologia : ["nenhuma"];
+  var categories = NUTRITION_PATHOLOGY_CATALOG.filter(function(category) {
+    return category && Array.isArray(category.items) && category.items.length > 0;
+  });
   return `<section class="glass-card border-l-rose">
     <div class="nutrition-official-card-head">
       <div>
@@ -8802,17 +8805,17 @@ function renderNutritionPathologySection() {
       <i data-lucide="stethoscope" class="lucide nutrition-official-rose" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
     </div>
     <div class="nutrition-pathology-list">
-      ${NUTRITION_PATHOLOGY_CATALOG.map(function(category) {
+      ${categories.map(function(category) {
         var isOpen = openNutritionPathologyCategories.has(category.id);
-        return `<div id="nutrition-pathology-category-${escapeAttr(category.id)}" class="nutrition-pathology-category bg-slate-900/40 rounded-[28px] overflow-hidden border border-white/5 mb-4">
-          <button type="button" class="nutrition-pathology-category-btn w-full min-h-[72px] px-5 py-4 flex items-center justify-between gap-4 text-left text-[15px] font-extrabold uppercase tracking-wide leading-tight text-slate-100 hover:bg-white/5 transition" onclick="toggleNutritionPathologyCategory('${escapeAttr(category.id)}')">
-            <span class="block flex-1 pr-3 whitespace-normal break-words">${escapeHTML(category.label)}</span>
-            <i data-lucide="chevron-down" class="lucide w-5 h-5 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2"></i>
+        return `<div id="nutrition-pathology-category-${escapeAttr(category.id)}" class="nutrition-pathology-category">
+          <button type="button" class="nutrition-pathology-category-btn" onclick="toggleNutritionPathologyCategory('${escapeAttr(category.id)}')">
+            <span>${escapeHTML(category.label)}</span>
+            <i data-lucide="chevron-down" class="lucide ${isOpen ? "rotate-180" : ""}" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2"></i>
           </button>
-          <div id="nutrition-pathology-items-${escapeAttr(category.id)}" class="nutrition-pathology-items p-4 pt-3 flex flex-wrap gap-3 border-t border-white/5 bg-slate-900/20 ${isOpen ? "show" : ""}">
-            ${(category.items || []).map(function(item) {
+          <div id="nutrition-pathology-items-${escapeAttr(category.id)}" class="nutrition-pathology-items ${isOpen ? "show" : ""}">
+            ${category.items.map(function(item) {
               var active = selected.indexOf(item.id) !== -1;
-              return `<button type="button" class="chip nutrition-pathology-chip text-sm px-4 py-2.5 rounded-full leading-none min-h-[40px] inline-flex items-center ${active ? "active" : ""}" onclick="toggleNutritionPathology('${escapeAttr(item.id)}')">${escapeHTML(item.label)}</button>`;
+              return `<button type="button" class="nutrition-pathology-chip ${active ? "active" : ""}" onclick="toggleNutritionPathology('${escapeAttr(item.id)}')">${escapeHTML(item.label)}</button>`;
             }).join("")}
           </div>
         </div>`;
