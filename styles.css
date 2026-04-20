@@ -4029,25 +4029,25 @@ body.light-mode #aiModal #aiSendBtn i {
 .nutrition-meal-item small { display:block; color:var(--text-2); font-size:.7rem; line-height:1.35; margin-top:4px; }
 .nutrition-meal-item button { border:1px solid var(--border); background:var(--bg2); color:var(--accent); border-radius:var(--r-sm); padding:8px 10px; font-family:var(--font); font-size:.74rem; font-weight:900; cursor:pointer; flex-shrink:0; }
 
-#nutritionFlowScreen .glass-card { background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.05); border-radius:28px; padding:20px; margin-bottom:20px; }
+#nutritionFlowScreen .glass-card { background:rgba(30,41,59,.5); border:1px solid rgba(255,255,255,.05); border-radius:22px; padding:16px; margin-bottom:12px; }
 #nutritionFlowScreen .border-l-green { border-left:4px solid rgba(34,197,94,.5); }
 #nutritionFlowScreen .border-l-blue { border-left:4px solid rgba(59,130,246,.5); }
 #nutritionFlowScreen .border-l-rose { border-left:4px solid rgba(244,63,94,.6); }
 #nutritionFlowScreen .sync-tag { font-size:8px; font-weight:900; color:#22C55E; background:rgba(34,197,94,.1); padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:.05em; }
 #nutritionFlowScreen .sync-tag-blue { color:#60A5FA; background:rgba(59,130,246,.1); }
-#nutritionFlowScreen .nutrition-official-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-#nutritionFlowScreen .nutrition-official-label { margin:0 0 12px; font-size:10px; font-weight:900; color:#94A3B8; text-transform:uppercase; letter-spacing:.12em; }
+#nutritionFlowScreen .nutrition-official-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+#nutritionFlowScreen .nutrition-official-label { margin:0 0 8px; font-size:10px; font-weight:900; color:#94A3B8; text-transform:uppercase; letter-spacing:.12em; }
 #nutritionFlowScreen .nutrition-official-label.no-margin { margin:0; }
 #nutritionFlowScreen .nutrition-official-hint { color:#64748B; font-size:8px; font-weight:700; font-style:italic; margin:4px 0 0; }
 #nutritionFlowScreen .nutrition-official-rose { color:#F43F5E; flex-shrink:0; }
 #nutritionFlowScreen .text-center { text-align:center; }
-#nutritionFlowScreen .nutrition-official-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
-#nutritionFlowScreen .nutrition-official-grid-3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+#nutritionFlowScreen .nutrition-official-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+#nutritionFlowScreen .nutrition-official-grid-3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
 #nutritionFlowScreen .nutrition-official-divider { border-bottom:1px solid rgba(255,255,255,.05); padding-bottom:16px; margin-bottom:16px; }
 #nutritionFlowScreen .nutrition-official-top-divider { border-top:1px solid rgba(255,255,255,.05); padding-top:16px; margin-top:16px; }
 #nutritionFlowScreen .nutrition-official-row { display:flex; gap:8px; flex-wrap:wrap; }
 #nutritionFlowScreen .nutrition-official-wrap { display:flex; flex-wrap:wrap; gap:8px; }
-#nutritionFlowScreen .chip { padding:10px; border-radius:16px; background:var(--nutrition-flow-chip-bg); border:2px solid transparent; color:var(--nutrition-flow-chip-text); cursor:pointer; font-size:10px; font-weight:800; text-transform:uppercase; transition:.2s; text-align:center; font-family:'Inter', var(--font), sans-serif; min-height:42px; display:inline-flex; align-items:center; justify-content:center; gap:5px; line-height:1.15; white-space:normal; overflow-wrap:anywhere; }
+#nutritionFlowScreen .chip { padding:8px 10px; border-radius:14px; background:var(--nutrition-flow-chip-bg); border:2px solid transparent; color:var(--nutrition-flow-chip-text); cursor:pointer; font-size:10px; font-weight:800; text-transform:uppercase; transition:.2s; text-align:center; font-family:'Inter', var(--font), sans-serif; min-height:36px; display:inline-flex; align-items:center; justify-content:center; gap:5px; line-height:1.15; white-space:normal; overflow-wrap:anywhere; }
 #nutritionFlowScreen .chip-compact { min-height:26px; padding:4px 16px; font-size:9px; }
 #nutritionFlowScreen .chip.active { border-color:var(--nutrition-flow-chip-active-border); background:var(--nutrition-flow-chip-active-bg); color:var(--nutrition-flow-chip-active-text); }
 #nutritionFlowScreen .input-dark { background:rgba(15,23,42,.8); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:12px; color:#fff; width:100%; font-weight:700; font-size:13px; outline:none; font-family:'Inter', var(--font), sans-serif; }
@@ -4069,25 +4069,28 @@ body.light-mode #aiModal #aiSendBtn i {
 #nutritionFlowScreen .slider { -webkit-appearance:none; appearance:none; width:100%; height:6px; background:#334155; border-radius:5px; outline:none; }
 #nutritionFlowScreen .slider::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; background:#F97316; border-radius:50%; cursor:pointer; }
 #nutritionFlowScreen .slider::-moz-range-thumb { width:22px; height:22px; background:#F97316; border:none; border-radius:50%; cursor:pointer; }
-#nutritionFlowScreen .check-container { transition:all .2s ease; border:1px solid rgba(255,255,255,.05); background:rgba(30,41,59,.5); display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; cursor:pointer; margin-bottom:12px; }
+#nutritionFlowScreen .check-container { transition:all .2s ease; border:1px solid rgba(255,255,255,.05); background:rgba(30,41,59,.5); display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:12px; cursor:pointer; margin-bottom:10px; }
 #nutritionFlowScreen .check-container.active { border-color:#F97316; background:rgba(249,115,22,.1); }
 #nutritionFlowScreen .check-container input { width:16px; height:16px; accent-color:#F97316; }
 #nutritionFlowScreen .check-container span { color:#E2E8F0; font-size:10px; font-weight:700; text-transform:uppercase; font-style:italic; }
-#nutritionFlowScreen .nutrition-pathology-list { max-height:min(400px, calc(100vh - 360px)); overflow-y:auto; padding-right:6px; display:flex; flex-direction:column; gap:0; scrollbar-width:thin; scrollbar-color:rgba(249,115,22,.55) rgba(255,255,255,.04); }
+#nutritionFlowScreen .nutrition-pathology-list { max-height:min(380px, calc(100vh - 330px)); overflow-y:auto; padding-right:6px; display:flex; flex-direction:column; gap:0; scrollbar-width:thin; scrollbar-color:rgba(249,115,22,.55) rgba(255,255,255,.04); }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar { width:6px; }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar-track { background:rgba(255,255,255,.04); border-radius:999px; }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar-thumb { background:rgba(249,115,22,.45); border-radius:999px; }
 #nutritionFlowScreen .nutrition-pathology-list::-webkit-scrollbar-thumb:hover { background:rgba(249,115,22,.7); }
-#nutritionFlowScreen .nutrition-pathology-category { background:var(--nutrition-flow-card); border:1px solid var(--nutrition-flow-border); border-radius:18px; overflow:hidden; margin-bottom:10px; }
-#nutritionFlowScreen .nutrition-pathology-category-btn { width:100%; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border:0; border-radius:16px; background:transparent; color:var(--nutrition-flow-text); font-family:'Inter', var(--font), sans-serif; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; line-height:1.18; cursor:pointer; text-align:left; white-space:normal; }
-#nutritionFlowScreen .nutrition-pathology-category-btn span { display:block; flex:1 1 auto; min-width:0; padding-right:8px; white-space:normal; overflow-wrap:anywhere; word-break:normal; }
+#nutritionFlowScreen .nutrition-pathology-category { flex:0 0 auto; background:var(--nutrition-flow-card); border:1px solid var(--nutrition-flow-border); border-radius:18px; overflow:hidden; margin-bottom:8px; }
+#nutritionFlowScreen .nutrition-pathology-category-btn { width:100%; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border:0; border-radius:20px; background:transparent; color:var(--nutrition-flow-text); font-family:'Inter', var(--font), sans-serif; font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; line-height:1.05; cursor:pointer; text-align:left; white-space:normal; }
+#nutritionFlowScreen .nutrition-pathology-category-btn span { display:block; flex:1 1 auto; min-width:0; padding-right:10px; white-space:normal; overflow-wrap:anywhere; word-break:normal; }
 #nutritionFlowScreen .nutrition-pathology-category-btn:hover { background:rgba(255,255,255,.05); }
 #nutritionFlowScreen .nutrition-pathology-category-btn .lucide { width:18px; height:18px; transition:transform .3s ease; flex-shrink:0; color:var(--nutrition-flow-muted); }
 #nutritionFlowScreen .nutrition-pathology-category-btn .rotate-180 { transform:rotate(180deg); }
-#nutritionFlowScreen .nutrition-pathology-items { display:none; flex-wrap:wrap; gap:8px; padding:10px 12px 12px; border-top:1px solid var(--nutrition-flow-border); background:var(--nutrition-flow-card-expanded); align-items:flex-start; }
+#nutritionFlowScreen .nutrition-pathology-items { display:none; flex-wrap:wrap; gap:8px; padding:12px 12px 10px; border-top:1px solid var(--nutrition-flow-border); background:var(--nutrition-flow-card-expanded); align-items:flex-start; }
 #nutritionFlowScreen .nutrition-pathology-items.show { display:flex; }
-#nutritionFlowScreen .nutrition-pathology-chip { min-height:34px; padding:8px 10px; border:1px solid transparent; border-radius:14px; background:var(--nutrition-flow-chip-bg); color:var(--nutrition-flow-chip-text); cursor:pointer; font-family:'Inter', var(--font), sans-serif; font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0; line-height:1.18; display:inline-flex; align-items:center; justify-content:center; flex:0 1 auto; max-width:100%; text-align:center; white-space:normal; overflow-wrap:anywhere; transition:background .2s ease, border-color .2s ease, color .2s ease; }
+#nutritionFlowScreen .nutrition-pathology-chip { min-height:32px; padding:7px 9px; border:1px solid transparent; border-radius:13px; background:var(--nutrition-flow-chip-bg); color:var(--nutrition-flow-chip-text); cursor:pointer; font-family:'Inter', var(--font), sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0; line-height:1.15; display:inline-flex; align-items:center; justify-content:center; flex:0 1 auto; max-width:100%; text-align:center; white-space:normal; overflow-wrap:anywhere; transition:background .2s ease, border-color .2s ease, color .2s ease; }
 #nutritionFlowScreen .nutrition-pathology-chip.active { border-color:var(--nutrition-flow-chip-active-border); background:var(--nutrition-flow-chip-active-bg); color:var(--nutrition-flow-chip-active-text); }
+#nutritionFlowScreen .nutrition-lab-card { padding:14px 16px; }
+#nutritionFlowScreen .nutrition-lab-card .nutrition-official-label { margin-bottom:8px; }
+#nutritionFlowScreen .nutrition-lab-card .chip { min-height:32px; padding:7px 8px; font-size:9px; border-radius:12px; }
 #nutritionFlowScreen .nutrition-official-final-kicker { margin:0 0 8px; text-align:center; color:#F97316; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; font-style:italic; }
 #nutritionFlowScreen .nutrition-official-summary-row { display:flex; justify-content:space-between; gap:14px; border-bottom:1px solid rgba(255,255,255,.05); padding:0 0 10px; margin-bottom:10px; }
 #nutritionFlowScreen .nutrition-official-summary-row:last-child { border-bottom:0; padding-bottom:0; margin-bottom:0; }
@@ -4554,11 +4557,16 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
   #nutritionFlowScreen .nutrition-flow-body,
   #nutritionFlowScreen .nutrition-flow-footer { padding-left:18px; padding-right:18px; }
   #nutritionFlowScreen .nutrition-official-grid-2 { gap:12px; }
-  #nutritionFlowScreen .chip { font-size:9px; padding:9px 7px; }
-  #nutritionFlowScreen .nutrition-pathology-category { border-radius:16px; margin-bottom:9px; }
-  #nutritionFlowScreen .nutrition-pathology-category-btn { min-height:56px; padding:11px 13px; font-size:12.5px; letter-spacing:.01em; line-height:1.18; }
-  #nutritionFlowScreen .nutrition-pathology-items { gap:7px; padding:9px 10px 11px; }
-  #nutritionFlowScreen .nutrition-pathology-chip { font-size:11px; padding:7px 9px; min-height:32px; line-height:1.18; border-radius:13px; }
+  #nutritionFlowScreen .glass-card { padding:14px; margin-bottom:10px; border-radius:20px; }
+  #nutritionFlowScreen .chip { font-size:9px; padding:7px 7px; min-height:34px; border-radius:12px; }
+  #nutritionFlowScreen .nutrition-official-card-head { margin-bottom:8px; }
+  #nutritionFlowScreen .nutrition-pathology-list { max-height:min(320px, calc(100vh - 360px)); }
+  #nutritionFlowScreen .nutrition-pathology-category { border-radius:16px; margin-bottom:7px; }
+  #nutritionFlowScreen .nutrition-pathology-category-btn { min-height:58px; padding:12px 16px; font-size:14px; letter-spacing:.03em; line-height:1.05; border-radius:20px; }
+  #nutritionFlowScreen .nutrition-pathology-items { gap:7px; padding:11px 10px 10px; }
+  #nutritionFlowScreen .nutrition-pathology-chip { font-size:10.5px; padding:7px 8px; min-height:31px; line-height:1.15; border-radius:12px; }
+  #nutritionFlowScreen .nutrition-lab-card { padding:12px 14px; }
+  #nutritionFlowScreen .nutrition-lab-card .chip { min-height:30px; padding:6px 6px; font-size:8.5px; }
   #dietDataScreen .diet-premium-macros { gap:10px; }
   #dietDataScreen .diet-premium-macro { padding:10px; }
   #dietDataScreen .diet-premium-floating button { padding:14px 16px; }

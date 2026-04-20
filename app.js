@@ -9111,7 +9111,7 @@ function renderNutritionFlowContent(key) {
 
     ${renderNutritionPathologySection()}
 
-    <section class="glass-card">
+    <section class="glass-card nutrition-lab-card">
       <h2 class="nutrition-official-label">Integração de Laboratório</h2>
       <div class="nutrition-official-grid-3">
         <button class="chip ${nutritionSelected("labsStatus", "detected") ? "active" : ""}" onclick="nutritionSet('labsStatus','detected')">Usar Exames</button>
