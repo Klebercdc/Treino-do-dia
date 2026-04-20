@@ -28,6 +28,12 @@
     });
   }
 
+  function hasLabMention(text) {
+    return hasAny(text, [
+      /\b(exame|exames|laboratorio|laboratorial|laudo|laudos|resultado|resultados|bioquimica|hemograma|coleta)\b/,
+    ]);
+  }
+
   function classifyConversationIntent(input) {
     var text = normalizeText(input?.message);
     var instructionalQuestion = /\bcomo\s+fazer\b/.test(text);
@@ -52,13 +58,23 @@
     var diet = !analysis && !instructionalQuestion && explicitFlowIntent &&
       hasAny(text, [/\b(dieta|alimentacao|plano alimentar|plano nutricional|nutricao|refeicao|cardapio|macros|calorias)\b/]);
 
-    var labUpload = hasAny(text, [
-      /\b(exame|laboratorio|laboratorial|laudo|resultado|bioquimica|hemograma|coleta)\b/,
-      /\b(fazer exame|enviar exame|anexar exame)\b/,
+    var labUpload = hasLabMention(text) && hasAny(text, [
+      /\b(enviar|envia|mandei|mandar|subir|upar|upload|anexar|anexa|cadastrar|registrar|adicionar|novo|incluir)\b.{0,40}\b(exame|exames|laudo|laudos|resultado|resultados|arquivo|pdf|imagem)\b/,
+      /\b(exame|exames|laudo|laudos|resultado|resultados|arquivo|pdf|imagem)\b.{0,40}\b(enviar|envia|mandar|subir|upar|upload|anexar|anexa|cadastrar|registrar|adicionar|novo|incluir)\b/,
+      /\b(fazer exame|enviar exame|enviar exames|anexar exame|anexar exames|upload de exame|upload dos exames)\b/,
+    ]);
+
+    var labHistory = hasLabMention(text) && !labUpload && hasAny(text, [
+      /\b(consegue|pode|tem como|voce consegue|kronos consegue)\b.{0,40}\b(ver|visualizar|acessar|consultar|ler|analisar|mostrar)\b.{0,40}\b(meu|meus|minha|minhas)?\s*(exame|exames|laudo|laudos|resultado|resultados)\b/,
+      /\b(ver|visualizar|acessar|consultar|listar|mostrar|resumir|analisar)\b.{0,40}\b(meu|meus|minha|minhas)\s*(exame|exames|laudo|laudos|resultado|resultados)\b/,
+      /\b(meu|meus|minha|minhas)\s*(exame|exames|laudo|laudos|resultado|resultados)\b.{0,40}\b(salvo|salvos|cadastrado|cadastrados|disponivel|disponiveis|historico|voce tem|tem acesso)\b/,
+      /\b(tenho|ha|existem)\b.{0,30}\b(exame|exames|laudo|laudos|resultado|resultados)\b.{0,30}\b(salvo|salvos|cadastrado|cadastrados|disponivel|disponiveis)\b/,
+      /\bcomo estao\b.{0,40}\b(meu|meus|minha|minhas)?\s*(exame|exames|laudo|laudos|resultado|resultados)\b/,
     ]);
 
     if (workout) return 'workout_creation_request';
     if (diet) return 'diet_creation_request';
+    if (labHistory) return 'lab_history_query';
     if (labUpload) return 'lab_upload_request';
     if (analysis) return 'progress_analysis';
     if (supplement) return 'supplement_question';
@@ -190,6 +206,71 @@
       errors: [],
       nextAction: null,
     }, overrides || {});
+  }
+
+  function compactLabValue(value, fallback) {
+    var text = String(value || '').trim();
+    return text || fallback || 'sem informação';
+  }
+
+  function formatLabDate(value) {
+    var raw = String(value || '').trim();
+    if (!raw) return 'data não informada';
+    var date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw.slice(0, 10);
+    return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  }
+
+  function summarizeLabReport(report, index) {
+    var biomarkers = Array.isArray(report?.biomarkers) ? report.biomarkers : [];
+    var flags = Array.isArray(report?.clinicalFlags) ? report.clinicalFlags : [];
+    var criticalFlags = Array.isArray(report?.criticalFlags) ? report.criticalFlags : [];
+    var markerNames = biomarkers
+      .map(function (item) { return compactLabValue(item?.name || item?.nome || item?.marker || item?.biomarker, ''); })
+      .filter(Boolean)
+      .slice(0, 4);
+    var parts = [
+      String(index + 1) + '. ' + compactLabValue(report?.fileName || report?.id, 'Exame') + ' (' + formatLabDate(report?.processedAt || report?.createdAt) + ')',
+      'status: ' + compactLabValue(report?.canonicalStatus || report?.status || report?.parseStatus, 'sem status'),
+    ];
+    if (markerNames.length) parts.push('biomarcadores: ' + markerNames.join(', '));
+    if (flags.length) parts.push('alertas: ' + flags.slice(0, 3).join(', '));
+    if (criticalFlags.length) parts.push('críticos: ' + criticalFlags.slice(0, 2).join(', '));
+    return parts.join(' | ');
+  }
+
+  function buildLabHistorySummary(payload) {
+    var reports = Array.isArray(payload?.reports) ? payload.reports : [];
+    if (!reports.length) {
+      return {
+        message: 'Ainda não encontrei exames salvos no seu histórico. Se você já enviou um laudo há pouco tempo, ele pode ainda estar em processamento.',
+        reports: [],
+      };
+    }
+
+    var lines = reports.slice(0, 5).map(summarizeLabReport);
+    var total = Number(payload?.total || reports.length);
+    var suffix = total > reports.length ? '\n\nHá mais exames no histórico; mostrei os mais recentes.' : '';
+    return {
+      message: 'Sim. Encontrei ' + total + ' exame' + (total === 1 ? '' : 's') + ' salvo' + (total === 1 ? '' : 's') + ' no seu histórico:\n\n' + lines.join('\n') + suffix,
+      reports: reports,
+    };
+  }
+
+  async function fetchLabHistorySummary() {
+    if (typeof fetch !== 'function') {
+      throw new Error('fetch_indisponivel');
+    }
+    var response = await fetch('/api/system?__route=kronia-labs-reports&limit=5', {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    });
+    var payload = await response.json().catch(function () { return {}; });
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || 'Falha ao consultar histórico de exames.');
+    }
+    return buildLabHistorySummary(payload);
   }
 
   var APPLICATION_STATES = {
@@ -349,6 +430,14 @@
     });
   }
 
+  if (intent === 'lab_history_query') {
+    return Object.assign({}, base, {
+      type: 'lab_history_query',
+      targetModule: 'labs',
+      message: 'Vou consultar seus exames salvos.',
+    });
+  }
+
     if (intent === 'progress_analysis') {
       var context = buildProgressAnalysisContext();
       return Object.assign({}, base, {
@@ -391,6 +480,28 @@
 
   async function resolveConversationFlow(input) {
     var decision = buildDecision(input || {});
+
+    if (decision.intent === 'lab_history_query') {
+      try {
+        var labHistory = await fetchLabHistorySummary();
+        decision.type = 'answer_only';
+        decision.message = labHistory.message;
+        decision.sourceOfTruth = 'kronia_labs_reports';
+        decision.usedStructuredUserData = true;
+        decision.validationStatus = 'validated';
+        decision.payload = {
+          route: '/api/system?__route=kronia-labs-reports',
+          reports: labHistory.reports,
+        };
+      } catch (error) {
+        decision.type = 'answer_only';
+        decision.message = 'Não consegui consultar seus exames salvos agora. Tente novamente em instantes.';
+        decision.sourceOfTruth = 'kronia_labs_reports';
+        decision.usedFallback = true;
+        decision.validationStatus = 'route_error';
+        decision.blockedReason = error && error.message ? String(error.message).slice(0, 160) : 'lab_history_query_failed';
+      }
+    }
 
     if (decision.type === 'answer_with_cta' && decision.ctaAction !== 'open_labs_upload') {
       try {
