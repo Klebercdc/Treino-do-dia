@@ -40,6 +40,8 @@
     "exam:ocr:health": "node -e \"fetch(process.env.EXAM_OCR_SERVICE_URL||'http://localhost:8010').then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e.message);process.exit(1);})\"",
     "exam:process:test": "tsx --test tests/unit/lab-reports-service.test.ts",
     "test:labs": "node --test tests/unit/kronia-labs-handler.test.js",
+    "lint": "tsc --noEmit --pretty false",
+    "build": "tsc --noEmit --pretty false",
     "check:labs-upload": "node --env-file=.env.local scripts/check-labs-upload.mjs",
     "check:labs-pipeline": "tsx scripts/labs-pipeline-check.ts"
   },

@@ -138,6 +138,12 @@ async function loadProfile(userId) {
     null
   ).catch(function () { return []; });
 
+  var pathologyRows = await supabase(
+    'GET',
+    'profiles?id=eq.' + userId + '&select=patologia&limit=1',
+    null
+  ).catch(function () { return []; });
+
   var legacyRows = await supabase(
     'GET',
     'user_profiles?user_id=eq.' + userId +
@@ -147,9 +153,10 @@ async function loadProfile(userId) {
 
   var canonical = (canonicalRows && canonicalRows[0]) ? canonicalRows[0] : null;
   var hormone = (hormoneRows && hormoneRows[0]) ? hormoneRows[0] : null;
+  var pathology = (pathologyRows && pathologyRows[0]) ? pathologyRows[0] : null;
   var legacy = (legacyRows && legacyRows[0]) ? legacyRows[0] : null;
-  if (!canonical && !hormone && !legacy) return null;
-  return Object.assign({}, legacy || {}, canonical || {}, hormone || {});
+  if (!canonical && !hormone && !pathology && !legacy) return null;
+  return Object.assign({}, legacy || {}, canonical || {}, hormone || {}, pathology || {});
 }
 
 async function loadNutritionGoal(userId) {
@@ -392,7 +399,8 @@ function mapProfile(row) {
       .concat(toStrArr(row.allergies || config.allergies))
       .concat(toStrArr(row.intolerances || config.intolerances))),
     pathologies: toStrArr(
-      row.patologias || row.pathologies || row.conditions || row.medical_conditions ||
+      row.patologia || row.patologias || row.pathology || row.pathologies || row.conditions || row.medical_conditions ||
+      config.patologia || config.pathology ||
       config.patologias || config.pathologies || config.conditions || config.medical_conditions
     ),
     medications: toStrArr(
@@ -796,6 +804,7 @@ function mapTraining(memoryBlocks, recentWorkouts, workoutLogs, exercises) {
 }
 
 function buildUserContext(profile) {
+  var pathologies = profile && profile.pathologies ? profile.pathologies : [];
   return {
     nome: profile && profile.name || null,
     idade: profile && profile.age || null,
@@ -804,6 +813,8 @@ function buildUserContext(profile) {
     altura: profile && profile.heightCm || null,
     objetivo: profile && profile.goal || null,
     nivel: profile && profile.athleteLevel || null,
+    patologia: pathologies[0] || null,
+    patologias: pathologies,
     observacoes: []
       .concat(profile && profile.activityLevel ? [profile.activityLevel] : [])
       .concat(profile && profile.observations ? profile.observations : [])
