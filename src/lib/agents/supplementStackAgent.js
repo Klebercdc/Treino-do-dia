@@ -1,4 +1,7 @@
 import { callClaude } from "../services/claude";
+import askKronosModule from "../../ai/kronos/askKronos.js";
+
+const { askKronos } = askKronosModule;
 
 function buildUserSupplementProfile(user = {}) {
   return {
@@ -22,12 +25,10 @@ export const SupplementStackAgent = {
   async build(user, message) {
     const profile = buildUserSupplementProfile(user);
 
-    const prompt = `
-Você é KRONOS, especialista avançado em suplementação esportiva, vitaminas e minerais.
-
+    const userMessage = `
 MONTE UMA ESTRATÉGIA DE SUPLEMENTAÇÃO INTELIGENTE E ESPECÍFICA.
 
-PERFIL:
+PERFIL LEGADO COMPLEMENTAR:
 ${JSON.stringify(profile, null, 2)}
 
 PEDIDO:
@@ -110,7 +111,19 @@ REGRAS IMPORTANTES:
 - não inventar exames; apenas dizer quando faria sentido avaliar.
 `;
 
-    const response = await callClaude(prompt);
+    const result = await askKronos({
+      message: userMessage,
+      userId: user?.id,
+      intent: "supplement_guidance",
+      topic: "supplement",
+      mode: "full",
+      maxTokens: 1800,
+      callLLM: async ({ systemPrompt, userMessage }) => {
+        return await callClaude(`${systemPrompt}\n\nMENSAGEM DO USUÁRIO:\n${userMessage}`);
+      },
+    });
+
+    const response = result.response;
     return JSON.parse(response);
   }
 };

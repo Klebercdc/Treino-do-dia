@@ -50,13 +50,50 @@ function loadHubWithRows(resolveRows) {
 test('buildKronosContext consolida dieta, treino e exames reais em contrato global', async function() {
   const hub = loadHubWithRows(function(requestPath) {
     if (requestPath.startsWith('profiles?')) {
-      return [{ id: 'u1', nome: 'Ana', idade: 34, sexo: 'feminino', peso_kg: 64, altura_cm: 168, objetivo: 'hipertrofia', nivel: 'intermediário', restricoes: ['lactose'] }];
+      return [{
+        id: 'u1',
+        full_name: 'Ana',
+        birth_date: '1992-01-10',
+        sex: 'female',
+        current_weight_kg: 64,
+        height_cm: 168,
+        objective: 'hipertrofia',
+        activity_level: 'moderado',
+        allergies: ['amendoim'],
+        intolerances: ['lactose'],
+        liked_foods: ['arroz', 'frango'],
+        clinical_notes: 'SOP em acompanhamento'
+      }];
+    }
+    if (requestPath.startsWith('user_profiles?')) {
+      return [{
+        user_id: 'u1',
+        nivel: 'intermediário',
+        patologias: ['SOP'],
+        medicamentos: ['metformina'],
+        preferencias: ['aveia'],
+        observacoes: 'prefere refeições simples'
+      }];
     }
     if (requestPath.startsWith('nutrition_goals?')) {
       return [{ calories_target: 2100, protein_g: 140, carbs_g: 240, fat_g: 65, updated_at: '2026-04-20T10:00:00Z' }];
     }
     if (requestPath.startsWith('meal_plans?')) {
-      return [{ id: 'mp1', title: 'Dieta atual', active: true, status: 'active', updated_at: '2026-04-20T10:00:00Z' }];
+      return [{
+        id: 'mp1',
+        title: 'Dieta atual',
+        active: true,
+        status: 'active',
+        updated_at: '2026-04-20T10:00:00Z',
+        context_snapshot: {
+          healthContext: {
+            patologia: 'SOP',
+            medicamentos: 'metformina',
+            preferencias: ['aveia'],
+            observacoes: ['evitar refeições muito grandes à noite']
+          }
+        }
+      }];
     }
     if (requestPath.startsWith('meal_plan_items?')) {
       return [
@@ -74,9 +111,10 @@ test('buildKronosContext consolida dieta, treino e exames reais em contrato glob
         created_at: '2026-04-18T10:00:00Z',
         ai_insights: { summary: 'Ferritina baixa pede atenção.', clinical_flags: ['ferritina baixa'] },
         normalized_payload: {
+          collection_date: '2026-04-17',
           biomarkers: [
-            { marker_key: 'ferritin', marker_name: 'Ferritina', value_numeric: 18, unit: 'ng/mL', reference_range: '30 - 300', flag: 'low' },
-            { marker_key: 'glucose', marker_name: 'Glicose', value_numeric: 88, unit: 'mg/dL', reference_range: '70 - 99', flag: 'normal' }
+            { marker_key: 'ferritin', marker_name: 'Ferritina', value_numeric: 18, unit: 'ng/mL', reference_min: 30, reference_max: 300, flag: 'low', feedback_summary: 'estoque baixo de ferro' },
+            { marker_key: 'glucose', marker_name: 'Glicose', value_numeric: 88, unit: 'mg/dL', reference_text: '70 - 99', flag: 'normal' }
           ]
         }
       }];
@@ -99,6 +137,15 @@ test('buildKronosContext consolida dieta, treino e exames reais em contrato glob
   const context = await hub.buildKronosContext({ userId: 'u1', message: 'Como estão dieta e exames?' });
 
   assert.equal(context.user.nome, 'Ana');
+  assert.equal(context.user.objetivo, 'hipertrofia');
+  assert.ok(context.contextoClinico.restricoes.includes('lactose'));
+  assert.ok(context.contextoClinico.restricoes.includes('amendoim'));
+  assert.ok(context.contextoClinico.preferencias.includes('arroz'));
+  assert.ok(context.contextoClinico.preferencias.includes('aveia'));
+  assert.ok(context.contextoClinico.patologias.includes('SOP'));
+  assert.ok(context.contextoClinico.medicacoes.includes('metformina'));
+  assert.ok(context.contextoClinico.observacoes.includes('SOP em acompanhamento'));
+  assert.ok(context.contextoClinico.observacoes.includes('evitar refeições muito grandes à noite'));
   assert.equal(context.dieta.disponivel, true);
   assert.equal(context.dieta.refeicoes[0].nome, 'Almoço');
   assert.equal(context.dieta.refeicoes[0].itens[0].nome, 'Arroz');
@@ -107,8 +154,11 @@ test('buildKronosContext consolida dieta, treino e exames reais em contrato glob
   assert.equal(context.treino.disponivel, true);
   assert.equal(context.treino.exercicios[0].nome, 'Supino reto');
   assert.equal(context.exames.disponivel, true);
+  assert.equal(context.exames.dataUltimaColeta, '2026-04-17');
   assert.equal(context.exames.biomarcadores[0].nome, 'Ferritina');
+  assert.equal(context.exames.biomarcadores[0].referencia, '30 - 300');
   assert.equal(context.exames.biomarcadores[0].status, 'baixo');
+  assert.ok(context.exames.biomarcadores[0].observacoes.includes('estoque baixo de ferro'));
 });
 
 test('buildKronosSystemPrompt proíbe falta de acesso quando há exames e preserva gramas da dieta', function() {
@@ -161,9 +211,15 @@ test('askKronos usa buildKronosContext e envia appContext para o LLM central', a
 test('fluxos legados de chat usam askKronos como entrada central', function() {
   const apiChat = fs.readFileSync(path.resolve(__dirname, '../../api/chat.js'), 'utf8');
   const chatAgent = fs.readFileSync(path.resolve(__dirname, '../../src/lib/agents/chatAgent.js'), 'utf8');
+  const supplementAgent = fs.readFileSync(path.resolve(__dirname, '../../src/lib/agents/supplementAgent.js'), 'utf8');
+  const supplementStackAgent = fs.readFileSync(path.resolve(__dirname, '../../src/lib/agents/supplementStackAgent.js'), 'utf8');
 
   assert.match(apiChat, /askKronosService\.askKronos/);
   assert.match(apiChat, /buildKronosContext\(\{ userId: userId/);
   assert.match(chatAgent, /askKronos\(/);
   assert.doesNotMatch(chatAgent, /callClaude\(prompt\)/);
+  assert.match(supplementAgent, /askKronos\(/);
+  assert.doesNotMatch(supplementAgent, /callClaude\(prompt\)/);
+  assert.match(supplementStackAgent, /askKronos\(/);
+  assert.doesNotMatch(supplementStackAgent, /callClaude\(prompt\)/);
 });

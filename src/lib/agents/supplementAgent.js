@@ -1,5 +1,8 @@
 import { callClaude } from "../services/claude";
 import { classifySupplementIntent } from "../engine/supplementClassifier";
+import askKronosModule from "../../ai/kronos/askKronos.js";
+
+const { askKronos } = askKronosModule;
 
 function buildSupplementContext(user = {}) {
   return {
@@ -20,17 +23,15 @@ export const SupplementAgent = {
     const intent = classifySupplementIntent(message);
     const context = buildSupplementContext(user);
 
-    const prompt = `
-Você é KRONOS, especialista avançado em suplementação esportiva e nutricional.
+    const userMessage = `
+MENSAGEM DO USUÁRIO:
+${message}
 
-CONTEXTO DO USUÁRIO:
+CONTEXTO LEGADO COMPLEMENTAR:
 ${JSON.stringify(context, null, 2)}
 
 INTENÇÃO:
 ${JSON.stringify(intent, null, 2)}
-
-MENSAGEM DO USUÁRIO:
-${message}
 
 REGRAS DE COMPORTAMENTO:
 1. Não responder de forma genérica.
@@ -115,6 +116,18 @@ G) Termogênicos:
 NUNCA RESPONDA COMO TEXTO VAZIO OU GENÉRICO.
 `;
 
-    return await callClaude(prompt);
+    const result = await askKronos({
+      message: userMessage,
+      userId: user?.id,
+      intent: "supplement_guidance",
+      topic: "supplement",
+      mode: "full",
+      maxTokens: 1400,
+      callLLM: async ({ systemPrompt, userMessage }) => {
+        return await callClaude(`${systemPrompt}\n\nMENSAGEM DO USUÁRIO:\n${userMessage}`);
+      },
+    });
+
+    return result.response;
   }
 };

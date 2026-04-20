@@ -121,19 +121,35 @@ async function buildKronosInventory(userId) {
 // ─────────────────────────────────────────────────────────────
 
 async function loadProfile(userId) {
-  // RISCO 2 — select every known alias so mapProfile never silently misses a field.
-  // New aliases discovered in the codebase: peso, altura, age, weight, height,
-  // pesoKg, alturaCm, weightKg, heightCm.  config (JSONB) covers anything else.
-  var rows = await supabase(
+  // Production uses public.profiles with canonical fields. Legacy/dev flows may
+  // still write public.user_profiles. Query them separately so a missing
+  // optional column never makes the whole profile disappear from KRONOS.
+  var canonicalRows = await supabase(
     'GET',
     'profiles?id=eq.' + userId +
-    '&select=id,nome,full_name,objetivo,objective,nivel,idade,age,sexo,sex,' +
-    'peso_kg,current_weight_kg,peso,weight,weight_kg,pesoKg,' +
-    'altura_cm,height_cm,altura,height,height_cm,alturaCm,' +
-    'activity_level,rotina,restricoes,intolerances,lesoes,config&limit=1',
+    '&select=id,full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,disliked_foods,liked_foods,clinical_notes&limit=1',
     null
   ).catch(function () { return []; });
-  return (rows && rows[0]) ? rows[0] : null;
+
+  var hormoneRows = await supabase(
+    'GET',
+    'profiles?id=eq.' + userId +
+    '&select=uses_exogenous_hormones,hormone_context_type,declared_compounds,last_administration_at,monitoring_mode&limit=1',
+    null
+  ).catch(function () { return []; });
+
+  var legacyRows = await supabase(
+    'GET',
+    'user_profiles?user_id=eq.' + userId +
+    '&select=user_id,nome,objetivo,nivel,idade,sexo,peso_kg,altura_cm,rotina,preferencias,restricoes,lesoes,observacoes&limit=1',
+    null
+  ).catch(function () { return []; });
+
+  var canonical = (canonicalRows && canonicalRows[0]) ? canonicalRows[0] : null;
+  var hormone = (hormoneRows && hormoneRows[0]) ? hormoneRows[0] : null;
+  var legacy = (legacyRows && legacyRows[0]) ? legacyRows[0] : null;
+  if (!canonical && !hormone && !legacy) return null;
+  return Object.assign({}, legacy || {}, canonical || {}, hormone || {});
 }
 
 async function loadNutritionGoal(userId) {
@@ -288,6 +304,31 @@ function toStrArr(v) {
   return [];
 }
 
+function uniqueArr(values) {
+  var seen = Object.create(null);
+  var out = [];
+  (values || []).forEach(function (value) {
+    var text = String(value || '').trim();
+    var key = text.toLowerCase();
+    if (!text || seen[key]) return;
+    seen[key] = true;
+    out.push(text);
+  });
+  return out;
+}
+
+function yearsFromBirthDate(value) {
+  if (!value) return null;
+  var birth = new Date(value);
+  if (Number.isNaN(birth.getTime())) return null;
+  var now = new Date();
+  var age = now.getUTCFullYear() - birth.getUTCFullYear();
+  var beforeBirthday = now.getUTCMonth() < birth.getUTCMonth() ||
+    (now.getUTCMonth() === birth.getUTCMonth() && now.getUTCDate() < birth.getUTCDate());
+  if (beforeBirthday) age -= 1;
+  return age >= 0 && age <= 120 ? age : null;
+}
+
 function mapProfile(row) {
   if (!row) return null;
   var config = (row.config && typeof row.config === 'object' && !Array.isArray(row.config))
@@ -318,7 +359,8 @@ function mapProfile(row) {
     ),
     age: firstNum(
       row.idade, row.age,
-      config.idade, config.age
+      config.idade, config.age,
+      yearsFromBirthDate(row.birth_date)
     ),
     sex: firstStr(
       row.sexo, row.sex, row.gender,
@@ -345,10 +387,34 @@ function mapProfile(row) {
       config.activity_level, config.rotina, config.activityLevel
     ),
     athleteLevel: athleteLevel,
-    restrictions: toStrArr(
-      row.restricoes || row.intolerances || row.restrictions ||
-      config.restricoes || config.intolerances || config.restrictions
-    )
+    restrictions: uniqueArr([]
+      .concat(toStrArr(row.restricoes || row.restrictions || config.restricoes || config.restrictions))
+      .concat(toStrArr(row.allergies || config.allergies))
+      .concat(toStrArr(row.intolerances || config.intolerances))),
+    pathologies: toStrArr(
+      row.patologias || row.pathologies || row.conditions || row.medical_conditions ||
+      config.patologias || config.pathologies || config.conditions || config.medical_conditions
+    ),
+    medications: toStrArr(
+      row.medicacoes || row.medicações || row.medicamentos || row.medications ||
+      config.medicacoes || config.medicamentos || config.medications
+    ),
+    preferences: uniqueArr([]
+      .concat(toStrArr(row.preferencias || row.preferences || config.preferencias || config.preferences))
+      .concat(toStrArr(row.liked_foods || config.liked_foods))),
+    injuries: toStrArr(row.lesoes || row.injuries || config.lesoes || config.injuries),
+    observations: [
+      firstStr(row.observacoes, row.notes, config.observacoes, config.notes),
+      firstStr(row.clinical_notes, config.clinical_notes),
+      firstStr(row.dietary_pattern, config.dietary_pattern)
+    ].filter(Boolean),
+    hormoneContext: {
+      usesExogenousHormones: typeof row.uses_exogenous_hormones === 'boolean' ? row.uses_exogenous_hormones : null,
+      type: firstStr(row.hormone_context_type, config.hormone_context_type) || null,
+      declaredCompounds: toStrArr(row.declared_compounds || config.declared_compounds),
+      lastAdministrationAt: firstStr(row.last_administration_at, config.last_administration_at) || null,
+      monitoringMode: firstStr(row.monitoring_mode, config.monitoring_mode) || null
+    }
   };
 }
 
@@ -532,6 +598,29 @@ function deriveLabsStatus(labRow, ai) {
   return 'partial';
 }
 
+function firstPayloadDate(payload, labRow) {
+  var extraction = payload && payload.extraction && typeof payload.extraction === 'object'
+    ? payload.extraction
+    : {};
+  var metadata = extraction.metadata && typeof extraction.metadata === 'object'
+    ? extraction.metadata
+    : {};
+  return firstStr(
+    payload && payload.collection_date,
+    payload && payload.collected_at,
+    payload && payload.sample_collected_at,
+    payload && payload.exam_date,
+    payload && payload.report_date,
+    metadata.collection_date,
+    metadata.collected_at,
+    metadata.sample_collected_at,
+    metadata.exam_date,
+    metadata.report_date,
+    labRow && labRow.processed_at,
+    labRow && labRow.created_at
+  );
+}
+
 function mapLabs(labRow) {
   if (!labRow) return null;
   var ai = (labRow.ai_insights && typeof labRow.ai_insights === 'object') ? labRow.ai_insights : {};
@@ -575,9 +664,13 @@ function mapLabs(labRow) {
       var flag = (b.flag === 'low' || b.flag === 'high' || b.flag === 'normal') ? b.flag : null;
       var reference = firstStr(
         b.reference_range,
+        b.reference_text,
+        b.reference_text_raw,
+        b.raw_reference_text,
         b.reference,
         b.ref,
         b.range,
+        b.reference_min != null || b.reference_max != null ? [b.reference_min, b.reference_max].filter(function (x) { return x != null; }).join(' - ') : null,
         b.min != null || b.max != null ? [b.min, b.max].filter(function (x) { return x != null; }).join(' - ') : null
       );
       return {
@@ -586,11 +679,12 @@ function mapLabs(labRow) {
         value: b.value_numeric !== undefined && b.value_numeric !== null ? b.value_numeric : (b.value_text || null),
         unit: b.unit || null,
         reference: reference || null,
-        flag: flag
+        flag: flag,
+        observations: [b.feedback_summary, b.source_line].map(function (x) { return firstStr(x); }).filter(Boolean)
       };
     });
 
-  var reportDate = firstStr(labRow.processed_at, labRow.created_at);
+  var reportDate = firstPayloadDate(payload, labRow);
 
   return {
     labsStatus: labsStatus,          // RISCO 3 — explicit status
@@ -710,7 +804,9 @@ function buildUserContext(profile) {
     altura: profile && profile.heightCm || null,
     objetivo: profile && profile.goal || null,
     nivel: profile && profile.athleteLevel || null,
-    observacoes: profile && profile.activityLevel ? [profile.activityLevel] : []
+    observacoes: []
+      .concat(profile && profile.activityLevel ? [profile.activityLevel] : [])
+      .concat(profile && profile.observations ? profile.observations : [])
   };
 }
 
@@ -734,7 +830,8 @@ function buildLabsContext(labs) {
         valor: marker.value != null ? marker.value : null,
         unidade: marker.unit || null,
         referencia: marker.reference || null,
-        status: statusMap[marker.flag] || 'indeterminado'
+        status: statusMap[marker.flag] || 'indeterminado',
+        observacoes: marker.observations || []
       };
     }).filter(function (marker) { return marker.nome; }),
     alteracoesImportantes: []
@@ -745,17 +842,49 @@ function buildLabsContext(labs) {
   };
 }
 
-function buildClinicalContext(profile, labs) {
+function extractDietClinicalContext(diet) {
+  var plan = diet && diet.planoAtual ? diet.planoAtual : {};
+  var snapshots = [
+    plan.contextSnapshot,
+    plan.planData,
+    plan.contextSnapshot && plan.contextSnapshot.healthContext,
+    plan.planData && plan.planData.healthContext,
+    plan.contextSnapshot && plan.contextSnapshot.profile,
+    plan.planData && plan.planData.profile
+  ].filter(function (item) { return item && typeof item === 'object'; });
+
+  return snapshots.reduce(function (acc, item) {
+    acc.pathologies = acc.pathologies.concat(toStrArr(item.patologias || item.patologia || item.pathologies || item.conditions));
+    acc.medications = acc.medications.concat(toStrArr(item.medicacoes || item.medicamentos || item.medications));
+    acc.preferences = acc.preferences.concat(toStrArr(item.preferencias || item.preferences || item.liked_foods));
+    acc.observations = acc.observations.concat(toStrArr(item.observacoes || item.observations || item.notes));
+    return acc;
+  }, { pathologies: [], medications: [], preferences: [], observations: [] });
+}
+
+function buildClinicalContext(profile, labs, diet) {
+  var dietClinical = extractDietClinicalContext(diet);
   return {
-    patologias: [],
+    patologias: uniqueArr([]
+      .concat(profile && profile.pathologies ? profile.pathologies : [])
+      .concat(dietClinical.pathologies)),
     restricoes: profile && profile.restrictions ? profile.restrictions : [],
-    medicacoes: [],
+    medicacoes: uniqueArr([]
+      .concat(profile && profile.medications ? profile.medications : [])
+      .concat(dietClinical.medications)),
     sinais: labs ? []
       .concat(labs.clinicalFlags || [])
       .concat(labs.criticalFlags || [])
       .filter(Boolean) : [],
-    preferencias: [],
-    observacoes: profile && profile.activityLevel ? [profile.activityLevel] : []
+    preferencias: uniqueArr([]
+      .concat(profile && profile.preferences ? profile.preferences : [])
+      .concat(dietClinical.preferences)),
+    lesoes: profile && profile.injuries ? profile.injuries : [],
+    hormonios: profile && profile.hormoneContext ? profile.hormoneContext : null,
+    observacoes: []
+      .concat(profile && profile.activityLevel ? [profile.activityLevel] : [])
+      .concat(profile && profile.observations ? profile.observations : [])
+      .concat(dietClinical.observations)
   };
 }
 
@@ -854,7 +983,7 @@ async function buildKronosContextHub(userId, queryText) {
         observacoes: []
       },
       exames: buildLabsContext(null),
-      contextoClinico: buildClinicalContext(null, null)
+      contextoClinico: buildClinicalContext(null, null, null)
     };
   }
 
@@ -957,7 +1086,7 @@ async function buildKronosContextHub(userId, queryText) {
     },
     dieta: detailedDietSlice,
     exames: buildLabsContext(labsSlice),
-    contextoClinico: buildClinicalContext(profileSlice, labsSlice)
+    contextoClinico: buildClinicalContext(profileSlice, labsSlice, detailedDietSlice)
   };
 
   // RISCO 1 — only cache successful, non-empty hubs
@@ -1343,7 +1472,7 @@ async function buildKronosContext(options) {
       observacoes: []
     },
     exames: hub.exames || buildLabsContext(hub.labs),
-    contextoClinico: hub.contextoClinico || buildClinicalContext(hub.profile, hub.labs),
+    contextoClinico: hub.contextoClinico || buildClinicalContext(hub.profile, hub.labs, hub.dieta || hub.diet),
     inventory: hub.inventory || {},
     missingData: hub.missingData || [],
     legacy: {
