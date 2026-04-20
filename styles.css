@@ -4573,10 +4573,80 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
 }
 
 body.light-mode #nutritionFlowScreen,
-body.light-mode #nutritionFlowScreen .nutrition-intake-shell,
-body.light-mode #nutritionFlowScreen .nutrition-flow-header { background:#0F172A; color:#F1F5F9; }
-body.light-mode #nutritionFlowScreen { --nutrition-flow-bg:#0F172A; --nutrition-flow-text:#F1F5F9; --nutrition-flow-muted:#94A3B8; --nutrition-flow-border:rgba(255,255,255,.08); --nutrition-flow-card:rgba(30,41,59,.72); --nutrition-flow-card-expanded:rgba(15,23,42,.44); --nutrition-flow-chip-bg:#1E293B; --nutrition-flow-chip-text:#F8FAFC; --nutrition-flow-chip-active-bg:rgba(249,115,22,.16); --nutrition-flow-chip-active-text:#FDBA74; --nutrition-flow-chip-active-border:#FB923C; }
-body.light-mode #nutritionFlowScreen .nutrition-flow-footer { background:rgba(15,23,42,.9); }
+body.light-mode #nutritionFlowScreen .nutrition-intake-shell {
+  background:#f3f6fb;
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen {
+  --nutrition-flow-bg:#f3f6fb;
+  --nutrition-flow-text:#0f172a;
+  --nutrition-flow-muted:#64748b;
+  --nutrition-flow-border:rgba(15,23,42,0.10);
+  --nutrition-flow-card:rgba(255,255,255,0.92);
+  --nutrition-flow-card-expanded:rgba(248,250,252,0.98);
+  --nutrition-flow-chip-bg:#eef2f7;
+  --nutrition-flow-chip-text:#0f172a;
+  --nutrition-flow-chip-active-bg:rgba(234,108,10,0.12);
+  --nutrition-flow-chip-active-text:#c2410c;
+  --nutrition-flow-chip-active-border:#ea6c0a;
+}
+body.light-mode #nutritionFlowScreen .nutrition-flow-header,
+body.light-mode #nutritionFlowScreen .nutrition-flow-footer {
+  background:rgba(243,246,251,.92);
+  color:#0f172a;
+  border-color:rgba(15,23,42,.08);
+}
+body.light-mode #nutritionFlowScreen .nutrition-flow-title-small,
+body.light-mode #nutritionFlowScreen .nutrition-pathology-category-btn,
+body.light-mode #nutritionFlowScreen .check-container span,
+body.light-mode #nutritionFlowScreen .nutrition-official-summary-row strong {
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen .nutrition-flow-percent,
+body.light-mode #nutritionFlowScreen .nutrition-official-label,
+body.light-mode #nutritionFlowScreen .nutrition-official-hint,
+body.light-mode #nutritionFlowScreen .nutrition-official-input-label,
+body.light-mode #nutritionFlowScreen .nutrition-official-meta-grid p,
+body.light-mode #nutritionFlowScreen .nutrition-official-summary-row span {
+  color:#64748b;
+}
+body.light-mode #nutritionFlowScreen .glass-card,
+body.light-mode #nutritionFlowScreen .check-container {
+  background:var(--nutrition-flow-card);
+  border-color:var(--nutrition-flow-border);
+}
+body.light-mode #nutritionFlowScreen .input-dark {
+  background:#fff;
+  border-color:rgba(15,23,42,.12);
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen .input-dark option,
+body.light-mode #nutritionFlowScreen .nutrition-official-meta-grid option {
+  background:#fff;
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen .nutrition-official-meta-grid select {
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen .nutrition-official-metric-box {
+  background:#fff;
+  border-color:rgba(15,23,42,.10);
+}
+body.light-mode #nutritionFlowScreen .nutrition-official-metric-box strong {
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen .nutrition-flow-progress,
+body.light-mode #nutritionFlowScreen .slider {
+  background:#d8e0ea;
+}
+body.light-mode #nutritionFlowScreen .nutrition-flow-back {
+  background:#e2e8f0;
+  color:#0f172a;
+}
+body.light-mode #nutritionFlowScreen .nutrition-official-reason {
+  color:#9a3412;
+  background:rgba(234,108,10,.10);
+}
 body.light-mode .nutrition-flow-primary,
 body.light-mode .nutrition-flow-primary [style*="color:#fff"],
 body.light-mode .nutrition-flow-primary [style*="color: #fff"] {
