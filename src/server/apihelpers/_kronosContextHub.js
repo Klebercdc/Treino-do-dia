@@ -204,17 +204,31 @@ async function loadTodayFoodLogs(userId) {
 }
 
 async function loadLatestLabSummary(userId) {
-  // RISCO 3 — include parse_status so mapLabs can distinguish
-  // "valid but still processing" from "valid and fully interpreted".
+  var select = 'id,created_at,processed_at,parse_status,clinical_flags,critical_flags,ai_insights,normalized_payload,confidence';
+
+  // Prioridade: laudos válidos e processados
   var rows = await supabase(
     'GET',
     'lab_reports?user_id=eq.' + userId +
     '&is_valid=eq.true' +
-    '&select=id,created_at,processed_at,parse_status,clinical_flags,critical_flags,ai_insights,normalized_payload,confidence' +
+    '&select=' + select +
     '&order=processed_at.desc.nullslast,created_at.desc&limit=1',
     null
   ).catch(function () { return []; });
-  return (rows && rows[0]) ? rows[0] : null;
+  if (rows && rows[0]) return rows[0];
+
+  // Fallback: laudos em processamento (uploaded/processing/queued) — permite
+  // que o KRONOS informe ao usuário que o exame existe mas ainda está sendo processado,
+  // em vez de dizer que não há exames cadastrados.
+  var pending = await supabase(
+    'GET',
+    'lab_reports?user_id=eq.' + userId +
+    '&parse_status=in.(uploaded,processing,pending,queued,pending_upload)' +
+    '&select=' + select +
+    '&order=created_at.desc&limit=1',
+    null
+  ).catch(function () { return []; });
+  return (pending && pending[0]) ? pending[0] : null;
 }
 
 async function loadRecentWorkouts(userId) {
