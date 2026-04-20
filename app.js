@@ -5705,6 +5705,7 @@ function openEditarPerfil() {
   document.body.classList.add('overlay-open');
   const _footerEP = document.querySelector('.footer-actions');
   if (_footerEP) _footerEP.style.display = 'none';
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
 }
 function closeEditarPerfil() {
   document.getElementById("editarPerfilScreen").classList.remove("show");

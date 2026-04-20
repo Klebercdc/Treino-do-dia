@@ -1503,7 +1503,9 @@ body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.52)"] { color: rgba(15
 #editarPerfilScreen.show { display: flex; }
 .ep-avatar-wrap { display: flex; flex-direction: column; align-items: center; padding: 56px 20px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); }
 .ep-avatar { width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 2.4rem; color: #fff; position: relative; cursor: pointer; overflow: hidden; border: 3px solid var(--accent); }
-.ep-avatar-cam { position: absolute; bottom: 0; left: 0; right: 0; height: 34px; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; }
+.ep-avatar-cam { position: absolute; bottom: 0; left: 0; right: 0; z-index: 2; height: 36px; border: 0; padding: 0; background: rgba(15,23,42,0.82); color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 1; }
+.ep-avatar-cam svg,
+.ep-avatar-cam i { width: 18px; height: 18px; color: #ffffff; stroke: currentColor; fill: none; opacity: 1; }
 .ep-name-display { margin-top: 12px; font-family: var(--display); font-size: 1.3rem; color: var(--text); letter-spacing: .04em; }
 .ep-level { margin-top: 4px; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 100px; padding: 2px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .ep-body { padding: 24px 20px; flex: 1; }
