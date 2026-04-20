@@ -773,17 +773,12 @@ module.exports = function(req, res) {
               topic: classification.topic,
               mode: mode,
               maxTokens: maxTokens,
-              kronosContext: hub && typeof hub === 'object' ? {
+              kronosContext: hub && typeof hub === 'object' ? Object.assign({}, selectedContext, {
                 generatedAt: hub.generatedAt || new Date().toISOString(),
-                user: hub.user,
-                treino: hub.treino,
-                dieta: hub.dieta || hub.diet,
-                exames: hub.exames,
-                contextoClinico: hub.contextoClinico,
-                inventory: hub.inventory,
-                missingData: hub.missingData,
+                inventory: hub.inventory || {},
+                missingData: hub.missingData || [],
                 scienceContext: scienceContext || null
-              } : null,
+              }) : null,
               callLLM: function(payload) {
                 return new Promise(function(resolve, reject) {
                   var system = payload.systemPrompt;
