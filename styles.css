@@ -4127,7 +4127,7 @@ body.light-mode #aiModal #aiSendBtn i {
   --diet-accent: #ea580c;
   --diet-accent-bg: #fff7ed;
   --diet-accent-bg-strong: #ffedd5;
-  --diet-cta-bg: #111827;
+  --diet-cta-bg: linear-gradient(135deg, #f97316, #ea580c);
   --diet-cta-text: #ffffff;
   --diet-danger: #ef4444;
   --diet-danger-bg: #fef2f2;
@@ -4351,6 +4351,17 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
   letter-spacing:.01em;
   box-shadow:var(--diet-shadow);
   cursor:pointer;
+}
+#dietDataScreen .diet-premium-floating .kronos-recalc-btn {
+  background:linear-gradient(135deg, #f97316, #ea580c);
+  color:#ffffff;
+  border:none;
+  box-shadow:0 10px 25px rgba(234,88,12,.25);
+}
+#dietDataScreen .diet-premium-floating .kronos-recalc-btn i,
+#dietDataScreen .diet-premium-floating .kronos-recalc-btn svg {
+  color:#fff;
+  stroke:#fff;
 }
 #dietDataScreen .diet-premium-floating button:active { transform:scale(.95); }
 .diet-premium-backdrop {
