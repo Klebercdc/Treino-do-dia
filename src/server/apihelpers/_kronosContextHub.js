@@ -146,6 +146,40 @@ async function loadNutritionGoal(userId) {
   return (rows && rows[0]) ? rows[0] : null;
 }
 
+async function loadLatestMealPlan(userId) {
+  var rows = await supabase(
+    'GET',
+    'meal_plans?user_id=eq.' + userId +
+    '&select=id,title,description,status,valid_from,valid_to,active,plan_data,context_snapshot,created_at,updated_at' +
+    '&order=active.desc,updated_at.desc.nullslast,created_at.desc&limit=1',
+    null
+  ).catch(function () { return []; });
+  return (rows && rows[0]) ? rows[0] : null;
+}
+
+async function loadMealPlanItems(mealPlanId) {
+  if (!mealPlanId) return [];
+  return supabase(
+    'GET',
+    'meal_plan_items?meal_plan_id=eq.' + mealPlanId +
+    '&select=meal_name,time_hint,food_name,quantity,unit,calories,protein_g,carbs_g,fat_g,notes,sort_order' +
+    '&order=sort_order.asc,created_at.asc&limit=500',
+    null
+  ).catch(function () { return []; });
+}
+
+async function loadTodayFoodLogs(userId) {
+  var today = new Date().toISOString().slice(0, 10);
+  return supabase(
+    'GET',
+    'user_food_logs?user_id=eq.' + userId +
+    '&consumed_at=gte.' + today + 'T00:00:00.000Z' +
+    '&select=consumed_at,meal_type,food_name,quantity,estimated_calories,estimated_protein_g,estimated_carbs_g,estimated_fat_g,source,notes' +
+    '&order=consumed_at.asc&limit=200',
+    null
+  ).catch(function () { return []; });
+}
+
 async function loadLatestLabSummary(userId) {
   // RISCO 3 — include parse_status so mapLabs can distinguish
   // "valid but still processing" from "valid and fully interpreted".
@@ -160,14 +194,32 @@ async function loadLatestLabSummary(userId) {
   return (rows && rows[0]) ? rows[0] : null;
 }
 
-async function loadLatestWorkout(userId) {
-  var rows = await supabase(
+async function loadRecentWorkouts(userId) {
+  return supabase(
     'GET',
     'workouts?user_id=eq.' + userId +
-    '&select=id,date,created_at&order=date.desc.nullslast,created_at.desc&limit=1',
+    '&select=id,date,duration_minutes,notes,created_at&order=date.desc.nullslast,created_at.desc&limit=14',
     null
   ).catch(function () { return []; });
-  return (rows && rows[0]) ? rows[0] : null;
+}
+
+async function loadWorkoutLogs(workoutIds) {
+  if (!workoutIds || !workoutIds.length) return [];
+  return supabase(
+    'GET',
+    'workout_logs?workout_id=in.(' + workoutIds.join(',') + ')' +
+    '&select=workout_id,weight_kg,reps,rpe,exercise_id,created_at&limit=2000',
+    null
+  ).catch(function () { return []; });
+}
+
+async function loadExercises(exerciseIds) {
+  if (!exerciseIds || !exerciseIds.length) return [];
+  return supabase(
+    'GET',
+    'exercises?id=in.(' + exerciseIds.join(',') + ')&select=id,name,muscle_group&limit=1000',
+    null
+  ).catch(function () { return []; });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -190,6 +242,44 @@ function firstNum() {
     if (Number.isFinite(n)) return n;
   }
   return null;
+}
+
+function round1(v) {
+  var n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 10) / 10;
+}
+
+function nullableRound1(v) {
+  var n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 10) / 10;
+}
+
+function parseGrams(quantity, unit) {
+  var q = firstNum(quantity);
+  if (q == null && typeof quantity === 'string') {
+    var match = quantity.replace(',', '.').match(/(\d+(?:\.\d+)?)/);
+    if (match) q = Number(match[1]);
+  }
+  var u = String(unit || '').trim().toLowerCase();
+  var rawQuantity = String(quantity || '').trim().toLowerCase();
+  if (q == null) return null;
+  if (!u && /kg/.test(rawQuantity)) return q * 1000;
+  if (!u && /g|grama/.test(rawQuantity)) return q;
+  if (!u || /^g(rama|ramas)?$/.test(u)) return q;
+  if (/^kg$/.test(u)) return q * 1000;
+  return null;
+}
+
+function groupByKey(items, keyFn) {
+  var grouped = Object.create(null);
+  (items || []).forEach(function (item) {
+    var key = keyFn(item) || 'Sem refeição definida';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(item);
+  });
+  return grouped;
 }
 
 function toStrArr(v) {
@@ -286,6 +376,133 @@ function mapNutrition(nutritionGoal, profileRow) {
   };
 }
 
+function normalizeMealItem(row) {
+  var nome = firstStr(row && row.food_name, row && row.nome, row && row.name);
+  if (!nome) return null;
+  return {
+    nome: nome,
+    gramas: parseGrams(row.quantity, row.unit),
+    unidade: firstStr(row.unit) || null,
+    quantidade: firstStr(row.quantity) || null,
+    calorias: nullableRound1(row.calories),
+    proteina: nullableRound1(row.protein_g),
+    carboidrato: nullableRound1(row.carbs_g),
+    gordura: nullableRound1(row.fat_g),
+    observacoes: firstStr(row.notes) || null
+  };
+}
+
+function sumMeal(items, field) {
+  var sum = 0;
+  var hasAny = false;
+  (items || []).forEach(function (item) {
+    var n = Number(item && item[field]);
+    if (Number.isFinite(n)) {
+      sum += n;
+      hasAny = true;
+    }
+  });
+  return hasAny ? round1(sum) : null;
+}
+
+function normalizeMealsFromItems(items) {
+  var grouped = groupByKey(items || [], function (row) { return firstStr(row.meal_name); });
+  return Object.keys(grouped).map(function (mealName) {
+    var rows = grouped[mealName];
+    var normalizedItems = rows.map(normalizeMealItem).filter(Boolean);
+    return {
+      nome: mealName,
+      horario: firstStr(rows[0] && rows[0].time_hint) || null,
+      calorias: sumMeal(normalizedItems, 'calorias'),
+      proteina: sumMeal(normalizedItems, 'proteina'),
+      carboidrato: sumMeal(normalizedItems, 'carboidrato'),
+      gordura: sumMeal(normalizedItems, 'gordura'),
+      itens: normalizedItems
+    };
+  });
+}
+
+function normalizeFoodLogItem(row) {
+  var nome = firstStr(row && row.food_name);
+  if (!nome) return null;
+  return {
+    nome: nome,
+    gramas: parseGrams(row.quantity, null),
+    unidade: null,
+    quantidade: firstStr(row.quantity) || null,
+    calorias: nullableRound1(row.estimated_calories),
+    proteina: nullableRound1(row.estimated_protein_g),
+    carboidrato: nullableRound1(row.estimated_carbs_g),
+    gordura: nullableRound1(row.estimated_fat_g),
+    observacoes: firstStr(row.notes) || null
+  };
+}
+
+function normalizeTodayFoodLogs(rows) {
+  var grouped = groupByKey(rows || [], function (row) { return firstStr(row.meal_type) || 'Consumo registrado'; });
+  var meals = Object.keys(grouped).map(function (mealName) {
+    var logs = grouped[mealName];
+    var items = logs.map(normalizeFoodLogItem).filter(Boolean);
+    return {
+      nome: mealName,
+      horario: firstStr(logs[0] && logs[0].consumed_at) || null,
+      calorias: sumMeal(items, 'calorias'),
+      proteina: sumMeal(items, 'proteina'),
+      carboidrato: sumMeal(items, 'carboidrato'),
+      gordura: sumMeal(items, 'gordura'),
+      itens: items
+    };
+  });
+  var flat = meals.reduce(function (acc, meal) { return acc.concat(meal.itens || []); }, []);
+  return {
+    refeicoes: meals,
+    total: {
+      calorias: sumMeal(flat, 'calorias'),
+      proteina: sumMeal(flat, 'proteina'),
+      carboidrato: sumMeal(flat, 'carboidrato'),
+      gordura: sumMeal(flat, 'gordura')
+    }
+  };
+}
+
+function mapDetailedDiet(nutritionGoal, mealPlan, mealItems, todayFoodLogs) {
+  var planMeals = normalizeMealsFromItems(mealItems || []);
+  var today = normalizeTodayFoodLogs(todayFoodLogs || []);
+  var hasPlan = !!mealPlan;
+  var hasItems = planMeals.some(function (meal) { return meal.itens && meal.itens.length; });
+  var hasTodayLogs = today.refeicoes.some(function (meal) { return meal.itens && meal.itens.length; });
+  var observations = [];
+  if (hasPlan && !hasItems) observations.push('Plano alimentar encontrado sem itens detalhados por alimento.');
+  if (!hasPlan && nutritionGoal) observations.push('Metas nutricionais encontradas sem plano alimentar salvo.');
+  if (hasTodayLogs) observations.push('Consumo de hoje foi agregado a partir de user_food_logs.');
+
+  return {
+    disponivel: !!(nutritionGoal || hasPlan || hasItems || hasTodayLogs),
+    planoAtual: mealPlan ? {
+      id: mealPlan.id || null,
+      titulo: mealPlan.title || null,
+      descricao: mealPlan.description || null,
+      status: mealPlan.status || null,
+      ativo: mealPlan.active !== false,
+      validoDe: mealPlan.valid_from || null,
+      validoAte: mealPlan.valid_to || null,
+      atualizadoEm: mealPlan.updated_at || mealPlan.created_at || null,
+      planData: mealPlan.plan_data || null,
+      contextSnapshot: mealPlan.context_snapshot || null
+    } : null,
+    metaCalorica: nutritionGoal ? nullableRound1(nutritionGoal.calories_target) : null,
+    metaMacros: {
+      proteina: nutritionGoal ? nullableRound1(nutritionGoal.protein_g) : null,
+      carboidrato: nutritionGoal ? nullableRound1(nutritionGoal.carbs_g) : null,
+      gordura: nutritionGoal ? nullableRound1(nutritionGoal.fat_g) : null
+    },
+    totalConsumidoHoje: today.total,
+    refeicoes: planMeals,
+    refeicoesConsumidasHoje: today.refeicoes,
+    observacoes: observations
+  };
+}
+
 function safeStrArr(v) {
   if (Array.isArray(v)) return v.map(String).filter(Boolean);
   if (typeof v === 'string' && v.trim()) return [v.trim()];
@@ -348,20 +565,28 @@ function mapLabs(labRow) {
   // Key markers — up to 6 most relevant (flagged first)
   var biomarkers = Array.isArray(payload.biomarkers) ? payload.biomarkers : [];
   var keyMarkers = biomarkers
-    .filter(function (b) { return b && b.marker_key; })
+    .filter(function (b) { return b && (b.marker_key || b.marker_name || b.name); })
     .sort(function (a, b) {
       var af = (a.flag === 'high' || a.flag === 'low') ? 0 : 1;
       var bf = (b.flag === 'high' || b.flag === 'low') ? 0 : 1;
       return af - bf;
     })
-    .slice(0, 6)
     .map(function (b) {
+      var flag = (b.flag === 'low' || b.flag === 'high' || b.flag === 'normal') ? b.flag : null;
+      var reference = firstStr(
+        b.reference_range,
+        b.reference,
+        b.ref,
+        b.range,
+        b.min != null || b.max != null ? [b.min, b.max].filter(function (x) { return x != null; }).join(' - ') : null
+      );
       return {
         key: String(b.marker_key || ''),
-        name: String(b.marker_name || b.marker_key || ''),
+        name: String(b.marker_name || b.name || b.marker_key || ''),
         value: b.value_numeric !== undefined && b.value_numeric !== null ? b.value_numeric : (b.value_text || null),
         unit: b.unit || null,
-        flag: (b.flag === 'low' || b.flag === 'high' || b.flag === 'normal') ? b.flag : null
+        reference: reference || null,
+        flag: flag
       };
     });
 
@@ -380,26 +605,90 @@ function mapLabs(labRow) {
   };
 }
 
-function mapTraining(memoryBlocks, lastWorkoutRow) {
-  if (!memoryBlocks) return null;
-  var perf = memoryBlocks.performance_trend || {};
-  var adherence = memoryBlocks.adherence_state || {};
-  var recovery = memoryBlocks.recovery_state || {};
-  var fatigue = memoryBlocks.fatigue_state || {};
-  var tolerance = memoryBlocks.training_tolerance_state || {};
-  var alignment = memoryBlocks.objective_alignment_state || {};
+function mapTraining(memoryBlocks, recentWorkouts, workoutLogs, exercises) {
+  var workouts = Array.isArray(recentWorkouts) ? recentWorkouts : [];
+  var logs = Array.isArray(workoutLogs) ? workoutLogs : [];
+  var exerciseRows = Array.isArray(exercises) ? exercises : [];
+  if (!memoryBlocks && !workouts.length) return null;
 
-  var lastWorkoutAt = null;
-  if (lastWorkoutRow) {
-    lastWorkoutAt = firstStr(lastWorkoutRow.date, lastWorkoutRow.created_at);
+  var exerciseById = Object.create(null);
+  exerciseRows.forEach(function (ex) {
+    if (ex && ex.id) exerciseById[ex.id] = ex;
+  });
+
+  var logsByWorkout = Object.create(null);
+  logs.forEach(function (log) {
+    if (!log || !log.workout_id) return;
+    if (!logsByWorkout[log.workout_id]) logsByWorkout[log.workout_id] = [];
+    logsByWorkout[log.workout_id].push(log);
+  });
+
+  function mapWorkout(row) {
+    var workoutLogsForRow = logsByWorkout[row.id] || [];
+    var exercicios = workoutLogsForRow.map(function (log) {
+      var ex = exerciseById[log.exercise_id] || {};
+      return {
+        nome: firstStr(ex.name, log.exercise_name) || 'Exercício registrado',
+        grupoMuscular: firstStr(ex.muscle_group) || null,
+        series: 1,
+        repeticoes: firstNum(log.reps),
+        carga: firstNum(log.weight_kg),
+        rpe: firstNum(log.rpe),
+        realizadoEm: log.created_at || null
+      };
+    });
+    var volume = workoutLogsForRow.reduce(function (sum, log) {
+      return sum + ((Number(log.weight_kg) || 0) * (Number(log.reps) || 0));
+    }, 0);
+    return {
+      id: row.id || null,
+      data: row.date || row.created_at || null,
+      duracaoMinutos: firstNum(row.duration_minutes),
+      observacoes: firstStr(row.notes) || null,
+      exercicios: exercicios,
+      volume: round1(volume)
+    };
   }
+
+  var blocks = memoryBlocks || {};
+  var perf = blocks.performance_trend || {};
+  var adherence = blocks.adherence_state || {};
+  var recovery = blocks.recovery_state || {};
+  var fatigue = blocks.fatigue_state || {};
+  var tolerance = blocks.training_tolerance_state || {};
+  var alignment = blocks.objective_alignment_state || {};
+
+  var historico = workouts.map(mapWorkout);
+  var lastWorkoutRow = workouts[0] || null;
+  var lastWorkoutAt = lastWorkoutRow ? firstStr(lastWorkoutRow.date, lastWorkoutRow.created_at) : null;
 
   var weeklyFreq = null;
   if (adherence.sourceSignals && adherence.sourceSignals.weeklyFrequencyEstimate != null) {
     weeklyFreq = Number(adherence.sourceSignals.weeklyFrequencyEstimate) || null;
   }
 
+  var sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  var weeklyVolume = historico.reduce(function (sum, workout) {
+    var date = new Date(workout.data || 0);
+    if (Number.isNaN(date.getTime()) || date.getTime() < sevenDaysAgo) return sum;
+    return sum + (Number(workout.volume) || 0);
+  }, 0);
+  var flatExercises = historico.reduce(function (acc, workout) {
+    return acc.concat(workout.exercicios || []);
+  }, []);
+
   return {
+    disponivel: !!(historico.length || memoryBlocks),
+    treinoAtual: historico[0] || null,
+    ultimoTreino: historico[0] || null,
+    historicoRecente: historico,
+    exercicios: flatExercises.slice(0, 80),
+    series: flatExercises.length,
+    repeticoes: flatExercises.reduce(function (sum, ex) { return sum + (Number(ex.repeticoes) || 0); }, 0),
+    cargas: flatExercises.map(function (ex) { return ex.carga; }).filter(function (v) { return v != null; }),
+    volumeSemanal: round1(weeklyVolume),
+    aderencia: adherence.status || null,
+    observacoes: [],
     lastWorkoutAt: lastWorkoutAt,
     weeklyFrequency: weeklyFreq,
     performanceTrend: perf.status || null,
@@ -408,7 +697,65 @@ function mapTraining(memoryBlocks, lastWorkoutRow) {
     fatigueStatus: fatigue.status || null,
     trainingTolerance: tolerance.status || null,
     objectiveAlignment: alignment.status || null,
-    topExercises: []
+    topExercises: flatExercises.slice(0, 10)
+  };
+}
+
+function buildUserContext(profile) {
+  return {
+    nome: profile && profile.name || null,
+    idade: profile && profile.age || null,
+    sexo: profile && profile.sex || null,
+    peso: profile && profile.weightKg || null,
+    altura: profile && profile.heightCm || null,
+    objetivo: profile && profile.goal || null,
+    nivel: profile && profile.athleteLevel || null,
+    observacoes: profile && profile.activityLevel ? [profile.activityLevel] : []
+  };
+}
+
+function buildLabsContext(labs) {
+  if (!labs) {
+    return {
+      disponivel: false,
+      dataUltimaColeta: null,
+      biomarcadores: [],
+      alteracoesImportantes: [],
+      observacoes: []
+    };
+  }
+  var statusMap = { low: 'baixo', normal: 'normal', high: 'alto' };
+  return {
+    disponivel: labs.labsStatus !== 'failed',
+    dataUltimaColeta: labs.lastReportAt || null,
+    biomarcadores: (labs.keyMarkers || []).map(function (marker) {
+      return {
+        nome: marker.name || marker.key || '',
+        valor: marker.value != null ? marker.value : null,
+        unidade: marker.unit || null,
+        referencia: marker.reference || null,
+        status: statusMap[marker.flag] || 'indeterminado'
+      };
+    }).filter(function (marker) { return marker.nome; }),
+    alteracoesImportantes: []
+      .concat(labs.criticalFlags || [])
+      .concat(labs.clinicalFlags || [])
+      .concat((labs.keyMarkers || []).filter(function (m) { return m.flag === 'high' || m.flag === 'low'; }).map(function (m) { return m.name + ': ' + m.flag; })),
+    observacoes: [labs.summaryText, labs.readinessSignal, labs.hormonalSignal, labs.metabolicSignal].filter(Boolean)
+  };
+}
+
+function buildClinicalContext(profile, labs) {
+  return {
+    patologias: [],
+    restricoes: profile && profile.restrictions ? profile.restrictions : [],
+    medicacoes: [],
+    sinais: labs ? []
+      .concat(labs.clinicalFlags || [])
+      .concat(labs.criticalFlags || [])
+      .filter(Boolean) : [],
+    preferencias: [],
+    observacoes: profile && profile.activityLevel ? [profile.activityLevel] : []
   };
 }
 
@@ -436,7 +783,7 @@ function mapMemory(memorySummary) {
 // D. MISSING DATA REPORTER
 // ─────────────────────────────────────────────────────────────
 
-function buildMissingData(inventory, profile, training, nutrition, labs) {
+function buildMissingData(inventory, profile, training, nutrition, labs, diet) {
   var missing = [];
   if (!inventory.hasProfile || !profile) missing.push('perfil do usuário');
   else {
@@ -446,7 +793,7 @@ function buildMissingData(inventory, profile, training, nutrition, labs) {
     if (!profile.goal) missing.push('objetivo');
   }
   if (!inventory.hasTrainingHistory || !training) missing.push('histórico de treino');
-  if (!inventory.hasNutritionPlan || !nutrition || !nutrition.targetCalories) missing.push('plano nutricional');
+  if (!inventory.hasNutritionPlan || (!nutrition && !(diet && diet.disponivel))) missing.push('plano nutricional');
   // RISCO 3 — labs processing/partial means the report EXISTS; don't flag as missing.
   // Only flag as missing when the inventory says no valid report exists at all.
   if (!inventory.hasLabReports || !labs) {
@@ -478,9 +825,36 @@ async function buildKronosContextHub(userId, queryText) {
         hasLabLongitudinal: false, hasProgressMetrics: false, hasMemoryState: false,
         hasScienceMatch: false
       },
-      profile: null, training: null, nutrition: null, labs: null,
+      profile: null, training: null, nutrition: null, diet: null, labs: null,
       progress: null, memory: null, science: null,
-      missingData: ['userId ausente']
+      missingData: ['userId ausente'],
+      generatedAt: new Date().toISOString(),
+      user: buildUserContext(null),
+      treino: {
+        disponivel: false,
+        treinoAtual: null,
+        ultimoTreino: null,
+        historicoRecente: [],
+        exercicios: [],
+        series: null,
+        repeticoes: null,
+        cargas: [],
+        volumeSemanal: null,
+        aderencia: null,
+        observacoes: []
+      },
+      dieta: {
+        disponivel: false,
+        planoAtual: null,
+        metaCalorica: null,
+        metaMacros: { proteina: null, carboidrato: null, gordura: null },
+        totalConsumidoHoje: { calorias: null, proteina: null, carboidrato: null, gordura: null },
+        refeicoes: [],
+        refeicoesConsumidasHoje: [],
+        observacoes: []
+      },
+      exames: buildLabsContext(null),
+      contextoClinico: buildClinicalContext(null, null)
     };
   }
 
@@ -494,8 +868,10 @@ async function buildKronosContextHub(userId, queryText) {
     loadProfile(userId),                        // 1
     loadNutritionGoal(userId),                  // 2
     loadLatestLabSummary(userId),               // 3
-    loadLatestWorkout(userId),                  // 4
-    userMemory.getCoachingSummary(userId)        // 5
+    loadRecentWorkouts(userId),                 // 4
+    userMemory.getCoachingSummary(userId),       // 5
+    loadLatestMealPlan(userId),                 // 6
+    loadTodayFoodLogs(userId)                   // 7
   ]);
 
   function get(idx) {
@@ -506,12 +882,27 @@ async function buildKronosContextHub(userId, queryText) {
   var profileRow = get(1);
   var nutritionGoalRow = get(2);
   var labRow = get(3);
-  var lastWorkoutRow = get(4);
+  var recentWorkoutRows = get(4) || [];
   var memorySummary = get(5);
+  var mealPlanRow = get(6);
+  var todayFoodLogRows = get(7) || [];
+
+  var mealItemRows = await loadMealPlanItems(mealPlanRow && mealPlanRow.id);
+  var workoutIds = (recentWorkoutRows || []).map(function (w) { return w && w.id; }).filter(Boolean);
+  var workoutLogRows = await loadWorkoutLogs(workoutIds);
+  var exerciseIds = (workoutLogRows || []).map(function (log) { return log && log.exercise_id; }).filter(Boolean);
+  var seenExerciseIds = Object.create(null);
+  exerciseIds = exerciseIds.filter(function (id) {
+    if (!id || seenExerciseIds[id]) return false;
+    seenExerciseIds[id] = true;
+    return true;
+  });
+  var exerciseRows = await loadExercises(exerciseIds);
 
   // 2. Map to clean domain slices
   var profileSlice = mapProfile(profileRow);
   var nutritionSlice = mapNutrition(nutritionGoalRow, profileRow);
+  var detailedDietSlice = mapDetailedDiet(nutritionGoalRow, mealPlanRow, mealItemRows, todayFoodLogRows);
   var labsSlice = mapLabs(labRow);
 
   // Enrich nutrition with clinical flags from labs if available
@@ -522,7 +913,7 @@ async function buildKronosContextHub(userId, queryText) {
 
   // Memory blocks → training slice
   var memoryBlocks = (memorySummary && memorySummary.blocks) ? memorySummary.blocks : null;
-  var trainingSlice = mapTraining(memoryBlocks, lastWorkoutRow);
+  var trainingSlice = mapTraining(memoryBlocks, recentWorkoutRows, workoutLogRows, exerciseRows);
   var progressSlice = mapProgress(memorySummary);
   var memorySlice = mapMemory(memorySummary);
 
@@ -533,20 +924,40 @@ async function buildKronosContextHub(userId, queryText) {
 
   // Update inventory flags we can now confirm
   inventory.hasWorkoutPlan = !!(trainingSlice && trainingSlice.lastWorkoutAt);
+  inventory.hasNutritionPlan = !!(detailedDietSlice && detailedDietSlice.disponivel);
   inventory.hasMemoryState = !!(memoryBlocks);
 
-  var missingData = buildMissingData(inventory, profileSlice, trainingSlice, nutritionSlice, labsSlice);
+  var missingData = buildMissingData(inventory, profileSlice, trainingSlice, nutritionSlice, labsSlice, detailedDietSlice);
 
   var hub = {
+    generatedAt: new Date().toISOString(),
     inventory: inventory,
     profile: profileSlice,
     training: trainingSlice,
     nutrition: nutritionSlice,
+    diet: detailedDietSlice,
     labs: labsSlice,
     progress: progressSlice,
     memory: memorySlice,
     science: null, // populated on-demand by scienceInsightService
-    missingData: missingData
+    missingData: missingData,
+    user: buildUserContext(profileSlice),
+    treino: trainingSlice || {
+      disponivel: false,
+      treinoAtual: null,
+      ultimoTreino: null,
+      historicoRecente: [],
+      exercicios: [],
+      series: null,
+      repeticoes: null,
+      cargas: [],
+      volumeSemanal: null,
+      aderencia: null,
+      observacoes: []
+    },
+    dieta: detailedDietSlice,
+    exames: buildLabsContext(labsSlice),
+    contextoClinico: buildClinicalContext(profileSlice, labsSlice)
   };
 
   // RISCO 1 — only cache successful, non-empty hubs
@@ -615,10 +1026,15 @@ function selectContextForIntent(hub, intent) {
   switch (intent) {
     case KRONOS_INTENT.LAB_ANALYSIS:
       selected.labs = hub.labs;
+      selected.exames = hub.exames;
       selected.profile = hub.profile; // for clinical context
+      selected.user = hub.user;
+      selected.contextoClinico = hub.contextoClinico;
       // Nutrition only if labs have metabolic/clinical flags
       if (hub.labs && (hub.labs.clinicalFlags.length || hub.labs.criticalFlags.length)) {
         selected.nutrition = hub.nutrition;
+        selected.diet = hub.diet;
+        selected.dieta = hub.dieta;
       }
       break;
 
@@ -626,11 +1042,14 @@ function selectContextForIntent(hub, intent) {
     case KRONOS_INTENT.WORKOUT_FEEDBACK:
       selected.profile = hub.profile;
       selected.training = hub.training;
+      selected.treino = hub.treino;
+      selected.user = hub.user;
       selected.memory = hub.memory;
       selected.progress = hub.progress;
       // Labs only if training readiness signal exists
       if (hub.labs && hub.labs.readinessSignal && hub.labs.readinessSignal !== 'ok') {
         selected.labs = hub.labs;
+        selected.exames = hub.exames;
       }
       break;
 
@@ -638,27 +1057,37 @@ function selectContextForIntent(hub, intent) {
     case KRONOS_INTENT.NUTRITION_FEEDBACK:
       selected.profile = hub.profile;
       selected.nutrition = hub.nutrition;
+      selected.diet = hub.diet;
+      selected.dieta = hub.dieta;
+      selected.user = hub.user;
       // Labs if there are clinical/metabolic flags relevant to diet
       if (hub.labs && (hub.labs.metabolicSignal || hub.labs.clinicalFlags.length)) {
         selected.labs = hub.labs;
+        selected.exames = hub.exames;
       }
       break;
 
     case KRONOS_INTENT.RECOVERY_ANALYSIS:
       selected.profile = hub.profile;
       selected.training = hub.training;
+      selected.treino = hub.treino;
+      selected.user = hub.user;
       selected.memory = hub.memory;
       // Labs if recovery signal is not ok
       if (hub.labs && hub.labs.readinessSignal) {
         selected.labs = hub.labs;
+        selected.exames = hub.exames;
       }
       break;
 
     case KRONOS_INTENT.SUPPLEMENT_GUIDANCE:
       selected.profile = hub.profile;
       selected.training = hub.training;
+      selected.treino = hub.treino;
+      selected.user = hub.user;
       if (hub.labs && hub.labs.keyMarkers.length) {
         selected.labs = hub.labs; // labs calibrate supplement decisions
+        selected.exames = hub.exames;
       }
       break;
 
@@ -668,13 +1097,22 @@ function selectContextForIntent(hub, intent) {
       selected.profile = hub.profile;
       selected.training = hub.training;
       selected.nutrition = hub.nutrition;
+      selected.user = hub.user;
+      selected.treino = hub.treino;
+      selected.diet = hub.diet;
+      selected.dieta = hub.dieta;
+      selected.contextoClinico = hub.contextoClinico;
       selected.memory = hub.memory;
       selected.progress = hub.progress;
-      if (hub.labs) selected.labs = hub.labs;
+      if (hub.labs) {
+        selected.labs = hub.labs;
+        selected.exames = hub.exames;
+      }
       break;
 
     default: // FALLBACK
       selected.profile = hub.profile;
+      selected.user = hub.user;
       selected.memory = hub.memory;
       break;
   }
@@ -726,6 +1164,20 @@ function formatContextForPrompt(selected) {
     if (t.trainingTolerance) tParts.push('tolerância: ' + t.trainingTolerance);
     if (t.objectiveAlignment) tParts.push('alinhamento: ' + t.objectiveAlignment);
     if (tParts.length) lines.push('[TREINO] ' + tParts.join(' | '));
+    if (Array.isArray(t.exercicios) && t.exercicios.length) {
+      lines.push('[TREINO EXERCÍCIOS] ' + t.exercicios.slice(0, 16).map(function (ex) {
+        var parts = [ex.nome];
+        if (ex.repeticoes != null) parts.push(String(ex.repeticoes) + ' reps');
+        if (ex.carga != null) parts.push(String(ex.carga) + ' kg');
+        if (ex.rpe != null) parts.push('RPE ' + ex.rpe);
+        return parts.join(' ');
+      }).join('; '));
+    }
+    if (Array.isArray(t.historicoRecente) && t.historicoRecente.length) {
+      lines.push('[TREINO HISTÓRICO RECENTE] ' + t.historicoRecente.slice(0, 5).map(function (w) {
+        return (w.data ? String(w.data).slice(0, 10) : 'sem data') + ': ' + ((w.exercicios || []).length) + ' exercícios, volume ' + (w.volume || 0);
+      }).join(' | '));
+    }
   }
 
   // ── Memory / coaching summary
@@ -758,6 +1210,53 @@ function formatContextForPrompt(selected) {
     }
   }
 
+  var d = selected.diet || selected.dieta;
+  if (d && d.disponivel) {
+    var dParts = [];
+    if (d.planoAtual && d.planoAtual.titulo) dParts.push('plano: ' + d.planoAtual.titulo);
+    if (d.metaCalorica != null) dParts.push('meta: ' + d.metaCalorica + ' kcal');
+    if (d.metaMacros) {
+      if (d.metaMacros.proteina != null) dParts.push('proteína meta: ' + d.metaMacros.proteina + 'g');
+      if (d.metaMacros.carboidrato != null) dParts.push('carbo meta: ' + d.metaMacros.carboidrato + 'g');
+      if (d.metaMacros.gordura != null) dParts.push('gordura meta: ' + d.metaMacros.gordura + 'g');
+    }
+    if (d.totalConsumidoHoje) {
+      var total = d.totalConsumidoHoje;
+      var totalParts = [];
+      if (total.calorias != null) totalParts.push(total.calorias + ' kcal');
+      if (total.proteina != null) totalParts.push(total.proteina + 'g proteína');
+      if (total.carboidrato != null) totalParts.push(total.carboidrato + 'g carbo');
+      if (total.gordura != null) totalParts.push(total.gordura + 'g gordura');
+      if (totalParts.length) dParts.push('consumido hoje: ' + totalParts.join(', '));
+    }
+    if (dParts.length) lines.push('[DIETA DETALHADA] ' + dParts.join(' | '));
+
+    var meals = Array.isArray(d.refeicoes) && d.refeicoes.length ? d.refeicoes : d.refeicoesConsumidasHoje;
+    if (Array.isArray(meals) && meals.length) {
+      meals.slice(0, 8).forEach(function (meal) {
+        var mealParts = [];
+        if (meal.horario) mealParts.push('horário ' + String(meal.horario).slice(0, 16));
+        if (meal.calorias != null) mealParts.push(meal.calorias + ' kcal');
+        if (meal.proteina != null) mealParts.push(meal.proteina + 'g proteína');
+        if (meal.carboidrato != null) mealParts.push(meal.carboidrato + 'g carbo');
+        if (meal.gordura != null) mealParts.push(meal.gordura + 'g gordura');
+        lines.push('[DIETA REFEIÇÃO] ' + meal.nome + (mealParts.length ? ' | ' + mealParts.join(' | ') : ''));
+        if (Array.isArray(meal.itens) && meal.itens.length) {
+          lines.push('[DIETA ITENS ' + meal.nome + '] ' + meal.itens.slice(0, 12).map(function (item) {
+            var parts = [item.nome];
+            if (item.gramas != null) parts.push(item.gramas + 'g');
+            else if (item.quantidade) parts.push(String(item.quantidade) + (item.unidade ? ' ' + item.unidade : ''));
+            if (item.calorias != null) parts.push(item.calorias + ' kcal');
+            if (item.proteina != null) parts.push(item.proteina + 'P');
+            if (item.carboidrato != null) parts.push(item.carboidrato + 'C');
+            if (item.gordura != null) parts.push(item.gordura + 'G');
+            return parts.join(' ');
+          }).join('; '));
+        }
+      });
+    }
+  }
+
   // ── Labs (RISCO 3 — status-aware rendering)
   var l = selected.labs;
   if (l) {
@@ -785,12 +1284,9 @@ function formatContextForPrompt(selected) {
         lines.push('[EXAMES ATENÇÃO CLÍNICA] ' + l.clinicalFlags.slice(0, 3).join('; '));
       }
       if (l.keyMarkers && l.keyMarkers.length) {
-        var flagged = l.keyMarkers.filter(function (k) { return k.flag === 'high' || k.flag === 'low'; });
-        if (flagged.length) {
-          lines.push('[EXAMES MARCADORES ALTERADOS] ' + flagged.map(function (k) {
-            return k.name + ' ' + k.value + (k.unit ? ' ' + k.unit : '') + ' (' + k.flag + ')';
-          }).join('; '));
-        }
+        lines.push('[EXAMES BIOMARCADORES] ' + l.keyMarkers.slice(0, 24).map(function (k) {
+          return k.name + ' ' + k.value + (k.unit ? ' ' + k.unit : '') + (k.reference ? ' ref ' + k.reference : '') + (k.flag ? ' (' + k.flag + ')' : '');
+        }).join('; '));
       }
     }
   }
@@ -817,6 +1313,66 @@ function formatContextForPrompt(selected) {
   return lines.join('\n');
 }
 
+async function buildKronosContext(options) {
+  var input = options && typeof options === 'object' ? options : {};
+  var hub = await buildKronosContextHub(input.userId || input.user_id || input.id, input.message || input.queryText || input.query);
+  var context = {
+    generatedAt: hub.generatedAt || new Date().toISOString(),
+    user: hub.user || buildUserContext(hub.profile),
+    treino: hub.treino || {
+      disponivel: false,
+      treinoAtual: null,
+      ultimoTreino: null,
+      historicoRecente: [],
+      exercicios: [],
+      series: null,
+      repeticoes: null,
+      cargas: [],
+      volumeSemanal: null,
+      aderencia: null,
+      observacoes: []
+    },
+    dieta: hub.dieta || hub.diet || {
+      disponivel: false,
+      planoAtual: null,
+      metaCalorica: null,
+      metaMacros: { proteina: null, carboidrato: null, gordura: null },
+      totalConsumidoHoje: { calorias: null, proteina: null, carboidrato: null, gordura: null },
+      refeicoes: [],
+      refeicoesConsumidasHoje: [],
+      observacoes: []
+    },
+    exames: hub.exames || buildLabsContext(hub.labs),
+    contextoClinico: hub.contextoClinico || buildClinicalContext(hub.profile, hub.labs),
+    inventory: hub.inventory || {},
+    missingData: hub.missingData || [],
+    legacy: {
+      profile: hub.profile,
+      training: hub.training,
+      nutrition: hub.nutrition,
+      labs: hub.labs,
+      progress: hub.progress,
+      memory: hub.memory
+    }
+  };
+
+  if (process.env.KRONOS_CONTEXT_DEBUG === '1') {
+    console.debug('[kronos.context]', JSON.stringify({
+      userId: input.userId || input.user_id || input.id || null,
+      treinoDisponivel: !!(context.treino && context.treino.disponivel),
+      dietaDisponivel: !!(context.dieta && context.dieta.disponivel),
+      examesDisponivel: !!(context.exames && context.exames.disponivel),
+      refeicoes: context.dieta && Array.isArray(context.dieta.refeicoes) ? context.dieta.refeicoes.length : 0,
+      alimentos: context.dieta && Array.isArray(context.dieta.refeicoes)
+        ? context.dieta.refeicoes.reduce(function (sum, meal) { return sum + ((meal.itens || []).length); }, 0)
+        : 0,
+      biomarcadores: context.exames && Array.isArray(context.exames.biomarcadores) ? context.exames.biomarcadores.length : 0
+    }));
+  }
+
+  return context;
+}
+
 // ─────────────────────────────────────────────────────────────
 // H. EXPORTS
 // ─────────────────────────────────────────────────────────────
@@ -824,6 +1380,7 @@ function formatContextForPrompt(selected) {
 module.exports = {
   buildKronosInventory: buildKronosInventory,
   buildKronosContextHub: buildKronosContextHub,
+  buildKronosContext: buildKronosContext,
   deriveKronosIntent: deriveKronosIntent,
   selectContextForIntent: selectContextForIntent,
   formatContextForPrompt: formatContextForPrompt,

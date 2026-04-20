@@ -23,6 +23,7 @@ var diagnosticConstants = require('../src/server/apihelpers/_diagnosticConstants
 var aiContracts = require('../src/server/apihelpers/_aiContracts');
 var userMemory = require('../src/server/apihelpers/_userMemory');
 var kronosHub = require('../src/server/apihelpers/_kronosContextHub');
+var askKronosService = require('../src/ai/kronos/askKronos');
 
 var TREINO_SYSTEM = `Você é o KRONOS, treinador pessoal aplicado. Responda SOMENTE com JSON válido.
 Formato obrigatório: {"treinos":[],"orientacoes":{}}. APENAS JSON.`;
@@ -253,14 +254,23 @@ function parseWorkout(text) {
 }
 
 function gerarTreino(userMsg, userId, callback) {
-  callChat(TREINO_SYSTEM, [userMsg], 3000, 0.1, userId, 'chat-treino', function(err, text) {
-    if (err) return callback(err);
-    try {
-      return callback(null, parseWorkout(text || ''));
-    } catch (e) {
-      return callback('Erro ao gerar treino: resposta inválida da IA.');
-    }
-  });
+  Promise.resolve(kronosHub.buildKronosContext({ userId: userId, message: userMsg && userMsg.content }))
+    .catch(function() { return null; })
+    .then(function(kronosContext) {
+      var system = TREINO_SYSTEM;
+      if (kronosContext) {
+        system += '\n\nCONTEXTO REAL DO APP PARA PERSONALIZAÇÃO DO TREINO:\n' + JSON.stringify(kronosContext);
+        system += '\n\nREGRAS: use o contexto real disponível; não diga que não tem acesso a treino, dieta ou exames quando o JSON acima marcar o módulo como disponível; não invente dados ausentes.';
+      }
+      callChat(system, [userMsg], 3000, 0.1, userId, 'chat-treino', function(err, text) {
+        if (err) return callback(err);
+        try {
+          return callback(null, parseWorkout(text || ''));
+        } catch (e) {
+          return callback('Erro ao gerar treino: resposta inválida da IA.');
+        }
+      });
+    });
 }
 
 function buildWorkoutSuccessPayload(data, extraMeta, memoryState) {
@@ -756,8 +766,39 @@ module.exports = function(req, res) {
 
             var mode = decision.depth || 'short';
             var maxTokens = decision.tokenLimit || decisionEngine.resolveTokenLimit(decision);
-            var system = prompts.buildCoachPrompt(mode, classification.topic, context, maxTokens);
-            callChat(system, messages, maxTokens, 0.35, user.id, 'chat', nextCall);
+            askKronosService.askKronos({
+              message: lastContent,
+              userId: user.id,
+              intent: kronosIntent,
+              topic: classification.topic,
+              mode: mode,
+              maxTokens: maxTokens,
+              kronosContext: hub && typeof hub === 'object' ? {
+                generatedAt: hub.generatedAt || new Date().toISOString(),
+                user: hub.user,
+                treino: hub.treino,
+                dieta: hub.dieta || hub.diet,
+                exames: hub.exames,
+                contextoClinico: hub.contextoClinico,
+                inventory: hub.inventory,
+                missingData: hub.missingData,
+                scienceContext: scienceContext || null
+              } : null,
+              callLLM: function(payload) {
+                return new Promise(function(resolve, reject) {
+                  var system = payload.systemPrompt;
+                  var llmMessages = messages;
+                  callChat(system, llmMessages, maxTokens, 0.35, user.id, 'chat', function(callErr, callPayload) {
+                    if (callErr) return reject(callErr);
+                    resolve(callPayload);
+                  });
+                });
+              }
+            }).then(function(result) {
+              nextCall(null, result.response);
+            }).catch(function(callErr) {
+              nextCall(callErr);
+            });
           }, function(err, payload) {
             if (err) {
               safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.LLM_RESPONSE_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err }); });
