@@ -135,6 +135,7 @@
       "maxDuration": 60
     }
   },
+  "outputDirectory": "public",
   "crons": [
     {
       "path": "/api/cron/daily-dispatch",

@@ -15,6 +15,7 @@ tests/dist/
 
 # TypeScript
 *.tsbuildinfo
+public/
 
 # Supabase local
 .supabase/
