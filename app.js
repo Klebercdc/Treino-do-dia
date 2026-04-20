@@ -8335,7 +8335,7 @@ function nutritionToggleArray(key, value, minExclusiveValue) {
   var current = Array.isArray(state[key]) ? state[key].slice() : [];
   if (minExclusiveValue && value === minExclusiveValue) {
     setNutritionFlowState({ [key]: [minExclusiveValue] });
-    renderNutritionFlow();
+    renderNutritionFlow({ preserveScroll: true });
     return;
   }
   current = current.filter(function(item) { return item !== minExclusiveValue; });
@@ -8343,12 +8343,12 @@ function nutritionToggleArray(key, value, minExclusiveValue) {
   if (idx >= 0) current.splice(idx, 1); else current.push(value);
   if (!current.length && minExclusiveValue) current = [minExclusiveValue];
   setNutritionFlowState({ [key]: current });
-  renderNutritionFlow();
+  renderNutritionFlow({ preserveScroll: true });
 }
 
 function nutritionSet(key, value) {
   setNutritionFlowState({ [key]: value });
-  renderNutritionFlow();
+  renderNutritionFlow({ preserveScroll: true });
 }
 
 function hydrateNutritionFlowFromLegacyForm(context) {
@@ -8842,7 +8842,7 @@ function toggleNutritionPathologyCategory(categoryId) {
   if (chevron) {
     chevron.style.transform = openNutritionPathologyCategories.has(categoryId) ? "rotate(180deg)" : "rotate(0deg)";
   }
-  renderNutritionFlow();
+  renderNutritionFlow({ preserveScroll: true });
 }
 
 function toggleNutritionPathology(pathologyId) {
@@ -8852,7 +8852,7 @@ function toggleNutritionPathology(pathologyId) {
   var index = current.indexOf(pathologyId);
   if (index >= 0) current.splice(index, 1); else current.push(pathologyId);
   setNutritionFlowState({ patologia: current.length ? current : ["nenhuma"] });
-  renderNutritionFlow();
+  renderNutritionFlow({ preserveScroll: true });
 }
 
 function buildNutritionIntakeSnapshot() {
@@ -8937,7 +8937,7 @@ function nutritionOfficialToggleLike(value) {
     if (pidx >= 0) proteins.splice(pidx, 1); else proteins.push(item);
     setNutritionFlowState({ proteinas: proteins });
   }
-  renderNutritionFlow();
+  renderNutritionFlow({ preserveScroll: true });
 }
 
 function nutritionOfficialSetAnthro(patch) {
@@ -9083,8 +9083,8 @@ function renderNutritionFlowContent(key) {
     return `<section class="glass-card">
       <h2 class="nutrition-official-label">Estilo do Plano</h2>
       <div class="nutrition-official-grid-2">
-        <button class="chip ${nutritionSelected("sugestao", "variada") ? "active" : ""}" onclick="nutritionSet('sugestao','variada')">Brasileiro Clássico</button>
-        <button class="chip ${nutritionSelected("sugestao", "prática") ? "active" : ""}" onclick="nutritionSet('sugestao','prática')">Alta Praticidade</button>
+        <button type="button" class="chip ${nutritionSelected("sugestao", "variada") ? "active" : ""}" onclick="nutritionSet('sugestao','variada')">Brasileiro Clássico</button>
+        <button type="button" class="chip ${nutritionSelected("sugestao", "prática") ? "active" : ""}" onclick="nutritionSet('sugestao','prática')">Alta Praticidade</button>
       </div>
     </section>
 
@@ -9092,7 +9092,7 @@ function renderNutritionFlowContent(key) {
       <h2 class="nutrition-official-label">Quero manter no plano</h2>
       <div class="nutrition-official-wrap">
         ${["Arroz/Feijão", "Frango", "Ovos", "Carne Vermelha"].map(function(item) {
-          return `<button class="chip ${nutritionOfficialLikeSelected(item) ? "active" : ""}" onclick="nutritionOfficialToggleLike('${escapeAttr(item)}')">${escapeHTML(item)}</button>`;
+          return `<button type="button" class="chip ${nutritionOfficialLikeSelected(item) ? "active" : ""}" onclick="nutritionOfficialToggleLike('${escapeAttr(item)}')">${escapeHTML(item)}</button>`;
         }).join("")}
       </div>
     </section>
@@ -9104,8 +9104,8 @@ function renderNutritionFlowContent(key) {
         <span>Fome Noturna Frequente</span>
       </label>
       <div class="nutrition-official-grid-2">
-        <button class="chip ${nutritionSelected("restricoesClinicas", "Sem lactose") ? "active" : ""}" onclick="nutritionToggleArray('restricoesClinicas','Sem lactose',null)">Sem Lactose</button>
-        <button class="chip ${nutritionSelected("restricoesClinicas", "Sem glúten") ? "active" : ""}" onclick="nutritionToggleArray('restricoesClinicas','Sem glúten',null)">Sem Glúten</button>
+        <button type="button" class="chip ${nutritionSelected("restricoesClinicas", "Sem lactose") ? "active" : ""}" onclick="nutritionToggleArray('restricoesClinicas','Sem lactose',null)">Sem Lactose</button>
+        <button type="button" class="chip ${nutritionSelected("restricoesClinicas", "Sem glúten") ? "active" : ""}" onclick="nutritionToggleArray('restricoesClinicas','Sem glúten',null)">Sem Glúten</button>
       </div>
     </section>
 
@@ -9114,9 +9114,9 @@ function renderNutritionFlowContent(key) {
     <section class="glass-card nutrition-lab-card">
       <h2 class="nutrition-official-label">Integração de Laboratório</h2>
       <div class="nutrition-official-grid-3">
-        <button class="chip ${nutritionSelected("labsStatus", "detected") ? "active" : ""}" onclick="nutritionSet('labsStatus','detected')">Usar Exames</button>
-        <button class="chip ${nutritionSelected("labsStatus", "missing") ? "active" : ""}" onclick="nutritionSet('labsStatus','missing')">Não Tenho</button>
-        <button class="chip ${nutritionSelected("labsStatus", "ignored") ? "active" : ""}" onclick="nutritionSet('labsStatus','ignored')">Ignorar</button>
+        <button type="button" class="chip ${nutritionSelected("labsStatus", "detected") ? "active" : ""}" onclick="nutritionSet('labsStatus','detected')">Usar Exames</button>
+        <button type="button" class="chip ${nutritionSelected("labsStatus", "missing") ? "active" : ""}" onclick="nutritionSet('labsStatus','missing')">Não Tenho</button>
+        <button type="button" class="chip ${nutritionSelected("labsStatus", "ignored") ? "active" : ""}" onclick="nutritionSet('labsStatus','ignored')">Ignorar</button>
       </div>
     </section>`;
   }
@@ -9402,7 +9402,28 @@ function nutritionUpdateCheckin(key, value) {
   setNutritionFlowState({ checkin: checkin });
 }
 
-function renderNutritionFlow() {
+function captureNutritionFlowScrollSnapshot() {
+  var flowBody = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
+  var pathologyList = document.querySelector("#nutritionFlowScreen .nutrition-pathology-list");
+  return {
+    flowBody: flowBody ? flowBody.scrollTop : 0,
+    pathologyList: pathologyList ? pathologyList.scrollTop : 0,
+  };
+}
+
+function restoreNutritionFlowScrollSnapshot(snapshot) {
+  if (!snapshot) return;
+  requestAnimationFrame(function() {
+    var flowBody = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
+    var pathologyList = document.querySelector("#nutritionFlowScreen .nutrition-pathology-list");
+    if (flowBody) flowBody.scrollTop = snapshot.flowBody || 0;
+    if (pathologyList) pathologyList.scrollTop = snapshot.pathologyList || 0;
+  });
+}
+
+function renderNutritionFlow(options) {
+  var opts = options && typeof options === "object" ? options : {};
+  var scrollSnapshot = opts.preserveScroll ? captureNutritionFlowScrollSnapshot() : null;
   var state = getNutritionFlowState();
   var step = NUTRITION_FLOW_STEPS[state.step] || NUTRITION_FLOW_STEPS[0];
   var body = document.getElementById("nutritionFlowBody");
@@ -9425,7 +9446,8 @@ function renderNutritionFlow() {
   if (back) back.style.display = state.step > 0 ? "block" : "none";
   try { if (typeof lucide !== "undefined") lucide.createIcons(); } catch (_) {}
   var shell = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
-  if (shell) shell.scrollTop = 0;
+  if (scrollSnapshot) restoreNutritionFlowScrollSnapshot(scrollSnapshot);
+  else if (shell) shell.scrollTop = 0;
 }
 
 async function nutritionFlowGeneratePlan() {
