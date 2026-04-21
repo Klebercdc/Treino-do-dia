@@ -547,6 +547,34 @@ function buildSubstitutions(item, profile) {
     });
 }
 
+function mealItemCap(tipo) {
+  if (/cafe/.test(tipo)) return 4;
+  if (/lanche|ceia/.test(tipo)) return 3;
+  return 5;
+}
+
+function capItemPortion(item) {
+  var name = normalizeFreeText(item.nome || '');
+  var g = Number(item.gramas || 0);
+  var max = null;
+  if (/\bovo/.test(name)) max = 180;
+  else if (/pao integral/.test(name)) max = 100;
+  else if (/azeite/.test(name)) max = 15;
+  else if (/castanha|amendoim/.test(name)) max = 30;
+  else if (/frango|patinho|tilapia|tofu/.test(name)) max = 220;
+  else if (/arroz|batata-doce|macarrao|aveia/.test(name)) max = 220;
+  if (max !== null && g > max) {
+    return cloneScaledMealItem(item, max / g);
+  }
+  return item;
+}
+
+function withinMealTolerance(totals, target) {
+  function pct(a, t) { return t > 0 ? Math.abs(a - t) / t : 0; }
+  return pct(totals.protein, target.protein) <= 0.10 &&
+         pct(totals.carbs, target.carbs) <= 0.10;
+}
+
 function buildMealItems(template, profile, macros, index) {
   var proteinSource;
   var carbSource;
@@ -599,33 +627,26 @@ function buildMealItems(template, profile, macros, index) {
     items.push(cloneFoodItem(fatSource, Math.max(0.3, Math.min(isBreakfast ? 0.8 : 1.0, macros.fat / Math.max(fatSource.fat, 1)))));
   }
 
+  // Hard stop: enforce per-meal item cap before any gap patching
+  var itemCap = mealItemCap(template.tipo);
+  items = items.slice(0, itemCap);
+
   items = items.map(function(item) {
     return Object.assign({}, item, {
       substituicoes: buildSubstitutions(item, profile)
     });
   });
 
-  var totals = sumMeal(items);
-  var proteinGap = round(macros.protein - totals.protein, 1);
-  var carbGap = round(macros.carbs - totals.carbs, 1);
-
-  if (proteinGap > 4) {
-    var whey = chooseFood('fastProteins', profile, 0) || chooseFood('breakfastProteins', profile, 0);
-    if (whey) items.push(Object.assign({}, cloneFoodItem(whey, Math.max(0.4, proteinGap / Math.max(whey.protein, 1))), {
-      substituicoes: buildSubstitutions(cloneFoodItem(whey, 1), profile)
-    }));
-  }
-  if (carbGap > 8 && !isMainMeal) {
-    var existingNames = items.map(function(item) { return item.nome; });
-    var extraCarb = isBreakfast
-      ? (selectDistinctFood('breakfastCarbs', profile, 0, existingNames) || selectDistinctFood('supportCarbs', profile, 0, existingNames))
-      : (selectDistinctFood('supportCarbs', profile, 0, existingNames) || selectDistinctFood('fastCarbs', profile, 0, existingNames));
-    if (extraCarb) items.push(Object.assign({}, cloneFoodItem(extraCarb, Math.max(0.5, carbGap / Math.max(extraCarb.carbs, 1))), {
-      substituicoes: buildSubstitutions(cloneFoodItem(extraCarb, 1), profile)
-    }));
+  // Adjust existing portions only when outside ±10% meal tolerance — never insert patch food
+  var preTotals = sumMeal(items);
+  if (!withinMealTolerance(preTotals, macros)) {
+    items = rebalanceMealItems(items, macros, { isWorkoutMeal: isWorkoutMeal });
   }
 
-  return rebalanceMealItems(items, macros, { isWorkoutMeal: isWorkoutMeal });
+  // Apply per-food-type portion hard caps as final enforcement
+  items = items.map(capItemPortion);
+
+  return items;
 }
 
 function getMealTemplates(profile) {
