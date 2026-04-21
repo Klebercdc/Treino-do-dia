@@ -277,16 +277,31 @@ var DIETA_KRONOS_SYSTEM = [
   'Você é KRONOS, nutricionista clínico-esportivo do KRONIA. Responda SOMENTE com JSON válido, sem texto extra.',
   'FORMATO OBRIGATÓRIO:',
   '{"refeicoes":[{"nome":"string","horario":"string","itens":[{"nome":"string","gramas":0,"calorias":0,"proteina":0,"carbo":0,"gordura":0}]}],"meta":{"calorias":0,"proteina":0,"carbo":0,"gordura":0},"hidratacao":{"litros":0},"observacoes":[]}',
+  'REGRA INVIOLÁVEL — APLICA-SE ANTES DE QUALQUER OUTRA:',
+  '0. CADA ALIMENTO DEVE APARECER NO MÁXIMO UMA VEZ POR REFEIÇÃO. Se o mesmo nome aparecer duas vezes na mesma refeição, some as gramas e mantenha apenas uma entrada. Isso é absoluto e sobrepõe qualquer outra regra.',
   'REGRAS ABSOLUTAS:',
-  '1. PROIBIDO repetir o mesmo alimento mais de uma vez na mesma refeição.',
+  '1. PROIBIDO repetir o mesmo alimento mais de uma vez na mesma refeição — mesmo se o plano atual tiver duplicatas, corrija-as.',
   '2. PROIBIDO adicionar alimento apenas para fechar número de macro sem justificativa clínica.',
   '3. Almoço/Jantar: proteína principal + base de carbo + leguminosa (quando pertinente) + vegetal.',
   '4. Café da manhã: sólido (pão, tapioca, aveia = carboidrato) + molhado (leite, café com leite = bebida com macros próprios) como itens SEPARADOS.',
   '5. Respeite OBRIGATORIAMENTE a patologia, exames, restrições e preferências do CONTEXTO DO USUÁRIO.',
-  '6. Se houver plano alimentar atual no contexto, preserve a estrutura base e ajuste; não reinvente do zero.',
+  '6. Se houver plano alimentar atual no contexto, preserve a estrutura base e ajuste — mas CORRIJA duplicatas existentes, não as herde.',
   '7. Só inclua um novo alimento se houver justificativa funcional ou clínica explícita.',
   '8. RESPOSTA: apenas JSON. Nenhum texto antes ou depois.'
 ].join('\n');
+
+function deduplicateMealItems(refeicoes) {
+  return (refeicoes || []).map(function(refeicao) {
+    var seen = {};
+    var uniqueItens = (refeicao.itens || []).filter(function(item) {
+      var key = String(item.nome || '').trim().toLowerCase();
+      if (!key || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+    return Object.assign({}, refeicao, { itens: uniqueItens });
+  });
+}
 
 function parseDietaKronos(text) {
   var clean = String(text || '').replace(/```json|```/g, '').trim();
@@ -296,6 +311,7 @@ function parseDietaKronos(text) {
   var p = JSON.parse(clean.slice(s, e + 1));
   if (!Array.isArray(p.refeicoes) || !p.refeicoes.length) throw new Error('sem refeicoes');
   if (!p.meta || !p.meta.calorias) throw new Error('sem meta');
+  p.refeicoes = deduplicateMealItems(p.refeicoes);
   return p;
 }
 
