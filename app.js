@@ -4323,6 +4323,7 @@ function renderDietModelAsText(model) {
     ].join("\n").trim();
   }
   const metaBlock = [
+    "PRESCRIÇÃO NUTRICIONAL",
     "##META",
     "CALORIAS: " + (meta.calorias ?? ""),
     "PROTEINA: " + (meta.proteina ?? ""),
@@ -4331,7 +4332,7 @@ function renderDietModelAsText(model) {
     "TMB: " + (meta.tmb ?? ""),
     "TDEE: " + (meta.get ?? "")
   ].join("\n");
-  const mealBlocks = meals.map(function(ref) {
+  const mealBlocks = "PLANO ALIMENTAR\n\n" + meals.map(function(ref) {
     const alimentos = Array.isArray(ref.alimentos) && ref.alimentos.length
       ? ref.alimentos
       : []
@@ -4359,9 +4360,20 @@ function renderDietModelAsText(model) {
     ]).join("\n");
   }).join("\n\n");
   const resumoBlock = [
+    "SEQUÊNCIA DE CONSUMO",
     "##RESUMO",
+  ].concat(meals.map(function(ref) {
+    const subtotal = ref.subtotal || {};
+    return [
+      ref.nome || "Refeição",
+      subtotal.kcal ?? "",
+      subtotal.prot ?? "",
+      subtotal.carb ?? "",
+      subtotal.gord ?? ""
+    ].join("|");
+  })).concat([
     "TOTAL||" + (meta.calorias ?? "") + "|" + (meta.proteina ?? "") + "|" + (meta.carbo ?? "") + "|" + (meta.gordura ?? "")
-  ].join("\n");
+  ]).join("\n");
   const substitutionNotes = meals.reduce(function(acc, meal) {
     (Array.isArray(meal.substituicoes) ? meal.substituicoes : []).slice(0, 3).forEach(function(entry) {
       if (entry && entry.item && Array.isArray(entry.opcoes) && entry.opcoes.length) {
@@ -4370,11 +4382,17 @@ function renderDietModelAsText(model) {
     });
     return acc;
   }, []);
+  const substitutionsBlock = [
+    "SUBSTITUIÇÕES"
+  ].concat(substitutionNotes.length
+    ? substitutionNotes.map(function(note) { return "- " + note; })
+    : ["- Use substituições equivalentes em proteína, carboidrato e gordura quando precisar trocar alimentos."]).join("\n");
   const orientBlock = [
+    "ORIENTAÇÕES",
     "##ORIENTACOES",
     "Água|" + ((model.hidratacao && model.hidratacao.litros) ? (model.hidratacao.litros + " L/dia") : "Hidrate-se ao longo do dia.")
   ].concat(substitutionNotes.map(function(note) { return "Substituição|" + note; })).concat(orientacoes.map(function(obs) { return "Nota|" + obs; })).join("\n");
-  return [metaBlock, mealBlocks, resumoBlock, orientBlock].filter(Boolean).join("\n\n");
+  return [metaBlock, mealBlocks, substitutionsBlock, resumoBlock, orientBlock].filter(Boolean).join("\n\n");
 }
 
 async function sendAI(overrideText, isGerarTreino = false) {
@@ -11426,50 +11444,100 @@ async function requestModernNutritionPlan(payload, timeoutMs) {
   }
 }
 
+async function requestKronosDietPlan(payload, timeoutMs) {
+  const timeout = Number(timeoutMs);
+  const supportsAbort = typeof AbortController === "function";
+  const controller = supportsAbort ? new AbortController() : null;
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/chat"), {
+    method: "POST",
+    body: JSON.stringify({
+      requestId: "diet_kronos_" + Date.now(),
+      isDietDirect: true,
+      messages: [{ role: "user", content: "Gerar dieta completa pelo KRONOS central." }],
+      dietProfile: payload || {},
+      payload: payload || {},
+    }),
+    signal: controller ? controller.signal : undefined,
+  });
+
+  if (!supportsAbort || !Number.isFinite(timeout) || timeout <= 0) {
+    return requestPromise;
+  }
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise(function(_, reject) {
+    timeoutId = setTimeout(function() {
+      try { controller.abort(); } catch (_) {}
+      reject(new Error("Tempo limite do KRONOS central de dieta excedido."));
+    }, timeout);
+  });
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 function extractModernNutritionRenderModel(payload) {
   const safePayload = payload && typeof payload === "object" ? payload : {};
-  const serviceResult = safePayload.data && typeof safePayload.data === "object" ? safePayload.data : safePayload;
+  const contentNodes = safePayload.data && Array.isArray(safePayload.data.content) ? safePayload.data.content : [];
+  const dietNode = contentNodes.find(function(node) {
+    return node && /^(diet_result|diet_primary|diet_failsafe)$/i.test(String(node.type || ""));
+  });
+  const serviceResult = dietNode && dietNode.data && typeof dietNode.data === "object"
+    ? dietNode.data
+    : (safePayload.data && typeof safePayload.data === "object" ? safePayload.data : safePayload);
   const plan = serviceResult.plan && typeof serviceResult.plan === "object" ? serviceResult.plan : serviceResult;
   if (!plan || !Array.isArray(plan.refeicoes) || !plan.refeicoes.length) return null;
   const calculation = serviceResult.calculation && typeof serviceResult.calculation === "object" ? serviceResult.calculation : {};
   const resumo = plan.resumoDiario && typeof plan.resumoDiario === "object" ? plan.resumoDiario : {};
+  const legacyMeta = plan.meta && typeof plan.meta === "object" ? plan.meta : {};
   const clinicalNotes = Array.isArray(serviceResult.clinicalNotes) ? serviceResult.clinicalNotes : [];
   const meta = {
-    calorias: resumo.calorias || calculation.targetCalories || 0,
-    proteina: resumo.proteinas || calculation.macros && calculation.macros.protein || 0,
-    carbo: resumo.carboidratos || calculation.macros && calculation.macros.carbs || 0,
-    gordura: resumo.gorduras || calculation.macros && calculation.macros.fat || 0,
-    tmb: calculation.tmb || 0,
-    get: calculation.get || 0,
+    calorias: legacyMeta.calorias || resumo.calorias || calculation.targetCalories || 0,
+    proteina: legacyMeta.proteina || resumo.proteinas || calculation.macros && calculation.macros.protein || 0,
+    carbo: legacyMeta.carbo || resumo.carboidratos || calculation.macros && calculation.macros.carbs || 0,
+    gordura: legacyMeta.gordura || resumo.gorduras || calculation.macros && calculation.macros.fat || 0,
+    tmb: legacyMeta.tmb || calculation.tmb || 0,
+    get: legacyMeta.get || calculation.get || 0,
   };
   const refeicoes = plan.refeicoes.map(function(meal) {
     const safeMeal = meal && typeof meal === "object" ? meal : {};
     const itens = Array.isArray(safeMeal.itens) ? safeMeal.itens : [];
     const subtotal = safeMeal.subtotal && typeof safeMeal.subtotal === "object" ? safeMeal.subtotal : {};
+    const alimentos = Array.isArray(safeMeal.alimentos) && safeMeal.alimentos.length
+      ? safeMeal.alimentos
+      : itens.map(function(item) {
+        const safeItem = item && typeof item === "object" ? item : {};
+        return {
+          nome: safeItem.nome || safeItem.name || "Alimento",
+          qtde: safeItem.porcao || safeItem.quantity || (safeItem.gramas ? (safeItem.gramas + " g") : ""),
+          kcal: safeItem.kcal || safeItem.calorias || 0,
+          prot: safeItem.prot || safeItem.proteinas || safeItem.proteina || 0,
+          carb: safeItem.carb || safeItem.carboidratos || safeItem.carbo || 0,
+          gord: safeItem.gord || safeItem.gorduras || safeItem.gordura || 0,
+        };
+      });
+    const computedSubtotal = alimentos.reduce(function(acc, item) {
+      acc.kcal += Number(item.kcal || 0);
+      acc.prot += Number(item.prot || 0);
+      acc.carb += Number(item.carb || 0);
+      acc.gord += Number(item.gord || 0);
+      return acc;
+    }, { kcal: 0, prot: 0, carb: 0, gord: 0 });
     return Object.assign({}, safeMeal, {
       subtotal: Object.assign({}, subtotal, {
-        kcal: subtotal.kcal || subtotal.calorias || 0,
-        prot: subtotal.prot || subtotal.proteinas || 0,
-        carb: subtotal.carb || subtotal.carboidratos || 0,
-        gord: subtotal.gord || subtotal.gorduras || 0,
+        kcal: subtotal.kcal || subtotal.calorias || computedSubtotal.kcal || 0,
+        prot: subtotal.prot || subtotal.proteinas || computedSubtotal.prot || 0,
+        carb: subtotal.carb || subtotal.carboidratos || computedSubtotal.carb || 0,
+        gord: subtotal.gord || subtotal.gorduras || computedSubtotal.gord || 0,
       }),
-      alimentos: Array.isArray(safeMeal.alimentos) && safeMeal.alimentos.length
-        ? safeMeal.alimentos
-        : itens.map(function(item) {
-          const safeItem = item && typeof item === "object" ? item : {};
-          return {
-            nome: safeItem.nome || safeItem.name || "Alimento",
-            qtde: safeItem.porcao || safeItem.quantity || (safeItem.gramas ? (safeItem.gramas + " g") : ""),
-            kcal: safeItem.kcal || safeItem.calorias || 0,
-            prot: safeItem.prot || safeItem.proteinas || 0,
-            carb: safeItem.carb || safeItem.carboidratos || 0,
-            gord: safeItem.gord || safeItem.gorduras || 0,
-          };
-        }),
+      alimentos: alimentos,
     });
   });
   return {
-    text: "Plano alimentar gerado pelo motor moderno de nutrição.",
+    text: dietNode ? "Plano alimentar gerado pelo KRONOS central." : "Plano alimentar gerado pelo motor moderno de nutrição.",
     flowState: null,
     failSafe: false,
     limitedOrientation: null,
@@ -11497,10 +11565,26 @@ function extractModernNutritionRenderModel(payload) {
 }
 
 async function generateDietWithModernEngine(input, dietPayload, timeoutMs) {
-  const resp = await requestModernNutritionPlan(dietPayload, timeoutMs || 12000);
-  const data = await resp.json().catch(function() { return null; });
-  if (!resp.ok || !data || data.ok === false || data.failSafe === true) {
-    throw new Error(data && (data.message || data.warning || data.error) || "A rota moderna de dieta retornou erro.");
+  let resp = null;
+  let data = null;
+  let primaryError = null;
+
+  try {
+    resp = await requestKronosDietPlan(dietPayload, timeoutMs || 12000);
+    data = await resp.json().catch(function() { return null; });
+    if (!resp.ok || !data || data.success === false || data.ok === false || data.failSafe === true) {
+      primaryError = new Error(data && (data.message || data.warning || data.error) || "O KRONOS central retornou erro.");
+    }
+  } catch (err) {
+    primaryError = err;
+  }
+
+  if (primaryError) {
+    resp = await requestModernNutritionPlan(dietPayload, timeoutMs || 12000);
+    data = await resp.json().catch(function() { return null; });
+    if (!resp.ok || !data || data.ok === false || data.failSafe === true) {
+      throw new Error(data && (data.message || data.warning || data.error) || primaryError.message || "A rota moderna de dieta retornou erro.");
+    }
   }
   const renderModel = extractModernNutritionRenderModel(data);
   if (!renderModel) throw new Error("Contrato inválido da rota moderna de dieta.");

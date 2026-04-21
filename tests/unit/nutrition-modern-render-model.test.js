@@ -78,3 +78,49 @@ test('modern nutrition response is adapted to legacy diet render contract', () =
   assert.equal(model.refeicoes[0].alimentos[0].kcal, 230);
   assert.deepEqual(Array.from(model.observacoes), ['Plano ajustado com base no seu exame recente.']);
 });
+
+test('kronos chat diet_result response is adapted to diet render contract', () => {
+  const { extractModernNutritionRenderModel } = loadRuntime();
+
+  const model = extractModernNutritionRenderModel({
+    success: true,
+    type: 'diet_result',
+    message: 'Dieta montada.',
+    data: {
+      content: [{
+        type: 'diet_result',
+        text: 'Dieta montada.',
+        data: {
+          meta: {
+            calorias: 2500,
+            proteina: 170,
+            carbo: 280,
+            gordura: 70,
+          },
+          hidratacao: { litros: 3 },
+          refeicoes: [{
+            nome: 'Almoço',
+            horario: '12:30',
+            itens: [{
+              nome: 'Frango grelhado',
+              gramas: 150,
+              calorias: 248,
+              proteina: 46,
+              carbo: 0,
+              gordura: 6,
+            }],
+          }],
+          observacoes: ['Plano gerado pelo KRONOS central.'],
+        },
+      }],
+    },
+  });
+
+  assert.equal(model.text, 'Plano alimentar gerado pelo KRONOS central.');
+  assert.equal(model.meta.calorias, 2500);
+  assert.equal(model.meta.proteina, 170);
+  assert.equal(model.refeicoes[0].subtotal.kcal, 248);
+  assert.equal(model.refeicoes[0].subtotal.prot, 46);
+  assert.equal(model.refeicoes[0].alimentos[0].qtde, '150 g');
+  assert.equal(model.refeicoes[0].alimentos[0].gord, 6);
+});

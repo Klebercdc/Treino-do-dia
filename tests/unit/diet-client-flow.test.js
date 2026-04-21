@@ -202,3 +202,33 @@ test('renderDietModelAsText renders complete failsafe plan when meals are presen
   assert.match(rendered, /Tofu firme/);
   assert.doesNotMatch(rendered, /##ORIENTACAO LIMITADA/);
 });
+
+test('renderDietModelAsText exposes the official five-section diet format', () => {
+  const context = loadDietHelpers();
+  const rendered = context.renderDietModelAsText({
+    failSafe: false,
+    meta: { calorias: 2400, proteina: 160, carbo: 280, gordura: 65, tmb: 1700, get: 2600 },
+    refeicoes: [
+      {
+        nome: 'Almoço',
+        horario: '12:30',
+        foco: 'META: 700 kcal',
+        alimentos: [{ nome: 'Frango grelhado', qtde: '150 g', kcal: 248, prot: 46, carb: 0, gord: 6 }],
+        subtotal: { kcal: 248, prot: 46, carb: 0, gord: 6 },
+        substituicoes: [{ item: 'Frango grelhado', opcoes: ['Tilápia 180 g', 'Patinho 130 g'] }],
+      },
+    ],
+    hidratacao: { litros: 3 },
+    observacoes: ['Distribuir água ao longo do dia.'],
+  });
+
+  assert.match(rendered, /PRESCRIÇÃO NUTRICIONAL/);
+  assert.match(rendered, /PLANO ALIMENTAR/);
+  assert.match(rendered, /SUBSTITUIÇÕES/);
+  assert.match(rendered, /SEQUÊNCIA DE CONSUMO/);
+  assert.match(rendered, /ORIENTAÇÕES/);
+  assert.match(rendered, /##META/);
+  assert.match(rendered, /##REFEICAO/);
+  assert.match(rendered, /##RESUMO/);
+  assert.match(rendered, /##ORIENTACOES/);
+});
