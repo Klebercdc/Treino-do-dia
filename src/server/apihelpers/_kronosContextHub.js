@@ -598,31 +598,65 @@ function mapDetailedDiet(nutritionGoal, mealPlan, mealItems, todayFoodLogs) {
 function mapDietSemantics(meals) {
   if (!meals || !meals.length) return null;
 
-  var PROTEINAS = /frango|peito|carne|peixe|atum|salmao|ovo|clara|whey|tilapia|contrafile|patinho|alcatra|sardinha|camarao|queijo cottage|ricota|iogurte grego|frango grelhado/i;
-  var CARBOIDRATOS = /arroz|batata|macarrao|pao|tapioca|aveia|mandioca|inhame|batata doce|cuscuz|milho|farinha/i;
-  var LEGUMINOSAS = /feijao|lentilha|grao.de.bico|ervilha|soja|fava/i;
-  var VEGETAIS = /br[oó]colis|cenoura|abobrinha|espinafre|couve|tomate|pepino|alface|repolho|beterraba|vagem|chuchu|berinjela|pimentao|acelga|salada/i;
+  var PROTEINAS = /frango|peito|carne|peixe|atum|salm[aã]o|ovo|clara|whey|tilapia|contrafile|patinho|alcatra|sardinha|camar[aã]o|queijo cottage|ricota|iogurte grego/i;
+  var CARBOIDRATOS = /arroz|batata|macarr[aã]o|tapioca|aveia|mandioca|inhame|batata.doce|cuscuz|milho|farinha|p[aã]o(?!.de.queijo)/i;
+  var LEGUMINOSAS = /feij[aã]o|lentilha|gr[aã]o.de.bico|ervilha|soja|fava/i;
+  var VEGETAIS = /br[oó]colis|cenoura|abobrinha|espinafre|couve|tomate|pepino|alface|repolho|beterraba|vagem|chuchu|berinjela|piment[aã]o|acelga|salada/i;
+  // Café da manhã: bebida quente com ou sem leite, sólido, fruta
+  var BEBIDA_CAFE = /caf[eé](?!\s+da\s+manh[aã])|leite|ch[aá]|cappuccino|achocolatado/i;
+  // Leite como bebida separada (não como ingrediente de pão de leite, bolo, etc.)
+  var LEITE_BEBIDA = /^leite\b|leite\s+(integral|desnatado|semi|zero|pó)/i;
+  var SOLIDO_CAFE = /p[aã]o|tapioca|aveia|bolo|cuscuz|biscoito|cereal|granola|torrada|wrap|panqueca/i;
+  var FRUTA = /banana|ma[cç][aã]|laranja|mam[aã]o|abacaxi|morango|uva|pera|melancia|mel[aã]o|manga|kiwi|framboesa|amora/i;
+
+  var ehCafeDaManha = function (nomeMeal) {
+    return /caf[eé]\s*da\s*manh[aã]|desjejum|manh[aã]/i.test(String(nomeMeal || ''));
+  };
 
   var frequencia = Object.create(null);
   var refeicoesSinais = meals.map(function (meal) {
     var itens = meal.itens || [];
     var nomes = itens.map(function (i) { return String(i.nome || '').toLowerCase(); });
     nomes.forEach(function (n) { frequencia[n] = (frequencia[n] || 0) + 1; });
+
+    var isCafe = ehCafeDaManha(meal.nome);
     var temProteina = nomes.some(function (n) { return PROTEINAS.test(n); });
     var temCarbo = nomes.some(function (n) { return CARBOIDRATOS.test(n); });
     var temLeguminosa = nomes.some(function (n) { return LEGUMINOSAS.test(n); });
     var temVegetais = nomes.some(function (n) { return VEGETAIS.test(n); });
     var proteinaPrincipal = nomes.find(function (n) { return PROTEINAS.test(n); }) || null;
     var carboidratoPrincipal = nomes.find(function (n) { return CARBOIDRATOS.test(n); }) || null;
+
+    // Café da manhã: sinais específicos
+    var cafeSinal = null;
+    if (isCafe) {
+      var temBebida = nomes.some(function (n) { return BEBIDA_CAFE.test(n); });
+      var temLeiteComoBebida = nomes.some(function (n) { return LEITE_BEBIDA.test(n); });
+      var temSolido = nomes.some(function (n) { return SOLIDO_CAFE.test(n); });
+      var temFruta = nomes.some(function (n) { return FRUTA.test(n); });
+      // Leite como bebida contribui macro (proteína + caloria) — sinaliza para KRONOS
+      var leiteMacroPresente = temLeiteComoBebida || nomes.some(function (n) { return /leite/.test(n) && !/p[aã]o de leite|bolo de leite|vitamina/i.test(n); });
+      cafeSinal = {
+        temBebidaQuente: temBebida,
+        temLeiteBebida: leiteMacroPresente, // leite como líquido — tem caloria e proteína
+        temSolido: temSolido,
+        temFruta: temFruta,
+        // Estruturado = tem ao menos um sólido + bebida
+        refeicaoEstruturada: temBebida && temSolido
+      };
+    }
+
     return {
       refeicao: meal.nome || null,
-      refeicaoEstruturada: temProteina && temCarbo,
+      tipoCafe: isCafe,
+      refeicaoEstruturada: isCafe ? (cafeSinal && cafeSinal.refeicaoEstruturada) : (temProteina && temCarbo),
       temProteina: temProteina,
       temCarbo: temCarbo,
       temLeguminosa: temLeguminosa,
       temVegetais: temVegetais,
       proteinaPrincipal: proteinaPrincipal,
-      carboidratoPrincipal: carboidratoPrincipal
+      carboidratoPrincipal: carboidratoPrincipal,
+      cafe: cafeSinal
     };
   });
 
