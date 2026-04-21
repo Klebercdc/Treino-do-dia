@@ -273,6 +273,52 @@ function gerarTreino(userMsg, userId, callback) {
     });
 }
 
+var DIETA_KRONOS_SYSTEM = [
+  'Você é KRONOS, nutricionista clínico-esportivo do KRONIA. Responda SOMENTE com JSON válido, sem texto extra.',
+  'FORMATO OBRIGATÓRIO:',
+  '{"refeicoes":[{"nome":"string","horario":"string","itens":[{"nome":"string","gramas":0,"calorias":0,"proteina":0,"carbo":0,"gordura":0}]}],"meta":{"calorias":0,"proteina":0,"carbo":0,"gordura":0},"hidratacao":{"litros":0},"observacoes":[]}',
+  'REGRAS ABSOLUTAS:',
+  '1. PROIBIDO repetir o mesmo alimento mais de uma vez na mesma refeição.',
+  '2. PROIBIDO adicionar alimento apenas para fechar número de macro sem justificativa clínica.',
+  '3. Almoço/Jantar: proteína principal + base de carbo + leguminosa (quando pertinente) + vegetal.',
+  '4. Café da manhã: sólido (pão, tapioca, aveia = carboidrato) + molhado (leite, café com leite = bebida com macros próprios) como itens SEPARADOS.',
+  '5. Respeite OBRIGATORIAMENTE a patologia, exames, restrições e preferências do CONTEXTO DO USUÁRIO.',
+  '6. Se houver plano alimentar atual no contexto, preserve a estrutura base e ajuste; não reinvente do zero.',
+  '7. Só inclua um novo alimento se houver justificativa funcional ou clínica explícita.',
+  '8. RESPOSTA: apenas JSON. Nenhum texto antes ou depois.'
+].join('\n');
+
+function parseDietaKronos(text) {
+  var clean = String(text || '').replace(/```json|```/g, '').trim();
+  var s = clean.indexOf('{');
+  var e = clean.lastIndexOf('}');
+  if (s === -1 || e === -1) throw new Error('sem json');
+  var p = JSON.parse(clean.slice(s, e + 1));
+  if (!Array.isArray(p.refeicoes) || !p.refeicoes.length) throw new Error('sem refeicoes');
+  if (!p.meta || !p.meta.calorias) throw new Error('sem meta');
+  return p;
+}
+
+function gerarDietaKronos(kronosContext, message, userId, callback) {
+  var ctx = kronosContext ? {
+    usuario: kronosContext.user,
+    treino: kronosContext.treino ? { disponivel: kronosContext.treino.disponivel, volumeSemanal: kronosContext.treino.volumeSemanal } : null,
+    exames: kronosContext.exames ? { disponivel: kronosContext.exames.disponivel, biomarcadores: kronosContext.exames.biomarcadores } : null,
+    dietaAtual: kronosContext.dieta ? { disponivel: kronosContext.dieta.disponivel, refeicoes: kronosContext.dieta.refeicoes, semantica: kronosContext.dieta.semantica } : null,
+    contextoClinico: kronosContext.contextoClinico
+  } : {};
+  var userMsg = { role: 'user', content: String(message || 'Gere um plano alimentar personalizado para mim.') };
+  var system = DIETA_KRONOS_SYSTEM + '\n\nCONTEXTO DO USUÁRIO:\n' + JSON.stringify(ctx);
+  callChat(system, [userMsg], 3000, 0.1, userId, 'chat-dieta-kronos', function(err, text) {
+    if (err) return callback(err);
+    try {
+      return callback(null, parseDietaKronos(text || ''));
+    } catch (e) {
+      return callback('Dieta gerada em formato inválido: ' + e.message);
+    }
+  });
+}
+
 function buildWorkoutSuccessPayload(data, extraMeta, memoryState) {
   var isFailSafe = !!(data && data.failSafe);
   return {
@@ -524,18 +570,33 @@ module.exports = function(req, res) {
             { local: true, flow: 'diet' }
           ));
         }
-        var dietPlan = diet.buildDietPlan(dietStep.collected);
-        var dietMessage = dietPlan && dietPlan.failSafe
-          ? String((dietPlan.limitedOrientation && dietPlan.limitedOrientation.orientacao) || 'Dados insuficientes para montar um plano completo agora. Revise seus dados e tente novamente.')
-          : formatDietSummary(dietPlan);
-        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: dietMessage }); });
-        console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'conversation_state', failSafe: !!(dietPlan && dietPlan.failSafe) }));
-        return sendTracked(200, buildDietSuccessPayload(
-          dietMessage,
-          dietPlan,
-          { conversationState: { memory: shortState } },
-          { local: true, tokensSaved: true }
-        ));
+        var collectedMsg = 'Gere um plano alimentar personalizado.' + (dietStep.collected ? ' Contexto coletado: ' + JSON.stringify(dietStep.collected) : '');
+        return runPaidAiCall(function(nextCall) {
+          Promise.resolve(kronosHub.buildKronosContext({ userId: user.id, message: collectedMsg }))
+            .catch(function() { return null; })
+            .then(function(kronosContext) {
+              gerarDietaKronos(kronosContext, collectedMsg, user.id, function(err, kronos_plan) {
+                if (err || !kronos_plan) {
+                  console.warn('[chat] diet_kronos_failed', JSON.stringify({ event: 'diet_kronos_failed', error: String(err || 'no plan'), source: 'conversation_state' }));
+                  return nextCall(null, buildDietErrorPayload());
+                }
+                safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: 'diet_response_built', status: 'success', success: true, outputSummary: formatDietSummary(kronos_plan) }); });
+                console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'conversation_state', refeicoes: (kronos_plan.refeicoes || []).length }));
+                return nextCall(null, buildDietSuccessPayload(
+                  formatDietSummary(kronos_plan),
+                  kronos_plan,
+                  { conversationState: { memory: shortState } },
+                  { flow: 'kronos_diet' }
+                ));
+              });
+            });
+        }, function(err, data) {
+          if (err) {
+            var dcErr = toProviderErrorContract(err, { operation: 'diet_kronos_flow' });
+            return sendTracked(dcErr.status, dcErr.body, 'failure');
+          }
+          return sendTracked(200, data);
+        });
       }
 
       if (convState && convState.mode === 'workout') {
@@ -644,43 +705,44 @@ module.exports = function(req, res) {
       }
 
       if (decision.action === 'open_diet_flow') {
-        console.log('[chat] diet_pipeline_selected', JSON.stringify({ event: 'diet_pipeline_selected', source: b && b.isDietDirect ? 'isDietDirect' : 'intent_classifier' }));
-        if (b && b.isDietDirect && b.dietProfile && typeof b.dietProfile === 'object') {
-          try {
-            var directPlan = diet.buildDietPlan(b.dietProfile);
-            var directDietMessage = directPlan && directPlan.failSafe
-              ? String((directPlan.limitedOrientation && directPlan.limitedOrientation.orientacao) || 'Dados insuficientes para montar um plano completo agora. Revise seus dados e tente novamente.')
-              : formatDietSummary(directPlan);
-            console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'direct_profile', failSafe: !!(directPlan && directPlan.failSafe) }));
-            fireAndForgetMemoryEvent({
-              userId: user.id,
-              eventType: 'diet_generated',
-              eventKey: user.id + ':diet_generated:' + (b.requestId || b.correlationId || Date.now()),
-              payload: { objective: b.dietProfile && b.dietProfile.objetivo || null, refeicoes: (directPlan.refeicoes || []).length, source: 'diet_direct' },
-              requestId: b.requestId || b.correlationId || null,
-              component: 'api/chat',
-              source: 'diet_pipeline'
-            });
-            return sendTracked(200, buildDietSuccessPayload(
-              directDietMessage,
-              directPlan,
-              { conversationState: { memory: nextShortState } },
-              { local: true, flow: 'diet_direct' }
-            ));
-          } catch (dietErr) {
-            console.warn('[chat] diet_pipeline_failed', JSON.stringify({ event: 'diet_pipeline_failed', source: 'direct_profile', error: dietErr && dietErr.message ? dietErr.message : 'unknown' }));
-            return sendTracked(500, buildDietErrorPayload(), 'failure');
-          }
-        }
-        var dietStart = dietflow.startDietFlow();
+        var dietSource = b && b.isDietDirect ? 'isDietDirect' : 'intent_classifier';
+        console.log('[chat] diet_pipeline_selected', JSON.stringify({ event: 'diet_pipeline_selected', source: dietSource }));
         emitDecisionTelemetry(user.id, classification, decision, false, true);
-        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, outputSummary: dietStart.response }); });
-        return sendTracked(200, buildDietCollectingPayload(
-          dietStart.response,
-          { flow_state: 'started', next_step: dietStart.stepIndex },
-          { conversationState: { mode: dietStart.mode, stepIndex: dietStart.stepIndex, collected: dietStart.collected, memory: nextShortState } },
-          { local: true }
-        ));
+        safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, outputSummary: 'kronos_diet_generation' }); });
+        return runPaidAiCall(function(done) {
+          Promise.resolve(kronosHub.buildKronosContext({ userId: user.id, message: lastContent }))
+            .catch(function() { return null; })
+            .then(function(kronosContext) {
+              gerarDietaKronos(kronosContext, lastContent, user.id, function(err, kronos_plan) {
+                if (err || !kronos_plan) {
+                  console.warn('[chat] diet_kronos_failed', JSON.stringify({ event: 'diet_kronos_failed', error: String(err || 'no plan') }));
+                  return done(null, buildDietErrorPayload());
+                }
+                console.log('[chat] diet_pipeline_completed', JSON.stringify({ event: 'diet_pipeline_completed', source: 'kronos', refeicoes: (kronos_plan.refeicoes || []).length }));
+                fireAndForgetMemoryEvent({
+                  userId: user.id,
+                  eventType: 'diet_generated',
+                  eventKey: user.id + ':diet_generated:' + Date.now(),
+                  payload: { refeicoes: (kronos_plan.refeicoes || []).length, source: 'kronos' },
+                  requestId: b.requestId || b.correlationId || null,
+                  component: 'api/chat',
+                  source: 'diet_pipeline'
+                });
+                return done(null, buildDietSuccessPayload(
+                  formatDietSummary(kronos_plan),
+                  kronos_plan,
+                  { conversationState: { memory: nextShortState } },
+                  { flow: 'kronos_diet' }
+                ));
+              });
+            });
+        }, function(err, data) {
+          if (err) {
+            var dietKronosErr = toProviderErrorContract(err, { operation: 'diet_kronos' });
+            return sendTracked(dietKronosErr.status, dietKronosErr.body, 'failure');
+          }
+          return sendTracked(200, data);
+        });
       }
 
       if (decision.action === 'open_workout_flow') {
