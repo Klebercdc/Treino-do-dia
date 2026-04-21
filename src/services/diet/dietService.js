@@ -1,13 +1,10 @@
 const dietCompat = require('../../server/apihelpers/_diet');
+const { buildMasterContext } = require('../../core/nutrition/diet_context_master');
+const { buildTrainingContext, buildAdherenceContext } = require('../../core/nutrition/diet_context_training');
+const { buildClinicalContext } = require('../../core/nutrition/diet_context_clinical');
 
-function pickNumber() {
-  for (let index = 0; index < arguments.length; index += 1) {
-    const value = arguments[index];
-    if (value === undefined || value === null || value === '') continue;
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return undefined;
+function normalizeObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function pickString() {
@@ -20,100 +17,58 @@ function pickString() {
   return undefined;
 }
 
-function toStringArray(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item || '').trim()).filter(Boolean);
+function pickNumber() {
+  for (let index = 0; index < arguments.length; index += 1) {
+    const value = arguments[index];
+    if (value === undefined || value === null || value === '') continue;
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
   }
-  if (typeof value === 'string') {
-    return value.split(',').map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-
-function normalizeObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return undefined;
 }
 
 function normalizeDietPayload(payload) {
+  const master = buildMasterContext(payload);
+  const training = buildTrainingContext(payload);
+  const adherence = buildAdherenceContext(payload);
+  const clinical = buildClinicalContext(payload);
+
   const safePayload = payload && typeof payload === 'object' ? payload : {};
   const context = normalizeObject(safePayload.context);
   const profile = normalizeObject(safePayload.profile);
-  const trainingContext = normalizeObject(
-    safePayload.contextoTreino || safePayload.trainingContext || safePayload.trainingSnapshot || context.contextoTreino || context.trainingContext || context.trainingSnapshot,
-  );
-  const healthContext = normalizeObject(
-    safePayload.saude || safePayload.healthContext || context.saude || context.healthContext,
-  );
-  const adherenceContext = normalizeObject(
-    safePayload.aderencia || safePayload.adherenceContext || context.aderencia || context.adherenceContext,
-  );
-  const intakeSnapshot = normalizeObject(
-    safePayload.intakeSnapshot || context.intakeSnapshot,
-  );
-  const intakeTraining = normalizeObject(intakeSnapshot.treino);
-  const nutritionFlowSelections = normalizeObject(
-    safePayload.nutritionFlowSelections || context.nutritionFlowSelections,
-  );
-  const nutritionGoals = normalizeObject(
-    safePayload.nutritionGoals || safePayload.goals || profile.nutritionGoals || context.nutritionGoals,
-  );
-  const labContext = normalizeObject(
-    safePayload.labContext || safePayload.labs || profile.labContext || context.labContext || healthContext.labContext,
-  );
-  const supabaseSnapshot = normalizeObject(
-    safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot,
-  );
-  const latestLabReport = normalizeObject(supabaseSnapshot.latestLabReport);
-  const effectiveLabContext = Object.keys(labContext).length ? labContext : latestLabReport;
+  const intakeSnapshot = normalizeObject(safePayload.intakeSnapshot || context.intakeSnapshot);
+  const nutritionFlowSelections = normalizeObject(safePayload.nutritionFlowSelections || context.nutritionFlowSelections);
+  const supabaseSnapshot = normalizeObject(safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot);
+
+  const goals = master.nutritionGoals || {};
 
   return {
-    objetivo: pickString(safePayload.objetivo, safePayload.objective, profile.objetivo, profile.objective, context.objetivo, context.objective),
-    sexo: pickString(safePayload.sexo, safePayload.sex, profile.sexo, profile.sex, context.sexo, context.sex),
-    idade: pickNumber(safePayload.idade, safePayload.age, profile.idade, profile.age, context.idade, context.age),
-    peso: pickNumber(safePayload.peso, safePayload.pesoKg, safePayload.weight, safePayload.weightKg, profile.peso, profile.pesoKg, profile.weight, profile.weightKg, context.peso, context.pesoKg, context.weight, context.weightKg),
-    altura: pickNumber(safePayload.altura, safePayload.alturaCm, safePayload.height, safePayload.heightCm, profile.altura, profile.alturaCm, profile.height, profile.heightCm, context.altura, context.alturaCm, context.height, context.heightCm),
-    rotina: pickString(safePayload.rotina, safePayload.routine, profile.rotina, profile.routine, context.rotina, context.routine),
-    nivelAtividade: pickString(safePayload.nivelAtividade, safePayload.activityLevel, profile.nivelAtividade, profile.activityLevel, context.nivelAtividade, context.activityLevel),
-    refeicoesPorDia: pickNumber(safePayload.refeicoesPorDia, safePayload.meals, safePayload.mealCount, profile.refeicoesPorDia, profile.meals, context.refeicoesPorDia, context.meals),
-    restricoes: toStringArray(safePayload.restricoes || safePayload.restrictions || profile.restricoes || context.restricoes),
-    preferencias: toStringArray(safePayload.preferencias || safePayload.preferences || profile.preferencias || context.preferencias),
-    alimentosEvitar: toStringArray(safePayload.alimentosEvitar || safePayload.dislikes || profile.alimentosEvitar || profile.dislikes || context.alimentosEvitar),
-    suplementos: toStringArray(safePayload.suplementos || safePayload.supplements || profile.suplementos || context.suplementos),
-    observacoes: pickString(safePayload.observacoes, safePayload.notes, profile.observacoes, context.observacoes),
-    gorduraCorporal: pickNumber(safePayload.gorduraCorporal, safePayload.bodyFatPercent, profile.gorduraCorporal, profile.bodyFatPercent, context.gorduraCorporal),
-    biotipo: pickString(safePayload.biotipo, safePayload.somatotype, profile.biotipo, profile.somatotype, context.biotipo),
-    padraoAlimentar: pickString(safePayload.padraoAlimentar, safePayload.dietaryPattern, profile.padraoAlimentar, profile.dietaryPattern, context.padraoAlimentar),
-    contextoTreino: {
-      frequencia: pickString(trainingContext.frequencia, trainingContext.frequency, intakeTraining.frequencia),
-      duracao: pickString(trainingContext.duracao, trainingContext.duration),
-      tipo: pickString(trainingContext.tipo, trainingContext.type),
-      fadiga: pickNumber(trainingContext.fadiga, trainingContext.fatigue, adherenceContext.fadiga, intakeTraining.fadiga),
-      tendenciaForca: pickString(trainingContext.tendenciaForca, trainingContext.strengthTrend, adherenceContext.tendenciaForca, intakeTraining.tendenciaForca),
-      prioridadeMetabolica: pickString(trainingContext.prioridadeMetabolica, trainingContext.priority, adherenceContext.prioridadeMetabolica, intakeTraining.prioridadeMetabolica),
-    },
-    saude: {
-      patologia: pickString(healthContext.patologia, healthContext.pathology),
-      medicamentos: pickString(healthContext.medicamentos, healthContext.medications),
-      sono: pickString(healthContext.sono, healthContext.sleep),
-      estresse: pickString(healthContext.estresse, healthContext.stress),
-    },
-    aderencia: {
-      modoAjuste: pickString(adherenceContext.modoAjuste, adherenceContext.adjustmentMode),
-      praticidade: pickString(adherenceContext.praticidade, adherenceContext.practicality),
-      neat: pickString(adherenceContext.neat),
-      fadiga: pickNumber(adherenceContext.fadiga, trainingContext.fadiga, trainingContext.fatigue, intakeTraining.fadiga),
-      tendenciaForca: pickString(adherenceContext.tendenciaForca, trainingContext.tendenciaForca, trainingContext.strengthTrend, intakeTraining.tendenciaForca),
-      prioridadeMetabolica: pickString(adherenceContext.prioridadeMetabolica, trainingContext.prioridadeMetabolica, trainingContext.priority, intakeTraining.prioridadeMetabolica),
-      horarioTreino: pickString(adherenceContext.horarioTreino, intakeTraining.periodo),
-    },
+    objetivo: master.objetivo,
+    sexo: master.sexo,
+    idade: master.idade,
+    peso: master.peso,
+    altura: master.altura,
+    rotina: master.rotina,
+    nivelAtividade: master.nivelAtividade,
+    refeicoesPorDia: master.refeicoesPorDia,
+    restricoes: master.restricoes,
+    preferencias: master.preferencias,
+    alimentosEvitar: master.alimentosEvitar,
+    suplementos: master.suplementos,
+    observacoes: master.observacoes,
+    gorduraCorporal: master.gorduraCorporal,
+    biotipo: master.biotipo,
+    padraoAlimentar: master.padraoAlimentar,
+    contextoTreino: training,
+    saude: clinical.saude,
+    aderencia: adherence,
     nutritionGoals: {
-      calories_target: pickNumber(nutritionGoals.calories_target, nutritionGoals.caloriesTarget),
-      protein_g: pickNumber(nutritionGoals.protein_g, nutritionGoals.proteinTarget),
-      carbs_g: pickNumber(nutritionGoals.carbs_g, nutritionGoals.carbsTarget),
-      fat_g: pickNumber(nutritionGoals.fat_g, nutritionGoals.fatTarget),
+      calories_target: goals.calories_target || undefined,
+      protein_g: goals.protein_g || undefined,
+      carbs_g: goals.carbs_g || undefined,
+      fat_g: goals.fat_g || undefined,
     },
-    labContext: Object.keys(effectiveLabContext).length ? effectiveLabContext : null,
+    labContext: clinical.labContext,
     intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
     nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
     supabaseSnapshot,

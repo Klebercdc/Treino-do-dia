@@ -6967,7 +6967,7 @@ window.KroniaActions = {
     try { closeOrientacao?.(); } catch (_) {}
     try { this.openDietWorkspace(context); } catch (_) {}
     try {
-      openDietaSheet?.(Object.assign({}, sanitizeCtaObject(context), {
+      openNutritionFlowFull?.(Object.assign({}, sanitizeCtaObject(context), {
         source: context && context.source || 'kronia_action_diet',
         origin: context && context.origin || 'dieta_ia',
         returnTab: context && context.returnTab || 'dieta',
@@ -9865,7 +9865,7 @@ function formatMuscleLabel(value) {
 }
 
 
-async function openDietaSheet(context) {
+async function openNutritionFlowFull(context) {
   syncDietaTheme(resolveKroniaThemeForDieta());
   if (context && typeof context === 'object') {
     var safeContext = sanitizeCtaObject(context);
@@ -9905,6 +9905,9 @@ async function openDietaSheet(context) {
       });
     }
   }
+}
+async function openDietaSheet(context) {
+  return openNutritionFlowFull(context);
 }
 function closeDietaSheet() {
   document.getElementById("dietaSheet").classList.remove("show");

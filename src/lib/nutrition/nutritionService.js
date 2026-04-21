@@ -1030,6 +1030,7 @@ module.exports = {
   resolveDietMode: resolveDietMode,
   applyClinicalRules: applyClinicalRules,
   applyMedicalAdjustments: applyMedicalAdjustments,
+  buildLabContext: buildLabContext,
   calculateNutrition: calculateNutrition,
   generateNutritionPlan: generateNutritionPlan,
   round: round
