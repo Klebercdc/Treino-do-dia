@@ -82,11 +82,11 @@ async function buildKronosInventory(userId) {
     supabase('GET', 'workouts?user_id=eq.' + userId + '&select=id&limit=1', null),
     // 2 – nutrition goals
     supabase('GET', 'nutrition_goals?user_id=eq.' + userId + '&select=id&limit=1', null),
-    // 3 – valid lab reports (presence check)
-    supabase('GET', 'lab_reports?user_id=eq.' + userId + '&is_valid=eq.true&select=id&limit=1', null),
+    // 3 – lab reports presence check (any non-failed report, not just is_valid=true)
+    supabase('GET', 'lab_reports?user_id=eq.' + userId + '&parse_status=not.in.(failed,error)&select=id&limit=1', null),
     // 4 – memory state
     supabase('GET', 'user_memory_state?user_id=eq.' + userId + '&select=user_id&limit=1', null),
-    // 5 – lab reports count (longitudinal)
+    // 5 – lab reports count (longitudinal — only validated reports for comparison)
     supabase('GET', 'lab_reports?user_id=eq.' + userId + '&is_valid=eq.true&select=id&limit=3', null),
     // 6 – body metrics / progress entries
     supabase('GET', 'body_metrics?user_id=eq.' + userId + '&select=id&limit=1', null)
@@ -217,13 +217,13 @@ async function loadLatestLabSummary(userId) {
   ).catch(function () { return []; });
   if (rows && rows[0]) return rows[0];
 
-  // Fallback: laudos em processamento (uploaded/processing/queued) — permite
-  // que o KRONOS informe ao usuário que o exame existe mas ainda está sendo processado,
-  // em vez de dizer que não há exames cadastrados.
+  // Fallback: qualquer laudo que não seja failed/error — inclui "Revisão Manual"
+  // (parse_status: extracted, done, manual_review, reviewed, etc.) e laudos em
+  // processamento, para que KRONOS sempre encontre o exame mais recente disponível.
   var pending = await supabase(
     'GET',
     'lab_reports?user_id=eq.' + userId +
-    '&parse_status=in.(uploaded,processing,pending,queued,pending_upload)' +
+    '&parse_status=not.in.(failed,error)' +
     '&select=' + select +
     '&order=created_at.desc&limit=1',
     null
@@ -948,9 +948,10 @@ function buildMissingData(inventory, profile, training, nutrition, labs, diet) {
   }
   if (!inventory.hasTrainingHistory || !training) missing.push('histórico de treino');
   if (!inventory.hasNutritionPlan || (!nutrition && !(diet && diet.disponivel))) missing.push('plano nutricional');
-  // RISCO 3 — labs processing/partial means the report EXISTS; don't flag as missing.
-  // Only flag as missing when the inventory says no valid report exists at all.
-  if (!inventory.hasLabReports || !labs) {
+  // RISCO 3 — use labs (the actual row found) as source of truth, not inventory.
+  // inventory.hasLabReports may be false for "Revisão Manual" or non-is_valid reports
+  // that were still found by loadLatestLabSummary's fallback query.
+  if (!labs) {
     missing.push('exames laboratoriais');
   } else if (labs.labsStatus === 'processing' || labs.labsStatus === 'partial') {
     missing.push('interpretação de exames em andamento');
