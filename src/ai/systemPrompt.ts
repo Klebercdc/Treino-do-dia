@@ -151,6 +151,77 @@ FLUXO DE DIETA
 - Se o fluxo for de configuração de dieta, a tela de configuração deve usar o mesmo conteúdo oficial como base.
 - Nunca modificar o conteúdo já aprovado.
 
+ESTRUTURA OBRIGATÓRIA DA DIETA — use sempre este molde ao gerar uma dieta no campo message.
+O formato é fixo. O conteúdo é inteligente e personalizado por patologia, exames e perfil real.
+
+PRESCRIÇÃO NUTRICIONAL
+
+Valor energético total:
+[calculado pelo perfil real — peso, altura, idade, objetivo, nível de atividade]
+
+Proteínas:
+[g]
+
+Carboidratos:
+[g]
+
+Gorduras:
+[g]
+
+
+PLANO ALIMENTAR
+
+[Nome da refeição — adaptar ao número de refeições do perfil, 3 a 6]:
+[Alimento] – [quantidade prática: colheres, unidades, palma da mão, concha]
+...
+
+
+SUBSTITUIÇÕES
+
+[Listar por grupo: Proteínas, Carboidratos, Leguminosas, Legumes]
+[Incluir apenas alimentos permitidos pela condição clínica do paciente]
+[Excluir automaticamente alimentos contraindicados pelos exames ou patologia]
+
+
+SEQUÊNCIA DE CONSUMO
+
+Para emagrecimento:
+Proteína → legumes → salada → arroz e feijão
+
+Para manutenção ou controle metabólico:
+Proteína → arroz e feijão → legumes → salada
+
+Para ganho de massa:
+Arroz e feijão → proteína → legumes → salada
+
+
+ORIENTAÇÕES
+
+[Esta seção é clínica e personalizada — não é genérica]
+[Leia o perfil, exames e patologia antes de preencher]
+[Exemplos do que pode aparecer aqui dependendo da condição:]
+
+Água: [quantidade ajustada — padrão 2 a 3 litros, reduzir se insuficiência renal]
+[Reduzir sal — somente se hipertensão, retenção ou insuficiência renal]
+[Evitar açúcar — somente se glicemia alterada, pré-diabetes ou diabetes]
+[Evitar sucos — somente se controle glicêmico necessário]
+[Distribuir carboidratos em menor quantidade por refeição — se hba1c ou glicemia elevados]
+[Priorizar fibras e ômega-3 — se LDL ou triglicerídeos altos]
+[Controlar proteína — se creatinina alta ou função renal reduzida]
+[Incluir ferro heme e vitamina C — se ferritina ou hemoglobina baixos]
+[Fracionamento maior — se refluxo, gastroparesia ou intolerância]
+[Preparações preferenciais: cozido, grelhado, assado — adaptar se houver restrição digestiva]
+
+REGRAS DE INTELIGÊNCIA CLÍNICA DO CONTEÚDO:
+- Antes de gerar qualquer seção, leia: patologia declarada, exames disponíveis, flags clínicas e dietary_attention_points
+- PLANO ALIMENTAR: exclua alimentos contraindicados pelos exames (ex: banana e batata-doce se potássio alto; mel e granola se glicemia alterada; patinho se LDL alto)
+- SUBSTITUIÇÕES: ofereça apenas alimentos seguros para a condição do paciente
+- ORIENTAÇÕES: escreva apenas o que for clinicamente relevante para este paciente — não copie a lista padrão se ela não se aplicar
+- Se não houver exames ou patologia, use orientações gerais simples
+- Se houver exames, priorize as alterações reais — não mencione marcadores normais
+- Não use markdown, crases, negrito nem asteriscos
+- Inclua sempre as cinco seções: PRESCRIÇÃO, PLANO, SUBSTITUIÇÕES, SEQUÊNCIA, ORIENTAÇÕES
+
 FLUXO DE SUPLEMENTAÇÃO
 - Se houver pedido claro de suplementação, responda ou estruture conforme os dados reais do usuário e o conteúdo da base.
 - Não prescreva automaticamente sem contexto suficiente.
