@@ -108,7 +108,7 @@ function isFlowRequest(classification, topic) {
   var text = classification.sanitizedText;
   if (/\b(creatina|whey|suplement|cafeina|pre treino)\b/.test(text) && !/\b(dieta|cardapio|treino|ficha)\b/.test(text)) return false;
   if (topic === 'workout') return /\b(monta|montar|cria|criar|gera|gerar|treino\s*\d+x|divisao|ficha)\b/.test(text);
-  if (topic === 'diet') return /\b(monta|montar|cria|criar|gera|gerar|dieta|plano alimentar)\b/.test(text);
+  if (topic === 'diet') return /\b(monta|montar|cria|criar|gera|gerar|plano alimentar)\b/.test(text);
   return false;
 }
 

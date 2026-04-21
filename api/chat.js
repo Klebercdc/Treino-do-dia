@@ -596,9 +596,10 @@ module.exports = function(req, res) {
         decision.action = 'open_diet_flow';
         decision.reason = 'isDietDirect flag forces diet pipeline.';
       }
-      if (classification.topic === 'diet' && decision.action !== 'open_diet_flow' && classification.topic !== 'labs') {
+      var isDietGenRequest = /\b(monta|montar|cria|criar|gera|gerar|plano alimentar)\b/.test(lastContent);
+      if (classification.topic === 'diet' && isDietGenRequest && decision.action !== 'open_diet_flow') {
         decision.action = 'open_diet_flow';
-        decision.reason = 'Diet topic always uses diet pipeline.';
+        decision.reason = 'Explicit diet generation request.';
       }
       safeTrack(function() { tracker.captureDecision({
         intentDetected: classification.kind || classification.topic || 'unknown',
