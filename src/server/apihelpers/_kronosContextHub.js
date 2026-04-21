@@ -204,7 +204,7 @@ async function loadTodayFoodLogs(userId) {
 }
 
 async function loadLatestLabSummary(userId) {
-  var select = 'id,created_at,processed_at,parse_status,clinical_flags,critical_flags,ai_insights,normalized_payload,confidence';
+  var select = 'id,created_at,processed_at,parse_status,is_valid,ai_insights,normalized_payload';
 
   // Prioridade: laudos válidos e processados
   var rows = await supabase(
