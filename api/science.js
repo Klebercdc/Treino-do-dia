@@ -184,6 +184,9 @@ async function handleNutritionPlan(req, res) {
 
   var bodyPayload = parseJsonBodyIfNeeded(req);
   var queryPayload = req && req.query ? req.query : {};
+  var directPayload = bodyPayload && bodyPayload.payload && typeof bodyPayload.payload === 'object'
+    ? Object.assign({}, bodyPayload.payload)
+    : (bodyPayload && typeof bodyPayload === 'object' ? Object.assign({}, bodyPayload) : {});
   var isNonEmptyValue = function(value) {
     return value !== undefined && value !== null && value !== '';
   };
@@ -207,21 +210,22 @@ async function handleNutritionPlan(req, res) {
     return Number.isFinite(parsed) ? parsed : undefined;
   };
 
-  var payloadFinal = {
-    sexo: pickValue(['sexo']),
-    idade: toNumber(pickValue(['idade'])),
-    peso: toNumber(pickValue(['peso', 'peso_kg', 'pesoKg'])),
-    altura: toNumber(pickValue(['altura', 'altura_cm', 'alturaCm'])),
-    nivelAtividade: pickValue(['nivelAtividade', 'nivel_atividade']),
-    objetivo: pickValue(['objetivo']),
-    refeicoesPorDia: toNumber(pickValue(['refeicoesPorDia', 'refeicoes_por_dia']))
-  };
+  var payloadFinal = Object.assign({}, directPayload, {
+    sexo: pickValue(['sexo']) || directPayload.sexo,
+    idade: toNumber(pickValue(['idade'])) || directPayload.idade,
+    peso: toNumber(pickValue(['peso', 'peso_kg', 'pesoKg'])) || directPayload.peso || directPayload.pesoKg,
+    altura: toNumber(pickValue(['altura', 'altura_cm', 'alturaCm'])) || directPayload.altura || directPayload.alturaCm,
+    nivelAtividade: pickValue(['nivelAtividade', 'nivel_atividade']) || directPayload.nivelAtividade || directPayload.activityLevel,
+    objetivo: pickValue(['objetivo']) || directPayload.objetivo || directPayload.objective,
+    refeicoesPorDia: toNumber(pickValue(['refeicoesPorDia', 'refeicoes_por_dia'])) || directPayload.refeicoesPorDia || directPayload.meals || directPayload.mealCount
+  });
 
   var forwardedKeys = Object.keys(payloadFinal).filter(function(key) {
     return isNonEmptyValue(payloadFinal[key]);
   });
   console.log('[nutrition-plan] payload mapping', {
-    forwardedKeys: forwardedKeys
+    forwardedKeys: forwardedKeys,
+    preservedContext: Boolean(payloadFinal.context || payloadFinal.supabaseSnapshot || payloadFinal.intakeSnapshot)
   });
 
   var result = _nutritionService.generateNutritionPlan(payloadFinal);

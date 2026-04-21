@@ -76,6 +76,37 @@ test('dietService normalizes mixed payload shapes and generates diet plan', asyn
   assert.equal(result.payload.plan.refeicoes.length, 5);
 });
 
+test('nutritionService consolida contexto, estratégia e prescrição com treino, exames e recuperação', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 36,
+    peso: 82,
+    altura: 178,
+    objetivo: 'emagrecimento',
+    refeicoesPorDia: 4,
+    preferencias: ['arroz', 'frango'],
+    restricoes: ['lactose'],
+    contextoTreino: { frequencia: '5x por semana', tipo: 'musculacao' },
+    aderencia: { fadiga: 9, tendenciaForca: 'caindo', prioridadeMetabolica: 'Recuperar' },
+    labContext: {
+      id: 'lab-context',
+      isValid: true,
+      parsed: { glucose: 101, hba1c: 5.8, potassium: 4.5, ldl: 110 },
+      clinicalFlags: ['glycemic_risk'],
+      criticalFlags: [],
+    },
+  });
+
+  assert.equal(result.failSafe, false);
+  assert.equal(result.contextoNutricional.objective, 'emagrecimento');
+  assert.equal(result.contextoNutricional.training.frequencia, '5x por semana');
+  assert.equal(result.contextoNutricional.recovery.fatigue, 9);
+  assert.equal(result.estrategiaNutricional.recovery.fatigue, 9);
+  assert.ok(result.estrategiaNutricional.adjustments.includes('recovery_deficit_softened'));
+  assert.ok(Array.isArray(result.plan.refeicoes));
+  assert.ok(result.plan.refeicoes.length >= 3);
+});
+
 test('nutritionService personaliza plano com padrao alimentar e alimentos evitados', () => {
   const result = nutritionService.generateNutritionPlan({
     sexo: 'F',

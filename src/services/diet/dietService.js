@@ -40,10 +40,20 @@ function normalizeDietPayload(payload) {
   const context = normalizeObject(safePayload.context);
   const profile = normalizeObject(safePayload.profile);
   const trainingContext = normalizeObject(
-    safePayload.contextoTreino || safePayload.trainingContext || context.contextoTreino || context.trainingContext,
+    safePayload.contextoTreino || safePayload.trainingContext || safePayload.trainingSnapshot || context.contextoTreino || context.trainingContext || context.trainingSnapshot,
   );
   const healthContext = normalizeObject(
     safePayload.saude || safePayload.healthContext || context.saude || context.healthContext,
+  );
+  const adherenceContext = normalizeObject(
+    safePayload.aderencia || safePayload.adherenceContext || context.aderencia || context.adherenceContext,
+  );
+  const intakeSnapshot = normalizeObject(
+    safePayload.intakeSnapshot || context.intakeSnapshot,
+  );
+  const intakeTraining = normalizeObject(intakeSnapshot.treino);
+  const nutritionFlowSelections = normalizeObject(
+    safePayload.nutritionFlowSelections || context.nutritionFlowSelections,
   );
   const nutritionGoals = normalizeObject(
     safePayload.nutritionGoals || safePayload.goals || profile.nutritionGoals || context.nutritionGoals,
@@ -54,6 +64,8 @@ function normalizeDietPayload(payload) {
   const supabaseSnapshot = normalizeObject(
     safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot,
   );
+  const latestLabReport = normalizeObject(supabaseSnapshot.latestLabReport);
+  const effectiveLabContext = Object.keys(labContext).length ? labContext : latestLabReport;
 
   return {
     objetivo: pickString(safePayload.objetivo, safePayload.objective, profile.objetivo, profile.objective, context.objetivo, context.objective),
@@ -73,9 +85,12 @@ function normalizeDietPayload(payload) {
     biotipo: pickString(safePayload.biotipo, safePayload.somatotype, profile.biotipo, profile.somatotype, context.biotipo),
     padraoAlimentar: pickString(safePayload.padraoAlimentar, safePayload.dietaryPattern, profile.padraoAlimentar, profile.dietaryPattern, context.padraoAlimentar),
     contextoTreino: {
-      frequencia: pickString(trainingContext.frequencia, trainingContext.frequency),
+      frequencia: pickString(trainingContext.frequencia, trainingContext.frequency, intakeTraining.frequencia),
       duracao: pickString(trainingContext.duracao, trainingContext.duration),
       tipo: pickString(trainingContext.tipo, trainingContext.type),
+      fadiga: pickNumber(trainingContext.fadiga, trainingContext.fatigue, adherenceContext.fadiga, intakeTraining.fadiga),
+      tendenciaForca: pickString(trainingContext.tendenciaForca, trainingContext.strengthTrend, adherenceContext.tendenciaForca, intakeTraining.tendenciaForca),
+      prioridadeMetabolica: pickString(trainingContext.prioridadeMetabolica, trainingContext.priority, adherenceContext.prioridadeMetabolica, intakeTraining.prioridadeMetabolica),
     },
     saude: {
       patologia: pickString(healthContext.patologia, healthContext.pathology),
@@ -83,13 +98,24 @@ function normalizeDietPayload(payload) {
       sono: pickString(healthContext.sono, healthContext.sleep),
       estresse: pickString(healthContext.estresse, healthContext.stress),
     },
+    aderencia: {
+      modoAjuste: pickString(adherenceContext.modoAjuste, adherenceContext.adjustmentMode),
+      praticidade: pickString(adherenceContext.praticidade, adherenceContext.practicality),
+      neat: pickString(adherenceContext.neat),
+      fadiga: pickNumber(adherenceContext.fadiga, trainingContext.fadiga, trainingContext.fatigue, intakeTraining.fadiga),
+      tendenciaForca: pickString(adherenceContext.tendenciaForca, trainingContext.tendenciaForca, trainingContext.strengthTrend, intakeTraining.tendenciaForca),
+      prioridadeMetabolica: pickString(adherenceContext.prioridadeMetabolica, trainingContext.prioridadeMetabolica, trainingContext.priority, intakeTraining.prioridadeMetabolica),
+      horarioTreino: pickString(adherenceContext.horarioTreino, intakeTraining.periodo),
+    },
     nutritionGoals: {
       calories_target: pickNumber(nutritionGoals.calories_target, nutritionGoals.caloriesTarget),
       protein_g: pickNumber(nutritionGoals.protein_g, nutritionGoals.proteinTarget),
       carbs_g: pickNumber(nutritionGoals.carbs_g, nutritionGoals.carbsTarget),
       fat_g: pickNumber(nutritionGoals.fat_g, nutritionGoals.fatTarget),
     },
-    labContext: Object.keys(labContext).length ? labContext : null,
+    labContext: Object.keys(effectiveLabContext).length ? effectiveLabContext : null,
+    intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
+    nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
     supabaseSnapshot,
   };
 }

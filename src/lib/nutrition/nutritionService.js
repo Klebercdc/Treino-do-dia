@@ -280,9 +280,10 @@ function textIncludesAny(text, items) {
 }
 
 function buildNutritionProfile(input) {
+  var unifiedContext = buildUnifiedNutritionContext(input || {});
   var dietaryPattern = String(input.padraoAlimentar || input.dietaryPattern || '').trim();
   var dislikes = normalizeStringArray(input.alimentosEvitar || input.dislikes);
-  var training = input.contextoTreino || input.trainingContext || {};
+  var training = unifiedContext.training;
   return {
     sexo: normalizeSex(input.sexo),
     idade: Number(input.idade),
@@ -300,9 +301,83 @@ function buildNutritionProfile(input) {
     bodyFatPercent: input.gorduraCorporal || input.bodyFatPercent || null,
     biotipo: String(input.biotipo || '').trim() || null,
     contextoTreino: training,
-    saude: input.saude || input.healthContext || null,
-    nutritionGoals: input.nutritionGoals || null,
-    labContext: buildLabContext(input.labContext || (input.saude && input.saude.labContext) || null)
+    saude: unifiedContext.health,
+    adherenceContext: unifiedContext.adherence,
+    recoveryContext: unifiedContext.recovery,
+    nutritionFlowSelections: unifiedContext.foodSelections,
+    nutritionGoals: unifiedContext.goals || null,
+    labContext: buildLabContext(unifiedContext.labs),
+    contextoNutricional: unifiedContext
+  };
+}
+
+function normalizeObject(input) {
+  return input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+}
+
+function pickNestedObject() {
+  for (var i = 0; i < arguments.length; i += 1) {
+    var value = arguments[i];
+    if (value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length) return value;
+  }
+  return null;
+}
+
+function buildUnifiedNutritionContext(input) {
+  var safeInput = normalizeObject(input);
+  var context = normalizeObject(safeInput.context);
+  var profile = normalizeObject(safeInput.profile);
+  var supabaseSnapshot = normalizeObject(safeInput.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot);
+  var intakeSnapshot = normalizeObject(safeInput.intakeSnapshot || context.intakeSnapshot);
+  var training = normalizeObject(
+    safeInput.contextoTreino ||
+    safeInput.trainingContext ||
+    safeInput.trainingSnapshot ||
+    context.contextoTreino ||
+    context.trainingContext ||
+    context.trainingSnapshot ||
+    intakeSnapshot.treino
+  );
+  var health = normalizeObject(safeInput.saude || safeInput.healthContext || context.saude || context.healthContext);
+  var adherence = normalizeObject(safeInput.aderencia || safeInput.adherenceContext || context.adherenceContext || intakeSnapshot.aderencia);
+  var flowSelections = normalizeObject(safeInput.nutritionFlowSelections || context.nutritionFlowSelections);
+  var goals = pickNestedObject(safeInput.nutritionGoals, safeInput.goals, profile.nutritionGoals, context.nutritionGoals, supabaseSnapshot.nutritionGoals);
+  var labs = pickNestedObject(
+    safeInput.labContext,
+    safeInput.labs,
+    profile.labContext,
+    context.labContext,
+    health.labContext,
+    supabaseSnapshot.latestLabReport
+  );
+  var fatigue = Number(
+    adherence.fadiga != null ? adherence.fadiga :
+    training.fadiga != null ? training.fadiga :
+    training.fatigue != null ? training.fatigue :
+    intakeSnapshot.treino && intakeSnapshot.treino.fadiga
+  );
+
+  return {
+    source: context.source || safeInput.source || 'nutrition_service',
+    objective: safeInput.objetivo || safeInput.objective || profile.objetivo || profile.objective || null,
+    preferences: normalizeStringArray(safeInput.preferencias || safeInput.preferences || profile.preferencias || profile.preferences),
+    restrictions: normalizeStringArray(safeInput.restricoes || safeInput.restrictions || profile.restricoes || profile.restrictions),
+    dislikes: normalizeStringArray(safeInput.alimentosEvitar || safeInput.dislikes || profile.alimentosEvitar || profile.dislikes),
+    training: training,
+    health: health,
+    labs: labs,
+    goals: goals,
+    adherence: adherence,
+    recovery: {
+      fatigue: Number.isFinite(fatigue) ? Math.max(0, Math.min(10, fatigue)) : null,
+      strengthTrend: adherence.tendenciaForca || training.tendenciaForca || training.strengthTrend || null,
+      priority: adherence.prioridadeMetabolica || training.prioridadeMetabolica || training.priority || null,
+      sleep: health.sono || safeInput.sono || null,
+      stress: health.estresse || safeInput.estresse || null
+    },
+    foodSelections: flowSelections,
+    supabaseSnapshot: Object.keys(supabaseSnapshot).length ? supabaseSnapshot : null,
+    intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null
   };
 }
 
@@ -782,8 +857,7 @@ function limitedOrientation(profile, validation) {
   };
 }
 
-function calculateNutrition(profileInput) {
-  var profile = buildNutritionProfile(profileInput || {});
+function buildNutritionStrategy(profile) {
   var validation = validateProfile(profile);
 
   if (!validation.ok) {
@@ -802,7 +876,11 @@ function calculateNutrition(profileInput) {
     : applyObjectiveToCalories(get, profile.objetivo);
   profile.getForClinicalSafety = round(get);
   var macros = calculateMacroTargets(profile, rawTargetCalories);
+  var contextual = applyRecoveryStrategy(profile, rawTargetCalories, macros);
   var clinicalAdjusted = applyMedicalAdjustments(profile, rawTargetCalories, macros);
+  if (!hasCriticalLabFlag(profile)) {
+    clinicalAdjusted = contextual;
+  }
 
   return {
     profile: profile,
@@ -819,12 +897,58 @@ function calculateNutrition(profileInput) {
       macros: clinicalAdjusted.macros,
       activityFactor: ACTIVITY_FACTORS[profile.nivelAtividade],
       objective: profile.objetivo
-    }
+    },
+    strategy: {
+      objective: profile.objetivo,
+      activityLevel: profile.nivelAtividade,
+      recovery: profile.recoveryContext || null,
+      labsMode: profile.labContext && profile.labContext.mode || 'standard',
+      adjustments: contextual.adjustments || []
+    },
+    unifiedContext: profile.contextoNutricional || null
   };
 }
 
-function generateNutritionPlan(profileInput) {
-  var calc = calculateNutrition(profileInput);
+function applyRecoveryStrategy(profile, targetCalories, macros) {
+  var adjustedCalories = targetCalories;
+  var adjustedMacros = {
+    protein: macros.protein,
+    carbs: macros.carbs,
+    fat: macros.fat
+  };
+  var adjustments = [];
+  var recovery = profile && profile.recoveryContext ? profile.recoveryContext : {};
+  var fatigue = Number(recovery.fatigue);
+  var priority = normalizeFreeText(recovery.priority || '');
+  var strengthTrend = normalizeFreeText(recovery.strengthTrend || '');
+  var needsRecovery = (Number.isFinite(fatigue) && fatigue >= 8) || /recuper/.test(priority) || /queda|caindo|pior/.test(strengthTrend);
+
+  if (needsRecovery) {
+    if (profile.objetivo === 'emagrecimento' || profile.objetivo === 'recomposicao') {
+      adjustedCalories = round(adjustedCalories + 80);
+      adjustments.push('recovery_deficit_softened');
+    } else {
+      adjustedCalories = round(adjustedCalories + 80);
+      adjustments.push('recovery_carbs_supported');
+    }
+    adjustedMacros.carbs = round((adjustedCalories - (adjustedMacros.protein * 4) - (adjustedMacros.fat * 9)) / 4, 1);
+    if (adjustedMacros.carbs < 70) adjustedMacros.carbs = 70;
+  }
+
+  return {
+    targetCalories: adjustedCalories,
+    macros: adjustedMacros,
+    adjustments: adjustments
+  };
+}
+
+function calculateNutrition(profileInput) {
+  var profile = buildNutritionProfile(profileInput || {});
+  return buildNutritionStrategy(profile);
+}
+
+function buildNutritionPrescription(strategy) {
+  var calc = strategy;
   if (calc.failSafe) return calc;
 
   var plan = buildInitialNutritionPlan(calc.profile, calc.result);
@@ -863,6 +987,8 @@ function generateNutritionPlan(profileInput) {
       activityFactor: calc.result.activityFactor,
       objective: calc.result.objective
     },
+    contextoNutricional: calc.unifiedContext || null,
+    estrategiaNutricional: calc.strategy || null,
     plan: plan,
     catalogStats: {
       canonicalFoods: premiumCatalog.CANONICAL_FOODS.length,
@@ -888,12 +1014,19 @@ function generateNutritionPlan(profileInput) {
   };
 }
 
+function generateNutritionPlan(profileInput) {
+  return buildNutritionPrescription(calculateNutrition(profileInput));
+}
+
 module.exports = {
   ACTIVITY_FACTORS: ACTIVITY_FACTORS,
   FOOD_LIBRARY: FOOD_LIBRARY,
   CANONICAL_FOODS: premiumCatalog.CANONICAL_FOODS,
   RECIPE_CATALOG: premiumCatalog.RECIPE_CATALOG,
   buildNutritionProfile: buildNutritionProfile,
+  buildUnifiedNutritionContext: buildUnifiedNutritionContext,
+  buildNutritionStrategy: buildNutritionStrategy,
+  buildNutritionPrescription: buildNutritionPrescription,
   resolveDietMode: resolveDietMode,
   applyClinicalRules: applyClinicalRules,
   applyMedicalAdjustments: applyMedicalAdjustments,
