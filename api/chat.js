@@ -556,21 +556,11 @@ module.exports = function(req, res) {
         console.log('[chat] diet_pipeline_selected', JSON.stringify({ event: 'diet_pipeline_selected', source: 'conversation_state' }));
         safeTrack(function() { tracker.captureDecision({
           graphNode: 'Nutricao',
-          reason: 'Continuação de fluxo ativo de dieta.',
-          pipelineSelected: 'diet_flow',
-          fallbackUsed: true
+          reason: 'Continuação de fluxo de dieta — KRONOS direto.',
+          pipelineSelected: 'kronos_diet',
+          fallbackUsed: false
         }); });
-        var dietStep = dietflow.continueDietFlow(convState.stepIndex, convState.collected, lastContent);
-        if (!dietStep.finished) {
-          safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Nutricao', stepName: diagnosticConstants.STEP_NAMES.DIET_PIPELINE_SELECTED, status: 'success', success: true, inputSummary: lastContent, outputSummary: dietStep.response }); });
-          return sendTracked(200, buildDietCollectingPayload(
-            dietStep.response,
-            { next_step: dietStep.stepIndex },
-            { conversationState: { mode: dietStep.mode, stepIndex: dietStep.stepIndex, collected: dietStep.collected, memory: shortState } },
-            { local: true, flow: 'diet' }
-          ));
-        }
-        var collectedMsg = 'Gere um plano alimentar personalizado.' + (dietStep.collected ? ' Contexto coletado: ' + JSON.stringify(dietStep.collected) : '');
+        var collectedMsg = 'Gere um plano alimentar personalizado.' + (convState.collected ? ' Contexto coletado: ' + JSON.stringify(convState.collected) : '') + (lastContent ? ' Mensagem do usuário: ' + lastContent : '');
         return runPaidAiCall(function(nextCall) {
           Promise.resolve(kronosHub.buildKronosContext({ userId: user.id, message: collectedMsg }))
             .catch(function() { return null; })
