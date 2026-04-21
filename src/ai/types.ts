@@ -44,6 +44,9 @@ export interface UserProfile {
   lesoes?: string[]
   rotina?: string
   observacoes?: string
+  patologia?: string
+  patologias?: string[]
+  padraoAlimentar?: string
   usesExogenousHormones?: boolean
   hormoneContextType?: HormoneContextType
   declaredCompounds?: string[]
@@ -139,6 +142,50 @@ export interface AssistantStructuredResponse {
   mobilityPayload?: MobilityPayload | null
 }
 
+export interface ActiveDietMealItem {
+  alimento: string
+  quantidade: string
+  calorias?: number
+  proteinas?: number
+  carboidratos?: number
+  gorduras?: number
+}
+
+export interface ActiveDietMeal {
+  nome: string
+  horario?: string
+  itens: ActiveDietMealItem[]
+}
+
+export interface ActiveDietContext {
+  titulo: string
+  metas: {
+    calorias?: number
+    proteinas?: number
+    carboidratos?: number
+    gorduras?: number
+  }
+  refeicoes: ActiveDietMeal[]
+}
+
+export interface WorkoutSet {
+  repeticoes?: number
+  carga?: number
+  rpe?: number
+}
+
+export interface WorkoutExerciseEntry {
+  nome: string
+  grupoMuscular?: string
+  series: WorkoutSet[]
+}
+
+export interface RecentWorkoutEntry {
+  data: string
+  duracao?: number
+  exercicios: WorkoutExerciseEntry[]
+}
+
 export interface AIRequestInput {
   userId?: string
   userMessage: string
@@ -150,6 +197,8 @@ export interface AIRequestInput {
   retrievedContext?: RetrievedContextItem[]
   memoryItems?: MemoryItem[]
   sourceOfTruthMode?: "rag_required" | "rag_preferred"
+  activeDiet?: ActiveDietContext | null
+  recentWorkouts?: RecentWorkoutEntry[]
 }
 
 export interface AIModelClient {

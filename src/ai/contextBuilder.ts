@@ -1,9 +1,14 @@
-import type { ChatMessage, MemoryItem, RetrievedContextItem, UserProfile } from './types'
+import type { ActiveDietContext, ChatMessage, MemoryItem, RecentWorkoutEntry, RetrievedContextItem, UserProfile } from './types'
 import type { HealthPerformanceProfile, LabLongitudinalContext, StoredLabContext } from '../core/labs/labTypes'
 import { serializeHealthProfile } from '../core/labs/labRules'
 
 function serializeProfile(profile?: UserProfile | null): string {
   if (!profile) return 'Sem perfil disponível.'
+
+  const patologiaList = [
+    ...(profile.patologias ?? []),
+    ...(profile.patologia && !profile.patologias?.includes(profile.patologia) ? [profile.patologia] : []),
+  ].filter(Boolean)
 
   return [
     `nome: ${profile.nome ?? ''}`,
@@ -13,6 +18,8 @@ function serializeProfile(profile?: UserProfile | null): string {
     `sexo: ${profile.sexo ?? ''}`,
     `pesoKg: ${profile.pesoKg ?? ''}`,
     `alturaCm: ${profile.alturaCm ?? ''}`,
+    `padrao_alimentar: ${profile.padraoAlimentar ?? ''}`,
+    `patologia: ${patologiaList.length ? patologiaList.join(', ') : 'não informada'}`,
     `restrições: ${(profile.restricoes ?? []).join(', ')}`,
     `preferências: ${(profile.preferencias ?? []).join(', ')}`,
     `lesões: ${(profile.lesoes ?? []).join(', ')}`,
@@ -24,6 +31,43 @@ function serializeProfile(profile?: UserProfile | null): string {
     `ultima_administracao_hormonal: ${profile.lastAdministrationAt ?? ''}`,
     `modo_monitoramento: ${profile.monitoringMode ?? ''}`,
   ].join('\n')
+}
+
+function serializeActiveDiet(diet?: ActiveDietContext | null): string | null {
+  if (!diet) return null
+  const lines = [
+    '=== DIETA ATIVA ===',
+    `plano: ${diet.titulo}`,
+    `metas: ${diet.metas.calorias ?? '?'}kcal | proteínas: ${diet.metas.proteinas ?? '?'}g | carboidratos: ${diet.metas.carboidratos ?? '?'}g | gorduras: ${diet.metas.gorduras ?? '?'}g`,
+  ]
+  for (const refeicao of diet.refeicoes) {
+    lines.push(`\n${refeicao.nome}${refeicao.horario ? ' (' + refeicao.horario + ')' : ''}:`)
+    for (const item of refeicao.itens) {
+      const macros: string[] = []
+      if (item.calorias) macros.push(`${item.calorias}kcal`)
+      if (item.proteinas) macros.push(`P:${item.proteinas}g`)
+      if (item.carboidratos) macros.push(`C:${item.carboidratos}g`)
+      if (item.gorduras) macros.push(`G:${item.gorduras}g`)
+      lines.push(`  • ${item.alimento} — ${item.quantidade}${macros.length ? ' (' + macros.join(' ') + ')' : ''}`)
+    }
+  }
+  return lines.join('\n')
+}
+
+function serializeRecentWorkouts(workouts?: RecentWorkoutEntry[]): string | null {
+  if (!workouts || !workouts.length) return null
+  const lines = ['=== TREINOS RECENTES ===']
+  for (const workout of workouts.slice(0, 3)) {
+    lines.push(`\nData: ${workout.data}${workout.duracao ? ' | ' + workout.duracao + 'min' : ''}`)
+    for (const ex of workout.exercicios) {
+      const seriesStr = ex.series
+        .map((s) => [s.repeticoes ? `${s.repeticoes}rep` : '', s.carga ? `${s.carga}kg` : '', s.rpe ? `RPE${s.rpe}` : ''].filter(Boolean).join('/'))
+        .filter(Boolean)
+        .join(', ')
+      lines.push(`  • ${ex.nome}${ex.grupoMuscular ? ' [' + ex.grupoMuscular + ']' : ''}: ${seriesStr || 'registrado'}`)
+    }
+  }
+  return lines.join('\n')
 }
 
 function serializeHistory(history: ChatMessage[]): string {
@@ -184,14 +228,18 @@ export function buildUserMessageBundle(args: {
   retrievedContext?: RetrievedContextItem[]
   memoryItems?: MemoryItem[]
   sourceOfTruthMode?: 'rag_required' | 'rag_preferred'
-  /** Structured health & performance profile derived from latest valid lab report */
   labHealthProfile?: HealthPerformanceProfile | null
   labLatestContext?: StoredLabContext | null
   labLongitudinalContext?: LabLongitudinalContext | null
+  activeDiet?: ActiveDietContext | null
+  recentWorkouts?: RecentWorkoutEntry[]
+  [key: string]: unknown
 }): string {
   const labSection = serializeLabContext(args.labHealthProfile)
   const latestLabSection = serializeLatestLabContext(args.labLatestContext)
   const longitudinalSection = serializeLabLongitudinalContext(args.labLongitudinalContext)
+  const dietSection = serializeActiveDiet(args.activeDiet)
+  const workoutSection = serializeRecentWorkouts(args.recentWorkouts)
 
   const parts = [
     'MODO DE CONHECIMENTO:',
@@ -211,6 +259,18 @@ export function buildUserMessageBundle(args: {
     'CONTEXTO RECUPERADO:',
     serializeContext(args.retrievedContext),
   ]
+
+  if (dietSection) {
+    parts.push('')
+    parts.push('DIETA ATIVA DO USUÁRIO (usar para ajustes, análise e geração de nova dieta):')
+    parts.push(dietSection)
+  }
+
+  if (workoutSection) {
+    parts.push('')
+    parts.push('TREINOS RECENTES DO USUÁRIO (usar para análise de volume, progressão e recomendações):')
+    parts.push(workoutSection)
+  }
 
   if (labSection) {
     parts.push('')
