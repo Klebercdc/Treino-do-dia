@@ -588,7 +588,50 @@ function mapDetailedDiet(nutritionGoal, mealPlan, mealItems, todayFoodLogs) {
     totalConsumidoHoje: today.total,
     refeicoes: planMeals,
     refeicoesConsumidasHoje: today.refeicoes,
-    observacoes: observations
+    observacoes: observations,
+    semantica: mapDietSemantics(planMeals)
+  };
+}
+
+// Sinais semânticos da dieta — permite ao KRONOS raciocinar sobre padrões
+// alimentares reais em vez de só operar sobre números de macro.
+function mapDietSemantics(meals) {
+  if (!meals || !meals.length) return null;
+
+  var PROTEINAS = /frango|peito|carne|peixe|atum|salmao|ovo|clara|whey|tilapia|contrafile|patinho|alcatra|sardinha|camarao|queijo cottage|ricota|iogurte grego|frango grelhado/i;
+  var CARBOIDRATOS = /arroz|batata|macarrao|pao|tapioca|aveia|mandioca|inhame|batata doce|cuscuz|milho|farinha/i;
+  var LEGUMINOSAS = /feijao|lentilha|grao.de.bico|ervilha|soja|fava/i;
+  var VEGETAIS = /br[oó]colis|cenoura|abobrinha|espinafre|couve|tomate|pepino|alface|repolho|beterraba|vagem|chuchu|berinjela|pimentao|acelga|salada/i;
+
+  var frequencia = Object.create(null);
+  var refeicoesSinais = meals.map(function (meal) {
+    var itens = meal.itens || [];
+    var nomes = itens.map(function (i) { return String(i.nome || '').toLowerCase(); });
+    nomes.forEach(function (n) { frequencia[n] = (frequencia[n] || 0) + 1; });
+    var temProteina = nomes.some(function (n) { return PROTEINAS.test(n); });
+    var temCarbo = nomes.some(function (n) { return CARBOIDRATOS.test(n); });
+    var temLeguminosa = nomes.some(function (n) { return LEGUMINOSAS.test(n); });
+    var temVegetais = nomes.some(function (n) { return VEGETAIS.test(n); });
+    var proteinaPrincipal = nomes.find(function (n) { return PROTEINAS.test(n); }) || null;
+    var carboidratoPrincipal = nomes.find(function (n) { return CARBOIDRATOS.test(n); }) || null;
+    return {
+      refeicao: meal.nome || null,
+      refeicaoEstruturada: temProteina && temCarbo,
+      temProteina: temProteina,
+      temCarbo: temCarbo,
+      temLeguminosa: temLeguminosa,
+      temVegetais: temVegetais,
+      proteinaPrincipal: proteinaPrincipal,
+      carboidratoPrincipal: carboidratoPrincipal
+    };
+  });
+
+  var alimentosRepetidos = Object.keys(frequencia).filter(function (k) { return frequencia[k] >= 2; });
+
+  return {
+    refeicoes: refeicoesSinais,
+    alimentosRepetidos: alimentosRepetidos,
+    totalRefeicoes: meals.length
   };
 }
 
