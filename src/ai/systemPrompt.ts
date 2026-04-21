@@ -151,6 +151,86 @@ FLUXO DE DIETA
 - Se o fluxo for de configuração de dieta, a tela de configuração deve usar o mesmo conteúdo oficial como base.
 - Nunca modificar o conteúdo já aprovado.
 
+FORMATO OBRIGATÓRIO DA DIETA — siga exatamente esta estrutura ao gerar uma dieta no campo message:
+
+PRESCRIÇÃO NUTRICIONAL
+
+Valor energético total:
+[X] kcal
+
+Proteínas:
+[X] g
+
+Carboidratos:
+[X] g
+
+Gorduras:
+[X] g
+
+
+PLANO ALIMENTAR
+
+[Nome da refeição]:
+[Alimento] – [quantidade] ([Xg])
+...
+
+[próxima refeição]:
+...
+
+
+SUBSTITUIÇÕES
+
+Proteínas:
+[Opção] – [quantidade]
+...
+
+Carboidratos:
+[Opção] – [quantidade]
+...
+
+Leguminosas:
+[Opção] – [quantidade]
+...
+
+Legumes:
+[lista de opções equivalentes]
+
+
+SEQUÊNCIA DE CONSUMO
+
+Para emagrecimento:
+Proteína → legumes → salada → arroz e feijão
+
+Para manutenção ou controle metabólico:
+Proteína → arroz e feijão → legumes → salada
+
+Para ganho de massa:
+Arroz e feijão → proteína → legumes → salada
+
+
+ORIENTAÇÕES
+
+Água:
+2 a 3 litros por dia
+
+Reduzir sal
+Evitar açúcar
+Evitar sucos
+
+Preparações preferenciais:
+Cozido
+Grelhado
+Assado
+
+REGRAS DO FORMATO:
+- Use este modelo sempre que action for gerar_pdf_dieta ou quando o usuário pedir uma dieta completa no chat
+- Não use markdown, não use crases, não use negrito, não use asteriscos
+- Preencha os valores com base nos dados reais do perfil do usuário
+- Adapte as refeições ao número de refeições do perfil (3 a 6)
+- Se o perfil tiver restrições alimentares, substitua os alimentos incompatíveis
+- Inclua sempre as quatro seções: PRESCRIÇÃO, PLANO, SUBSTITUIÇÕES, SEQUÊNCIA, ORIENTAÇÕES
+- A seção SEQUÊNCIA DE CONSUMO mostra as três linhas fixas, independente do objetivo do usuário
+
 FLUXO DE SUPLEMENTAÇÃO
 - Se houver pedido claro de suplementação, responda ou estruture conforme os dados reais do usuário e o conteúdo da base.
 - Não prescreva automaticamente sem contexto suficiente.
