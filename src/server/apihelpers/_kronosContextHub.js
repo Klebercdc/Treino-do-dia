@@ -82,8 +82,8 @@ async function buildKronosInventory(userId) {
     supabase('GET', 'workouts?user_id=eq.' + userId + '&select=id&limit=1', null),
     // 2 – nutrition goals
     supabase('GET', 'nutrition_goals?user_id=eq.' + userId + '&select=id&limit=1', null),
-    // 3 – lab reports presence check (any non-failed report, not just is_valid=true)
-    supabase('GET', 'lab_reports?user_id=eq.' + userId + '&parse_status=not.in.(failed,error)&select=id&limit=1', null),
+    // 3 – lab reports presence check: sem filtro de status para não excluir NULLs
+    supabase('GET', 'lab_reports?user_id=eq.' + userId + '&select=id&limit=1', null),
     // 4 – memory state
     supabase('GET', 'user_memory_state?user_id=eq.' + userId + '&select=user_id&limit=1', null),
     // 5 – lab reports count (longitudinal — only validated reports for comparison)
@@ -217,18 +217,19 @@ async function loadLatestLabSummary(userId) {
   ).catch(function () { return []; });
   if (rows && rows[0]) return rows[0];
 
-  // Fallback: qualquer laudo que não seja failed/error — inclui "Revisão Manual"
-  // (parse_status: extracted, done, manual_review, reviewed, etc.) e laudos em
-  // processamento, para que KRONOS sempre encontre o exame mais recente disponível.
-  var pending = await supabase(
+  // Fallback sem filtro de status: NOT IN exclui NULLs em SQL, então
+  // laudos com parse_status NULL (Revisão Manual, imports externos, etc.)
+  // nunca seriam encontrados por parse_status=not.in.(failed,error).
+  // A solução correta é buscar qualquer laudo do usuário, sem filtro de status,
+  // e deixar o mapLabs derivar o estado a partir dos campos disponíveis.
+  var any = await supabase(
     'GET',
     'lab_reports?user_id=eq.' + userId +
-    '&parse_status=not.in.(failed,error)' +
     '&select=' + select +
     '&order=created_at.desc&limit=1',
     null
   ).catch(function () { return []; });
-  return (pending && pending[0]) ? pending[0] : null;
+  return (any && any[0]) ? any[0] : null;
 }
 
 async function loadRecentWorkouts(userId) {
