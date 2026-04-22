@@ -4335,6 +4335,14 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
   cursor:pointer;
 }
 #dietDataScreen .diet-premium-add:hover { background:var(--diet-accent-bg-strong); }
+#dietDataScreen .diet-section-block { background:var(--diet-surface-2); border-radius:20px; padding:20px; margin-bottom:16px; }
+#dietDataScreen .diet-section-title { margin:0 0 14px; color:var(--diet-text-muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; }
+#dietDataScreen .diet-section-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:8px 0; border-bottom:1px solid var(--diet-border); font-size:14px; }
+#dietDataScreen .diet-section-row:last-child { border-bottom:0; padding-bottom:0; }
+#dietDataScreen .diet-section-row span { color:var(--diet-text-soft); font-weight:600; flex:1; min-width:0; }
+#dietDataScreen .diet-section-row small { color:var(--diet-text-muted); font-size:12px; font-weight:500; text-align:right; flex-shrink:0; }
+#dietDataScreen .diet-section-row strong { color:var(--diet-text); font-weight:800; white-space:nowrap; flex-shrink:0; }
+#dietDataScreen .diet-section-row-accent strong { color:var(--diet-accent); }
 #dietDataScreen .diet-premium-floating {
   display:flex;
   justify-content:center;
