@@ -4298,7 +4298,10 @@ function extractDietRenderModel(payload) {
   const node = nodes.find(n => n && /^(diet_result|diet_primary|diet_failsafe)$/i.test(String(n.type || ""))) || normalizeDietContentNode(safePayload);
   if (!node || !node.data || typeof node.data !== "object") return null;
   const plan = node.data;
-  const meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
+  const structuredPlan = plan.planoEstruturado && typeof plan.planoEstruturado === "object" ? plan.planoEstruturado : null;
+  const primaryMeals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
+  const structuredMeals = structuredPlan && Array.isArray(structuredPlan.refeicoes) ? structuredPlan.refeicoes : [];
+  const meals = primaryMeals.length ? primaryMeals : structuredMeals;
   const hasFailSafeOrientation = !!(plan.failSafe && (plan.limitedOrientation || (Array.isArray(plan.observacoes) && plan.observacoes.length)));
   if (!meals.length && !plan.flow_state && !hasFailSafeOrientation) return null;
   return {
@@ -4306,10 +4309,10 @@ function extractDietRenderModel(payload) {
     flowState: plan.flow_state || null,
     failSafe: plan.failSafe === true,
     limitedOrientation: plan.limitedOrientation && typeof plan.limitedOrientation === "object" ? plan.limitedOrientation : null,
-    meta: plan.meta && typeof plan.meta === "object" ? plan.meta : {},
+    meta: plan.meta && typeof plan.meta === "object" ? plan.meta : (structuredPlan && structuredPlan.meta && typeof structuredPlan.meta === "object" ? structuredPlan.meta : {}),
     refeicoes: meals,
-    hidratacao: plan.hidratacao && typeof plan.hidratacao === "object" ? plan.hidratacao : {},
-    observacoes: Array.isArray(plan.observacoes) ? plan.observacoes : []
+    hidratacao: plan.hidratacao && typeof plan.hidratacao === "object" ? plan.hidratacao : (structuredPlan && structuredPlan.hidratacao && typeof structuredPlan.hidratacao === "object" ? structuredPlan.hidratacao : {}),
+    observacoes: Array.isArray(plan.observacoes) ? plan.observacoes : (structuredPlan && Array.isArray(structuredPlan.observacoes) ? structuredPlan.observacoes : [])
   };
 }
 
