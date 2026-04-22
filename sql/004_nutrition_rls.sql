@@ -261,21 +261,21 @@ drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptio
 create policy "push_subscriptions_delete_own" on public.push_subscriptions
   for delete to authenticated using (auth.uid() = user_id);
 
--- ── nutrition_knowledge_sources — leitura pública, escrita restrita ──
+-- ── nutrition_knowledge_sources — leitura autenticada, escrita restrita ──
 alter table public.nutrition_knowledge_sources enable row level security;
 
 drop policy if exists "nutrition_knowledge_sources_select_all" on public.nutrition_knowledge_sources;
 create policy "nutrition_knowledge_sources_select_all" on public.nutrition_knowledge_sources
   for select to authenticated using (true);
 
--- ── nutrition_knowledge_documents — leitura pública, escrita restrita ──
+-- ── nutrition_knowledge_documents — leitura autenticada, escrita restrita ──
 alter table public.nutrition_knowledge_documents enable row level security;
 
 drop policy if exists "nutrition_knowledge_documents_select_all" on public.nutrition_knowledge_documents;
 create policy "nutrition_knowledge_documents_select_all" on public.nutrition_knowledge_documents
   for select to authenticated using (true);
 
--- ── nutrition_knowledge_chunks — leitura pública, escrita restrita ──
+-- ── nutrition_knowledge_chunks — leitura autenticada, escrita restrita ──
 alter table public.nutrition_knowledge_chunks enable row level security;
 
 drop policy if exists "nutrition_knowledge_chunks_select_all" on public.nutrition_knowledge_chunks;
