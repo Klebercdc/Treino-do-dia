@@ -83,7 +83,20 @@
     }
   };
 
-  window.ffObFinish = function () {
+  const originalFfObFinish = window.ffObFinish;
+
+  function ffNormalizeOnboardingRoute(completion) {
+    var action = completion && completion.nextAction;
+    if (!action) return 'plans';
+    if (typeof action === 'string') {
+      if (action === 'load_dashboard') return 'inicio';
+      if (action === 'complete_onboarding') return 'onboarding';
+      return action;
+    }
+    return action.route || action.nextRoute || 'plans';
+  }
+
+  window.ffObFinish = function patchedFfObFinish() {
     var startedAt = Date.now();
     var correlationId = 'onboarding_finish_' + startedAt;
     try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'onboardingComplete', status: 'start', correlationId: correlationId, source: 'fitflow_layout' }); } catch (_) {}
@@ -104,14 +117,19 @@
     }
     try { window.KroniaIntelligence?.track?.({ module: 'onboarding', action: 'onboardingComplete', status: 'success', correlationId: correlationId, durationMs: Date.now() - startedAt, source: 'fitflow_layout' }); } catch (_) {}
 
-    var ob = document.getElementById('onboarding');
-    if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }
-    document.body.classList.remove('overlay-open');
+    if (typeof originalFfObFinish === 'function' && originalFfObFinish !== window.ffObFinish) {
+      originalFfObFinish.apply(this, arguments);
+    } else {
+      try { localStorage.setItem('kronia_onboarded', '1'); } catch (_) {}
+      var ob = document.getElementById('onboarding');
+      if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }
+      document.body.classList.remove('overlay-open');
+    }
 
-    var nextRoute = completion && completion.nextAction ? completion.nextAction.route : 'plans';
+    var nextRoute = ffNormalizeOnboardingRoute(completion);
     if (nextRoute === 'plans' && typeof openPlanModal === 'function') {
       openPlanModal();
-    } else if (typeof navTo === 'function') {
+    } else if ((typeof _appUnlocked === 'undefined' || _appUnlocked) && typeof navTo === 'function') {
       navTo('inicio');
       if (typeof openHome === 'function') openHome();
     }

@@ -9113,7 +9113,6 @@ function buildDietSubstitutionGroups(flowState) {
     return items.length ? { label: g.label, items: items } : null;
   }).filter(Boolean);
 }
-}
 
 function getNutritionCatalogNameOptions(group) {
   return getNutritionCatalogItems(group).map(function(item) { return item.nome; });
