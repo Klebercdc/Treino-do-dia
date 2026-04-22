@@ -4395,6 +4395,58 @@ function renderDietModelAsText(model) {
   return [metaBlock, mealBlocks, substitutionsBlock, resumoBlock, orientBlock].filter(Boolean).join("\n\n");
 }
 
+var _kronos_chat_files = [];
+
+function clearKronosChatFile() {
+  _kronos_chat_files = [];
+  var badge = document.getElementById('aiFileAttachBadge');
+  if (badge) badge.style.display = 'none';
+  var fi = document.getElementById('aiFileInput');
+  if (fi) fi.value = '';
+}
+
+async function handleKronosChatFileSelect(input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return;
+  var ALLOWED = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  var mime = file.type || 'application/pdf';
+  if (!ALLOWED.includes(mime)) { addAIMessage('assistant', 'Formato não suportado. Use PDF, JPEG ou PNG.'); return; }
+  if (file.size > 10 * 1024 * 1024) { addAIMessage('assistant', 'Arquivo muito grande. Máximo 10 MB.'); return; }
+
+  var badge = document.getElementById('aiFileAttachBadge');
+  var badgeName = document.getElementById('aiFileAttachName');
+  if (badge) { badge.style.display = 'flex'; }
+  if (badgeName) { badgeName.textContent = file.name + ' — lendo...'; }
+
+  try {
+    var reader = new FileReader();
+    var base64 = await new Promise(function(resolve, reject) {
+      reader.onload = function(e) { resolve(String(e.target.result || '').split(',')[1] || ''); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    var response = await apiFetch(resolveAppApiUrl('/api/kronia/chat-file'), {
+      method: 'POST',
+      body: JSON.stringify({ fileData: base64, mimeType: mime, fileName: file.name }),
+    });
+    var data = await response.json().catch(function() { return {}; });
+
+    if (!response.ok || !data.ok || !data.text) {
+      if (badgeName) badgeName.textContent = file.name + ' — falha na leitura';
+      addAIMessage('assistant', 'Não consegui extrair o texto do arquivo. Tente um PDF com texto selecionável ou uma imagem nítida.');
+      return;
+    }
+
+    _kronos_chat_files = [{ name: file.name, text: data.text }];
+    if (badgeName) badgeName.textContent = file.name + ' — pronto';
+    addAIMessage('assistant', 'Arquivo "' + escapeHTML(file.name) + '" lido. Pode fazer sua pergunta sobre o exame.');
+  } catch (err) {
+    if (badgeName) badgeName.textContent = file.name + ' — erro';
+    addAIMessage('assistant', 'Erro ao processar arquivo. Tente novamente.');
+  }
+}
+
 async function sendAI(overrideText, isGerarTreino = false) {
   if (_aiTyping) return;
   var input = document.getElementById('aiInput');
@@ -4417,12 +4469,17 @@ async function sendAI(overrideText, isGerarTreino = false) {
   var correlationId = 'chat_' + Date.now();
   var startedAt = Date.now();
 
+  var pendingChatFiles = _kronos_chat_files.slice();
+  clearKronosChatFile();
+
   try {
     var userData = buildUserData();
     var messages = _aiHistory.slice(-12);
+    var chatPayload = { messages: messages, history: userData.history, profile: userData.profile, requestId: correlationId };
+    if (pendingChatFiles.length) chatPayload.chatFiles = pendingChatFiles;
     var response = await apiFetch('/api/chat', {
       method: 'POST',
-      body: JSON.stringify({ messages: messages, history: userData.history, profile: userData.profile, requestId: correlationId }),
+      body: JSON.stringify(chatPayload),
     });
     removeThinking();
     var data = await parseApiJsonSafely(response);

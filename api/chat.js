@@ -401,6 +401,24 @@ module.exports = function(req, res) {
         return responseUtil.sendJson(res, 400, { success: false, type: 'error', message: 'messages deve ser um array', error: 'INVALID_MESSAGES', meta: { fallback: true } });
       }
 
+      // Inject chat-attached file content into the last user message for context
+      var chatFiles = Array.isArray(b.chatFiles) ? b.chatFiles : [];
+      if (chatFiles.length && messages.length) {
+        var fileContextBlocks = chatFiles.map(function(f) {
+          var name = typeof f.name === 'string' && f.name ? f.name : 'arquivo';
+          var text = typeof f.text === 'string' ? f.text.slice(0, 6000) : '';
+          return '[ARQUIVO ENVIADO NA CONVERSA: ' + name + ']\n' + text + '\n[/ARQUIVO]';
+        }).join('\n\n');
+        // Prepend file content to last user message so KRONOS reads it first
+        var lastMsg = messages[messages.length - 1];
+        if (lastMsg && lastMsg.role === 'user') {
+          messages = messages.slice(0, -1).concat([{
+            role: 'user',
+            content: fileContextBlocks + '\n\n' + String(lastMsg.content || '')
+          }]);
+        }
+      }
+
       var convState = b.conversationState || null;
       var shortState = conversationStateUtil.extractShortState(convState);
       var lastContent = classifier.extractLastUserMessage(messages);

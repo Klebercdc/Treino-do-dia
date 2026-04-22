@@ -8,6 +8,8 @@ var humanStylePrompt = 'Não use linguagem de robô. Não use "Claro", "Certamen
 
 var dataPolicyPrompt = 'REGRAS DE USO DE DADOS: (1) Use apenas dados reais do contexto fornecido — nunca invente valores ausentes. (2) Se um dado crítico estiver ausente e for necessário para a resposta, declare isso e peça ao usuário. (3) Domínio principal da pergunta tem prioridade — use domínios auxiliares apenas quando houver utilidade causal real. (4) Quanto mais contexto real existir, mais personalizada deve ser a resposta. (5) Sem exames: responda com treino/dieta/memória sem mencionar ausência de labs desnecessariamente. (6) Com exames: use-os quando impactarem a decisão. NUNCA mencione ao usuário: artigos recuperados, base científica interna, contexto do sistema, fontes de dados ou o processo de raciocínio. Use esses dados internamente e responda apenas o conteúdo final.';
 
+var filesPriorityPrompt = 'REGRA ABSOLUTA — ARQUIVOS ENVIADOS NA CONVERSA: Quando o usuário enviar um PDF ou imagem de exame diretamente na conversa (indicado por [ARQUIVO ENVIADO NA CONVERSA] no contexto), esse conteúdo tem PRIORIDADE MÁXIMA sobre qualquer outra fonte — banco de dados, histórico ou perfil. OBRIGAÇÕES: (1) Leia e analise o conteúdo extraído do arquivo antes de qualquer outra fonte. (2) Identifique todos os exames presentes, mesmo com variações de nome (ex: "Testosterona Total", "Testo Total", "Testosterone"). (3) Extraia: nome do exame, valor, unidade e data de coleta. (4) Se encontrar o exame no arquivo: informe o valor exato com data e fonte ("identificado no arquivo enviado"). (5) Se não encontrar: liste todos os exames que encontrou no arquivo e declare explicitamente que o exame solicitado não consta. PROIBIDO: responder sobre exames sem verificar o conteúdo do arquivo enviado quando ele estiver presente.';
+
 var domainModules = {
   workout: 'Módulo treino: use perfil, histórico, performance, fadiga, recuperação e adesão para personalizar. Periodização prática, progressão objetiva, volume adequado ao nível e segurança.',
   diet: 'Módulo dieta: use perfil, metas nutricionais e exames quando disponíveis. Estratégia sustentável, calorias/macros objetivas e aderência.',
@@ -42,6 +44,7 @@ function buildCoachPrompt(mode, topic, context, tokenLimit) {
     depthGuardPrompt,
     humanStylePrompt,
     dataPolicyPrompt,
+    filesPriorityPrompt,
     'Modo atual: ' + mode + '.',
     'Tópico atual: ' + (topic || 'general') + '.',
     'Teto de tokens para esta resposta: ' + (tokenLimit || 120) + '.'
@@ -98,6 +101,7 @@ module.exports = {
   depthGuardPrompt: depthGuardPrompt,
   humanStylePrompt: humanStylePrompt,
   dataPolicyPrompt: dataPolicyPrompt,
+  filesPriorityPrompt: filesPriorityPrompt,
   domainModules: domainModules,
   buildCoachPrompt: buildCoachPrompt,
   buildCoachSystem: buildCoachSystem,

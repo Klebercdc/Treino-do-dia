@@ -751,6 +751,13 @@ function mapLabs(labRow) {
     hp.metabolicHealth && hp.metabolicHealth.level
   );
 
+  // Raw OCR text — full text from the original PDF (first 4000 chars, enough for KRONOS)
+  var rawOcrText = null;
+  var extraction = payload.extraction && typeof payload.extraction === 'object' ? payload.extraction : null;
+  if (extraction && typeof extraction.raw_text === 'string' && extraction.raw_text.trim()) {
+    rawOcrText = extraction.raw_text.slice(0, 4000);
+  }
+
   // Key markers — up to 6 most relevant (flagged first)
   var biomarkers = Array.isArray(payload.biomarkers) ? payload.biomarkers : [];
   var keyMarkers = biomarkers
@@ -795,7 +802,8 @@ function mapLabs(labRow) {
     readinessSignal: readinessSignal,
     hormonalSignal: hormonalSignal,
     metabolicSignal: metabolicSignal,
-    keyMarkers: keyMarkers
+    keyMarkers: keyMarkers,
+    rawOcrText: rawOcrText
   };
 }
 
@@ -941,7 +949,8 @@ function buildLabsContext(labs) {
       .concat(labs.criticalFlags || [])
       .concat(labs.clinicalFlags || [])
       .concat((labs.keyMarkers || []).filter(function (m) { return m.flag === 'high' || m.flag === 'low'; }).map(function (m) { return m.name + ': ' + m.flag; })),
-    observacoes: [labs.summaryText, labs.readinessSignal, labs.hormonalSignal, labs.metabolicSignal].filter(Boolean)
+    observacoes: [labs.summaryText, labs.readinessSignal, labs.hormonalSignal, labs.metabolicSignal].filter(Boolean),
+    rawOcr: labs.rawOcrText || null
   };
 }
 
@@ -1520,6 +1529,9 @@ function formatContextForPrompt(selected) {
         lines.push('[EXAMES BIOMARCADORES] ' + l.keyMarkers.slice(0, 24).map(function (k) {
           return k.name + ' ' + k.value + (k.unit ? ' ' + k.unit : '') + (k.reference ? ' ref ' + k.reference : '') + (k.flag ? ' (' + k.flag + ')' : '');
         }).join('; '));
+      }
+      if (l.rawOcrText) {
+        lines.push('[EXAMES TEXTO COMPLETO DO PDF — PRIORIDADE MÁXIMA] ' + l.rawOcrText);
       }
     }
   }
