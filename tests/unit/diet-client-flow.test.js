@@ -13,6 +13,14 @@ function loadDietHelpers() {
   const code = fs.readFileSync('app.js', 'utf8');
   const snippet = [
     extract(code, /function buildApiErrorEnvelope\(message, errorCode\) \{[\s\S]*?\n\}/, 'buildApiErrorEnvelope'),
+    extract(code, /function normalizeDietContentNode\(payload\) \{[\s\S]*?\n\}/, 'normalizeDietContentNode'),
+    extract(code, /function getApiContentNodes\(payload\) \{[\s\S]*?\n\}/, 'getApiContentNodes'),
+    extract(
+      code,
+      /function ensureApiContract\(payload, contextName\) \{[\s\S]*?\n\}\n\nasync function parseApiJsonSafely/,
+      'ensureApiContract'
+    ).replace(/\n\nasync function parseApiJsonSafely[\s\S]*$/, ''),
+    extract(code, /function extractDietRenderModel\(payload\) \{[\s\S]*?\n\}\n\nfunction renderDietModelAsText/, 'extractDietRenderModel').replace(/\n\nfunction renderDietModelAsText[\s\S]*$/, ''),
     extract(code, /function resolveAiFriendlyError\(payload, httpStatus\) \{[\s\S]*?\n\}/, 'resolveAiFriendlyError'),
     extract(code, /function computeDietGenerationBaseline\(input\) \{[\s\S]*?\n\}/, 'computeDietGenerationBaseline'),
     extract(code, /function buildDietRequestPayloadFromInput\(input\) \{[\s\S]*?\n\}/, 'buildDietRequestPayloadFromInput'),
@@ -232,4 +240,40 @@ test('renderDietModelAsText exposes the official five-section diet format', () =
   assert.match(rendered, /##REFEICAO/);
   assert.match(rendered, /##RESUMO/);
   assert.match(rendered, /##ORIENTACOES/);
+});
+
+test('extractDietRenderModel uses structured plan meals when top-level meals are empty', () => {
+  const context = loadDietHelpers();
+  const model = context.extractDietRenderModel({
+    success: true,
+    type: 'diet_result',
+    message: 'Plano estruturado gerado.',
+    data: {
+      content: [{
+        type: 'diet_result',
+        text: 'Plano estruturado gerado.',
+        data: {
+          meta: { calorias: 2300, proteina: 150, carbo: 260, gordura: 65 },
+          refeicoes: [],
+          planoEstruturado: {
+            hidratacao: { litros: 3 },
+            observacoes: ['Fallback estruturado aplicado.'],
+            refeicoes: [{
+              nome: 'Almoço',
+              horario: '12:30',
+              alimentos: [{ nome: 'Frango grelhado', qtde: '150 g', kcal: 248, prot: 46, carb: 0, gord: 6 }],
+              subtotal: { kcal: 248, prot: 46, carb: 0, gord: 6 },
+            }],
+          },
+        },
+      }],
+    },
+  });
+
+  assert.ok(model);
+  assert.equal(model.refeicoes.length, 1);
+  assert.equal(model.refeicoes[0].nome, 'Almoço');
+  assert.equal(model.refeicoes[0].alimentos[0].nome, 'Frango grelhado');
+  assert.equal(model.hidratacao.litros, 3);
+  assert.deepEqual(Array.from(model.observacoes), ['Fallback estruturado aplicado.']);
 });
