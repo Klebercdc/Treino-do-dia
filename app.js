@@ -2248,8 +2248,12 @@ function obNext(step) {
 }
 function obFinish() {
   localStorage.setItem("kronia_onboarded","1");
+  document.body.classList.remove('overlay-open');
   const ob = document.getElementById("onboarding");
   if (ob) { ob.style.display = "none"; ob.classList.remove("show"); }
+  // Restaura footer que foi escondido ao abrir o onboarding
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
   showEmailLogin(false);
 }
 
@@ -2298,6 +2302,9 @@ function ffObFinish() {
   document.body.classList.remove('overlay-open');
   const ob = document.getElementById('onboarding');
   if (ob) { ob.style.display = 'none'; ob.classList.remove('show'); }
+  // Restaura footer que foi escondido ao abrir o onboarding
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
   if (typeof _appUnlocked !== 'undefined' && _appUnlocked) {
     try { navTo('inicio'); openHome(); } catch(e) {}
   } else {
@@ -5304,10 +5311,15 @@ function openHome() {
   document.getElementById('evolutionDataScreen')?.classList.remove('show');
   document.getElementById('perfilScreen')?.classList.remove('show');
   const el = document.getElementById("homeScreen");
+  if (!el) return;
   el.classList.add("show");
+  // Garante que o footer não ficou oculto por overlay anterior (onboarding, krona-setup, etc.)
+  const footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
+  document.body.classList.remove('overlay-open');
   // Atualiza dados no próximo frame — tela aparece antes de qualquer cálculo
   requestAnimationFrame(() => {
-    try { updateHomeScreen(); } catch(e) {}
+    try { updateHomeScreen(); } catch(e) { console.error('[openHome] updateHomeScreen falhou:', e); }
     schedulePendingConversationIntentConsumption('home_open');
   });
 }
@@ -5389,7 +5401,8 @@ function updateHomeScreen() {
   const hora  = new Date().getHours();
   const sauds = ["BOA MADRUGADA", "BOM DIA", "BOA TARDE", "BOA NOITE"];
   const saudIdx = hora < 5 ? 0 : hora < 12 ? 1 : hora < 18 ? 2 : 3;
-  document.getElementById("homeGreeting").textContent = sauds[saudIdx];
+  const greetingEl = document.getElementById("homeGreeting");
+  if (greetingEl) greetingEl.textContent = sauds[saudIdx];
 
   // Nome do usuário no título
   const userName = cfg.nome || localStorage.getItem("kronia_nome") || "";
@@ -5405,7 +5418,8 @@ function updateHomeScreen() {
     cursor -= 86400000;
     if (streak > 0 && !days.has(cursor) && !days.has(cursor + 86400000)) break;
   }
-  document.getElementById("homeStreak").textContent = streak;
+  const streakNumEl = document.getElementById("homeStreak");
+  if (streakNumEl) streakNumEl.textContent = streak;
   // Circular ring — circunferência ≈ 314, 30 dias = meta
   const ringEl = document.getElementById("homeStreakRing");
   if (ringEl) {
@@ -5430,13 +5444,15 @@ function updateHomeScreen() {
     volTotal += v;
     if (h.createdAt > semAgo) { volSem += v; semTreinos++; }
   }
-  document.getElementById("homeSemanaTreinos").textContent = semTreinos;
+  const semTreinosEl = document.getElementById("homeSemanaTreinos");
+  if (semTreinosEl) semTreinosEl.textContent = semTreinos;
   // Progress bar treinos
   const treinosBar = document.getElementById("homeTreinosBarFill");
   if (treinosBar) treinosBar.style.width = Math.min((semTreinos / 5) * 100, 100) + "%";
 
   const volFormatted = volSem > 999 ? (volSem / 1000).toFixed(1) + "t" : Math.round(volSem) + "kg";
-  document.getElementById("homeVolSemana").textContent = volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
+  const volSemanaEl = document.getElementById("homeVolSemana");
+  if (volSemanaEl) volSemanaEl.textContent = volSem > 999 ? (volSem/1000).toFixed(1)+"t" : Math.round(volSem);
   // Progress bar volume (meta 12.000kg/semana)
   const volBar = document.getElementById("homeVolBarFill");
   if (volBar) volBar.style.width = Math.min((volSem / 12000) * 100, 100) + "%";
@@ -5471,6 +5487,14 @@ function updateHomeScreen() {
   // Passes streak/hist pré-computados para evitar reler
   try { renderDesafios(); } catch(e) {}
   try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+
+  // Fallback para estado vazio: garante que a tela não fica em branco sem dados
+  const homeEl = document.getElementById("homeScreen");
+  if (homeEl && !homeEl.classList.contains("show")) {
+    homeEl.classList.add("show");
+    const footerEl = document.querySelector('.footer-actions');
+    if (footerEl) footerEl.style.display = '';
+  }
 }
 
 function _updateConfigTreinoCard() {
