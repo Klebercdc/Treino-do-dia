@@ -26,6 +26,7 @@ function loadDietHelpers() {
     extract(code, /function buildMergedDietInput\(input\) \{[\s\S]*?\n\}/, 'buildMergedDietInput'),
     extract(code, /function buildLocalDietFoodCatalog\(input\) \{[\s\S]*?\n\}/, 'buildLocalDietFoodCatalog'),
     extract(code, /function buildLocalDietPlan\(input\) \{[\s\S]*?\n\}/, 'buildLocalDietPlan'),
+    extract(code, /function buildLocalDietOrientacoes\(input, baseline\) \{[\s\S]*?\n\}/, 'buildLocalDietOrientacoes'),
     extract(code, /function buildLocalDietRenderText\(input, reason\) \{[\s\S]*?\n\}/, 'buildLocalDietRenderText'),
     extract(code, /function buildDietFallbackTextFromInput\(input, reason\) \{[\s\S]*?\n\}/, 'buildDietFallbackTextFromInput'),
     extract(code, /function resolveDietRuntimeErrorMessage\(payload, httpStatus, input, fallbackReason\) \{[\s\S]*?\n\}/, 'resolveDietRuntimeErrorMessage'),
