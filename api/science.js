@@ -9,6 +9,7 @@ var crypto = require('crypto');
 var _science = null;
 var _scienceInsight = null;
 var _nutritionService = null;
+var _kronaEngine = null;
 var _lazyLoadAttempted = false;
 var _lazyLoadError = null;
 
@@ -19,6 +20,7 @@ function ensureModulesLoaded() {
     _science = require('../src/lib/science/scienceSyncService');
     _scienceInsight = require('../src/lib/science/scienceInsightService');
     _nutritionService = require('../src/lib/nutrition/nutritionService');
+    _kronaEngine = require('../src/core/diet/kronaEngine');
     return null;
   } catch (err) {
     _lazyLoadError = err;
@@ -136,6 +138,71 @@ function isValidCronSecret(req) {
 }
 
 
+// ─── KRONIA DIET ENGINE HANDLERS ────────────────────────────────────────────
+
+function handleKronaDietGenerate(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var payload = req.body || {};
+  var result = _kronaEngine.generatePlan(payload);
+  if (result.failSafe) {
+    return res.status(422).json({ success: false, error: result.error || { reason: 'Dados insuficientes para gerar o plano.' } });
+  }
+  return res.status(200).json({ success: true, activeState: result.activeState, prescription: result.prescription, strategy: result.strategy });
+}
+
+function handleKronaSubstitutions(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var body = req.body || {};
+  if (!body.state || !body.mealOrdem || !body.blockName) {
+    return res.status(400).json({ success: false, error: 'state, mealOrdem e blockName são obrigatórios.' });
+  }
+  var result = _kronaEngine.getSubstitutions(body.state, Number(body.mealOrdem), String(body.blockName));
+  if (result.error) return res.status(404).json({ success: false, error: result.error });
+  return res.status(200).json({ success: true, options: result.options });
+}
+
+function handleKronaSwap(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var body = req.body || {};
+  if (!body.state || !body.mealOrdem || !body.blockName || !body.newFoodCode) {
+    return res.status(400).json({ success: false, error: 'state, mealOrdem, blockName e newFoodCode são obrigatórios.' });
+  }
+  var result = _kronaEngine.swapFood(body.state, Number(body.mealOrdem), String(body.blockName), String(body.newFoodCode));
+  if (result.warnings && result.warnings.length) return res.status(422).json({ success: false, error: result.warnings[0] });
+  return res.status(200).json({ success: true, activeState: result.state, message: result.message });
+}
+
+function handleKronaRemoveBlock(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var body = req.body || {};
+  if (!body.state || !body.mealOrdem || !body.blockName) {
+    return res.status(400).json({ success: false, error: 'state, mealOrdem e blockName são obrigatórios.' });
+  }
+  var result = _kronaEngine.removeBlock(body.state, Number(body.mealOrdem), String(body.blockName));
+  if (result.warnings && result.warnings.length) return res.status(422).json({ success: false, error: result.warnings[0] });
+  return res.status(200).json({ success: true, activeState: result.state, message: result.message });
+}
+
+function handleKronaAdjustPortion(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var body = req.body || {};
+  if (!body.state || !body.mealOrdem || !body.blockName || !body.newGrams) {
+    return res.status(400).json({ success: false, error: 'state, mealOrdem, blockName e newGrams são obrigatórios.' });
+  }
+  var result = _kronaEngine.adjustPortion(body.state, Number(body.mealOrdem), String(body.blockName), Number(body.newGrams));
+  if (result.warnings && result.warnings.length) return res.status(422).json({ success: false, error: result.warnings[0] });
+  return res.status(200).json({ success: true, activeState: result.state, message: result.message });
+}
+
+function handleKronaPrint(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  var body = req.body || {};
+  if (!body.state) return res.status(400).json({ success: false, error: 'state é obrigatório.' });
+  return res.status(200).json({ success: true, prescription: _kronaEngine.renderForPrint(body.state) });
+}
+
+// ─── ROUTE HELPERS ──────────────────────────────────────────────────────────
+
 function isPrivilegedRoute(route) {
   return route === 'science-sync' || route === 'science-classify' || route === 'nutrition-selftest';
 }
@@ -159,6 +226,12 @@ function detectRoute(req) {
   if (pathname.endsWith('/nutrition-plan')) return 'nutrition-plan';
   if (pathname.endsWith('/nutrition-selftest')) return 'nutrition-selftest';
   if (pathname.endsWith('/science')) return 'science';
+  if (pathname.endsWith('/diet/generate'))       return 'krona-diet-generate';
+  if (pathname.endsWith('/diet/substitutions'))  return 'krona-diet-substitutions';
+  if (pathname.endsWith('/diet/swap'))           return 'krona-diet-swap';
+  if (pathname.endsWith('/diet/remove-block'))   return 'krona-diet-remove-block';
+  if (pathname.endsWith('/diet/adjust-portion')) return 'krona-diet-adjust-portion';
+  if (pathname.endsWith('/diet/print'))          return 'krona-diet-print';
 
   return '';
 }
@@ -419,6 +492,13 @@ module.exports = async function(req, res) {
     if (route === 'nutrition-plan') {
       return handleNutritionPlan(req, res);
     }
+
+    if (route === 'krona-diet-generate')       return handleKronaDietGenerate(req, res);
+    if (route === 'krona-diet-substitutions')  return handleKronaSubstitutions(req, res);
+    if (route === 'krona-diet-swap')           return handleKronaSwap(req, res);
+    if (route === 'krona-diet-remove-block')   return handleKronaRemoveBlock(req, res);
+    if (route === 'krona-diet-adjust-portion') return handleKronaAdjustPortion(req, res);
+    if (route === 'krona-diet-print')          return handleKronaPrint(req, res);
 
     return res.status(404).json({ error: 'rota científica não encontrada' });
   }, { max: 20, windowMs: 60000, category: 'ai_heavy_operation' }, user.id); });

@@ -127,27 +127,27 @@
     },
     {
       "source": "/api/kronia/diet/generate",
-      "destination": "/api/diet-engine?__route=generate"
+      "destination": "/api/science?__route=krona-diet-generate"
     },
     {
       "source": "/api/kronia/diet/substitutions",
-      "destination": "/api/diet-engine?__route=substitutions"
+      "destination": "/api/science?__route=krona-diet-substitutions"
     },
     {
       "source": "/api/kronia/diet/swap",
-      "destination": "/api/diet-engine?__route=swap"
+      "destination": "/api/science?__route=krona-diet-swap"
     },
     {
       "source": "/api/kronia/diet/remove-block",
-      "destination": "/api/diet-engine?__route=remove-block"
+      "destination": "/api/science?__route=krona-diet-remove-block"
     },
     {
       "source": "/api/kronia/diet/adjust-portion",
-      "destination": "/api/diet-engine?__route=adjust-portion"
+      "destination": "/api/science?__route=krona-diet-adjust-portion"
     },
     {
       "source": "/api/kronia/diet/print",
-      "destination": "/api/diet-engine?__route=print"
+      "destination": "/api/science?__route=krona-diet-print"
     },
     {
       "source": "/api/(.*)",
