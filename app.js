@@ -8488,6 +8488,8 @@ function buildNutritionFlowInput() {
       sinaisRelevantes: state.sinaisRelevantes,
       labsStatus: state.labsStatus,
     },
+    // Stale stored nutrition_goals must not override the freshly computed TDEE+objective baseline
+    nutritionGoals: null,
   });
 }
 
