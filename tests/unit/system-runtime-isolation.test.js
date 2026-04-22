@@ -51,8 +51,21 @@ async function invoke(handler, req) {
 }
 
 function loadSystemHandler() {
-  delete require.cache[SYSTEM_PATH];
-  return require(SYSTEM_PATH);
+  const originalLoad = Module._load;
+  // Provide minimal stubs for modules unavailable in the test environment
+  // so system.js can be loaded in isolation.
+  Module._load = function(request, parent, isMain) {
+    if (request === '@supabase/supabase-js') {
+      return { createClient: function() { return { from: function() { return {}; }, auth: {} }; } };
+    }
+    return originalLoad.apply(this, arguments);
+  };
+  try {
+    delete require.cache[SYSTEM_PATH];
+    return require(SYSTEM_PATH);
+  } finally {
+    Module._load = originalLoad;
+  }
 }
 
 function withMissingScienceModule(callback) {
