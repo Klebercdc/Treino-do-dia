@@ -8633,6 +8633,11 @@ function validateNutritionFlowStep() {
     if (!(Number(state.peso) > 0 && Number(state.altura) > 0)) {
       return { ok: false, message: "Confirme peso e altura com valores válidos." };
     }
+    var neck = Number(state.pescoco || 0);
+    if (neck > 0 && (neck < 20 || neck > 60)) {
+      // Reset invalid neck to default so Navy formula doesn't produce absurd BF%
+      window._nutritionFlowState = Object.assign({}, getNutritionFlowState(), { pescoco: "38" });
+    }
   }
   return { ok: true };
 }
@@ -8657,6 +8662,8 @@ function calculateNutritionNavyAnthro(state) {
   var height = Number(safe.altura || 0);
   var waist = Number(safe.cintura || 0);
   var neck = Number(safe.pescoco || 0);
+  // Reset physiologically impossible neck values (normal adult: 20–60 cm)
+  if (neck < 20 || neck > 60) neck = 38;
   var hip = Number(safe.quadril || 0);
   var bf = Number(safe.gorduraCorporal || 0);
   if (!(bf > 2 && bf < 60) && height > 0 && waist > neck) {
