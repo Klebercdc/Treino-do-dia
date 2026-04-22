@@ -6247,9 +6247,9 @@ function getDietItemName(item) {
 function normalizeDietEditorItem(item, order) {
   var grams = dietRound(item && (item.gramas || item.grams || item.porcao_gramas), 1);
   var kcal = dietRound(item && (item.calorias || item.kcal || item.calories), 1);
-  var protein = dietRound(item && (item.proteinas || item.protein_g || item.protein || item.estimated_protein_g), 1);
-  var carbs = dietRound(item && (item.carboidratos || item.carbs_g || item.carbs || item.estimated_carbs_g), 1);
-  var fat = dietRound(item && (item.gorduras || item.fat_g || item.fat || item.estimated_fat_g), 1);
+  var protein = dietRound(item && (item.proteinas || item.protein_g || item.protein || item.prot || item.estimated_protein_g), 1);
+  var carbs = dietRound(item && (item.carboidratos || item.carbs_g || item.carbs || item.carb || item.estimated_carbs_g), 1);
+  var fat = dietRound(item && (item.gorduras || item.fat_g || item.fat || item.gord || item.estimated_fat_g), 1);
   var fiber = dietRound(item && (item.fibras || item.fiber_g || item.fiber), 1);
   var sodium = dietRound(item && (item.sodium_mg || item.sodio_mg || item.sodium), 1);
   var baseGrams = grams || 100;
