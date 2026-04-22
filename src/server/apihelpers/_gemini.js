@@ -5,6 +5,7 @@
 var https = require('https');
 
 var GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+var GROQ_VISION_MODELS = ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'];
 var RETRYABLE_STATUS = { 429: true, 502: true, 503: true, 504: true };
 var RETRYABLE_NETWORK = { timeout: true, econnreset: true, etimedout: true, eai_again: true };
 var RETRY_DELAYS_MS = [350, 900, 1800];
@@ -202,4 +203,36 @@ function callGeminiStreamWithTools(KEY, payload, timeoutMs, onDelta, onDone, onE
   attempt();
 }
 
-module.exports = { callGemini: callGemini, callGeminiAgent: callGeminiAgent, callGeminiFull: callGeminiFull, callGeminiStreamWithTools: callGeminiStreamWithTools };
+function callGeminiVision(KEY, base64Data, mimeType, prompt, callback) {
+  var message = {
+    role: 'user',
+    content: [
+      { type: 'image_url', image_url: { url: 'data:' + mimeType + ';base64,' + base64Data } },
+      { type: 'text', text: prompt || 'Extraia todo o texto deste exame laboratorial, incluindo nomes de exames, valores, unidades e datas de coleta. Liste cada exame em uma linha separada.' }
+    ]
+  };
+  var payload = { messages: [message], max_tokens: 4096, temperature: 0.1 };
+  var models = GROQ_VISION_MODELS.slice();
+  var idx = 0;
+
+  function attempt() {
+    if (idx >= models.length) return callback('Nenhum modelo de visão disponível', null);
+    var p = Object.assign({}, payload, { model: models[idx++] });
+    executeRequest(KEY, p, 45000, function(err, response) {
+      if (err) return attempt();
+      var status = Number(response && response.status || 0);
+      if (status >= 400) return attempt();
+      try {
+        var j = JSON.parse(response.raw || '{}');
+        var text = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+        callback(null, text);
+      } catch (e) {
+        attempt();
+      }
+    });
+  }
+
+  attempt();
+}
+
+module.exports = { callGemini: callGemini, callGeminiAgent: callGeminiAgent, callGeminiFull: callGeminiFull, callGeminiStreamWithTools: callGeminiStreamWithTools, callGeminiVision: callGeminiVision };
