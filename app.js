@@ -6579,6 +6579,29 @@ function renderActiveDietPlan() {
   var proteinTarget = target.protein || Math.max(plan.totals.protein, 1);
   var carbsTarget = target.carbs || Math.max(plan.totals.carbs, 1);
   var fatTarget = target.fat || Math.max(plan.totals.fat, 1);
+  // For plans without prescription data (old saved plans), compute fresh baseline from current profile
+  var freshPresc = null;
+  if (!plan.presc || !plan.presc.tmb) {
+    try {
+      var _flowState = getNutritionFlowState();
+      if (_flowState && Number(_flowState.peso || 0) > 0) {
+        var _fb = computeDietGenerationBaseline({
+          peso: Number(_flowState.peso), altura: Number(_flowState.altura || 175),
+          idade: Number(_flowState.idade || 25), sexo: _flowState.sexo || 'masculino',
+          gorduraCorporal: Number(_flowState.gorduraCorporal || 0),
+          nivelAtividade: _flowState.nivelAtividade || 'levemente ativo',
+          objetivo: plan.objective || _flowState.objetivo || 'hipertrofia'
+        });
+        if (_fb && _fb.metaCalorias > 0) {
+          freshPresc = { tmb: _fb.tmb, tdee: _fb.tdee };
+          kcalTarget = _fb.metaCalorias;
+          proteinTarget = _fb.proteinaMeta;
+          carbsTarget = _fb.carboMeta;
+          fatTarget = _fb.gorduraMeta;
+        }
+      }
+    } catch (_) {}
+  }
   function pct(current, expected) {
     return Math.max(0, Math.min(100, Math.round(asKroniaNumber(current, 0) / Math.max(asKroniaNumber(expected, 1), 1) * 100)));
   }
@@ -6591,7 +6614,7 @@ function renderActiveDietPlan() {
       + '<div class="diet-premium-macro fat"><div class="diet-premium-macro-head"><span>Gordura</span><span>' + escapeHTML(formatKroniaNumber(plan.totals.fat, 'g')) + '</span></div><div class="diet-premium-track"><div class="diet-premium-fill" style="width:' + pct(plan.totals.fat, fatTarget) + '%"></div></div></div>'
       + '</div></div>';
   }
-  var presc = plan.presc || {};
+  var presc = plan.presc || freshPresc || {};
   if (progress) {
     var prescRows = [];
     if (presc.tmb) prescRows.push('<div class="diet-section-row"><span>Basal (TMB)</span><strong>' + Math.round(presc.tmb).toLocaleString('pt-BR') + ' kcal</strong></div>');
@@ -6612,6 +6635,14 @@ function renderActiveDietPlan() {
         }
       });
     });
+    if (!substRows.length) {
+      try {
+        var _substGroups = buildDietSubstitutionGroups(getNutritionFlowState());
+        _substGroups.forEach(function(g) {
+          substRows.push('<div class="diet-section-row"><span>' + escapeHTML(g.label) + '</span><small>' + escapeHTML(g.items.join(', ')) + '</small></div>');
+        });
+      } catch(_) {}
+    }
     var substBlock = substRows.length ? '<section class="diet-section-block"><h3 class="diet-section-title">SUBSTITUIÇÕES</h3>' + substRows.join('') + '</section>' : '';
     var seqMap = { hipertrofia: 'Arroz e feijão → Proteína → Legumes → Salada', emagrecimento: 'Proteína → Legumes → Salada → Arroz e feijão', manutencao: 'Proteína → Arroz e feijão → Legumes → Salada', forca: 'Arroz e feijão → Proteína → Legumes → Salada', recomposicao: 'Proteína → Legumes → Salada → Arroz e feijão' };
     var seqText = seqMap[plan.objective || ''] || 'Proteína → Legumes → Salada → Carboidratos';
@@ -6619,6 +6650,22 @@ function renderActiveDietPlan() {
     var orientRows = [];
     if (plan.hidratacao && plan.hidratacao.litros) orientRows.push('<div class="diet-section-row"><span>Hidratação</span><strong>' + escapeHTML(String(plan.hidratacao.litros)) + ' L/dia</strong></div>');
     (plan.orientacoes || []).forEach(function(note) { if (note) orientRows.push('<div class="diet-section-row"><span>' + escapeHTML(String(note)) + '</span></div>'); });
+    if (orientRows.length <= 1) {
+      try {
+        var _flowForOrient = getNutritionFlowState();
+        if (_flowForOrient && Number(_flowForOrient.peso || 0) > 0) {
+          var _orientBaseline = computeDietGenerationBaseline({
+            peso: Number(_flowForOrient.peso), altura: Number(_flowForOrient.altura || 175),
+            idade: Number(_flowForOrient.idade || 25), sexo: _flowForOrient.sexo || 'masculino',
+            gorduraCorporal: Number(_flowForOrient.gorduraCorporal || 0),
+            nivelAtividade: _flowForOrient.nivelAtividade || 'levemente ativo',
+            objetivo: plan.objective || _flowForOrient.objetivo || 'hipertrofia'
+          });
+          var _clinicalNotes = buildLocalDietOrientacoes(_flowForOrient, _orientBaseline);
+          _clinicalNotes.forEach(function(note) { if (note) orientRows.push('<div class="diet-section-row"><span>' + escapeHTML(String(note)) + '</span></div>'); });
+        }
+      } catch(_) {}
+    }
     var orientBlock = orientRows.length ? '<section class="diet-section-block"><h3 class="diet-section-title">ORIENTAÇÕES</h3>' + orientRows.join('') + '</section>' : '';
     meals.innerHTML = mealCards + substBlock + seqBlock + orientBlock;
   }
@@ -8951,6 +8998,40 @@ function buildNutritionIntakeSnapshot() {
 
 function getNutritionCatalogItems(group) {
   return NUTRITION_FOOD_CATALOG.filter(function(item) { return item.grupo === group; });
+}
+
+function buildDietSubstitutionGroups(flowState) {
+  var restricoes = String((flowState && flowState.restricoes) || (flowState && flowState.restricoesClinicas) || '').toLowerCase();
+  var padrao = String((flowState && flowState.padraoAlimentar) || 'onivoro').toLowerCase();
+  var isVegan = /vegano|vegan/.test(padrao);
+  var isVegetarian = /vegetariano/.test(padrao);
+  var hasLactose = /lactose/.test(restricoes);
+  var hasGluten = /gluten|glúten/.test(restricoes);
+
+  function allowed(item) {
+    if (isVegan && /(frango|patinho|ovo|iogurte|atum|sardinha|salmão|tilápia|queijo|leite|whey)/i.test(item.nome)) return false;
+    if (isVegetarian && /(frango|patinho|atum|sardinha|salmão|tilápia)/i.test(item.nome)) return false;
+    if (hasLactose && /(iogurte|queijo|leite|whey)/i.test(item.nome)) return false;
+    if (hasGluten && /(macarrão|pão|aveia)/i.test(item.nome)) return false;
+    return true;
+  }
+
+  var groups = [
+    { label: 'Proteínas', grupo: 'proteinas' },
+    { label: 'Carboidratos', grupo: 'carboidratos' },
+    { label: 'Gorduras saudáveis', grupo: 'gorduras' },
+    { label: 'Vegetais', grupo: 'vegetais' },
+    { label: 'Frutas', grupo: 'frutas' },
+    { label: 'Laticínios e substitutos', grupo: 'laticinios' },
+  ];
+
+  return groups.map(function(g) {
+    var items = getNutritionCatalogItems(g.grupo).filter(allowed).slice(0, 4).map(function(item) {
+      return item.nome + ' (' + item.porcao + ')';
+    });
+    return items.length ? { label: g.label, items: items } : null;
+  }).filter(Boolean);
+}
 }
 
 function getNutritionCatalogNameOptions(group) {
@@ -11369,6 +11450,8 @@ function buildLocalDietPlan(input) {
 
   return {
     failSafe: false,
+    caloriasMeta: baseline.metaCalorias,
+    macrosMeta: { protein: baseline.proteinaMeta, carbs: baseline.carboMeta, fat: baseline.gorduraMeta },
     meta: {
       calorias: Math.round(resumo.calorias),
       proteina: Math.round(resumo.proteina * 10) / 10,
@@ -11379,12 +11462,139 @@ function buildLocalDietPlan(input) {
     },
     refeicoes: refeicoes,
     hidratacao: { litros: baseline.hidratacaoLitros },
-    observacoes: [
-      "Plano local gerado em modo contingência com base na sua ficha atual.",
-      safeInput.padraoAlimentar ? ("Padrão alimentar respeitado: " + safeInput.padraoAlimentar + ".") : "",
-      safeInput.restricoes ? ("Restrições consideradas: " + safeInput.restricoes + ".") : "",
-    ].filter(Boolean),
+    observacoes: buildLocalDietOrientacoes(safeInput, baseline),
   };
+}
+
+function buildLocalDietOrientacoes(input, baseline) {
+  var obj = String(input.objetivo || 'manutencao').toLowerCase();
+  var patologia = String(input.patologia || '').toLowerCase();
+  var restricoes = String(input.restricoes || '').toLowerCase();
+  var medicamentos = String(input.medicamentos || '').toLowerCase();
+  var sexo = String(input.sexo || 'masculino').toLowerCase();
+  var peso = Number(input.peso || 0);
+  var lines = [];
+
+  // === MÉDICO ESPORTIVO: estratégia calórico-proteica por objetivo ===
+  if (obj === 'hipertrofia') {
+    lines.push('Superavit calórico de 200-400 kcal sobre o TDEE para ganho muscular limpo, minimizando acumulo de gordura.');
+    lines.push('Proteína: 1,8-2,2 g/kg/dia. Distribua em todas as refeicoes (min. 25-30 g por refeicao) para estimular sintese proteica muscular ao longo do dia.');
+    lines.push('Janela anabolica: consuma 30-40 g de proteina de rapida absorcao (whey, claras) e 60-80 g de carboidratos simples em ate 30-60 min apos o treino.');
+    lines.push('Pre-treino: carboidratos de medio/alto IG (banana, batata-doce, arroz branco) 60-90 min antes para glicogenio muscular maximo.');
+    lines.push('Sono 7-9 h: pico de GH ocorre nas primeiras horas de sono profundo. Ceia com caseina (iogurte grego, queijo cottage) reduz catabolismo noturno.');
+  } else if (obj === 'forca') {
+    lines.push('Calorias em leve superavit (150-300 kcal). Foco em potencia e recuperacao neuromuscular.');
+    lines.push('Proteina: 2,0-2,4 g/kg/dia para suportar adaptacoes de forca e hipertrofia miofibilar.');
+    lines.push('Creatina monohidratada 3-5 g/dia aumenta fosfato de creatina intramuscular, melhora performance em esforcos maximos de 1-10 s.');
+    lines.push('Carboidratos no pre-treino sao criticos para manter intensidade nos lifts pesados.');
+  } else if (obj === 'emagrecimento') {
+    lines.push('Deficit calorico de 300-500 kcal/dia (max. 500 kcal) para perda de gordura sem catabolismo muscular significativo.');
+    lines.push('Proteina alta: 2,0-2,4 g/kg/dia no deficit preserva massa magra e aumenta termogenese dietetica.');
+    lines.push('Ciclagem de carboidratos: dias de treino pesado com mais carbo, dias de repouso com foco em proteina e gordura saudavel.');
+    lines.push('Fibras soluveis (aveia, feijao, lentilha) retardam esvaziamento gastrico, controlam glicemia e aumentam saciedade.');
+  } else if (obj === 'recomposicao') {
+    lines.push('Recomposicao: calorias proximas do TDEE (+/-100 kcal). Exige disciplina proteica rigorosa: 2,2-2,6 g/kg/dia.');
+    lines.push('Divida os macros pelo tipo de dia: treino pesado (mais carbo), repouso (mais proteina e gordura saudavel).');
+  } else if (obj === 'manutencao') {
+    lines.push('Calorias iguais ao TDEE. Mantenha variacao semanal pequena (+/-200 kcal) para estabilidade metabolica.');
+    lines.push('Proteina minima de 1,6-1,8 g/kg/dia para preservar massa magra com o envelhecimento.');
+  }
+
+  // === ENDOCRINOLOGISTA: patologias metabolicas e hormonais ===
+  if (/diabetes|pre.?diabetes|insulina|resistencia.*insulina/.test(patologia)) {
+    lines.push('Diabetes/resistencia a insulina: distribua carboidratos em porcoes iguais ao longo do dia (max. 45-60 g por refeicao) para evitar picos de glicemia pos-prandial.');
+    lines.push('Indice glicemico importa: prefira arroz integral, aveia, batata-doce e leguminosas. Evite arroz branco, pao frances, sucos e doces.');
+    lines.push('Vinagre de maca (1 col. sopa antes das refeicoes) e canela (1-2 g/dia) tem evidencia modesta de melhora de sensibilidade a insulina.');
+    lines.push('Exercicio resistido melhora captacao de glicose independente de insulina via GLUT-4. Priorize treino de forca.');
+  }
+  if (/hipotireoidismo/.test(patologia)) {
+    lines.push('Hipotireoidismo: selenium (castanha-do-para: 1-2 unidades/dia) e zinco (carne vermelha magra, sementes de abobora) suportam conversao de T4 em T3 ativo.');
+    lines.push('Evite goitrogenos crus em excesso (brocolis, couve, repolho) se TSH muito elevado. Cozidos sao seguros.');
+    lines.push('Tome levotiroxina em jejum, 30-60 min antes do cafe da manha. Calcio, ferro e fibras prejudicam absorcao.');
+  }
+  if (/hipertireoidismo/.test(patologia)) {
+    lines.push('Hipertireoidismo: hipercatabolismo eleva necessidade calorica. Priorize densidade calorica e proteina.');
+    lines.push('Evite iodo em excesso (algas, suplementos com iodo). Limite cafeina pela taquicardia associada.');
+  }
+  if (/sop|sindrome.*ovario|ovarito/.test(patologia)) {
+    lines.push('SOP: dieta de baixo indice glicemico reduz hiperinsulinemia, principal driver do excesso androgenico na SOP.');
+    lines.push('Inositol (mio-inositol 2-4 g/dia) tem evidencia de melhora de sensibilidade a insulina e regularizacao do ciclo em SOP.');
+    lines.push('Omega-3 (2-3 g/dia EPA+DHA) reduz inflamacao cronica de baixo grau associada a SOP.');
+    if (/metformina/.test(medicamentos)) {
+      lines.push('Metformina: tome com as refeicoes para reduzir efeitos gastrointestinais. Pode reduzir absorcao de B12 a longo prazo.');
+    }
+  }
+  if (/menopausa|climaterio/.test(patologia)) {
+    lines.push('Menopausa: queda de estrogenio acelera perda ossea. Calcio 1200 mg/dia (laticinios, sardinha com espinha, brocolis) e vitamina D 1000-2000 UI/dia.');
+    lines.push('Fitoestrogenios (soja, linhaca) podem aliviar sintomas vasomotores em algumas mulheres.');
+    lines.push('Proteina elevada (1,6-2,0 g/kg) e treino de forca sao as intervencoes mais eficazes contra sarcopenia pos-menopausa.');
+  }
+  if (/hipertensão|hipertensao|pressao.*alta/.test(patologia)) {
+    lines.push('Hipertensao: limite sodio a 2000 mg/dia (equivale a 5 g de sal). Leia rotulos: embutidos, enlatados e temperos prontos sao as maiores fontes ocultas.');
+    lines.push('Dieta DASH: rica em potassio (banana, batata-doce, feijao), magnesio (folhas verdes, amendoas) e calcio reduz PA sistolica 8-14 mmHg.');
+    lines.push('Limit alcool a maximo 1 dose/dia (mulheres) ou 2 doses/dia (homens). Acima disso, PA aumenta linearmente.');
+  }
+  if (/colesterol|ldl|dislipidemia|triglicerid/.test(patologia)) {
+    lines.push('Dislipidemia: fibras soluveis (aveia 40 g/dia, psyllium) reduzem LDL em 5-10% ao sequestrar acidos biliares no intestino.');
+    lines.push('Omega-3 (2-4 g EPA+DHA/dia) reduz triglicerideos em 20-30%. Prefira sardinha, salmao, atum em natacao natural.');
+    lines.push('Substitua gorduras saturadas (carne gorda, manteiga) por insaturadas (azeite extravirgem, abacate, nozes). Evite gordura trans.');
+    lines.push('Fitosterois (2 g/dia via margarinas enriquecidas ou suplemento) inibem absorcao de colesterol no intestino.');
+  }
+  if (/refluxo|gerd|esofagite|gastrite|ulcera/.test(patologia)) {
+    lines.push('Refluxo/gastrite: evite cafe, alcool, menta, tomate, citricos e alimentos gordurosos nas ultimas 3 h antes de dormir.');
+    lines.push('Refeicoes menores e mais frequentes reduzem pressao intragastrica. Mastige bem e devagar.');
+    lines.push('Elevacao da cabeceira da cama em 15-20 cm e nao deitar ate 2 h apos a refeicao reduz episodios noturnos.');
+  }
+  if (/renal|creatinina|ckd|rim/.test(patologia)) {
+    lines.push('Doenca renal: restricao proteica (0,6-0,8 g/kg em DRC sem dialise) reduz progressao. Ajuste com nefrologista.');
+    lines.push('Controle potassio (evite banana, laranja, tomate se K elevado), fosforo (evite laticinios em excesso, nozes) e sodio.');
+  }
+
+  // === NUTRÓLOGO: estratégias micronutricionais e interacoes ===
+  if (/anemia|ferritina|hemoglobina/.test(patologia)) {
+    lines.push('Anemia ferropriva: ferro heme (carne vermelha magra, figado) tem absorcao 3x maior que ferro nao-heme. Combine com vitamina C (laranja, limaO, pimentao) na mesma refeicao.');
+    lines.push('Evite cha, cafe e calcio na mesma refeicao que alimentos ricos em ferro: inibem absorcao.');
+  }
+  if (/osteoporose|osteopenia/.test(patologia)) {
+    lines.push('Osteoporose: calcio 1200 mg/dia + vitamina D 1000-2000 UI/dia sao base do tratamento nao-farmacologico.');
+    lines.push('Vitamina K2 (MK-7, 100-200 mcg/dia) direciona calcio para os ossos e impede deposicao vascular.');
+    lines.push('Treino de impacto (caminhada, corrida leve) e de forca estimulam osteoblastos diretamente.');
+  }
+  if (/esteatose|figado.?gordo|nash/.test(patologia)) {
+    lines.push('Esteatose hepatica: reducao de 7-10% do peso corporal melhora histologia hepatica mesmo sem medicacao.');
+    lines.push('Elimine acucar adicionado e frutose industrial (refrigerantes, sucos industrializados) — principal driver de esteatose independente de alcool.');
+    lines.push('Cafe (2-3 xicaras/dia) tem evidencia de efeito hepatoprotetor em NAFLD.');
+  }
+  if (sexo === 'feminino') {
+    lines.push('Ferro: mulheres em idade fertil necessitam 18 mg/dia (vs. 8 mg/dia em homens). Priorize carne vermelha magra, feijao e folhas escuras.');
+    lines.push('Acido folico: essencial em mulheres que planejam gestacao (400-800 mcg/dia).');
+  }
+
+  // === RESTRIÇÕES ALIMENTARES ===
+  if (/lactose/.test(restricoes)) {
+    lines.push('Intolerancia a lactose confirmada: substitua leite e derivados por versoes sem lactose ou bebidas vegetais (soja, amendoa) enriquecidas com calcio para atingir cota diaria de 1000-1200 mg.');
+  }
+  if (/glúten|gluten/.test(restricoes)) {
+    lines.push('Restricao ao gluten: evite trigo, centeio, cevada e aveia contaminada. Prefira arroz, batata-doce, mandioca, quinoa e milho como fontes de carboidrato.');
+  }
+  if (/amendoim|amend/.test(restricoes)) {
+    lines.push('Alergia a amendoim: verifique rotulos de barras de proteina, pasta de amendoim, biscoitos e amendoas — contaminacao cruzada e frequente.');
+  }
+
+  // === HIDRATACAO (calculada pelo peso) ===
+  if (baseline && baseline.hidratacaoLitros) {
+    lines.push('Hidratacao: ' + baseline.hidratacaoLitros + ' L/dia (35 ml/kg). Aumente 500-750 ml por hora de treino intenso ou em dias de calor.');
+  }
+
+  // === COMPORTAMENTO ALIMENTAR (universal) ===
+  lines.push('Mastigue devagar (min. 20 mastigadas por bocado) para melhorar digestao e sinalizar saciedade ao hipotalamo.');
+  lines.push('Evite grandes volumes de liquido junto as refeicoes para nao diluir enzimas digestivas e acido gastrico.');
+  lines.push('Planejamento semanal: prepare proteinas e carboidratos em lote (meal prep) para garantir aderencia nos dias corridos.');
+
+  if (input.padraoAlimentar && !/oniv/i.test(input.padraoAlimentar)) {
+    lines.push('Padrao alimentar: ' + input.padraoAlimentar + '. Atencao a vitamina B12, ferro e zinco que tem biodisponibilidade reduzida em dietas sem carnes.');
+  }
+  return lines;
 }
 
 function buildLocalDietRenderText(input, reason) {
