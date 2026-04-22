@@ -33,11 +33,6 @@ function readSupabaseServiceKey() {
     || '';
 }
 
-var SUPABASE_URL = readSupabaseUrl();
-if (!SUPABASE_URL) {
-  throw new Error('[_auth] SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL não configurada. Adicione a variável de ambiente no Vercel.');
-}
-
 /**
  * Verifica o JWT do Supabase delegando ao endpoint /auth/v1/user.
  * Funciona com qualquer algoritmo (HS256, RS256, etc.) sem depender
@@ -45,6 +40,9 @@ if (!SUPABASE_URL) {
  */
 function verifyToken(token, callback) {
   if (!token) return callback('Token ausente', null);
+
+  var SUPABASE_URL = readSupabaseUrl();
+  if (!SUPABASE_URL) return callback('[_auth] SUPABASE_URL não configurada', null);
 
   var apiKey = readSupabaseServiceKey() || readSupabaseAnonKey();
 

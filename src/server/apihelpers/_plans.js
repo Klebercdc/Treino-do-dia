@@ -19,13 +19,6 @@ function readSupabaseServiceKey() {
     || '';
 }
 
-var SUPABASE_URL = readSupabaseUrl();
-var SUPABASE_SERVICE_KEY = readSupabaseServiceKey();
-
-if (!SUPABASE_URL) {
-  throw new Error('[_plans] SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL não configurada.');
-}
-
 var FREE_AI_LIMIT = parseInt(process.env.FREE_AI_LIMIT || '15', 10);
 var TRIAL_AI_LIMIT = parseInt(process.env.TRIAL_AI_LIMIT || '30', 10);
 
@@ -39,6 +32,9 @@ function getTrialDays(callback) {
 }
 
 function supabaseRequest(method, path, body, callback) {
+  var SUPABASE_URL = readSupabaseUrl();
+  var SUPABASE_SERVICE_KEY = readSupabaseServiceKey();
+  if (!SUPABASE_URL) return callback('[_plans] SUPABASE_URL não configurada.', null);
   if (!SUPABASE_SERVICE_KEY) {
     return callback('[_plans] SUPABASE_SERVICE_KEY não configurada.', null);
   }

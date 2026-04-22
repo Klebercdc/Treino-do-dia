@@ -176,7 +176,7 @@ test('buildKronosSystemPrompt proíbe falta de acesso quando há exames e preser
   }, 'lab_analysis');
 
   assert.match(system, /Se `exames\.disponivel === true`, você NÃO pode dizer que não tem acesso aos exames/);
-  assert.match(system, /"gramas": 120/);
+  assert.match(system, /"gramas":120/);
   assert.match(system, /"Ferritina"/);
 });
 
