@@ -6635,6 +6635,14 @@ function renderActiveDietPlan() {
         }
       });
     });
+    if (!substRows.length) {
+      try {
+        var _substGroups = buildDietSubstitutionGroups(getNutritionFlowState());
+        _substGroups.forEach(function(g) {
+          substRows.push('<div class="diet-section-row"><span>' + escapeHTML(g.label) + '</span><small>' + escapeHTML(g.items.join(', ')) + '</small></div>');
+        });
+      } catch(_) {}
+    }
     var substBlock = substRows.length ? '<section class="diet-section-block"><h3 class="diet-section-title">SUBSTITUIÇÕES</h3>' + substRows.join('') + '</section>' : '';
     var seqMap = { hipertrofia: 'Arroz e feijão → Proteína → Legumes → Salada', emagrecimento: 'Proteína → Legumes → Salada → Arroz e feijão', manutencao: 'Proteína → Arroz e feijão → Legumes → Salada', forca: 'Arroz e feijão → Proteína → Legumes → Salada', recomposicao: 'Proteína → Legumes → Salada → Arroz e feijão' };
     var seqText = seqMap[plan.objective || ''] || 'Proteína → Legumes → Salada → Carboidratos';
@@ -6642,6 +6650,22 @@ function renderActiveDietPlan() {
     var orientRows = [];
     if (plan.hidratacao && plan.hidratacao.litros) orientRows.push('<div class="diet-section-row"><span>Hidratação</span><strong>' + escapeHTML(String(plan.hidratacao.litros)) + ' L/dia</strong></div>');
     (plan.orientacoes || []).forEach(function(note) { if (note) orientRows.push('<div class="diet-section-row"><span>' + escapeHTML(String(note)) + '</span></div>'); });
+    if (orientRows.length <= 1) {
+      try {
+        var _flowForOrient = getNutritionFlowState();
+        if (_flowForOrient && Number(_flowForOrient.peso || 0) > 0) {
+          var _orientBaseline = computeDietGenerationBaseline({
+            peso: Number(_flowForOrient.peso), altura: Number(_flowForOrient.altura || 175),
+            idade: Number(_flowForOrient.idade || 25), sexo: _flowForOrient.sexo || 'masculino',
+            gorduraCorporal: Number(_flowForOrient.gorduraCorporal || 0),
+            nivelAtividade: _flowForOrient.nivelAtividade || 'levemente ativo',
+            objetivo: plan.objective || _flowForOrient.objetivo || 'hipertrofia'
+          });
+          var _clinicalNotes = buildLocalDietOrientacoes(_flowForOrient, _orientBaseline);
+          _clinicalNotes.forEach(function(note) { if (note) orientRows.push('<div class="diet-section-row"><span>' + escapeHTML(String(note)) + '</span></div>'); });
+        }
+      } catch(_) {}
+    }
     var orientBlock = orientRows.length ? '<section class="diet-section-block"><h3 class="diet-section-title">ORIENTAÇÕES</h3>' + orientRows.join('') + '</section>' : '';
     meals.innerHTML = mealCards + substBlock + seqBlock + orientBlock;
   }
@@ -8974,6 +8998,40 @@ function buildNutritionIntakeSnapshot() {
 
 function getNutritionCatalogItems(group) {
   return NUTRITION_FOOD_CATALOG.filter(function(item) { return item.grupo === group; });
+}
+
+function buildDietSubstitutionGroups(flowState) {
+  var restricoes = String((flowState && flowState.restricoes) || (flowState && flowState.restricoesClinicas) || '').toLowerCase();
+  var padrao = String((flowState && flowState.padraoAlimentar) || 'onivoro').toLowerCase();
+  var isVegan = /vegano|vegan/.test(padrao);
+  var isVegetarian = /vegetariano/.test(padrao);
+  var hasLactose = /lactose/.test(restricoes);
+  var hasGluten = /gluten|glúten/.test(restricoes);
+
+  function allowed(item) {
+    if (isVegan && /(frango|patinho|ovo|iogurte|atum|sardinha|salmão|tilápia|queijo|leite|whey)/i.test(item.nome)) return false;
+    if (isVegetarian && /(frango|patinho|atum|sardinha|salmão|tilápia)/i.test(item.nome)) return false;
+    if (hasLactose && /(iogurte|queijo|leite|whey)/i.test(item.nome)) return false;
+    if (hasGluten && /(macarrão|pão|aveia)/i.test(item.nome)) return false;
+    return true;
+  }
+
+  var groups = [
+    { label: 'Proteínas', grupo: 'proteinas' },
+    { label: 'Carboidratos', grupo: 'carboidratos' },
+    { label: 'Gorduras saudáveis', grupo: 'gorduras' },
+    { label: 'Vegetais', grupo: 'vegetais' },
+    { label: 'Frutas', grupo: 'frutas' },
+    { label: 'Laticínios e substitutos', grupo: 'laticinios' },
+  ];
+
+  return groups.map(function(g) {
+    var items = getNutritionCatalogItems(g.grupo).filter(allowed).slice(0, 4).map(function(item) {
+      return item.nome + ' (' + item.porcao + ')';
+    });
+    return items.length ? { label: g.label, items: items } : null;
+  }).filter(Boolean);
+}
 }
 
 function getNutritionCatalogNameOptions(group) {
