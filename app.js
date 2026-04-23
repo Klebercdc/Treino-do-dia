@@ -6552,6 +6552,37 @@ function mapVisualMealToLegacyMeal(meal, mealIndex) {
   };
 }
 
+function getDietRenderableMeals(plan) {
+  var safePlan = plan && typeof plan === 'object' ? plan : {};
+  var visual = safePlan.visualPrescription && typeof safePlan.visualPrescription === 'object' ? safePlan.visualPrescription : null;
+  if (visual && Array.isArray(visual.meals) && visual.meals.length) {
+    return visual.meals.map(function(meal, mealIndex) {
+      var safeMeal = meal && typeof meal === 'object' ? meal : {};
+      var items = Array.isArray(safeMeal.items) ? safeMeal.items.map(parseDietVisualItem).filter(Boolean) : [];
+      return {
+        id: safeMeal.id || ('visual_meal_' + (mealIndex + 1)),
+        name: safeMeal.name || ('Refeição ' + (mealIndex + 1)),
+        slot: safeMeal.slot || normalizeDietFoodText(safeMeal.name || 'refeicao'),
+        time: safeMeal.time || '',
+        notes: '',
+        substituicoes: [],
+        subtotal: {
+          kcal: asKroniaNumber(safeMeal.kcal_estimada, 0),
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
+          sodium: 0
+        },
+        items: items.map(function(item, itemIndex) {
+          return normalizeDietEditorItem(item, itemIndex + 1);
+        })
+      };
+    });
+  }
+  return Array.isArray(safePlan.meals) ? safePlan.meals : [];
+}
+
 function normalizeDietVisualSubstitutions(raw) {
   var base = raw && typeof raw === 'object' ? raw : {};
   return {
@@ -6977,7 +7008,7 @@ function renderDietMealCard(meal, mealIndex) {
       + '<div class="diet-premium-food-emoji">' + getDietFoodEmoji(item) + '</div>'
       + '<div><p class="diet-premium-food-name">' + escapeHTML(item.name) + '</p><p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + '</p></div>'
       + '</div>'
-      + '<p class="diet-premium-food-kcal">' + escapeHTML(asKroniaNumber(item.kcal, 0) > 0 ? formatKroniaNumber(item.kcal, 'kcal') : 'item')</p>'
+      + '<p class="diet-premium-food-kcal">' + escapeHTML(asKroniaNumber(item.kcal, 0) > 0 ? formatKroniaNumber(item.kcal, 'kcal') : 'item') + '</p>'
       + '</button>';
   }).join('');
   return '<section class="diet-premium-meal">'
@@ -6994,6 +7025,7 @@ function renderActiveDietPlan() {
   var plan = recalculateDietPlan(window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
   window._kroniaDietPlan = plan;
   var visual = plan.visualPrescription && typeof plan.visualPrescription === 'object' ? plan.visualPrescription : buildDefaultDietVisualPrescription();
+  var renderableMeals = getDietRenderableMeals(plan);
   var summary = document.getElementById('dietDataSummary');
   var progress = document.getElementById('dietDataProgress');
   var meals = document.getElementById('dietDataMeals');
@@ -7065,7 +7097,7 @@ function renderActiveDietPlan() {
       + '<section class="diet-section-block"><h3 class="diet-section-title">Direção do KRONOS</h3><div class="diet-section-row"><span>' + escapeHTML(getDietPlanSequenceText(plan)) + '</span></div>' + guidanceRows + '</section>';
   }
   if (meals) {
-    var mealCards = (plan.meals || []).map(renderDietMealCard).join('');
+    var mealCards = renderableMeals.map(renderDietMealCard).join('');
     meals.innerHTML = mealCards || '<section class="diet-premium-meal"><div class="diet-premium-empty"><div class="diet-premium-empty-icon"><i data-lucide="utensils" stroke-width="1.5"></i></div><p>Nenhuma dieta ativa salva. Gere ou recalcule com o KRONOS para preencher este painel.</p></div></section>';
   }
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
