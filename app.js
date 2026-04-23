@@ -6329,7 +6329,12 @@ function getDietItemName(item) {
 }
 
 function normalizeDietEditorItem(item, order) {
-  var grams = dietRound(item && (item.gramas || item.grams || item.porcao_gramas), 1);
+  var qtdeStr = item && typeof item.qtde === 'string' ? item.qtde.trim() : '';
+  var qtdeGrams = (function() {
+    var m = qtdeStr.match(/^(\d+(?:[.,]\d+)?)\s*g\b/i);
+    return m ? parseFloat(m[1].replace(',', '.')) : 0;
+  }());
+  var grams = dietRound((item && (item.gramas || item.grams || item.porcao_gramas)) || qtdeGrams || 0, 1);
   var kcal = dietRound(item && (item.calorias || item.kcal || item.calories), 1);
   var protein = dietRound(item && (item.proteinas || item.protein_g || item.protein || item.prot || item.estimated_protein_g), 1);
   var carbs = dietRound(item && (item.carboidratos || item.carbs_g || item.carbs || item.carb || item.estimated_carbs_g), 1);
@@ -6343,7 +6348,7 @@ function normalizeDietEditorItem(item, order) {
     sourceId: item && (item.sourceId || item.source_id || item.foodCode || item.code) || null,
     name: getDietItemName(item),
     slot: item && (item.slot || item.substitution_group || item.groupKey || item.group_key) || 'item',
-    quantity: String(item && (item.porcao || item.quantity || item.household_measure || item.default_unit) || (grams ? (grams + ' g') : '1 porção')),
+    quantity: String(item && (item.porcao || item.qtde || item.quantity || item.household_measure || item.default_unit) || (grams ? (grams + ' g') : '1 porção')),
     grams: grams || null,
     kcal: kcal,
     protein: protein,
