@@ -86,11 +86,6 @@ function toLegacyMeals(planMeals) {
   });
 }
 
-function applyRestrictions(meals, restricoes) {
-  if (!restricoes) return meals;
-  return meals;
-}
-
 function buildDietAIMessage(profile, meta, meals) {
   var objetivo = profile.objetivo || 'manutenção';
   var restricoes = profile.restricoes || profile.restricoesAlimentares || 'nenhuma';
@@ -156,6 +151,5 @@ module.exports = {
   buildDietAIMessage: buildDietAIMessage,
   calculateCalories: calculateCalories,
   calculateMacros: calculateMacros,
-  applyRestrictions: applyRestrictions,
   round: round
 };
