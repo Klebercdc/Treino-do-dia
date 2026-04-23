@@ -73,7 +73,16 @@ function loadNutritionFlowGeneratePlan(overrides = {}) {
       meta: { calorias: 2400, proteina: 160, carbo: 280, gordura: 70 },
       refeicoes: [{ nome: 'Café da manhã', horario: '07:00', alimentos: [{ nome: 'Ovos', qtde: '3 un' }] }],
     }),
-    buildDefaultDietVisualPrescription: () => ({ meals: [] }),
+    buildDietVisualPrescriptionFromLegacyPlan: (plan) => ({
+      meals: (Array.isArray(plan && plan.refeicoes) ? plan.refeicoes : []).map((meal) => ({
+        name: meal.nome,
+        time: meal.horario,
+        kcal_estimada: 0,
+        items: (Array.isArray(meal.alimentos) ? meal.alimentos : []).map((item) => (
+          `${item.nome} - ${item.qtde || item.porcao || ''}`.replace(/\s+-\s*$/, '')
+        )),
+      })),
+    }),
     buildLocalDietRenderText: () => 'plano-local',
     validateScientificGenerationGuard: async () => ({ ok: true }),
     generateDietWithModernEngine: async () => { throw new Error('falha no motor'); },

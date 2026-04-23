@@ -6356,29 +6356,90 @@ function buildDefaultDietVisualPrescription() {
     version: 'v1',
     dashboard: {
       title: 'Plano alimentar KRONIA',
-      subtitle: 'Resumo do dia com refeições práticas e aderentes à rotina.'
+      subtitle: 'Prescrição base pronta para execução, com medidas práticas e refeições brasileiras.'
     },
     summary: {
-      kcal_total: 0,
-      proteina: 0,
-      carbo: 0,
-      gordura: 0
+      kcal_total: 2230,
+      proteina: 160,
+      carbo: 228,
+      gordura: 74
     },
-    meals: [],
+    meals: [
+      {
+        id: 'fallback_breakfast',
+        slot: 'cafe_da_manha',
+        name: 'Café da manhã',
+        time: '07:00',
+        kcal_estimada: 520,
+        items: [
+          'Ovos mexidos - 3 unidades',
+          'Pão integral - 2 fatias',
+          'Mamão - 1/2 unidade',
+          'Café sem açúcar - 1 xícara'
+        ]
+      },
+      {
+        id: 'fallback_lunch',
+        slot: 'almoco',
+        name: 'Almoço',
+        time: '12:30',
+        kcal_estimada: 760,
+        items: [
+          'Frango grelhado - 180 g',
+          'Arroz - 4 colheres de sopa',
+          'Feijão - 1 concha média',
+          'Legumes cozidos - 1 prato de sobremesa',
+          'Azeite de oliva - 1 colher de chá'
+        ]
+      },
+      {
+        id: 'fallback_snack',
+        slot: 'lanche_tarde',
+        name: 'Café da tarde',
+        time: '16:30',
+        kcal_estimada: 340,
+        items: [
+          'Iogurte natural - 1 pote',
+          'Banana - 1 unidade',
+          'Aveia - 2 colheres de sopa'
+        ]
+      },
+      {
+        id: 'fallback_dinner',
+        slot: 'jantar',
+        name: 'Jantar',
+        time: '19:30',
+        kcal_estimada: 610,
+        items: [
+          'Patinho moído - 160 g',
+          'Batata-doce cozida - 1 unidade média',
+          'Salada verde - 1 prato fundo',
+          'Abacate - 3 colheres de sopa'
+        ]
+      }
+    ],
     substitutions: {
-      proteinas: [],
-      carboidratos: [],
-      leguminosas: [],
-      legumes: []
+      proteinas: ['Frango grelhado - 180 g', 'Tilápia - 200 g', 'Tofu firme - 220 g'],
+      carboidratos: ['Arroz - 4 colheres de sopa', 'Batata-doce - 1 unidade média', 'Macarrão - 1 prato raso'],
+      leguminosas: ['Feijão - 1 concha média', 'Lentilha - 1 concha média'],
+      legumes: ['Brócolis cozido - 1 prato de sobremesa', 'Abobrinha refogada - 1 prato de sobremesa']
     },
     sequence: {
       emagrecimento: 'Proteína -> legumes -> salada -> arroz e feijão',
       manutencao: 'Proteína -> arroz e feijão -> legumes -> salada',
       ganho_massa: 'Arroz e feijão -> proteína -> legumes -> salada'
     },
-    guidance: [],
-    reasons: [],
-    observation: ''
+    guidance: [
+      'Distribua a água entre manhã, treino e noite para bater pelo menos 2,5 L.',
+      'Se treinar cedo, mantenha o café da manhã completo e concentre a fruta perto do treino.',
+      'Use medidas domésticas simples para manter aderência mesmo fora de casa.'
+    ],
+    reasons: [
+      'Proteínas foram distribuídas nas principais refeições para preservar recuperação e saciedade.',
+      'Carboidratos aparecem em blocos práticos para sustentar energia sem depender de alimentos ultraprocessados.',
+      'A prescrição usa combinações comuns no Brasil para reduzir atrito na execução.'
+    ],
+    observation: 'Fallback profissional ativo: revise os dados com o KRONOS para personalizar este plano base.'
   };
 }
 
@@ -6414,6 +6475,50 @@ function extractDietVisualPrescription(plan) {
     return cloneDietVisualPrescription(safePlan.planoEstruturado.visualPrescription);
   }
   return null;
+}
+
+function buildDietVisualPrescriptionFromLegacyPlan(plan) {
+  var safePlan = plan && typeof plan === 'object' ? plan : {};
+  var meals = Array.isArray(safePlan.refeicoes) ? safePlan.refeicoes : [];
+  if (!meals.length) return cloneDietVisualPrescription(buildDefaultDietVisualPrescription());
+  return {
+    version: 'v1',
+    dashboard: {
+      title: 'Plano alimentar KRONIA',
+      subtitle: 'Prescrição convertida automaticamente para o painel visual da dieta.'
+    },
+    summary: {
+      kcal_total: asKroniaNumber(safePlan.meta && safePlan.meta.calorias, 0),
+      proteina: asKroniaNumber(safePlan.meta && safePlan.meta.proteina, 0),
+      carbo: asKroniaNumber(safePlan.meta && safePlan.meta.carbo, 0),
+      gordura: asKroniaNumber(safePlan.meta && safePlan.meta.gordura, 0)
+    },
+    meals: meals.map(function(meal, mealIndex) {
+      var foods = Array.isArray(meal && meal.alimentos) ? meal.alimentos : [];
+      var subtotal = meal && meal.subtotal && typeof meal.subtotal === 'object' ? meal.subtotal : {};
+      return {
+        id: meal && meal.id || ('legacy_visual_' + (mealIndex + 1)),
+        slot: meal && meal.tipo || normalizeDietFoodText(meal && meal.nome || 'refeicao'),
+        name: meal && meal.nome || ('Refeição ' + (mealIndex + 1)),
+        time: meal && meal.horario || '',
+        kcal_estimada: asKroniaNumber(subtotal.kcal || subtotal.calorias, 0),
+        items: foods.map(function(item) {
+          var nome = String(item && item.nome || 'Alimento').trim();
+          var porcao = String(item && (item.qtde || item.porcao || item.quantity) || '').trim();
+          return porcao ? (nome + ' - ' + porcao) : nome;
+        }).filter(Boolean)
+      };
+    }),
+    substitutions: cloneDietVisualPrescription(buildDefaultDietVisualPrescription()).substitutions,
+    sequence: cloneDietVisualPrescription(buildDefaultDietVisualPrescription()).sequence,
+    guidance: cloneDietVisualPrescription(buildDefaultDietVisualPrescription()).guidance,
+    reasons: [
+      'Prescrição visual convertida automaticamente a partir do plano local salvo.',
+      'As refeições mantêm quantidades e medidas práticas para execução imediata.',
+      'Recalcule com o KRONOS para trocar a base local por uma prescrição totalmente personalizada.'
+    ],
+    observation: 'Plano local sincronizado no painel visual.'
+  };
 }
 
 function mapVisualMealToLegacyMeal(meal, mealIndex) {
@@ -9902,7 +10007,10 @@ async function nutritionFlowGeneratePlan() {
   var dietPayload = buildDietRequestPayloadFromInput(input);
   dietPayload.context = Object.assign({}, dietPayload.context || {}, { intakeSnapshot: intakeSnapshot, source: "nutrition_intake_v2" });
   dietPayload.intakeSnapshot = intakeSnapshot;
-  var localPlan = Object.assign({}, buildLocalDietPlan(input), { visualPrescription: buildDefaultDietVisualPrescription() });
+  var localBasePlan = buildLocalDietPlan(input);
+  var localPlan = Object.assign({}, localBasePlan, {
+    visualPrescription: buildDietVisualPrescriptionFromLegacyPlan(localBasePlan)
+  });
   var finalPlan = localPlan;
   var finalText = buildLocalDietRenderText(input, "Plano inicial gerado localmente pelo KRONOS.");
   var resolvedFromEngine = false;

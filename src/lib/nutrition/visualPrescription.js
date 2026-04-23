@@ -4,29 +4,90 @@ var DEFAULT_VISUAL_PRESCRIPTION = Object.freeze({
   version: 'v1',
   dashboard: {
     title: 'Plano alimentar KRONIA',
-    subtitle: 'Resumo do dia com refeições práticas e aderentes à rotina.'
+    subtitle: 'Prescrição base pronta para execução, com medidas práticas e refeições brasileiras.'
   },
   summary: {
-    kcal_total: 0,
-    proteina: 0,
-    carbo: 0,
-    gordura: 0
+    kcal_total: 2230,
+    proteina: 160,
+    carbo: 228,
+    gordura: 74
   },
-  meals: [],
+  meals: [
+    {
+      id: 'fallback_breakfast',
+      slot: 'cafe_da_manha',
+      name: 'Café da manhã',
+      time: '07:00',
+      kcal_estimada: 520,
+      items: [
+        'Ovos mexidos - 3 unidades',
+        'Pão integral - 2 fatias',
+        'Mamão - 1/2 unidade',
+        'Café sem açúcar - 1 xícara'
+      ]
+    },
+    {
+      id: 'fallback_lunch',
+      slot: 'almoco',
+      name: 'Almoço',
+      time: '12:30',
+      kcal_estimada: 760,
+      items: [
+        'Frango grelhado - 180 g',
+        'Arroz - 4 colheres de sopa',
+        'Feijão - 1 concha média',
+        'Legumes cozidos - 1 prato de sobremesa',
+        'Azeite de oliva - 1 colher de chá'
+      ]
+    },
+    {
+      id: 'fallback_snack',
+      slot: 'lanche_tarde',
+      name: 'Café da tarde',
+      time: '16:30',
+      kcal_estimada: 340,
+      items: [
+        'Iogurte natural - 1 pote',
+        'Banana - 1 unidade',
+        'Aveia - 2 colheres de sopa'
+      ]
+    },
+    {
+      id: 'fallback_dinner',
+      slot: 'jantar',
+      name: 'Jantar',
+      time: '19:30',
+      kcal_estimada: 610,
+      items: [
+        'Patinho moído - 160 g',
+        'Batata-doce cozida - 1 unidade média',
+        'Salada verde - 1 prato fundo',
+        'Abacate - 3 colheres de sopa'
+      ]
+    }
+  ],
   substitutions: {
-    proteinas: [],
-    carboidratos: [],
-    leguminosas: [],
-    legumes: []
+    proteinas: ['Frango grelhado - 180 g', 'Tilápia - 200 g', 'Tofu firme - 220 g'],
+    carboidratos: ['Arroz - 4 colheres de sopa', 'Batata-doce - 1 unidade média', 'Macarrão - 1 prato raso'],
+    leguminosas: ['Feijão - 1 concha média', 'Lentilha - 1 concha média'],
+    legumes: ['Brócolis cozido - 1 prato de sobremesa', 'Abobrinha refogada - 1 prato de sobremesa']
   },
   sequence: {
     emagrecimento: 'Proteína -> legumes -> salada -> arroz e feijão',
     manutencao: 'Proteína -> arroz e feijão -> legumes -> salada',
     ganho_massa: 'Arroz e feijão -> proteína -> legumes -> salada'
   },
-  guidance: [],
-  reasons: [],
-  observation: ''
+  guidance: [
+    'Distribua a água entre manhã, treino e noite para bater pelo menos 2,5 L.',
+    'Se treinar cedo, mantenha o café da manhã completo e concentre a fruta perto do treino.',
+    'Use medidas domésticas simples para manter aderência mesmo fora de casa.'
+  ],
+  reasons: [
+    'Proteínas foram distribuídas nas principais refeições para preservar recuperação e saciedade.',
+    'Carboidratos aparecem em blocos práticos para sustentar energia sem depender de alimentos ultraprocessados.',
+    'A prescrição usa combinações comuns no Brasil para reduzir atrito na execução.'
+  ],
+  observation: 'Fallback profissional ativo: revise os dados com o KRONOS para personalizar este plano base.'
 });
 
 function clone(value) {
