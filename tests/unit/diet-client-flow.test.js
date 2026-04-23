@@ -277,3 +277,46 @@ test('extractDietRenderModel uses structured plan meals when top-level meals are
   assert.equal(model.hidratacao.litros, 3);
   assert.deepEqual(Array.from(model.observacoes), ['Fallback estruturado aplicado.']);
 });
+
+test('normalizeDietEditorItem resolves qtde field as quantity and parses grams from it', () => {
+  const code = fs.readFileSync('app.js', 'utf8');
+
+  function extract(src, pattern, label) {
+    const match = src.match(pattern);
+    if (!match) throw new Error(`snippet not found: ${label}`);
+    return match[0];
+  }
+
+  const snippet = [
+    extract(code, /function asKroniaNumber\(value, fallback\) \{[\s\S]*?\n\}/, 'asKroniaNumber'),
+    extract(code, /function dietRound\(value, decimals\) \{[\s\S]*?\n\}/, 'dietRound'),
+    extract(code, /function getDietItemName\(item\) \{[\s\S]*?\n\}/, 'getDietItemName'),
+    extract(code, /function normalizeDietEditorItem\(item, order\) \{[\s\S]*?\n\}/, 'normalizeDietEditorItem'),
+  ].join('\n\n');
+
+  const ctx = {};
+  require('node:vm').createContext(ctx);
+  require('node:vm').runInContext(snippet, ctx, { filename: 'normalize-diet-editor-item-snippet.js' });
+
+  // Legacy item from toLegacyMeals(): uses qtde for portion, no gramas field
+  const legacyItem = { nome: 'Frango grelhado', qtde: '150 g', kcal: 248, prot: 46, carb: 0, gord: 6 };
+  const normalized = ctx.normalizeDietEditorItem(legacyItem, 1);
+
+  assert.equal(normalized.quantity, '150 g', 'quantity deve usar item.qtde quando porcao está ausente');
+  assert.equal(normalized.grams, 150, 'grams deve ser parseado de item.qtde quando gramas está ausente');
+  assert.equal(normalized.name, 'Frango grelhado');
+  assert.equal(normalized.kcal, 248);
+  assert.equal(normalized.protein, 46);
+
+  // Modern item with porcao field (should take priority over qtde)
+  const modernItem = { nome: 'Arroz integral', porcao: '1 xícara (160 g)', gramas: 160, calorias: 220, proteinas: 5, carboidratos: 45, gorduras: 2 };
+  const modernNormalized = ctx.normalizeDietEditorItem(modernItem, 2);
+  assert.equal(modernNormalized.quantity, '1 xícara (160 g)', 'quantity deve preferir porcao sobre qtde');
+  assert.equal(modernNormalized.grams, 160);
+
+  // Item with no portion info should fall back to '1 porção'
+  const bareItem = { nome: 'Suplemento', calorias: 100, proteinas: 20, carboidratos: 5, gorduras: 1 };
+  const bareNormalized = ctx.normalizeDietEditorItem(bareItem, 3);
+  assert.equal(bareNormalized.quantity, '1 porção', 'sem qtde nem porcao deve cair em 1 porção');
+  assert.equal(bareNormalized.grams, null);
+});
