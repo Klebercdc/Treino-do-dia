@@ -79,7 +79,9 @@ function toLegacyMeals(planMeals) {
       substituicoes: (meal.itens || []).map(function(item) {
         return {
           item: item.nome,
-          opcoes: item.substituicoes
+          opcoes: (item.substituicoes || []).map(function(sub) {
+            return sub.nome + ' (' + sub.porcao + ')';
+          })
         };
       })
     };

@@ -347,6 +347,64 @@ test('nutritionService mantém plano conservador quando há flag crítica labora
   assert.ok(result.clinicalNotes.some((note) => /modo conservador/i.test(note)));
 });
 
+test('dietService refeicoes have substituicoes.opcoes as readable strings, not raw objects', async () => {
+  const result = await dietService.execute('GENERATE_DIET', {
+    sexo: 'M',
+    idade: 30,
+    peso: 80,
+    altura: 178,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 4,
+    padraoAlimentar: 'onívoro',
+  });
+
+  assert.equal(result.payload.plan.failSafe, false);
+  const refeicoes = result.payload.plan.refeicoes;
+  assert.ok(refeicoes.length > 0);
+
+  refeicoes.forEach((ref) => {
+    (ref.substituicoes || []).forEach((sub) => {
+      (sub.opcoes || []).forEach((opcao) => {
+        assert.equal(
+          typeof opcao,
+          'string',
+          `substituicao opcao deve ser string legível, recebeu ${typeof opcao}: ${JSON.stringify(opcao)}`,
+        );
+      });
+    });
+  });
+});
+
+test('normalizeDietPayload returns null nutritionGoals when no goals are present in input', () => {
+  const result = dietService.normalizeDietPayload({
+    sexo: 'M',
+    idade: 30,
+    peso: 80,
+    altura: 178,
+    objetivo: 'hipertrofia',
+  });
+
+  assert.equal(result.nutritionGoals, null,
+    'deve retornar null, não { calories_target: undefined, ... } com chaves fantasma');
+});
+
+test('normalizeDietPayload preserves supabase calories_target in nutritionGoals', () => {
+  const result = dietService.normalizeDietPayload({
+    sexo: 'M',
+    idade: 30,
+    peso: 80,
+    altura: 178,
+    objetivo: 'hipertrofia',
+    supabaseSnapshot: {
+      nutritionGoals: { calories_target: 2300, protein_g: 150 },
+    },
+  });
+
+  assert.ok(result.nutritionGoals !== null, 'nutritionGoals deve ser não-nulo quando supabase tem metas');
+  assert.equal(result.nutritionGoals.calories_target, 2300);
+  assert.equal(result.nutritionGoals.protein_g, 150);
+});
+
 if (typeof globalThis.test === 'function' && globalThis.test !== test) {
   globalThis.test('diet-service node:test suite compatibility', () => {
     assert.equal(typeof nutritionService.generateNutritionPlan, 'function');
