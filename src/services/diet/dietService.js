@@ -40,8 +40,6 @@ function normalizeDietPayload(payload) {
   const nutritionFlowSelections = normalizeObject(safePayload.nutritionFlowSelections || context.nutritionFlowSelections);
   const supabaseSnapshot = normalizeObject(safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot);
 
-  const goals = master.nutritionGoals || {};
-
   return {
     objetivo: master.objetivo,
     sexo: master.sexo,
@@ -62,12 +60,7 @@ function normalizeDietPayload(payload) {
     contextoTreino: training,
     saude: clinical.saude,
     aderencia: adherence,
-    nutritionGoals: {
-      calories_target: goals.calories_target || undefined,
-      protein_g: goals.protein_g || undefined,
-      carbs_g: goals.carbs_g || undefined,
-      fat_g: goals.fat_g || undefined,
-    },
+    nutritionGoals: master.nutritionGoals,
     labContext: clinical.labContext,
     intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
     nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
