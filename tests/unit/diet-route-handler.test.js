@@ -53,6 +53,8 @@ test('handler retorna diet_result em sucesso para plano permitido', async () => 
   assert.equal(result.body.data.content[0].type, 'diet_primary');
   assert.equal(result.body.data.service.gatedPlan, 'PRO');
   assert.equal(result.body.data.content[0].data.failSafe, false);
+  assert.ok(Array.isArray(result.body.data.content[0].data.visualPrescription.meals));
+  assert.ok(result.body.data.content[0].data.visualPrescription.meals.length >= 3);
 });
 
 test('handler retorna diet_failsafe em vez de erro cru quando faltam dados criticos', async () => {

@@ -147,7 +147,7 @@ test.describe('CTA and Diet flows', () => {
         nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
       }));
     }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false });
-    await expect(page.locator('#dietDataScreen')).toContainText('Adicionar item');
+    await expect(page.locator('#dietDataScreen')).toContainText(/Adicionar alimento|Registrar água|Ver substituições/);
 
     await page.locator('#nav-inicio').click();
     await page.locator('#nav-dieta').click();

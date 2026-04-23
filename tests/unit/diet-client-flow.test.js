@@ -47,6 +47,53 @@ function loadDietHelpers() {
   return context;
 }
 
+function loadNutritionFlowGeneratePlan(overrides = {}) {
+  const code = fs.readFileSync('app.js', 'utf8');
+  const snippet = extract(code, /async function nutritionFlowGeneratePlan\(\) \{[\s\S]*?\n\}/, 'nutritionFlowGeneratePlan');
+  const calls = {
+    setActiveDietPlan: [],
+    saveActiveDietPlan: [],
+    setNutritionFlowState: [],
+  };
+  const context = {
+    NUTRITION_FLOW_STEPS: [{ key: 'gerar' }, { key: 'final' }],
+    document: {
+      getElementById() {
+        return null;
+      },
+    },
+    buildNutritionIntakeSnapshot: () => ({ snapshot: true }),
+    buildNutritionFlowInput: () => ({
+      objetivo: 'hipertrofia',
+      refeicoesPorDia: 4,
+    }),
+    buildDietRequestPayloadFromInput: () => ({}),
+    buildLocalDietPlan: () => ({
+      objetivo: 'hipertrofia',
+      meta: { calorias: 2400, proteina: 160, carbo: 280, gordura: 70 },
+      refeicoes: [{ nome: 'Café da manhã', horario: '07:00', alimentos: [{ nome: 'Ovos', qtde: '3 un' }] }],
+    }),
+    buildDefaultDietVisualPrescription: () => ({ meals: [] }),
+    buildLocalDietRenderText: () => 'plano-local',
+    validateScientificGenerationGuard: async () => ({ ok: true }),
+    generateDietWithModernEngine: async () => { throw new Error('falha no motor'); },
+    normalizeDietGeneratedPlan: (plan, meta) => ({ normalized: true, plan, meta }),
+    setActiveDietPlan: (plan, options) => { calls.setActiveDietPlan.push({ plan, options }); },
+    setNutritionFlowState: (patch) => { calls.setNutritionFlowState.push(patch); },
+    persistDietGenerationPrefs: () => {},
+    persistCanonicalNutritionSnapshot: () => {},
+    saveActiveDietPlan: async (options) => { calls.saveActiveDietPlan.push(options); },
+    closeNutritionFlow: () => {},
+    navTo: () => {},
+    openDietDataScreen: () => {},
+    window: {},
+    ...overrides,
+  };
+  vm.createContext(context);
+  vm.runInContext(snippet, context, { filename: 'nutrition-flow-generate-plan-snippet.js' });
+  return { context, calls };
+}
+
 test('buildDietRequestPayloadFromInput creates compact payload for route', () => {
   const context = loadDietHelpers();
   const payload = context.buildDietRequestPayloadFromInput({
@@ -319,4 +366,49 @@ test('normalizeDietEditorItem resolves qtde field as quantity and parses grams f
   const bareNormalized = ctx.normalizeDietEditorItem(bareItem, 3);
   assert.equal(bareNormalized.quantity, '1 porção', 'sem qtde nem porcao deve cair em 1 porção');
   assert.equal(bareNormalized.grams, null);
+});
+
+test('extractDietRenderModel uses visualPrescription first when present', () => {
+  const context = loadDietHelpers();
+  const model = context.extractDietRenderModel({
+    success: true,
+    type: 'diet_primary',
+    message: 'Plano visual gerado.',
+    data: {
+      content: [{
+        type: 'diet_primary',
+        text: 'Plano visual gerado.',
+        data: {
+          meta: { calorias: 2795, proteina: 158, carbo: 332, gordura: 91 },
+          visualPrescription: {
+            meals: [{
+              name: 'Café da manhã',
+              time: '07:00',
+              kcal_estimada: 700,
+              items: ['Ovos - 3 unidades (150 g)', 'Pão francês - 1 unidade (50 g)'],
+            }],
+          },
+        },
+      }],
+    },
+  });
+
+  assert.ok(model);
+  assert.equal(model.visualPrescription.meals[0].name, 'Café da manhã');
+  assert.equal(model.refeicoes[0].nome, 'Café da manhã');
+  assert.equal(model.refeicoes[0].subtotal.kcal, 700);
+  assert.equal(model.refeicoes[0].alimentos[0].nome, 'Ovos');
+});
+
+test('nutritionFlowGeneratePlan promotes local fallback plan to active state when engine fails', async () => {
+  const { context, calls } = loadNutritionFlowGeneratePlan();
+
+  await context.nutritionFlowGeneratePlan();
+
+  assert.equal(calls.setActiveDietPlan.length, 1);
+  assert.equal(calls.setActiveDietPlan[0].plan.meta.source, 'nutrition_intake_local_fallback');
+  assert.equal(calls.setActiveDietPlan[0].plan.plan.refeicoes[0].nome, 'Café da manhã');
+  assert.equal(calls.saveActiveDietPlan.length, 1);
+  assert.equal(calls.saveActiveDietPlan[0].generatedPlan.refeicoes[0].nome, 'Café da manhã');
+  assert.equal(calls.setNutritionFlowState[0].generatedPlan.refeicoes[0].nome, 'Café da manhã');
 });

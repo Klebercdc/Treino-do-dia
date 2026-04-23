@@ -124,3 +124,34 @@ test('kronos chat diet_result response is adapted to diet render contract', () =
   assert.equal(model.refeicoes[0].alimentos[0].qtde, '150 g');
   assert.equal(model.refeicoes[0].alimentos[0].gord, 6);
 });
+
+test('modern nutrition response accepts visualPrescription without depending on legacy refeicoes', () => {
+  const { extractModernNutritionRenderModel } = loadRuntime();
+
+  const model = extractModernNutritionRenderModel({
+    success: true,
+    type: 'diet_primary',
+    data: {
+      content: [{
+        type: 'diet_primary',
+        data: {
+          visualPrescription: {
+            summary: { kcal_total: 2795, proteina: 158, carbo: 332, gordura: 91 },
+            meals: [{
+              name: 'Café da manhã',
+              time: '07:00',
+              kcal_estimada: 700,
+              items: ['Ovos - 3 unidades (150 g)', 'Pão francês - 1 unidade (50 g)'],
+            }],
+          },
+        },
+      }],
+    },
+  });
+
+  assert.equal(model.meta.calorias, 2795);
+  assert.equal(model.visualPrescription.summary.proteina, 158);
+  assert.equal(model.refeicoes[0].nome, 'Café da manhã');
+  assert.equal(model.refeicoes[0].subtotal.kcal, 700);
+  assert.equal(model.refeicoes[0].alimentos[0].nome, 'Ovos');
+});

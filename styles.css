@@ -4108,116 +4108,58 @@ body.light-mode #aiModal #aiSendBtn i {
 #nutritionFlowScreen .nutrition-official-notes { min-height:80px; resize:vertical; }
 @keyframes nutritionOfficialSpin { to { transform:rotate(360deg); } }
 #nutritionFlowScreen .nutrition-official-processing { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center; }
-#nutritionFlowScreen .nutrition-official-spinner { width:64px; height:64px; border:4px solid #F97316; border-top-color:transparent; border-radius:50%; animation:nutritionOfficialSpin 1s linear infinite; margin-bottom:24px; }
+#nutritionFlowScreen .nutrition-official-spinner { width:64px; height:64px; border:4px solid var(--accent); border-top-color:transparent; border-radius:50%; animation:nutritionOfficialSpin 1s linear infinite; margin-bottom:24px; }
 
 /* ── Plano Alimentar Premium ─────────────────────────────── */
 #dietDataScreen,
 .diet-premium-backdrop,
 .diet-premium-bottom-sheet,
 .diet-add-item-sheet {
-  --diet-bg: #f9fafb;
-  --diet-surface: #ffffff;
-  --diet-surface-2: #f9fafb;
-  --diet-surface-3: #f3f4f6;
-  --diet-border: #f3f4f6;
-  --diet-border-strong: #e5e7eb;
-  --diet-text: #111827;
-  --diet-text-soft: #6b7280;
-  --diet-text-muted: #9ca3af;
-  --diet-shadow: 0 1px 2px rgba(15,23,42,.05);
-  --diet-shadow-strong: 0 -24px 60px rgba(15,23,42,.22);
-  --diet-chip-bg: #f9fafb;
-  --diet-input-bg: #f9fafb;
-  --diet-overlay: rgba(17,24,39,.4);
-  --diet-accent: #ea580c;
-  --diet-accent-bg: #fff7ed;
-  --diet-accent-bg-strong: #ffedd5;
-  --diet-cta-bg: linear-gradient(135deg, #f97316, #ea580c);
-  --diet-cta-text: #ffffff;
-  --diet-danger: #ef4444;
-  --diet-danger-bg: #fef2f2;
-  --diet-protein-bg: rgba(239,246,255,.5);
-  --diet-protein-border: #eff6ff;
-  --diet-protein-text: #1e3a8a;
-  --diet-protein-value: #2563eb;
-  --diet-protein-track: #dbeafe;
-  --diet-carbs-bg: rgba(240,253,244,.5);
-  --diet-carbs-border: #f0fdf4;
-  --diet-carbs-text: #14532d;
-  --diet-carbs-value: #16a34a;
-  --diet-carbs-track: #dcfce7;
-  --diet-fat-bg: rgba(254,252,232,.5);
-  --diet-fat-border: #fefce8;
-  --diet-fat-text: #713f12;
-  --diet-fat-value: #ca8a04;
-  --diet-fat-track: #fef9c3;
-}
-html[data-theme="dark"] #dietDataScreen,
-html.dark-mode #dietDataScreen,
-body[data-theme="dark"] #dietDataScreen,
-body.dark-mode #dietDataScreen,
-#dietDataScreen[data-theme="dark"],
-html[data-theme="dark"] .diet-premium-backdrop,
-html.dark-mode .diet-premium-backdrop,
-body[data-theme="dark"] .diet-premium-backdrop,
-body.dark-mode .diet-premium-backdrop,
-.diet-premium-backdrop[data-theme="dark"],
-html[data-theme="dark"] .diet-premium-bottom-sheet,
-html.dark-mode .diet-premium-bottom-sheet,
-body[data-theme="dark"] .diet-premium-bottom-sheet,
-body.dark-mode .diet-premium-bottom-sheet,
-.diet-premium-bottom-sheet[data-theme="dark"],
-html[data-theme="dark"] .diet-add-item-sheet,
-html.dark-mode .diet-add-item-sheet,
-body[data-theme="dark"] .diet-add-item-sheet,
-body.dark-mode .diet-add-item-sheet,
-.diet-add-item-sheet[data-theme="dark"] {
-  --diet-bg: #08111f;
-  --diet-surface: #111827;
-  --diet-surface-2: #172033;
-  --diet-surface-3: #1f2937;
-  --diet-border: rgba(148,163,184,.16);
-  --diet-border-strong: rgba(148,163,184,.24);
-  --diet-text: #f8fafc;
-  --diet-text-soft: #cbd5e1;
-  --diet-text-muted: #94a3b8;
-  --diet-shadow: 0 18px 42px rgba(0,0,0,.32);
-  --diet-shadow-strong: 0 -24px 60px rgba(0,0,0,.48);
-  --diet-chip-bg: rgba(148,163,184,.08);
-  --diet-input-bg: rgba(15,23,42,.72);
-  --diet-overlay: rgba(2,6,23,.72);
-  --diet-accent: #fb923c;
-  --diet-accent-bg: rgba(249,115,22,.14);
-  --diet-accent-bg-strong: rgba(249,115,22,.24);
-  --diet-cta-bg: #ea580c;
-  --diet-cta-text: #ffffff;
-  --diet-danger: #f87171;
-  --diet-danger-bg: rgba(239,68,68,.14);
-  --diet-protein-bg: rgba(37,99,235,.14);
-  --diet-protein-border: rgba(96,165,250,.28);
-  --diet-protein-text: #bfdbfe;
-  --diet-protein-value: #60a5fa;
-  --diet-protein-track: rgba(96,165,250,.18);
-  --diet-carbs-bg: rgba(22,163,74,.14);
-  --diet-carbs-border: rgba(74,222,128,.26);
-  --diet-carbs-text: #bbf7d0;
-  --diet-carbs-value: #4ade80;
-  --diet-carbs-track: rgba(74,222,128,.18);
-  --diet-fat-bg: rgba(202,138,4,.16);
-  --diet-fat-border: rgba(250,204,21,.28);
-  --diet-fat-text: #fef3c7;
-  --diet-fat-value: #facc15;
-  --diet-fat-track: rgba(250,204,21,.2);
+  --diet-bg: var(--bg-app);
+  --diet-surface: var(--bg-card);
+  --diet-surface-2: var(--bg-elevated);
+  --diet-surface-3: var(--bg2);
+  --diet-border: var(--border);
+  --diet-border-strong: color-mix(in srgb, var(--border) 72%, var(--text-soft));
+  --diet-text: var(--text-main);
+  --diet-text-soft: var(--text-muted);
+  --diet-text-muted: var(--text-soft);
+  --diet-shadow: var(--shadow-sm);
+  --diet-shadow-strong: var(--shadow-lg);
+  --diet-chip-bg: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  --diet-input-bg: var(--input-bg);
+  --diet-overlay: color-mix(in srgb, var(--bg) 74%, transparent);
+  --diet-accent: var(--accent);
+  --diet-accent-bg: var(--accent-dim);
+  --diet-accent-bg-strong: color-mix(in srgb, var(--accent) 22%, var(--bg-card));
+  --diet-cta-bg: var(--accent);
+  --diet-cta-text: var(--accent-contrast);
+  --diet-danger: var(--red);
+  --diet-danger-bg: var(--red-bg);
+  --diet-protein-bg: var(--blue-bg);
+  --diet-protein-border: color-mix(in srgb, var(--blue) 22%, var(--border));
+  --diet-protein-text: var(--text-main);
+  --diet-protein-value: var(--blue);
+  --diet-protein-track: color-mix(in srgb, var(--blue) 18%, var(--bg-elevated));
+  --diet-carbs-bg: var(--green-bg);
+  --diet-carbs-border: color-mix(in srgb, var(--green) 22%, var(--border));
+  --diet-carbs-text: var(--text-main);
+  --diet-carbs-value: var(--green);
+  --diet-carbs-track: color-mix(in srgb, var(--green) 18%, var(--bg-elevated));
+  --diet-fat-bg: color-mix(in srgb, var(--accent2) 16%, var(--bg-elevated));
+  --diet-fat-border: color-mix(in srgb, var(--accent2) 24%, var(--border));
+  --diet-fat-text: var(--text-main);
+  --diet-fat-value: var(--accent2);
+  --diet-fat-track: color-mix(in srgb, var(--accent2) 16%, var(--bg-elevated));
 }
 #dietDataScreen.kronia-data-screen {
   background:var(--diet-bg);
   color:var(--diet-text);
-  font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:var(--font);
   padding:0 0 112px;
   min-height:100%;
   overflow-y:auto;
 }
-body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); color:var(--diet-text); }
 #dietDataScreen .diet-premium-header {
   position:sticky;
   top:0;
@@ -4271,17 +4213,17 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
 #dietDataScreen .diet-premium-macro.protein span:first-child { color:var(--diet-protein-text); }
 #dietDataScreen .diet-premium-macro.protein span:last-child { color:var(--diet-protein-value); }
 #dietDataScreen .diet-premium-macro.protein .diet-premium-track { background:var(--diet-protein-track); }
-#dietDataScreen .diet-premium-macro.protein .diet-premium-fill { background:#3b82f6; }
+#dietDataScreen .diet-premium-macro.protein .diet-premium-fill { background:var(--blue); }
 #dietDataScreen .diet-premium-macro.carbs { background:var(--diet-carbs-bg); border-color:var(--diet-carbs-border); }
 #dietDataScreen .diet-premium-macro.carbs span:first-child { color:var(--diet-carbs-text); }
 #dietDataScreen .diet-premium-macro.carbs span:last-child { color:var(--diet-carbs-value); }
 #dietDataScreen .diet-premium-macro.carbs .diet-premium-track { background:var(--diet-carbs-track); }
-#dietDataScreen .diet-premium-macro.carbs .diet-premium-fill { background:#22c55e; }
+#dietDataScreen .diet-premium-macro.carbs .diet-premium-fill { background:var(--green); }
 #dietDataScreen .diet-premium-macro.fat { background:var(--diet-fat-bg); border-color:var(--diet-fat-border); }
 #dietDataScreen .diet-premium-macro.fat span:first-child { color:var(--diet-fat-text); }
 #dietDataScreen .diet-premium-macro.fat span:last-child { color:var(--diet-fat-value); }
 #dietDataScreen .diet-premium-macro.fat .diet-premium-track { background:var(--diet-fat-track); }
-#dietDataScreen .diet-premium-macro.fat .diet-premium-fill { background:#eab308; }
+#dietDataScreen .diet-premium-macro.fat .diet-premium-fill { background:var(--accent2); }
 #dietDataMeals { display:flex; flex-direction:column; gap:24px; }
 #dietDataScreen .diet-premium-meal {
   background:var(--diet-surface);
@@ -4311,7 +4253,7 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
 }
 #dietDataScreen .diet-premium-food-row:hover { background:var(--diet-surface-3); }
 #dietDataScreen .diet-premium-food-left { display:flex; align-items:center; gap:16px; min-width:0; }
-#dietDataScreen .diet-premium-food-emoji { width:40px; height:40px; border-radius:999px; background:var(--diet-chip-bg); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:inset 0 2px 4px rgba(15,23,42,.04); flex-shrink:0; }
+#dietDataScreen .diet-premium-food-emoji { width:40px; height:40px; border-radius:999px; background:var(--diet-chip-bg); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:inset 0 2px 4px rgba(var(--text-rgb),.04); flex-shrink:0; }
 #dietDataScreen .diet-premium-food-name { margin:0; color:var(--diet-text); font-size:14px; font-weight:800; line-height:1.2; }
 #dietDataScreen .diet-premium-food-qty { margin:3px 0 0; color:var(--diet-text-soft); font-size:12px; font-weight:600; }
 #dietDataScreen .diet-premium-food-kcal { color:var(--diet-text-soft); font-size:14px; font-weight:800; white-space:nowrap; }
@@ -4366,15 +4308,15 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
   cursor:pointer;
 }
 #dietDataScreen .diet-premium-floating .kronos-recalc-btn {
-  background:linear-gradient(135deg, #f97316, #ea580c);
-  color:#ffffff;
+  background:var(--diet-cta-bg);
+  color:var(--diet-cta-text);
   border:none;
-  box-shadow:0 10px 25px rgba(234,88,12,.25);
+  box-shadow:var(--diet-shadow);
 }
 #dietDataScreen .diet-premium-floating .kronos-recalc-btn i,
 #dietDataScreen .diet-premium-floating .kronos-recalc-btn svg {
-  color:#fff;
-  stroke:#fff;
+  color:var(--diet-cta-text);
+  stroke:var(--diet-cta-text);
 }
 #dietDataScreen .diet-premium-floating button:active { transform:scale(.95); }
 .diet-premium-backdrop {
@@ -4403,7 +4345,7 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
   box-shadow:var(--diet-shadow-strong);
   transform:translateY(100%);
   transition:transform .3s ease-out;
-  font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:var(--font);
 }
 .diet-premium-bottom-sheet.open { transform:translateY(0); }
 .diet-premium-handle { width:48px; height:6px; border-radius:999px; background:var(--diet-border-strong); margin:0 auto 32px; }
@@ -4423,8 +4365,8 @@ body.light-mode #dietDataScreen.kronia-data-screen { background:var(--diet-bg); 
 .diet-premium-quantity div { display:flex; align-items:baseline; justify-content:center; }
 .diet-premium-quantity div span:first-child { color:var(--diet-text); font-size:40px; line-height:1; font-weight:800; letter-spacing:0; }
 .diet-premium-quantity div span:last-child { color:var(--diet-text-soft); font-weight:800; margin-left:4px; }
-.diet-premium-sheet-save { width:100%; margin-top:24px; min-height:58px; border:0; border-radius:16px; background:var(--diet-accent); color:#fff; font-size:18px; font-weight:800; box-shadow:0 10px 20px rgba(234,88,12,.3); cursor:pointer; }
-.diet-premium-sheet-save:hover { background:#c2410c; }
+.diet-premium-sheet-save { width:100%; margin-top:24px; min-height:58px; border:0; border-radius:16px; background:var(--diet-accent); color:var(--diet-cta-text); font-size:18px; font-weight:800; box-shadow:var(--diet-shadow); cursor:pointer; transition:filter .15s ease; }
+.diet-premium-sheet-save:hover { filter:brightness(.96); }
 
 #dietDataScreen.kronia-data-screen {
   background: var(--diet-bg);

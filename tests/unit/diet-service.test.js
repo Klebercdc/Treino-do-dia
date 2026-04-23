@@ -250,14 +250,43 @@ test('nutritionService evita café da manhã com vegetais e pré-treino com tofu
 
   assert.equal(result.failSafe, false);
   const breakfast = result.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('cafe'));
-  const preWorkout = result.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('pre-treino'));
+  const afternoonSnack = result.plan.refeicoes.find((meal) => normalizeText(meal.nome).includes('cafe da tarde'));
 
   const breakfastFoods = breakfast.itens.map((item) => normalizeText(item.nome));
-  const preWorkoutFoods = preWorkout.itens.map((item) => normalizeText(item.nome));
+  const snackFoods = afternoonSnack.itens.map((item) => normalizeText(item.nome));
 
   assert.ok(!breakfastFoods.some((name) => /brocolis|salada|cenoura|legumes/.test(name)));
   assert.ok(!breakfastFoods.some((name) => /azeite/.test(name)));
-  assert.ok(!preWorkoutFoods.some((name) => /tofu/.test(name)));
+  assert.ok(!snackFoods.some((name) => /brocolis|salada|cenoura|legumes/.test(name)));
+  assert.ok(!snackFoods.some((name) => /frango|patinho|tilapia|sardinha/.test(name)));
+});
+
+test('nutritionService redistribui dinamicamente a dieta entre 3 e 6 refeições sem criar slots estranhos', () => {
+  [3, 4, 5, 6].forEach((mealCount) => {
+    const result = nutritionService.generateNutritionPlan({
+      sexo: 'M',
+      idade: 31,
+      peso: 82,
+      altura: 178,
+      objetivo: 'hipertrofia',
+      refeicoesPorDia: mealCount,
+      padraoAlimentar: 'onívoro',
+    });
+
+    assert.equal(result.failSafe, false);
+    assert.equal(result.plan.refeicoes.length, mealCount);
+
+    const names = result.plan.refeicoes.map((meal) => normalizeText(meal.nome));
+    assert.ok(names[0].includes('cafe da manha'));
+    assert.ok(names.some((name) => name.includes('almoco')));
+    assert.ok(names.some((name) => name.includes('jantar')));
+    assert.ok(!names.some((name) => /pre-treino|pos-treino/.test(name)));
+
+    result.plan.refeicoes.forEach((meal) => {
+      const proteinFoods = meal.itens.filter((item) => Number(item.proteinas || 0) >= 6);
+      assert.ok(proteinFoods.length >= 1, meal.nome + ' precisa manter proteína');
+    });
+  });
 });
 
 test('dietService returns safe failsafe response when critical profile data is missing', async () => {

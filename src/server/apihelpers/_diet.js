@@ -4,6 +4,7 @@
  */
 
 var nutritionService = require('../../lib/nutrition/nutritionService');
+var visualPrescription = require('../../lib/nutrition/visualPrescription');
 
 function round(v, decimals) {
   return nutritionService.round(v, decimals);
@@ -118,6 +119,11 @@ function buildDietPlan(profile) {
 
   var legacyMeals = toLegacyMeals(nutrition.plan.refeicoes);
   var p = nutrition.profile;
+  var visual = nutrition.visualPrescription || nutrition.plan && nutrition.plan.visualPrescription || visualPrescription.buildVisualPrescription({
+    plan: nutrition.plan,
+    calculation: nutrition.calculation,
+    clinicalNotes: nutrition.clinicalNotes
+  });
 
   return {
     failSafe: false,
@@ -133,6 +139,7 @@ function buildDietPlan(profile) {
       fatorAtividade: nutrition.calculation.activityFactor
     },
     refeicoes: legacyMeals,
+    visualPrescription: visual,
     planoEstruturado: nutrition.plan,
     catalogStats: nutrition.catalogStats || null,
     recipeSuggestions: nutrition.recipeSuggestions || [],
