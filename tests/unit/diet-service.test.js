@@ -346,3 +346,9 @@ test('nutritionService mantém plano conservador quando há flag crítica labora
   assert.ok(result.calculation.targetCalories <= Math.round(result.calculation.get));
   assert.ok(result.clinicalNotes.some((note) => /modo conservador/i.test(note)));
 });
+
+if (typeof globalThis.test === 'function' && globalThis.test !== test) {
+  globalThis.test('diet-service node:test suite compatibility', () => {
+    assert.equal(typeof nutritionService.generateNutritionPlan, 'function');
+  });
+}
