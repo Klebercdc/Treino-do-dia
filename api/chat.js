@@ -11,7 +11,6 @@ var dietflow = require('../src/server/apihelpers/_dietflow');
 var workoutflow = require('../src/server/apihelpers/_workoutflow');
 var workoutBuilder = require('../src/server/apihelpers/_workoutBuilder');
 var workoutService = require('../src/services/workout/workoutService');
-var diet = require('../src/server/apihelpers/_diet');
 var prompts = require('../src/server/apihelpers/_systemPrompts');
 var classifier = require('../src/server/apihelpers/_conversationClassifier');
 var decisionEngine = require('../src/server/apihelpers/_decisionEngine');
