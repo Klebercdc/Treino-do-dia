@@ -57,11 +57,60 @@ function chunkText(text, limit = MAX_MESSAGE_LENGTH) {
   return chunks;
 }
 
-function getConfig(env = process.env) {
+async function readBashrcExports(file) {
+  if (!file) return {};
+  try {
+    const content = await fs.readFile(file, "utf8");
+    const result = {};
+    for (const rawLine of content.split("\n")) {
+      const line = rawLine.trim();
+      if (!line.startsWith("export ")) continue;
+      const body = line.slice(7);
+      const separator = body.indexOf("=");
+      if (separator <= 0) continue;
+      const key = body.slice(0, separator).trim();
+      let value = body.slice(separator + 1).trim();
+      if (
+        (value.startsWith("\"") && value.endsWith("\"")) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      result[key] = value;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+export async function getConfig(env = process.env) {
+  const bashrcEnv = await readBashrcExports(path.join(env.HOME || process.env.HOME || "", ".bashrc"));
   return {
-    token: env.TELEGRAM_BOT_TOKEN || "",
-    chatId: env.TELEGRAM_CHAT_ID || "",
-    apiBase: env.TELEGRAM_API_BASE || DEFAULT_API_BASE,
+    token: firstNonEmpty(
+      env.TELEGRAM_BOT_TOKEN,
+      env.BOT_TOKEN,
+      bashrcEnv.TELEGRAM_BOT_TOKEN,
+      bashrcEnv.BOT_TOKEN
+    ),
+    chatId: firstNonEmpty(
+      env.TELEGRAM_CHAT_ID,
+      env.CHAT_ID,
+      bashrcEnv.TELEGRAM_CHAT_ID,
+      bashrcEnv.CHAT_ID
+    ),
+    apiBase: firstNonEmpty(
+      env.TELEGRAM_API_BASE,
+      bashrcEnv.TELEGRAM_API_BASE,
+      DEFAULT_API_BASE
+    ),
   };
 }
 
@@ -120,7 +169,7 @@ export async function sendTelegramReport({
   filename = "kronia-auditoria.txt",
   env = process.env,
 } = {}) {
-  const config = getConfig(env);
+  const config = await getConfig(env);
   const configured = redactedConfigStatus(config);
   const baseResult = {
     status: "NÃO CONFIGURADO",
