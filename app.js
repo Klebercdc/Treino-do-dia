@@ -7135,6 +7135,10 @@ function renderActiveDietPlan() {
   function pct(current, expected) {
     return Math.max(0, Math.min(100, Math.round(asKroniaNumber(current, 0) / Math.max(asKroniaNumber(expected, 1), 1) * 100)));
   }
+  // AI-generated plans store per-item macros as 0 (text-only items); fall back to targets
+  var displayProtein = plan.totals.protein > 0 ? plan.totals.protein : proteinTarget;
+  var displayCarbs   = plan.totals.carbs   > 0 ? plan.totals.carbs   : carbsTarget;
+  var displayFat     = plan.totals.fat     > 0 ? plan.totals.fat     : fatTarget;
   var pctKcal = pct(plan.totals.kcal, kcalTarget);
   if (summary) {
     summary.innerHTML = '<div class="tp-summary-card">'
@@ -7151,19 +7155,19 @@ function renderActiveDietPlan() {
       + '</div>'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--protein"><i data-lucide="dumbbell" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(plan.totals.protein, '')) + '</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayProtein, '')) + '</span>'
       + '<span class="tp-macro-sub">g</span>'
       + '<span class="tp-macro-label tp-macro-label--protein">Proteínas</span>'
       + '</div>'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--carbs"><i data-lucide="leaf" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(plan.totals.carbs, '')) + '</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayCarbs, '')) + '</span>'
       + '<span class="tp-macro-sub">g</span>'
       + '<span class="tp-macro-label tp-macro-label--carbs">Carbos</span>'
       + '</div>'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--fat"><i data-lucide="droplet" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(plan.totals.fat, '')) + '</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayFat, '')) + '</span>'
       + '<span class="tp-macro-sub">g</span>'
       + '<span class="tp-macro-label tp-macro-label--fat">Gorduras</span>'
       + '</div>'
