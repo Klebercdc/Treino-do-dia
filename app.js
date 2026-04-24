@@ -7071,7 +7071,7 @@ function renderDietMealCard(meal, mealIndex) {
   var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
   var statusBadge = _tpMealStatusBadge(meal.time);
   var kcalText = asKroniaNumber(subtotal.kcal, 0) > 0 ? formatKroniaNumber(subtotal.kcal, 'kcal') : '— kcal';
-  return '<div class="tp-meal-card">'
+  return '<div class="tp-meal-row">'
     + '<div class="tp-meal-header-card" onclick="toggleTpMealBody(' + mealIndex + ')">'
     + '<div class="tp-meal-header-left">'
     + '<div class="tp-meal-icon-wrap ' + iconColorClass + '"><i data-lucide="' + slotIcon + '" width="24" height="24" stroke-width="1.75"></i></div>'
@@ -7093,7 +7093,7 @@ function renderDietMealCard(meal, mealIndex) {
     + '<button type="button" class="tp-meal-ai-btn" onclick="openKronosFromDieta(\'Ajustar esta refeição mantendo os macros do plano salvo.\')"><i data-lucide="sparkles" stroke-width="1.5" width="16" height="16"></i></button>'
     + '</div>'
     + '</div>'
-    + '</div>';
+    + '</div>'; // tp-meal-row
 }
 
 function renderActiveDietPlan() {
@@ -7149,26 +7149,22 @@ function renderActiveDietPlan() {
       + '<div class="tp-macros-grid">'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--kcal"><i data-lucide="flame" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(plan.totals.kcal, '')) + '</span>'
-      + '<span class="tp-macro-sub">/ ' + escapeHTML(formatKroniaNumber(kcalTarget, '')) + '</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(plan.totals.kcal, '')) + ' / ' + escapeHTML(formatKroniaNumber(kcalTarget, '')) + '</span>'
       + '<span class="tp-macro-label tp-macro-label--kcal">kcal</span>'
       + '</div>'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--protein"><i data-lucide="dumbbell" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayProtein, '')) + '</span>'
-      + '<span class="tp-macro-sub">g</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayProtein, '')) + ' g</span>'
       + '<span class="tp-macro-label tp-macro-label--protein">Proteínas</span>'
       + '</div>'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--carbs"><i data-lucide="leaf" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayCarbs, '')) + '</span>'
-      + '<span class="tp-macro-sub">g</span>'
-      + '<span class="tp-macro-label tp-macro-label--carbs">Carbos</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayCarbs, '')) + ' g</span>'
+      + '<span class="tp-macro-label tp-macro-label--carbs">Carboidratos</span>'
       + '</div>'
       + '<div class="tp-macro-col">'
       + '<div class="tp-macro-icon tp-macro-icon--fat"><i data-lucide="droplet" width="20" height="20" stroke-width="1.75"></i></div>'
-      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayFat, '')) + '</span>'
-      + '<span class="tp-macro-sub">g</span>'
+      + '<span class="tp-macro-val">' + escapeHTML(formatKroniaNumber(displayFat, '')) + ' g</span>'
       + '<span class="tp-macro-label tp-macro-label--fat">Gorduras</span>'
       + '</div>'
       + '</div>'
@@ -7191,7 +7187,7 @@ function renderActiveDietPlan() {
       + '</div>';
     meals.innerHTML = '<div class="tp-meals-section">'
       + '<div class="tp-section-header"><h2 class="tp-section-kicker">PLANO ALIMENTAR</h2><button type="button" class="tp-section-link" onclick="expandAllTpMeals()">Ver todas</button></div>'
-      + '<div class="tp-meals-list">' + (mealCards || emptyState) + '</div>'
+      + '<div class="tp-meals-group">' + (mealCards || emptyState) + '</div>'
       + '</div>'
       + actionsGrid;
   }

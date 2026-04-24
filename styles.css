@@ -5326,17 +5326,7 @@ body.dark-mode .settings-row-value {
   flex-shrink: 0;
 }
 #dietDataScreen .tp-header-icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 0;
-  background: var(--diet-chip-bg);
-  color: var(--diet-text-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background .15s;
+  display: none;
 }
 #dietDataScreen .tp-header-icon-btn:hover { background: var(--diet-surface-3); }
 #dietDataScreen .tp-bell-btn {
@@ -5521,6 +5511,13 @@ body.dark-mode .settings-row-value {
   font-weight: 700;
 }
 #dietDataScreen .tp-meals-list { display: flex; flex-direction: column; gap: 8px; }
+#dietDataScreen .tp-meals-group {
+  background: var(--diet-surface);
+  border-radius: 22px;
+  border: 1px solid var(--diet-border);
+  overflow: hidden;
+}
+#dietDataScreen .tp-meal-row + .tp-meal-row { border-top: 1px solid var(--diet-border); }
 #dietDataScreen .tp-meals-empty {
   background: var(--diet-surface);
   border-radius: 20px;
@@ -5541,6 +5538,7 @@ body.dark-mode .settings-row-value {
   border: 1px solid var(--diet-border);
   overflow: hidden;
 }
+#dietDataScreen .tp-meal-row { overflow: hidden; }
 #dietDataScreen .tp-meal-header-card {
   display: flex;
   align-items: center;
@@ -5549,10 +5547,9 @@ body.dark-mode .settings-row-value {
   padding: 14px 16px;
   cursor: pointer;
   transition: background .12s;
-  border-radius: 22px;
 }
 #dietDataScreen .tp-meal-header-card:hover { background: var(--diet-surface-2); }
-#dietDataScreen .tp-meal-header-card--open { border-radius: 22px 22px 0 0; }
+#dietDataScreen .tp-meal-header-card--open { }
 #dietDataScreen .tp-meal-header-left {
   display: flex;
   align-items: center;
@@ -5568,8 +5565,8 @@ body.dark-mode .settings-row-value {
   justify-content: center;
   flex-shrink: 0;
 }
-#dietDataScreen .tp-meal-icon--orange { background: rgba(230,81,0,.18); color: #E65100; }
-#dietDataScreen .tp-meal-icon--purple { background: rgba(139,92,246,.18); color: #a78bfa; }
+#dietDataScreen .tp-meal-icon--orange { background: #E65100; color: #fff; }
+#dietDataScreen .tp-meal-icon--purple { background: #7c3aed; color: #fff; }
 #dietDataScreen .tp-meal-info { min-width: 0; }
 #dietDataScreen .tp-meal-time {
   display: block;
@@ -5630,9 +5627,10 @@ body.dark-mode .settings-row-value {
   border: 1px solid rgba(230,81,0,.3);
 }
 #dietDataScreen .tp-badge--pending {
-  background: var(--diet-chip-bg);
+  background: none;
   color: var(--diet-text-muted);
-  border: 1px solid var(--diet-border);
+  border: none;
+  padding: 0;
 }
 
 /* Meal body (collapsible) */
