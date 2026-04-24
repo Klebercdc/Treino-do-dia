@@ -5427,21 +5427,21 @@ body.dark-mode .settings-row-value {
 #dietDataScreen .tp-macro-icon--carbs  { background: rgba(74,222,128,.12); color: #4ade80; }
 #dietDataScreen .tp-macro-icon--fat    { background: rgba(251,191,36,.12); color: #fbbf24; }
 #dietDataScreen .tp-macro-val {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--diet-text);
   line-height: 1.1;
   display: block;
 }
 #dietDataScreen .tp-macro-sub {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  color: var(--diet-text-muted);
+  color: var(--diet-text-soft);
   line-height: 1;
   display: block;
 }
 #dietDataScreen .tp-macro-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   display: block;
@@ -5468,8 +5468,9 @@ body.dark-mode .settings-row-value {
 }
 #dietDataScreen .tp-progress-text {
   text-align: center;
-  font-size: 11px;
-  color: var(--diet-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--diet-text-soft);
   margin: 0 0 16px;
 }
 
@@ -5572,15 +5573,15 @@ body.dark-mode .settings-row-value {
 #dietDataScreen .tp-meal-info { min-width: 0; }
 #dietDataScreen .tp-meal-time {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: #E65100;
   line-height: 1;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 #dietDataScreen .tp-meal-name {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--diet-text);
   line-height: 1.2;
@@ -5589,10 +5590,10 @@ body.dark-mode .settings-row-value {
   text-overflow: ellipsis;
 }
 #dietDataScreen .tp-meal-meta {
-  margin: 3px 0 0;
-  font-size: 12px;
+  margin: 4px 0 0;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--diet-text-muted);
+  color: var(--diet-text-soft);
 }
 #dietDataScreen .tp-meal-header-right {
   display: flex;
