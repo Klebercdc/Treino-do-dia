@@ -34,6 +34,7 @@ function loadDietMacroContext() {
     extract(code, /function buildDefaultDietVisualPrescription\(\) \{[\s\S]*?\n\}/, 'buildDefaultDietVisualPrescription'),
     extract(code, /function cloneDietVisualPrescription\(value\) \{[\s\S]*?\n\}/, 'cloneDietVisualPrescription'),
     extract(code, /function getDietItemName\(item\) \{[\s\S]*?\n\}/, 'getDietItemName'),
+    extract(code, /function extractDietQuantityGrams\(\) \{[\s\S]*?\n\}/, 'extractDietQuantityGrams'),
     extract(code, /function getDietRuntimeCatalogFoods\(\) \{[\s\S]*?\n\}/, 'getDietRuntimeCatalogFoods'),
     extract(code, /function buildDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'buildDietCatalogIndexes'),
     extract(code, /function getDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'getDietCatalogIndexes'),
@@ -195,6 +196,41 @@ test('calculateFoodMacros recalcula arroz de 150g para 200g com carboidrato e kc
   assert.equal(result.carbs, 56);
   assert.equal(result.protein, 5);
   assert.equal(result.fat, 0.6);
+});
+
+test('normalizeDietEditorItem preserva gramas explícitas em porcao textual antes do default do catálogo', () => {
+  const context = loadDietMacroContext();
+  const item = context.normalizeDietEditorItem({
+    nome: 'Frango grelhado',
+    food_slug: 'frango_grelhado',
+    porcao: '100 g',
+  }, 1);
+
+  assert.equal(item.grams, 100);
+  assert.equal(item.quantity, '100 g');
+  assert.equal(item.kcal, 165);
+  assert.equal(item.protein, 31);
+});
+
+test('normalizeDietEditorItem preserva per100 persistido mesmo quando existe catálogo resolvido', () => {
+  const context = loadDietMacroContext();
+  const item = context.normalizeDietEditorItem({
+    nome: 'Frango grelhado',
+    food_slug: 'frango_grelhado',
+    porcao: '150 g',
+    per100: {
+      kcal: 165,
+      protein: 31,
+      carbs: 0,
+      fat: 3.6,
+      fiber: 0,
+      sodium: 35,
+    },
+  }, 1);
+
+  assert.equal(item.grams, 150);
+  assert.equal(item.kcal, 247.5);
+  assert.equal(item.protein, 46.5);
 });
 
 test('editar gramas atualiza subtotal da refeição e total diário imediatamente', () => {

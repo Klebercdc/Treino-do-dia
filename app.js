@@ -6840,15 +6840,28 @@ function getDietItemName(item) {
   return String(item && (item.nome || item.food_name || item.display_name || item.name) || 'Alimento');
 }
 
+function extractDietQuantityGrams() {
+  for (var i = 0; i < arguments.length; i++) {
+    var value = arguments[i];
+    var text = typeof value === 'string' ? value.trim() : '';
+    if (!text) continue;
+    var match = text.match(/(\d+(?:[.,]\d+)?)\s*g\b/i);
+    if (match) return parseFloat(match[1].replace(',', '.'));
+  }
+  return 0;
+}
+
 function normalizeDietEditorItem(item, order) {
-  var qtdeStr = item && typeof item.qtde === 'string' ? item.qtde.trim() : '';
-  var qtdeGrams = (function() {
-    var m = qtdeStr.match(/^(\d+(?:[.,]\d+)?)\s*g\b/i);
-    return m ? parseFloat(m[1].replace(',', '.')) : 0;
-  }());
   var safeItem = item && typeof item === 'object' ? item : {};
+  var quantityGrams = extractDietQuantityGrams(
+    safeItem.qtde,
+    safeItem.porcao,
+    safeItem.quantity,
+    safeItem.household_measure,
+    safeItem.default_unit
+  );
   var resolvedFood = resolveDietCatalogFood(safeItem);
-  var grams = dietRound((safeItem.gramas || safeItem.grams || safeItem.porcao_gramas || safeItem.default_portion_g) || qtdeGrams || (resolvedFood && resolvedFood.default_portion_g) || 0, 1);
+  var grams = dietRound((safeItem.gramas || safeItem.grams || safeItem.porcao_gramas) || quantityGrams || safeItem.default_portion_g || (resolvedFood && resolvedFood.default_portion_g) || 0, 1);
   var rawMacros = {
     kcal: dietRound(safeItem && (safeItem.calorias || safeItem.kcal || safeItem.calories), 1),
     protein: dietRound(safeItem && (safeItem.proteinas || safeItem.protein_g || safeItem.protein || safeItem.prot || safeItem.estimated_protein_g), 1),
@@ -6858,9 +6871,11 @@ function normalizeDietEditorItem(item, order) {
     sodium: dietRound(safeItem && (safeItem.sodium_mg || safeItem.sodio_mg || safeItem.sodium), 1)
   };
   var fallbackPer100 = buildDietFallbackPer100(safeItem, grams);
-  var macroSource = resolvedFood
-    ? calculateFoodMacros(resolvedFood, grams || resolvedFood.default_portion_g || 0)
-    : calculateDietFallbackMacros(fallbackPer100, grams, rawMacros);
+  var macroSource = fallbackPer100
+    ? calculateDietFallbackMacros(fallbackPer100, grams, rawMacros)
+    : (resolvedFood
+      ? calculateFoodMacros(resolvedFood, grams || resolvedFood.default_portion_g || 0)
+      : calculateDietFallbackMacros(fallbackPer100, grams, rawMacros));
   var quantity = String(safeItem && (safeItem.porcao || safeItem.qtde || safeItem.quantity || safeItem.household_measure || safeItem.default_unit)
     || (resolvedFood && resolvedFood.default_unit)
     || (grams ? (grams + ' g') : '1 porção'));
