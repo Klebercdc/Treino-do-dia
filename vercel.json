@@ -159,6 +159,7 @@
       "maxDuration": 60
     }
   },
+  "buildCommand": "npm run build",
   "outputDirectory": "public",
   "crons": [
     {
