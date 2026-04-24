@@ -100,6 +100,14 @@ function round(value, decimals) {
   return Math.round(Number(value || 0) * factor) / factor;
 }
 
+function getMealItems(meal) {
+  if (!meal || typeof meal !== 'object') return [];
+  if (Array.isArray(meal.itens) && meal.itens.length) return meal.itens;
+  if (Array.isArray(meal.alimentos) && meal.alimentos.length) return meal.alimentos;
+  if (Array.isArray(meal.items) && meal.items.length) return meal.items;
+  return [];
+}
+
 function sumMacros(items) {
   return (items || []).reduce(function(acc, item) {
     acc.kcal += Number(item && (item.calorias || item.kcal) || 0);
@@ -112,8 +120,8 @@ function sumMacros(items) {
 
 function itemToVisualLine(item) {
   var safe = item && typeof item === 'object' ? item : {};
-  var name = String(safe.nome || safe.name || 'Alimento').trim();
-  var portion = String(safe.porcao || safe.quantity || safe.qtde || '').trim();
+  var name = String(safe.nome || safe.food_name || safe.display_name || safe.name || 'Alimento').trim();
+  var portion = String(safe.porcao || safe.qtde || safe.quantity || safe.household_measure || safe.default_unit || '').trim();
   return portion ? (name + ' - ' + portion) : name;
 }
 
@@ -126,7 +134,7 @@ function collectGeneratedSubstitutions(meals) {
   };
 
   (meals || []).forEach(function(meal) {
-    (meal && meal.itens || []).forEach(function(item) {
+    getMealItems(meal).forEach(function(item) {
       var itemName = String(item && item.nome || '').toLowerCase();
       var groupKey = String(item && item.groupKey || '').toLowerCase();
       var targetGroup = 'proteinas';
@@ -176,12 +184,13 @@ function buildVisualPrescription(input) {
 
   var resumo = plan.resumoDiario && typeof plan.resumoDiario === 'object' ? plan.resumoDiario : {};
   var visualMeals = meals.map(function(meal) {
-    var subtotal = meal && meal.subtotal && typeof meal.subtotal === 'object' ? meal.subtotal : sumMacros(meal && meal.itens);
+    var mealItems = getMealItems(meal);
+    var subtotal = meal && meal.subtotal && typeof meal.subtotal === 'object' ? meal.subtotal : sumMacros(mealItems);
     return {
       name: String(meal && meal.nome || 'Refeição').trim(),
       time: String(meal && meal.horario || '').trim(),
       kcal_estimada: round(subtotal.calorias || subtotal.kcal || 0),
-      items: (meal && meal.itens || []).map(itemToVisualLine).filter(Boolean)
+      items: getMealItems(meal).map(itemToVisualLine).filter(Boolean)
     };
   });
 
