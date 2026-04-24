@@ -6965,9 +6965,12 @@ function normalizeDietGeneratedPlan(plan, meta) {
   var visualMeals = visualPrescription && Array.isArray(visualPrescription.meals)
     ? visualPrescription.meals.map(mapVisualMealToLegacyMeal)
     : [];
-  var meals = visualMeals.length
+  var visualHasItems = visualMeals.some(function(m) {
+    return (Array.isArray(m.itens) && m.itens.length > 0) || (Array.isArray(m.alimentos) && m.alimentos.length > 0);
+  });
+  var meals = (visualMeals.length && visualHasItems)
     ? visualMeals
-    : (Array.isArray(safePlan.refeicoes) ? safePlan.refeicoes : []);
+    : (Array.isArray(safePlan.refeicoes) && safePlan.refeicoes.length ? safePlan.refeicoes : (visualMeals.length ? visualMeals : []));
   var summary = visualPrescription && visualPrescription.summary && typeof visualPrescription.summary === 'object'
     ? visualPrescription.summary
     : null;
@@ -7071,6 +7074,16 @@ async function loadActiveDietPlanFromSupabase() {
         source: 'supabase_meal_plans',
         contextSnapshot: planResp.data.context_snapshot || planResp.data.plan_data.contextSnapshot || null
       }));
+    }
+    // Formato antigo: plan_data tem refeicoes (não meals)
+    if (planResp.data.plan_data && typeof planResp.data.plan_data === 'object' && Array.isArray(planResp.data.plan_data.refeicoes) && planResp.data.plan_data.refeicoes.length) {
+      var legacyConverted = normalizeDietGeneratedPlan(Object.assign({}, planResp.data.plan_data, {
+        id: planResp.data.id,
+        source: 'supabase_meal_plans'
+      }), { source: 'supabase_meal_plans' });
+      if (legacyConverted && Array.isArray(legacyConverted.meals) && legacyConverted.meals.some(function(m) { return Array.isArray(m.items) && m.items.length > 0; })) {
+        return legacyConverted;
+      }
     }
     var itemsResp = await _sb.from('meal_plan_items')
       .select('id,meal_name,time_hint,food_name,quantity,unit,calories,protein_g,carbs_g,fat_g,notes,sort_order')
