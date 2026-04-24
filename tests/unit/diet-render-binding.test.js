@@ -13,6 +13,8 @@ function loadDietRenderContext() {
   const code = fs.readFileSync('app.js', 'utf8');
   const snippet = [
     extract(code, /function getDietRenderableMeals\(plan\) \{[\s\S]*?\n\}/, 'getDietRenderableMeals'),
+    extract(code, /function buildDietItemSubtitle\(item\) \{[\s\S]*?\n\}/, 'buildDietItemSubtitle'),
+    extract(code, /function renderDietMealCard\(meal, mealIndex\) \{[\s\S]*?\n\}/, 'renderDietMealCard'),
     extract(code, /function renderActiveDietPlan\(\) \{[\s\S]*?\n\}/, 'renderActiveDietPlan'),
   ].join('\n\n');
 
@@ -20,6 +22,15 @@ function loadDietRenderContext() {
     dietDataSummary: { innerHTML: '' },
     dietDataProgress: { innerHTML: '' },
     dietDataMeals: { innerHTML: '' },
+    headerTitle: { textContent: '' },
+    headerSubtitle: { textContent: '' },
+    floatingRecalc: {
+      style: {},
+      attributes: {},
+      setAttribute(name, value) {
+        this.attributes[name] = value;
+      },
+    },
   };
 
   const context = {
@@ -29,6 +40,12 @@ function loadDietRenderContext() {
     document: {
       getElementById(id) {
         return elements[id] || null;
+      },
+      querySelector(selector) {
+        if (selector === '#dietDataScreen .diet-premium-header h1') return elements.headerTitle;
+        if (selector === '#dietDataScreen .diet-premium-header p') return elements.headerSubtitle;
+        if (selector === '#dietDataScreen .diet-premium-floating') return elements.floatingRecalc;
+        return null;
       },
     },
     recalculateDietPlan: (plan) => {
@@ -69,11 +86,18 @@ function loadDietRenderContext() {
       fat: 0,
     }),
     formatKroniaNumber: (value, suffix) => `${value}${suffix ? ` ${suffix}` : ''}`.trim(),
-    getDietVisualReasons: () => [],
-    getDietVisualGuidance: () => [],
-    getDietPlanSequenceText: () => '',
+    getDietVisualReasons: () => ['Proteínas distribuídas ao longo do dia'],
+    getDietVisualGuidance: () => ['Concentre carboidratos perto do treino'],
+    getDietPlanSequenceText: () => 'Proteína -> arroz e feijão -> legumes -> salada',
+    getDietDisplayGrams: (item) => Number(item?.grams || 100),
     escapeHTML: (value) => String(value || ''),
-    renderDietMealCard: (meal) => `<article data-meal="${meal.name}">${(meal.items || []).map((item) => `<span>${item.name}</span>`).join('')}</article>`,
+    escapeAttr: (value) => String(value || ''),
+    safeJSON: () => ({}),
+    localStorage: {
+      getItem() {
+        return null;
+      },
+    },
     lucide: { createIcons() {} },
   };
 
@@ -118,4 +142,54 @@ test('renderActiveDietPlan renders visualPrescription meals instead of legacy pl
   assert.match(context.__elements.dietDataMeals.innerHTML, /Ovos/);
   assert.doesNotMatch(context.__elements.dietDataMeals.innerHTML, /LEGACY/);
   assert.doesNotMatch(context.__elements.dietDataMeals.innerHTML, /ITEM LEGACY/);
+});
+
+test('renderDietMealCard preserves access to every meal item via preview chips', () => {
+  const context = loadDietRenderContext();
+  const html = context.renderDietMealCard({
+    name: 'Almoço',
+    time: '12:30',
+    subtotal: { kcal: 640 },
+    items: [
+      { name: 'Frango', quantity: '180 g', grams: 180, kcal: 300, protein: 54, carbs: 0, fat: 7 },
+      { name: 'Arroz', quantity: '160 g', grams: 160, kcal: 208, protein: 4, carbs: 45, fat: 1 },
+      { name: 'Feijão', quantity: '100 g', grams: 100, kcal: 76, protein: 5, carbs: 14, fat: 0.5 },
+    ],
+  }, 1);
+
+  assert.match(html, /Frango/);
+  assert.match(html, /Arroz/);
+  assert.match(html, /Feijão/);
+  assert.equal((html.match(/diet-premium-preview-chip/g) || []).length, 3);
+});
+
+test('renderActiveDietPlan preserves nutritional summary and KRONOS guidance blocks', () => {
+  const context = loadDietRenderContext();
+  context.window._kroniaDietPlan = {
+    totals: { kcal: 2100, protein: 150, carbs: 200, fat: 60 },
+    targets: { kcal: 2300, protein: 170, carbs: 240, fat: 70 },
+    visualPrescription: {
+      dashboard: { subtitle: 'visual runtime' },
+      meals: [
+        {
+          id: 'visual_1',
+          name: 'Café visual',
+          time: '07:00',
+          kcal_estimada: 500,
+          items: ['Ovos - 3 unidades', 'Pão integral - 2 fatias'],
+        },
+      ],
+      guidance: ['Concentre carboidratos perto do treino'],
+      reasons: ['Proteínas distribuídas ao longo do dia'],
+      observation: '',
+    },
+    meals: [],
+  };
+
+  context.renderActiveDietPlan();
+
+  assert.match(context.__elements.dietDataProgress.innerHTML, /Resumo nutricional/);
+  assert.match(context.__elements.dietDataProgress.innerHTML, /Meta calórica/);
+  assert.match(context.__elements.dietDataProgress.innerHTML, /Direção do KRONOS/);
+  assert.match(context.__elements.dietDataProgress.innerHTML, /Proteína -&gt; arroz e feijão -&gt; legumes -&gt; salada|Proteína -> arroz e feijão -> legumes -> salada/);
 });
