@@ -5367,11 +5367,11 @@ body.dark-mode .settings-row-value {
 
 /* Summary card */
 #dietDataScreen .tp-summary-card {
-  background: #1C1C1E;
+  background: var(--diet-surface);
   border-radius: 28px;
   padding: 22px 20px 20px;
   margin-bottom: 20px;
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid var(--diet-border);
 }
 #dietDataScreen .tp-summary-toprow {
   display: flex;
@@ -5455,7 +5455,7 @@ body.dark-mode .settings-row-value {
 #dietDataScreen .tp-progress-bar {
   width: 100%;
   height: 6px;
-  background: #2C2C2E;
+  background: var(--diet-surface-3);
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 6px;
@@ -5521,11 +5521,11 @@ body.dark-mode .settings-row-value {
 }
 #dietDataScreen .tp-meals-list { display: flex; flex-direction: column; gap: 8px; }
 #dietDataScreen .tp-meals-empty {
-  background: #1C1C1E;
+  background: var(--diet-surface);
   border-radius: 20px;
   padding: 32px 20px;
   text-align: center;
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid var(--diet-border);
 }
 #dietDataScreen .tp-meals-empty p {
   margin: 0;
@@ -5535,9 +5535,9 @@ body.dark-mode .settings-row-value {
 
 /* Meal card */
 #dietDataScreen .tp-meal-card {
-  background: #1C1C1E;
+  background: var(--diet-surface);
   border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid var(--diet-border);
   overflow: hidden;
 }
 #dietDataScreen .tp-meal-header-card {
@@ -5550,7 +5550,7 @@ body.dark-mode .settings-row-value {
   transition: background .12s;
   border-radius: 22px;
 }
-#dietDataScreen .tp-meal-header-card:hover { background: rgba(255,255,255,.03); }
+#dietDataScreen .tp-meal-header-card:hover { background: var(--diet-surface-2); }
 #dietDataScreen .tp-meal-header-card--open { border-radius: 22px 22px 0 0; }
 #dietDataScreen .tp-meal-header-left {
   display: flex;
@@ -5629,15 +5629,15 @@ body.dark-mode .settings-row-value {
   border: 1px solid rgba(230,81,0,.3);
 }
 #dietDataScreen .tp-badge--pending {
-  background: #27272a;
-  color: #71717a;
-  border: 1px solid #3f3f46;
+  background: var(--diet-chip-bg);
+  color: var(--diet-text-muted);
+  border: 1px solid var(--diet-border);
 }
 
 /* Meal body (collapsible) */
 #dietDataScreen .tp-meal-body {
   display: none;
-  border-top: 1px solid rgba(255,255,255,.06);
+  border-top: 1px solid var(--diet-border);
   padding: 0 4px 4px;
 }
 #dietDataScreen .tp-meal-body--open { display: block; }
@@ -5669,10 +5669,10 @@ body.dark-mode .settings-row-value {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  background: #1C1C1E;
+  background: var(--diet-surface);
   border-radius: 22px;
   padding: 16px 12px;
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid var(--diet-border);
   margin-bottom: 20px;
 }
 #dietDataScreen .tp-action-btn {
@@ -5709,10 +5709,10 @@ body.dark-mode .settings-row-value {
 
 /* "Por que sua dieta está assim?" card */
 #dietDataScreen .tp-why-card {
-  background: #1C1C1E;
+  background: var(--diet-surface);
   border-radius: 22px;
   padding: 20px;
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid var(--diet-border);
   margin-bottom: 20px;
 }
 #dietDataScreen .tp-why-header {
