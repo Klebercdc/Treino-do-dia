@@ -5480,14 +5480,14 @@ body.dark-mode .settings-row-value {
   background: #E65100;
   color: #fff;
   border: 0;
-  border-radius: 16px;
-  padding: 16px 20px;
-  font-size: 15px;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   transition: background .15s, transform .1s;
   letter-spacing: .01em;
