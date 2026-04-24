@@ -7035,6 +7035,19 @@ function toggleTpMealBody(idx) {
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
 }
 
+function expandAllTpMeals() {
+  var idx = 0;
+  while (true) {
+    var el = document.getElementById('tpMealBody_' + idx);
+    if (!el) break;
+    el.classList.add('tp-meal-body--open');
+    var card = el.previousElementSibling;
+    if (card) card.classList.add('tp-meal-header-card--open');
+    idx++;
+  }
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
+}
+
 function renderDietMealCard(meal, mealIndex) {
   var subtotal = meal.subtotal || {};
   var items = (meal.items || []).map(function(item, itemIndex) {
@@ -7173,7 +7186,7 @@ function renderActiveDietPlan() {
       + '<button type="button" class="tp-action-btn" onclick="openDietShoppingList()"><div class="tp-action-icon tp-action-icon--amber"><i data-lucide="shopping-cart" width="20" height="20" stroke-width="1.75"></i></div><span>Gerar lista compras</span></button>'
       + '</div>';
     meals.innerHTML = '<div class="tp-meals-section">'
-      + '<div class="tp-section-header"><h2 class="tp-section-kicker">PLANO ALIMENTAR</h2><button type="button" class="tp-section-link" onclick="openKronosFromDieta()">Ver todas</button></div>'
+      + '<div class="tp-section-header"><h2 class="tp-section-kicker">PLANO ALIMENTAR</h2><button type="button" class="tp-section-link" onclick="expandAllTpMeals()">Ver todas</button></div>'
       + '<div class="tp-meals-list">' + (mealCards || emptyState) + '</div>'
       + '</div>'
       + actionsGrid;
@@ -7409,16 +7422,17 @@ async function scanDietBarcode() {
 }
 
 function exportActiveDietPlanPDF() {
-  var plan = recalculateDietPlan(window._kroniaDietPlan || buildFallbackActiveDietPlan());
-  setActiveDietPlan(plan, { render: false });
+  var plan = recalculateDietPlan(window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
   var cfg = safeJSON('kronia_config', {});
-  var nome = cfg.nome || 'Atleta';
+  var nome = cfg.nome || localStorage.getItem('kronia_nome') || 'Atleta';
   var data = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-  var mealsHtml = (plan.meals || []).map(function(meal) {
+  // Use getDietRenderableMeals so the PDF always reflects what's shown on screen
+  var renderableMeals = getDietRenderableMeals(plan);
+  var mealsHtml = renderableMeals.map(function(meal) {
     var rows = (meal.items || []).map(function(item) {
-      return '<tr><td>' + escapeHTML(item.name) + '</td><td>' + escapeHTML(item.quantity || '-') + '</td><td>' + escapeHTML(formatKroniaNumber(item.kcal, 'kcal')) + '</td><td>' + escapeHTML(formatKroniaNumber(item.protein, 'g')) + '</td><td>' + escapeHTML(formatKroniaNumber(item.carbs, 'g')) + '</td><td>' + escapeHTML(formatKroniaNumber(item.fat, 'g')) + '</td></tr>';
+      return '<tr><td>' + escapeHTML(item.name || getDietItemName(item)) + '</td><td>' + escapeHTML(item.quantity || (item.grams ? Math.round(item.grams) + 'g' : '-')) + '</td><td>' + escapeHTML(asKroniaNumber(item.kcal, 0) > 0 ? formatKroniaNumber(item.kcal, 'kcal') : '-') + '</td><td>' + escapeHTML(asKroniaNumber(item.protein, 0) > 0 ? formatKroniaNumber(item.protein, 'g') : '-') + '</td><td>' + escapeHTML(asKroniaNumber(item.carbs, 0) > 0 ? formatKroniaNumber(item.carbs, 'g') : '-') + '</td><td>' + escapeHTML(asKroniaNumber(item.fat, 0) > 0 ? formatKroniaNumber(item.fat, 'g') : '-') + '</td></tr>';
     }).join('');
-    return '<section><h2>' + escapeHTML(meal.name) + ' <small>' + escapeHTML(meal.time || '') + '</small></h2><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th></tr></thead><tbody>' + rows + '</tbody></table></section>';
+    return '<section><h2>' + escapeHTML(meal.name || 'Refeição') + ' <small>' + escapeHTML(meal.time || '') + '</small></h2><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6" style="color:#888;font-style:italic">Nenhum item cadastrado</td></tr>') + '</tbody></table></section>';
   }).join('');
   var html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Prescrição alimentar KRONIA</title><style>body{font-family:Arial,sans-serif;color:#111;padding:32px;max-width:920px;margin:auto}.header{background:#111;color:#fff;padding:22px;border-radius:10px;border-bottom:5px solid #f97316}.kicker{font-size:11px;letter-spacing:.14em;color:#f97316;text-transform:uppercase}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.metric{border:1px solid #ddd;border-radius:8px;padding:12px}.metric span{display:block;font-size:11px;color:#666;text-transform:uppercase}.metric strong{font-size:20px}section{margin:22px 0;border:1px solid #ddd;border-radius:8px;overflow:hidden}h2{margin:0;padding:12px 14px;background:#111;color:#fff;font-size:16px}h2 small{color:#f97316;font-size:12px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:12px}th{background:#f3f4f6;text-transform:uppercase;font-size:10px}.footer{margin-top:26px;color:#666;font-size:11px}@media print{.header,h2{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="header"><div class="kicker">KRONIA · Prescrição alimentar</div><h1>' + escapeHTML(plan.title || 'Plano alimentar') + '</h1><p>' + escapeHTML(nome) + ' · ' + escapeHTML(data) + '</p></div><div class="meta"><div class="metric"><span>Calorias</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.kcal, 'kcal')) + '</strong></div><div class="metric"><span>Proteína</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.protein, 'g')) + '</strong></div><div class="metric"><span>Carboidrato</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.carbs, 'g')) + '</strong></div><div class="metric"><span>Gordura</span><strong>' + escapeHTML(formatKroniaNumber(plan.totals.fat, 'g')) + '</strong></div></div>' + mealsHtml + '<div class="footer">Documento gerado a partir da versão ativa salva da dieta. Não substitui acompanhamento de nutricionista.</div><script>window.onload=function(){window.print()}<\/script></body></html>';
   var win = window.open('', '_blank');
