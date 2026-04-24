@@ -6527,6 +6527,243 @@ function buildDietVisualPrescriptionFromLegacyPlan(plan) {
   };
 }
 
+var _dietCatalogIndexCache = null;
+var _dietPlanPersistTimer = null;
+
+function getDietRuntimeCatalogFoods() {
+  var premium = typeof window !== 'undefined' && window && window.KRONIA_PREMIUM_FOOD_CATALOG && Array.isArray(window.KRONIA_PREMIUM_FOOD_CATALOG.foods)
+    ? window.KRONIA_PREMIUM_FOOD_CATALOG.foods
+    : null;
+  if (premium && premium.length) return premium;
+  return Array.isArray(NUTRITION_FOOD_CATALOG) ? NUTRITION_FOOD_CATALOG.map(function(item) {
+    var portionText = String(item && item.porcao || '');
+    var portionMatch = portionText.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i);
+    var portionGrams = asKroniaNumber(item && (item.porcao_gramas || item.gramas), 0) || (portionMatch ? asKroniaNumber(portionMatch[1], 0) : 0);
+    var base = portionGrams > 0 ? (100 / portionGrams) : 0;
+    return {
+      id: item.id,
+      slug: item.food_slug || item.slug || normalizeDietFoodText(item.nome || item.name || 'alimento'),
+      display_name_pt: item.nome || item.name || 'Alimento',
+      canonical_name_pt: item.nome || item.name || 'Alimento',
+      group_key: item.grupo || item.group_key || null,
+      subgroup_key: item.subgrupo || item.subgroup_key || null,
+      default_portion_g: portionGrams || 100,
+      default_unit: item.porcao || item.default_unit || ((portionGrams || 100) + ' g'),
+      kcal_100g: base ? dietRound(asKroniaNumber(item.kcal || item.calorias, 0) * base, 3) : 0,
+      protein_100g: base ? dietRound(asKroniaNumber(item.proteina || item.proteinas || item.protein, 0) * base, 3) : 0,
+      carbs_100g: base ? dietRound(asKroniaNumber(item.carboidrato || item.carboidratos || item.carbs, 0) * base, 3) : 0,
+      fat_100g: base ? dietRound(asKroniaNumber(item.gordura || item.gorduras || item.fat, 0) * base, 3) : 0,
+      fiber_100g: base ? dietRound(asKroniaNumber(item.fibra || item.fibras || item.fiber, 0) * base, 3) : 0,
+      sodium_mg_100g: base ? dietRound(asKroniaNumber(item.sodium_mg || item.sodio_mg || item.sodium, 0) * base, 3) : 0,
+      source: 'NUTRITION_FOOD_CATALOG_fallback',
+      source_code: item.id || null
+    };
+  }) : [];
+}
+
+function buildDietCatalogIndexes() {
+  var foods = getDietRuntimeCatalogFoods();
+  var premiumAliases = typeof window !== 'undefined' && window && window.KRONIA_PREMIUM_FOOD_CATALOG && Array.isArray(window.KRONIA_PREMIUM_FOOD_CATALOG.aliases)
+    ? window.KRONIA_PREMIUM_FOOD_CATALOG.aliases
+    : [];
+  var byKey = {};
+  var byNormalizedName = {};
+  foods.forEach(function(food) {
+    if (!food || typeof food !== 'object') return;
+    var slug = String(food.slug || food.food_slug || food.id || '').trim();
+    var id = String(food.id || '').trim();
+    var normalizedNames = [
+      food.display_name_pt,
+      food.canonical_name_pt,
+      slug.replace(/_/g, ' ')
+    ].filter(Boolean).map(normalizeDietFoodText);
+    var normalizedSlug = normalizeDietFoodText(slug);
+    if (slug) {
+      byKey[slug] = food;
+      byKey[normalizedSlug] = food;
+    }
+    if (id) {
+      byKey[id] = food;
+      byKey[normalizeDietFoodText(id)] = food;
+    }
+    normalizedNames.forEach(function(nameKey) {
+      if (nameKey && !byNormalizedName[nameKey]) byNormalizedName[nameKey] = food;
+    });
+  });
+  premiumAliases.forEach(function(alias) {
+    var aliasKey = normalizeDietFoodText(alias && (alias.normalized_alias || alias.alias));
+    var slug = alias && alias.food_slug;
+    if (aliasKey && slug && byKey[slug] && !byNormalizedName[aliasKey]) byNormalizedName[aliasKey] = byKey[slug];
+  });
+  return {
+    foods: foods,
+    byKey: byKey,
+    byNormalizedName: byNormalizedName
+  };
+}
+
+function getDietCatalogIndexes() {
+  if (!_dietCatalogIndexCache) _dietCatalogIndexCache = buildDietCatalogIndexes();
+  return _dietCatalogIndexCache;
+}
+
+function resolveDietCatalogFood(item) {
+  var safeItem = item && typeof item === 'object' ? item : {};
+  var indexes = getDietCatalogIndexes();
+  var candidates = [
+    safeItem.food_slug,
+    safeItem.foodSlug,
+    safeItem.catalog_ref,
+    safeItem.catalogRef,
+    safeItem.sourceId,
+    safeItem.source_id,
+    safeItem.food_id,
+    safeItem.foodId
+  ].filter(Boolean);
+  for (var i = 0; i < candidates.length; i++) {
+    var key = String(candidates[i]).trim();
+    if (indexes.byKey[key]) return indexes.byKey[key];
+    var normalizedKey = normalizeDietFoodText(key);
+    if (indexes.byKey[normalizedKey]) return indexes.byKey[normalizedKey];
+    if (indexes.byNormalizedName[normalizedKey]) return indexes.byNormalizedName[normalizedKey];
+  }
+  var nameKey = normalizeDietFoodText(getDietItemName(safeItem));
+  return indexes.byNormalizedName[nameKey] || null;
+}
+
+function calculateFoodMacros(food, grams) {
+  var safeFood = food && typeof food === 'object' ? food : null;
+  var normalizedGrams = Math.max(0, asKroniaNumber(grams, 0));
+  if (!safeFood || !normalizedGrams) {
+    return {
+      grams: normalizedGrams,
+      kcal: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+      sodium: 0,
+      catalogMatch: Boolean(safeFood),
+      per100: safeFood ? {
+        kcal: dietRound(safeFood.kcal_100g, 3),
+        protein: dietRound(safeFood.protein_100g, 3),
+        carbs: dietRound(safeFood.carbs_100g, 3),
+        fat: dietRound(safeFood.fat_100g, 3),
+        fiber: dietRound(safeFood.fiber_100g, 3),
+        sodium: dietRound(safeFood.sodium_mg_100g, 3)
+      } : null
+    };
+  }
+  var ratio = normalizedGrams / 100;
+  return {
+    grams: normalizedGrams,
+    kcal: dietRound(asKroniaNumber(safeFood.kcal_100g, 0) * ratio, 1),
+    protein: dietRound(asKroniaNumber(safeFood.protein_100g, 0) * ratio, 1),
+    carbs: dietRound(asKroniaNumber(safeFood.carbs_100g, 0) * ratio, 1),
+    fat: dietRound(asKroniaNumber(safeFood.fat_100g, 0) * ratio, 1),
+    fiber: dietRound(asKroniaNumber(safeFood.fiber_100g, 0) * ratio, 1),
+    sodium: dietRound(asKroniaNumber(safeFood.sodium_mg_100g, 0) * ratio, 1),
+    catalogMatch: true,
+    per100: {
+      kcal: dietRound(safeFood.kcal_100g, 3),
+      protein: dietRound(safeFood.protein_100g, 3),
+      carbs: dietRound(safeFood.carbs_100g, 3),
+      fat: dietRound(safeFood.fat_100g, 3),
+      fiber: dietRound(safeFood.fiber_100g, 3),
+      sodium: dietRound(safeFood.sodium_mg_100g, 3)
+    }
+  };
+}
+
+function buildDietFallbackPer100(item, grams) {
+  var safeItem = item && typeof item === 'object' ? item : {};
+  var currentPer100 = safeItem.per100 && typeof safeItem.per100 === 'object' ? safeItem.per100 : null;
+  if (currentPer100) {
+    return {
+      kcal: dietRound(asKroniaNumber(currentPer100.kcal, 0), 3),
+      protein: dietRound(asKroniaNumber(currentPer100.protein, 0), 3),
+      carbs: dietRound(asKroniaNumber(currentPer100.carbs, 0), 3),
+      fat: dietRound(asKroniaNumber(currentPer100.fat, 0), 3),
+      fiber: dietRound(asKroniaNumber(currentPer100.fiber, 0), 3),
+      sodium: dietRound(asKroniaNumber(currentPer100.sodium, 0), 3)
+    };
+  }
+  var baseGrams = Math.max(asKroniaNumber(grams, 0), 0);
+  if (!baseGrams || safeItem.food_slug || safeItem.foodSlug || safeItem.food_id || safeItem.foodId || safeItem.catalog_ref || safeItem.catalogRef) return null;
+  var ratio = 100 / baseGrams;
+  return {
+    kcal: dietRound(asKroniaNumber(safeItem.kcal || safeItem.calorias, 0) * ratio, 3),
+    protein: dietRound(asKroniaNumber(safeItem.protein || safeItem.proteina || safeItem.proteinas || safeItem.prot, 0) * ratio, 3),
+    carbs: dietRound(asKroniaNumber(safeItem.carbs || safeItem.carbo || safeItem.carboidratos || safeItem.carb, 0) * ratio, 3),
+    fat: dietRound(asKroniaNumber(safeItem.fat || safeItem.gordura || safeItem.gorduras || safeItem.gord, 0) * ratio, 3),
+    fiber: dietRound(asKroniaNumber(safeItem.fiber || safeItem.fibras || safeItem.fibra, 0) * ratio, 3),
+    sodium: dietRound(asKroniaNumber(safeItem.sodium || safeItem.sodio_mg || safeItem.sodium_mg, 0) * ratio, 3)
+  };
+}
+
+function calculateDietFallbackMacros(per100, grams, currentValues) {
+  var normalizedPer100 = per100 && typeof per100 === 'object' ? per100 : null;
+  var safeCurrent = currentValues && typeof currentValues === 'object' ? currentValues : {};
+  var normalizedGrams = Math.max(0, asKroniaNumber(grams, 0));
+  if (!normalizedPer100 || !normalizedGrams) {
+    return {
+      grams: normalizedGrams,
+      kcal: dietRound(asKroniaNumber(safeCurrent.kcal, 0), 1),
+      protein: dietRound(asKroniaNumber(safeCurrent.protein, 0), 1),
+      carbs: dietRound(asKroniaNumber(safeCurrent.carbs, 0), 1),
+      fat: dietRound(asKroniaNumber(safeCurrent.fat, 0), 1),
+      fiber: dietRound(asKroniaNumber(safeCurrent.fiber, 0), 1),
+      sodium: dietRound(asKroniaNumber(safeCurrent.sodium, 0), 1),
+      catalogMatch: false,
+      per100: normalizedPer100
+    };
+  }
+  var ratio = normalizedGrams / 100;
+  return {
+    grams: normalizedGrams,
+    kcal: dietRound(asKroniaNumber(normalizedPer100.kcal, 0) * ratio, 1),
+    protein: dietRound(asKroniaNumber(normalizedPer100.protein, 0) * ratio, 1),
+    carbs: dietRound(asKroniaNumber(normalizedPer100.carbs, 0) * ratio, 1),
+    fat: dietRound(asKroniaNumber(normalizedPer100.fat, 0) * ratio, 1),
+    fiber: dietRound(asKroniaNumber(normalizedPer100.fiber, 0) * ratio, 1),
+    sodium: dietRound(asKroniaNumber(normalizedPer100.sodium, 0) * ratio, 1),
+    catalogMatch: false,
+    per100: normalizedPer100
+  };
+}
+
+function syncDietPlanVisualPrescription(plan) {
+  var safePlan = plan && typeof plan === 'object' ? plan : {};
+  var baseVisual = safePlan.visualPrescription && typeof safePlan.visualPrescription === 'object'
+    ? cloneDietVisualPrescription(safePlan.visualPrescription)
+    : buildDefaultDietVisualPrescription();
+  var meals = Array.isArray(safePlan.meals) ? safePlan.meals : [];
+  baseVisual.summary = Object.assign({}, baseVisual.summary, {
+    kcal_total: dietRound(asKroniaNumber(safePlan.totals && safePlan.totals.kcal, 0), 0),
+    proteina: dietRound(asKroniaNumber(safePlan.totals && safePlan.totals.protein, 0), 1),
+    carbo: dietRound(asKroniaNumber(safePlan.totals && safePlan.totals.carbs, 0), 1),
+    gordura: dietRound(asKroniaNumber(safePlan.totals && safePlan.totals.fat, 0), 1)
+  });
+  baseVisual.meals = meals.map(function(meal, mealIndex) {
+    var safeMeal = meal && typeof meal === 'object' ? meal : {};
+    var subtotal = safeMeal.subtotal && typeof safeMeal.subtotal === 'object' ? safeMeal.subtotal : {};
+    return {
+      id: safeMeal.id || ('visual_meal_' + (mealIndex + 1)),
+      slot: safeMeal.slot || normalizeDietFoodText(safeMeal.name || 'refeicao'),
+      name: safeMeal.name || ('Refeição ' + (mealIndex + 1)),
+      time: safeMeal.time || '',
+      kcal_estimada: dietRound(asKroniaNumber(subtotal.kcal, 0), 0),
+      items: (Array.isArray(safeMeal.items) ? safeMeal.items : []).map(function(item) {
+        var safeItem = item && typeof item === 'object' ? item : {};
+        var name = String(safeItem.name || getDietItemName(safeItem)).trim();
+        var quantity = String(safeItem.quantity || (safeItem.grams ? (safeItem.grams + ' g') : '')).trim();
+        return quantity ? (name + ' - ' + quantity) : name;
+      }).filter(Boolean)
+    };
+  });
+  return baseVisual;
+}
+
 function mapVisualMealToLegacyMeal(meal, mealIndex) {
   var safeMeal = meal && typeof meal === 'object' ? meal : {};
   var foods = Array.isArray(safeMeal.items) ? safeMeal.items.map(parseDietVisualItem).filter(Boolean) : [];
@@ -6609,40 +6846,51 @@ function normalizeDietEditorItem(item, order) {
     var m = qtdeStr.match(/^(\d+(?:[.,]\d+)?)\s*g\b/i);
     return m ? parseFloat(m[1].replace(',', '.')) : 0;
   }());
-  var grams = dietRound((item && (item.gramas || item.grams || item.porcao_gramas)) || qtdeGrams || 0, 1);
-  var kcal = dietRound(item && (item.calorias || item.kcal || item.calories), 1);
-  var protein = dietRound(item && (item.proteinas || item.protein_g || item.protein || item.prot || item.estimated_protein_g), 1);
-  var carbs = dietRound(item && (item.carboidratos || item.carbs_g || item.carbs || item.carb || item.estimated_carbs_g), 1);
-  var fat = dietRound(item && (item.gorduras || item.fat_g || item.fat || item.gord || item.estimated_fat_g), 1);
-  var fiber = dietRound(item && (item.fibras || item.fiber_g || item.fiber), 1);
-  var sodium = dietRound(item && (item.sodium_mg || item.sodio_mg || item.sodium), 1);
-  var baseGrams = grams || 100;
+  var safeItem = item && typeof item === 'object' ? item : {};
+  var resolvedFood = resolveDietCatalogFood(safeItem);
+  var grams = dietRound((safeItem.gramas || safeItem.grams || safeItem.porcao_gramas || safeItem.default_portion_g) || qtdeGrams || (resolvedFood && resolvedFood.default_portion_g) || 0, 1);
+  var rawMacros = {
+    kcal: dietRound(safeItem && (safeItem.calorias || safeItem.kcal || safeItem.calories), 1),
+    protein: dietRound(safeItem && (safeItem.proteinas || safeItem.protein_g || safeItem.protein || safeItem.prot || safeItem.estimated_protein_g), 1),
+    carbs: dietRound(safeItem && (safeItem.carboidratos || safeItem.carbs_g || safeItem.carbs || safeItem.carb || safeItem.estimated_carbs_g), 1),
+    fat: dietRound(safeItem && (safeItem.gorduras || safeItem.fat_g || safeItem.fat || safeItem.gord || safeItem.estimated_fat_g), 1),
+    fiber: dietRound(safeItem && (safeItem.fibras || safeItem.fiber_g || safeItem.fiber), 1),
+    sodium: dietRound(safeItem && (safeItem.sodium_mg || safeItem.sodio_mg || safeItem.sodium), 1)
+  };
+  var fallbackPer100 = buildDietFallbackPer100(safeItem, grams);
+  var macroSource = resolvedFood
+    ? calculateFoodMacros(resolvedFood, grams || resolvedFood.default_portion_g || 0)
+    : calculateDietFallbackMacros(fallbackPer100, grams, rawMacros);
+  var quantity = String(safeItem && (safeItem.porcao || safeItem.qtde || safeItem.quantity || safeItem.household_measure || safeItem.default_unit)
+    || (resolvedFood && resolvedFood.default_unit)
+    || (grams ? (grams + ' g') : '1 porção'));
+  if (grams && /\bg\b/i.test(quantity) && !/\d/.test(quantity)) quantity = grams + ' g';
   return {
-    id: item && item.id || ('item_' + Date.now() + '_' + order),
-    sourceType: item && (item.sourceType || item.source_type) || (item && item.foodCode ? 'catalog' : 'custom'),
-    sourceId: item && (item.sourceId || item.source_id || item.foodCode || item.code) || null,
-    name: getDietItemName(item),
-    slot: item && (item.slot || item.substitution_group || item.groupKey || item.group_key) || 'item',
-    quantity: String(item && (item.porcao || item.qtde || item.quantity || item.household_measure || item.default_unit) || (grams ? (grams + ' g') : '1 porção')),
+    id: safeItem && safeItem.id || ('item_' + Date.now() + '_' + order),
+    sourceType: safeItem && (safeItem.sourceType || safeItem.source_type) || (resolvedFood ? 'catalog' : (safeItem && safeItem.foodCode ? 'catalog' : 'custom')),
+    sourceId: safeItem && (safeItem.sourceId || safeItem.source_id || safeItem.foodCode || safeItem.code || safeItem.food_id || safeItem.foodId) || (resolvedFood && (resolvedFood.id || resolvedFood.slug)) || null,
+    food_id: safeItem && (safeItem.food_id || safeItem.foodId) || (resolvedFood && resolvedFood.id) || null,
+    food_slug: safeItem && (safeItem.food_slug || safeItem.foodSlug) || (resolvedFood && resolvedFood.slug) || null,
+    catalog_ref: safeItem && (safeItem.catalog_ref || safeItem.catalogRef) || (resolvedFood && resolvedFood.slug) || null,
+    catalogMatch: Boolean(resolvedFood),
+    source: safeItem && safeItem.source || (resolvedFood && resolvedFood.source) || null,
+    name: getDietItemName(safeItem),
+    slot: safeItem && (safeItem.slot || safeItem.substitution_group || safeItem.groupKey || safeItem.group_key) || (resolvedFood && resolvedFood.group_key) || 'item',
+    unit: safeItem && (safeItem.unit || safeItem.unidade) || (resolvedFood && resolvedFood.default_unit) || null,
+    quantity: quantity,
     grams: grams || null,
-    kcal: kcal,
-    protein: protein,
-    carbs: carbs,
-    fat: fat,
-    fiber: fiber,
-    sodium: sodium,
-    locked: Boolean(item && (item.locked || item.is_locked)),
-    order: Number(order || item && (item.ordem || item.sort_order) || 0),
-    notes: item && item.notes || '',
-    per100: {
-      kcal: baseGrams ? dietRound(kcal / baseGrams * 100, 3) : 0,
-      protein: baseGrams ? dietRound(protein / baseGrams * 100, 3) : 0,
-      carbs: baseGrams ? dietRound(carbs / baseGrams * 100, 3) : 0,
-      fat: baseGrams ? dietRound(fat / baseGrams * 100, 3) : 0,
-      fiber: baseGrams ? dietRound(fiber / baseGrams * 100, 3) : 0,
-      sodium: baseGrams ? dietRound(sodium / baseGrams * 100, 3) : 0
-    },
-    substitutions: Array.isArray(item && item.substituicoes) ? item.substituicoes : []
+    kcal: macroSource.kcal,
+    protein: macroSource.protein,
+    carbs: macroSource.carbs,
+    fat: macroSource.fat,
+    fiber: macroSource.fiber,
+    sodium: macroSource.sodium,
+    locked: Boolean(safeItem && (safeItem.locked || safeItem.is_locked)),
+    order: Number(order || safeItem && (safeItem.ordem || safeItem.sort_order) || 0),
+    notes: safeItem && safeItem.notes || '',
+    per100: macroSource.per100,
+    substitutions: Array.isArray(safeItem && safeItem.substituicoes) ? safeItem.substituicoes : [],
+    catalogSource: resolvedFood ? 'premium_catalog' : (fallbackPer100 ? 'item_fallback' : null)
   };
 }
 
@@ -6650,7 +6898,7 @@ function recalculateDietPlan(plan) {
   var safePlan = plan && typeof plan === 'object' ? Object.assign({}, plan) : {};
   safePlan.meals = (safePlan.meals || []).map(function(meal, mealIndex) {
     var items = (meal.items || []).map(function(item, itemIndex) {
-      return Object.assign({}, item, { order: itemIndex + 1 });
+      return normalizeDietEditorItem(Object.assign({}, item, { order: itemIndex + 1 }), itemIndex + 1);
     });
     var subtotal = items.reduce(function(acc, item) {
       acc.kcal += asKroniaNumber(item.kcal, 0);
@@ -6691,6 +6939,7 @@ function recalculateDietPlan(plan) {
     fiber: dietRound(totals.fiber, 1),
     sodium: dietRound(totals.sodium, 0)
   };
+  safePlan.visualPrescription = syncDietPlanVisualPrescription(safePlan);
   safePlan.updatedAt = new Date().toISOString();
   return safePlan;
 }
@@ -6768,6 +7017,14 @@ function setActiveDietPlan(plan, options) {
   try { localStorage.setItem(KRONIA_ACTIVE_DIET_PLAN_KEY, JSON.stringify(window._kroniaDietPlan)); } catch (_) {}
   if (!options || options.render !== false) renderActiveDietPlan();
   return window._kroniaDietPlan;
+}
+
+function schedulePersistActiveDietPlan() {
+  if (_dietPlanPersistTimer) clearTimeout(_dietPlanPersistTimer);
+  _dietPlanPersistTimer = setTimeout(function() {
+    _dietPlanPersistTimer = null;
+    try { saveActiveDietPlan({ silent: true }); } catch (_) {}
+  }, 250);
 }
 
 async function loadActiveDietPlanFromSupabase() {
@@ -7048,15 +7305,20 @@ function expandAllTpMeals() {
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
 }
 
+function buildDietItemSubtitle(item) {
+  var safeItem = item && typeof item === 'object' ? item : {};
+  var metrics = [];
+  if (asKroniaNumber(safeItem.kcal, 0) > 0) metrics.push(formatKroniaNumber(safeItem.kcal, 'kcal'));
+  if (asKroniaNumber(safeItem.protein, 0) > 0) metrics.push(formatKroniaNumber(safeItem.protein, 'g') + ' P');
+  if (asKroniaNumber(safeItem.carbs, 0) > 0) metrics.push(formatKroniaNumber(safeItem.carbs, 'g') + ' C');
+  if (asKroniaNumber(safeItem.fat, 0) > 0) metrics.push(formatKroniaNumber(safeItem.fat, 'g') + ' G');
+  return metrics.join(' • ') || 'Troca rápida e ajuste fino';
+}
+
 function renderDietMealCard(meal, mealIndex) {
   var subtotal = meal.subtotal || {};
   var items = (meal.items || []).map(function(item, itemIndex) {
-    var metrics = [];
-    if (asKroniaNumber(item.kcal, 0) > 0) metrics.push(formatKroniaNumber(item.kcal, 'kcal'));
-    if (asKroniaNumber(item.protein, 0) > 0) metrics.push(formatKroniaNumber(item.protein, 'g') + ' P');
-    if (asKroniaNumber(item.carbs, 0) > 0) metrics.push(formatKroniaNumber(item.carbs, 'g') + ' C');
-    if (asKroniaNumber(item.fat, 0) > 0) metrics.push(formatKroniaNumber(item.fat, 'g') + ' G');
-    var subtitle = metrics.join(' • ') || 'Troca rápida e ajuste fino';
+    var subtitle = buildDietItemSubtitle(item);
     var grams = getDietDisplayGrams(item);
     return '<button type="button" onclick="abrirBottomSheet(' + mealIndex + ',' + itemIndex + ',' + escapeAttr(JSON.stringify(item.name || 'Alimento')) + ',' + escapeAttr(JSON.stringify(subtitle)) + ',' + escapeAttr(JSON.stringify(String(Math.round(grams)))) + ')" class="diet-premium-food-row">'
       + '<div class="diet-premium-food-left">'
@@ -7071,6 +7333,9 @@ function renderDietMealCard(meal, mealIndex) {
   var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
   var statusBadge = _tpMealStatusBadge(meal.time);
   var kcalText = asKroniaNumber(subtotal.kcal, 0) > 0 ? formatKroniaNumber(subtotal.kcal, 'kcal') : '— kcal';
+  var previewChips = (meal.items || []).map(function(item) {
+    return '<span class="diet-premium-preview-chip">' + escapeHTML(item.name || getDietItemName(item)) + '</span>';
+  }).join('');
   return '<div class="tp-meal-row">'
     + '<div class="tp-meal-header-card" onclick="toggleTpMealBody(' + mealIndex + ')">'
     + '<div class="tp-meal-header-left">'
@@ -7079,6 +7344,7 @@ function renderDietMealCard(meal, mealIndex) {
     + (meal.time ? '<span class="tp-meal-time">' + escapeHTML(meal.time) + '</span>' : '')
     + '<h3 class="tp-meal-name">' + escapeHTML(meal.name || 'Refeição') + '</h3>'
     + '<p class="tp-meal-meta">' + escapeHTML(kcalText) + ' • ' + itemCount + (itemCount === 1 ? ' item' : ' itens') + '</p>'
+    + (previewChips ? '<div class="diet-premium-preview-chips">' + previewChips + '</div>' : '')
     + '</div>'
     + '</div>'
     + '<div class="tp-meal-header-right">'
@@ -7306,20 +7572,18 @@ function updateDietPlanItem(mealIndex, itemIndex, field, value) {
   if (!item) return;
   if (field === 'grams') {
     var grams = Math.max(0, asKroniaNumber(value, 0));
-    item.grams = grams || null;
-    if (grams && item.per100) {
-      item.kcal = dietRound(item.per100.kcal * grams / 100, 1);
-      item.protein = dietRound(item.per100.protein * grams / 100, 1);
-      item.carbs = dietRound(item.per100.carbs * grams / 100, 1);
-      item.fat = dietRound(item.per100.fat * grams / 100, 1);
-      item.fiber = dietRound(item.per100.fiber * grams / 100, 1);
-      item.sodium = dietRound(item.per100.sodium * grams / 100, 1);
-      item.quantity = grams + ' g';
-    }
+    var updatedItem = normalizeDietEditorItem(Object.assign({}, item, {
+      grams: grams || null,
+      gramas: grams || null,
+      quantity: grams ? (grams + ' g') : item.quantity,
+      porcao: grams ? (grams + ' g') : item.quantity
+    }), item.order || itemIndex + 1);
+    plan.meals[mealIndex].items[itemIndex] = updatedItem;
   } else {
     item[field] = value;
   }
   setActiveDietPlan(plan);
+  schedulePersistActiveDietPlan();
 }
 
 function removeDietPlanItem(mealIndex, itemIndex) {
@@ -7327,6 +7591,7 @@ function removeDietPlanItem(mealIndex, itemIndex) {
   if (plan.meals && plan.meals[mealIndex] && plan.meals[mealIndex].items) {
     plan.meals[mealIndex].items.splice(itemIndex, 1);
     setActiveDietPlan(plan);
+    schedulePersistActiveDietPlan();
   }
 }
 
@@ -7363,7 +7628,7 @@ function addDietPlanItem(mealIndex, item) {
   var safeIndex = Math.min(Number.isFinite(Number(mealIndex)) ? Number(mealIndex) : 0, plan.meals.length - 1);
   var targetMeal = plan.meals[safeIndex];
   targetMeal.items = targetMeal.items || [];
-  targetMeal.items.push(item);
+  targetMeal.items.push(normalizeDietEditorItem(item, targetMeal.items.length + 1));
   // Sync to visualPrescription.meals so getDietRenderableMeals() reflects the addition
   if (plan.visualPrescription && Array.isArray(plan.visualPrescription.meals) && plan.visualPrescription.meals.length) {
     var vpIdx = Math.min(safeIndex, plan.visualPrescription.meals.length - 1);
@@ -7375,6 +7640,7 @@ function addDietPlanItem(mealIndex, item) {
     }
   }
   setActiveDietPlan(plan);
+  schedulePersistActiveDietPlan();
   closeDietAddItemSheet();
 }
 

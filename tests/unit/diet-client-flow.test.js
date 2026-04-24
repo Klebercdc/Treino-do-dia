@@ -346,11 +346,23 @@ test('normalizeDietEditorItem resolves qtde field as quantity and parses grams f
   const snippet = [
     extract(code, /function asKroniaNumber\(value, fallback\) \{[\s\S]*?\n\}/, 'asKroniaNumber'),
     extract(code, /function dietRound\(value, decimals\) \{[\s\S]*?\n\}/, 'dietRound'),
+    extract(code, /function normalizeDietFoodText\(value\) \{[\s\S]*?\n\}/, 'normalizeDietFoodText'),
     extract(code, /function getDietItemName\(item\) \{[\s\S]*?\n\}/, 'getDietItemName'),
+    extract(code, /function getDietRuntimeCatalogFoods\(\) \{[\s\S]*?\n\}/, 'getDietRuntimeCatalogFoods'),
+    extract(code, /function buildDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'buildDietCatalogIndexes'),
+    extract(code, /function getDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'getDietCatalogIndexes'),
+    extract(code, /function resolveDietCatalogFood\(item\) \{[\s\S]*?\n\}/, 'resolveDietCatalogFood'),
+    extract(code, /function calculateFoodMacros\(food, grams\) \{[\s\S]*?\n\}/, 'calculateFoodMacros'),
+    extract(code, /function buildDietFallbackPer100\(item, grams\) \{[\s\S]*?\n\}/, 'buildDietFallbackPer100'),
+    extract(code, /function calculateDietFallbackMacros\(per100, grams, currentValues\) \{[\s\S]*?\n\}/, 'calculateDietFallbackMacros'),
     extract(code, /function normalizeDietEditorItem\(item, order\) \{[\s\S]*?\n\}/, 'normalizeDietEditorItem'),
   ].join('\n\n');
 
-  const ctx = {};
+  const ctx = {
+    window: { KRONIA_PREMIUM_FOOD_CATALOG: { foods: [], aliases: [] } },
+    NUTRITION_FOOD_CATALOG: [],
+    _dietCatalogIndexCache: null,
+  };
   require('node:vm').createContext(ctx);
   require('node:vm').runInContext(snippet, ctx, { filename: 'normalize-diet-editor-item-snippet.js' });
 

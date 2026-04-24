@@ -90,6 +90,11 @@ function loadDietRenderContext() {
     getDietVisualGuidance: () => ['Concentre carboidratos perto do treino'],
     getDietPlanSequenceText: () => 'Proteína -> arroz e feijão -> legumes -> salada',
     getDietDisplayGrams: (item) => Number(item?.grams || 100),
+    getDietFoodEmoji: () => '🍽️',
+    getDietItemName: (item) => String(item?.name || item?.nome || 'Alimento'),
+    _tpMealSlotIcon: () => 'utensils',
+    _tpMealSlotColorClass: () => 'tp-meal-icon--orange',
+    _tpMealStatusBadge: () => '<span class="tp-badge">Pendente</span>',
     escapeHTML: (value) => String(value || ''),
     escapeAttr: (value) => String(value || ''),
     safeJSON: () => ({}),
@@ -160,7 +165,7 @@ test('renderDietMealCard preserves access to every meal item via preview chips',
   assert.match(html, /Frango/);
   assert.match(html, /Arroz/);
   assert.match(html, /Feijão/);
-  assert.equal((html.match(/diet-premium-preview-chip/g) || []).length, 3);
+  assert.equal((html.match(/class="diet-premium-preview-chip"/g) || []).length, 3);
 });
 
 test('renderActiveDietPlan preserves nutritional summary and KRONOS guidance blocks', () => {
@@ -188,8 +193,7 @@ test('renderActiveDietPlan preserves nutritional summary and KRONOS guidance blo
 
   context.renderActiveDietPlan();
 
-  assert.match(context.__elements.dietDataProgress.innerHTML, /Resumo nutricional/);
-  assert.match(context.__elements.dietDataProgress.innerHTML, /Meta calórica/);
-  assert.match(context.__elements.dietDataProgress.innerHTML, /Direção do KRONOS/);
-  assert.match(context.__elements.dietDataProgress.innerHTML, /Proteína -&gt; arroz e feijão -&gt; legumes -&gt; salada|Proteína -> arroz e feijão -> legumes -> salada/);
+  assert.match(context.__elements.dietDataProgress.innerHTML, /POR QUE SUA DIETA ESTÁ ASSIM\?/);
+  assert.match(context.__elements.dietDataProgress.innerHTML, /Proteínas distribuídas ao longo do dia/);
+  assert.match(context.__elements.dietDataProgress.innerHTML, /Concentre carboidratos perto do treino/);
 });
