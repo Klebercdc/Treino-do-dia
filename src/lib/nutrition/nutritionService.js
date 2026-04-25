@@ -10,6 +10,7 @@ module.exports = {
   FOOD_LIBRARY: renderer.FOOD_LIBRARY,
   CANONICAL_FOODS: premiumCatalog.CANONICAL_FOODS,
   RECIPE_CATALOG: premiumCatalog.RECIPE_CATALOG,
+  DIET_TEMPLATES: renderer.DIET_TEMPLATES,
 
   buildNutritionProfile: strategyEngine.buildNutritionProfile,
   buildUnifiedNutritionContext: strategyEngine.buildUnifiedNutritionContext,
@@ -19,6 +20,11 @@ module.exports = {
 
   buildNutritionPrescription: renderer.buildNutritionPrescription,
   generateNutritionPlan: renderer.generateNutritionPlan,
+  selectDietTemplate: renderer.selectDietTemplate,
+  generateDietFromTemplate: renderer.generateDietFromTemplate,
+  substituteFood: renderer.substituteFood,
+  rebalanceDiet: renderer.rebalanceDiet,
+  normalizeDietItem: renderer.normalizeDietItem,
 
   resolveDietMode: clinical.resolveDietMode,
   applyClinicalRules: clinical.applyClinicalRules,

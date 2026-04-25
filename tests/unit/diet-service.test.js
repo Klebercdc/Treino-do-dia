@@ -30,8 +30,10 @@ test('nutritionService accepts abbreviated sex values for diet generation', () =
 test('nutritionService exposes premium canonical food and recipe catalogs', () => {
   assert.ok(Array.isArray(nutritionService.CANONICAL_FOODS));
   assert.ok(Array.isArray(nutritionService.RECIPE_CATALOG));
+  assert.ok(Array.isArray(nutritionService.DIET_TEMPLATES));
   assert.ok(nutritionService.CANONICAL_FOODS.length >= 150);
   assert.ok(nutritionService.RECIPE_CATALOG.length >= 100);
+  assert.ok(nutritionService.DIET_TEMPLATES.length >= 100);
 
   const groups = new Set(nutritionService.CANONICAL_FOODS.map((food) => food.group_key));
   ['proteinas', 'carboidratos', 'gorduras', 'frutas', 'vegetais', 'laticinios', 'temperos'].forEach((group) => {
@@ -42,6 +44,140 @@ test('nutritionService exposes premium canonical food and recipe catalogs', () =
   assert.equal(sample.canonical_name_pt, 'Frango grelhado');
   assert.equal(sample.default_portion_g, 120);
   assert.equal(sample.is_recipe_ingredient, true);
+});
+
+test('nutritionService premium diet templates expose required living-template contract', () => {
+  const categories = new Set();
+
+  nutritionService.DIET_TEMPLATES.forEach((template) => {
+    assert.ok(template.id);
+    assert.ok(template.nome);
+    assert.ok(template.objetivo);
+    assert.ok(template.faixa_calorica.min > 0);
+    assert.ok(Array.isArray(template.perfil_indicado));
+    assert.ok(template.nivel_dificuldade);
+    assert.ok(template.quantidade_refeicoes >= 3);
+    assert.ok(template.estrategia_nutricional);
+    assert.ok(template.distribuicao_macros.protein > 0);
+    assert.ok(Array.isArray(template.estrutura_refeicoes));
+    assert.ok(template.alimentos_base.proteinas.length);
+    assert.ok(template.substituicoes_por_categoria.proteina.length);
+    assert.ok(template.regras_adaptacao.length);
+    assert.ok(template.ordem_consumo.length);
+    assert.ok(Array.isArray(template.observacoes));
+    assert.ok(Array.isArray(template.alertas_profissionais));
+    categories.add(template.id.replace(/^kronia_/, '').replace(/_\d+_\d+$/, ''));
+  });
+
+  [
+    'emagrecimento',
+    'hipertrofia',
+    'manutencao',
+    'economica_brasileira',
+    'marmita',
+    'rotina_corrida',
+    'treino_matinal',
+    'treino_noturno',
+    'alta_saciedade',
+    'low_carb_leve',
+    'high_carb',
+    'flexivel',
+    'sem_lactose',
+    'sem_gluten',
+    'vegetariana',
+    'plant_based',
+    'reeducacao_alimentar',
+    'baixa_adesao',
+    'ansiedade_alimentar',
+    'especial_alerta_profissional',
+  ].forEach((category) => assert.ok(categories.has(category), `categoria ausente: ${category}`));
+});
+
+test('nutritionService selects best premium template and applies it to generated plan', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 34,
+    peso: 84,
+    altura: 179,
+    objetivo: 'hipertrofia',
+    refeicoesPorDia: 5,
+    rotina: 'treino noturno musculacao 5x por semana',
+  });
+
+  assert.equal(result.failSafe, false);
+  assert.ok(result.selectedDietTemplate.id.includes('treino_noturno') || result.selectedDietTemplate.objetivo === 'hipertrofia');
+  assert.equal(result.catalogStats.dietTemplates >= 100, true);
+  assert.equal(result.plan.templateId, result.selectedDietTemplate.id);
+  assert.ok(result.plan.ordemConsumo.includes('carboidrato'));
+  assert.equal(result.plan.refeicoes.length, result.selectedDietTemplate.quantidade_refeicoes);
+});
+
+test('nutritionService generates template skeleton, substitutes only equivalent category and rebalances macros', () => {
+  const template = nutritionService.selectDietTemplate(
+    { objetivo: 'emagrecimento', rotina: 'rotina corrida com baixa adesao' },
+    { targetCalories: 1850 },
+  );
+  const skeleton = nutritionService.generateDietFromTemplate(template, {}, {
+    targetCalories: 1850,
+    macros: { protein: 150, carbs: 170, fat: 55 },
+  });
+
+  assert.equal(skeleton.templateId, template.id);
+  assert.ok(skeleton.refeicoes.length >= 3);
+  assert.ok(skeleton.refeicoes.every((meal) => meal.meta.protein > 0 && meal.meta.carbs > 0));
+
+  const plan = {
+    refeicoes: [{
+      nome: 'Almoço',
+      meta: { proteinas: 46.5, carboidratos: 56, gorduras: 8 },
+      itens: [
+        { nome: 'Frango grelhado', groupKey: 'proteinas', gramas: 100, per100: { kcal: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0 } },
+        { nome: 'Arroz cozido', groupKey: 'carboidratos', gramas: 150, per100: { kcal: 130, protein: 2.5, carbs: 28, fat: 0.3, fiber: 0.4 } },
+      ],
+    }],
+  };
+
+  const refused = nutritionService.substituteFood(plan, 0, 0, {
+    nome: 'Arroz cozido',
+    groupKey: 'carboidratos',
+    gramas: 150,
+    per100: { kcal: 130, protein: 2.5, carbs: 28, fat: 0.3, fiber: 0.4 },
+  });
+  assert.equal(refused.warnings.length, 1);
+
+  const swapped = nutritionService.substituteFood(plan, 0, 0, {
+    nome: 'Tilápia grelhada',
+    groupKey: 'proteinas',
+    gramas: 120,
+    per100: { kcal: 128, protein: 26, carbs: 0, fat: 2.7, fiber: 0 },
+  });
+  assert.deepEqual(swapped.warnings, []);
+  assert.ok(swapped.plan.refeicoes[0].subtotal.proteinas >= 42);
+  assert.ok(swapped.plan.refeicoes[0].subtotal.carboidratos >= 45);
+});
+
+test('nutritionService normalizeDietItem preserves persisted per100 before catalog-like current values', () => {
+  const item = nutritionService.normalizeDietItem({
+    nome: 'Frango grelhado',
+    gramas: 150,
+    calorias: 12,
+    proteinas: 3,
+    carboidratos: 9,
+    gorduras: 1,
+    per100: {
+      kcal: 165,
+      protein: 31,
+      carbs: 0,
+      fat: 3.6,
+      fiber: 0,
+    },
+  });
+
+  assert.equal(item.gramas, 150);
+  assert.equal(item.calorias, 248);
+  assert.equal(item.proteinas, 46.5);
+  assert.equal(item.carboidratos, 0);
+  assert.equal(item.gorduras, 5.4);
 });
 
 test('dietService normalizes mixed payload shapes and generates diet plan', async () => {

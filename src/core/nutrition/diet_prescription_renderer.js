@@ -4,6 +4,7 @@ var premiumCatalog = require('../../lib/nutrition/premiumCatalog');
 var visualPrescription = require('../../lib/nutrition/visualPrescription');
 var clinical = require('./diet_context_clinical');
 var strategyEngine = require('./diet_strategy_engine');
+var dietTemplates = require('../diet/dietTemplates');
 
 function round(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 0;
@@ -434,8 +435,12 @@ function buildMealItems(template, profile, macros, index) {
   return rebalanceMealItems(items, macros, { isWorkoutMeal: isWorkoutMeal });
 }
 
-function getMealTemplates(profile) {
-  var templates = MEAL_TEMPLATES[profile.refeicoesPorDia] || MEAL_TEMPLATES[5];
+function getMealTemplates(profile, selectedTemplate) {
+  var requestedCount = Math.min(6, Math.max(3, Number(profile.refeicoesPorDia || 5)));
+  var templateMatchesRequested = selectedTemplate && Number(selectedTemplate.quantidade_refeicoes) === requestedCount;
+  var templates = templateMatchesRequested && Array.isArray(selectedTemplate.estrutura_refeicoes) && selectedTemplate.estrutura_refeicoes.length
+    ? selectedTemplate.estrutura_refeicoes
+    : (MEAL_TEMPLATES[requestedCount] || MEAL_TEMPLATES[5]);
   if (profile.nivelAtividade !== 'sedentario') return templates;
 
   return templates.map(function(template) {
@@ -460,8 +465,8 @@ function getMealTemplates(profile) {
   });
 }
 
-function distributeMacrosAcrossMeals(profile, macros) {
-  var templates = getMealTemplates(profile);
+function distributeMacrosAcrossMeals(profile, macros, selectedTemplate) {
+  var templates = getMealTemplates(profile, selectedTemplate);
   return templates.map(function(template, index) {
     return {
       ordem: index + 1,
@@ -478,8 +483,8 @@ function distributeMacrosAcrossMeals(profile, macros) {
   });
 }
 
-function buildInitialNutritionPlan(profile, calc) {
-  var mealTargets = distributeMacrosAcrossMeals(profile, calc.macros);
+function buildInitialNutritionPlan(profile, calc, selectedTemplate) {
+  var mealTargets = distributeMacrosAcrossMeals(profile, calc.macros, selectedTemplate);
   var meals = mealTargets.map(function(target, index) {
     var items = buildMealItems(target, profile, target.meta, index);
     var subtotal = sumMeal(items);
@@ -509,6 +514,11 @@ function buildInitialNutritionPlan(profile, calc) {
 
   return {
     objetivo: profile.objetivo,
+    templateId: selectedTemplate ? selectedTemplate.id : null,
+    templateName: selectedTemplate ? selectedTemplate.nome : null,
+    templateStrategy: selectedTemplate ? selectedTemplate.estrategia_nutricional : null,
+    ordemConsumo: selectedTemplate ? selectedTemplate.ordem_consumo : null,
+    alertasProfissionais: selectedTemplate ? selectedTemplate.alertas_profissionais : [],
     caloriasMeta: round(planTotals.calories),
     macrosMeta: {
       protein: round(planTotals.protein, 1),
@@ -570,7 +580,7 @@ function capPlanCalories(plan, maxCalories) {
     return plan;
   }
 
-  var factor = Math.max(0.85, (targetCalories - 1) / currentCalories);
+  var factor = Math.max(0.5, (targetCalories - 1) / currentCalories);
   var scaled = Object.assign({}, plan, {
     refeicoes: (plan.refeicoes || []).map(function(meal) {
       return Object.assign({}, meal, {
@@ -587,7 +597,8 @@ function buildNutritionPrescription(strategy) {
   var calc = strategy;
   if (calc.failSafe) return calc;
 
-  var plan = buildInitialNutritionPlan(calc.profile, calc.result);
+  var selectedTemplate = dietTemplates.selectDietTemplate(calc.profile, calc.result);
+  var plan = buildInitialNutritionPlan(calc.profile, calc.result, selectedTemplate);
   if (clinical.hasCriticalLabFlag(calc.profile)) {
     plan = capPlanCalories(plan, calc.result.targetCalories);
   }
@@ -623,6 +634,10 @@ function buildNutritionPrescription(strategy) {
     clinicalNotes: clinicalNotes
   });
   plan.visualPrescription = visual;
+  var templateClinicalAlerts = dietTemplates.clinicalFlags(calc.profile || {}).length
+    ? [dietTemplates.CLINICAL_ALERT]
+    : [];
+
   return {
     profile: calc.profile,
     failSafe: false,
@@ -646,9 +661,11 @@ function buildNutritionPrescription(strategy) {
     catalogStats: {
       canonicalFoods: premiumCatalog.CANONICAL_FOODS.length,
       recipes: premiumCatalog.RECIPE_CATALOG.length,
+      dietTemplates: dietTemplates.DIET_TEMPLATES.length,
       aliases: premiumCatalog.FOOD_ALIASES.length,
       portions: premiumCatalog.FOOD_PORTIONS.length
     },
+    selectedDietTemplate: selectedTemplate,
     recipeSuggestions: premiumCatalog.RECIPE_CATALOG
       .filter(function(recipe) {
         return (plan.refeicoes || []).some(function(meal) { return recipe.meal_slot === meal.tipo; });
@@ -663,6 +680,7 @@ function buildNutritionPrescription(strategy) {
       confidence: calc.profile.labContext.confidence || 0
     },
     clinicalSafety: 'Plano esportivo educacional. Não substitui conduta clínica, terapêutica ou nutricional individualizada em casos complexos.',
+    professionalAlerts: (selectedTemplate.alertas_profissionais || []).concat(templateClinicalAlerts),
     clinicalNotes: clinicalNotes
   };
 }
@@ -683,6 +701,12 @@ function generatePlan(profileInput) {
 module.exports = {
   FOOD_LIBRARY: FOOD_LIBRARY,
   MEAL_TEMPLATES: MEAL_TEMPLATES,
+  DIET_TEMPLATES: dietTemplates.DIET_TEMPLATES,
+  selectDietTemplate: dietTemplates.selectDietTemplate,
+  generateDietFromTemplate: dietTemplates.generateDietFromTemplate,
+  substituteFood: dietTemplates.substituteFood,
+  rebalanceDiet: dietTemplates.rebalanceDiet,
+  normalizeDietItem: dietTemplates.normalizeDietItem,
   buildNutritionPrescription: buildNutritionPrescription,
   generateNutritionPlan: generateNutritionPlan,
   renderPrescription: renderPrescription,
