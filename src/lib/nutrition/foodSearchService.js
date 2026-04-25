@@ -86,6 +86,14 @@ function buildPremiumResult(food) {
     potassio_mg_por_100g: toNumber(food.potassio_mg_por_100g),
     calcio_mg_por_100g: toNumber(food.calcio_mg_por_100g),
     ferro_mg_por_100g: toNumber(food.ferro_mg_por_100g),
+    per100: {
+      kcal: toNumber(food.kcal_por_100g),
+      protein: toNumber(food.proteina_por_100g),
+      carbs: toNumber(food.carbo_por_100g),
+      fat: toNumber(food.gordura_por_100g),
+      fiber: toNumber(food.fibra_por_100g),
+      sodium: toNumber(food.sodio_mg_por_100g)
+    },
     raw: clone(food)
   };
 }
@@ -147,6 +155,14 @@ function buildTacoResult(food) {
     potassio_mg_por_100g: macros ? macros.potassio_mg_por_100g : toNumber(food.potassio_mg),
     calcio_mg_por_100g: macros ? macros.calcio_mg_por_100g : toNumber(food.calcio_mg),
     ferro_mg_por_100g: macros ? macros.ferro_mg_por_100g : toNumber(food.ferro_mg),
+    per100: {
+      kcal: macros ? macros.kcal_por_100g : toNumber(food.energia_kcal),
+      protein: macros ? macros.proteina_por_100g : toNumber(food.proteina_g),
+      carbs: macros ? macros.carbo_por_100g : toNumber(food.carboidrato_g),
+      fat: macros ? macros.gordura_por_100g : toNumber(food.lipidios_g),
+      fiber: macros ? macros.fibra_por_100g : toNumber(food.fibra_g),
+      sodium: macros ? macros.sodio_mg_por_100g : toNumber(food.sodio_mg)
+    },
     raw: clone(food)
   };
 }

@@ -107,7 +107,7 @@ test('TACO UX overrides cover common Brazilian editor portions and groups', () =
     ['TACO_0088', 'Batata-doce cozida', 130, 'carboidratos'],
     ['TACO_0091', 'Batata inglesa cozida', 150, 'carboidratos'],
     ['TACO_0551', 'Tapioca', 70, 'carboidratos'],
-    ['TACO_0040', 'Macarrão de trigo', 80, 'carboidratos'],
+    ['TACO_0040', 'Macarrão cozido', 120, 'carboidratos'],
   ];
 
   for (const [id, name, grams, group] of cases) {

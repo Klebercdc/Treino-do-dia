@@ -49,8 +49,8 @@ test('searchNutritionFoods supports accentless popular TACO aliases and realisti
     ['batata doce', 'TACO_0088', 'Batata-doce cozida', 130],
     ['batata inglesa', 'TACO_0091', 'Batata inglesa cozida', 150],
     ['tapioca', 'TACO_0551', 'Tapioca', 70],
-    ['macarrao', 'TACO_0040', 'Macarrão de trigo', 80],
-    ['macarrão', 'TACO_0040', 'Macarrão de trigo', 80],
+    ['macarrao', 'TACO_0040', 'Macarrão cozido', 120],
+    ['macarrão', 'TACO_0040', 'Macarrão cozido', 120],
   ];
 
   for (const [query, tacoId, name, grams] of cases) {
@@ -59,6 +59,59 @@ test('searchNutritionFoods supports accentless popular TACO aliases and realisti
     assert.ok(item, query);
     if (item.source === 'taco') assert.equal(item.nome, name);
     assert.equal(item.default_portion_g, grams);
+    assert.equal(typeof item.per100, 'object');
+    assert.equal(item.per100.kcal, item.kcal_por_100g);
+  }
+});
+
+test('TACO UX overrides cover the required common foods with realistic portions', () => {
+  const required = [
+    ['TACO_0053', 'Pão francês', 50, /1 unidade média/i],
+    ['TACO_0488', 'Ovo de galinha', 50, /1 unidade média/i],
+    ['TACO_0182', 'Banana', 86, /1 unidade média/i],
+    ['TACO_0221', 'Maçã', 130, /1 unidade média/i],
+    ['TACO_0003', 'Arroz branco cozido', 120, /4 colheres de sopa cheias/i],
+    ['TACO_0001', 'Arroz integral cozido', 120, /120 g/i],
+    ['TACO_0561', 'Feijão carioca cozido', 100, /1 concha média/i],
+    ['TACO_0567', 'Feijão preto cozido', 100, /100 g/i],
+    ['TACO_0088', 'Batata-doce cozida', 130, /130 g/i],
+    ['TACO_0091', 'Batata inglesa cozida', 150, /150 g/i],
+    ['TACO_0551', 'Tapioca', 70, /70 g/i],
+    ['TACO_0040', 'Macarrão cozido', 120, /120 g/i],
+  ];
+
+  for (const [tacoId, name, grams, unitPattern] of required) {
+    const food = nutritionService.getTacoFoodById(tacoId);
+    assert.ok(food, tacoId);
+    assert.equal(food.nome, name);
+    assert.equal(food.default_portion_g, grams);
+    assert.match(food.default_unit, unitPattern);
+    assert.equal(food.official_name, food.raw ? food.raw.nome : food.official_name);
+    assert.equal(food.per100.kcal, food.kcal_100g);
+    assert.equal(food.source, 'taco');
+    assert.equal(food.is_taco_fallback, true);
+  }
+});
+
+test('TACO search handles popular names, official names, accents and simple plural/singular aliases', () => {
+  const cases = [
+    ['Pão, trigo, francês', 'TACO_0053'],
+    ['paes franceses', 'TACO_0053'],
+    ['pães franceses', 'TACO_0053'],
+    ['Ovo, de galinha, inteiro, cozido/10minutos', 'TACO_0488'],
+    ['ovos cozidos', 'TACO_0488'],
+    ['bananas', 'TACO_0182'],
+    ['maca argentina', 'TACO_0221'],
+    ['Maçã, Argentina, com casca, crua', 'TACO_0221'],
+    ['arroz tipo 1 cozido', 'TACO_0003'],
+    ['feijoes cariocas', 'TACO_0561'],
+    ['batatas doces', 'TACO_0088'],
+    ['macarroes cozidos', 'TACO_0040'],
+  ];
+
+  for (const [query, tacoId] of cases) {
+    const found = nutritionService.searchNutritionFoods(query, { limit: 10 }).find((item) => item.taco_id === tacoId);
+    assert.ok(found, `${query} -> ${tacoId}`);
   }
 });
 

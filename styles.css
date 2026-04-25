@@ -5836,6 +5836,88 @@ body.dark-mode .settings-row-value {
   gap: 14px;
   padding-bottom: 94px;
 }
+#dietDataScreen .diet-adaptive-card {
+  background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(3,7,18,.9));
+  border: 1px solid rgba(34,197,94,.18);
+  border-radius: 18px;
+  box-shadow: 0 16px 34px rgba(0,0,0,.28), 0 0 22px rgba(34,197,94,.06);
+  padding: 16px;
+}
+#dietDataScreen .diet-adaptive-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+#dietDataScreen .diet-adaptive-card-head span {
+  color: rgba(203,213,225,.72);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+#dietDataScreen .diet-adaptive-card-head strong {
+  color: #86efac;
+  font-size: 16px;
+  font-weight: 900;
+}
+#dietDataScreen .diet-adaptive-card p {
+  margin: 0 0 12px;
+  color: rgba(226,232,240,.78);
+  font-size: 13px;
+  line-height: 1.45;
+}
+#dietDataScreen .diet-adaptive-progress {
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148,163,184,.14);
+  margin-bottom: 10px;
+}
+#dietDataScreen .diet-adaptive-progress div {
+  height: 100%;
+  background: #22c55e;
+  box-shadow: 0 0 16px rgba(34,197,94,.42);
+}
+#dietDataScreen .diet-adaptive-tags,
+#dietDataScreen .diet-adaptive-actions,
+#dietDataScreen .diet-feedback-grid,
+#dietDataScreen .diet-adaptive-question-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#dietDataScreen .diet-adaptive-tags span {
+  border: 1px solid rgba(34,197,94,.24);
+  border-radius: 999px;
+  color: #bbf7d0;
+  background: rgba(34,197,94,.08);
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+#dietDataScreen .diet-adaptive-actions button,
+#dietDataScreen .diet-feedback-grid button,
+#dietDataScreen .diet-adaptive-question-grid button {
+  border: 1px solid rgba(34,197,94,.2);
+  background: rgba(15,23,42,.9);
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+#dietDataScreen .diet-adaptive-actions button:first-child {
+  background: #22c55e;
+  color: #052e16;
+  border-color: #22c55e;
+}
+#dietDataScreen .diet-feedback-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
 #dietDataScreen .diet-panel-header {
   display: flex;
   align-items: center;

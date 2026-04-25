@@ -41,10 +41,14 @@ function loadDietMacroContext() {
     extract(code, /function cloneDietVisualPrescription\(value\) \{[\s\S]*?\n\}/, 'cloneDietVisualPrescription'),
     extract(code, /function getDietItemName\(item\) \{[\s\S]*?\n\}/, 'getDietItemName'),
     extract(code, /function extractDietQuantityGrams\(\) \{[\s\S]*?\n\}/, 'extractDietQuantityGrams'),
+    extract(code, /function ensureDietTacoCatalogLoaded\(\) \{[\s\S]*?\n\}/, 'ensureDietTacoCatalogLoaded'),
+    extract(code, /function getDietCatalogDedupKey\(item\) \{[\s\S]*?\n\}/, 'getDietCatalogDedupKey'),
+    extract(code, /function getDietCatalogTacoKey\(item\) \{[\s\S]*?\n\}/, 'getDietCatalogTacoKey'),
     extract(code, /function getDietRuntimeCatalogFoods\(\) \{[\s\S]*?\n\}/, 'getDietRuntimeCatalogFoods'),
     extract(code, /function buildDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'buildDietCatalogIndexes'),
     extract(code, /function getDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'getDietCatalogIndexes'),
     extract(code, /function resolveDietCatalogFood\(item\) \{[\s\S]*?\n\}/, 'resolveDietCatalogFood'),
+    extract(code, /function findDietCatalogItems\(query\) \{[\s\S]*?\n\}/, 'findDietCatalogItems'),
     extract(code, /function calculateFoodMacros\(food, grams\) \{[\s\S]*?\n\}/, 'calculateFoodMacros'),
     extract(code, /function buildDietFallbackPer100\(item, grams\) \{[\s\S]*?\n\}/, 'buildDietFallbackPer100'),
     extract(code, /function calculateDietFallbackMacros\(per100, grams, currentValues\) \{[\s\S]*?\n\}/, 'calculateDietFallbackMacros'),
@@ -177,6 +181,90 @@ function loadDietMacroContext() {
           lipidios_g: 0.5,
           fibra_g: 8.5,
           sodio_mg: 2
+        },
+        {
+          taco_id: 'TACO_0001',
+          codigo_taco: 1,
+          nome: 'Arroz, integral, cozido',
+          categoria: 'Cereais e derivados',
+          energia_kcal: 124,
+          proteina_g: 2.6,
+          carboidrato_g: 25.8,
+          lipidios_g: 1,
+          fibra_g: 2.7,
+          sodio_mg: 1
+        },
+        {
+          taco_id: 'TACO_0567',
+          codigo_taco: 567,
+          nome: 'Feijão, preto, cozido',
+          categoria: 'Leguminosas e derivados',
+          energia_kcal: 77,
+          proteina_g: 4.5,
+          carboidrato_g: 14,
+          lipidios_g: 0.5,
+          fibra_g: 8.4,
+          sodio_mg: 2
+        },
+        {
+          taco_id: 'TACO_0088',
+          codigo_taco: 88,
+          nome: 'Batata, doce, cozida',
+          categoria: 'Raízes, tubérculos e derivados',
+          energia_kcal: 77,
+          proteina_g: 0.6,
+          carboidrato_g: 18.4,
+          lipidios_g: 0.1,
+          fibra_g: 2.2,
+          sodio_mg: 3
+        },
+        {
+          taco_id: 'TACO_0091',
+          codigo_taco: 91,
+          nome: 'Batata, inglesa, cozida',
+          categoria: 'Raízes, tubérculos e derivados',
+          energia_kcal: 52,
+          proteina_g: 1.2,
+          carboidrato_g: 11.9,
+          lipidios_g: 0,
+          fibra_g: 1.3,
+          sodio_mg: 2
+        },
+        {
+          taco_id: 'TACO_0551',
+          codigo_taco: 551,
+          nome: 'Tapioca, com manteiga',
+          categoria: 'Preparações',
+          energia_kcal: 348,
+          proteina_g: 0.1,
+          carboidrato_g: 63.6,
+          lipidios_g: 10.9,
+          fibra_g: 0,
+          sodio_mg: 158
+        },
+        {
+          taco_id: 'TACO_0040',
+          codigo_taco: 40,
+          nome: 'Macarrão, trigo, cru',
+          categoria: 'Cereais e derivados',
+          energia_kcal: 371,
+          proteina_g: 10,
+          carboidrato_g: 77.9,
+          lipidios_g: 1.3,
+          fibra_g: 2.9,
+          sodio_mg: 7
+        },
+        {
+          taco_id: 'TACO_0221',
+          codigo_taco: 221,
+          nome: 'Maçã, Argentina, com casca, crua',
+          categoria: 'Frutas e derivados',
+          energia_kcal: 63,
+          proteina_g: 0.2,
+          carboidrato_g: 16.6,
+          lipidios_g: 0.2,
+          fibra_g: 2,
+          sodio_mg: 1
         }
       ]
     },
@@ -306,14 +394,21 @@ test('normalizeDietEditorItem adiciona TACO com porção UX, per100 e identidade
   const context = loadDietMacroContext();
 
   const cases = [
-    ['TACO_0053', 'Pão francês', 50, 150, 4, 29],
-    ['TACO_0488', 'Ovo de galinha', 50, 77.5, 6.5, 0.6],
-    ['TACO_0182', 'Banana', 86, 84.3, 1.1, 22.4],
-    ['TACO_0003', 'Arroz branco cozido', 120, 153.6, 3, 33.7],
-    ['TACO_0561', 'Feijão carioca cozido', 100, 76, 4.8, 13.6],
+    ['TACO_0053', 'Pão francês', 50],
+    ['TACO_0488', 'Ovo de galinha', 50],
+    ['TACO_0182', 'Banana', 86],
+    ['TACO_0221', 'Maçã', 130],
+    ['TACO_0003', 'Arroz branco cozido', 120],
+    ['TACO_0001', 'Arroz integral cozido', 120],
+    ['TACO_0561', 'Feijão carioca cozido', 100],
+    ['TACO_0567', 'Feijão preto cozido', 100],
+    ['TACO_0088', 'Batata-doce cozida', 130],
+    ['TACO_0091', 'Batata inglesa cozida', 150],
+    ['TACO_0551', 'Tapioca', 70],
+    ['TACO_0040', 'Macarrão cozido', 120],
   ];
 
-  for (const [tacoId, name, grams, kcal, protein, carbs] of cases) {
+  for (const [tacoId, name, grams] of cases) {
     const catalogFood = context.resolveDietCatalogFood({ taco_id: tacoId });
     assert.ok(catalogFood, tacoId);
     const item = context.normalizeDietEditorItem({
@@ -345,11 +440,78 @@ test('normalizeDietEditorItem adiciona TACO com porção UX, per100 e identidade
     assert.equal(item.taco_id, tacoId);
     assert.equal(item.official_name, catalogFood.official_name);
     assert.equal(item.is_taco_fallback, true);
-    assert.equal(item.kcal, kcal);
-    assert.equal(item.protein, protein);
-    assert.equal(item.carbs, carbs);
+    assert.equal(item.kcal, context.dietRound(catalogFood.kcal_100g * grams / 100, 1));
+    assert.equal(item.protein, context.dietRound(catalogFood.protein_100g * grams / 100, 1));
+    assert.equal(item.carbs, context.dietRound(catalogFood.carbs_100g * grams / 100, 1));
     assert.equal(item.per100.kcal, catalogFood.kcal_100g);
   }
+});
+
+test('TACO runtime cobre busca, seleção, adição, cálculo, edição, salvamento e recarregamento para alimentos comuns', () => {
+  const context = loadDietMacroContext();
+  const cases = [
+    ['pao frances', 'TACO_0053', 50],
+    ['ovo', 'TACO_0488', 50],
+    ['banana', 'TACO_0182', 86],
+    ['maca', 'TACO_0221', 130],
+    ['arroz branco', 'TACO_0003', 120],
+    ['arroz integral', 'TACO_0001', 120],
+    ['feijao carioca', 'TACO_0561', 100],
+    ['feijao preto', 'TACO_0567', 100],
+    ['batata doce', 'TACO_0088', 130],
+    ['batata inglesa', 'TACO_0091', 150],
+    ['tapioca', 'TACO_0551', 70],
+    ['macarrao cozido', 'TACO_0040', 120],
+  ];
+
+  const items = cases.map(([query, tacoId, grams], index) => {
+    const found = context.findDietCatalogItems(query).find((entry) => entry.taco_id === tacoId);
+    assert.ok(found, `${query} encontrou ${tacoId}`);
+    assert.equal(found.default_portion_g, grams);
+    assert.equal(found.source, 'taco');
+    assert.equal(found.is_taco_fallback, true);
+    const item = context.normalizeDietEditorItem({
+      nome: found.nome,
+      source: 'taco',
+      source_id: found.taco_id,
+      taco_id: found.taco_id,
+      codigo_taco: found.codigo_taco,
+      gramas: found.default_portion_g,
+      porcao: found.default_unit,
+      official_name: found.official_name,
+      is_taco_fallback: true,
+      per100: found.per100
+    }, index + 1);
+    assert.equal(item.grams, grams);
+    assert.equal(item.per100.kcal, found.kcal_100g);
+    return item;
+  });
+
+  context.setActiveDietPlan({
+    id: 'plan_taco_common',
+    title: 'Plano TACO comum',
+    targets: {},
+    visualPrescription: context.buildDefaultDietVisualPrescription(),
+    meals: [{ id: 'meal_1', name: 'Refeição TACO', slot: 'refeicao', items }]
+  }, { render: false });
+
+  context.updateDietPlanItem(0, 0, 'grams', 75);
+  const persisted = context.readLocalActiveDietPlan();
+  const reloaded = persisted.meals[0].items;
+  assert.equal(reloaded.length, cases.length);
+  assert.equal(reloaded[0].taco_id, 'TACO_0053');
+  assert.equal(reloaded[0].grams, 75);
+  assert.equal(reloaded[0].per100.kcal, 300);
+  assert.equal(reloaded[0].kcal, 225);
+
+  reloaded.forEach((item) => {
+    assert.equal(item.source, 'taco');
+    assert.equal(item.sourceType, 'taco');
+    assert.ok(item.taco_id);
+    assert.ok(item.official_name);
+    assert.equal(typeof item.per100, 'object');
+    assert.equal(item.kcal, context.dietRound(item.per100.kcal * item.grams / 100, 1));
+  });
 });
 
 test('TACO salvo e recarregado mantém source, taco_id, grams e per100 sem drift', () => {

@@ -3,6 +3,7 @@
 var premiumCatalog = require('./premiumCatalog');
 var tacoService = require('./tacoService');
 var foodSearchService = require('./foodSearchService');
+var adaptiveNutrition = require('./adaptiveNutrition');
 var clinical = require('../../core/nutrition/diet_context_clinical');
 var strategyEngine = require('../../core/nutrition/diet_strategy_engine');
 var renderer = require('../../core/nutrition/diet_prescription_renderer');
@@ -43,6 +44,18 @@ module.exports = {
   applyTacoFoodUx: tacoService.applyTacoFoodUx,
   findNutritionFood: foodSearchService.findNutritionFood,
   searchNutritionFoods: foodSearchService.searchNutritionFoods,
+  NUTRITION_MEMORY_KEY: adaptiveNutrition.NUTRITION_MEMORY_KEY,
+  DEFAULT_NUTRITION_MEMORY: adaptiveNutrition.DEFAULT_NUTRITION_MEMORY,
+  normalizeNutritionMemory: adaptiveNutrition.normalizeMemory,
+  readNutritionMemory: adaptiveNutrition.readNutritionMemory,
+  saveNutritionMemory: adaptiveNutrition.saveNutritionMemory,
+  updateNutritionMemory: adaptiveNutrition.updateNutritionMemory,
+  resetNutritionMemory: adaptiveNutrition.resetNutritionMemory,
+  calculateNutritionPersonalizationScore: adaptiveNutrition.calculateNutritionPersonalizationScore,
+  selectAdaptiveDietTemplate: adaptiveNutrition.selectAdaptiveDietTemplate,
+  registerDailyNutritionFeedback: adaptiveNutrition.registerDailyNutritionFeedback,
+  suggestDietAdaptations: adaptiveNutrition.suggestDietAdaptations,
+  runWeeklyNutritionCheckin: adaptiveNutrition.runWeeklyNutritionCheckin,
 
   resolveDietMode: clinical.resolveDietMode,
   applyClinicalRules: clinical.applyClinicalRules,

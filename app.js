@@ -6433,8 +6433,92 @@ var KRONIA_ACTIVE_DIET_PLAN_KEY = 'kronia_active_diet_plan_v2';
 var KRONIA_DIET_WATER_TRACKER_KEY = 'kronia_diet_water_tracker_v1';
 var KRONIA_USER_ANAMNESIS_KEY = 'kronia_user_anamnesis_v1';
 var KRONIA_DIET_HISTORY_KEY = 'kronia_diet_history_v1';
+var KRONIA_NUTRITION_MEMORY_KEY = 'kronia_nutrition_memory_v1';
 var _dietCoreView = 'home';
 var _labsReturnDietMiniChrome = false;
+
+function getDefaultNutritionMemory() {
+  return {
+    personalization_score: 0,
+    confidence_level: 'baixo',
+    missing_fields: [],
+    plan_status: 'provisório',
+    preferred_meal_count: null,
+    preferred_diet_style: null,
+    has_food_scale: null,
+    budget_level: null,
+    workout_time: null,
+    hunger_period: null,
+    disliked_foods: [],
+    liked_foods: [],
+    avoided_foods: [],
+    skipped_meals_count: 0,
+    swapped_foods_count: 0,
+    hunger_reports_count: 0,
+    adherence_days: 0,
+    frequent_swaps: [],
+    frequent_rejections: [],
+    current_template_id: null,
+    previous_template_ids: [],
+    reason_selected: null,
+    updated_at: null
+  };
+}
+
+function normalizeNutritionMemoryArray(value) {
+  if (Array.isArray(value)) return value.map(String).map(function(item) { return item.trim(); }).filter(Boolean);
+  if (typeof value === 'string') return value.split(/[,;\n]+/).map(function(item) { return item.trim(); }).filter(Boolean);
+  return [];
+}
+
+function normalizeNutritionMemory(memory) {
+  var next = Object.assign(getDefaultNutritionMemory(), memory && typeof memory === 'object' ? memory : {});
+  ['missing_fields', 'disliked_foods', 'liked_foods', 'avoided_foods', 'frequent_swaps', 'frequent_rejections', 'previous_template_ids'].forEach(function(key) {
+    next[key] = normalizeNutritionMemoryArray(next[key]);
+  });
+  ['skipped_meals_count', 'swapped_foods_count', 'hunger_reports_count', 'adherence_days'].forEach(function(key) {
+    next[key] = Math.max(0, asKroniaNumber(next[key], 0));
+  });
+  next.personalization_score = Math.max(0, Math.min(100, asKroniaNumber(next.personalization_score, 0)));
+  next.confidence_level = next.personalization_score >= 70 ? 'alto' : (next.personalization_score >= 40 ? 'médio' : 'baixo');
+  next.plan_status = next.personalization_score >= 70 ? 'personalizado' : 'provisório';
+  return next;
+}
+
+function readNutritionMemory() {
+  return normalizeNutritionMemory(safeJSON(KRONIA_NUTRITION_MEMORY_KEY, {}));
+}
+
+function saveNutritionMemory(memory) {
+  var next = normalizeNutritionMemory(Object.assign({}, memory || {}, { updated_at: (memory && memory.updated_at) || new Date().toISOString() }));
+  try { localStorage.setItem(KRONIA_NUTRITION_MEMORY_KEY, JSON.stringify(next)); } catch (_) {}
+  return next;
+}
+
+function updateNutritionMemory(patch) {
+  return saveNutritionMemory(Object.assign({}, readNutritionMemory(), patch || {}));
+}
+
+function resetNutritionMemory() {
+  try { localStorage.removeItem(KRONIA_NUTRITION_MEMORY_KEY); } catch (_) {}
+  return normalizeNutritionMemory({});
+}
+
+function calculateNutritionPersonalizationScore(profile, memory) {
+  var p = profile || {};
+  var m = normalizeNutritionMemory(memory);
+  var score = 0;
+  var missing = [];
+  if (asKroniaNumber(p.peso, 0) > 0 && asKroniaNumber(p.altura, 0) > 0 && asKroniaNumber(p.idade, 0) > 0 && p.sexo && p.objetivo) score += 30; else missing.push('dados_basicos');
+  if (asKroniaNumber(m.preferred_meal_count || p.refeicoesPorDia, 0) > 0) score += 10; else missing.push('refeicoes_por_dia');
+  if (m.preferred_diet_style || normalizeNutritionMemoryArray(m.liked_foods).length || normalizeNutritionMemoryArray(p.preferencias_alimentares).length) score += 10; else missing.push('preferencias_alimentares');
+  if (normalizeNutritionMemoryArray(m.disliked_foods).length || normalizeNutritionMemoryArray(m.avoided_foods).length || normalizeNutritionMemoryArray(p.restricoes).length) score += 10; else missing.push('rejeicoes');
+  if (p.condicoes_clinicas || p.restricoes) score += 10; else missing.push('restricoes_patologias');
+  if (m.workout_time) score += 10; else missing.push('horario_treino');
+  if (m.preferred_diet_style) score += 10; else missing.push('estilo_dieta');
+  if (m.adherence_days || m.skipped_meals_count || m.swapped_foods_count || m.hunger_reports_count) score += 10; else missing.push('feedback_recente');
+  return { score: score, confidence_level: score >= 70 ? 'alto' : (score >= 40 ? 'médio' : 'baixo'), missing_fields: missing, plan_status: score >= 70 ? 'personalizado' : 'provisório' };
+}
 
 function normalizeKroniaObjective(value) {
   var raw = normalizeDietFoodText(value || '');
@@ -6561,14 +6645,181 @@ function analyzeUserContext() {
 
 function selectDietTemplateForContext(context) {
   var objective = normalizeKroniaObjective(context && context.goals && context.goals.objective);
+  var memory = readNutritionMemory();
   var templates = Array.isArray(window.KRONIA_DIET_TEMPLATES) ? window.KRONIA_DIET_TEMPLATES : [];
-  var match = templates.find(function(t) { return normalizeKroniaObjective(t && t.objetivo) === objective; });
+  var ranked = templates.map(function(t) {
+    var id = String(t && t.id || '');
+    var score = normalizeKroniaObjective(t && t.objetivo) === objective ? 30 : 0;
+    var style = normalizeDietFoodText(memory.preferred_diet_style);
+    var workout = normalizeDietFoodText(memory.workout_time);
+    var hunger = normalizeDietFoodText(memory.hunger_period);
+    if (style === 'economica' && id.indexOf('economica_brasileira') !== -1) score += 55;
+    if (style === 'marmita' && id.indexOf('marmita') !== -1) score += 55;
+    if (style === 'flexivel' && id.indexOf('flexivel') !== -1) score += 55;
+    if (/corrid|plantao/.test(normalizeDietFoodText(context && context.userContext && context.userContext.behaviorContext && context.userContext.behaviorContext.rotina)) && (id.indexOf('rotina_corrida') !== -1 || id.indexOf('baixa_adesao') !== -1)) score += 35;
+    if (workout.indexOf('manha') !== -1 && id.indexOf('treino_matinal') !== -1) score += 45;
+    if (workout.indexOf('noite') !== -1 && id.indexOf('treino_noturno') !== -1) score += 45;
+    if (hunger.indexOf('noite') !== -1 && objective === 'emagrecimento' && id.indexOf('alta_saciedade') !== -1) score += 50;
+    if (memory.has_food_scale === false && (id.indexOf('reeducacao_alimentar') !== -1 || id.indexOf('baixa_adesao') !== -1 || id.indexOf('economica_brasileira') !== -1)) score += 25;
+    if (memory.swapped_foods_count >= 2 && id.indexOf('flexivel') !== -1) score += 50;
+    if (memory.skipped_meals_count >= 2 && id.indexOf('baixa_adesao') !== -1) score += 50;
+    return { template: t, score: score };
+  }).sort(function(a, b) { return b.score - a.score; });
+  var match = ranked.length && ranked[0].score > 0 ? ranked[0].template : templates.find(function(t) { return normalizeKroniaObjective(t && t.objetivo) === objective; });
+  if (match && match.id) {
+    var previous = memory.current_template_id && memory.current_template_id !== match.id
+      ? [memory.current_template_id].concat(memory.previous_template_ids || []).filter(function(id, index, all) { return id && all.indexOf(id) === index; }).slice(0, 8)
+      : memory.previous_template_ids;
+    saveNutritionMemory(Object.assign({}, memory, {
+      current_template_id: match.id,
+      previous_template_ids: previous,
+      reason_selected: buildNutritionTemplateReason(match, memory)
+    }));
+  }
   if (match) return match;
   if (objective === 'emagrecimento') return { id: 'deficit_saciedade', nome: 'Déficit com saciedade', objetivo: objective };
   if (objective === 'hipertrofia') return { id: 'high_carb', nome: 'High carb performance', objetivo: objective };
   if (objective === 'performance') return { id: 'performance_training_day', nome: 'Performance treino', objetivo: objective };
   if (objective === 'recomposicao') return { id: 'recomp_alta_proteina', nome: 'Recomposição alta proteína', objetivo: objective };
   return { id: 'maintenance_balanced', nome: 'Manutenção equilibrada', objetivo: objective };
+}
+
+function buildNutritionTemplateReason(template, memory) {
+  var id = String(template && template.id || '');
+  var reasons = [];
+  if (memory.preferred_diet_style) reasons.push('estilo ' + memory.preferred_diet_style);
+  if (memory.workout_time && (/treino/.test(id) || id.indexOf('treino_') !== -1)) reasons.push('horário de treino');
+  if (memory.hunger_period && id.indexOf('alta_saciedade') !== -1) reasons.push('fome recorrente');
+  if (memory.swapped_foods_count >= 2 && id.indexOf('flexivel') !== -1) reasons.push('muitas trocas');
+  if (memory.skipped_meals_count >= 2 && id.indexOf('baixa_adesao') !== -1) reasons.push('refeições puladas');
+  return reasons.length ? reasons.join(', ') : 'perfil atual e meta calórica';
+}
+
+function suggestDietAdaptations(plan, memory, profile) {
+  var m = normalizeNutritionMemory(memory);
+  var objective = normalizeKroniaObjective(profile && profile.objetivo);
+  var out = [];
+  if ((m.hunger_reports_count >= 2 || normalizeDietFoodText(m.hunger_period).indexOf('noite') !== -1) && objective === 'emagrecimento') out.push({ type: 'night_satiety', message: 'Reforçar jantar com proteína e fibra sem aumentar calorias totais.' });
+  if (m.skipped_meals_count >= 2) out.push({ type: 'low_adherence', message: 'Reduzir número de refeições ou usar template baixa adesão.' });
+  if (m.swapped_foods_count >= 2) out.push({ type: 'flexible', message: 'Usar template flexível com trocas equivalentes.' });
+  if (m.frequent_rejections.length >= 2) out.push({ type: 'avoid_rejections', message: 'Evitar alimentos rejeitados nas próximas dietas.' });
+  if (m.adherence_days < 2 && (m.skipped_meals_count + m.swapped_foods_count + m.hunger_reports_count) >= 3) out.push({ type: 'simplify', message: 'Simplificar para dieta simples, econômica ou marmita.' });
+  return out;
+}
+
+function registerDailyNutritionFeedback(type) {
+  var m = readNutritionMemory();
+  var patch = {};
+  if (type === 'adherent') patch.adherence_days = m.adherence_days + 1;
+  if (type === 'swapped') patch.swapped_foods_count = m.swapped_foods_count + 1;
+  if (type === 'skipped') patch.skipped_meals_count = m.skipped_meals_count + 1;
+  if (type === 'hungry') patch.hunger_reports_count = m.hunger_reports_count + 1;
+  if (type === 'difficult') patch.frequent_rejections = m.frequent_rejections.concat(['dieta dificil']).slice(-10);
+  var next = updateNutritionMemory(patch);
+  var score = calculateNutritionPersonalizationScore(readLocalUserAnamnesis(), next);
+  saveNutritionMemory(Object.assign({}, next, { personalization_score: score.score, confidence_level: score.confidence_level, missing_fields: score.missing_fields, plan_status: score.plan_status }));
+  renderActiveDietPlan();
+  showToast('Feedback registrado na memória nutricional.', 'success', 2200);
+}
+
+function saveNutritionProgressiveAnswer(field, value) {
+  var patch = {};
+  patch[field] = value;
+  if (field === 'disliked_foods') patch[field] = normalizeNutritionMemoryArray(value);
+  var next = updateNutritionMemory(patch);
+  var score = calculateNutritionPersonalizationScore(readLocalUserAnamnesis(), next);
+  saveNutritionMemory(Object.assign({}, next, { personalization_score: score.score, confidence_level: score.confidence_level, missing_fields: score.missing_fields, plan_status: score.plan_status }));
+  renderActiveDietPlan();
+}
+
+function openNutritionProgressiveAnamnesis() {
+  var mealCount = prompt('Quantas refeições você prefere por dia?');
+  var style = prompt('Prefere dieta simples, econômica, variada, marmita ou flexível?');
+  var scale = prompt('Você tem balança de alimentos? Responda sim ou não.');
+  var disliked = prompt('Tem algum alimento que você não come? Separe por vírgula.');
+  var workout = prompt('Qual horário você treina?');
+  var hunger = prompt('Em qual período sente mais fome?');
+  var patch = {
+    preferred_meal_count: asKroniaNumber(mealCount, null),
+    preferred_diet_style: normalizeDietFoodText(style || '').replace('economica', 'econômica') || null,
+    has_food_scale: /^s/i.test(String(scale || '')),
+    disliked_foods: normalizeNutritionMemoryArray(disliked),
+    avoided_foods: normalizeNutritionMemoryArray(disliked),
+    workout_time: workout || null,
+    hunger_period: hunger || null
+  };
+  saveNutritionProgressiveAnswer('preferred_meal_count', patch.preferred_meal_count);
+  updateNutritionMemory(patch);
+  var score = calculateNutritionPersonalizationScore(readLocalUserAnamnesis(), readNutritionMemory());
+  saveNutritionMemory(Object.assign({}, readNutritionMemory(), { personalization_score: score.score, confidence_level: score.confidence_level, missing_fields: score.missing_fields, plan_status: score.plan_status }));
+  renderActiveDietPlan();
+}
+
+function skipNutritionAnamnesisAndGenerate() {
+  var score = calculateNutritionPersonalizationScore(readLocalUserAnamnesis(), readNutritionMemory());
+  saveNutritionMemory(Object.assign({}, readNutritionMemory(), { personalization_score: score.score, confidence_level: score.confidence_level, missing_fields: score.missing_fields, plan_status: 'provisório' }));
+  gerarDieta();
+}
+
+function applyDietAdaptiveSuggestion() {
+  var memory = readNutritionMemory();
+  if (memory.skipped_meals_count >= 2) memory.preferred_meal_count = Math.max(3, asKroniaNumber(memory.preferred_meal_count, 4) - 1);
+  if (memory.swapped_foods_count >= 2) memory.preferred_diet_style = 'flexível';
+  if (memory.hunger_reports_count >= 2) memory.hunger_period = memory.hunger_period || 'noite';
+  saveNutritionMemory(memory);
+  showToast('Ajuste aplicado à próxima geração da dieta.', 'success', 2600);
+  renderActiveDietPlan();
+}
+
+function dismissDietAdaptiveSuggestion() {
+  showToast('Ajuste mantido para análise futura.', 'info', 2200);
+}
+
+function runWeeklyNutritionCheckin(checkin, plan, profile, memory) {
+  var c = checkin || {};
+  var objective = normalizeKroniaObjective(profile && profile.objetivo);
+  var adherence = asKroniaNumber(c.adherence_days || c.seguiu_dias, 0);
+  var hunger = asKroniaNumber(c.hunger_avg || c.fome_media, 0);
+  var energy = asKroniaNumber(c.training_energy || c.energia_treino, 0);
+  var weightDelta = asKroniaNumber(c.weight_delta_kg != null ? c.weight_delta_kg : c.delta_peso_kg, 0);
+  var targetCalories = asKroniaNumber(plan && plan.targets && plan.targets.kcal || plan && plan.caloriasMeta, 0);
+  var result = { calorie_multiplier: 1, targetCalories: targetCalories || null, carb_timing: null, simplify: false, reason: 'Check-in estável: manter plano atual e observar nova semana.' };
+  if (objective === 'emagrecimento' && adherence >= 5 && Math.abs(weightDelta) < 0.2 && hunger < 7) {
+    result.calorie_multiplier = 0.95;
+    result.targetCalories = targetCalories ? Math.round(targetCalories * 0.95) : null;
+    result.reason = 'Adesão boa e peso estável em emagrecimento: reduzir 5% das calorias.';
+  } else if (hunger >= 7) {
+    result.reason = 'Fome alta: manter calorias, aumentar volume/fibra e redistribuir refeições.';
+  } else if (energy > 0 && energy <= 4) {
+    result.carb_timing = 'pre_pos_treino';
+    result.reason = 'Energia baixa no treino: mover carboidratos para pré/pós-treino.';
+  } else if (adherence < 4) {
+    result.simplify = true;
+    result.reason = 'Adesão baixa: simplificar dieta sem apertar calorias.';
+  } else if (objective === 'hipertrofia' && weightDelta <= 0.1) {
+    result.calorie_multiplier = 1.05;
+    result.targetCalories = targetCalories ? Math.round(targetCalories * 1.05) : null;
+    result.reason = 'Hipertrofia sem subida de peso: aumentar 5% das calorias.';
+  }
+  return result;
+}
+
+function openWeeklyNutritionCheckin() {
+  var peso = prompt('Peso atual');
+  var dias = prompt('Seguiu a dieta quantos dias?');
+  var fome = prompt('Fome média 0-10');
+  var energia = prompt('Energia no treino 0-10');
+  var ajuste = prompt('Quer manter, acelerar ou flexibilizar?');
+  var plan = window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan();
+  var result = runWeeklyNutritionCheckin({
+    peso_atual: peso,
+    seguiu_dias: dias,
+    fome_media: fome,
+    energia_treino: energia,
+    ajuste: ajuste
+  }, plan, readLocalUserAnamnesis(), readNutritionMemory());
+  updateNutritionMemory({ adherence_days: asKroniaNumber(dias, 0) });
+  showToast(result.reason, 'info', 5200);
 }
 
 function analyzeDietContext() {
@@ -6653,11 +6904,21 @@ function generateDietViewModel(context) {
   var currentMeal = getNextDietMeal(getDietRenderableMeals(plan));
   var targets = ctx.macroTargets || plan.targets || {};
   var totals = plan.totals || {};
+  var memory = readNutritionMemory();
+  var personalization = calculateNutritionPersonalizationScore(ctx.userProfile || {}, memory);
+  memory = saveNutritionMemory(Object.assign({}, memory, {
+    personalization_score: personalization.score,
+    confidence_level: personalization.confidence_level,
+    missing_fields: personalization.missing_fields,
+    plan_status: personalization.plan_status
+  }));
   return {
     header: {
       title: 'Dieta',
       greeting: getDietGreeting(ctx.userProfile && ctx.userProfile.nome),
-      subtitle: 'Aqui está seu plano alimentar de hoje',
+      subtitle: personalization.plan_status === 'personalizado'
+        ? 'Plano personalizado com base no seu perfil e comportamento recente.'
+        : 'Plano inicial gerado com dados limitados.',
       source: ctx.source
     },
     currentMeal: buildMealSummary(currentMeal || meals[0] || {}),
@@ -6670,6 +6931,7 @@ function generateDietViewModel(context) {
     actionCards: [
       { key: 'minha-dieta', icon: 'utensils', title: 'Minha Dieta', description: 'Veja todas as refeições do dia.' },
       { key: 'trocar-alimento', icon: 'refresh-cw', title: 'Trocar alimento', description: 'Substitua alimentos mantendo os macros.' },
+      { key: 'check-in-semanal', icon: 'calendar-check', title: 'Check-in semanal', description: 'Ajuste calorias e aderência da semana.' },
       { key: 'progresso', icon: 'trending-up', title: 'Progresso nutricional', description: 'Acompanhe adesão, peso e metas.' },
       { key: 'exames', icon: 'flask-conical', title: 'Exames', description: 'Use exames para orientar ajustes alimentares.' },
       { key: 'perfil', icon: 'user-round', title: 'Perfil alimentar', description: 'Edite objetivo, preferências e restrições.' }
@@ -6677,6 +6939,9 @@ function generateDietViewModel(context) {
     meals: meals,
     substitutions: normalizeDietVisualSubstitutions(plan.visualPrescription && plan.visualPrescription.substitutions),
     progress: { adherence: 87, streak: 5, insight: buildDietContextInsight(ctx) },
+    memory: memory,
+    personalization: personalization,
+    adaptations: suggestDietAdaptations(plan, memory, ctx.userProfile || {}),
     labs: { alerts: ctx.clinicalAlerts || [], latest: ctx.userContext && ctx.userContext.clinicalContext && ctx.userContext.clinicalContext.latestLabReport || null },
     profile: ctx.userProfile,
     context: ctx,
@@ -6892,21 +7157,21 @@ var TACO_FOOD_UX_OVERRIDES = {
     default_portion_g: 50,
     default_unit: '1 unidade média (50 g)',
     medida_caseira: '1 unidade média (50 g)',
-    aliases: ['pao frances', 'pão francês', 'francesinho']
+    aliases: ['pao frances', 'pão francês', 'paes franceses', 'pães franceses', 'francesinho']
   },
   TACO_0488: {
     display_name: 'Ovo de galinha',
     default_portion_g: 50,
     default_unit: '1 unidade média (50 g)',
     medida_caseira: '1 unidade média (50 g)',
-    aliases: ['ovo', 'ovo cozido', 'ovo de galinha']
+    aliases: ['ovo', 'ovos', 'ovo cozido', 'ovos cozidos', 'ovo de galinha']
   },
   TACO_0182: {
     display_name: 'Banana',
     default_portion_g: 86,
     default_unit: '1 unidade média (86 g)',
     medida_caseira: '1 unidade média (86 g)',
-    aliases: ['banana', 'banana prata']
+    aliases: ['banana', 'bananas', 'banana prata']
   },
   TACO_0221: {
     display_name: 'Maçã',
@@ -6934,7 +7199,7 @@ var TACO_FOOD_UX_OVERRIDES = {
     default_portion_g: 100,
     default_unit: '1 concha média (100 g)',
     medida_caseira: '1 concha média (100 g)',
-    aliases: ['feijao', 'feijão', 'feijao carioca', 'feijão carioca']
+    aliases: ['feijao', 'feijão', 'feijoes', 'feijões', 'feijao carioca', 'feijão carioca', 'feijoes cariocas', 'feijões cariocas']
   },
   TACO_0567: {
     display_name: 'Feijão preto cozido',
@@ -6948,7 +7213,7 @@ var TACO_FOOD_UX_OVERRIDES = {
     default_portion_g: 130,
     default_unit: '1 unidade média (130 g)',
     medida_caseira: '1 unidade média (130 g)',
-    aliases: ['batata doce', 'batata-doce', 'batata doce cozida']
+    aliases: ['batata doce', 'batata-doce', 'batatas doces', 'batatas-doces', 'batata doce cozida']
   },
   TACO_0091: {
     display_name: 'Batata inglesa cozida',
@@ -6965,11 +7230,11 @@ var TACO_FOOD_UX_OVERRIDES = {
     aliases: ['tapioca']
   },
   TACO_0040: {
-    display_name: 'Macarrão de trigo',
-    default_portion_g: 80,
-    default_unit: '1 prato raso cozido a partir de 80 g cru',
-    medida_caseira: '1 prato raso cozido a partir de 80 g cru',
-    aliases: ['macarrao', 'macarrão', 'macarrao trigo', 'macarrão de trigo']
+    display_name: 'Macarrão cozido',
+    default_portion_g: 120,
+    default_unit: '1 prato raso (120 g)',
+    medida_caseira: '1 prato raso (120 g)',
+    aliases: ['macarrao', 'macarrão', 'macarroes', 'macarrões', 'macarrao cozido', 'macarrão cozido', 'macarroes cozidos', 'macarrões cozidos', 'macarrao trigo', 'macarrão de trigo']
   }
 };
 var TACO_RUNTIME_PORTION_MAP = TACO_FOOD_UX_OVERRIDES;
@@ -7013,6 +7278,14 @@ function applyTacoFoodUx(food) {
   var officialName = food.official_name || food.nome || food.name || food.display_name_pt || null;
   var displayName = override && override.display_name ? override.display_name : (food.display_name || food.display_name_pt || food.canonical_name_pt || food.nome || food.name || 'Alimento');
   var groupKey = food.group_key || food.grupo || (override && override.group_key) || mapTacoCatalogGroup([food.categoria, officialName, displayName].filter(Boolean).join(' '));
+  var per100 = {
+    kcal: asKroniaNumber(food.kcal_100g != null ? food.kcal_100g : (food.kcal_por_100g != null ? food.kcal_por_100g : food.energia_kcal), 0),
+    protein: asKroniaNumber(food.protein_100g != null ? food.protein_100g : (food.proteina_por_100g != null ? food.proteina_por_100g : food.proteina_g), 0),
+    carbs: asKroniaNumber(food.carbs_100g != null ? food.carbs_100g : (food.carbo_por_100g != null ? food.carbo_por_100g : food.carboidrato_g), 0),
+    fat: asKroniaNumber(food.fat_100g != null ? food.fat_100g : (food.gordura_por_100g != null ? food.gordura_por_100g : food.lipidios_g), 0),
+    fiber: asKroniaNumber(food.fiber_100g != null ? food.fiber_100g : (food.fibra_por_100g != null ? food.fibra_por_100g : food.fibra_g), 0),
+    sodium: asKroniaNumber(food.sodium_mg_100g != null ? food.sodium_mg_100g : (food.sodio_mg_por_100g != null ? food.sodio_mg_por_100g : food.sodio_mg), 0)
+  };
   return Object.assign({}, food, {
     display_name: displayName,
     display_name_pt: displayName,
@@ -7025,6 +7298,13 @@ function applyTacoFoodUx(food) {
     group_key: groupKey,
     grupo: groupKey,
     aliases: mergeDietAliases(food.aliases, override && override.aliases, officialName, displayName),
+    per100: per100,
+    kcal_100g: per100.kcal,
+    protein_100g: per100.protein,
+    carbs_100g: per100.carbs,
+    fat_100g: per100.fat,
+    fiber_100g: per100.fiber,
+    sodium_mg_100g: per100.sodium,
     source: food.source || 'taco',
     source_type: food.source_type || 'taco',
     is_taco_fallback: true
@@ -7120,6 +7400,14 @@ function normalizeRuntimeFoodEntry(food, sourceKind) {
     fat_100g: fat,
     fiber_100g: fiber,
     sodium_mg_100g: asKroniaNumber(safeFood.sodium_mg_100g != null ? safeFood.sodium_mg_100g : safeFood.sodio_mg, 0),
+    per100: {
+      kcal: kcal,
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
+      fiber: fiber,
+      sodium: asKroniaNumber(safeFood.sodium_mg_100g != null ? safeFood.sodium_mg_100g : safeFood.sodio_mg, 0)
+    },
     source: safeFood.source || (isTaco ? 'taco' : 'kronia'),
     source_type: safeFood.source_type || (isTaco ? 'taco' : 'kronia'),
     source_id: safeFood.source_id || safeFood.sourceCode || safeFood.code || safeFood.id || safeFood.taco_id || slug,
@@ -7529,7 +7817,7 @@ function normalizeDietEditorItem(item, order) {
   if (grams && /\bg\b/i.test(quantity) && !/\d/.test(quantity)) quantity = grams + ' g';
   return {
     id: safeItem && safeItem.id || ('item_' + Date.now() + '_' + order),
-    sourceType: safeItem && (safeItem.sourceType || safeItem.source_type) || (resolvedFood ? 'catalog' : (safeItem && safeItem.foodCode ? 'catalog' : 'custom')),
+    sourceType: safeItem && (safeItem.sourceType || safeItem.source_type) || ((resolvedFood && (resolvedFood.source === 'taco' || resolvedFood.is_taco_fallback)) ? 'taco' : (resolvedFood ? 'catalog' : (safeItem && safeItem.foodCode ? 'catalog' : 'custom'))),
     sourceId: safeItem && (safeItem.sourceId || safeItem.source_id || safeItem.foodCode || safeItem.code || safeItem.food_id || safeItem.foodId) || (resolvedFood && (resolvedFood.id || resolvedFood.slug)) || null,
     food_id: safeItem && (safeItem.food_id || safeItem.foodId) || (resolvedFood && resolvedFood.id) || null,
     food_slug: safeItem && (safeItem.food_slug || safeItem.foodSlug) || (resolvedFood && resolvedFood.slug) || null,
@@ -7540,7 +7828,7 @@ function normalizeDietEditorItem(item, order) {
     codigo_taco: safeItem && safeItem.codigo_taco || (resolvedFood && resolvedFood.codigo_taco) || null,
     official_name: safeItem && safeItem.official_name || (resolvedFood && resolvedFood.official_name) || null,
     is_taco_fallback: Boolean((safeItem && safeItem.is_taco_fallback) || (resolvedFood && resolvedFood.is_taco_fallback) || (safeItem && safeItem.source === 'taco')),
-    name: getDietItemName(safeItem),
+    name: resolvedFood && (resolvedFood.source === 'taco' || resolvedFood.is_taco_fallback) ? getDietItemName(resolvedFood) : getDietItemName(safeItem),
     slot: safeItem && (safeItem.slot || safeItem.substitution_group || safeItem.groupKey || safeItem.group_key) || (resolvedFood && resolvedFood.group_key) || 'item',
     unit: safeItem && (safeItem.unit || safeItem.unidade) || (resolvedFood && resolvedFood.default_unit) || null,
     quantity: quantity,
@@ -7990,7 +8278,76 @@ function renderDietActionCards(vm) {
 }
 
 function renderDietHome(vm) {
-  return '<div class="diet-core-view">' + renderDietNowCard(vm) + renderDietProgressCard(vm) + renderDietActionCards(vm) + '</div>';
+  return '<div class="diet-core-view">'
+    + renderDietAdaptiveStatusCard(vm)
+    + renderDietProgressCard(vm)
+    + renderDietNowCard(vm)
+    + renderDietProgressiveAnamnesisCard(vm)
+    + renderDietDailyFeedbackCard(vm)
+    + renderDietAdaptationCard(vm)
+    + renderDietActionCards(vm)
+    + '</div>';
+}
+
+function renderDietAdaptiveStatusCard(vm) {
+  var memory = vm.memory || readNutritionMemory();
+  var score = asKroniaNumber(memory.personalization_score, 0);
+  var statusText = memory.plan_status === 'personalizado'
+    ? 'Plano personalizado com base no seu perfil e comportamento recente.'
+    : 'Plano inicial gerado com dados limitados.';
+  return '<section class="diet-adaptive-card diet-adaptive-card--status">'
+    + '<div class="diet-adaptive-card-head"><span>Personalização atual</span><strong>' + score + '%</strong></div>'
+    + '<div class="diet-adaptive-progress"><div style="width:' + Math.max(0, Math.min(100, score)) + '%"></div></div>'
+    + '<p>' + escapeHTML(statusText) + ' Complete sua anamnese para melhorar precisão e adesão.</p>'
+    + '<div class="diet-adaptive-tags"><span>' + escapeHTML(memory.plan_status === 'personalizado' ? 'Personalizado' : 'Provisório') + '</span><span>' + escapeHTML(memory.confidence_level || 'baixo') + '</span></div>'
+    + '</section>';
+}
+
+function renderDietProgressiveAnamnesisCard(vm) {
+  var memory = vm.memory || readNutritionMemory();
+  var missing = (memory.missing_fields || []).length;
+  return '<section class="diet-adaptive-card">'
+    + '<div class="diet-adaptive-card-head"><span>Complete sua dieta</span><strong>' + escapeHTML(String(missing || 0)) + ' pendências</strong></div>'
+    + '<p>Personalização atual: ' + escapeHTML(String(memory.personalization_score || 0)) + '%. Responda perguntas rápidas sem formulário grande.</p>'
+    + '<div class="diet-adaptive-question-grid">'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_meal_count\',3)">3 refeições</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_meal_count\',4)">4 refeições</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_meal_count\',5)">5 refeições</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'has_food_scale\',true)">Tenho balança</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'has_food_scale\',false)">Sem balança</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_diet_style\',\'simples\')">Simples</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_diet_style\',\'econômica\')">Econômica</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_diet_style\',\'variada\')">Variada</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_diet_style\',\'marmita\')">Marmita</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'preferred_diet_style\',\'flexível\')">Flexível</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'workout_time\',\'manhã\')">Treino manhã</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'workout_time\',\'noite\')">Treino noite</button>'
+    + '<button onclick="saveNutritionProgressiveAnswer(\'hunger_period\',\'noite\')">Fome à noite</button>'
+    + '</div>'
+    + '<div class="diet-adaptive-actions"><button onclick="openNutritionProgressiveAnamnesis()">Responder agora</button><button onclick="skipNutritionAnamnesisAndGenerate()">Pular e gerar plano provisório</button></div>'
+    + '</section>';
+}
+
+function renderDietDailyFeedbackCard() {
+  return '<section class="diet-adaptive-card">'
+    + '<div class="diet-adaptive-card-head"><span>Como foi sua dieta hoje?</span><strong>Feedback</strong></div>'
+    + '<div class="diet-feedback-grid">'
+    + '<button onclick="registerDailyNutritionFeedback(\'adherent\')">Comi conforme o plano</button>'
+    + '<button onclick="registerDailyNutritionFeedback(\'swapped\')">Troquei alimentos</button>'
+    + '<button onclick="registerDailyNutritionFeedback(\'skipped\')">Pulei refeição</button>'
+    + '<button onclick="registerDailyNutritionFeedback(\'hungry\')">Ainda fiquei com fome</button>'
+    + '<button onclick="registerDailyNutritionFeedback(\'difficult\')">Muito difícil de seguir</button>'
+    + '</div></section>';
+}
+
+function renderDietAdaptationCard(vm) {
+  var adaptations = Array.isArray(vm.adaptations) ? vm.adaptations : [];
+  if (!adaptations.length) return '';
+  return '<section class="diet-adaptive-card diet-adaptive-card--pattern">'
+    + '<div class="diet-adaptive-card-head"><span>KroniA percebeu um padrão</span><strong>' + adaptations.length + '</strong></div>'
+    + '<p>' + escapeHTML(adaptations[0].message) + '</p>'
+    + '<div class="diet-adaptive-actions"><button onclick="applyDietAdaptiveSuggestion()">Aplicar ajuste</button><button onclick="dismissDietAdaptiveSuggestion()">Não agora</button></div>'
+    + '</section>';
 }
 
 function renderDietPlanPanel(vm) {
@@ -8045,6 +8402,7 @@ function renderDietProfilePanel(vm) {
 function renderDietCoreContent(view, vm) {
   if (view === 'minha-dieta' || view === 'plano') return renderDietPlanPanel(vm);
   if (view === 'trocar-alimento' || view === 'substituir') return renderDietSubstitutionPanel(vm);
+  if (view === 'check-in-semanal') return '<div class="diet-core-view">' + renderDietBackHeader('Check-in semanal') + '<section class="diet-adaptive-card"><div class="diet-adaptive-card-head"><span>Check-in da semana</span><strong>5 perguntas</strong></div><p>Peso atual, dias de adesão, fome média, energia no treino e direção do ajuste.</p><div class="diet-adaptive-actions"><button onclick="openWeeklyNutritionCheckin()">Responder check-in</button></div></section></div>';
   if (view === 'progresso') return renderDietProgressPanel(vm);
   if (view === 'exames') return renderDietLabsPanel(vm);
   if (view === 'perfil') return renderDietProfilePanel(vm);

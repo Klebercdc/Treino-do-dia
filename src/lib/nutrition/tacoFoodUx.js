@@ -6,21 +6,21 @@ var TACO_FOOD_UX_OVERRIDES = {
     default_portion_g: 50,
     default_unit: '1 unidade média (50 g)',
     medida_caseira: '1 unidade média (50 g)',
-    aliases: ['pao frances', 'pão francês', 'francesinho']
+    aliases: ['pao frances', 'pão francês', 'paes franceses', 'pães franceses', 'francesinho']
   },
   TACO_0488: {
     display_name: 'Ovo de galinha',
     default_portion_g: 50,
     default_unit: '1 unidade média (50 g)',
     medida_caseira: '1 unidade média (50 g)',
-    aliases: ['ovo', 'ovo cozido', 'ovo de galinha']
+    aliases: ['ovo', 'ovos', 'ovo cozido', 'ovos cozidos', 'ovo de galinha']
   },
   TACO_0182: {
     display_name: 'Banana',
     default_portion_g: 86,
     default_unit: '1 unidade média (86 g)',
     medida_caseira: '1 unidade média (86 g)',
-    aliases: ['banana', 'banana prata']
+    aliases: ['banana', 'bananas', 'banana prata']
   },
   TACO_0221: {
     display_name: 'Maçã',
@@ -48,7 +48,7 @@ var TACO_FOOD_UX_OVERRIDES = {
     default_portion_g: 100,
     default_unit: '1 concha média (100 g)',
     medida_caseira: '1 concha média (100 g)',
-    aliases: ['feijao', 'feijão', 'feijao carioca', 'feijão carioca']
+    aliases: ['feijao', 'feijão', 'feijoes', 'feijões', 'feijao carioca', 'feijão carioca', 'feijoes cariocas', 'feijões cariocas']
   },
   TACO_0567: {
     display_name: 'Feijão preto cozido',
@@ -62,7 +62,7 @@ var TACO_FOOD_UX_OVERRIDES = {
     default_portion_g: 130,
     default_unit: '1 unidade média (130 g)',
     medida_caseira: '1 unidade média (130 g)',
-    aliases: ['batata doce', 'batata-doce', 'batata doce cozida']
+    aliases: ['batata doce', 'batata-doce', 'batatas doces', 'batatas-doces', 'batata doce cozida']
   },
   TACO_0091: {
     display_name: 'Batata inglesa cozida',
@@ -79,11 +79,11 @@ var TACO_FOOD_UX_OVERRIDES = {
     aliases: ['tapioca']
   },
   TACO_0040: {
-    display_name: 'Macarrão de trigo',
-    default_portion_g: 80,
-    default_unit: '1 prato raso cozido a partir de 80 g cru',
-    medida_caseira: '1 prato raso cozido a partir de 80 g cru',
-    aliases: ['macarrao', 'macarrão', 'macarrao trigo', 'macarrão de trigo']
+    display_name: 'Macarrão cozido',
+    default_portion_g: 120,
+    default_unit: '1 prato raso (120 g)',
+    medida_caseira: '1 prato raso (120 g)',
+    aliases: ['macarrao', 'macarrão', 'macarroes', 'macarrões', 'macarrao cozido', 'macarrão cozido', 'macarroes cozidos', 'macarrões cozidos', 'macarrao trigo', 'macarrão de trigo']
   }
 };
 
@@ -151,6 +151,14 @@ function applyTacoFoodUx(food) {
   var override = tacoId && TACO_FOOD_UX_OVERRIDES[tacoId] ? TACO_FOOD_UX_OVERRIDES[tacoId] : null;
   var officialName = food.official_name || food.nome || food.name || food.display_name_pt || null;
   var displayName = override && override.display_name ? override.display_name : (food.display_name || food.display_name_pt || food.nome || food.name || 'Alimento');
+  var per100 = {
+    kcal: food.kcal_100g != null ? Number(food.kcal_100g) : (food.kcal_por_100g != null ? Number(food.kcal_por_100g) : (food.energia_kcal != null ? Number(food.energia_kcal) : null)),
+    protein: food.protein_100g != null ? Number(food.protein_100g) : (food.proteina_por_100g != null ? Number(food.proteina_por_100g) : (food.proteina_g != null ? Number(food.proteina_g) : null)),
+    carbs: food.carbs_100g != null ? Number(food.carbs_100g) : (food.carbo_por_100g != null ? Number(food.carbo_por_100g) : (food.carboidrato_g != null ? Number(food.carboidrato_g) : null)),
+    fat: food.fat_100g != null ? Number(food.fat_100g) : (food.gordura_por_100g != null ? Number(food.gordura_por_100g) : (food.lipidios_g != null ? Number(food.lipidios_g) : null)),
+    fiber: food.fiber_100g != null ? Number(food.fiber_100g) : (food.fibra_por_100g != null ? Number(food.fibra_por_100g) : (food.fibra_g != null ? Number(food.fibra_g) : null)),
+    sodium: food.sodium_mg_100g != null ? Number(food.sodium_mg_100g) : (food.sodio_mg_por_100g != null ? Number(food.sodio_mg_por_100g) : (food.sodio_mg != null ? Number(food.sodio_mg) : null))
+  };
   var aliases = uniqueAliases([]
     .concat(Array.isArray(food.aliases) ? food.aliases : [])
     .concat(override && Array.isArray(override.aliases) ? override.aliases : [])
@@ -168,6 +176,13 @@ function applyTacoFoodUx(food) {
     group_key: food.group_key || classifyTacoFoodGroup(Object.assign({}, food, override || {})),
     grupo: food.grupo || food.group_key || classifyTacoFoodGroup(Object.assign({}, food, override || {})),
     aliases: aliases,
+    per100: per100,
+    kcal_100g: per100.kcal,
+    protein_100g: per100.protein,
+    carbs_100g: per100.carbs,
+    fat_100g: per100.fat,
+    fiber_100g: per100.fiber,
+    sodium_mg_100g: per100.sodium,
     source: food.source || 'taco',
     source_type: food.source_type || 'taco',
     is_taco_fallback: true
