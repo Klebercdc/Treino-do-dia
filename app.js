@@ -2651,6 +2651,15 @@ function syncMainScrollArea() {
   container.style.height = `${Math.max(160, available)}px`;
 }
 
+function setDietMiniAppChrome(active) {
+  var isActive = !!active;
+  document.body.classList.toggle('diet-mini-app-active', isActive);
+  var footer = document.querySelector('.footer-actions');
+  if (footer) footer.setAttribute('aria-hidden', isActive ? 'true' : 'false');
+  var miniNav = document.getElementById('dietMiniAppNav');
+  if (miniNav) miniNav.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+}
+
 function navTo(tab) {
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
@@ -2658,6 +2667,7 @@ function navTo(tab) {
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
   if (tab !== "perfil") document.getElementById("perfilScreen")?.classList.remove("show");
+  setDietMiniAppChrome(tab === "dieta");
   document.querySelectorAll('.btn-nav').forEach(b => {
     b.classList.remove('active');
     b.classList.remove('diet-active');
@@ -5339,6 +5349,7 @@ function openHome() {
   document.getElementById('dietDataScreen')?.classList.remove('show');
   document.getElementById('evolutionDataScreen')?.classList.remove('show');
   document.getElementById('perfilScreen')?.classList.remove('show');
+  setDietMiniAppChrome(false);
   const el = document.getElementById("homeScreen");
   if (!el) return;
   el.classList.add("show");
@@ -5642,6 +5653,7 @@ function _updateHomeBannerFast(streak, totalTreinos) {
 // TELA DE PERFIL
 // ══════════════════════════════════════════
 function openPerfil() {
+  setDietMiniAppChrome(false);
   try { updatePerfilScreen(); } catch(e) { console.error("updatePerfilScreen:", e); }
   // Preenche seção de conta
   _sb.auth.getSession().then(({ data: { session } }) => {
@@ -5670,6 +5682,7 @@ function openPerfil() {
 function closePerfil() {
   document.getElementById("perfilScreen").classList.remove("show");
   document.body.classList.remove('overlay-open');
+  setDietMiniAppChrome(false);
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
 }
@@ -6312,6 +6325,7 @@ function renderKroniaProgress(label, consumed, target, cssClass, unit) {
 
 function openDietDataScreen() {
   syncDietaTheme(resolveKroniaThemeForDieta());
+  setDietMiniAppChrome(true);
   document.getElementById('dietDataScreen')?.classList.add('show');
   document.body.classList.remove('overlay-open');
   var greetingEl = document.getElementById('dietHeaderGreeting');
@@ -8068,6 +8082,7 @@ function exportActiveDietPlanPDF() {
 }
 
 function openEvolutionDataScreen() {
+  setDietMiniAppChrome(false);
   document.getElementById('evolutionDataScreen')?.classList.add('show');
   document.body.classList.remove('overlay-open');
   refreshEvolutionDataScreen();
