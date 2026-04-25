@@ -31,9 +31,11 @@ function buildPremiumSearchBlob(food) {
   var parts = [
     food.nome,
     food.code,
+    food.taco_id,
     food.categoria,
     food.subcategoria,
-    food.grupo_equivalencia
+    food.grupo_equivalencia,
+    Array.isArray(food.aliases) ? food.aliases.join(' ') : ''
   ];
   return normalizeText(parts.filter(Boolean).join(' '));
 }
@@ -49,6 +51,16 @@ function buildTacoSearchBlob(food) {
 }
 
 function buildPremiumResult(food) {
+  var medidaText = String(food.medida_caseira || '');
+  var medidaMatch = medidaText.match(/(\d+(?:[.,]\d+)?)\s*g\b/i);
+  var medidaGrams = medidaMatch ? toNumber(medidaMatch[1].replace(',', '.')) : null;
+  var tacoUx = food.taco_id ? tacoService.applyTacoFoodUx({
+    taco_id: food.taco_id,
+    codigo_taco: food.codigo_taco,
+    nome: food.nome,
+    categoria: food.categoria,
+    aliases: food.aliases
+  }) : null;
   return {
     source: 'kronia',
     is_taco_fallback: false,
@@ -57,8 +69,14 @@ function buildPremiumResult(food) {
     taco_id: food.taco_id || null,
     codigo_taco: food.codigo_taco || null,
     nome: food.nome || null,
+    display_name: food.nome || null,
+    official_name: tacoUx && tacoUx.official_name ? tacoUx.official_name : null,
     categoria: food.categoria || null,
     grupo_equivalencia: food.grupo_equivalencia || null,
+    default_portion_g: tacoUx && tacoUx.default_portion_g ? tacoUx.default_portion_g : medidaGrams,
+    default_unit: tacoUx && tacoUx.default_unit ? tacoUx.default_unit : (food.medida_caseira || null),
+    medida_caseira: tacoUx && tacoUx.medida_caseira ? tacoUx.medida_caseira : (food.medida_caseira || null),
+    aliases: tacoUx && Array.isArray(tacoUx.aliases) ? tacoUx.aliases.slice() : (Array.isArray(food.aliases) ? food.aliases.slice() : []),
     kcal_por_100g: toNumber(food.kcal_por_100g),
     proteina_por_100g: toNumber(food.proteina_por_100g),
     carbo_por_100g: toNumber(food.carbo_por_100g),
@@ -73,16 +91,27 @@ function buildPremiumResult(food) {
 }
 
 function buildTacoResult(food) {
+  var uxFood = tacoService.applyTacoFoodUx(food);
   var macros = tacoService.mapTacoFoodToKroniaMacros(food);
   return {
     source: 'taco',
     is_taco_fallback: true,
-    code: food.taco_id,
-    id: food.taco_id,
-    taco_id: food.taco_id,
-    codigo_taco: food.codigo_taco,
-    nome: food.nome,
+    code: uxFood.taco_id,
+    id: uxFood.taco_id,
+    taco_id: uxFood.taco_id,
+    codigo_taco: uxFood.codigo_taco,
+    nome: uxFood.nome,
+    display_name: uxFood.display_name,
+    display_name_pt: uxFood.display_name_pt,
+    canonical_name_pt: uxFood.canonical_name_pt,
+    official_name: uxFood.official_name,
     categoria: food.categoria || null,
+    grupo: uxFood.grupo,
+    group_key: uxFood.group_key,
+    default_portion_g: toNumber(uxFood.default_portion_g),
+    default_unit: uxFood.default_unit,
+    medida_caseira: uxFood.medida_caseira,
+    aliases: Array.isArray(uxFood.aliases) ? uxFood.aliases.slice() : [],
     energia_kcal: toNumber(food.energia_kcal),
     energia_kj: toNumber(food.energia_kj),
     proteina_g: toNumber(food.proteina_g),
@@ -126,11 +155,18 @@ function scoreSearchEntry(entry, normalizedQuery, queryTokens, sourcePriority) {
   var name = normalizeText(entry.nome);
   var blob = normalizeText([
     entry.nome,
+    entry.display_name,
+    entry.display_name_pt,
+    entry.canonical_name_pt,
+    entry.official_name,
     entry.code,
     entry.taco_id,
     entry.codigo_taco,
     entry.categoria,
-    entry.grupo_equivalencia
+    entry.grupo_equivalencia,
+    entry.group_key,
+    entry.grupo,
+    Array.isArray(entry.aliases) ? entry.aliases.join(' ') : ''
   ].filter(Boolean).join(' '));
   var score = 0;
 
@@ -186,11 +222,28 @@ function isStrongMatch(entry, query) {
   var name = normalizeText(entry && entry.nome);
   if (name === normalizedQuery) return true;
   if (name.indexOf(normalizedQuery) >= 0) return true;
+  var blob = normalizeText([
+    entry && entry.nome,
+    entry && entry.code,
+    entry && entry.taco_id,
+    entry && entry.display_name,
+    entry && entry.official_name,
+    entry && entry.grupo_equivalencia,
+    entry && Array.isArray(entry.aliases) ? entry.aliases.join(' ') : ''
+  ].filter(Boolean).join(' '));
+  if (blob === normalizedQuery || blob.indexOf(normalizedQuery) >= 0) return true;
   var tokens = normalizedQuery.split(' ').filter(Boolean);
   if (!tokens.length) return false;
-  return tokens.every(function (token) {
-    return name.indexOf(token) >= 0;
-  });
+  return tokens.every(function (token) { return blob.indexOf(token) >= 0; });
+}
+
+function getDedupKeys(entry) {
+  var keys = [];
+  if (!entry || typeof entry !== 'object') return keys;
+  if (entry.taco_id) return ['taco:' + String(entry.taco_id).trim()];
+  var nameKey = normalizeText(entry.nome || entry.display_name || entry.display_name_pt || entry.canonical_name_pt);
+  if (nameKey) keys.push('name:' + nameKey);
+  return keys;
 }
 
 function searchPremiumFoods(query, options) {
@@ -211,9 +264,10 @@ function searchNutritionFoods(query, options) {
 
   function pushUnique(entry) {
     if (!entry) return;
-    var key = normalizeText(entry.nome) || String(entry.code || entry.taco_id || entry.id || '');
-    if (!key || seen[key]) return;
-    seen[key] = true;
+    var keys = getDedupKeys(entry);
+    if (!keys.length) keys = [String(entry.code || entry.taco_id || entry.id || '')];
+    if (keys.some(function (key) { return key && seen[key]; })) return;
+    keys.forEach(function (key) { if (key) seen[key] = true; });
     combined.push(entry);
   }
 

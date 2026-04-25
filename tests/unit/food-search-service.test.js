@@ -20,16 +20,46 @@ test('findNutritionFood prefers premium foods and falls back to TACO', () => {
   assert.equal(taco.source, 'taco');
   assert.equal(taco.taco_id, 'TACO_0053');
   assert.equal(taco.code, 'TACO_0053');
+  assert.equal(taco.nome, 'Pão francês');
+  assert.equal(taco.official_name, 'Pão, trigo, francês');
+  assert.equal(taco.default_portion_g, 50);
 });
 
 test('searchNutritionFoods merges premium and TACO results without ugly duplicates', () => {
-  const results = nutritionService.searchNutritionFoods('arroz', { limit: 20 });
+  const results = nutritionService.searchNutritionFoods('arroz branco', { limit: 20 });
   const names = results.map((item) => item.nome);
   const uniqueNames = new Set(names);
 
-  assert.ok(results.some((item) => item.source === 'kronia'));
-  assert.ok(results.some((item) => item.source === 'taco'));
+  assert.equal(results[0].source, 'kronia');
+  assert.equal(results[0].taco_id, 'TACO_0003');
+  assert.ok(!results.some((item, index) => index > 0 && item.taco_id === 'TACO_0003'));
   assert.equal(uniqueNames.size, names.length);
+});
+
+test('searchNutritionFoods supports accentless popular TACO aliases and realistic portions', () => {
+  const cases = [
+    ['pao frances', 'TACO_0053', 'Pão francês', 50],
+    ['pão francês', 'TACO_0053', 'Pão francês', 50],
+    ['ovo', 'TACO_0488', 'Ovo de galinha', 50],
+    ['banana', 'TACO_0182', 'Banana', 86],
+    ['feijao', 'TACO_0561', 'Feijão carioca cozido', 100],
+    ['feijão preto', 'TACO_0567', 'Feijão preto cozido', 100],
+    ['maca', 'TACO_0221', 'Maçã', 130],
+    ['maçã', 'TACO_0221', 'Maçã', 130],
+    ['batata doce', 'TACO_0088', 'Batata-doce cozida', 130],
+    ['batata inglesa', 'TACO_0091', 'Batata inglesa cozida', 150],
+    ['tapioca', 'TACO_0551', 'Tapioca', 70],
+    ['macarrao', 'TACO_0040', 'Macarrão de trigo', 80],
+    ['macarrão', 'TACO_0040', 'Macarrão de trigo', 80],
+  ];
+
+  for (const [query, tacoId, name, grams] of cases) {
+    const results = nutritionService.searchNutritionFoods(query, { limit: 10 });
+    const item = results.find((entry) => entry.taco_id === tacoId);
+    assert.ok(item, query);
+    if (item.source === 'taco') assert.equal(item.nome, name);
+    assert.equal(item.default_portion_g, grams);
+  }
 });
 
 test('nutritionService re-exports the unified food search helpers', () => {
@@ -51,8 +81,11 @@ test('estimateNutritionFromTaco scales 50g correctly through the unified lookup'
 test('diet editor search resolves TACO fallback items in the app flow', () => {
   const appCode = fs.readFileSync('app.js', 'utf8');
   const snippet = [
-    extract(appCode, /var TACO_RUNTIME_PORTION_MAP = \{[\s\S]*?\n\};/, 'TACO_RUNTIME_PORTION_MAP'),
+    extract(appCode, /var TACO_FOOD_UX_OVERRIDES = \{[\s\S]*?\n\};/, 'TACO_FOOD_UX_OVERRIDES'),
+    extract(appCode, /var TACO_RUNTIME_PORTION_MAP = TACO_FOOD_UX_OVERRIDES;/, 'TACO_RUNTIME_PORTION_MAP'),
     extract(appCode, /function mapTacoCatalogGroup\(category\) \{[\s\S]*?\n\}/, 'mapTacoCatalogGroup'),
+    extract(appCode, /function mergeDietAliases\(\) \{[\s\S]*?\n\}(?=\n\nfunction applyTacoFoodUx)/, 'mergeDietAliases'),
+    extract(appCode, /function applyTacoFoodUx\(food\) \{[\s\S]*?\n\}/, 'applyTacoFoodUx'),
     extract(appCode, /function normalizeRuntimeFoodEntry\(food, sourceKind\) \{[\s\S]*?\n\}/, 'normalizeRuntimeFoodEntry'),
     extract(appCode, /function ensureDietTacoCatalogLoaded\(\) \{[\s\S]*?\n\}/, 'ensureDietTacoCatalogLoaded'),
     extract(appCode, /function getDietCatalogDedupKey\(item\) \{[\s\S]*?\n\}/, 'getDietCatalogDedupKey'),
@@ -100,13 +133,6 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
     NUTRITION_FOOD_CATALOG: [],
     _dietCatalogIndexCache: null,
     _dietTacoCatalogPromise: null,
-    TACO_RUNTIME_PORTION_MAP: {
-      TACO_0053: {
-        default_portion_g: 50,
-        default_unit: '1 unidade média (50 g)',
-        medida_caseira: '1 unidade média (50 g)',
-      },
-    },
     window: {
       KRONIA_PREMIUM_FOOD_CATALOG: {
         foods: [
@@ -131,6 +157,7 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
             display_name_pt: 'Arroz cozido',
             canonical_name_pt: 'Arroz cozido',
             group_key: 'carboidratos',
+            taco_id: 'TACO_0003',
             default_portion_g: 120,
             default_unit: '120 g',
             kcal_100g: 130,
@@ -179,6 +206,8 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
   assert.ok(french.length > 0);
   assert.equal(french[0].source, 'taco');
   assert.equal(french[0].taco_id, 'TACO_0053');
+  assert.equal(french[0].nome, 'Pão francês');
+  assert.equal(french[0].official_name, 'Pão, trigo, francês');
   assert.equal(french[0].default_portion_g, 50);
   assert.match(french[0].default_unit, /1 unidade/i);
 
@@ -224,6 +253,6 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
   const rice = context.findDietCatalogItems('arroz');
   const riceNames = rice.map((item) => item.nome);
   assert.ok(rice.some((item) => item.source !== 'taco'));
-  assert.ok(rice.some((item) => item.source === 'taco'));
+  assert.ok(!rice.some((item) => item.source === 'taco' && item.taco_id === 'TACO_0003'));
   assert.equal(new Set(riceNames).size, riceNames.length);
 });

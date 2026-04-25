@@ -6886,41 +6886,154 @@ function buildDietVisualPrescriptionFromLegacyPlan(plan) {
 var _dietCatalogIndexCache = null;
 var _dietPlanPersistTimer = null;
 var _dietTacoCatalogPromise = null;
-var TACO_RUNTIME_PORTION_MAP = {
+var TACO_FOOD_UX_OVERRIDES = {
   TACO_0053: {
+    display_name: 'Pão francês',
     default_portion_g: 50,
     default_unit: '1 unidade média (50 g)',
-    medida_caseira: '1 unidade média (50 g)'
+    medida_caseira: '1 unidade média (50 g)',
+    aliases: ['pao frances', 'pão francês', 'francesinho']
   },
   TACO_0488: {
+    display_name: 'Ovo de galinha',
     default_portion_g: 50,
     default_unit: '1 unidade média (50 g)',
-    medida_caseira: '1 unidade média (50 g)'
+    medida_caseira: '1 unidade média (50 g)',
+    aliases: ['ovo', 'ovo cozido', 'ovo de galinha']
   },
   TACO_0182: {
+    display_name: 'Banana',
     default_portion_g: 86,
     default_unit: '1 unidade média (86 g)',
-    medida_caseira: '1 unidade média (86 g)'
+    medida_caseira: '1 unidade média (86 g)',
+    aliases: ['banana', 'banana prata']
   },
   TACO_0221: {
+    display_name: 'Maçã',
     default_portion_g: 130,
     default_unit: '1 unidade média (130 g)',
-    medida_caseira: '1 unidade média (130 g)'
+    medida_caseira: '1 unidade média (130 g)',
+    aliases: ['maca', 'maçã']
+  },
+  TACO_0003: {
+    display_name: 'Arroz branco cozido',
+    default_portion_g: 120,
+    default_unit: '4 colheres de sopa cheias (120 g)',
+    medida_caseira: '4 colheres de sopa cheias (120 g)',
+    aliases: ['arroz', 'arroz branco', 'arroz cozido']
+  },
+  TACO_0001: {
+    display_name: 'Arroz integral cozido',
+    default_portion_g: 120,
+    default_unit: '4 colheres de sopa cheias (120 g)',
+    medida_caseira: '4 colheres de sopa cheias (120 g)',
+    aliases: ['arroz integral', 'arroz integral cozido']
+  },
+  TACO_0561: {
+    display_name: 'Feijão carioca cozido',
+    default_portion_g: 100,
+    default_unit: '1 concha média (100 g)',
+    medida_caseira: '1 concha média (100 g)',
+    aliases: ['feijao', 'feijão', 'feijao carioca', 'feijão carioca']
+  },
+  TACO_0567: {
+    display_name: 'Feijão preto cozido',
+    default_portion_g: 100,
+    default_unit: '1 concha média (100 g)',
+    medida_caseira: '1 concha média (100 g)',
+    aliases: ['feijao preto', 'feijão preto']
+  },
+  TACO_0088: {
+    display_name: 'Batata-doce cozida',
+    default_portion_g: 130,
+    default_unit: '1 unidade média (130 g)',
+    medida_caseira: '1 unidade média (130 g)',
+    aliases: ['batata doce', 'batata-doce', 'batata doce cozida']
+  },
+  TACO_0091: {
+    display_name: 'Batata inglesa cozida',
+    default_portion_g: 150,
+    default_unit: '1 unidade média (150 g)',
+    medida_caseira: '1 unidade média (150 g)',
+    aliases: ['batata inglesa', 'batata cozida']
+  },
+  TACO_0551: {
+    display_name: 'Tapioca',
+    default_portion_g: 70,
+    default_unit: '1 unidade média (70 g)',
+    medida_caseira: '1 unidade média (70 g)',
+    aliases: ['tapioca']
+  },
+  TACO_0040: {
+    display_name: 'Macarrão de trigo',
+    default_portion_g: 80,
+    default_unit: '1 prato raso cozido a partir de 80 g cru',
+    medida_caseira: '1 prato raso cozido a partir de 80 g cru',
+    aliases: ['macarrao', 'macarrão', 'macarrao trigo', 'macarrão de trigo']
   }
 };
+var TACO_RUNTIME_PORTION_MAP = TACO_FOOD_UX_OVERRIDES;
 
 function mapTacoCatalogGroup(category) {
   var normalized = normalizeDietFoodText(category || '');
-  if (/(prote|carne|ovo|leite|queijo|pesc|peixe|frango|bov|suin|aves?)/.test(normalized)) return 'proteinas';
-  if (/frut/.test(normalized)) return 'frutas';
-  if (/(veget|hortal|legume|verdur)/.test(normalized)) return 'vegetais';
-  if (/(gord|oleo|oleag|past|semen)/.test(normalized)) return 'gorduras';
-  if (/(legumin)/.test(normalized)) return 'leguminosas';
+  if (/(feij|lentilha|grao de bico|ervilha|leguminosa)/.test(normalized)) return 'leguminosas';
+  if (/(frut|banana|\bmaca\b)/.test(normalized)) return 'frutas';
+  if (/(cereal|pao|paes|massa|macarrao|arroz|raiz|raizes|tuberc|farinha|tapioca|batata)/.test(normalized)) return 'carboidratos';
+  if (/(hortalic|verdura|legume|veget|brocol|cenoura|tomate|alface)/.test(normalized)) return 'vegetais';
+  if (/(oleo|gordura|azeite|castanha|semente|amendoim|oleaginosa|abacate)/.test(normalized)) return 'gorduras';
+  if (/(carne|ovo|ovos|pescad|peixe|frango|bovin|suin|leite|queijo|iogurte|proteina)/.test(normalized)) return 'proteinas';
   return 'carboidratos';
 }
 
+function mergeDietAliases() {
+  var seen = Object.create(null);
+  var out = [];
+  Array.prototype.slice.call(arguments).forEach(function(list) {
+    (Array.isArray(list) ? list : [list]).forEach(function(value) {
+      var key = normalizeDietFoodText(value);
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      out.push(value);
+      var singular = key.split(' ').map(function(token) {
+        return token.length > 3 && /s$/.test(token) ? token.slice(0, -1) : token;
+      }).join(' ');
+      if (singular && !seen[singular]) {
+        seen[singular] = true;
+        out.push(singular);
+      }
+    });
+  });
+  return out;
+}
+
+function applyTacoFoodUx(food) {
+  if (!food || typeof food !== 'object') return food;
+  var tacoId = food.taco_id || food.id || food.code || null;
+  var override = tacoId && TACO_FOOD_UX_OVERRIDES[tacoId] ? TACO_FOOD_UX_OVERRIDES[tacoId] : null;
+  var officialName = food.official_name || food.nome || food.name || food.display_name_pt || null;
+  var displayName = override && override.display_name ? override.display_name : (food.display_name || food.display_name_pt || food.canonical_name_pt || food.nome || food.name || 'Alimento');
+  var groupKey = food.group_key || food.grupo || (override && override.group_key) || mapTacoCatalogGroup([food.categoria, officialName, displayName].filter(Boolean).join(' '));
+  return Object.assign({}, food, {
+    display_name: displayName,
+    display_name_pt: displayName,
+    canonical_name_pt: displayName,
+    nome: displayName,
+    official_name: officialName,
+    default_portion_g: override && override.default_portion_g ? override.default_portion_g : (food.default_portion_g || food.porcao_gramas || food.grams || food.gramas || 100),
+    default_unit: override && override.default_unit ? override.default_unit : (food.default_unit || food.medida_caseira || '100 g'),
+    medida_caseira: override && override.medida_caseira ? override.medida_caseira : (food.medida_caseira || food.default_unit || '100 g'),
+    group_key: groupKey,
+    grupo: groupKey,
+    aliases: mergeDietAliases(food.aliases, override && override.aliases, officialName, displayName),
+    source: food.source || 'taco',
+    source_type: food.source_type || 'taco',
+    is_taco_fallback: true
+  });
+}
+
 function normalizeRuntimeFoodEntry(food, sourceKind) {
-  var safeFood = food && typeof food === 'object' ? food : {};
+  var initialFood = food && typeof food === 'object' ? food : {};
+  var safeFood = sourceKind === 'taco' || Boolean(initialFood.taco_id) ? applyTacoFoodUx(initialFood) : initialFood;
   var isTaco = sourceKind === 'taco' || Boolean(safeFood.taco_id);
   var tacoPortion = isTaco && safeFood.taco_id && TACO_RUNTIME_PORTION_MAP[safeFood.taco_id]
     ? TACO_RUNTIME_PORTION_MAP[safeFood.taco_id]
@@ -6935,7 +7048,8 @@ function normalizeRuntimeFoodEntry(food, sourceKind) {
   ) || 100;
   var defaultUnit = safeFood.default_unit || (tacoPortion && tacoPortion.default_unit) || (defaultPortion + ' g');
   var medidaCaseira = safeFood.medida_caseira || (tacoPortion && tacoPortion.medida_caseira) || defaultUnit;
-  var nome = String(safeFood.display_name_pt || safeFood.canonical_name_pt || safeFood.nome || safeFood.name || safeFood.label || 'Alimento').trim();
+  var nome = String(safeFood.display_name || safeFood.display_name_pt || safeFood.canonical_name_pt || safeFood.nome || safeFood.name || safeFood.label || 'Alimento').trim();
+  var officialName = isTaco ? String(safeFood.official_name || initialFood.nome || initialFood.name || nome).trim() : null;
   var slug = String(safeFood.slug || safeFood.food_slug || safeFood.code || safeFood.id || normalizeDietFoodText(nome)).trim();
   var groupKey = String(safeFood.group_key || safeFood.grupo || safeFood.grupo_equivalencia || (isTaco ? mapTacoCatalogGroup(safeFood.categoria) : 'carboidratos') || '').trim();
   var kcal = asKroniaNumber(
@@ -6984,6 +7098,7 @@ function normalizeRuntimeFoodEntry(food, sourceKind) {
     food_slug: slug,
     display_name_pt: nome,
     canonical_name_pt: nome,
+    official_name: officialName,
     name: nome,
     nome: nome,
     grupo: groupKey,
@@ -7094,6 +7209,7 @@ function buildDietCatalogIndexes() {
     var normalizedNames = [
       food.display_name_pt,
       food.canonical_name_pt,
+      food.official_name,
       slug.replace(/_/g, ' ')
     ].filter(Boolean).map(normalizeDietFoodText);
     var normalizedSlug = normalizeDietFoodText(slug);
@@ -7104,6 +7220,10 @@ function buildDietCatalogIndexes() {
     if (id) {
       byKey[id] = food;
       byKey[normalizeDietFoodText(id)] = food;
+    }
+    if (food.taco_id) {
+      byKey[String(food.taco_id)] = food;
+      byKey[normalizeDietFoodText(food.taco_id)] = food;
     }
     normalizedNames.forEach(function(nameKey) {
       if (nameKey && !byNormalizedName[nameKey]) byNormalizedName[nameKey] = food;
@@ -7142,6 +7262,8 @@ function resolveDietCatalogFood(item) {
     safeItem.catalogRef,
     safeItem.sourceId,
     safeItem.source_id,
+    safeItem.taco_id,
+    safeItem.codigo_taco,
     safeItem.food_id,
     safeItem.foodId
   ].filter(Boolean);
@@ -7414,6 +7536,10 @@ function normalizeDietEditorItem(item, order) {
     catalog_ref: safeItem && (safeItem.catalog_ref || safeItem.catalogRef) || (resolvedFood && resolvedFood.slug) || null,
     catalogMatch: Boolean(resolvedFood),
     source: safeItem && safeItem.source || (resolvedFood && resolvedFood.source) || null,
+    taco_id: safeItem && safeItem.taco_id || (resolvedFood && resolvedFood.taco_id) || null,
+    codigo_taco: safeItem && safeItem.codigo_taco || (resolvedFood && resolvedFood.codigo_taco) || null,
+    official_name: safeItem && safeItem.official_name || (resolvedFood && resolvedFood.official_name) || null,
+    is_taco_fallback: Boolean((safeItem && safeItem.is_taco_fallback) || (resolvedFood && resolvedFood.is_taco_fallback) || (safeItem && safeItem.source === 'taco')),
     name: getDietItemName(safeItem),
     slot: safeItem && (safeItem.slot || safeItem.substitution_group || safeItem.groupKey || safeItem.group_key) || (resolvedFood && resolvedFood.group_key) || 'item',
     unit: safeItem && (safeItem.unit || safeItem.unidade) || (resolvedFood && resolvedFood.default_unit) || null,
@@ -8509,11 +8635,16 @@ function findDietCatalogItems(query) {
     var group = normalizeDietFoodText(item.grupo);
     var blob = normalizeDietFoodText([
       item.nome,
+      item.display_name,
+      item.display_name_pt,
+      item.canonical_name_pt,
+      item.official_name,
       item.grupo,
       item.code,
       item.slug,
       item.taco_id,
-      item.codigo_taco
+      item.codigo_taco,
+      Array.isArray(item.aliases) ? item.aliases.join(' ') : ''
     ].filter(Boolean).join(' '));
     var score = 0;
     if (!q) score = Number(item.codigo_taco || item.priority || item.prioridade || 0) + (item.source === 'taco' ? 0 : 20);
@@ -8530,6 +8661,12 @@ function findDietCatalogItems(query) {
   }).filter(function(entry) {
     return !q || entry.score > 0;
   }).sort(function(a, b) {
+    var tacoA = getDietCatalogTacoKey(a.item);
+    var tacoB = getDietCatalogTacoKey(b.item);
+    if (tacoA && tacoA === tacoB && a.item.source !== b.item.source) {
+      if (a.item.source === 'kronia') return -1;
+      if (b.item.source === 'kronia') return 1;
+    }
     var nameA = normalizeDietFoodText(a.item.nome);
     var nameB = normalizeDietFoodText(b.item.nome);
     if (nameA === nameB && a.item.source !== b.item.source) {
@@ -8549,11 +8686,10 @@ function findDietCatalogItems(query) {
     var item = entry.item;
     var nameKey = getDietCatalogDedupKey(item);
     var tacoKey = getDietCatalogTacoKey(item);
-    var dedupKey = nameKey || tacoKey;
+    var dedupKey = tacoKey ? ('taco:' + tacoKey) : nameKey;
     if (!dedupKey) return;
-    if (seen[dedupKey] || (tacoKey && seen['taco:' + tacoKey])) return;
+    if (seen[dedupKey]) return;
     seen[dedupKey] = item;
-    if (tacoKey) seen['taco:' + tacoKey] = item;
     deduped.push(item);
   });
   return deduped.slice(0, 20);
@@ -8566,6 +8702,7 @@ function addDietPlanItemFromCatalog(mealIndex, catalogIndex) {
   var tacoFallback = item.source === 'taco' || item.is_taco_fallback;
   addDietPlanItem(mealIndex || 0, normalizeDietEditorItem({
     nome: item.nome,
+    official_name: item.official_name || null,
     sourceType: tacoFallback ? 'taco' : 'catalog',
     source_id: item.taco_id || item.source_id || item.id || item.nome,
     source: item.source,

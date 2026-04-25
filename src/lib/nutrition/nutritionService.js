@@ -38,6 +38,9 @@ module.exports = {
   mapTacoFoodToKroniaMacros: tacoService.mapTacoFoodToKroniaMacros,
   estimateNutritionFromTaco: tacoService.estimateNutritionFromTaco,
   findBestTacoMatch: tacoService.findBestTacoMatch,
+  TACO_FOOD_UX_OVERRIDES: tacoService.TACO_FOOD_UX_OVERRIDES,
+  classifyTacoFoodGroup: tacoService.classifyTacoFoodGroup,
+  applyTacoFoodUx: tacoService.applyTacoFoodUx,
   findNutritionFood: foodSearchService.findNutritionFood,
   searchNutritionFoods: foodSearchService.searchNutritionFoods,
 

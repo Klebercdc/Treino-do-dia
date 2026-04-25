@@ -18,6 +18,20 @@ test('TACO_DATABASE contains Pão francês through a search alias', () => {
   assert.match(item.nome, /Pão, trigo, francês/);
 });
 
+test('applyTacoFoodUx applies global Brazilian UX without changing official per100 nutrition', () => {
+  const official = tacoDatabase.TACO_DATABASE.find((food) => food.taco_id === 'TACO_0053');
+  const normalized = tacoService.applyTacoFoodUx(official);
+
+  assert.equal(official.nome, 'Pão, trigo, francês');
+  assert.equal(normalized.nome, 'Pão francês');
+  assert.equal(normalized.official_name, 'Pão, trigo, francês');
+  assert.equal(normalized.default_portion_g, 50);
+  assert.equal(normalized.default_unit, '1 unidade média (50 g)');
+  assert.equal(normalized.energia_kcal, official.energia_kcal);
+  assert.equal(normalized.proteina_g, official.proteina_g);
+  assert.ok(normalized.aliases.some((alias) => tacoService.normalizeText(alias) === 'pao frances'));
+});
+
 test('searchTacoFoods ignores accents and finds multiple rice entries', () => {
   const results = tacoService.searchTacoFoods('arroz');
   const codes = results.map((food) => food.codigo_taco);
@@ -36,7 +50,8 @@ test('getTacoFoodByCode and getTacoFoodById work', () => {
   const byCode = tacoService.getTacoFoodByCode(53);
   const byId = tacoService.getTacoFoodById('TACO_0053');
 
-  assert.equal(byCode.nome, 'Pão, trigo, francês');
+  assert.equal(byCode.nome, 'Pão francês');
+  assert.equal(byCode.official_name, 'Pão, trigo, francês');
   assert.equal(byId.codigo_taco, 53);
 });
 
@@ -59,7 +74,7 @@ test('mapTacoFoodToKroniaMacros returns the KroniA per-100g macro shape', () => 
 
   assert.deepEqual(
     Object.keys(mapped).sort(),
-    ['calcio_mg_por_100g', 'carbo_por_100g', 'categoria', 'codigo_taco', 'ferro_mg_por_100g', 'fibra_por_100g', 'gordura_por_100g', 'kcal_por_100g', 'nome', 'potassio_mg_por_100g', 'proteina_por_100g', 'sodio_mg_por_100g', 'taco_id'].sort(),
+    ['calcio_mg_por_100g', 'carbo_por_100g', 'categoria', 'codigo_taco', 'ferro_mg_por_100g', 'fibra_por_100g', 'gordura_por_100g', 'kcal_por_100g', 'nome', 'official_name', 'potassio_mg_por_100g', 'proteina_por_100g', 'sodio_mg_por_100g', 'taco_id'].sort(),
   );
   assert.equal(mapped.kcal_por_100g, food.energia_kcal);
   assert.equal(mapped.proteina_por_100g, food.proteina_g);
@@ -76,6 +91,32 @@ test('nutritionService re-exports the TACO helpers', () => {
   assert.equal(typeof nutritionService.mapTacoFoodToKroniaMacros, 'function');
   assert.equal(typeof nutritionService.estimateNutritionFromTaco, 'function');
   assert.equal(typeof nutritionService.findBestTacoMatch, 'function');
+  assert.equal(typeof nutritionService.applyTacoFoodUx, 'function');
+  assert.equal(typeof nutritionService.classifyTacoFoodGroup, 'function');
+});
+
+test('TACO UX overrides cover common Brazilian editor portions and groups', () => {
+  const cases = [
+    ['TACO_0488', 'Ovo de galinha', 50, 'proteinas'],
+    ['TACO_0182', 'Banana', 86, 'frutas'],
+    ['TACO_0221', 'Maçã', 130, 'frutas'],
+    ['TACO_0003', 'Arroz branco cozido', 120, 'carboidratos'],
+    ['TACO_0001', 'Arroz integral cozido', 120, 'carboidratos'],
+    ['TACO_0561', 'Feijão carioca cozido', 100, 'leguminosas'],
+    ['TACO_0567', 'Feijão preto cozido', 100, 'leguminosas'],
+    ['TACO_0088', 'Batata-doce cozida', 130, 'carboidratos'],
+    ['TACO_0091', 'Batata inglesa cozida', 150, 'carboidratos'],
+    ['TACO_0551', 'Tapioca', 70, 'carboidratos'],
+    ['TACO_0040', 'Macarrão de trigo', 80, 'carboidratos'],
+  ];
+
+  for (const [id, name, grams, group] of cases) {
+    const food = tacoService.getTacoFoodById(id);
+    assert.equal(food.nome, name);
+    assert.equal(food.default_portion_g, grams);
+    assert.equal(food.group_key, group);
+    assert.ok(food.official_name);
+  }
 });
 
 test('kronaFoodDatabase keeps existing foods and adds safe taco_id mappings', () => {

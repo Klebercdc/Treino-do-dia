@@ -31,8 +31,11 @@ function loadDietMacroContext() {
     extract(code, /function asKroniaNumber\(value, fallback\) \{[\s\S]*?\n\}/, 'asKroniaNumber'),
     extract(code, /function dietRound\(value, decimals\) \{[\s\S]*?\n\}/, 'dietRound'),
     extract(code, /function normalizeDietFoodText\(value\) \{[\s\S]*?\n\}/, 'normalizeDietFoodText'),
-    extract(code, /var TACO_RUNTIME_PORTION_MAP = \{[\s\S]*?\n\};/, 'TACO_RUNTIME_PORTION_MAP'),
+    extract(code, /var TACO_FOOD_UX_OVERRIDES = \{[\s\S]*?\n\};/, 'TACO_FOOD_UX_OVERRIDES'),
+    extract(code, /var TACO_RUNTIME_PORTION_MAP = TACO_FOOD_UX_OVERRIDES;/, 'TACO_RUNTIME_PORTION_MAP'),
     extract(code, /function mapTacoCatalogGroup\(category\) \{[\s\S]*?\n\}/, 'mapTacoCatalogGroup'),
+    extract(code, /function mergeDietAliases\(\) \{[\s\S]*?\n\}(?=\n\nfunction applyTacoFoodUx)/, 'mergeDietAliases'),
+    extract(code, /function applyTacoFoodUx\(food\) \{[\s\S]*?\n\}/, 'applyTacoFoodUx'),
     extract(code, /function normalizeRuntimeFoodEntry\(food, sourceKind\) \{[\s\S]*?\n\}/, 'normalizeRuntimeFoodEntry'),
     extract(code, /function buildDefaultDietVisualPrescription\(\) \{[\s\S]*?\n\}/, 'buildDefaultDietVisualPrescription'),
     extract(code, /function cloneDietVisualPrescription\(value\) \{[\s\S]*?\n\}/, 'cloneDietVisualPrescription'),
@@ -113,20 +116,75 @@ function loadDietMacroContext() {
           { food_slug: 'feijao_cozido', alias: 'Feijão cozido', normalized_alias: 'feijao cozido' }
         ]
       },
-      _kroniaDietPlan: null
+      _kroniaDietPlan: null,
+      KRONIA_TACO_DATABASE: [
+        {
+          taco_id: 'TACO_0053',
+          codigo_taco: 53,
+          nome: 'Pão, trigo, francês',
+          categoria: 'Cereais e derivados',
+          energia_kcal: 300,
+          proteina_g: 8,
+          carboidrato_g: 58,
+          lipidios_g: 3,
+          fibra_g: 2,
+          sodio_mg: 500
+        },
+        {
+          taco_id: 'TACO_0488',
+          codigo_taco: 488,
+          nome: 'Ovo, de galinha, inteiro, cozido/10minutos',
+          categoria: 'Ovos e derivados',
+          energia_kcal: 155,
+          proteina_g: 13,
+          carboidrato_g: 1.1,
+          lipidios_g: 11,
+          fibra_g: 0,
+          sodio_mg: 124
+        },
+        {
+          taco_id: 'TACO_0182',
+          codigo_taco: 182,
+          nome: 'Banana, prata, crua',
+          categoria: 'Frutas e derivados',
+          energia_kcal: 98,
+          proteina_g: 1.3,
+          carboidrato_g: 26,
+          lipidios_g: 0.1,
+          fibra_g: 2,
+          sodio_mg: 0
+        },
+        {
+          taco_id: 'TACO_0003',
+          codigo_taco: 3,
+          nome: 'Arroz, tipo 1, cozido',
+          categoria: 'Cereais e derivados',
+          energia_kcal: 128,
+          proteina_g: 2.5,
+          carboidrato_g: 28.1,
+          lipidios_g: 0.2,
+          fibra_g: 1.6,
+          sodio_mg: 1
+        },
+        {
+          taco_id: 'TACO_0561',
+          codigo_taco: 561,
+          nome: 'Feijão, carioca, cozido',
+          categoria: 'Leguminosas e derivados',
+          energia_kcal: 76,
+          proteina_g: 4.8,
+          carboidrato_g: 13.6,
+          lipidios_g: 0.5,
+          fibra_g: 8.5,
+          sodio_mg: 2
+        }
+      ]
     },
     localStorage,
     KRONIA_ACTIVE_DIET_PLAN_KEY: 'kronia_active_diet_plan_v1',
     NUTRITION_FOOD_CATALOG: [],
     _dietCatalogIndexCache: null,
     _dietTacoCatalogPromise: null,
-    TACO_RUNTIME_PORTION_MAP: {
-      TACO_0053: {
-        default_portion_g: 50,
-        default_unit: '1 unidade média (50 g)',
-        medida_caseira: '1 unidade média (50 g)',
-      },
-    },
     renderActiveDietPlan() {},
     schedulePersistActiveDietPlan() {},
     buildFallbackActiveDietPlan() {
@@ -242,6 +300,104 @@ test('normalizeDietEditorItem preserva per100 persistido mesmo quando existe cat
   assert.equal(item.grams, 150);
   assert.equal(item.kcal, 247.5);
   assert.equal(item.protein, 46.5);
+});
+
+test('normalizeDietEditorItem adiciona TACO com porção UX, per100 e identidade persistente', () => {
+  const context = loadDietMacroContext();
+
+  const cases = [
+    ['TACO_0053', 'Pão francês', 50, 150, 4, 29],
+    ['TACO_0488', 'Ovo de galinha', 50, 77.5, 6.5, 0.6],
+    ['TACO_0182', 'Banana', 86, 84.3, 1.1, 22.4],
+    ['TACO_0003', 'Arroz branco cozido', 120, 153.6, 3, 33.7],
+    ['TACO_0561', 'Feijão carioca cozido', 100, 76, 4.8, 13.6],
+  ];
+
+  for (const [tacoId, name, grams, kcal, protein, carbs] of cases) {
+    const catalogFood = context.resolveDietCatalogFood({ taco_id: tacoId });
+    assert.ok(catalogFood, tacoId);
+    const item = context.normalizeDietEditorItem({
+      nome: catalogFood.nome,
+      sourceType: 'taco',
+      source: 'taco',
+      source_id: tacoId,
+      taco_id: tacoId,
+      codigo_taco: catalogFood.codigo_taco,
+      official_name: catalogFood.official_name,
+      is_taco_fallback: true,
+      gramas: catalogFood.default_portion_g,
+      porcao: catalogFood.default_unit,
+      per100: {
+        kcal: catalogFood.kcal_100g,
+        protein: catalogFood.protein_100g,
+        carbs: catalogFood.carbs_100g,
+        fat: catalogFood.fat_100g,
+        fiber: catalogFood.fiber_100g,
+        sodium: catalogFood.sodium_mg_100g
+      }
+    }, 1);
+
+    assert.equal(item.name, name);
+    assert.equal(item.grams, grams);
+    assert.equal(item.quantity, catalogFood.default_unit);
+    assert.equal(item.source, 'taco');
+    assert.equal(item.sourceType, 'taco');
+    assert.equal(item.taco_id, tacoId);
+    assert.equal(item.official_name, catalogFood.official_name);
+    assert.equal(item.is_taco_fallback, true);
+    assert.equal(item.kcal, kcal);
+    assert.equal(item.protein, protein);
+    assert.equal(item.carbs, carbs);
+    assert.equal(item.per100.kcal, catalogFood.kcal_100g);
+  }
+});
+
+test('TACO salvo e recarregado mantém source, taco_id, grams e per100 sem drift', () => {
+  const context = loadDietMacroContext();
+  const catalogFood = context.resolveDietCatalogFood({ taco_id: 'TACO_0053' });
+  const item = context.normalizeDietEditorItem({
+    nome: catalogFood.nome,
+    sourceType: 'taco',
+    source: 'taco',
+    source_id: 'TACO_0053',
+    taco_id: 'TACO_0053',
+    codigo_taco: 53,
+    official_name: catalogFood.official_name,
+    is_taco_fallback: true,
+    gramas: 50,
+    porcao: catalogFood.default_unit,
+    per100: {
+      kcal: catalogFood.kcal_100g,
+      protein: catalogFood.protein_100g,
+      carbs: catalogFood.carbs_100g,
+      fat: catalogFood.fat_100g,
+      fiber: catalogFood.fiber_100g,
+      sodium: catalogFood.sodium_mg_100g
+    }
+  }, 1);
+
+  context.setActiveDietPlan({
+    id: 'plan_taco',
+    title: 'Plano TACO',
+    targets: {},
+    visualPrescription: context.buildDefaultDietVisualPrescription(),
+    meals: [{ id: 'meal_1', name: 'Café da manhã', slot: 'cafe', items: [item] }]
+  }, { render: false });
+
+  context.updateDietPlanItem(0, 0, 'grams', 75);
+  const persisted = context.readLocalActiveDietPlan();
+  const reloaded = persisted.meals[0].items[0];
+
+  assert.equal(reloaded.name, 'Pão francês');
+  assert.equal(reloaded.source, 'taco');
+  assert.equal(reloaded.sourceType, 'taco');
+  assert.equal(reloaded.taco_id, 'TACO_0053');
+  assert.equal(reloaded.official_name, 'Pão, trigo, francês');
+  assert.equal(reloaded.grams, 75);
+  assert.equal(reloaded.per100.kcal, 300);
+  assert.equal(reloaded.kcal, 225);
+  assert.equal(reloaded.protein, 6);
+  assert.equal(reloaded.carbs, 43.5);
 });
 
 test('editar gramas atualiza subtotal da refeição e total diário imediatamente', () => {

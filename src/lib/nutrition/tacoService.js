@@ -1,6 +1,7 @@
 'use strict';
 
 const { TACO_DATABASE } = require('./tacoDatabase');
+const tacoFoodUx = require('./tacoFoodUx');
 
 const KRONIA_MACRO_FIELDS = [
   ['energia_kcal', 'kcal_por_100g', 'kcal'],
@@ -38,36 +39,42 @@ function roundValue(value, digits) {
 }
 
 function getAllTacoFoods() {
-  return TACO_DATABASE.slice();
+  return TACO_DATABASE.map(tacoFoodUx.applyTacoFoodUx);
 }
 
 function getTacoFoodById(tacoId) {
   if (!tacoId) return null;
   var target = String(tacoId);
-  return TACO_DATABASE.find(function (food) {
+  var found = TACO_DATABASE.find(function (food) {
     return food.taco_id === target;
   }) || null;
+  return found ? tacoFoodUx.applyTacoFoodUx(found) : null;
 }
 
 function getTacoFoodByCode(codigoTaco) {
   if (codigoTaco == null || codigoTaco === '') return null;
   var target = Number(codigoTaco);
   if (!Number.isFinite(target)) return null;
-  return TACO_DATABASE.find(function (food) {
+  var found = TACO_DATABASE.find(function (food) {
     return Number(food.codigo_taco) === target;
   }) || null;
+  return found ? tacoFoodUx.applyTacoFoodUx(found) : null;
 }
 
 function buildSearchBlob(food) {
-  var parts = [food.nome, food.categoria, food.codigo_taco];
+  var uxFood = tacoFoodUx.applyTacoFoodUx(food);
+  var parts = [food.nome, uxFood.nome, uxFood.display_name, uxFood.official_name, food.categoria, uxFood.group_key, food.codigo_taco];
   if (Array.isArray(food.aliases)) parts = parts.concat(food.aliases);
+  if (Array.isArray(uxFood.aliases)) parts = parts.concat(uxFood.aliases);
   return normalizeText(parts.filter(Boolean).join(' '));
 }
 
 function scoreTacoFood(food, query, normalizedQuery, queryTokens) {
-  var name = normalizeText(food.nome);
-  var aliasMatches = Array.isArray(food.aliases)
-    ? food.aliases.map(normalizeText).filter(Boolean)
+  var uxFood = tacoFoodUx.applyTacoFoodUx(food);
+  var name = normalizeText(uxFood.nome || food.nome);
+  var officialName = normalizeText(uxFood.official_name || food.nome);
+  var aliasMatches = Array.isArray(uxFood.aliases)
+    ? uxFood.aliases.map(normalizeText).filter(Boolean)
     : [];
   var blob = buildSearchBlob(food);
   var score = 0;
@@ -76,10 +83,13 @@ function scoreTacoFood(food, query, normalizedQuery, queryTokens) {
 
   if (name === normalizedQuery) score += 400;
   if (aliasMatches.indexOf(normalizedQuery) >= 0) score += 450;
+  if (officialName === normalizedQuery) score += 360;
   if (blob === normalizedQuery) score += 380;
   if (name.startsWith(normalizedQuery)) score += 120;
+  if (officialName.startsWith(normalizedQuery)) score += 110;
   if (blob.startsWith(normalizedQuery)) score += 100;
   if (name.indexOf(normalizedQuery) >= 0) score += 90;
+  if (officialName.indexOf(normalizedQuery) >= 0) score += 85;
   if (blob.indexOf(normalizedQuery) >= 0) score += 80;
 
   var matchedTokens = 0;
@@ -123,7 +133,7 @@ function searchTacoFoods(query, options) {
     })
     .slice(0, limit)
     .map(function (entry) {
-      return entry.food;
+      return tacoFoodUx.applyTacoFoodUx(entry.food);
     });
 
   return results;
@@ -134,15 +144,17 @@ function getTacoFoodsByCategory(category) {
   if (!normalizedCategory) return [];
   return TACO_DATABASE.filter(function (food) {
     return normalizeText(food.categoria) === normalizedCategory;
-  });
+  }).map(tacoFoodUx.applyTacoFoodUx);
 }
 
 function mapTacoFoodToKroniaMacros(food) {
   if (!food) return null;
+  var officialName = food.official_name || food.nome;
   var mapped = {
     taco_id: food.taco_id,
     codigo_taco: food.codigo_taco,
     nome: food.nome,
+    official_name: officialName,
     categoria: food.categoria
   };
 
@@ -224,5 +236,8 @@ module.exports = {
   getTacoFoodsByCategory: getTacoFoodsByCategory,
   mapTacoFoodToKroniaMacros: mapTacoFoodToKroniaMacros,
   estimateNutritionFromTaco: estimateNutritionFromTaco,
-  findBestTacoMatch: findBestTacoMatch
+  findBestTacoMatch: findBestTacoMatch,
+  TACO_FOOD_UX_OVERRIDES: tacoFoodUx.TACO_FOOD_UX_OVERRIDES,
+  classifyTacoFoodGroup: tacoFoodUx.classifyTacoFoodGroup,
+  applyTacoFoodUx: tacoFoodUx.applyTacoFoodUx
 };
