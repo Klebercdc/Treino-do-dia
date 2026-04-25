@@ -55,6 +55,8 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
     extract(appCode, /function mapTacoCatalogGroup\(category\) \{[\s\S]*?\n\}/, 'mapTacoCatalogGroup'),
     extract(appCode, /function normalizeRuntimeFoodEntry\(food, sourceKind\) \{[\s\S]*?\n\}/, 'normalizeRuntimeFoodEntry'),
     extract(appCode, /function ensureDietTacoCatalogLoaded\(\) \{[\s\S]*?\n\}/, 'ensureDietTacoCatalogLoaded'),
+    extract(appCode, /function getDietCatalogDedupKey\(item\) \{[\s\S]*?\n\}/, 'getDietCatalogDedupKey'),
+    extract(appCode, /function getDietCatalogTacoKey\(item\) \{[\s\S]*?\n\}/, 'getDietCatalogTacoKey'),
     extract(appCode, /function getDietRuntimeCatalogFoods\(\) \{[\s\S]*?\n\}/, 'getDietRuntimeCatalogFoods'),
     extract(appCode, /function buildDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'buildDietCatalogIndexes'),
     extract(appCode, /function getDietCatalogIndexes\(\) \{[\s\S]*?\n\}/, 'getDietCatalogIndexes'),
@@ -179,6 +181,45 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
   assert.equal(french[0].taco_id, 'TACO_0053');
   assert.equal(french[0].default_portion_g, 50);
   assert.match(french[0].default_unit, /1 unidade/i);
+
+  const banana = context.normalizeRuntimeFoodEntry({
+    taco_id: 'TACO_0182',
+    codigo_taco: 182,
+    nome: 'Banana',
+    energia_kcal: 100,
+    proteina_g: 1,
+    carboidrato_g: 23,
+    lipidios_g: 0.2,
+    fibra_g: 2.6,
+  }, 'taco');
+  assert.equal(banana.default_portion_g, 86);
+  assert.match(banana.default_unit, /86 g/);
+
+  const apple = context.normalizeRuntimeFoodEntry({
+    taco_id: 'TACO_0221',
+    codigo_taco: 221,
+    nome: 'Maçã',
+    energia_kcal: 52,
+    proteina_g: 0.3,
+    carboidrato_g: 14,
+    lipidios_g: 0.2,
+    fibra_g: 2.4,
+  }, 'taco');
+  assert.equal(apple.default_portion_g, 130);
+  assert.match(apple.default_unit, /130 g/);
+
+  const egg = context.normalizeRuntimeFoodEntry({
+    taco_id: 'TACO_0488',
+    codigo_taco: 488,
+    nome: 'Ovo',
+    energia_kcal: 155,
+    proteina_g: 13,
+    carboidrato_g: 1.1,
+    lipidios_g: 11,
+    fibra_g: 0,
+  }, 'taco');
+  assert.equal(egg.default_portion_g, 50);
+  assert.match(egg.default_unit, /50 g/);
 
   const rice = context.findDietCatalogItems('arroz');
   const riceNames = rice.map((item) => item.nome);
