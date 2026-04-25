@@ -6271,30 +6271,6 @@ function openDieta() {
   return;
 }
 
-function openDietaLegacy() {
-  syncDietaTheme(resolveKroniaThemeForDieta());
-  const cfg = safeJSON("kronia_config", {});
-  const prefs = safeJSON("kronia_calc_prefs", {});
-  document.getElementById("davPeso").value    = prefs.davPeso    || cfg.peso    || "";
-  document.getElementById("davAltura").value  = prefs.davAltura  || cfg.altura  || "";
-  document.getElementById("davPescoco").value = prefs.davPescoco || "";
-  document.getElementById("davCintura").value = prefs.davCintura || "";
-  document.getElementById("davQuadril").value = prefs.davQuadril || "";
-  selectDavSexo(prefs.davSexo || cfg.sexo || "M");
-  if (prefs.davBio) { const el = document.querySelector(`#davBioChips [data-val="${prefs.davBio}"]`); if (el) selectDavBio(el); }
-  if (prefs.davObj) { const el = document.querySelector(`#davObjChips [data-val="${prefs.davObj}"]`); if (el) selectDavObj(el); }
-  if (prefs.davCiclo) { const el = document.querySelector(`#davCicloChips [data-val="${prefs.davCiclo}"]`); if (el) selectDavCiclo(el); }
-  document.getElementById("dietaScreen").classList.add("show");
-  const footer = document.querySelector('.footer-actions');
-  if (footer) footer.style.display = 'none';
-}
-function closeDieta() {
-  document.getElementById("dietaScreen").classList.remove("show");
-  const footer = document.querySelector('.footer-actions');
-  if (footer) footer.style.display = '';
-  navTo("treino");
-}
-
 function asKroniaNumber(value, fallback) {
   var n = Number(value);
   return Number.isFinite(n) ? n : (arguments.length > 1 ? fallback : 0);
@@ -7315,8 +7291,10 @@ function toggleTpMealBody(idx) {
   var el = document.getElementById('tpMealBody_' + idx);
   if (!el) return;
   var card = el.previousElementSibling;
+  var row = el.closest ? el.closest('.tp-meal-row') : el.parentElement;
   var isOpen = el.classList.toggle('tp-meal-body--open');
   if (card) card.classList.toggle('tp-meal-header-card--open', isOpen);
+  if (row) row.classList.toggle('tp-meal-row--open', isOpen);
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
 }
 
@@ -7328,6 +7306,8 @@ function expandAllTpMeals() {
     el.classList.add('tp-meal-body--open');
     var card = el.previousElementSibling;
     if (card) card.classList.add('tp-meal-header-card--open');
+    var row = el.closest ? el.closest('.tp-meal-row') : el.parentElement;
+    if (row) row.classList.add('tp-meal-row--open');
     idx++;
   }
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
@@ -7348,22 +7328,31 @@ function renderDietMealCard(meal, mealIndex) {
   var items = (meal.items || []).map(function(item, itemIndex) {
     var subtitle = buildDietItemSubtitle(item);
     var grams = getDietDisplayGrams(item);
-    return '<button type="button" onclick="abrirBottomSheet(' + mealIndex + ',' + itemIndex + ',' + escapeAttr(JSON.stringify(item.name || 'Alimento')) + ',' + escapeAttr(JSON.stringify(subtitle)) + ',' + escapeAttr(JSON.stringify(String(Math.round(grams)))) + ')" class="diet-premium-food-row">'
-      + '<div class="diet-premium-food-left">'
+    var bsArgs = mealIndex + ',' + itemIndex + ',' + escapeAttr(JSON.stringify(item.name || 'Alimento')) + ',' + escapeAttr(JSON.stringify(subtitle)) + ',' + escapeAttr(JSON.stringify(String(Math.round(grams))));
+    return '<div class="tp-food-row">'
+      + '<button type="button" class="tp-food-main" onclick="abrirBottomSheet(' + bsArgs + ')">'
       + '<div class="diet-premium-food-emoji">' + getDietFoodEmoji(item) + '</div>'
-      + '<div><p class="diet-premium-food-name">' + escapeHTML(item.name) + '</p><p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + '</p></div>'
+      + '<div class="tp-food-info">'
+      + '<p class="diet-premium-food-name">' + escapeHTML(item.name || getDietItemName(item)) + '</p>'
+      + '<p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + (asKroniaNumber(item.kcal, 0) > 0 ? ' · ' + formatKroniaNumber(item.kcal, 'kcal') : '') + '</p>'
       + '</div>'
-      + '<p class="diet-premium-food-kcal">' + escapeHTML(asKroniaNumber(item.kcal, 0) > 0 ? formatKroniaNumber(item.kcal, 'kcal') : 'item') + '</p>'
-      + '</button>';
+      + '</button>'
+      + '<div class="tp-food-actions">'
+      + '<button type="button" class="tp-food-edit-btn" onclick="abrirBottomSheet(' + bsArgs + ')" title="Editar">'
+      + '<i data-lucide="pencil" width="13" height="13" stroke-width="2.5"></i>'
+      + '</button>'
+      + '<button type="button" class="tp-food-remove-btn" onclick="removeDietItemDirect(' + mealIndex + ',' + itemIndex + ')" title="Remover">−</button>'
+      + '</div>'
+      + '</div>';
   }).join('');
   var itemCount = (meal.items || []).length;
   var slotIcon = _tpMealSlotIcon(meal.slot || meal.name);
   var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
   var statusBadge = _tpMealStatusBadge(meal.time);
   var kcalText = asKroniaNumber(subtotal.kcal, 0) > 0 ? formatKroniaNumber(subtotal.kcal, 'kcal') : '— kcal';
-  var previewChips = (meal.items || []).map(function(item) {
-    return '<span class="diet-premium-preview-chip">' + escapeHTML(item.name || getDietItemName(item)) + '</span>';
-  }).join('');
+  var loadingState = meal._loading
+    ? '<div class="tp-meal-loading"><div class="tp-meal-loading-spinner"></div>IA recalculando ' + escapeHTML(meal.name || 'refeição') + '...</div>'
+    : '';
   return '<div class="tp-meal-row">'
     + '<div class="tp-meal-header-card" onclick="toggleTpMealBody(' + mealIndex + ')">'
     + '<div class="tp-meal-header-left">'
@@ -7371,8 +7360,7 @@ function renderDietMealCard(meal, mealIndex) {
     + '<div class="tp-meal-info">'
     + (meal.time ? '<span class="tp-meal-time">' + escapeHTML(meal.time) + '</span>' : '')
     + '<h3 class="tp-meal-name">' + escapeHTML(meal.name || 'Refeição') + '</h3>'
-    + '<p class="tp-meal-meta">' + escapeHTML(kcalText) + ' • ' + itemCount + (itemCount === 1 ? ' item' : ' itens') + '</p>'
-    + (previewChips ? '<div class="diet-premium-preview-chips">' + previewChips + '</div>' : '')
+    + '<p class="tp-meal-meta">' + escapeHTML(kcalText) + ' · ' + itemCount + (itemCount === 1 ? ' item' : ' itens') + '</p>'
     + '</div>'
     + '</div>'
     + '<div class="tp-meal-header-right">'
@@ -7381,13 +7369,14 @@ function renderDietMealCard(meal, mealIndex) {
     + '</div>'
     + '</div>'
     + '<div id="tpMealBody_' + mealIndex + '" class="tp-meal-body">'
+    + (loadingState || '')
     + '<div class="tp-meal-foods">' + (items || '<div class="diet-premium-empty"><div class="diet-premium-empty-icon"><i data-lucide="utensils" stroke-width="1.5"></i></div><p>Nenhum item adicionado.</p></div>') + '</div>'
     + '<div class="tp-meal-footer-row">'
     + '<button type="button" class="diet-premium-add" style="flex:1" onclick="openDietAddItemSheet(' + mealIndex + ')"><i data-lucide="plus" stroke-width="2" width="16" height="16"></i>Adicionar alimento</button>'
     + '<button type="button" class="tp-meal-ai-btn" onclick="openKronosFromDieta(\'Ajustar esta refeição mantendo os macros do plano salvo.\')"><i data-lucide="sparkles" stroke-width="1.5" width="16" height="16"></i></button>'
     + '</div>'
     + '</div>'
-    + '</div>'; // tp-meal-row
+    + '</div>';
 }
 
 function renderActiveDietPlan() {
@@ -7464,9 +7453,8 @@ function renderActiveDietPlan() {
       + '</div>'
       + '<div class="tp-progress-bar"><div class="tp-progress-fill" style="width:' + pctKcal + '%"></div></div>'
       + '<p class="tp-progress-text">' + pctKcal + '% da meta diária</p>'
-      + '<button type="button" class="tp-kronos-cta" onclick="recalculateDietWithKronos()">'
-      + '<i data-lucide="sparkles" width="18" height="18" stroke-width="1.75"></i>'
-      + ' Recalcular dieta com KRONOS'
+      + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()">'
+      + '🧠 Rebalancear automaticamente'
       + '</button>'
       + '</div>';
   }
@@ -7548,11 +7536,106 @@ function removeDietSheetItem() {
   fecharBottomSheet();
 }
 
+function removeDietItemDirect(mealIndex, itemIndex) {
+  removeDietPlanItem(mealIndex, itemIndex);
+}
+
+function openDietSubstituirScreen(mealIndex, itemIndex) {
+  fecharBottomSheet();
+  var plan = window._kroniaDietPlan || buildFallbackActiveDietPlan();
+  var meal = plan.meals && plan.meals[mealIndex];
+  var item = meal && meal.items && meal.items[itemIndex];
+  if (!item) return;
+  window._dietSubstState = { mealIndex: mealIndex, itemIndex: itemIndex, selectedOption: null };
+  var nameEl = document.getElementById('dsSubstituirItemName');
+  if (nameEl) nameEl.textContent = item.name || getDietItemName(item);
+  var alternatives = getDietSubstitutionOptions(item);
+  var listEl = document.getElementById('dsOptionsList');
+  if (listEl) {
+    if (!alternatives.length) {
+      listEl.innerHTML = '<p class="ds-empty">Nenhuma alternativa disponível para este alimento.</p>';
+    } else {
+      listEl.innerHTML = alternatives.map(function(opt, i) {
+        return '<div class="ds-option-card" onclick="selectDietSubstitutionOption(' + i + ')" id="dsOpt_' + i + '">'
+          + '<div class="ds-option-emoji">' + getDietFoodEmoji(opt) + '</div>'
+          + '<div class="ds-option-info">'
+          + '<p class="ds-option-name">' + escapeHTML(opt.name) + '</p>'
+          + '<p class="ds-option-meta">' + escapeHTML(opt.quantity || '') + (asKroniaNumber(opt.kcal, 0) > 0 ? ' · ' + formatKroniaNumber(opt.kcal, 'kcal') : '') + '</p>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+  var screen = document.getElementById('dietSubstituirScreen');
+  if (screen) screen.classList.add('show');
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+}
+
+function selectDietSubstitutionOption(optionIndex) {
+  if (!window._dietSubstState) return;
+  window._dietSubstState.selectedOption = optionIndex;
+  var cards = document.querySelectorAll('#dsOptionsList .ds-option-card');
+  cards.forEach(function(c, i) { c.classList.toggle('selected', i === optionIndex); });
+}
+
+function closeDietSubstituirScreen() {
+  var screen = document.getElementById('dietSubstituirScreen');
+  if (screen) screen.classList.remove('show');
+  window._dietSubstState = null;
+}
+
+function getDietSubstitutionOptions(item) {
+  var name = normalizeDietFoodText(item && item.name || '');
+  var commonSubs = {
+    'frango': [{ name: 'Tilápia grelhada', quantity: '150g', kcal: 180, protein: 35, carbs: 0, fat: 4 },
+               { name: 'Atum em água', quantity: '120g', kcal: 132, protein: 29, carbs: 0, fat: 1 },
+               { name: 'Peito de peru', quantity: '120g', kcal: 108, protein: 24, carbs: 0, fat: 1 }],
+    'arroz': [{ name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 },
+              { name: 'Quinoa cozida', quantity: '120g', kcal: 144, protein: 5, carbs: 25, fat: 2 },
+              { name: 'Macarrão integral', quantity: '80g', kcal: 280, protein: 10, carbs: 54, fat: 2 }],
+    'ovo': [{ name: 'Clara de ovo', quantity: '4 unidades', kcal: 68, protein: 15, carbs: 1, fat: 0 },
+            { name: 'Tofu firme', quantity: '100g', kcal: 76, protein: 8, carbs: 2, fat: 4 }],
+    'aveia': [{ name: 'Farelo de aveia', quantity: '30g', kcal: 105, protein: 4, carbs: 17, fat: 2 },
+              { name: 'Granola sem açúcar', quantity: '30g', kcal: 130, protein: 3, carbs: 20, fat: 5 }],
+    'batata': [{ name: 'Inhame cozido', quantity: '150g', kcal: 177, protein: 2, carbs: 42, fat: 0 },
+               { name: 'Mandioca cozida', quantity: '100g', kcal: 130, protein: 1, carbs: 31, fat: 0 }]
+  };
+  for (var key in commonSubs) {
+    if (name.includes(key)) return commonSubs[key];
+  }
+  return [
+    { name: 'Alternativa proteica similar', quantity: item.quantity || '100g', kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat },
+    { name: 'Opção baixo carboidrato', quantity: '100g', kcal: Math.round(asKroniaNumber(item.kcal, 150) * 0.8), protein: asKroniaNumber(item.protein, 20), carbs: Math.max(0, asKroniaNumber(item.carbs, 10) - 10), fat: asKroniaNumber(item.fat, 5) }
+  ];
+}
+
+function applyDietSubstitution() {
+  var state = window._dietSubstState;
+  if (!state || state.selectedOption === null) {
+    showToast('Selecione uma alternativa para substituir.', 'warn'); return;
+  }
+  var plan = window._kroniaDietPlan || buildFallbackActiveDietPlan();
+  var meal = plan.meals && plan.meals[state.mealIndex];
+  if (!meal || !meal.items || !meal.items[state.itemIndex]) {
+    showToast('Item não encontrado.', 'warn'); return;
+  }
+  var options = getDietSubstitutionOptions(meal.items[state.itemIndex]);
+  var chosenOpt = options[state.selectedOption];
+  if (!chosenOpt) return;
+  meal.items[state.itemIndex] = Object.assign({}, meal.items[state.itemIndex], chosenOpt);
+  setActiveDietPlan(plan);
+  schedulePersistActiveDietPlan();
+  closeDietSubstituirScreen();
+  showToast('Alimento substituído com sucesso!', 'success');
+}
+
 function replaceDietSheetItem() {
   var state = getDietSheetState();
-  var mealIndex = state ? state.mealIndex : 0;
-  fecharBottomSheet();
-  openDietAddItemSheet(mealIndex);
+  if (state) {
+    openDietSubstituirScreen(state.mealIndex, state.itemIndex);
+  } else {
+    fecharBottomSheet();
+  }
 }
 
 function showDietSheetDetails() {
@@ -12820,29 +12903,6 @@ async function gerarDieta() {
 // ══════════════════════════════════════════
 // CALCULAR BASAL
 // ══════════════════════════════════════════
-// ── Dieta Avançada ─────────────────────────────────────────────
-let _davSexo = 'M', _davBio = 'ecto', _davObj = 'emagrecer', _davCicloProto = 2, _davCalcResult = null;
-
-function selectDavSexo(s) {
-  _davSexo = s;
-  document.getElementById('davSexoM').classList.toggle('active', s === 'M');
-  document.getElementById('davSexoF').classList.toggle('active', s === 'F');
-  document.getElementById('davQuadrilWrap').style.display = s === 'F' ? '' : 'none';
-}
-function selectDavBio(el) {
-  document.querySelectorAll('#davBioChips .config-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active'); _davBio = el.dataset.val;
-}
-function selectDavObj(el) {
-  document.querySelectorAll('#davObjChips .config-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active'); _davObj = el.dataset.val;
-}
-function selectDavCiclo(el) {
-  document.querySelectorAll('#davCicloChips .config-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active'); _davCicloProto = parseInt(el.dataset.val);
-  if (_davCalcResult) renderDavCiclo(_davCalcResult);
-}
-
 function calcularDietaAvancada() {
   const peso    = parseFloat(document.getElementById('davPeso').value);
   const altura  = parseFloat(document.getElementById('davAltura').value);
