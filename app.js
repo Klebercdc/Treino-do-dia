@@ -6886,6 +6886,13 @@ function buildDietVisualPrescriptionFromLegacyPlan(plan) {
 var _dietCatalogIndexCache = null;
 var _dietPlanPersistTimer = null;
 var _dietTacoCatalogPromise = null;
+var TACO_RUNTIME_PORTION_MAP = {
+  TACO_0053: {
+    default_portion_g: 50,
+    default_unit: '1 unidade média (50 g)',
+    medida_caseira: '1 unidade média (50 g)'
+  }
+};
 
 function mapTacoCatalogGroup(category) {
   var normalized = normalizeDietFoodText(category || '');
@@ -6899,7 +6906,19 @@ function mapTacoCatalogGroup(category) {
 function normalizeRuntimeFoodEntry(food, sourceKind) {
   var safeFood = food && typeof food === 'object' ? food : {};
   var isTaco = sourceKind === 'taco' || Boolean(safeFood.taco_id);
-  var defaultPortion = asKroniaNumber(safeFood.default_portion_g || safeFood.porcao_gramas || safeFood.grams || safeFood.gramas, 0) || 100;
+  var tacoPortion = isTaco && safeFood.taco_id && TACO_RUNTIME_PORTION_MAP[safeFood.taco_id]
+    ? TACO_RUNTIME_PORTION_MAP[safeFood.taco_id]
+    : null;
+  var defaultPortion = asKroniaNumber(
+    safeFood.default_portion_g ||
+    (tacoPortion && tacoPortion.default_portion_g) ||
+    safeFood.porcao_gramas ||
+    safeFood.grams ||
+    safeFood.gramas,
+    0
+  ) || 100;
+  var defaultUnit = safeFood.default_unit || (tacoPortion && tacoPortion.default_unit) || (defaultPortion + ' g');
+  var medidaCaseira = safeFood.medida_caseira || (tacoPortion && tacoPortion.medida_caseira) || defaultUnit;
   var nome = String(safeFood.display_name_pt || safeFood.canonical_name_pt || safeFood.nome || safeFood.name || safeFood.label || 'Alimento').trim();
   var slug = String(safeFood.slug || safeFood.food_slug || safeFood.code || safeFood.id || normalizeDietFoodText(nome)).trim();
   var groupKey = String(safeFood.group_key || safeFood.grupo || safeFood.grupo_equivalencia || (isTaco ? mapTacoCatalogGroup(safeFood.categoria) : 'carboidratos') || '').trim();
@@ -6955,10 +6974,10 @@ function normalizeRuntimeFoodEntry(food, sourceKind) {
     group_key: groupKey,
     subgrupo: safeFood.subgroup_key || safeFood.subcategoria || safeFood.categoria || null,
     subgroup_key: safeFood.subgroup_key || safeFood.subcategoria || safeFood.categoria || null,
-    porcao: safeFood.porcao || safeFood.default_unit || (defaultPortion + ' g'),
-    medida_caseira: safeFood.measure || safeFood.medida_caseira || safeFood.default_unit || (defaultPortion + ' g'),
+    porcao: safeFood.porcao || defaultUnit,
+    medida_caseira: safeFood.measure || medidaCaseira,
     default_portion_g: defaultPortion,
-    default_unit: safeFood.default_unit || (defaultPortion + ' g'),
+    default_unit: defaultUnit,
     kcal: kcal,
     proteina: protein,
     carboidrato: carbs,

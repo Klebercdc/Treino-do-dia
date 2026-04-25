@@ -51,6 +51,7 @@ test('estimateNutritionFromTaco scales 50g correctly through the unified lookup'
 test('diet editor search resolves TACO fallback items in the app flow', () => {
   const appCode = fs.readFileSync('app.js', 'utf8');
   const snippet = [
+    extract(appCode, /var TACO_RUNTIME_PORTION_MAP = \{[\s\S]*?\n\};/, 'TACO_RUNTIME_PORTION_MAP'),
     extract(appCode, /function mapTacoCatalogGroup\(category\) \{[\s\S]*?\n\}/, 'mapTacoCatalogGroup'),
     extract(appCode, /function normalizeRuntimeFoodEntry\(food, sourceKind\) \{[\s\S]*?\n\}/, 'normalizeRuntimeFoodEntry'),
     extract(appCode, /function ensureDietTacoCatalogLoaded\(\) \{[\s\S]*?\n\}/, 'ensureDietTacoCatalogLoaded'),
@@ -97,6 +98,13 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
     NUTRITION_FOOD_CATALOG: [],
     _dietCatalogIndexCache: null,
     _dietTacoCatalogPromise: null,
+    TACO_RUNTIME_PORTION_MAP: {
+      TACO_0053: {
+        default_portion_g: 50,
+        default_unit: '1 unidade média (50 g)',
+        medida_caseira: '1 unidade média (50 g)',
+      },
+    },
     window: {
       KRONIA_PREMIUM_FOOD_CATALOG: {
         foods: [
@@ -169,6 +177,8 @@ test('diet editor search resolves TACO fallback items in the app flow', () => {
   assert.ok(french.length > 0);
   assert.equal(french[0].source, 'taco');
   assert.equal(french[0].taco_id, 'TACO_0053');
+  assert.equal(french[0].default_portion_g, 50);
+  assert.match(french[0].default_unit, /1 unidade/i);
 
   const rice = context.findDietCatalogItems('arroz');
   const riceNames = rice.map((item) => item.nome);
