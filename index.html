@@ -1412,8 +1412,8 @@
   <header class="tp-diet-header">
     <div class="tp-diet-header-inner">
       <div>
-        <h1 id="dietHeaderGreeting">Olá!</h1>
-        <p>Sua dieta inteligente para hoje</p>
+        <h1 class="tp-diet-title">Minha Dieta</h1>
+        <p id="dietHeaderGreeting" class="tp-diet-subtitle">Olá!</p>
       </div>
       <div class="tp-diet-header-actions">
         <button type="button" title="Gerar PDF" class="tp-header-icon-btn" onclick="exportActiveDietPlanPDF()">
@@ -1469,6 +1469,25 @@
     </div>
     <button type="button" class="diet-premium-sheet-save" onclick="saveDietSheetItem()">Salvar Alteração</button>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     DIETA — SUBSTITUIR ALIMENTO
+══════════════════════════════════════════ -->
+<div id="dietSubstituirScreen">
+  <div class="ds-header">
+    <button type="button" class="ds-back-btn" onclick="closeDietSubstituirScreen()">
+      <i data-lucide="chevron-left" stroke-width="2" width="22" height="22"></i>
+    </button>
+    <div class="ds-header-info">
+      <h2>Substituir Alimento</h2>
+      <p id="dsSubstituirItemName">Selecione uma opção</p>
+    </div>
+  </div>
+  <div class="ds-body">
+    <div id="dsOptionsList" class="ds-options-list"></div>
+  </div>
+  <button type="button" class="ds-confirm-btn" id="dsConfirmBtn" onclick="applyDietSubstitution()">Confirmar Substituição</button>
 </div>
 
 <!-- ══════════════════════════════════════════
