@@ -3508,6 +3508,9 @@ function closeTemplatesManager() {
 window.addEventListener("resize", syncMainScrollArea);
 window.addEventListener("orientationchange", () => setTimeout(syncMainScrollArea, 120));
 window.addEventListener("load", () => setTimeout(syncMainScrollArea, 0));
+window.addEventListener("load", function() {
+  ensureDietTacoCatalogLoaded();
+});
 
 /* ── Pós-Treino: atalhos rápidos para o KRONOS ───── */
 function _orientPosTreino(msg) {
@@ -6882,36 +6885,199 @@ function buildDietVisualPrescriptionFromLegacyPlan(plan) {
 
 var _dietCatalogIndexCache = null;
 var _dietPlanPersistTimer = null;
+var _dietTacoCatalogPromise = null;
+var TACO_RUNTIME_PORTION_MAP = {
+  TACO_0053: {
+    default_portion_g: 50,
+    default_unit: '1 unidade média (50 g)',
+    medida_caseira: '1 unidade média (50 g)'
+  },
+  TACO_0488: {
+    default_portion_g: 50,
+    default_unit: '1 unidade média (50 g)',
+    medida_caseira: '1 unidade média (50 g)'
+  },
+  TACO_0182: {
+    default_portion_g: 86,
+    default_unit: '1 unidade média (86 g)',
+    medida_caseira: '1 unidade média (86 g)'
+  },
+  TACO_0221: {
+    default_portion_g: 130,
+    default_unit: '1 unidade média (130 g)',
+    medida_caseira: '1 unidade média (130 g)'
+  }
+};
+
+function mapTacoCatalogGroup(category) {
+  var normalized = normalizeDietFoodText(category || '');
+  if (/(prote|carne|ovo|leite|queijo|pesc|peixe|frango|bov|suin|aves?)/.test(normalized)) return 'proteinas';
+  if (/frut/.test(normalized)) return 'frutas';
+  if (/(veget|hortal|legume|verdur)/.test(normalized)) return 'vegetais';
+  if (/(gord|oleo|oleag|past|semen)/.test(normalized)) return 'gorduras';
+  if (/(legumin)/.test(normalized)) return 'leguminosas';
+  return 'carboidratos';
+}
+
+function normalizeRuntimeFoodEntry(food, sourceKind) {
+  var safeFood = food && typeof food === 'object' ? food : {};
+  var isTaco = sourceKind === 'taco' || Boolean(safeFood.taco_id);
+  var tacoPortion = isTaco && safeFood.taco_id && TACO_RUNTIME_PORTION_MAP[safeFood.taco_id]
+    ? TACO_RUNTIME_PORTION_MAP[safeFood.taco_id]
+    : null;
+  var defaultPortion = asKroniaNumber(
+    safeFood.default_portion_g ||
+    (tacoPortion && tacoPortion.default_portion_g) ||
+    safeFood.porcao_gramas ||
+    safeFood.grams ||
+    safeFood.gramas,
+    0
+  ) || 100;
+  var defaultUnit = safeFood.default_unit || (tacoPortion && tacoPortion.default_unit) || (defaultPortion + ' g');
+  var medidaCaseira = safeFood.medida_caseira || (tacoPortion && tacoPortion.medida_caseira) || defaultUnit;
+  var nome = String(safeFood.display_name_pt || safeFood.canonical_name_pt || safeFood.nome || safeFood.name || safeFood.label || 'Alimento').trim();
+  var slug = String(safeFood.slug || safeFood.food_slug || safeFood.code || safeFood.id || normalizeDietFoodText(nome)).trim();
+  var groupKey = String(safeFood.group_key || safeFood.grupo || safeFood.grupo_equivalencia || (isTaco ? mapTacoCatalogGroup(safeFood.categoria) : 'carboidratos') || '').trim();
+  var kcal = asKroniaNumber(
+    safeFood.kcal_100g != null ? safeFood.kcal_100g :
+    safeFood.calories != null ? safeFood.calories :
+    safeFood.kcal != null ? safeFood.kcal :
+    safeFood.energia_kcal != null ? safeFood.energia_kcal : 0,
+    0
+  );
+  var protein = asKroniaNumber(
+    safeFood.protein_100g != null ? safeFood.protein_100g :
+    safeFood.proteina_por_100g != null ? safeFood.proteina_por_100g :
+    safeFood.proteina != null ? safeFood.proteina :
+    safeFood.proteina_g != null ? safeFood.proteina_g :
+    safeFood.protein != null ? safeFood.protein : 0,
+    0
+  );
+  var carbs = asKroniaNumber(
+    safeFood.carbs_100g != null ? safeFood.carbs_100g :
+    safeFood.carbo_por_100g != null ? safeFood.carbo_por_100g :
+    safeFood.carboidrato != null ? safeFood.carboidrato :
+    safeFood.carboidrato_g != null ? safeFood.carboidrato_g :
+    safeFood.carbs != null ? safeFood.carbs : 0,
+    0
+  );
+  var fat = asKroniaNumber(
+    safeFood.fat_100g != null ? safeFood.fat_100g :
+    safeFood.gordura_por_100g != null ? safeFood.gordura_por_100g :
+    safeFood.gordura != null ? safeFood.gordura :
+    safeFood.lipidios_g != null ? safeFood.lipidios_g :
+    safeFood.fat != null ? safeFood.fat : 0,
+    0
+  );
+  var fiber = asKroniaNumber(
+    safeFood.fiber_100g != null ? safeFood.fiber_100g :
+    safeFood.fibra_por_100g != null ? safeFood.fibra_por_100g :
+    safeFood.fibra != null ? safeFood.fibra :
+    safeFood.fibra_g != null ? safeFood.fibra_g :
+    safeFood.fiber != null ? safeFood.fiber : 0,
+    0
+  );
+
+  return {
+    id: String(safeFood.id || safeFood.taco_id || slug || nome),
+    slug: slug,
+    food_slug: slug,
+    display_name_pt: nome,
+    canonical_name_pt: nome,
+    name: nome,
+    nome: nome,
+    grupo: groupKey,
+    group_key: groupKey,
+    subgrupo: safeFood.subgroup_key || safeFood.subcategoria || safeFood.categoria || null,
+    subgroup_key: safeFood.subgroup_key || safeFood.subcategoria || safeFood.categoria || null,
+    porcao: safeFood.porcao || defaultUnit,
+    medida_caseira: safeFood.measure || medidaCaseira,
+    default_portion_g: defaultPortion,
+    default_unit: defaultUnit,
+    kcal: kcal,
+    proteina: protein,
+    carboidrato: carbs,
+    gordura: fat,
+    fibra: fiber,
+    kcal_100g: kcal,
+    protein_100g: protein,
+    carbs_100g: carbs,
+    fat_100g: fat,
+    fiber_100g: fiber,
+    sodium_mg_100g: asKroniaNumber(safeFood.sodium_mg_100g != null ? safeFood.sodium_mg_100g : safeFood.sodio_mg, 0),
+    source: safeFood.source || (isTaco ? 'taco' : 'kronia'),
+    source_type: safeFood.source_type || (isTaco ? 'taco' : 'kronia'),
+    source_id: safeFood.source_id || safeFood.sourceCode || safeFood.code || safeFood.id || safeFood.taco_id || slug,
+    code: safeFood.code || safeFood.id || safeFood.taco_id || slug,
+    taco_id: safeFood.taco_id || null,
+    codigo_taco: safeFood.codigo_taco != null ? Number(safeFood.codigo_taco) : null,
+    is_taco_fallback: Boolean(isTaco),
+    aliases: Array.isArray(safeFood.aliases) ? safeFood.aliases.slice() : []
+  };
+}
+
+function ensureDietTacoCatalogLoaded() {
+  if (Array.isArray(window.KRONIA_TACO_DATABASE) && window.KRONIA_TACO_DATABASE.length) {
+    return Promise.resolve(window.KRONIA_TACO_DATABASE);
+  }
+  if (_dietTacoCatalogPromise) return _dietTacoCatalogPromise;
+  if (typeof fetch !== 'function') return Promise.resolve([]);
+
+  _dietTacoCatalogPromise = fetch('src/lib/nutrition/tacoDatabase.json', { cache: 'force-cache' })
+    .then(function(response) {
+      if (!response.ok) throw new Error('Falha ao carregar TACO runtime');
+      return response.json();
+    })
+    .then(function(payload) {
+      window.KRONIA_TACO_DATABASE = Array.isArray(payload) ? payload : [];
+      _dietCatalogIndexCache = null;
+      if (document.getElementById('dietAddItemSheet')) {
+        renderDietAddCatalog(Number(document.getElementById('dietAddMeal')?.value || 0));
+      }
+      return window.KRONIA_TACO_DATABASE;
+    })
+    .catch(function() {
+      return [];
+    });
+
+  return _dietTacoCatalogPromise;
+}
+
+function getDietCatalogDedupKey(item) {
+  if (!item || typeof item !== 'object') return '';
+  return normalizeDietFoodText(item.display_name_pt || item.canonical_name_pt || item.nome || item.name || '');
+}
+
+function getDietCatalogTacoKey(item) {
+  if (!item || typeof item !== 'object') return '';
+  return String(item.taco_id || item.codigo_taco || item.source_id || item.sourceId || '').trim();
+}
 
 function getDietRuntimeCatalogFoods() {
   var premium = typeof window !== 'undefined' && window && window.KRONIA_PREMIUM_FOOD_CATALOG && Array.isArray(window.KRONIA_PREMIUM_FOOD_CATALOG.foods)
-    ? window.KRONIA_PREMIUM_FOOD_CATALOG.foods
-    : null;
-  if (premium && premium.length) return premium;
-  return Array.isArray(NUTRITION_FOOD_CATALOG) ? NUTRITION_FOOD_CATALOG.map(function(item) {
+    ? window.KRONIA_PREMIUM_FOOD_CATALOG.foods.map(function(item) { return normalizeRuntimeFoodEntry(item, 'kronia'); })
+    : [];
+  var fallback = Array.isArray(NUTRITION_FOOD_CATALOG) ? NUTRITION_FOOD_CATALOG.map(function(item) {
     var portionText = String(item && item.porcao || '');
     var portionMatch = portionText.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i);
-    var portionGrams = asKroniaNumber(item && (item.porcao_gramas || item.gramas), 0) || (portionMatch ? asKroniaNumber(portionMatch[1], 0) : 0);
-    var base = portionGrams > 0 ? (100 / portionGrams) : 0;
-    return {
-      id: item.id,
-      slug: item.food_slug || item.slug || normalizeDietFoodText(item.nome || item.name || 'alimento'),
-      display_name_pt: item.nome || item.name || 'Alimento',
-      canonical_name_pt: item.nome || item.name || 'Alimento',
-      group_key: item.grupo || item.group_key || null,
-      subgroup_key: item.subgrupo || item.subgroup_key || null,
+    var portionGrams = asKroniaNumber(item && (item.porcao_gramas || item.grams || item.gramas), 0) || (portionMatch ? asKroniaNumber(portionMatch[1], 0) : 0);
+    return normalizeRuntimeFoodEntry(Object.assign({}, item, {
       default_portion_g: portionGrams || 100,
       default_unit: item.porcao || item.default_unit || ((portionGrams || 100) + ' g'),
-      kcal_100g: base ? dietRound(asKroniaNumber(item.kcal || item.calorias, 0) * base, 3) : 0,
-      protein_100g: base ? dietRound(asKroniaNumber(item.proteina || item.proteinas || item.protein, 0) * base, 3) : 0,
-      carbs_100g: base ? dietRound(asKroniaNumber(item.carboidrato || item.carboidratos || item.carbs, 0) * base, 3) : 0,
-      fat_100g: base ? dietRound(asKroniaNumber(item.gordura || item.gorduras || item.fat, 0) * base, 3) : 0,
-      fiber_100g: base ? dietRound(asKroniaNumber(item.fibra || item.fibras || item.fiber, 0) * base, 3) : 0,
-      sodium_mg_100g: base ? dietRound(asKroniaNumber(item.sodium_mg || item.sodio_mg || item.sodium, 0) * base, 3) : 0,
+      kcal_100g: portionGrams > 0 ? dietRound(asKroniaNumber(item.kcal || item.calorias, 0) * (100 / portionGrams), 3) : asKroniaNumber(item.kcal || item.calorias, 0),
+      protein_100g: portionGrams > 0 ? dietRound(asKroniaNumber(item.proteina || item.proteinas || item.protein, 0) * (100 / portionGrams), 3) : asKroniaNumber(item.proteina || item.proteinas || item.protein, 0),
+      carbs_100g: portionGrams > 0 ? dietRound(asKroniaNumber(item.carboidrato || item.carboidratos || item.carbs, 0) * (100 / portionGrams), 3) : asKroniaNumber(item.carboidrato || item.carboidratos || item.carbs, 0),
+      fat_100g: portionGrams > 0 ? dietRound(asKroniaNumber(item.gordura || item.gorduras || item.fat, 0) * (100 / portionGrams), 3) : asKroniaNumber(item.gordura || item.gorduras || item.fat, 0),
+      fiber_100g: portionGrams > 0 ? dietRound(asKroniaNumber(item.fibra || item.fibras || item.fiber, 0) * (100 / portionGrams), 3) : asKroniaNumber(item.fibra || item.fibras || item.fiber, 0),
+      sodium_mg_100g: portionGrams > 0 ? dietRound(asKroniaNumber(item.sodium_mg || item.sodio_mg || item.sodium, 0) * (100 / portionGrams), 3) : asKroniaNumber(item.sodium_mg || item.sodio_mg || item.sodium, 0),
       source: 'NUTRITION_FOOD_CATALOG_fallback',
-      source_code: item.id || null
-    };
+      source_type: 'fallback'
+    }), 'fallback');
   }) : [];
+  var taco = Array.isArray(window.KRONIA_TACO_DATABASE) ? window.KRONIA_TACO_DATABASE.map(function(item) {
+    return normalizeRuntimeFoodEntry(item, 'taco');
+  }) : [];
+  return premium.concat(fallback).concat(taco);
 }
 
 function buildDietCatalogIndexes() {
@@ -6942,6 +7108,12 @@ function buildDietCatalogIndexes() {
     normalizedNames.forEach(function(nameKey) {
       if (nameKey && !byNormalizedName[nameKey]) byNormalizedName[nameKey] = food;
     });
+    if (Array.isArray(food.aliases)) {
+      food.aliases.forEach(function(alias) {
+        var aliasKey = normalizeDietFoodText(alias);
+        if (aliasKey && !byNormalizedName[aliasKey]) byNormalizedName[aliasKey] = food;
+      });
+    }
   });
   premiumAliases.forEach(function(alias) {
     var aliasKey = normalizeDietFoodText(alias && (alias.normalized_alias || alias.alias));
@@ -8328,29 +8500,94 @@ function removeDietPlanItem(mealIndex, itemIndex) {
 }
 
 function findDietCatalogItems(query) {
+  ensureDietTacoCatalogLoaded();
   var q = normalizeDietFoodText(query || '');
-  var catalog = Array.isArray(NUTRITION_FOOD_CATALOG) ? NUTRITION_FOOD_CATALOG : [];
-  return catalog.filter(function(item) {
-    return !q || normalizeDietFoodText(item.nome).indexOf(q) >= 0 || normalizeDietFoodText(item.grupo).indexOf(q) >= 0;
-  }).slice(0, 20);
+  var catalog = getDietCatalogIndexes().foods || [];
+  var tokens = q ? q.split(' ').filter(Boolean) : [];
+  var ranked = catalog.map(function(item) {
+    var name = normalizeDietFoodText(item.nome);
+    var group = normalizeDietFoodText(item.grupo);
+    var blob = normalizeDietFoodText([
+      item.nome,
+      item.grupo,
+      item.code,
+      item.slug,
+      item.taco_id,
+      item.codigo_taco
+    ].filter(Boolean).join(' '));
+    var score = 0;
+    if (!q) score = Number(item.codigo_taco || item.priority || item.prioridade || 0) + (item.source === 'taco' ? 0 : 20);
+    if (name === q) score += 400;
+    if (blob === q) score += 380;
+    if (name.startsWith(q)) score += 120;
+    if (blob.startsWith(q)) score += 100;
+    if (name.indexOf(q) >= 0) score += 90;
+    if (group.indexOf(q) >= 0) score += 40;
+    tokens.forEach(function(token) {
+      if (blob.indexOf(token) >= 0) score += 14;
+    });
+    return { item: item, score: score };
+  }).filter(function(entry) {
+    return !q || entry.score > 0;
+  }).sort(function(a, b) {
+    var nameA = normalizeDietFoodText(a.item.nome);
+    var nameB = normalizeDietFoodText(b.item.nome);
+    if (nameA === nameB && a.item.source !== b.item.source) {
+      if (a.item.source === 'kronia') return -1;
+      if (b.item.source === 'kronia') return 1;
+    }
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.item.source !== b.item.source) {
+      if (a.item.source === 'kronia') return -1;
+      if (b.item.source === 'kronia') return 1;
+    }
+    return normalizeDietFoodText(a.item.nome).localeCompare(normalizeDietFoodText(b.item.nome));
+  });
+  var deduped = [];
+  var seen = Object.create(null);
+  ranked.forEach(function(entry) {
+    var item = entry.item;
+    var nameKey = getDietCatalogDedupKey(item);
+    var tacoKey = getDietCatalogTacoKey(item);
+    var dedupKey = nameKey || tacoKey;
+    if (!dedupKey) return;
+    if (seen[dedupKey] || (tacoKey && seen['taco:' + tacoKey])) return;
+    seen[dedupKey] = item;
+    if (tacoKey) seen['taco:' + tacoKey] = item;
+    deduped.push(item);
+  });
+  return deduped.slice(0, 20);
 }
 
 function addDietPlanItemFromCatalog(mealIndex, catalogIndex) {
   var query = document.getElementById('dietAddSearch')?.value || '';
   var item = findDietCatalogItems(query)[catalogIndex];
   if (!item) return;
+  var tacoFallback = item.source === 'taco' || item.is_taco_fallback;
   addDietPlanItem(mealIndex || 0, normalizeDietEditorItem({
     nome: item.nome,
-    sourceType: 'catalog',
-    source_id: item.id || item.nome,
+    sourceType: tacoFallback ? 'taco' : 'catalog',
+    source_id: item.taco_id || item.source_id || item.id || item.nome,
+    source: item.source,
+    taco_id: item.taco_id || null,
+    codigo_taco: item.codigo_taco || null,
+    is_taco_fallback: tacoFallback,
     slot: item.grupo,
-    gramas: item.porcao_gramas || item.gramas || 100,
-    porcao: item.medida || item.default_unit || ((item.porcao_gramas || 100) + ' g'),
-    calorias: item.kcal || item.calorias || 0,
-    proteinas: item.proteina || item.proteinas || 0,
-    carboidratos: item.carbo || item.carboidratos || 0,
-    gorduras: item.gordura || item.gorduras || 0,
-    fibras: item.fibra || item.fibras || 0
+    gramas: item.default_portion_g || item.porcao_gramas || item.gramas || 100,
+    porcao: item.default_unit || item.medida || item.porcao || ((item.default_portion_g || item.porcao_gramas || 100) + ' g'),
+    calorias: item.kcal || item.calorias || item.kcal_100g || 0,
+    proteinas: item.proteina || item.proteinas || item.protein_100g || 0,
+    carboidratos: item.carbo || item.carboidratos || item.carbs_100g || 0,
+    gorduras: item.gordura || item.gorduras || item.fat_100g || 0,
+    fibras: item.fibra || item.fibras || item.fiber_100g || 0,
+    per100: {
+      kcal: item.kcal_100g != null ? item.kcal_100g : item.kcal,
+      protein: item.protein_100g != null ? item.protein_100g : item.proteina,
+      carbs: item.carbs_100g != null ? item.carbs_100g : item.carboidrato,
+      fat: item.fat_100g != null ? item.fat_100g : item.gordura,
+      fiber: item.fiber_100g != null ? item.fiber_100g : item.fibra,
+      sodium: item.sodium_mg_100g != null ? item.sodium_mg_100g : item.sodium_mg || 0
+    }
   }, 99));
 }
 
@@ -8379,6 +8616,7 @@ function addDietPlanItem(mealIndex, item) {
 function renderDietAddCatalog(mealIndex) {
   var list = document.getElementById('dietAddCatalogList');
   if (!list) return;
+  ensureDietTacoCatalogLoaded();
   var query = document.getElementById('dietAddSearch')?.value || '';
   var items = findDietCatalogItems(query);
   list.innerHTML = items.map(function(item, idx) {
@@ -8394,6 +8632,7 @@ function openDietAddItemSheet(mealIndex) {
   closeDietAddItemSheet();
   var plan = window._kroniaDietPlan || buildFallbackActiveDietPlan();
   var selectedMeal = Number.isFinite(Number(mealIndex)) ? Number(mealIndex) : 0;
+  ensureDietTacoCatalogLoaded();
   var sheet = document.createElement('div');
   sheet.id = 'dietAddItemSheet';
   sheet.className = 'bottom-sheet show diet-add-item-sheet';

@@ -31,6 +31,9 @@ function loadDietMacroContext() {
     extract(code, /function asKroniaNumber\(value, fallback\) \{[\s\S]*?\n\}/, 'asKroniaNumber'),
     extract(code, /function dietRound\(value, decimals\) \{[\s\S]*?\n\}/, 'dietRound'),
     extract(code, /function normalizeDietFoodText\(value\) \{[\s\S]*?\n\}/, 'normalizeDietFoodText'),
+    extract(code, /var TACO_RUNTIME_PORTION_MAP = \{[\s\S]*?\n\};/, 'TACO_RUNTIME_PORTION_MAP'),
+    extract(code, /function mapTacoCatalogGroup\(category\) \{[\s\S]*?\n\}/, 'mapTacoCatalogGroup'),
+    extract(code, /function normalizeRuntimeFoodEntry\(food, sourceKind\) \{[\s\S]*?\n\}/, 'normalizeRuntimeFoodEntry'),
     extract(code, /function buildDefaultDietVisualPrescription\(\) \{[\s\S]*?\n\}/, 'buildDefaultDietVisualPrescription'),
     extract(code, /function cloneDietVisualPrescription\(value\) \{[\s\S]*?\n\}/, 'cloneDietVisualPrescription'),
     extract(code, /function getDietItemName\(item\) \{[\s\S]*?\n\}/, 'getDietItemName'),
@@ -116,6 +119,14 @@ function loadDietMacroContext() {
     KRONIA_ACTIVE_DIET_PLAN_KEY: 'kronia_active_diet_plan_v1',
     NUTRITION_FOOD_CATALOG: [],
     _dietCatalogIndexCache: null,
+    _dietTacoCatalogPromise: null,
+    TACO_RUNTIME_PORTION_MAP: {
+      TACO_0053: {
+        default_portion_g: 50,
+        default_unit: '1 unidade média (50 g)',
+        medida_caseira: '1 unidade média (50 g)',
+      },
+    },
     renderActiveDietPlan() {},
     schedulePersistActiveDietPlan() {},
     buildFallbackActiveDietPlan() {
