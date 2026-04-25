@@ -5515,6 +5515,13 @@ body.dark-mode .settings-row-value {
   font-weight: 500;
   color: var(--diet-text-soft);
 }
+#dietDataScreen .tp-meal-macros {
+  margin: 3px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--diet-text-muted);
+  letter-spacing: .02em;
+}
 #dietDataScreen .tp-meal-header-right {
   display: flex;
   align-items: center;
@@ -5719,6 +5726,13 @@ body.dark-mode .settings-row-value {
   padding: 2px 0;
 }
 #dietDataScreen .tp-food-info { min-width: 0; }
+#dietDataScreen .tp-food-macros {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--diet-text-muted);
+  letter-spacing: .02em;
+}
 #dietDataScreen .tp-food-actions {
   display: flex;
   align-items: center;

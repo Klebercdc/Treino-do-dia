@@ -7736,7 +7736,20 @@ function getDietRenderableMeals(plan) {
   if (visual && Array.isArray(visual.meals) && visual.meals.length) {
     return visual.meals.map(function(meal, mealIndex) {
       var safeMeal = meal && typeof meal === 'object' ? meal : {};
-      var items = Array.isArray(safeMeal.items) ? safeMeal.items.map(parseDietVisualItem).filter(Boolean) : [];
+      var rawItems = Array.isArray(safeMeal.items) ? safeMeal.items.map(parseDietVisualItem).filter(Boolean) : [];
+      var normalizedItems = rawItems.map(function(item, itemIndex) {
+        return normalizeDietEditorItem(item, itemIndex + 1);
+      });
+      var computedSub = normalizedItems.reduce(function(acc, it) {
+        acc.kcal  += asKroniaNumber(it.kcal,    0);
+        acc.protein += asKroniaNumber(it.protein, 0);
+        acc.carbs   += asKroniaNumber(it.carbs,   0);
+        acc.fat     += asKroniaNumber(it.fat,     0);
+        acc.fiber   += asKroniaNumber(it.fiber,   0);
+        acc.sodium  += asKroniaNumber(it.sodium,  0);
+        return acc;
+      }, { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 });
+      var estimatedKcal = asKroniaNumber(safeMeal.kcal_estimada, 0);
       return {
         id: safeMeal.id || ('visual_meal_' + (mealIndex + 1)),
         name: safeMeal.name || ('Refeição ' + (mealIndex + 1)),
@@ -7745,16 +7758,14 @@ function getDietRenderableMeals(plan) {
         notes: '',
         substituicoes: [],
         subtotal: {
-          kcal: asKroniaNumber(safeMeal.kcal_estimada, 0),
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          fiber: 0,
-          sodium: 0
+          kcal:    dietRound(computedSub.kcal    || estimatedKcal, 0),
+          protein: dietRound(computedSub.protein, 1),
+          carbs:   dietRound(computedSub.carbs,   1),
+          fat:     dietRound(computedSub.fat,     1),
+          fiber:   dietRound(computedSub.fiber,   1),
+          sodium:  dietRound(computedSub.sodium,  0)
         },
-        items: items.map(function(item, itemIndex) {
-          return normalizeDietEditorItem(item, itemIndex + 1);
-        })
+        items: normalizedItems
       };
     });
   }
@@ -8614,12 +8625,17 @@ function renderDietMealCard(meal, mealIndex) {
     var subtitle = buildDietItemSubtitle(item);
     var grams = getDietDisplayGrams(item);
     var bsArgs = mealIndex + ',' + itemIndex + ',' + escapeAttr(JSON.stringify(item.name || 'Alimento')) + ',' + escapeAttr(JSON.stringify(subtitle)) + ',' + escapeAttr(JSON.stringify(String(Math.round(grams))));
+    var itemP = dietRound(asKroniaNumber(item.protein, 0), 1);
+    var itemC = dietRound(asKroniaNumber(item.carbs,   0), 1);
+    var itemG = dietRound(asKroniaNumber(item.fat,     0), 1);
+    var hasMacros = itemP > 0 || itemC > 0 || itemG > 0;
     return '<div class="tp-food-row">'
       + '<button type="button" class="tp-food-main" onclick="abrirBottomSheet(' + bsArgs + ')">'
       + '<div class="diet-premium-food-emoji">' + getDietFoodEmoji(item) + '</div>'
       + '<div class="tp-food-info">'
       + '<p class="diet-premium-food-name">' + escapeHTML(item.name || getDietItemName(item)) + '</p>'
       + '<p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + (asKroniaNumber(item.kcal, 0) > 0 ? ' · ' + formatKroniaNumber(item.kcal, 'kcal') : '') + '</p>'
+      + (hasMacros ? '<p class="tp-food-macros">P ' + itemP + 'g&nbsp;·&nbsp;C ' + itemC + 'g&nbsp;·&nbsp;G ' + itemG + 'g</p>' : '')
       + '</div>'
       + '</button>'
       + '<div class="tp-food-actions">'
@@ -8635,6 +8651,12 @@ function renderDietMealCard(meal, mealIndex) {
   var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
   var statusBadge = _tpMealStatusBadge(meal.time);
   var kcalText = asKroniaNumber(subtotal.kcal, 0) > 0 ? formatKroniaNumber(subtotal.kcal, 'kcal') : '— kcal';
+  var mealP = dietRound(asKroniaNumber(subtotal.protein, 0), 1);
+  var mealC = dietRound(asKroniaNumber(subtotal.carbs,   0), 1);
+  var mealG = dietRound(asKroniaNumber(subtotal.fat,     0), 1);
+  var mealMacros = (mealP > 0 || mealC > 0 || mealG > 0)
+    ? '<p class="tp-meal-macros">P ' + mealP + 'g · C ' + mealC + 'g · G ' + mealG + 'g</p>'
+    : '';
   var loadingState = meal._loading
     ? '<div class="tp-meal-loading"><div class="tp-meal-loading-spinner"></div>IA recalculando ' + escapeHTML(meal.name || 'refeição') + '...</div>'
     : '';
@@ -8646,6 +8668,7 @@ function renderDietMealCard(meal, mealIndex) {
     + (meal.time ? '<span class="tp-meal-time">' + escapeHTML(meal.time) + '</span>' : '')
     + '<h3 class="tp-meal-name">' + escapeHTML(meal.name || 'Refeição') + '</h3>'
     + '<p class="tp-meal-meta">' + escapeHTML(kcalText) + ' · ' + itemCount + (itemCount === 1 ? ' item' : ' itens') + '</p>'
+    + mealMacros
     + '</div>'
     + '</div>'
     + '<div class="tp-meal-header-right">'
