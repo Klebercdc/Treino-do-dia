@@ -6271,30 +6271,6 @@ function openDieta() {
   return;
 }
 
-function openDietaLegacy() {
-  syncDietaTheme(resolveKroniaThemeForDieta());
-  const cfg = safeJSON("kronia_config", {});
-  const prefs = safeJSON("kronia_calc_prefs", {});
-  document.getElementById("davPeso").value    = prefs.davPeso    || cfg.peso    || "";
-  document.getElementById("davAltura").value  = prefs.davAltura  || cfg.altura  || "";
-  document.getElementById("davPescoco").value = prefs.davPescoco || "";
-  document.getElementById("davCintura").value = prefs.davCintura || "";
-  document.getElementById("davQuadril").value = prefs.davQuadril || "";
-  selectDavSexo(prefs.davSexo || cfg.sexo || "M");
-  if (prefs.davBio) { const el = document.querySelector(`#davBioChips [data-val="${prefs.davBio}"]`); if (el) selectDavBio(el); }
-  if (prefs.davObj) { const el = document.querySelector(`#davObjChips [data-val="${prefs.davObj}"]`); if (el) selectDavObj(el); }
-  if (prefs.davCiclo) { const el = document.querySelector(`#davCicloChips [data-val="${prefs.davCiclo}"]`); if (el) selectDavCiclo(el); }
-  document.getElementById("dietaScreen").classList.add("show");
-  const footer = document.querySelector('.footer-actions');
-  if (footer) footer.style.display = 'none';
-}
-function closeDieta() {
-  document.getElementById("dietaScreen").classList.remove("show");
-  const footer = document.querySelector('.footer-actions');
-  if (footer) footer.style.display = '';
-  navTo("treino");
-}
-
 function asKroniaNumber(value, fallback) {
   var n = Number(value);
   return Number.isFinite(n) ? n : (arguments.length > 1 ? fallback : 0);
@@ -12820,29 +12796,6 @@ async function gerarDieta() {
 // ══════════════════════════════════════════
 // CALCULAR BASAL
 // ══════════════════════════════════════════
-// ── Dieta Avançada ─────────────────────────────────────────────
-let _davSexo = 'M', _davBio = 'ecto', _davObj = 'emagrecer', _davCicloProto = 2, _davCalcResult = null;
-
-function selectDavSexo(s) {
-  _davSexo = s;
-  document.getElementById('davSexoM').classList.toggle('active', s === 'M');
-  document.getElementById('davSexoF').classList.toggle('active', s === 'F');
-  document.getElementById('davQuadrilWrap').style.display = s === 'F' ? '' : 'none';
-}
-function selectDavBio(el) {
-  document.querySelectorAll('#davBioChips .config-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active'); _davBio = el.dataset.val;
-}
-function selectDavObj(el) {
-  document.querySelectorAll('#davObjChips .config-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active'); _davObj = el.dataset.val;
-}
-function selectDavCiclo(el) {
-  document.querySelectorAll('#davCicloChips .config-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active'); _davCicloProto = parseInt(el.dataset.val);
-  if (_davCalcResult) renderDavCiclo(_davCalcResult);
-}
-
 function calcularDietaAvancada() {
   const peso    = parseFloat(document.getElementById('davPeso').value);
   const altura  = parseFloat(document.getElementById('davAltura').value);
