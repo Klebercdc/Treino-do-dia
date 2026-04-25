@@ -11,6 +11,7 @@ var KRONA_FOODS = [
   // ─── PROTEÍNAS ANIMAIS ───────────────────────────────────────────────────────
   {
     code: 'frango_grelhado',
+    taco_id: 'TACO_0410',
     nome: 'Frango grelhado',
     categoria: 'proteina',
     subcategoria: 'magra',
@@ -47,6 +48,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'patinho_grelhado',
+    taco_id: 'TACO_0377',
     nome: 'Patinho grelhado',
     categoria: 'proteina',
     subcategoria: 'magra',
@@ -119,6 +121,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'ovo_inteiro',
+    taco_id: 'TACO_0488',
     nome: 'Ovo inteiro cozido',
     categoria: 'proteina',
     subcategoria: 'mista',
@@ -233,6 +236,7 @@ var KRONA_FOODS = [
   // ─── CARBOIDRATOS COMPLEXOS ──────────────────────────────────────────────────
   {
     code: 'arroz_branco',
+    taco_id: 'TACO_0003',
     nome: 'Arroz cozido',
     categoria: 'carbo',
     subcategoria: 'grao',
@@ -251,6 +255,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'arroz_integral',
+    taco_id: 'TACO_0001',
     nome: 'Arroz integral cozido',
     categoria: 'carbo',
     subcategoria: 'grao',
@@ -269,6 +274,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'batata_doce',
+    taco_id: 'TACO_0088',
     nome: 'Batata-doce cozida',
     categoria: 'carbo',
     subcategoria: 'tuberculo',
@@ -287,6 +293,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'batata_inglesa',
+    taco_id: 'TACO_0091',
     nome: 'Batata inglesa cozida',
     categoria: 'carbo',
     subcategoria: 'tuberculo',
@@ -343,6 +350,7 @@ var KRONA_FOODS = [
   // ─── CARBOIDRATOS CAFÉ DA MANHÃ ──────────────────────────────────────────────
   {
     code: 'aveia',
+    taco_id: 'TACO_0007',
     nome: 'Aveia em flocos',
     categoria: 'carbo',
     subcategoria: 'cereal',
@@ -361,6 +369,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'pao_integral',
+    taco_id: 'TACO_0052',
     nome: 'Pão integral',
     categoria: 'carbo',
     subcategoria: 'pao',
@@ -399,6 +408,7 @@ var KRONA_FOODS = [
   // ─── LEGUMINOSAS ─────────────────────────────────────────────────────────────
   {
     code: 'feijao_cozido',
+    taco_id: 'TACO_0561',
     nome: 'Feijão cozido',
     categoria: 'leguminosa',
     subcategoria: 'leguminosa',
@@ -547,6 +557,7 @@ var KRONA_FOODS = [
   // ─── FRUTAS ──────────────────────────────────────────────────────────────────
   {
     code: 'banana',
+    taco_id: 'TACO_0182',
     nome: 'Banana',
     categoria: 'fruta',
     subcategoria: 'energetica',
@@ -565,6 +576,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'maca',
+    taco_id: 'TACO_0221',
     nome: 'Maçã',
     categoria: 'fruta',
     subcategoria: 'neutra',

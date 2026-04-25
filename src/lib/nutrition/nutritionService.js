@@ -1,6 +1,7 @@
 'use strict';
 
 var premiumCatalog = require('./premiumCatalog');
+var tacoService = require('./tacoService');
 var clinical = require('../../core/nutrition/diet_context_clinical');
 var strategyEngine = require('../../core/nutrition/diet_strategy_engine');
 var renderer = require('../../core/nutrition/diet_prescription_renderer');
@@ -11,6 +12,7 @@ module.exports = {
   CANONICAL_FOODS: premiumCatalog.CANONICAL_FOODS,
   RECIPE_CATALOG: premiumCatalog.RECIPE_CATALOG,
   DIET_TEMPLATES: renderer.DIET_TEMPLATES,
+  TACO_DATABASE: tacoService.TACO_DATABASE,
 
   buildNutritionProfile: strategyEngine.buildNutritionProfile,
   buildUnifiedNutritionContext: strategyEngine.buildUnifiedNutritionContext,
@@ -25,6 +27,16 @@ module.exports = {
   substituteFood: renderer.substituteFood,
   rebalanceDiet: renderer.rebalanceDiet,
   normalizeDietItem: renderer.normalizeDietItem,
+
+  normalizeText: tacoService.normalizeText,
+  getAllTacoFoods: tacoService.getAllTacoFoods,
+  getTacoFoodById: tacoService.getTacoFoodById,
+  getTacoFoodByCode: tacoService.getTacoFoodByCode,
+  searchTacoFoods: tacoService.searchTacoFoods,
+  getTacoFoodsByCategory: tacoService.getTacoFoodsByCategory,
+  mapTacoFoodToKroniaMacros: tacoService.mapTacoFoodToKroniaMacros,
+  estimateNutritionFromTaco: tacoService.estimateNutritionFromTaco,
+  findBestTacoMatch: tacoService.findBestTacoMatch,
 
   resolveDietMode: clinical.resolveDietMode,
   applyClinicalRules: clinical.applyClinicalRules,

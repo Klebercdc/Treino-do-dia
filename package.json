@@ -4,6 +4,7 @@
   "private": true,
   "description": "KRONIA — Sistema de Gestão Fisiológica e Periodização",
   "scripts": {
+    "test": "node --test tests/unit/*.test.js tests/unit/*.test.mjs",
     "test:e2e": "npm run db:push:test && playwright test",
     "test:sanity": "playwright test tests/e2e/sanity.spec.ts --reporter=list",
     "test:workout": "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
