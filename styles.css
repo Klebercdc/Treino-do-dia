@@ -268,10 +268,10 @@ body {
   backface-visibility: hidden;
 }
 body.diet-mini-app-active .footer-actions {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translate3d(0, 110%, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate3d(0,0,0);
 }
 .btn {
   flex: 1; display: flex; flex-direction: column;
@@ -5825,52 +5825,86 @@ body.dark-mode .settings-row-value {
   font-size: 13px;
   line-height: 1.5;
 }
-#dietDataScreen .diet-mini-nav {
-  position: fixed;
-  left: 50%;
-  bottom: calc(10px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: 5600;
-  width: min(560px, calc(100% - 24px));
-  display: none;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid rgba(34,197,94,.2);
-  border-radius: 22px;
-  background: rgba(3,7,18,.92);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 -10px 36px rgba(0,0,0,.42), 0 0 24px rgba(34,197,94,.12);
-}
-body.diet-mini-app-active #dietDataScreen.show .diet-mini-nav {
-  display: grid;
-}
-#dietDataScreen .diet-mini-tab {
-  min-width: 0;
-  min-height: 54px;
-  border: 0;
-  border-radius: 16px;
-  background: transparent;
-  color: rgba(148,163,184,.82);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 800;
-  cursor: pointer;
-}
-#dietDataScreen .diet-mini-tab span { overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
-#dietDataScreen .diet-mini-tab.is-active {
-  color: #86efac;
-  background: rgba(34,197,94,.13);
-  box-shadow: inset 0 0 0 1px rgba(34,197,94,.22), 0 0 18px rgba(34,197,94,.12);
-}
 #dietDataScreen .diet-mini-view {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+#dietDataScreen .diet-core-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 94px;
+}
+#dietDataScreen .diet-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0 4px;
+}
+#dietDataScreen .diet-panel-header button {
+  border: 1px solid rgba(34,197,94,.2);
+  border-radius: 14px;
+  background: rgba(34,197,94,.1);
+  color: #bbf7d0;
+  padding: 10px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 900;
+  cursor: pointer;
+}
+#dietDataScreen .diet-panel-header h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+#dietDataScreen .diet-action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+#dietDataScreen .diet-action-card {
+  width: 100%;
+  border: 1px solid rgba(34,197,94,.16);
+  border-radius: 18px;
+  background: rgba(17,24,39,.8);
+  color: #fff;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr) 22px;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(0,0,0,.22);
+}
+#dietDataScreen .diet-action-card > div {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(34,197,94,.12);
+  color: #86efac;
+}
+#dietDataScreen .diet-action-card span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+#dietDataScreen .diet-action-card strong {
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+}
+#dietDataScreen .diet-action-card small {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(203,213,225,.74);
+  font-weight: 700;
 }
 #dietDataScreen .diet-now-head,
 #dietDataScreen .diet-mini-card-head {
@@ -6056,6 +6090,10 @@ body.diet-mini-app-active #dietDataScreen.show .diet-mini-nav {
 #dietDataScreen .diet-sub-option span { font-size: 15px; font-weight: 900; }
 #dietDataScreen .diet-sub-option small { color: rgba(203,213,225,.72); font-weight: 800; }
 #dietDataScreen .diet-sub-option strong { color: #86efac; font-size: 12px; }
+#dietDataScreen .diet-sub-option.selected {
+  border-color: rgba(34,197,94,.55);
+  background: rgba(34,197,94,.14);
+}
 #dietDataScreen .diet-line-chart { width: 100%; height: 96px; margin: 10px 0; }
 #dietDataScreen .diet-adherence-card {
   display: grid;
@@ -6076,12 +6114,25 @@ body.diet-mini-app-active #dietDataScreen.show .diet-mini-nav {
 }
 #dietDataScreen .diet-profile-grid span { display: block; color: rgba(203,213,225,.68); font-size: 11px; font-weight: 900; margin-bottom: 5px; }
 #dietDataScreen .diet-profile-grid strong { color: #fff; font-size: 15px; font-weight: 900; }
+.perfil-objective-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+.perfil-objective-card p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
 
 @media (max-width: 420px) {
   #dietDataScreen .tp-premium-cal-main,
   #dietDataScreen .diet-adherence-card { grid-template-columns: 1fr; display: grid; }
   #dietDataScreen .tp-premium-ring { margin: 0 auto; }
-  #dietDataScreen .diet-mini-tab { font-size: 9px; }
 }
 
 /* Substituir Alimento screen */

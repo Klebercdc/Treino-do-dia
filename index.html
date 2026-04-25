@@ -1414,7 +1414,7 @@
       <div>
         <h1 class="tp-diet-title">Dieta</h1>
         <p id="dietHeaderGreeting" class="tp-diet-greeting">Boa noite, Kleber 👋</p>
-        <p class="tp-diet-subtitle">Plano premium conectado ao seu motor de macros.</p>
+        <p class="tp-diet-subtitle">Aqui está seu plano alimentar de hoje</p>
       </div>
       <div class="tp-diet-header-actions">
         <button type="button" title="Gerar PDF" class="tp-header-icon-btn" onclick="exportActiveDietPlanPDF()">
@@ -1433,7 +1433,6 @@
 
   <div id="dietDataPremium" class="diet-premium-content">
     <div id="dietDataSummary"></div>
-    <div id="dietMiniAppNav" class="diet-mini-nav" aria-label="Navegação interna da dieta"></div>
     <div id="dietDataMeals"></div>
     <div id="dietDataProgress"></div>
   </div>
@@ -1658,6 +1657,20 @@
         <div class="perfil-input-lbl">Sono (h/noite)</div>
         <input class="perfil-input" id="perfilSono" type="number" placeholder="7" min="3" max="12" step="0.5" onchange="salvarMedidas()"/>
       </div>
+    </div>
+  </div>
+
+  <div class="perfil-section">
+    <div class="perfil-section-title">Objetivo global</div>
+    <div class="perfil-objective-card">
+      <select id="perfilObjetivoGlobal" class="perfil-input" onchange="handleGlobalObjectiveChange(this.value)">
+        <option value="emagrecimento">Emagrecimento</option>
+        <option value="hipertrofia">Hipertrofia</option>
+        <option value="manutencao">Manutenção</option>
+        <option value="performance">Performance</option>
+        <option value="recomposicao">Recomposição corporal</option>
+      </select>
+      <p>A alteração do objetivo alimenta treino, dieta, KRONOS, exames e evolução.</p>
     </div>
   </div>
 

@@ -2652,12 +2652,9 @@ function syncMainScrollArea() {
 }
 
 function setDietMiniAppChrome(active) {
-  var isActive = !!active;
-  document.body.classList.toggle('diet-mini-app-active', isActive);
+  document.body.classList.toggle('diet-mini-app-active', false);
   var footer = document.querySelector('.footer-actions');
-  if (footer) footer.setAttribute('aria-hidden', isActive ? 'true' : 'false');
-  var miniNav = document.getElementById('dietMiniAppNav');
-  if (miniNav) miniNav.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+  if (footer) footer.setAttribute('aria-hidden', 'false');
 }
 
 function navTo(tab) {
@@ -2667,7 +2664,7 @@ function navTo(tab) {
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
   if (tab !== "perfil") document.getElementById("perfilScreen")?.classList.remove("show");
-  setDietMiniAppChrome(tab === "dieta");
+  setDietMiniAppChrome(false);
   document.querySelectorAll('.btn-nav').forEach(b => {
     b.classList.remove('active');
     b.classList.remove('diet-active');
@@ -2709,6 +2706,11 @@ function closeLabsScreen() {
   document.body.classList.remove('overlay-open');
   var footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
+  if (_labsReturnDietMiniChrome) {
+    document.getElementById('dietDataScreen')?.classList.add('show');
+    setDietMiniAppChrome(false);
+  }
+  _labsReturnDietMiniChrome = false;
 }
 
 function _initLabsScreen() {
@@ -5917,8 +5919,10 @@ function salvarMedidas() {
     altura: document.getElementById("perfilAltura")?.value || "",
     idade:  document.getElementById("perfilIdade")?.value || "",
     sono:   document.getElementById("perfilSono")?.value   || "",
+    objetivo: normalizeKroniaObjective(document.getElementById("perfilObjetivoGlobal")?.value || safeJSON("kronia_config", {}).objetivo || "manutencao"),
   };
   localStorage.setItem("kronia_config", JSON.stringify(data));
+  persistUserAnamnesis(data);
   _dbSync.pushConfig(); // backup silencioso na nuvem
   const nome = data.nome || "ATLETA";
   document.getElementById("perfilNome").textContent = nome.toUpperCase();
@@ -5933,6 +5937,92 @@ function salvarMedidas() {
       homeAvatar.textContent = nome[0]?.toUpperCase() || "T";
     }
   }
+}
+
+function archiveActiveDietLocally(reason) {
+  var current = window._kroniaDietPlan || readLocalActiveDietPlan();
+  if (!current) return false;
+  var history = safeJSON(KRONIA_DIET_HISTORY_KEY, []);
+  history.unshift({
+    archivedAt: new Date().toISOString(),
+    reason: reason || 'objective_change',
+    plan: current
+  });
+  try { localStorage.setItem(KRONIA_DIET_HISTORY_KEY, JSON.stringify(history.slice(0, 20))); } catch (_) {}
+  return true;
+}
+
+async function applyGlobalObjectiveOnly(objective) {
+  var next = persistUserAnamnesis({ objetivo: objective });
+  await saveUserAnamnesisToSupabase(next);
+  try { if (typeof _dbSync !== 'undefined') _dbSync.pushConfig(); } catch (_) {}
+  var select = document.getElementById('perfilObjetivoGlobal');
+  if (select) select.value = normalizeKroniaObjective(objective);
+  showToast('A dieta atual será mantida até você gerar uma nova.', 'info', 3600);
+  if (document.getElementById('dietDataScreen')?.classList.contains('show')) renderActiveDietPlan();
+}
+
+async function generateDietForGlobalObjective(objective) {
+  var next = persistUserAnamnesis({ objetivo: objective });
+  await saveUserAnamnesisToSupabase(next);
+  archiveActiveDietLocally('global_objective_change_' + normalizeKroniaObjective(objective));
+  var context = analyzeDietContext();
+  context.userProfile.objetivo = normalizeKroniaObjective(objective);
+  var baseline = computeDietGenerationBaseline({
+    peso: Number(context.userProfile.peso || 75),
+    altura: Number(context.userProfile.altura || 175),
+    idade: Number(context.userProfile.idade || 30),
+    sexo: context.userProfile.sexo || 'masculino',
+    nivelAtividade: context.userProfile.nivel_atividade || 'levemente ativo',
+    objetivo: normalizeKroniaObjective(objective)
+  });
+  var basePlan = normalizeDietGeneratedPlan({
+    objetivo: normalizeKroniaObjective(objective),
+    visualPrescription: buildDefaultDietVisualPrescription(),
+    meta: {
+      calorias: baseline.metaCalorias,
+      proteina: baseline.proteinaMeta,
+      carbo: baseline.carboMeta,
+      gordura: baseline.gorduraMeta,
+      tmb: baseline.tmb,
+      get: baseline.tdee
+    },
+    observacoes: [buildDietContextInsight(context)]
+  }, { source: 'global_objective_regeneration' });
+  basePlan.objective = normalizeKroniaObjective(objective);
+  basePlan.targets = {
+    kcal: baseline.metaCalorias,
+    protein: baseline.proteinaMeta,
+    carbs: baseline.carboMeta,
+    fat: baseline.gorduraMeta
+  };
+  setActiveDietPlan(basePlan, { render: false });
+  await saveActiveDietPlan({ silent: true, contextSnapshot: analyzeUserContext() });
+  _dietCoreView = 'home';
+  navTo('dieta');
+  openDietDataScreen();
+  showToast('Nova dieta gerada para ' + getObjectiveLabel(objective) + '.', 'success', 3200);
+}
+
+function handleGlobalObjectiveChange(value) {
+  var objective = normalizeKroniaObjective(value);
+  var current = normalizeKroniaObjective(readLocalUserAnamnesis().objetivo);
+  if (objective === current) return;
+  var message = 'Mudar o objetivo altera dieta, treino e recomendações do KRONOS. Deseja gerar uma nova dieta com esse objetivo?';
+  var generate = window.confirm(message + '\n\nOK = Gerar nova dieta\nCancelar = escolher entre salvar ou cancelar');
+  if (generate) {
+    generateDietForGlobalObjective(objective).catch(function() {
+      showToast('Não foi possível gerar a nova dieta agora.', 'error', 3200);
+    });
+    return;
+  }
+  var saveOnly = window.confirm('Apenas salvar objetivo?\n\nOK = Apenas salvar objetivo\nCancelar = Cancelar');
+  if (saveOnly) {
+    applyGlobalObjectiveOnly(objective).catch(function() { showToast('Objetivo salvo localmente.', 'info', 2600); });
+    return;
+  }
+  var select = document.getElementById('perfilObjetivoGlobal');
+  if (select) select.value = current;
 }
 
 function updatePerfilScreen() {
@@ -5951,6 +6041,8 @@ function updatePerfilScreen() {
   if (cfg.altura) document.getElementById("perfilAltura").value = cfg.altura;
   if (cfg.idade)  document.getElementById("perfilIdade").value  = cfg.idade;
   if (cfg.sono)   document.getElementById("perfilSono").value   = cfg.sono;
+  const objSelect = document.getElementById("perfilObjetivoGlobal");
+  if (objSelect) objSelect.value = normalizeKroniaObjective(readLocalUserAnamnesis().objetivo || cfg.objetivo || "manutencao");
   const sonoStat = document.getElementById("perfilSonoStat");
   if (sonoStat) sonoStat.textContent = cfg.sono ? cfg.sono+'h' : '—';
 
@@ -6325,24 +6417,286 @@ function renderKroniaProgress(label, consumed, target, cssClass, unit) {
 
 function openDietDataScreen() {
   syncDietaTheme(resolveKroniaThemeForDieta());
-  setDietMiniAppChrome(true);
+  setDietMiniAppChrome(false);
   document.getElementById('dietDataScreen')?.classList.add('show');
   document.body.classList.remove('overlay-open');
   var greetingEl = document.getElementById('dietHeaderGreeting');
-  if (greetingEl) {
-    var _nome = localStorage.getItem('kronia_nome') || '';
-    var _first = _nome.trim().split(' ')[0];
-    var _hour = new Date().getHours();
-    var _period = _hour < 12 ? 'Bom dia' : (_hour < 18 ? 'Boa tarde' : 'Boa noite');
-    greetingEl.textContent = _period + ', ' + (_first || 'Kleber') + ' 👋';
-  }
+  if (greetingEl) greetingEl.textContent = getDietGreeting(readLocalUserAnamnesis().nome);
   refreshDietDataScreen();
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
 }
 
 var KRONIA_ACTIVE_DIET_PLAN_KEY = 'kronia_active_diet_plan_v2';
 var KRONIA_DIET_WATER_TRACKER_KEY = 'kronia_diet_water_tracker_v1';
-var _dietMiniAppView = 'home';
+var KRONIA_USER_ANAMNESIS_KEY = 'kronia_user_anamnesis_v1';
+var KRONIA_DIET_HISTORY_KEY = 'kronia_diet_history_v1';
+var _dietCoreView = 'home';
+var _labsReturnDietMiniChrome = false;
+
+function normalizeKroniaObjective(value) {
+  var raw = normalizeDietFoodText(value || '');
+  if (/emagrec|perda|secar|defin/.test(raw)) return 'emagrecimento';
+  if (/hipertrof|ganho|massa|forca/.test(raw)) return 'hipertrofia';
+  if (/performance|desempenho|atleta/.test(raw)) return 'performance';
+  if (/recomp/.test(raw)) return 'recomposicao';
+  return 'manutencao';
+}
+
+function getObjectiveLabel(value) {
+  var key = normalizeKroniaObjective(value);
+  return {
+    emagrecimento: 'Emagrecimento',
+    hipertrofia: 'Hipertrofia',
+    manutencao: 'Manutenção',
+    performance: 'Performance',
+    recomposicao: 'Recomposição corporal'
+  }[key] || 'Manutenção';
+}
+
+function readLocalUserAnamnesis() {
+  var cfg = safeJSON('kronia_config', {});
+  var flow = {};
+  try { flow = getNutritionFlowState() || {}; } catch (_) {}
+  var stored = safeJSON(KRONIA_USER_ANAMNESIS_KEY, {});
+  var snapshot = window._dietaSupabaseSnapshot || {};
+  var profile = snapshot.profile || {};
+  var body = snapshot.bodyMetrics || {};
+  var lab = snapshot.latestLabReport || null;
+  var nome = stored.nome || profile.full_name || cfg.nome || localStorage.getItem('kronia_nome') || '';
+  return {
+    nome: nome,
+    idade: stored.idade || cfg.idade || flow.idade || (profile.birth_date ? parseDietAgeFromBirthDate(profile.birth_date) : ''),
+    sexo: stored.sexo || flow.sexo || profile.sex || 'masculino',
+    peso: stored.peso || body.weight_kg || profile.current_weight_kg || cfg.peso || flow.peso || '',
+    altura: stored.altura || profile.height_cm || cfg.altura || flow.altura || '',
+    objetivo: normalizeKroniaObjective(stored.objetivo || profile.objective || flow.objetivo || cfg.objetivo || 'manutencao'),
+    nivel_atividade: stored.nivel_atividade || profile.activity_level || flow.nivelAtividade || 'levemente ativo',
+    rotina: stored.rotina || flow.aderencia && flow.aderencia.praticidade || '',
+    preferencias_alimentares: stored.preferencias_alimentares || profile.liked_foods || flow.preferencias || '',
+    restricoes: stored.restricoes || [].concat(profile.allergies || [], profile.intolerances || [], flow.restricoes || []).filter(Boolean),
+    condicoes_clinicas: stored.condicoes_clinicas || profile.clinical_notes || flow.patologia || '',
+    medicamentos: stored.medicamentos || flow.medicamentos || '',
+    sono: stored.sono || cfg.sono || flow.sono || '',
+    estresse: stored.estresse || flow.estresse || '',
+    latestLabReport: lab
+  };
+}
+
+function persistUserAnamnesis(patch) {
+  var current = readLocalUserAnamnesis();
+  var next = Object.assign({}, current, patch || {});
+  next.objetivo = normalizeKroniaObjective(next.objetivo);
+  try { localStorage.setItem(KRONIA_USER_ANAMNESIS_KEY, JSON.stringify(next)); } catch (_) {}
+  var cfg = Object.assign({}, safeJSON('kronia_config', {}), {
+    nome: next.nome || '',
+    peso: next.peso || '',
+    altura: next.altura || '',
+    idade: next.idade || '',
+    sono: next.sono || '',
+    objetivo: next.objetivo
+  });
+  try { localStorage.setItem('kronia_config', JSON.stringify(cfg)); } catch (_) {}
+  return next;
+}
+
+async function saveUserAnamnesisToSupabase(anamnesis) {
+  try {
+    if (!_sb || !_sb.auth) return false;
+    var sessionResp = await _sb.auth.getSession();
+    var userId = sessionResp && sessionResp.data && sessionResp.data.session && sessionResp.data.session.user && sessionResp.data.session.user.id;
+    if (!userId) return false;
+    var payload = {
+      objective: anamnesis.objetivo,
+      current_weight_kg: anamnesis.peso ? Number(anamnesis.peso) : null,
+      height_cm: anamnesis.altura ? Number(anamnesis.altura) : null,
+      activity_level: anamnesis.nivel_atividade || null,
+      clinical_notes: Array.isArray(anamnesis.condicoes_clinicas) ? anamnesis.condicoes_clinicas.join(', ') : (anamnesis.condicoes_clinicas || null)
+    };
+    if (anamnesis.nome) payload.full_name = anamnesis.nome;
+    var resp = await _sb.from('profiles').update(payload).eq('id', userId);
+    return !resp.error;
+  } catch (_) {
+    return false;
+  }
+}
+
+function analyzeUserContext() {
+  var anamnesis = readLocalUserAnamnesis();
+  var training = {};
+  try { training = readDietMasterTrainingSnapshot() || {}; } catch (_) {}
+  var source = window._dietaSupabaseSnapshot && window._dietaSupabaseSnapshot.profile ? 'supabase' : 'localStorage';
+  return {
+    profile: {
+      nome: anamnesis.nome,
+      idade: anamnesis.idade,
+      sexo: anamnesis.sexo,
+      peso: anamnesis.peso,
+      altura: anamnesis.altura,
+      objetivo: anamnesis.objetivo,
+      nivel_atividade: anamnesis.nivel_atividade
+    },
+    goals: { objective: anamnesis.objetivo, label: getObjectiveLabel(anamnesis.objetivo) },
+    trainingContext: training,
+    nutritionContext: {
+      preferencias_alimentares: anamnesis.preferencias_alimentares,
+      restricoes: anamnesis.restricoes,
+      activeDiet: window._kroniaDietPlan || readLocalActiveDietPlan() || null
+    },
+    clinicalContext: {
+      condicoes_clinicas: anamnesis.condicoes_clinicas,
+      medicamentos: anamnesis.medicamentos,
+      latestLabReport: anamnesis.latestLabReport || null
+    },
+    behaviorContext: {
+      rotina: anamnesis.rotina,
+      sono: anamnesis.sono,
+      estresse: anamnesis.estresse
+    },
+    source: source
+  };
+}
+
+function selectDietTemplateForContext(context) {
+  var objective = normalizeKroniaObjective(context && context.goals && context.goals.objective);
+  var templates = Array.isArray(window.KRONIA_DIET_TEMPLATES) ? window.KRONIA_DIET_TEMPLATES : [];
+  var match = templates.find(function(t) { return normalizeKroniaObjective(t && t.objetivo) === objective; });
+  if (match) return match;
+  if (objective === 'emagrecimento') return { id: 'deficit_saciedade', nome: 'Déficit com saciedade', objetivo: objective };
+  if (objective === 'hipertrofia') return { id: 'high_carb', nome: 'High carb performance', objetivo: objective };
+  if (objective === 'performance') return { id: 'performance_training_day', nome: 'Performance treino', objetivo: objective };
+  if (objective === 'recomposicao') return { id: 'recomp_alta_proteina', nome: 'Recomposição alta proteína', objetivo: objective };
+  return { id: 'maintenance_balanced', nome: 'Manutenção equilibrada', objetivo: objective };
+}
+
+function analyzeDietContext() {
+  var user = analyzeUserContext();
+  var profile = user.profile || {};
+  var plan = user.nutritionContext && user.nutritionContext.activeDiet || readLocalActiveDietPlan();
+  var baseline = computeDietGenerationBaseline({
+    peso: Number(profile.peso || 75),
+    altura: Number(profile.altura || 175),
+    idade: Number(profile.idade || 30),
+    sexo: profile.sexo || 'masculino',
+    nivelAtividade: profile.nivel_atividade || 'levemente ativo',
+    objetivo: normalizeKroniaObjective(profile.objetivo)
+  });
+  var training = user.trainingContext || {};
+  var fatigue = Number(training.fadiga || training.fatigue || 0);
+  var heavyTraining = Number(training.volume7d || 0) >= 8000 || Number(training.sessions7d || 0) >= 4;
+  var objective = normalizeKroniaObjective(profile.objetivo);
+  var calorieTarget = baseline.metaCalorias;
+  if (heavyTraining && (objective === 'performance' || objective === 'hipertrofia')) calorieTarget += 120;
+  if (!Number(training.sessions7d || 0) && objective === 'emagrecimento') calorieTarget -= 80;
+  var clinicalAlerts = [];
+  var lab = user.clinicalContext && user.clinicalContext.latestLabReport;
+  if (lab && Array.isArray(lab.clinicalFlags)) clinicalAlerts = clinicalAlerts.concat(lab.clinicalFlags);
+  if (fatigue >= 8) clinicalAlerts.push('Fadiga alta: priorizar recuperação, sono e proteína.');
+  if (objective === 'emagrecimento') clinicalAlerts.push('Déficit calórico com foco em saciedade.');
+  if (objective === 'hipertrofia') clinicalAlerts.push('Superávit controlado com proteína distribuída.');
+  return {
+    hasSavedDiet: Boolean(plan && Array.isArray(plan.meals) && plan.meals.length),
+    source: plan && plan.source || user.source,
+    userProfile: profile,
+    trainingContext: Object.assign({}, training, {
+      heavyTraining: heavyTraining,
+      restDay: !Number(training.sessions7d || 0),
+      fatigue: fatigue
+    }),
+    calorieTarget: calorieTarget,
+    macroTargets: {
+      kcal: calorieTarget,
+      protein: baseline.proteinaMeta,
+      carbs: Math.max(70, Math.round((calorieTarget - baseline.proteinaMeta * 4 - baseline.gorduraMeta * 9) / 4)),
+      fat: baseline.gorduraMeta
+    },
+    selectedTemplate: selectDietTemplateForContext(user),
+    clinicalAlerts: clinicalAlerts.filter(Boolean).slice(0, 5),
+    shouldUseMock: !(plan && plan.source === 'supabase_meal_plans'),
+    userContext: user,
+    activeDiet: plan || buildFallbackActiveDietPlan()
+  };
+}
+
+function buildMealSummary(meal) {
+  var items = Array.isArray(meal && meal.items) ? meal.items : [];
+  var subtotal = meal && meal.subtotal || {};
+  return {
+    id: meal && meal.id,
+    name: meal && meal.name || 'Refeição',
+    time: meal && meal.time || '',
+    foods: items.map(function(item) {
+      return {
+        name: item.name || getDietItemName(item),
+        quantity: item.quantity || (getDietDisplayGrams(item) + ' g'),
+        kcal: asKroniaNumber(item.kcal, 0),
+        protein: asKroniaNumber(item.protein, 0),
+        carbs: asKroniaNumber(item.carbs, 0),
+        fat: asKroniaNumber(item.fat, 0)
+      };
+    }),
+    subtotal: {
+      kcal: asKroniaNumber(subtotal.kcal, 0),
+      protein: asKroniaNumber(subtotal.protein, 0),
+      carbs: asKroniaNumber(subtotal.carbs, 0),
+      fat: asKroniaNumber(subtotal.fat, 0)
+    }
+  };
+}
+
+function generateDietViewModel(context) {
+  var ctx = context || analyzeDietContext();
+  var plan = recalculateDietPlan(ctx.activeDiet || buildFallbackActiveDietPlan());
+  var meals = getDietRenderableMeals(plan).map(buildMealSummary);
+  var currentMeal = getNextDietMeal(getDietRenderableMeals(plan));
+  var targets = ctx.macroTargets || plan.targets || {};
+  var totals = plan.totals || {};
+  return {
+    header: {
+      title: 'Dieta',
+      greeting: getDietGreeting(ctx.userProfile && ctx.userProfile.nome),
+      subtitle: 'Aqui está seu plano alimentar de hoje',
+      source: ctx.source
+    },
+    currentMeal: buildMealSummary(currentMeal || meals[0] || {}),
+    dailyProgress: {
+      calories: { current: getDietDisplayKcalTotal(plan, getDietRenderableMeals(plan)), target: targets.kcal || plan.targets && plan.targets.kcal || 2100 },
+      protein: { current: totals.protein || 0, target: targets.protein || 160 },
+      carbs: { current: totals.carbs || 0, target: targets.carbs || 230 },
+      fat: { current: totals.fat || 0, target: targets.fat || 75 }
+    },
+    actionCards: [
+      { key: 'minha-dieta', icon: 'utensils', title: 'Minha Dieta', description: 'Veja todas as refeições do dia.' },
+      { key: 'trocar-alimento', icon: 'refresh-cw', title: 'Trocar alimento', description: 'Substitua alimentos mantendo os macros.' },
+      { key: 'progresso', icon: 'trending-up', title: 'Progresso nutricional', description: 'Acompanhe adesão, peso e metas.' },
+      { key: 'exames', icon: 'flask-conical', title: 'Exames', description: 'Use exames para orientar ajustes alimentares.' },
+      { key: 'perfil', icon: 'user-round', title: 'Perfil alimentar', description: 'Edite objetivo, preferências e restrições.' }
+    ],
+    meals: meals,
+    substitutions: normalizeDietVisualSubstitutions(plan.visualPrescription && plan.visualPrescription.substitutions),
+    progress: { adherence: 87, streak: 5, insight: buildDietContextInsight(ctx) },
+    labs: { alerts: ctx.clinicalAlerts || [], latest: ctx.userContext && ctx.userContext.clinicalContext && ctx.userContext.clinicalContext.latestLabReport || null },
+    profile: ctx.userProfile,
+    context: ctx,
+    plan: plan
+  };
+}
+
+function getDietGreeting(nome) {
+  var first = String(nome || localStorage.getItem('kronia_nome') || 'Kleber').trim().split(' ')[0] || 'Kleber';
+  var hour = new Date().getHours();
+  var period = hour < 12 ? 'Bom dia' : (hour < 18 ? 'Boa tarde' : 'Boa noite');
+  return period + ', ' + first + ' 👋';
+}
+
+function buildDietContextInsight(ctx) {
+  var objective = normalizeKroniaObjective(ctx && ctx.userProfile && ctx.userProfile.objetivo);
+  var training = ctx && ctx.trainingContext || {};
+  if (Number(training.fatigue || 0) >= 8) return 'Fadiga alta hoje: priorize recuperação e proteína em todas as refeições.';
+  if (training.heavyTraining) return 'Treino pesado recente: carboidratos ficam mais estratégicos para performance.';
+  if (objective === 'emagrecimento') return 'Plano orientado para saciedade, proteína alta e déficit sustentável.';
+  if (objective === 'hipertrofia') return 'Plano orientado para superávit controlado e recuperação muscular.';
+  return 'Plano equilibrado para consistência diária e aderência.';
+}
 
 function dietRound(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 1;
@@ -7267,26 +7621,19 @@ function renderPremiumCalorieCard(plan, renderableMeals, targets) {
     + '</div>';
 }
 
-function renderDietMiniAppNav(active) {
-  var tabs = [
-    ['home', 'Home', 'home'],
-    ['progresso', 'Progresso', 'trending-up'],
-    ['plano', 'Dieta', 'apple'],
-    ['exames', 'Exames', 'flask-conical'],
-    ['perfil', 'Perfil', 'user-round']
-  ];
-  return tabs.map(function(tab) {
-    var key = tab[0];
-    return '<button type="button" class="diet-mini-tab ' + (active === key ? 'is-active' : '') + '" onclick="switchDietMiniAppView(\'' + key + '\')">'
-      + '<i data-lucide="' + tab[2] + '" width="15" height="15" stroke-width="2"></i>'
-      + '<span>' + escapeHTML(tab[1]) + '</span>'
-      + '</button>';
-  }).join('');
+function switchDietMiniAppView(view) {
+  openDietCorePanel(view === 'plano' ? 'minha-dieta' : view);
 }
 
-function switchDietMiniAppView(view) {
-  _dietMiniAppView = view || 'home';
+function openDietCorePanel(view) {
+  _dietCoreView = view || 'home';
   renderActiveDietPlan();
+}
+
+function openDietMiniLabsScreen() {
+  _labsReturnDietMiniChrome = document.getElementById('dietDataScreen')?.classList.contains('show') || false;
+  setDietMiniAppChrome(false);
+  openLabsUploadScreen('diet_core_panel');
 }
 
 function getNextDietMeal(renderableMeals) {
@@ -7301,91 +7648,109 @@ function getNextDietMeal(renderableMeals) {
   return next || meals[0] || null;
 }
 
-function renderDietMiniHome(plan, renderableMeals, targets) {
-  var nextMeal = getNextDietMeal(renderableMeals);
-  var mealName = nextMeal && nextMeal.name || 'Almoço';
-  return '<div class="diet-mini-view">'
-    + '<section class="diet-now-card">'
-    + '<div class="diet-now-head"><span class="tp-summary-kicker">Boa noite, Kleber</span><strong>O que comer agora</strong></div>'
-    + '<h2>' + escapeHTML(mealName) + '</h2>'
-    + '<div class="diet-now-foods diet-now-foods--list">'
-    + '<span>Arroz Integral <strong>150g</strong></span>'
-    + '<span>Filé de Frango Grelhado <strong>160g</strong></span>'
-    + '<span>Salada de Alface e Tomate <strong>à vontade</strong></span>'
-    + '</div>'
-    + '<div class="diet-now-macros"><span>P 38g</span><span>C 42g</span><span>G 10g</span></div>'
-    + '<div class="diet-mini-actions"><button type="button" onclick="switchDietMiniAppView(\'substituir\')"><i data-lucide="refresh-cw" width="16" height="16"></i>Trocar alimento</button><button type="button" onclick="switchDietMiniAppView(\'plano\')"><i data-lucide="shuffle" width="16" height="16"></i>Trocar refeição</button></div>'
-    + '</section>'
-    + renderPremiumCalorieCard(plan, renderableMeals, targets)
+function renderDietBackHeader(title) {
+  return '<div class="diet-panel-header"><button type="button" onclick="openDietCorePanel(\'home\')"><i data-lucide="arrow-left" width="18" height="18"></i>Dieta</button><h2>' + escapeHTML(title) + '</h2></div>';
+}
+
+function renderDietNowCard(vm) {
+  var meal = vm.currentMeal || {};
+  var foods = (meal.foods || []).slice(0, 3);
+  var subtotal = meal.subtotal || {};
+  return '<section class="diet-now-card">'
+    + '<div class="diet-now-head"><span class="tp-summary-kicker">O que comer agora</span><strong>' + escapeHTML(meal.time || 'Hoje') + '</strong></div>'
+    + '<h2>' + escapeHTML(meal.name || 'Próxima refeição') + '</h2>'
+    + '<div class="diet-now-foods diet-now-foods--list">' + (foods.length ? foods.map(function(food) {
+      return '<span>' + escapeHTML(food.name) + '<strong>' + escapeHTML(food.quantity || '') + '</strong></span>';
+    }).join('') : '<span>Plano pronto para ser gerado <strong>KRONOS</strong></span>') + '</div>'
+    + '<div class="diet-now-macros"><span>P ' + escapeHTML(formatKroniaNumber(subtotal.protein || 0, 'g')) + '</span><span>C ' + escapeHTML(formatKroniaNumber(subtotal.carbs || 0, 'g')) + '</span><span>G ' + escapeHTML(formatKroniaNumber(subtotal.fat || 0, 'g')) + '</span></div>'
+    + '<div class="diet-mini-actions"><button type="button" onclick="openDietCorePanel(\'minha-dieta\')"><i data-lucide="eye" width="16" height="16"></i>Ver refeição</button></div>'
+    + '</section>';
+}
+
+function renderDietProgressCard(vm) {
+  var p = vm.dailyProgress || {};
+  var cal = p.calories || {};
+  var pct = Math.max(0, Math.min(100, Math.round(asKroniaNumber(cal.current, 0) / Math.max(asKroniaNumber(cal.target, 1), 1) * 100)));
+  var circumference = 2 * Math.PI * 42;
+  var dash = dietRound((pct / 100) * circumference, 1);
+  return '<section class="tp-premium-cal-card">'
+    + '<div class="tp-premium-cal-head"><div><span class="tp-summary-kicker">Progresso do dia</span><h2>' + escapeHTML(formatKroniaNumber(cal.current, 'kcal')) + ' / ' + escapeHTML(formatKroniaNumber(cal.target, 'kcal')) + '</h2></div><span class="tp-premium-source">' + escapeHTML(vm.context && vm.context.source || 'local') + '</span></div>'
+    + '<div class="tp-premium-cal-main"><div class="tp-premium-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="tp-ring-bg"></circle><circle cx="50" cy="50" r="42" class="tp-ring-fill" stroke-dasharray="' + dash + ' ' + circumference + '"></circle></svg><div><strong>' + pct + '%</strong><span>da meta</span></div></div>'
+    + '<div class="tp-premium-cal-stats"><div><span>Template</span><strong>' + escapeHTML(vm.context && vm.context.selectedTemplate && (vm.context.selectedTemplate.nome || vm.context.selectedTemplate.id) || 'KRONIA') + '</strong></div><div><span>Objetivo</span><strong>' + escapeHTML(getObjectiveLabel(vm.profile && vm.profile.objetivo)) + '</strong></div><div><span>Treino</span><strong>' + escapeHTML(vm.context && vm.context.trainingContext && vm.context.trainingContext.heavyTraining ? 'Pesado' : 'Controlado') + '</strong></div></div></div>'
+    + '<div class="tp-premium-macro-bars">'
+    + renderPremiumMacroBar('Proteína', p.protein && p.protein.current, p.protein && p.protein.target, 'tp-premium-macro--protein')
+    + renderPremiumMacroBar('Carboidratos', p.carbs && p.carbs.current, p.carbs && p.carbs.target, 'tp-premium-macro--carbs')
+    + renderPremiumMacroBar('Gorduras', p.fat && p.fat.current, p.fat && p.fat.target, 'tp-premium-macro--fat')
+    + '</div><button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="18" height="18"></i>Rebalancear automaticamente</button>'
+    + '</section>';
+}
+
+function renderDietActionCards(vm) {
+  return '<section class="diet-action-grid">' + vm.actionCards.map(function(card) {
+    return '<button type="button" class="diet-action-card" onclick="openDietCorePanel(\'' + escapeAttr(card.key) + '\')"><div><i data-lucide="' + escapeAttr(card.icon) + '" width="22" height="22"></i></div><span><strong>' + escapeHTML(card.title) + '</strong><small>' + escapeHTML(card.description) + '</small></span><i data-lucide="chevron-right" width="18" height="18"></i></button>';
+  }).join('') + '</section>';
+}
+
+function renderDietHome(vm) {
+  return '<div class="diet-core-view">' + renderDietNowCard(vm) + renderDietProgressCard(vm) + renderDietActionCards(vm) + '</div>';
+}
+
+function renderDietPlanPanel(vm) {
+  return '<div class="diet-core-view">' + renderDietBackHeader('Minha Dieta')
+    + vm.meals.map(function(meal, index) { return renderDietMealCard(vm.plan.meals[index] || meal, index); }).join('')
+    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="18" height="18"></i>Rebalancear automaticamente</button></div>';
+}
+
+function renderDietSubstitutionPanel(vm) {
+  var firstMeal = vm.plan.meals && vm.plan.meals[0];
+  var firstItem = firstMeal && firstMeal.items && firstMeal.items[0];
+  var options = getDietSubstitutionOptions(firstItem || {});
+  return '<div class="diet-core-view">' + renderDietBackHeader('Trocar alimento')
+    + '<section class="diet-mini-title-card"><p>Busque ou escolha uma troca equivalente. O motor preserva os macros da refeição.</p><input class="diet-search-input" placeholder="Buscar alimento" aria-label="Buscar alimento"></section>'
+    + '<div class="diet-sub-options">' + options.map(function(opt, index) {
+      return '<button type="button" class="diet-sub-option" onclick="selectDietMiniSubstitutionCandidate(' + index + ')"><span>' + escapeHTML(opt.name) + '</span><small>' + escapeHTML(formatKroniaNumber(opt.protein || 0, 'g')) + ' P | ' + escapeHTML(formatKroniaNumber(opt.carbs || 0, 'g')) + ' C | ' + escapeHTML(formatKroniaNumber(opt.fat || 0, 'g')) + ' G</small><strong>Compatibilidade ' + (index === 0 ? '94' : '88') + '%</strong></button>';
+    }).join('') + '</div><button type="button" class="tp-rebalancear-btn" onclick="applyDietMiniSubstitution()"><i data-lucide="check" width="18" height="18"></i>Aplicar troca</button></div>';
+}
+
+function selectDietMiniSubstitutionCandidate(index) {
+  if (!window._dietSubstState) window._dietSubstState = { mealIndex: 0, itemIndex: 0, selectedOption: null };
+  window._dietSubstState.selectedOption = index;
+  document.querySelectorAll('#dietDataScreen .diet-sub-option').forEach(function(btn, i) { btn.classList.toggle('selected', i === index); });
+}
+
+function renderDietProgressPanel(vm) {
+  return '<div class="diet-core-view">' + renderDietBackHeader('Progresso nutricional')
+    + '<section class="diet-mini-card diet-adherence-card"><div class="tp-premium-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="tp-ring-bg"></circle><circle cx="50" cy="50" r="42" class="tp-ring-fill" stroke-dasharray="230 264"></circle></svg><div><strong>' + escapeHTML(String(vm.progress.adherence)) + '%</strong><span>adesão</span></div></div><div>' + renderPremiumMacroBar('Calorias', vm.dailyProgress.calories.current, vm.dailyProgress.calories.target, 'tp-premium-macro--carbs') + renderPremiumMacroBar('Proteína', vm.dailyProgress.protein.current, vm.dailyProgress.protein.target, 'tp-premium-macro--protein') + '</div></section>'
+    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Peso</span><strong>' + escapeHTML(vm.profile && vm.profile.peso ? vm.profile.peso + 'kg' : '--') + '</strong></div><svg class="diet-line-chart" viewBox="0 0 240 80"><polyline points="8,20 60,28 112,42 164,38 232,48" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 20 L60 28 L112 42 L164 38 L232 48 L232 80 L8 80 Z" fill="rgba(34,197,94,.14)"/></svg><p class="diet-mini-muted">' + escapeHTML(vm.progress.insight) + '</p></section>'
+    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Streak</span><strong>' + escapeHTML(String(vm.progress.streak)) + ' dias</strong></div><p class="diet-mini-muted">Sequência nutricional ativa.</p></section></div>';
+}
+
+function renderDietLabsPanel(vm) {
+  var alerts = vm.labs.alerts || [];
+  return '<div class="diet-core-view">' + renderDietBackHeader('Exames')
+    + '<section class="diet-mini-title-card"><p>Fluxo real de exames do KroniA. Upload, análise e alertas nutricionais usam a vertical existente.</p><button type="button" class="tp-rebalancear-btn" onclick="openDietMiniLabsScreen()"><i data-lucide="upload-cloud" width="18" height="18"></i>Enviar exame</button></section>'
+    + (alerts.length ? alerts.map(function(alert) { return '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Alerta nutricional</span><strong>Atenção</strong></div><p class="diet-mini-muted">' + escapeHTML(alert) + '</p></section>'; }).join('') : '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Exames</span><strong>Sem alerta</strong></div><p class="diet-mini-muted">Nenhum alerta nutricional crítico disponível para o plano atual.</p></section>')
     + '</div>';
 }
 
-function renderDietMiniPlan(renderableMeals, plan) {
-  if (plan && plan.source === 'supabase_meal_plans' && Array.isArray(renderableMeals) && renderableMeals.length) {
-    return '<div class="diet-mini-view"><section class="diet-mini-title-card"><h2>Minha Dieta</h2><p>Plano salvo carregado do Supabase.</p></section>'
-      + renderableMeals.map(function(meal, index) { return renderDietMealCard(meal, index); }).join('')
-      + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="18" height="18"></i>Rebalancear automaticamente</button>'
-      + '</div>';
-  }
-  return '<div class="diet-mini-view"><section class="diet-mini-title-card"><h2>Minha Dieta</h2><p>Plano ativo, editável e rebalanceável.</p></section>'
-    + '<details class="diet-mini-meal" open><summary><span>Café da manhã</span><strong>07:00</strong></summary><ul><li>Ovos mexidos <strong>2 ovos</strong></li><li>Abacate <strong>50g</strong></li><li>Café <strong>sem açúcar, 200ml</strong></li></ul></details>'
-    + '<details class="diet-mini-meal" open><summary><span>Almoço</span><strong>12:30</strong></summary><ul><li>Arroz Integral <strong>150g</strong></li><li>Peito de Frango Grelhado <strong>200g</strong></li><li>Salada <strong>à vontade</strong></li></ul></details>'
-    + '<details class="diet-mini-meal"><summary><span>Jantar</span><strong>19:30</strong></summary><ul><li>Tilápia grelhada <strong>160g</strong></li><li>Legumes cozidos <strong>1 prato</strong></li></ul></details>'
-    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="18" height="18"></i>Rebalancear automaticamente</button>'
-    + '</div>';
+function renderDietProfilePanel(vm) {
+  var profile = vm.profile || {};
+  return '<div class="diet-core-view">' + renderDietBackHeader('Perfil alimentar')
+    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>' + escapeHTML(profile.nome || 'Atleta') + '</span><strong>' + escapeHTML(getObjectiveLabel(profile.objetivo)) + '</strong></div><div class="diet-profile-grid">'
+    + '<div><span>Peso</span><strong>' + escapeHTML(profile.peso ? profile.peso + 'kg' : '--') + '</strong></div>'
+    + '<div><span>Altura</span><strong>' + escapeHTML(profile.altura ? profile.altura + 'cm' : '--') + '</strong></div>'
+    + '<div><span>Meta calórica</span><strong>' + escapeHTML(formatKroniaNumber(vm.dailyProgress.calories.target, 'kcal')) + '</strong></div>'
+    + '<div><span>Fonte</span><strong>' + escapeHTML(vm.context && vm.context.source || 'local') + '</strong></div></div></section>'
+    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Preferências e restrições</span><button type="button" onclick="navTo(\'perfil\');openPerfil()">Alterar objetivo</button></div><p class="diet-mini-muted">' + escapeHTML([].concat(profile.preferencias_alimentares || [], profile.restricoes || []).filter(Boolean).join(', ') || 'Sem restrições registradas.') + '</p></section></div>';
 }
 
-function renderDietMiniSubstitutions(plan) {
-  var options = ['Patinho Moído', 'Lentilha Cozida', 'Tilápia', 'Tilápia filé'];
-  return '<div class="diet-mini-view"><section class="diet-mini-title-card"><h2>Substituir alimento</h2><p>Mantendo seus macros</p><input class="diet-search-input" placeholder="Buscar alimento" aria-label="Buscar alimento"></section>'
-    + '<div class="diet-sub-options">' + options.map(function(name) {
-      return '<button type="button" class="diet-sub-option"><span>' + escapeHTML(name) + '</span><small>P 36g | C 0g | G 12g</small><strong>Compatibilidade 90%</strong></button>';
-    }).join('') + '</div>'
-    + '<button type="button" class="tp-rebalancear-btn" onclick="applyDietMiniSubstitution()"><i data-lucide="check" width="18" height="18"></i>Aplicar troca</button></div>';
-}
-
-function renderDietMiniProgress(plan, targets, consumed) {
-  return '<div class="diet-mini-view">'
-    + '<section class="diet-mini-title-card"><h2>Progresso</h2><p>Aderência e tendência nutricional.</p></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Peso</span><strong>71.5kg</strong></div><svg class="diet-line-chart" viewBox="0 0 240 80"><polyline points="8,18 60,30 112,44 164,50 232,46" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18 L60 30 L112 44 L164 50 L232 46 L232 80 L8 80 Z" fill="rgba(34,197,94,.14)"/></svg><p class="diet-mini-muted">72.1kg, 71.8kg, 71.5kg, 71.4kg, 71.5kg</p></section>'
-    + '<section class="diet-mini-card diet-adherence-card"><div class="tp-premium-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="tp-ring-bg"></circle><circle cx="50" cy="50" r="42" class="tp-ring-fill" stroke-dasharray="230 264"></circle></svg><div><strong>87%</strong><span>adesão</span></div></div><div>' + renderPremiumMacroBar('Proteína', 87, 100, 'tp-premium-macro--protein') + renderPremiumMacroBar('Carbs', 20, 100, 'tp-premium-macro--carbs') + '</div></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Streak</span><strong>5 dias</strong></div><p class="diet-mini-muted">5 dias batendo proteína.</p></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Insight</span><strong>Adesão 87%</strong></div><p class="diet-mini-muted">Você está consistente. Continue assim.</p></section>'
-    + '</div>';
-}
-
-function renderDietMiniLabs() {
-  return '<div class="diet-mini-view">'
-    + '<section class="diet-mini-title-card"><h2>Exames</h2><p>Exames relacionados à dieta.</p><button type="button" class="tp-rebalancear-btn" onclick="openLabsUploadScreen(\'diet_mini_app\')"><i data-lucide="upload-cloud" width="18" height="18"></i>Enviar exame (PDF ou imagem)</button><p class="diet-mini-muted">Analisando seus exames...</p></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Ferritina baixa</span><strong>Atenção</strong></div><p class="diet-mini-muted">Priorizar investigação e ajuste alimentar com acompanhamento.</p></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>TSH alterado</span><strong>Investigar</strong></div><p class="diet-mini-muted">Seus exames indicam alguns desequilíbrios. Nossa IA já preparou ajustes alimentares recomendados. Toque para ver os detalhes na sua Dieta.</p></section>'
-    + '</div>';
-}
-
-function renderDietMiniProfile(plan, targets) {
-  var flow = {};
-  try { flow = getNutritionFlowState() || {}; } catch (_) {}
-  var nome = localStorage.getItem('kronia_nome') || 'Ana Silva';
-  return '<div class="diet-mini-view">'
-    + '<section class="diet-mini-title-card"><h2>Perfil</h2><p>' + escapeHTML(nome) + '</p></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Dados pessoais</span><strong>' + escapeHTML(plan.objective || flow.objetivo || 'Perda de Peso') + '</strong></div>'
-    + '<div class="diet-profile-grid">'
-    + '<div><span>Peso</span><strong>' + escapeHTML(flow.peso ? flow.peso + 'kg' : '68kg') + '</strong></div>'
-    + '<div><span>Altura</span><strong>' + escapeHTML(flow.altura ? flow.altura + 'cm' : '165cm') + '</strong></div>'
-    + '<div><span>Objetivo</span><strong>Perda de Peso</strong></div>'
-    + '<div><span>Meta Calórica</span><strong>1800 kcal/dia</strong></div>'
-    + '</div></section>'
-    + '<section class="diet-mini-card"><div class="diet-mini-card-head"><span>Preferências Alimentares</span><strong>Ativas</strong></div><p class="diet-mini-muted">Seu plano: Ultra · IA Avançada · Chats ilimitados · Recomendações de Suplementos.</p></section>'
-    + '</div>';
-}
-
-function renderDietMiniAppContent(view, plan, renderableMeals, targets, consumed) {
-  if (view === 'plano') return renderDietMiniPlan(renderableMeals, plan);
-  if (view === 'substituir') return renderDietMiniSubstitutions(plan);
-  if (view === 'progresso') return renderDietMiniProgress(plan, targets, consumed);
-  if (view === 'exames') return renderDietMiniLabs();
-  if (view === 'perfil') return renderDietMiniProfile(plan, targets);
-  return renderDietMiniHome(plan, renderableMeals, targets);
+function renderDietCoreContent(view, vm) {
+  if (view === 'minha-dieta' || view === 'plano') return renderDietPlanPanel(vm);
+  if (view === 'trocar-alimento' || view === 'substituir') return renderDietSubstitutionPanel(vm);
+  if (view === 'progresso') return renderDietProgressPanel(vm);
+  if (view === 'exames') return renderDietLabsPanel(vm);
+  if (view === 'perfil') return renderDietProfilePanel(vm);
+  return renderDietHome(vm);
 }
 
 function getDietVisualReasons(plan) {
@@ -7609,6 +7974,9 @@ function renderDietMealCard(meal, mealIndex) {
       + '</div>'
       + '</div>';
   }).join('');
+  var previewChips = (meal.items || []).map(function(item) {
+    return '<span class="diet-premium-preview-chip">' + escapeHTML(item.name || getDietItemName(item)) + '</span>';
+  }).join('');
   var itemCount = (meal.items || []).length;
   var slotIcon = _tpMealSlotIcon(meal.slot || meal.name);
   var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
@@ -7625,6 +7993,7 @@ function renderDietMealCard(meal, mealIndex) {
     + (meal.time ? '<span class="tp-meal-time">' + escapeHTML(meal.time) + '</span>' : '')
     + '<h3 class="tp-meal-name">' + escapeHTML(meal.name || 'Refeição') + '</h3>'
     + '<p class="tp-meal-meta">' + escapeHTML(kcalText) + ' · ' + itemCount + (itemCount === 1 ? ' item' : ' itens') + '</p>'
+    + (previewChips ? '<div class="diet-premium-preview-chips">' + previewChips + '</div>' : '')
     + '</div>'
     + '</div>'
     + '<div class="tp-meal-header-right">'
@@ -7649,7 +8018,6 @@ function renderActiveDietPlan() {
   var visual = plan.visualPrescription && typeof plan.visualPrescription === 'object' ? plan.visualPrescription : buildDefaultDietVisualPrescription();
   var renderableMeals = getDietRenderableMeals(plan);
   var summary = document.getElementById('dietDataSummary');
-  var miniNav = document.getElementById('dietMiniAppNav');
   var progress = document.getElementById('dietDataProgress');
   var meals = document.getElementById('dietDataMeals');
   var target = plan.targets || {};
@@ -7699,26 +8067,32 @@ function renderActiveDietPlan() {
     carbs: carbsTarget,
     fat: fatTarget
   };
-  var displayKcal = getDietDisplayKcalTotal(plan, renderableMeals);
-  var pctKcal = pct(displayKcal, kcalTarget);
-  if (summary) {
-    summary.innerHTML = '<section class="diet-mini-hero"><span class="tp-summary-kicker">KRONIA DIET</span><h2>O que comer agora</h2><p>Mini-app interno para dieta, substituições, progresso, exames e perfil alimentar.</p></section>';
+  var hasCoreViewModel = typeof analyzeDietContext === 'function' && typeof generateDietViewModel === 'function' && typeof renderDietCoreContent === 'function';
+  var viewModel = null;
+  if (hasCoreViewModel) {
+    var dietContext = analyzeDietContext();
+    dietContext.activeDiet = Object.assign({}, plan, { targets: premiumTargets });
+    dietContext.macroTargets = premiumTargets;
+    viewModel = generateDietViewModel(dietContext);
   }
-  if (miniNav) {
-    miniNav.innerHTML = renderDietMiniAppNav(_dietMiniAppView);
+  if (summary) {
+    summary.innerHTML = '';
   }
   if (meals) {
-    meals.innerHTML = renderDietMiniAppContent(_dietMiniAppView, plan, renderableMeals, premiumTargets, displayKcal);
+    meals.innerHTML = hasCoreViewModel
+      ? renderDietCoreContent(_dietCoreView, viewModel)
+      : renderableMeals.map(function(meal, index) { return renderDietMealCard(meal, index); }).join('');
   }
   var presc = plan.presc || freshPresc || {};
   if (progress) {
+    var activeCoreView = typeof _dietCoreView !== 'undefined' ? _dietCoreView : 'home';
     var reasonRows = getDietVisualReasons(plan).map(function(reason) {
       return '<li>' + escapeHTML(reason) + '</li>';
     }).join('');
     var guidanceRows = getDietVisualGuidance(plan).slice(0, 3).map(function(note) {
       return '<li>' + escapeHTML(note) + '</li>';
     }).join('');
-    progress.innerHTML = _dietMiniAppView === 'home' || _dietMiniAppView === 'plano' ? '<div class="tp-why-card">'
+    progress.innerHTML = activeCoreView === 'home' || activeCoreView === 'minha-dieta' || activeCoreView === 'plano' ? '<div class="tp-why-card">'
       + '<div class="tp-why-header">'
       + '<div class="tp-why-icon"><i data-lucide="brain" width="24" height="24" stroke-width="1.5"></i></div>'
       + '<div><span class="tp-summary-kicker">POR QUE SUA DIETA ESTÁ ASSIM?</span>'
