@@ -25,4 +25,5 @@ Observações:
 
 - A edição 4 da TACO usada aqui totaliza 597 alimentos.
 - Os campos ausentes na planilha ficam como `null`.
+- A planilha oficial desta edição não publica vitamina E na aba importada; por isso o campo fica como `vitamina_e_mg: null`.
 - `aliases` são apenas facilitadores de busca e não alteram a composição nutricional.

@@ -27,7 +27,8 @@ const staticFiles = [
   'src/client/access-scope.js',
   'src/core/intelligence/kronia-intelligence.js',
   'src/core/intelligence/adminBridge.js',
-  'src/application/kronia-application.js'
+  'src/application/kronia-application.js',
+  'src/lib/nutrition/tacoDatabase.json'
 ];
 
 await rm(outputDir, { recursive: true, force: true });

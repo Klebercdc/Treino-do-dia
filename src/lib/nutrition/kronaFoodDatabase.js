@@ -312,6 +312,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'macarrao_cozido',
+    // Sem correspondência segura direta na TACO 4ª edição para a forma genérica "cozido".
     nome: 'Macarrão cozido',
     categoria: 'carbo',
     subcategoria: 'massa',
@@ -388,6 +389,7 @@ var KRONA_FOODS = [
   },
   {
     code: 'tapioca',
+    // A TACO 4ª edição traz variantes como "Tapioca, com manteiga"; não há mapeamento genérico seguro para a base do KroniA.
     nome: 'Tapioca',
     categoria: 'carbo',
     subcategoria: 'cereal',

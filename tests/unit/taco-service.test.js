@@ -49,6 +49,8 @@ test('estimateNutritionFromTaco scales 50g from a 100g reference correctly', () 
   assert.equal(estimated.kcal, Number((food.energia_kcal / 2).toFixed(4)));
   assert.equal(estimated.proteina, Number((food.proteina_g / 2).toFixed(4)));
   assert.equal(estimated.carbo, Number((food.carboidrato_g / 2).toFixed(4)));
+  assert.ok(Object.prototype.hasOwnProperty.call(food, 'vitamina_e_mg'));
+  assert.equal(food.vitamina_e_mg, null);
 });
 
 test('mapTacoFoodToKroniaMacros returns the KroniA per-100g macro shape', () => {

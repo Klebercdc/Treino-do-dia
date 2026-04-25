@@ -179,7 +179,7 @@ def load_taco_foods(xlsx_path: Path) -> list[dict[str, Any]]:
             for col, field in FIELD_BY_COLUMN.items():
                 item[field] = _parse_number(cells.get(col, ""))
 
-            item["vitamina_e_mcg"] = None
+            item["vitamina_e_mg"] = None
 
             aliases = ALIASES_BY_CODE.get(codigo)
             if aliases:

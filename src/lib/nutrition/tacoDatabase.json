@@ -30,7 +30,7 @@
     "piridoxina_mg": 0.08,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Arroz integral cozido"
     ]
@@ -66,7 +66,7 @@
     "piridoxina_mg": 0.175,
     "niacina_mg": 4.183333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0003",
@@ -99,7 +99,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Arroz branco cozido"
     ]
@@ -135,7 +135,7 @@
     "piridoxina_mg": 0.06916666666666667,
     "niacina_mg": 1.1166666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0005",
@@ -168,7 +168,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0006",
@@ -201,7 +201,7 @@
     "piridoxina_mg": 0.04916666666666667,
     "niacina_mg": 0.9183333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0007",
@@ -234,7 +234,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.47,
     "vitamina_c_mg": 1.35,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Aveia"
     ]
@@ -270,7 +270,7 @@
     "piridoxina_mg": 0.23,
     "niacina_mg": 3.9066666666666663,
     "vitamina_c_mg": 6.216666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0009",
@@ -303,7 +303,7 @@
     "piridoxina_mg": 0.4566666666666666,
     "niacina_mg": 2.5233333333333334,
     "vitamina_c_mg": 3.526666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0010",
@@ -336,7 +336,7 @@
     "piridoxina_mg": 0.21,
     "niacina_mg": 1.4966666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0011",
@@ -369,7 +369,7 @@
     "piridoxina_mg": 0.2966666666666667,
     "niacina_mg": 1.12,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0012",
@@ -402,7 +402,7 @@
     "piridoxina_mg": 0.94,
     "niacina_mg": 0.37333333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0013",
@@ -435,7 +435,7 @@
     "piridoxina_mg": 0.17,
     "niacina_mg": 7.136666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0014",
@@ -468,7 +468,7 @@
     "piridoxina_mg": 1.5033333333333332,
     "niacina_mg": 1.5166666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0015",
@@ -501,7 +501,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0016",
@@ -534,7 +534,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0017",
@@ -567,7 +567,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0018",
@@ -600,7 +600,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0019",
@@ -633,7 +633,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0020",
@@ -666,7 +666,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0021",
@@ -699,7 +699,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0022",
@@ -732,7 +732,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0023",
@@ -765,7 +765,7 @@
     "piridoxina_mg": 5.076666666666667,
     "niacina_mg": 24.163333333333338,
     "vitamina_c_mg": 109.36666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0024",
@@ -798,7 +798,7 @@
     "piridoxina_mg": 1.4866666666666666,
     "niacina_mg": 7.456666666666667,
     "vitamina_c_mg": 13.106666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0025",
@@ -831,7 +831,7 @@
     "piridoxina_mg": 2.2466666666666666,
     "niacina_mg": 11.04,
     "vitamina_c_mg": 17.293333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0026",
@@ -864,7 +864,7 @@
     "piridoxina_mg": 0.7866666666666666,
     "niacina_mg": 10.133333333333333,
     "vitamina_c_mg": 14.55,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0027",
@@ -897,7 +897,7 @@
     "piridoxina_mg": 0.05333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0028",
@@ -930,7 +930,7 @@
     "piridoxina_mg": 2.0533333333333332,
     "niacina_mg": null,
     "vitamina_c_mg": 96.34,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0029",
@@ -963,7 +963,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0030",
@@ -996,7 +996,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0031",
@@ -1029,7 +1029,7 @@
     "piridoxina_mg": 3.466666666666667,
     "niacina_mg": 24.423333333333332,
     "vitamina_c_mg": 173.58666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0032",
@@ -1062,7 +1062,7 @@
     "piridoxina_mg": 0.08,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0033",
@@ -1095,7 +1095,7 @@
     "piridoxina_mg": 0.25333333333333335,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0034",
@@ -1128,7 +1128,7 @@
     "piridoxina_mg": 0.09,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0035",
@@ -1161,7 +1161,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.89,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0036",
@@ -1194,7 +1194,7 @@
     "piridoxina_mg": 1.1366666666666667,
     "niacina_mg": 9.5,
     "vitamina_c_mg": 24.31,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0037",
@@ -1227,7 +1227,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.96,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0038",
@@ -1260,7 +1260,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0039",
@@ -1293,7 +1293,7 @@
     "piridoxina_mg": 0.5333333333333333,
     "niacina_mg": 9.366666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0040",
@@ -1326,7 +1326,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.5666666666666664,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0041",
@@ -1359,7 +1359,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 4.37,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0042",
@@ -1392,7 +1392,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0043",
@@ -1425,7 +1425,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.7466666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0044",
@@ -1458,7 +1458,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0045",
@@ -1491,7 +1491,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.7366666666666664,
     "vitamina_c_mg": 1.7433333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0046",
@@ -1524,7 +1524,7 @@
     "piridoxina_mg": 3.11,
     "niacina_mg": 19.393333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0047",
@@ -1557,7 +1557,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0048",
@@ -1590,7 +1590,7 @@
     "piridoxina_mg": 0.08333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0049",
@@ -1623,7 +1623,7 @@
     "piridoxina_mg": 0.7933333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0050",
@@ -1656,7 +1656,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0051",
@@ -1689,7 +1689,7 @@
     "piridoxina_mg": 0.08333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0052",
@@ -1722,7 +1722,7 @@
     "piridoxina_mg": 0.1466666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Pão integral"
     ]
@@ -1758,7 +1758,7 @@
     "piridoxina_mg": 0.6,
     "niacina_mg": 2.3366666666666664,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Pão francês"
     ]
@@ -1794,7 +1794,7 @@
     "piridoxina_mg": 0.1466666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0055",
@@ -1827,7 +1827,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.58,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0056",
@@ -1860,7 +1860,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.83,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0057",
@@ -1893,7 +1893,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0058",
@@ -1926,7 +1926,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0059",
@@ -1959,7 +1959,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0060",
@@ -1992,7 +1992,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0061",
@@ -2025,7 +2025,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0062",
@@ -2058,7 +2058,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0063",
@@ -2091,7 +2091,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0064",
@@ -2124,7 +2124,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": null,
     "vitamina_c_mg": 7.463333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0065",
@@ -2157,7 +2157,7 @@
     "piridoxina_mg": 0.1,
     "niacina_mg": null,
     "vitamina_c_mg": 5.09,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0066",
@@ -2190,7 +2190,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 1.5,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0067",
@@ -2223,7 +2223,7 @@
     "piridoxina_mg": 0.06333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 9.646666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0068",
@@ -2256,7 +2256,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 6.726666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0069",
@@ -2289,7 +2289,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": 2.09,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0070",
@@ -2322,7 +2322,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": 2.13,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0071",
@@ -2355,7 +2355,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 6.873333333333332,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0072",
@@ -2388,7 +2388,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 7.53,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0073",
@@ -2421,7 +2421,7 @@
     "piridoxina_mg": 0.03333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 17.546666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0074",
@@ -2454,7 +2454,7 @@
     "piridoxina_mg": 0.1566666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 22.55,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0075",
@@ -2487,7 +2487,7 @@
     "piridoxina_mg": 0.09333333333333334,
     "niacina_mg": 1.1933333333333334,
     "vitamina_c_mg": 60.1,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0076",
@@ -2520,7 +2520,7 @@
     "piridoxina_mg": 0.18,
     "niacina_mg": null,
     "vitamina_c_mg": 5.88,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0077",
@@ -2553,7 +2553,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": null,
     "vitamina_c_mg": 10.96,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0078",
@@ -2586,7 +2586,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.0933333333333333,
     "vitamina_c_mg": 15.576666666666668,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0079",
@@ -2619,7 +2619,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": 0.75,
     "vitamina_c_mg": 21.39,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0080",
@@ -2652,7 +2652,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 13.473333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0081",
@@ -2685,7 +2685,7 @@
     "piridoxina_mg": 0.5566666666666666,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0082",
@@ -2718,7 +2718,7 @@
     "piridoxina_mg": 0.44333333333333336,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0083",
@@ -2751,7 +2751,7 @@
     "piridoxina_mg": 0.08333333333333333,
     "niacina_mg": 0.34,
     "vitamina_c_mg": 14.146666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0084",
@@ -2784,7 +2784,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.6266666666666666,
     "vitamina_c_mg": 1.6866666666666668,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0085",
@@ -2817,7 +2817,7 @@
     "piridoxina_mg": 0.04666666666666667,
     "niacina_mg": 4.033333333333333,
     "vitamina_c_mg": 1.47,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0086",
@@ -2850,7 +2850,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.98,
     "vitamina_c_mg": 17.1,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0087",
@@ -2883,7 +2883,7 @@
     "piridoxina_mg": 0.12333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 7.55,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0088",
@@ -2916,7 +2916,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": 2.573333333333333,
     "vitamina_c_mg": 23.786666666666665,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Batata-doce cozida"
     ]
@@ -2952,7 +2952,7 @@
     "piridoxina_mg": 0.1,
     "niacina_mg": null,
     "vitamina_c_mg": 16.48,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0090",
@@ -2985,7 +2985,7 @@
     "piridoxina_mg": 0.13,
     "niacina_mg": 2.6133333333333337,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0091",
@@ -3018,7 +3018,7 @@
     "piridoxina_mg": 0.08333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 3.76,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Batata inglesa cozida"
     ]
@@ -3054,7 +3054,7 @@
     "piridoxina_mg": 0.15,
     "niacina_mg": null,
     "vitamina_c_mg": 31.083333333333332,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0093",
@@ -3087,7 +3087,7 @@
     "piridoxina_mg": 0.10333333333333335,
     "niacina_mg": 2.5066666666666664,
     "vitamina_c_mg": 16.343333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0094",
@@ -3120,7 +3120,7 @@
     "piridoxina_mg": 0.09333333333333334,
     "niacina_mg": 1.3833333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0095",
@@ -3153,7 +3153,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0096",
@@ -3186,7 +3186,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 3.01,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0097",
@@ -3219,7 +3219,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 1.24,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0098",
@@ -3252,7 +3252,7 @@
     "piridoxina_mg": 0.043333333333333335,
     "niacina_mg": null,
     "vitamina_c_mg": 3.116666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0099",
@@ -3285,7 +3285,7 @@
     "piridoxina_mg": 0.06666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0100",
@@ -3318,7 +3318,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 42.00333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0101",
@@ -3351,7 +3351,7 @@
     "piridoxina_mg": 0.07666666666666667,
     "niacina_mg": 1.39,
     "vitamina_c_mg": 34.28333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0102",
@@ -3384,7 +3384,7 @@
     "piridoxina_mg": 0.12,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0103",
@@ -3417,7 +3417,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": 8.786666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0104",
@@ -3450,7 +3450,7 @@
     "piridoxina_mg": 0.11,
     "niacina_mg": null,
     "vitamina_c_mg": 5.3566666666666665,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0105",
@@ -3483,7 +3483,7 @@
     "piridoxina_mg": 0.36,
     "niacina_mg": 1.5366666666666668,
     "vitamina_c_mg": 7.333333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0106",
@@ -3516,7 +3516,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 0.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0107",
@@ -3549,7 +3549,7 @@
     "piridoxina_mg": 0.14333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 4.666666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0108",
@@ -3582,7 +3582,7 @@
     "piridoxina_mg": 0.08333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 31.78,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0109",
@@ -3615,7 +3615,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": 2.683333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0110",
@@ -3648,7 +3648,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 5.116666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0111",
@@ -3681,7 +3681,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.6833333333333332,
     "vitamina_c_mg": 6.543333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0112",
@@ -3714,7 +3714,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 5.566666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0113",
@@ -3747,7 +3747,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 10.613333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0114",
@@ -3780,7 +3780,7 @@
     "piridoxina_mg": 0.09333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 40.77333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0115",
@@ -3813,7 +3813,7 @@
     "piridoxina_mg": 0.06333333333333334,
     "niacina_mg": 2.29,
     "vitamina_c_mg": 96.68333333333332,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0116",
@@ -3846,7 +3846,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": null,
     "vitamina_c_mg": 76.94333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0117",
@@ -3879,7 +3879,7 @@
     "piridoxina_mg": 0.1,
     "niacina_mg": null,
     "vitamina_c_mg": 36.05,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0118",
@@ -3912,7 +3912,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 23.69666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0119",
@@ -3945,7 +3945,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": 2.42,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0120",
@@ -3978,7 +3978,7 @@
     "piridoxina_mg": 0.13333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 5.266666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0121",
@@ -4011,7 +4011,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0122",
@@ -4044,7 +4044,7 @@
     "piridoxina_mg": 0.8066666666666666,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0123",
@@ -4077,7 +4077,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0124",
@@ -4110,7 +4110,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0125",
@@ -4143,7 +4143,7 @@
     "piridoxina_mg": 0.1466666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 12,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0126",
@@ -4176,7 +4176,7 @@
     "piridoxina_mg": 0.10666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 5.623333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0127",
@@ -4209,7 +4209,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 6.793333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0128",
@@ -4242,7 +4242,7 @@
     "piridoxina_mg": 0.20333333333333337,
     "niacina_mg": null,
     "vitamina_c_mg": 13.833333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0129",
@@ -4275,7 +4275,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 11.066666666666668,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0130",
@@ -4308,7 +4308,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 16.526666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0131",
@@ -4341,7 +4341,7 @@
     "piridoxina_mg": 0.15333333333333335,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0132",
@@ -4374,7 +4374,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0133",
@@ -4407,7 +4407,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": 0.8966666666666666,
     "vitamina_c_mg": 2.3366666666666664,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0134",
@@ -4440,7 +4440,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 9.633,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0135",
@@ -4473,7 +4473,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 38.553333333333335,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0136",
@@ -4506,7 +4506,7 @@
     "piridoxina_mg": 0.03666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0137",
@@ -4539,7 +4539,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 9.55,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0138",
@@ -4572,7 +4572,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 1.98,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0139",
@@ -4605,7 +4605,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 8.663333333333332,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0140",
@@ -4638,7 +4638,7 @@
     "piridoxina_mg": 0.03666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0141",
@@ -4671,7 +4671,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0142",
@@ -4704,7 +4704,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 4.986666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0143",
@@ -4737,7 +4737,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": 201.36,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0144",
@@ -4770,7 +4770,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 100.21,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0145",
@@ -4803,7 +4803,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": 158.21,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0146",
@@ -4836,7 +4836,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0147",
@@ -4869,7 +4869,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 5.596666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0148",
@@ -4902,7 +4902,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 9.633333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0149",
@@ -4935,7 +4935,7 @@
     "piridoxina_mg": 0.056666666666666664,
     "niacina_mg": null,
     "vitamina_c_mg": 18.716666666666665,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0150",
@@ -4968,7 +4968,7 @@
     "piridoxina_mg": 0.09333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 43.2,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0151",
@@ -5001,7 +5001,7 @@
     "piridoxina_mg": 0.07333333333333335,
     "niacina_mg": 0.626,
     "vitamina_c_mg": 40.52,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0152",
@@ -5034,7 +5034,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.35,
     "vitamina_c_mg": 46.29333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0153",
@@ -5067,7 +5067,7 @@
     "piridoxina_mg": 0.4666666666666666,
     "niacina_mg": 0.72,
     "vitamina_c_mg": 51.69333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0154",
@@ -5100,7 +5100,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.716666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0155",
@@ -5133,7 +5133,7 @@
     "piridoxina_mg": 0.08,
     "niacina_mg": null,
     "vitamina_c_mg": 1.51,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0156",
@@ -5166,7 +5166,7 @@
     "piridoxina_mg": 0.09666666666666668,
     "niacina_mg": null,
     "vitamina_c_mg": 17.94,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0157",
@@ -5199,7 +5199,7 @@
     "piridoxina_mg": 0.023333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 21.213333333333335,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0158",
@@ -5232,7 +5232,7 @@
     "piridoxina_mg": 0.11,
     "niacina_mg": 2.42,
     "vitamina_c_mg": 18.01,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0159",
@@ -5265,7 +5265,7 @@
     "piridoxina_mg": 0.06333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 2.706666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0160",
@@ -5298,7 +5298,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": 1.18,
     "vitamina_c_mg": 5.383333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0161",
@@ -5331,7 +5331,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 12.804,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0162",
@@ -5364,7 +5364,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 1.1533333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0163",
@@ -5397,7 +5397,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 8.66,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0164",
@@ -5430,7 +5430,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 34.623333333333335,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0165",
@@ -5463,7 +5463,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 1.2466666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0166",
@@ -5496,7 +5496,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 10.283333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0167",
@@ -5529,7 +5529,7 @@
     "piridoxina_mg": 0.07333333333333335,
     "niacina_mg": null,
     "vitamina_c_mg": 10.27,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0168",
@@ -5562,7 +5562,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0169",
@@ -5595,7 +5595,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.383333333333333,
     "vitamina_c_mg": 941.3696666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0170",
@@ -5628,7 +5628,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 623.2393333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0171",
@@ -5661,7 +5661,7 @@
     "piridoxina_mg": 0.37,
     "niacina_mg": null,
     "vitamina_c_mg": 4.269666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0172",
@@ -5694,7 +5694,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 7.63,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0173",
@@ -5727,7 +5727,7 @@
     "piridoxina_mg": 0.08333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 5.151666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0174",
@@ -5760,7 +5760,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": 1.58,
     "vitamina_c_mg": 10.146666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0175",
@@ -5793,7 +5793,7 @@
     "piridoxina_mg": 0.14,
     "niacina_mg": null,
     "vitamina_c_mg": 15.746666666666668,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0176",
@@ -5826,7 +5826,7 @@
     "piridoxina_mg": 0.056666666666666664,
     "niacina_mg": 1.41,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0177",
@@ -5859,7 +5859,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 17.496666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0178",
@@ -5892,7 +5892,7 @@
     "piridoxina_mg": 0.14333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 10.466666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0179",
@@ -5925,7 +5925,7 @@
     "piridoxina_mg": 0.14333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 5.86,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0180",
@@ -5958,7 +5958,7 @@
     "piridoxina_mg": 0.14333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 7.5566666666666675,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0181",
@@ -5991,7 +5991,7 @@
     "piridoxina_mg": 0.17,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0182",
@@ -6024,7 +6024,7 @@
     "piridoxina_mg": 0.1,
     "niacina_mg": null,
     "vitamina_c_mg": 21.59,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Banana"
     ]
@@ -6060,7 +6060,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 13.563333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0184",
@@ -6093,7 +6093,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 26.69666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0185",
@@ -6126,7 +6126,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0186",
@@ -6159,7 +6159,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 219.33333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0187",
@@ -6192,7 +6192,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.2466666666666666,
     "vitamina_c_mg": 119.71933333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0188",
@@ -6225,7 +6225,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 138.6953333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0189",
@@ -6258,7 +6258,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 29.613333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0190",
@@ -6291,7 +6291,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 60.866666666666674,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0191",
@@ -6324,7 +6324,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 27.026666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0192",
@@ -6357,7 +6357,7 @@
     "piridoxina_mg": 0.07333333333333335,
     "niacina_mg": 4.343333333333333,
     "vitamina_c_mg": 24.512999999999995,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0193",
@@ -6390,7 +6390,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 10.488999999999999,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0194",
@@ -6423,7 +6423,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 0.79,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0195",
@@ -6456,7 +6456,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 5.243333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0196",
@@ -6489,7 +6489,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 9.866666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0197",
@@ -6522,7 +6522,7 @@
     "piridoxina_mg": 0.02666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 99.195,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0198",
@@ -6555,7 +6555,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 23.05666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0199",
@@ -6588,7 +6588,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.4066666666666665,
     "vitamina_c_mg": 34.32666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0200",
@@ -6621,7 +6621,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 80.60166666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0201",
@@ -6654,7 +6654,7 @@
     "piridoxina_mg": 0.03333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 19.137333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0202",
@@ -6687,7 +6687,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 10.475333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0203",
@@ -6720,7 +6720,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 16.17,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0204",
@@ -6753,7 +6753,7 @@
     "piridoxina_mg": 0.04666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 14.816666666666668,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0205",
@@ -6786,7 +6786,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.18,
     "vitamina_c_mg": 3.7733333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0206",
@@ -6819,7 +6819,7 @@
     "piridoxina_mg": 0.11666666666666665,
     "niacina_mg": null,
     "vitamina_c_mg": 27.07,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0207",
@@ -6852,7 +6852,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": 70.77666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0208",
@@ -6885,7 +6885,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 56.87,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0209",
@@ -6918,7 +6918,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": 94.48333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0210",
@@ -6951,7 +6951,7 @@
     "piridoxina_mg": 0.03333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 34.67966666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0211",
@@ -6984,7 +6984,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": null,
     "vitamina_c_mg": 44.32,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0212",
@@ -7017,7 +7017,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 43.45566666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0213",
@@ -7050,7 +7050,7 @@
     "piridoxina_mg": 0.043333333333333335,
     "niacina_mg": null,
     "vitamina_c_mg": 41.3033,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0214",
@@ -7083,7 +7083,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": 53.73333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0215",
@@ -7116,7 +7116,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 73.33666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0216",
@@ -7149,7 +7149,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 47.84566666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0217",
@@ -7182,7 +7182,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0218",
@@ -7215,7 +7215,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 32.78,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0219",
@@ -7248,7 +7248,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 34.49666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0220",
@@ -7281,7 +7281,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 38.236,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0221",
@@ -7314,7 +7314,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 1.4866666666666666,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Maçã"
     ]
@@ -7350,7 +7350,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 2.4066666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0223",
@@ -7383,7 +7383,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 13.4435,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0224",
@@ -7416,7 +7416,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 3.9,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0225",
@@ -7449,7 +7449,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 78.52666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0226",
@@ -7482,7 +7482,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.0333333333333334,
     "vitamina_c_mg": 82.20666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0227",
@@ -7515,7 +7515,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0228",
@@ -7548,7 +7548,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 17.413,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0229",
@@ -7581,7 +7581,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 65.52333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0230",
@@ -7614,7 +7614,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 24.90233333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0231",
@@ -7647,7 +7647,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 7.936666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0232",
@@ -7680,7 +7680,7 @@
     "piridoxina_mg": 0.04666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 19.84,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0233",
@@ -7713,7 +7713,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": null,
     "vitamina_c_mg": 7.257000000000001,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0234",
@@ -7746,7 +7746,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": 1.9166666666666667,
     "vitamina_c_mg": 13.679333333333332,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0235",
@@ -7779,7 +7779,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 6.146666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0236",
@@ -7812,7 +7812,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": 8.68,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0237",
@@ -7845,7 +7845,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 21.795666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0238",
@@ -7878,7 +7878,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 111.97,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0239",
@@ -7911,7 +7911,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 63.596666666666664,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0240",
@@ -7944,7 +7944,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 3.1566666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0241",
@@ -7977,7 +7977,7 @@
     "piridoxina_mg": 0.06333333333333334,
     "niacina_mg": 2.573333333333333,
     "vitamina_c_mg": 8.283333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0242",
@@ -8010,7 +8010,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 2.36,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0243",
@@ -8043,7 +8043,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 2.8333333333333335,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0244",
@@ -8076,7 +8076,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 3.2533333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0245",
@@ -8109,7 +8109,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0246",
@@ -8142,7 +8142,7 @@
     "piridoxina_mg": 0.08666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 35.90333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0247",
@@ -8175,7 +8175,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 24.87,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0248",
@@ -8208,7 +8208,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0249",
@@ -8241,7 +8241,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 8.123333333333335,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0250",
@@ -8274,7 +8274,7 @@
     "piridoxina_mg": 0.10333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 7.246666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0251",
@@ -8307,7 +8307,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": 48.81666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0252",
@@ -8340,7 +8340,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 41.75,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0253",
@@ -8373,7 +8373,7 @@
     "piridoxina_mg": 0.11,
     "niacina_mg": null,
     "vitamina_c_mg": 17.993333333333336,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0254",
@@ -8406,7 +8406,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 24.055333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0255",
@@ -8439,7 +8439,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 3.953333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0256",
@@ -8472,7 +8472,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 3.2933333333333334,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0257",
@@ -8505,7 +8505,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 1.8629999999999998,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0258",
@@ -8538,7 +8538,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": null,
     "vitamina_c_mg": 20.967666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0259",
@@ -8571,7 +8571,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0260",
@@ -8604,7 +8604,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0261",
@@ -8637,7 +8637,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0262",
@@ -8670,7 +8670,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0263",
@@ -8703,7 +8703,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0264",
@@ -8736,7 +8736,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0265",
@@ -8769,7 +8769,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0266",
@@ -8802,7 +8802,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0267",
@@ -8835,7 +8835,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0268",
@@ -8868,7 +8868,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0269",
@@ -8901,7 +8901,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0270",
@@ -8934,7 +8934,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0271",
@@ -8967,7 +8967,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0272",
@@ -9000,7 +9000,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0273",
@@ -9033,7 +9033,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.4366666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0274",
@@ -9066,7 +9066,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0275",
@@ -9099,7 +9099,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0276",
@@ -9132,7 +9132,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.4366666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0277",
@@ -9165,7 +9165,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.1666666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0278",
@@ -9198,7 +9198,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.94,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0279",
@@ -9231,7 +9231,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0280",
@@ -9264,7 +9264,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.166666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0281",
@@ -9297,7 +9297,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.77,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0282",
@@ -9330,7 +9330,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 9.766666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0283",
@@ -9363,7 +9363,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.31,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0284",
@@ -9396,7 +9396,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.0666666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0285",
@@ -9429,7 +9429,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0286",
@@ -9462,7 +9462,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.35,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0287",
@@ -9495,7 +9495,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.166666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0288",
@@ -9528,7 +9528,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.8733333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0289",
@@ -9561,7 +9561,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.6966666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0290",
@@ -9594,7 +9594,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.0933333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0291",
@@ -9627,7 +9627,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0292",
@@ -9660,7 +9660,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.6233333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0293",
@@ -9693,7 +9693,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.233333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0294",
@@ -9726,7 +9726,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.77,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0295",
@@ -9759,7 +9759,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.703333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0296",
@@ -9792,7 +9792,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.3,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0297",
@@ -9825,7 +9825,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": 8.933333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0298",
@@ -9858,7 +9858,7 @@
     "piridoxina_mg": 0.07333333333333335,
     "niacina_mg": 1.8566666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0299",
@@ -9891,7 +9891,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.7866666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0300",
@@ -9924,7 +9924,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 7.266666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0301",
@@ -9957,7 +9957,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 7.966666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0302",
@@ -9990,7 +9990,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.3433333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0303",
@@ -10023,7 +10023,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.77,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0304",
@@ -10056,7 +10056,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.6033333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0305",
@@ -10089,7 +10089,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 8.066666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0306",
@@ -10122,7 +10122,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.6033333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0307",
@@ -10155,7 +10155,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.1033333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0308",
@@ -10188,7 +10188,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 8.866666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0309",
@@ -10221,7 +10221,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.1033333333333333,
     "vitamina_c_mg": 6.8933333333333335,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0310",
@@ -10254,7 +10254,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0311",
@@ -10287,7 +10287,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.633333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0312",
@@ -10320,7 +10320,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.953333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0313",
@@ -10353,7 +10353,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.8666666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0314",
@@ -10386,7 +10386,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.1933333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0315",
@@ -10419,7 +10419,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.346666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0316",
@@ -10452,7 +10452,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.21,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0317",
@@ -10485,7 +10485,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.303333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0318",
@@ -10518,7 +10518,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.833333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0319",
@@ -10551,7 +10551,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.553333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0320",
@@ -10584,7 +10584,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 7.1,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0321",
@@ -10617,7 +10617,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 7.7,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0322",
@@ -10650,7 +10650,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.9,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0323",
@@ -10683,7 +10683,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.6966666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0324",
@@ -10716,7 +10716,7 @@
     "piridoxina_mg": 0.26666666666666666,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0325",
@@ -10749,7 +10749,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0326",
@@ -10782,7 +10782,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.7633333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0327",
@@ -10815,7 +10815,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 4.33,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0328",
@@ -10848,7 +10848,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": 1.6266666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0329",
@@ -10881,7 +10881,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.33,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0330",
@@ -10914,7 +10914,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.2,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0331",
@@ -10947,7 +10947,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0332",
@@ -10980,7 +10980,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.18,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0333",
@@ -11013,7 +11013,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.1333333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0334",
@@ -11046,7 +11046,7 @@
     "piridoxina_mg": 0.12,
     "niacina_mg": 1.55,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0335",
@@ -11079,7 +11079,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.7433333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0336",
@@ -11112,7 +11112,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.81,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0337",
@@ -11145,7 +11145,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.8566666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0338",
@@ -11178,7 +11178,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.5,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0339",
@@ -11211,7 +11211,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.6333333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0340",
@@ -11244,7 +11244,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.016666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0341",
@@ -11277,7 +11277,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.676666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0342",
@@ -11310,7 +11310,7 @@
     "piridoxina_mg": 0.1733,
     "niacina_mg": 2.7533333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0343",
@@ -11343,7 +11343,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 3.79,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0344",
@@ -11376,7 +11376,7 @@
     "piridoxina_mg": 0.13,
     "niacina_mg": 4.91,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0345",
@@ -11409,7 +11409,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.64,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0346",
@@ -11442,7 +11442,7 @@
     "piridoxina_mg": 0.16,
     "niacina_mg": 4.933333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0347",
@@ -11475,7 +11475,7 @@
     "piridoxina_mg": 0.35,
     "niacina_mg": 0.5566666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0348",
@@ -11508,7 +11508,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.99,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0349",
@@ -11541,7 +11541,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.26,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0350",
@@ -11574,7 +11574,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.376666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0351",
@@ -11607,7 +11607,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.09,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0352",
@@ -11640,7 +11640,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.32,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0353",
@@ -11673,7 +11673,7 @@
     "piridoxina_mg": 0.14,
     "niacina_mg": 2.1633333333333336,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0354",
@@ -11706,7 +11706,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 3.33,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0355",
@@ -11739,7 +11739,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 10.66,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0356",
@@ -11772,7 +11772,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 11.923333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0357",
@@ -11805,7 +11805,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": 1.7766666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0358",
@@ -11838,7 +11838,7 @@
     "piridoxina_mg": 0.04666666666666667,
     "niacina_mg": 4.266666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0359",
@@ -11871,7 +11871,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.32,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0360",
@@ -11904,7 +11904,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.276666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0361",
@@ -11937,7 +11937,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": 1.6066666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0362",
@@ -11970,7 +11970,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 3.563333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0363",
@@ -12003,7 +12003,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.546666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0364",
@@ -12036,7 +12036,7 @@
     "piridoxina_mg": 0.03333333333333333,
     "niacina_mg": 2.1933333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0365",
@@ -12069,7 +12069,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.8266666666666669,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0366",
@@ -12102,7 +12102,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.1766666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0367",
@@ -12135,7 +12135,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 4.273333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0368",
@@ -12168,7 +12168,7 @@
     "piridoxina_mg": 0.13,
     "niacina_mg": 1.4566666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0369",
@@ -12201,7 +12201,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.59,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0370",
@@ -12234,7 +12234,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": 4.663333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0371",
@@ -12267,7 +12267,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.9733333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0372",
@@ -12300,7 +12300,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": 2.7866666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0373",
@@ -12333,7 +12333,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.91,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0374",
@@ -12366,7 +12366,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.1633333333333336,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0375",
@@ -12399,7 +12399,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.6666666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0376",
@@ -12432,7 +12432,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.61,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0377",
@@ -12465,7 +12465,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.01,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Patinho grelhado"
     ]
@@ -12501,7 +12501,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.536666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0379",
@@ -12534,7 +12534,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 3.91,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0380",
@@ -12567,7 +12567,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.766666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0381",
@@ -12600,7 +12600,7 @@
     "piridoxina_mg": 0.13,
     "niacina_mg": 1.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0382",
@@ -12633,7 +12633,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.8866666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0383",
@@ -12666,7 +12666,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 1.8233333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0384",
@@ -12699,7 +12699,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.32,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0385",
@@ -12732,7 +12732,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.8333333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0386",
@@ -12765,7 +12765,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0387",
@@ -12798,7 +12798,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.9466666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0388",
@@ -12831,7 +12831,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.773333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0389",
@@ -12864,7 +12864,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0390",
@@ -12897,7 +12897,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0391",
@@ -12930,7 +12930,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.5833333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0392",
@@ -12963,7 +12963,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.333333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0393",
@@ -12996,7 +12996,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 9.2,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0394",
@@ -13029,7 +13029,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.3866666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0395",
@@ -13062,7 +13062,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 9.7,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0396",
@@ -13095,7 +13095,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 10.4,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0397",
@@ -13128,7 +13128,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.0366666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0398",
@@ -13161,7 +13161,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 8.2,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0399",
@@ -13194,7 +13194,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.53,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0400",
@@ -13227,7 +13227,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.363333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0401",
@@ -13260,7 +13260,7 @@
     "piridoxina_mg": 0.52,
     "niacina_mg": 11.066666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0402",
@@ -13293,7 +13293,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.276666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0403",
@@ -13326,7 +13326,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 11.2,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0404",
@@ -13359,7 +13359,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 12.833333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0405",
@@ -13392,7 +13392,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.2833333333333337,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0406",
@@ -13425,7 +13425,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 15.8,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0407",
@@ -13458,7 +13458,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.5833333333333335,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0408",
@@ -13491,7 +13491,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 7.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0409",
@@ -13524,7 +13524,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.8566666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0410",
@@ -13557,7 +13557,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 24.833333333333332,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Frango grelhado"
     ]
@@ -13593,7 +13593,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 11.2,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0412",
@@ -13626,7 +13626,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.3966666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0413",
@@ -13659,7 +13659,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 10.2,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0414",
@@ -13692,7 +13692,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.06,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0415",
@@ -13725,7 +13725,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": 3.5333333333333337,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0416",
@@ -13758,7 +13758,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.733333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0417",
@@ -13791,7 +13791,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.766666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0418",
@@ -13824,7 +13824,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0419",
@@ -13857,7 +13857,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.666666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0420",
@@ -13890,7 +13890,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.966666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0421",
@@ -13923,7 +13923,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0422",
@@ -13956,7 +13956,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.833333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0423",
@@ -13989,7 +13989,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0424",
@@ -14022,7 +14022,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.0033333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0425",
@@ -14055,7 +14055,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.233333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0426",
@@ -14088,7 +14088,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.233333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0427",
@@ -14121,7 +14121,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.6466666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0428",
@@ -14154,7 +14154,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.2466666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0429",
@@ -14187,7 +14187,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 1.9233333333333331,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0430",
@@ -14220,7 +14220,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 10.633333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0431",
@@ -14253,7 +14253,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 8.266666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0432",
@@ -14286,7 +14286,7 @@
     "piridoxina_mg": 0.10666666666666667,
     "niacina_mg": 12.433333333333332,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0433",
@@ -14319,7 +14319,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 13.833333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0434",
@@ -14352,7 +14352,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0435",
@@ -14385,7 +14385,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 6.566666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0436",
@@ -14418,7 +14418,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.666666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0437",
@@ -14451,7 +14451,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.4333333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0438",
@@ -14484,7 +14484,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.78,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0439",
@@ -14517,7 +14517,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.003333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0440",
@@ -14550,7 +14550,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.8066666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0441",
@@ -14583,7 +14583,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.2033333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0442",
@@ -14616,7 +14616,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.5033333333333332,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0443",
@@ -14649,7 +14649,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 12.486666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0444",
@@ -14682,7 +14682,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.1,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0445",
@@ -14715,7 +14715,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 5.033333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0446",
@@ -14748,7 +14748,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.33,
     "vitamina_c_mg": 2.0533333333333332,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0447",
@@ -14781,7 +14781,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0448",
@@ -14814,7 +14814,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 0.9266666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0449",
@@ -14847,7 +14847,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 0.3466666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0450",
@@ -14880,7 +14880,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0451",
@@ -14913,7 +14913,7 @@
     "piridoxina_mg": 0.02,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0452",
@@ -14946,7 +14946,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.38033333333333336,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0453",
@@ -14979,7 +14979,7 @@
     "piridoxina_mg": 0.5733333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 2.143333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0454",
@@ -15012,7 +15012,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0455",
@@ -15045,7 +15045,7 @@
     "piridoxina_mg": 0.14,
     "niacina_mg": 1.23,
     "vitamina_c_mg": 3.2616666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0456",
@@ -15078,7 +15078,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.8066666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0457",
@@ -15111,7 +15111,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.49,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0458",
@@ -15144,7 +15144,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.52,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Leite"
     ]
@@ -15180,7 +15180,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0460",
@@ -15213,7 +15213,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 0.49,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0461",
@@ -15246,7 +15246,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Queijo minas frescal"
     ]
@@ -15282,7 +15282,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0463",
@@ -15315,7 +15315,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0464",
@@ -15348,7 +15348,7 @@
     "piridoxina_mg": 0.2333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0465",
@@ -15381,7 +15381,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0466",
@@ -15414,7 +15414,7 @@
     "piridoxina_mg": 0.21,
     "niacina_mg": 2.6833333333333336,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0467",
@@ -15447,7 +15447,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0468",
@@ -15480,7 +15480,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0469",
@@ -15513,7 +15513,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0470",
@@ -15546,7 +15546,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0471",
@@ -15579,7 +15579,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0472",
@@ -15612,7 +15612,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0473",
@@ -15645,7 +15645,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 2.779666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0474",
@@ -15678,7 +15678,7 @@
     "piridoxina_mg": 0.14333333333333334,
     "niacina_mg": 2.9166666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0475",
@@ -15711,7 +15711,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0476",
@@ -15744,7 +15744,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0477",
@@ -15777,7 +15777,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0478",
@@ -15810,7 +15810,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 2.408666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0479",
@@ -15843,7 +15843,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0480",
@@ -15876,7 +15876,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0481",
@@ -15909,7 +15909,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0482",
@@ -15942,7 +15942,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0483",
@@ -15975,7 +15975,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0484",
@@ -16008,7 +16008,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0485",
@@ -16041,7 +16041,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.9666666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0486",
@@ -16074,7 +16074,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0487",
@@ -16107,7 +16107,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0488",
@@ -16140,7 +16140,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Ovo de galinha"
     ]
@@ -16176,7 +16176,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.75,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0490",
@@ -16209,7 +16209,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0491",
@@ -16242,7 +16242,7 @@
     "piridoxina_mg": 1.5233333333333334,
     "niacina_mg": 4.986666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0492",
@@ -16275,7 +16275,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0493",
@@ -16308,7 +16308,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0494",
@@ -16341,7 +16341,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0495",
@@ -16374,7 +16374,7 @@
     "piridoxina_mg": 0.59,
     "niacina_mg": 0.63,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0496",
@@ -16407,7 +16407,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.366666666666667,
     "vitamina_c_mg": 1.42,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0497",
@@ -16440,7 +16440,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.79,
     "vitamina_c_mg": 2.046666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0498",
@@ -16473,7 +16473,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.0633333333333335,
     "vitamina_c_mg": 2.096666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0499",
@@ -16506,7 +16506,7 @@
     "piridoxina_mg": 0.16333333333333333,
     "niacina_mg": 0.4666666666666666,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0500",
@@ -16539,7 +16539,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": 0.11333333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0501",
@@ -16572,7 +16572,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0502",
@@ -16605,7 +16605,7 @@
     "piridoxina_mg": 0.22333333333333336,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0503",
@@ -16638,7 +16638,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0504",
@@ -16671,7 +16671,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0505",
@@ -16704,7 +16704,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0506",
@@ -16737,7 +16737,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0507",
@@ -16770,7 +16770,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 0.7366666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0508",
@@ -16803,7 +16803,7 @@
     "piridoxina_mg": 0.2,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0509",
@@ -16836,7 +16836,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": 1.14,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0510",
@@ -16869,7 +16869,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0511",
@@ -16902,7 +16902,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 11.886666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0512",
@@ -16935,7 +16935,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0513",
@@ -16968,7 +16968,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0514",
@@ -17001,7 +17001,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0515",
@@ -17034,7 +17034,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 39.99666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0516",
@@ -17067,7 +17067,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0517",
@@ -17100,7 +17100,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0518",
@@ -17133,7 +17133,7 @@
     "piridoxina_mg": 0.15333333333333335,
     "niacina_mg": 2.1,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0519",
@@ -17166,7 +17166,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0520",
@@ -17199,7 +17199,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0521",
@@ -17232,7 +17232,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0522",
@@ -17265,7 +17265,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0523",
@@ -17298,7 +17298,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0524",
@@ -17331,7 +17331,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0525",
@@ -17364,7 +17364,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0526",
@@ -17397,7 +17397,7 @@
     "piridoxina_mg": 0.07333333333333335,
     "niacina_mg": 1.6033333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0527",
@@ -17430,7 +17430,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0528",
@@ -17463,7 +17463,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.0933333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0529",
@@ -17496,7 +17496,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.9166666666666665,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0530",
@@ -17529,7 +17529,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0531",
@@ -17562,7 +17562,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.3066666666666667,
     "vitamina_c_mg": 4.07,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0532",
@@ -17595,7 +17595,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.32,
     "vitamina_c_mg": 4.773333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0533",
@@ -17628,7 +17628,7 @@
     "piridoxina_mg": 0.06333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0534",
@@ -17661,7 +17661,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.9333333333333332,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0535",
@@ -17694,7 +17694,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 1.0966666666666667,
     "vitamina_c_mg": 10.28,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0536",
@@ -17727,7 +17727,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 4.266666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0537",
@@ -17760,7 +17760,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.2533333333333334,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0538",
@@ -17793,7 +17793,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": 3.366666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0539",
@@ -17826,7 +17826,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.4366666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0540",
@@ -17859,7 +17859,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.93,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0541",
@@ -17892,7 +17892,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.64,
     "vitamina_c_mg": 5.28,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0542",
@@ -17925,7 +17925,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.4366666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0543",
@@ -17958,7 +17958,7 @@
     "piridoxina_mg": 0.05,
     "niacina_mg": 2.5766666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0544",
@@ -17991,7 +17991,7 @@
     "piridoxina_mg": 0.036666666666666674,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0545",
@@ -18024,7 +18024,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0546",
@@ -18057,7 +18057,7 @@
     "piridoxina_mg": 0.03333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 29.35,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0547",
@@ -18090,7 +18090,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.4766666666666666,
     "vitamina_c_mg": 9.256666666666666,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0548",
@@ -18123,7 +18123,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.8366666666666664,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0549",
@@ -18156,7 +18156,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.6,
     "vitamina_c_mg": 16.216666666666665,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0550",
@@ -18189,7 +18189,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0551",
@@ -18222,7 +18222,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Tapioca"
     ]
@@ -18258,7 +18258,7 @@
     "piridoxina_mg": 0.05333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": 46.39666666666667,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0553",
@@ -18291,7 +18291,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 0.77,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0554",
@@ -18324,7 +18324,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 1.7966666666666669,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0555",
@@ -18357,7 +18357,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.5966666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0556",
@@ -18390,7 +18390,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.0933333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0557",
@@ -18423,7 +18423,7 @@
     "piridoxina_mg": 0.7633333333333333,
     "niacina_mg": 10.176666666666668,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0558",
@@ -18456,7 +18456,7 @@
     "piridoxina_mg": 0.21,
     "niacina_mg": 7.47,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0559",
@@ -18489,7 +18489,7 @@
     "piridoxina_mg": 0.06,
     "niacina_mg": 1.1633333333333333,
     "vitamina_c_mg": 12.443333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0560",
@@ -18522,7 +18522,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0561",
@@ -18555,7 +18555,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Feijão carioca cozido"
     ]
@@ -18591,7 +18591,7 @@
     "piridoxina_mg": 0.65,
     "niacina_mg": 4.023333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0563",
@@ -18624,7 +18624,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0564",
@@ -18657,7 +18657,7 @@
     "piridoxina_mg": 0.26,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0565",
@@ -18690,7 +18690,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0566",
@@ -18723,7 +18723,7 @@
     "piridoxina_mg": 0.12333333333333334,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0567",
@@ -18756,7 +18756,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null,
+    "vitamina_e_mg": null,
     "aliases": [
       "Feijão preto cozido"
     ]
@@ -18792,7 +18792,7 @@
     "piridoxina_mg": 0.59,
     "niacina_mg": 4.6,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0569",
@@ -18825,7 +18825,7 @@
     "piridoxina_mg": 0.04,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0570",
@@ -18858,7 +18858,7 @@
     "piridoxina_mg": 0.06666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0571",
@@ -18891,7 +18891,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.69,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0572",
@@ -18924,7 +18924,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 3.9233333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0573",
@@ -18957,7 +18957,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0574",
@@ -18990,7 +18990,7 @@
     "piridoxina_mg": 0.08,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0575",
@@ -19023,7 +19023,7 @@
     "piridoxina_mg": 0.7533333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0576",
@@ -19056,7 +19056,7 @@
     "piridoxina_mg": 0.07,
     "niacina_mg": 2.6933333333333334,
     "vitamina_c_mg": 1.4666666666666668,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0577",
@@ -19089,7 +19089,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0578",
@@ -19122,7 +19122,7 @@
     "piridoxina_mg": 0.4166666666666667,
     "niacina_mg": 5.073333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0579",
@@ -19155,7 +19155,7 @@
     "piridoxina_mg": 1.1966666666666665,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0580",
@@ -19188,7 +19188,7 @@
     "piridoxina_mg": 0.11,
     "niacina_mg": 5.94,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0581",
@@ -19221,7 +19221,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0582",
@@ -19254,7 +19254,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0583",
@@ -19287,7 +19287,7 @@
     "piridoxina_mg": 0.35333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": 9.213333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0584",
@@ -19320,7 +19320,7 @@
     "piridoxina_mg": 0.03333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0585",
@@ -19353,7 +19353,7 @@
     "piridoxina_mg": 0.06666666666666667,
     "niacina_mg": null,
     "vitamina_c_mg": 24.97333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0586",
@@ -19386,7 +19386,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0587",
@@ -19419,7 +19419,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0588",
@@ -19452,7 +19452,7 @@
     "piridoxina_mg": 0.3933333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0589",
@@ -19485,7 +19485,7 @@
     "piridoxina_mg": 0.44,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0590",
@@ -19518,7 +19518,7 @@
     "piridoxina_mg": 0.025,
     "niacina_mg": null,
     "vitamina_c_mg": 2.493333333333333,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0591",
@@ -19551,7 +19551,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0592",
@@ -19584,7 +19584,7 @@
     "piridoxina_mg": null,
     "niacina_mg": 2.5766666666666667,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0593",
@@ -19617,7 +19617,7 @@
     "piridoxina_mg": 0.13,
     "niacina_mg": 5.923333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0594",
@@ -19650,7 +19650,7 @@
     "piridoxina_mg": 0.13333333333333333,
     "niacina_mg": null,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0595",
@@ -19683,7 +19683,7 @@
     "piridoxina_mg": null,
     "niacina_mg": null,
     "vitamina_c_mg": 27.69,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0596",
@@ -19716,7 +19716,7 @@
     "piridoxina_mg": 0.03,
     "niacina_mg": null,
     "vitamina_c_mg": 2.18,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   },
   {
     "taco_id": "TACO_0597",
@@ -19749,6 +19749,6 @@
     "piridoxina_mg": 0.13,
     "niacina_mg": 1.0833333333333333,
     "vitamina_c_mg": null,
-    "vitamina_e_mcg": null
+    "vitamina_e_mg": null
   }
 ]

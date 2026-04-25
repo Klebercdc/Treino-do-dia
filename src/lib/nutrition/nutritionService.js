@@ -2,6 +2,7 @@
 
 var premiumCatalog = require('./premiumCatalog');
 var tacoService = require('./tacoService');
+var foodSearchService = require('./foodSearchService');
 var clinical = require('../../core/nutrition/diet_context_clinical');
 var strategyEngine = require('../../core/nutrition/diet_strategy_engine');
 var renderer = require('../../core/nutrition/diet_prescription_renderer');
@@ -37,6 +38,8 @@ module.exports = {
   mapTacoFoodToKroniaMacros: tacoService.mapTacoFoodToKroniaMacros,
   estimateNutritionFromTaco: tacoService.estimateNutritionFromTaco,
   findBestTacoMatch: tacoService.findBestTacoMatch,
+  findNutritionFood: foodSearchService.findNutritionFood,
+  searchNutritionFoods: foodSearchService.searchNutritionFoods,
 
   resolveDietMode: clinical.resolveDietMode,
   applyClinicalRules: clinical.applyClinicalRules,

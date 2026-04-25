@@ -174,6 +174,17 @@ function estimateNutritionFromTaco(tacoFood, grams) {
     var tacoField = pair[0];
     var estimatedField = pair[2];
     var base = tacoFood[tacoField];
+    if (base == null) {
+      if (tacoField === 'energia_kcal') base = tacoFood.kcal_por_100g;
+      else if (tacoField === 'proteina_g') base = tacoFood.proteina_por_100g;
+      else if (tacoField === 'carboidrato_g') base = tacoFood.carbo_por_100g;
+      else if (tacoField === 'lipidios_g') base = tacoFood.gordura_por_100g;
+      else if (tacoField === 'fibra_g') base = tacoFood.fibra_por_100g;
+      else if (tacoField === 'sodio_mg') base = tacoFood.sodio_mg_por_100g;
+      else if (tacoField === 'potassio_mg') base = tacoFood.potassio_mg_por_100g;
+      else if (tacoField === 'calcio_mg') base = tacoFood.calcio_mg_por_100g;
+      else if (tacoField === 'ferro_mg') base = tacoFood.ferro_mg_por_100g;
+    }
     estimated[estimatedField] = base == null ? null : roundValue(Number(base) * factor, 4);
   });
 
@@ -191,7 +202,9 @@ function estimateNutritionFromTaco(tacoFood, grams) {
   estimated.piridoxina_mg = tacoFood.piridoxina_mg == null ? null : roundValue(Number(tacoFood.piridoxina_mg) * factor, 4);
   estimated.niacina_mg = tacoFood.niacina_mg == null ? null : roundValue(Number(tacoFood.niacina_mg) * factor, 4);
   estimated.vitamina_c_mg = tacoFood.vitamina_c_mg == null ? null : roundValue(Number(tacoFood.vitamina_c_mg) * factor, 4);
-  estimated.vitamina_e_mcg = tacoFood.vitamina_e_mcg == null ? null : roundValue(Number(tacoFood.vitamina_e_mcg) * factor, 4);
+  var vitaminE = tacoFood.vitamina_e_mg == null ? tacoFood.vitamina_e_mcg : tacoFood.vitamina_e_mg;
+  estimated.vitamina_e_mg = vitaminE == null ? null : roundValue(Number(vitaminE) * factor, 4);
+  estimated.vitamina_e_mcg = estimated.vitamina_e_mg;
 
   return estimated;
 }
