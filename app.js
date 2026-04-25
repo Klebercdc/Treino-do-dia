@@ -8630,9 +8630,6 @@ function renderDietMealCard(meal, mealIndex) {
       + '</div>'
       + '</div>';
   }).join('');
-  var previewChips = (meal.items || []).map(function(item) {
-    return '<span class="diet-premium-preview-chip">' + escapeHTML(item.name || getDietItemName(item)) + '</span>';
-  }).join('');
   var itemCount = (meal.items || []).length;
   var slotIcon = _tpMealSlotIcon(meal.slot || meal.name);
   var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
@@ -8649,7 +8646,6 @@ function renderDietMealCard(meal, mealIndex) {
     + (meal.time ? '<span class="tp-meal-time">' + escapeHTML(meal.time) + '</span>' : '')
     + '<h3 class="tp-meal-name">' + escapeHTML(meal.name || 'Refeição') + '</h3>'
     + '<p class="tp-meal-meta">' + escapeHTML(kcalText) + ' · ' + itemCount + (itemCount === 1 ? ' item' : ' itens') + '</p>'
-    + (previewChips ? '<div class="diet-premium-preview-chips">' + previewChips + '</div>' : '')
     + '</div>'
     + '</div>'
     + '<div class="tp-meal-header-right">'
@@ -8853,26 +8849,140 @@ function closeDietSubstituirScreen() {
 
 function getDietSubstitutionOptions(item) {
   var name = normalizeDietFoodText(item && item.name || '');
-  var commonSubs = {
-    'frango': [{ name: 'Tilápia grelhada', quantity: '150g', kcal: 180, protein: 35, carbs: 0, fat: 4 },
-               { name: 'Atum em água', quantity: '120g', kcal: 132, protein: 29, carbs: 0, fat: 1 },
-               { name: 'Peito de peru', quantity: '120g', kcal: 108, protein: 24, carbs: 0, fat: 1 }],
-    'arroz': [{ name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 },
-              { name: 'Quinoa cozida', quantity: '120g', kcal: 144, protein: 5, carbs: 25, fat: 2 },
-              { name: 'Macarrão integral', quantity: '80g', kcal: 280, protein: 10, carbs: 54, fat: 2 }],
-    'ovo': [{ name: 'Clara de ovo', quantity: '4 unidades', kcal: 68, protein: 15, carbs: 1, fat: 0 },
-            { name: 'Tofu firme', quantity: '100g', kcal: 76, protein: 8, carbs: 2, fat: 4 }],
-    'aveia': [{ name: 'Farelo de aveia', quantity: '30g', kcal: 105, protein: 4, carbs: 17, fat: 2 },
-              { name: 'Granola sem açúcar', quantity: '30g', kcal: 130, protein: 3, carbs: 20, fat: 5 }],
-    'batata': [{ name: 'Inhame cozido', quantity: '150g', kcal: 177, protein: 2, carbs: 42, fat: 0 },
-               { name: 'Mandioca cozida', quantity: '100g', kcal: 130, protein: 1, carbs: 31, fat: 0 }]
-  };
-  for (var key in commonSubs) {
-    if (name.includes(key)) return commonSubs[key];
+  var protein = asKroniaNumber(item && item.protein, 0);
+  var carbs = asKroniaNumber(item && item.carbs, 0);
+  var fat = asKroniaNumber(item && item.fat, 0);
+
+  var SUBS = [
+    { pattern: /frango|peito|ave\b/, options: [
+      { name: 'Tilápia grelhada', quantity: '150g', kcal: 180, protein: 35, carbs: 0, fat: 4 },
+      { name: 'Atum em água', quantity: '120g', kcal: 132, protein: 29, carbs: 0, fat: 1 },
+      { name: 'Peito de peru', quantity: '120g', kcal: 108, protein: 24, carbs: 0, fat: 1 }
+    ]},
+    { pattern: /tilapia|tilap|peixe|pescada|merluza/, options: [
+      { name: 'Frango grelhado', quantity: '130g', kcal: 143, protein: 30, carbs: 0, fat: 3 },
+      { name: 'Atum em água', quantity: '120g', kcal: 132, protein: 29, carbs: 0, fat: 1 },
+      { name: 'Camarão grelhado', quantity: '150g', kcal: 150, protein: 30, carbs: 2, fat: 2 }
+    ]},
+    { pattern: /atum/, options: [
+      { name: 'Frango grelhado', quantity: '130g', kcal: 143, protein: 30, carbs: 0, fat: 3 },
+      { name: 'Tilápia grelhada', quantity: '150g', kcal: 180, protein: 35, carbs: 0, fat: 4 },
+      { name: 'Sardinha em água', quantity: '100g', kcal: 140, protein: 24, carbs: 0, fat: 5 }
+    ]},
+    { pattern: /carne|patinho|alcatra|boi|bife/, options: [
+      { name: 'Frango grelhado', quantity: '130g', kcal: 143, protein: 30, carbs: 0, fat: 3 },
+      { name: 'Tilápia grelhada', quantity: '150g', kcal: 180, protein: 35, carbs: 0, fat: 4 },
+      { name: 'Ovos mexidos', quantity: '3 unidades', kcal: 198, protein: 18, carbs: 2, fat: 14 }
+    ]},
+    { pattern: /ovo|clara|mexido|cozido/, options: [
+      { name: 'Frango grelhado', quantity: '100g', kcal: 110, protein: 23, carbs: 0, fat: 2 },
+      { name: 'Clara de ovo', quantity: '5 unidades', kcal: 85, protein: 18, carbs: 1, fat: 0 },
+      { name: 'Tofu firme grelhado', quantity: '120g', kcal: 91, protein: 10, carbs: 2, fat: 5 }
+    ]},
+    { pattern: /arroz/, options: [
+      { name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 },
+      { name: 'Quinoa cozida', quantity: '120g', kcal: 144, protein: 5, carbs: 25, fat: 2 },
+      { name: 'Macarrão integral', quantity: '80g', kcal: 280, protein: 10, carbs: 54, fat: 2 }
+    ]},
+    { pattern: /batata.?doce|batata doce/, options: [
+      { name: 'Arroz integral cozido', quantity: '120g', kcal: 157, protein: 3, carbs: 33, fat: 1 },
+      { name: 'Inhame cozido', quantity: '150g', kcal: 177, protein: 2, carbs: 42, fat: 0 },
+      { name: 'Mandioca cozida', quantity: '100g', kcal: 130, protein: 1, carbs: 31, fat: 0 }
+    ]},
+    { pattern: /batata\b/, options: [
+      { name: 'Inhame cozido', quantity: '150g', kcal: 177, protein: 2, carbs: 42, fat: 0 },
+      { name: 'Mandioca cozida', quantity: '100g', kcal: 130, protein: 1, carbs: 31, fat: 0 },
+      { name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 }
+    ]},
+    { pattern: /quinoa/, options: [
+      { name: 'Arroz integral cozido', quantity: '120g', kcal: 157, protein: 3, carbs: 33, fat: 1 },
+      { name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 },
+      { name: 'Lentilha cozida', quantity: '100g', kcal: 116, protein: 9, carbs: 20, fat: 0 }
+    ]},
+    { pattern: /aveia|granola|farelo/, options: [
+      { name: 'Farelo de aveia', quantity: '30g', kcal: 105, protein: 4, carbs: 17, fat: 2 },
+      { name: 'Granola sem açúcar', quantity: '30g', kcal: 130, protein: 3, carbs: 20, fat: 5 },
+      { name: 'Tapioca', quantity: '40g', kcal: 136, protein: 0, carbs: 34, fat: 0 }
+    ]},
+    { pattern: /feijao|lentilha|grao/, options: [
+      { name: 'Lentilha cozida', quantity: '100g', kcal: 116, protein: 9, carbs: 20, fat: 0 },
+      { name: 'Grão-de-bico cozido', quantity: '100g', kcal: 164, protein: 9, carbs: 27, fat: 3 },
+      { name: 'Ervilha cozida', quantity: '100g', kcal: 81, protein: 5, carbs: 14, fat: 0 }
+    ]},
+    { pattern: /azeite|oliva|oleo/, options: [
+      { name: 'Abacate', quantity: '50g', kcal: 80, protein: 1, carbs: 1, fat: 8 },
+      { name: 'Castanha-do-pará', quantity: '20g', kcal: 132, protein: 3, carbs: 1, fat: 13 },
+      { name: 'Amendoim torrado', quantity: '25g', kcal: 144, protein: 6, carbs: 4, fat: 12 }
+    ]},
+    { pattern: /abacate/, options: [
+      { name: 'Azeite de oliva', quantity: '10g', kcal: 88, protein: 0, carbs: 0, fat: 10 },
+      { name: 'Castanha-do-pará', quantity: '20g', kcal: 132, protein: 3, carbs: 1, fat: 13 },
+      { name: 'Amendoim torrado', quantity: '25g', kcal: 144, protein: 6, carbs: 4, fat: 12 }
+    ]},
+    { pattern: /salada|alface|rucula|espinafre|brocoli|couve|tomate|pepino|cenoura|vegetal|legume/, options: [
+      { name: 'Brócolis cozido', quantity: '100g', kcal: 34, protein: 3, carbs: 5, fat: 0 },
+      { name: 'Abobrinha grelhada', quantity: '150g', kcal: 27, protein: 2, carbs: 5, fat: 0 },
+      { name: 'Aspargos grelhados', quantity: '100g', kcal: 20, protein: 2, carbs: 4, fat: 0 }
+    ]},
+    { pattern: /iogurte|queijo|cottage|leite/, options: [
+      { name: 'Iogurte grego natural', quantity: '150g', kcal: 88, protein: 11, carbs: 5, fat: 3 },
+      { name: 'Cottage desnatado', quantity: '100g', kcal: 72, protein: 12, carbs: 2, fat: 1 },
+      { name: 'Ricota', quantity: '80g', kcal: 100, protein: 9, carbs: 2, fat: 6 }
+    ]},
+    { pattern: /whey|proteina|suplemento/, options: [
+      { name: 'Frango grelhado', quantity: '130g', kcal: 143, protein: 30, carbs: 0, fat: 3 },
+      { name: 'Ovo cozido', quantity: '3 unidades', kcal: 198, protein: 18, carbs: 2, fat: 14 },
+      { name: 'Atum em água', quantity: '120g', kcal: 132, protein: 29, carbs: 0, fat: 1 }
+    ]},
+    { pattern: /banana|maca|laranja|fruta|mamao|manga/, options: [
+      { name: 'Banana-prata', quantity: '1 unidade (80g)', kcal: 73, protein: 1, carbs: 19, fat: 0 },
+      { name: 'Maçã', quantity: '1 unidade (130g)', kcal: 67, protein: 0, carbs: 17, fat: 0 },
+      { name: 'Mamão formosa', quantity: '150g', kcal: 54, protein: 1, carbs: 13, fat: 0 }
+    ]}
+  ];
+
+  for (var i = 0; i < SUBS.length; i++) {
+    if (SUBS[i].pattern.test(name)) return SUBS[i].options;
+  }
+
+  // Profile-based fallback using real food names
+  var isProteinRich = protein >= 15 || (protein > carbs && protein > fat);
+  var isCarbRich = carbs >= 20 || (carbs > protein * 1.5);
+  var isFatRich = fat >= 8 || (fat > protein && fat > carbs);
+  var isVegetable = asKroniaNumber(item && item.kcal, 999) < 60 && carbs < 15 && protein < 5;
+
+  if (isVegetable) {
+    return [
+      { name: 'Brócolis cozido', quantity: '100g', kcal: 34, protein: 3, carbs: 5, fat: 0 },
+      { name: 'Abobrinha grelhada', quantity: '150g', kcal: 27, protein: 2, carbs: 5, fat: 0 },
+      { name: 'Aspargos grelhados', quantity: '100g', kcal: 20, protein: 2, carbs: 4, fat: 0 }
+    ];
+  }
+  if (isFatRich) {
+    return [
+      { name: 'Azeite de oliva', quantity: '10g', kcal: 88, protein: 0, carbs: 0, fat: 10 },
+      { name: 'Abacate', quantity: '50g', kcal: 80, protein: 1, carbs: 1, fat: 8 },
+      { name: 'Castanha-do-pará', quantity: '20g', kcal: 132, protein: 3, carbs: 1, fat: 13 }
+    ];
+  }
+  if (isCarbRich) {
+    return [
+      { name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 },
+      { name: 'Arroz integral cozido', quantity: '120g', kcal: 157, protein: 3, carbs: 33, fat: 1 },
+      { name: 'Mandioca cozida', quantity: '100g', kcal: 130, protein: 1, carbs: 31, fat: 0 }
+    ];
+  }
+  if (isProteinRich) {
+    return [
+      { name: 'Frango grelhado', quantity: '130g', kcal: 143, protein: 30, carbs: 0, fat: 3 },
+      { name: 'Tilápia grelhada', quantity: '150g', kcal: 180, protein: 35, carbs: 0, fat: 4 },
+      { name: 'Atum em água', quantity: '120g', kcal: 132, protein: 29, carbs: 0, fat: 1 }
+    ];
   }
   return [
-    { name: 'Alternativa proteica similar', quantity: item.quantity || '100g', kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat },
-    { name: 'Opção baixo carboidrato', quantity: '100g', kcal: Math.round(asKroniaNumber(item.kcal, 150) * 0.8), protein: asKroniaNumber(item.protein, 20), carbs: Math.max(0, asKroniaNumber(item.carbs, 10) - 10), fat: asKroniaNumber(item.fat, 5) }
+    { name: 'Frango grelhado', quantity: '130g', kcal: 143, protein: 30, carbs: 0, fat: 3 },
+    { name: 'Batata-doce cozida', quantity: '150g', kcal: 129, protein: 2, carbs: 30, fat: 0 },
+    { name: 'Azeite de oliva', quantity: '10g', kcal: 88, protein: 0, carbs: 0, fat: 10 }
   ];
 }
 
