@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "outDir": "./tests/dist",
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "types": ["node", "@playwright/test"]
   },
