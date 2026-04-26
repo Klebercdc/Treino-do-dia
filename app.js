@@ -6427,6 +6427,7 @@ function openDietDataScreen() {
   document.body.classList.remove('overlay-open');
   var greetingEl = document.getElementById('dietHeaderGreeting');
   if (greetingEl) greetingEl.textContent = getDietGreeting(readLocalUserAnamnesis().nome);
+  renderActiveDietPlan();
   refreshDietDataScreen();
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
 }
@@ -9034,14 +9035,8 @@ function renderActiveDietPlan() {
 }
 
 async function refreshDietDataScreen() {
-  var summary = document.getElementById('dietDataSummary');
-  var progress = document.getElementById('dietDataProgress');
-  var meals = document.getElementById('dietDataMeals');
-  if (summary) summary.innerHTML = renderKroniaMetricCard('Dieta', '...', 'Carregando plano');
-  if (progress) progress.innerHTML = '<div class="kronia-empty">Sincronizando plano salvo...</div>';
-  if (meals) meals.innerHTML = '<div class="kronia-card-title">Plano</div><div class="kronia-empty">Carregando...</div>';
   var remotePlan = await loadActiveDietPlanFromSupabase();
-  setActiveDietPlan(remotePlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
+  if (remotePlan) setActiveDietPlan(remotePlan);
 }
 
 function getDietSheetState() {
