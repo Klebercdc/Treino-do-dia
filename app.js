@@ -11098,8 +11098,63 @@ function defaultNutritionFlowState() {
   };
 }
 
+function restoreNutritionFlowFromSnapshot() {
+  try {
+    var raw = localStorage.getItem(KRONIA_NUTRITION_SNAPSHOT_KEY);
+    if (!raw) return null;
+    var snap = JSON.parse(raw);
+    if (!snap || snap.v !== 1) return null;
+    var p = snap.profile || {};
+    var food = snap.foodSelections || {};
+    var ctx = snap.canonicalContext || {};
+    var adh = p.aderencia || {};
+    var nivelMap = {
+      "sedentário": "sedentario", "sedentario": "sedentario",
+      "levemente ativo": "leve", "moderadamente ativo": "moderado",
+      "muito ativo": "intenso", "atleta": "intenso"
+    };
+    var def = defaultNutritionFlowState();
+    return Object.assign({}, def, {
+      objetivo:          mapObjectiveToPremiumFlow(p.objetivo) || def.objetivo,
+      sexo:              p.sexo || def.sexo,
+      peso:              p.peso       ? String(p.peso)       : def.peso,
+      altura:            p.altura     ? String(p.altura)     : def.altura,
+      idade:             p.idade      ? String(p.idade)      : def.idade,
+      gorduraCorporal:   p.gorduraCorporal != null ? String(p.gorduraCorporal) : def.gorduraCorporal,
+      cintura:           p.cintura    ? String(p.cintura)    : def.cintura,
+      pescoco:           p.pescoco    ? String(p.pescoco)    : def.pescoco,
+      quadril:           p.quadril    ? String(p.quadril)    : def.quadril,
+      nivelAtividade:    nivelMap[String(p.nivelAtividade || "").toLowerCase()] || def.nivelAtividade,
+      treinoForca:       p.frequenciaTreino === "não treino" ? "nao" : "sim",
+      frequenciaTreino:  p.frequenciaTreino && p.frequenciaTreino !== "não treino" ? p.frequenciaTreino : def.frequenciaTreino,
+      horarioTreino:     adh.horarioTreino || def.horarioTreino,
+      refeicoesPorDia:   p.refeicoesPorDia  || def.refeicoesPorDia,
+      padraoAlimentar:   p.padraoAlimentar  || def.padraoAlimentar,
+      medicamentos:      p.medicamentos     || def.medicamentos,
+      alimentosEvitar:   p.alimentosEvitar  || def.alimentosEvitar,
+      neat:              adh.neat            || def.neat,
+      fadiga:            adh.fadiga != null  ? adh.fadiga : def.fadiga,
+      sugestao:          adh.modoAjuste      || def.sugestao,
+      tendenciaForca:    adh.tendenciaForca  || def.tendenciaForca,
+      prioridadeMetabolica: adh.prioridadeMetabolica || def.prioridadeMetabolica,
+      patologia:         Array.isArray(ctx.patologias) && ctx.patologias.length ? ctx.patologias : def.patologia,
+      proteinas:         food.proteinas    || def.proteinas,
+      carboidratos:      food.carboidratos || def.carboidratos,
+      gorduras:          food.gorduras     || def.gorduras,
+      frutas:            food.frutas       || def.frutas,
+      vegetais:          food.vegetais     || def.vegetais,
+      laticinios:        food.laticinios   || def.laticinios,
+      temperos:          food.temperos     || def.temperos,
+      generatedPlan:     snap.activePlan   || def.generatedPlan,
+      checkin:           snap.checkin      || def.checkin,
+    });
+  } catch (_) {
+    return null;
+  }
+}
+
 function getNutritionFlowState() {
-  if (!window._nutritionFlowState) window._nutritionFlowState = defaultNutritionFlowState();
+  if (!window._nutritionFlowState) window._nutritionFlowState = restoreNutritionFlowFromSnapshot() || defaultNutritionFlowState();
   return window._nutritionFlowState;
 }
 
