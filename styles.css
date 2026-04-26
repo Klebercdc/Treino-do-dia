@@ -7086,19 +7086,29 @@ body.dark-mode .settings-row-value {
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.04);
-  color: #e2e8f0;
+  color: rgba(226,232,240,.75);
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  transition: background .14s, border-color .14s, transform .1s;
+  transition: background .16s, border-color .16s, color .16s, transform .12s cubic-bezier(.34,1.56,.64,1), box-shadow .16s;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
-#dietDataScreen .diet-chip:active { transform: scale(.95); }
-#dietDataScreen .diet-chip.selected,
-#dietDataScreen .diet-chip:focus {
+#dietDataScreen .diet-chip:active {
+  transform: scale(.93);
+}
+#dietDataScreen .diet-chip:hover:not(.selected) {
+  border-color: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08);
+  color: #e2e8f0;
+}
+#dietDataScreen .diet-chip.selected {
   background: rgba(34,197,94,.15);
   border-color: #22C55E;
   color: #fff;
-  box-shadow: 0 0 10px rgba(34,197,94,.2);
+  box-shadow: 0 0 12px rgba(34,197,94,.25), inset 0 0 0 1px rgba(34,197,94,.15);
+  transform: scale(1.02);
 }
 #dietDataScreen .diet-ver-mais-btn {
   display: inline-flex;

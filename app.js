@@ -6757,6 +6757,17 @@ function saveNutritionProgressiveAnswer(field, value) {
   renderActiveDietPlan();
 }
 
+function toggleDietChip(field, rawValue) {
+  var memory = readNutritionMemory();
+  var current = memory[field];
+  var value = rawValue;
+  if (rawValue === 'true') value = true;
+  else if (rawValue === 'false') value = false;
+  else if (!isNaN(rawValue) && rawValue !== '') value = Number(rawValue);
+  var isSelected = current === value || String(current) === String(value);
+  saveNutritionProgressiveAnswer(field, isSelected ? null : value);
+}
+
 function openNutritionProgressiveAnamnesis() {
   var mealCount = prompt('Quantas refeições você prefere por dia?');
   var style = prompt('Prefere dieta simples, econômica, variada, marmita ou flexível?');
@@ -8425,12 +8436,13 @@ function renderDietAdaptiveStatusCard(vm) {
     + '</section>';
 }
 
-function renderDietChipGroup(title, chips) {
+function renderDietChipGroup(title, chips, memory) {
   return '<div class="diet-chip-group">'
     + '<span class="diet-chip-group-title">' + escapeHTML(title) + '</span>'
     + '<div class="diet-chip-group-chips">'
     + chips.map(function(chip) {
-        return '<button type="button" class="diet-chip" onclick="' + chip.action + '">' + escapeHTML(chip.label) + '</button>';
+        var selected = memory && chip.isSelected ? chip.isSelected(memory) : false;
+        return '<button type="button" class="diet-chip' + (selected ? ' selected' : '') + '" onclick="' + chip.action + '">' + escapeHTML(chip.label) + '</button>';
       }).join('')
     + '</div>'
     + '</div>';
@@ -8440,6 +8452,12 @@ function renderDietProgressiveAnamnesisCard(vm) {
   var memory = vm.memory || readNutritionMemory();
   var missing = (memory.missing_fields || []).length;
   var score = memory.personalization_score || 0;
+  var mealCount = Number(memory.preferred_meal_count) || null;
+  var hasScale = memory.has_food_scale;
+  var style = memory.preferred_diet_style || null;
+  var workout = memory.workout_time || null;
+  var hunger = memory.hunger_period || null;
+
   return '<section class="diet-adaptive-card diet-complete-card">'
     + '<div class="diet-adaptive-card-head">'
     + '<span class="tp-summary-kicker">COMPLETE SUA DIETA</span>'
@@ -8447,24 +8465,24 @@ function renderDietProgressiveAnamnesisCard(vm) {
     + '</div>'
     + '<p>Personalização atual: ' + escapeHTML(String(score)) + '%. Responda perguntas rápidas sem formulário grande.</p>'
     + renderDietChipGroup('QUANTIDADE DE REFEIÇÕES', [
-        { label: '3 refeições', action: "saveNutritionProgressiveAnswer('preferred_meal_count',3)" },
-        { label: '4 refeições', action: "saveNutritionProgressiveAnswer('preferred_meal_count',4)" },
-        { label: '5 refeições', action: "saveNutritionProgressiveAnswer('preferred_meal_count',5)" }
-      ])
+        { label: '3 refeições', action: "toggleDietChip('preferred_meal_count','3')", isSelected: function(m) { return Number(m.preferred_meal_count) === 3; } },
+        { label: '4 refeições', action: "toggleDietChip('preferred_meal_count','4')", isSelected: function(m) { return Number(m.preferred_meal_count) === 4; } },
+        { label: '5 refeições', action: "toggleDietChip('preferred_meal_count','5')", isSelected: function(m) { return Number(m.preferred_meal_count) === 5; } }
+      ], memory)
     + renderDietChipGroup('EQUIPAMENTOS', [
-        { label: 'Tenho balança', action: "saveNutritionProgressiveAnswer('has_food_scale',true)" },
-        { label: 'Sem balança', action: "saveNutritionProgressiveAnswer('has_food_scale',false)" }
-      ])
+        { label: 'Tenho balança', action: "toggleDietChip('has_food_scale','true')", isSelected: function(m) { return m.has_food_scale === true; } },
+        { label: 'Sem balança',   action: "toggleDietChip('has_food_scale','false')", isSelected: function(m) { return m.has_food_scale === false; } }
+      ], memory)
     + renderDietChipGroup('ESTILO DA DIETA', [
-        { label: 'Simples', action: "saveNutritionProgressiveAnswer('preferred_diet_style','simples')" },
-        { label: 'Econômica', action: "saveNutritionProgressiveAnswer('preferred_diet_style','econômica')" },
-        { label: 'Variada', action: "saveNutritionProgressiveAnswer('preferred_diet_style','variada')" },
-        { label: 'Marmita', action: "saveNutritionProgressiveAnswer('preferred_diet_style','marmita')" },
-        { label: 'Flexível', action: "saveNutritionProgressiveAnswer('preferred_diet_style','flexível')" },
-        { label: 'Treino manhã', action: "saveNutritionProgressiveAnswer('workout_time','manhã')" },
-        { label: 'Treino noite', action: "saveNutritionProgressiveAnswer('workout_time','noite')" },
-        { label: 'Fome à noite', action: "saveNutritionProgressiveAnswer('hunger_period','noite')" }
-      ])
+        { label: 'Simples',      action: "toggleDietChip('preferred_diet_style','simples')",   isSelected: function(m) { return m.preferred_diet_style === 'simples'; } },
+        { label: 'Econômica',   action: "toggleDietChip('preferred_diet_style','econômica')", isSelected: function(m) { return m.preferred_diet_style === 'econômica'; } },
+        { label: 'Variada',     action: "toggleDietChip('preferred_diet_style','variada')",   isSelected: function(m) { return m.preferred_diet_style === 'variada'; } },
+        { label: 'Marmita',     action: "toggleDietChip('preferred_diet_style','marmita')",   isSelected: function(m) { return m.preferred_diet_style === 'marmita'; } },
+        { label: 'Flexível',    action: "toggleDietChip('preferred_diet_style','flexível')",  isSelected: function(m) { return m.preferred_diet_style === 'flexível'; } },
+        { label: 'Treino manhã', action: "toggleDietChip('workout_time','manhã')",            isSelected: function(m) { return m.workout_time === 'manhã'; } },
+        { label: 'Treino noite', action: "toggleDietChip('workout_time','noite')",            isSelected: function(m) { return m.workout_time === 'noite'; } },
+        { label: 'Fome à noite', action: "toggleDietChip('hunger_period','noite')",           isSelected: function(m) { return m.hunger_period === 'noite'; } }
+      ], memory)
     + '<button type="button" class="diet-ver-mais-btn" onclick="this.style.display=\'none\'">'
     + '<i data-lucide="plus-circle" width="14" height="14"></i> Ver mais opções'
     + '</button>'
