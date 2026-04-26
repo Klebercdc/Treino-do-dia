@@ -8245,8 +8245,8 @@ function getNextDietMeal(renderableMeals) {
   return next || meals[0] || null;
 }
 
-function renderDietBackHeader(title) {
-  return '<div class="diet-panel-header"><button type="button" onclick="openDietCorePanel(\'home\')"><i data-lucide="arrow-left" width="18" height="18"></i>Dieta</button><h2>' + escapeHTML(title) + '</h2></div>';
+function renderDietBackHeader(title, actionsHtml) {
+  return '<div class="diet-panel-header"><button type="button" onclick="openDietCorePanel(\'home\')"><i data-lucide="arrow-left" width="18" height="18"></i>Dieta</button><h2 class="diet-panel-header-title">' + escapeHTML(title) + '</h2>' + (actionsHtml || '') + '</div>';
 }
 
 function renderDietNowCard(vm) {
@@ -8362,7 +8362,8 @@ function renderDietAdaptationCard(vm) {
 }
 
 function renderDietPlanPanel(vm) {
-  return '<div class="diet-core-view">' + renderDietBackHeader('Minha Dieta')
+  var pdfBtn = '<button type="button" class="diet-panel-pdf-btn" onclick="exportActiveDietPlanPDF()" title="Exportar PDF"><i data-lucide="download" width="15" height="15" stroke-width="2"></i>PDF</button>';
+  return '<div class="diet-core-view">' + renderDietBackHeader('Minha Dieta', pdfBtn)
     + vm.meals.map(function(meal, index) { return renderDietMealCard(vm.plan.meals[index] || meal, index); }).join('')
     + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="18" height="18"></i>Rebalancear automaticamente</button></div>';
 }
