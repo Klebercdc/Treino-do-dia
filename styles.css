@@ -5595,6 +5595,23 @@ body.dark-mode .settings-row-value {
   justify-content: space-between;
 }
 
+.tp-rebalancear-btn--compact {
+  min-height: 56px !important;
+  height: 56px !important;
+  border-radius: 16px !important;
+  padding: 0 18px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  background: var(--diet-green) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.tp-rebalancear-btn--compact * {
+  font-size: 16px !important;
+}
+
 /* Meals section */
 #dietDataScreen .tp-meals-section { margin-bottom: 16px; }
 #dietDataScreen .tp-section-header {

@@ -8219,7 +8219,7 @@ function renderPremiumCalorieCard(plan, renderableMeals, targets) {
     + renderPremiumMacroBar('Carboidratos', carbsCurrent, targets.carbs, 'tp-premium-macro--carbs')
     + renderPremiumMacroBar('Gorduras', fatCurrent, targets.fat, 'tp-premium-macro--fat')
     + '</div>'
-    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()">'
+    + '<button type="button" class="tp-rebalancear-btn tp-rebalancear-btn--compact" onclick="recalculateDietWithKronos()">'
     + '<i data-lucide="refresh-cw" width="18" height="18" stroke-width="2"></i>Rebalancear automaticamente'
     + '</button>'
     + '</div>';
