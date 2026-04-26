@@ -7810,10 +7810,10 @@ function normalizeDietEditorItem(item, order) {
   var grams = dietRound((safeItem.gramas || safeItem.grams || safeItem.porcao_gramas) || quantityGrams || safeItem.default_portion_g || (resolvedFood && resolvedFood.default_portion_g) || 0, 1);
   var rawMacros = {
     kcal: dietRound(safeItem && (safeItem.calorias || safeItem.kcal || safeItem.calories), 1),
-    protein: dietRound(safeItem && (safeItem.proteinas || safeItem.protein_g || safeItem.protein || safeItem.prot || safeItem.estimated_protein_g), 1),
-    carbs: dietRound(safeItem && (safeItem.carboidratos || safeItem.carbs_g || safeItem.carbs || safeItem.carb || safeItem.estimated_carbs_g), 1),
-    fat: dietRound(safeItem && (safeItem.gorduras || safeItem.fat_g || safeItem.fat || safeItem.gord || safeItem.estimated_fat_g), 1),
-    fiber: dietRound(safeItem && (safeItem.fibras || safeItem.fiber_g || safeItem.fiber), 1),
+    protein: dietRound(safeItem && (safeItem.proteinas || safeItem.proteína || safeItem.proteina || safeItem.protein_g || safeItem.protein || safeItem.prot || safeItem.estimated_protein_g), 1),
+    carbs: dietRound(safeItem && (safeItem.carboidratos || safeItem.carboidrato || safeItem.carbo || safeItem.carbs_g || safeItem.carbs || safeItem.carb || safeItem.estimated_carbs_g), 1),
+    fat: dietRound(safeItem && (safeItem.gorduras || safeItem.gordura || safeItem.fat_g || safeItem.fat || safeItem.gord || safeItem.estimated_fat_g), 1),
+    fiber: dietRound(safeItem && (safeItem.fibras || safeItem.fibra || safeItem.fiber_g || safeItem.fiber), 1),
     sodium: dietRound(safeItem && (safeItem.sodium_mg || safeItem.sodio_mg || safeItem.sodium), 1)
   };
   var fallbackPer100 = buildDietFallbackPer100(safeItem, grams);
@@ -8245,8 +8245,8 @@ function getNextDietMeal(renderableMeals) {
   return next || meals[0] || null;
 }
 
-function renderDietBackHeader(title, actionsHtml) {
-  return '<div class="diet-panel-header"><button type="button" onclick="openDietCorePanel(\'home\')"><i data-lucide="arrow-left" width="18" height="18"></i>Dieta</button><h2 class="diet-panel-header-title">' + escapeHTML(title) + '</h2>' + (actionsHtml || '') + '</div>';
+function renderDietBackHeader(title) {
+  return '';
 }
 
 function renderDietNowCard(vm) {
@@ -8362,10 +8362,9 @@ function renderDietAdaptationCard(vm) {
 }
 
 function renderDietPlanPanel(vm) {
-  var pdfBtn = '<button type="button" class="diet-panel-pdf-btn" onclick="exportActiveDietPlanPDF()" title="Exportar PDF"><i data-lucide="download" width="15" height="15" stroke-width="2"></i>PDF</button>';
-  return '<div class="diet-core-view">' + renderDietBackHeader('Minha Dieta', pdfBtn)
+  return '<div class="diet-core-view diet-core-view--plan">' + renderDietBackHeader('Minha Dieta')
     + vm.meals.map(function(meal, index) { return renderDietMealCard(vm.plan.meals[index] || meal, index); }).join('')
-    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="18" height="18"></i>Rebalancear automaticamente</button></div>';
+    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()">Rebalancear automaticamente</button></div>';
 }
 
 function renderDietSubstitutionPanel(vm) {
@@ -8579,8 +8578,8 @@ function _tpMealStatusBadge(mealTime) {
   var m = String(mealTime).match(/^(\d{1,2}):(\d{2})/);
   if (!m) return '<span class="tp-badge tp-badge--pending">Pendente</span>';
   var mt = parseInt(m[1]) * 60 + parseInt(m[2]);
-  if (cur > mt + 60) return '<span class="tp-badge tp-badge--done"><i data-lucide="check-circle" width="12" height="12" stroke-width="2.5"></i>Concluído</span>';
-  if (cur >= mt - 90 && cur <= mt + 60) return '<span class="tp-badge tp-badge--next"><i data-lucide="clock" width="12" height="12" stroke-width="2.5"></i>Próxima</span>';
+  if (cur > mt + 60) return '<span class="tp-badge tp-badge--done">Concluído</span>';
+  if (cur >= mt - 90 && cur <= mt + 60) return '<span class="tp-badge tp-badge--next">Próxima</span>';
   return '<span class="tp-badge tp-badge--pending">Pendente</span>';
 }
 
@@ -8610,13 +8609,75 @@ function expandAllTpMeals() {
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
 }
 
+function getDietMacroValue(source, keys) {
+  var safeSource = source && typeof source === 'object' ? source : {};
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (safeSource[key] == null || safeSource[key] === '') continue;
+    var value = asKroniaNumber(safeSource[key], NaN);
+    if (Number.isFinite(value)) return value;
+  }
+  return 0;
+}
+
+function getDietKcalValue(source) {
+  return getDietMacroValue(source, ['kcal', 'calories', 'calorias']);
+}
+
+function getDietProteinValue(source) {
+  return getDietMacroValue(source, ['protein', 'proteinas', 'proteína', 'prot', 'protein_g']);
+}
+
+function getDietCarbsValue(source) {
+  return getDietMacroValue(source, ['carbs', 'carboidratos', 'carbo', 'carb', 'carbs_g']);
+}
+
+function getDietFatValue(source) {
+  return getDietMacroValue(source, ['fat', 'gorduras', 'gordura', 'gord', 'fat_g']);
+}
+
+function getDietFiberValue(source) {
+  return getDietMacroValue(source, ['fiber', 'fibra', 'fibras', 'fiber_g']);
+}
+
+function formatDietPdfMacro(value, suffix) {
+  return asKroniaNumber(value, 0) > 0 ? formatKroniaNumber(value, suffix || 'g') : '0 ' + (suffix || 'g');
+}
+
+function renderDietMacroSummaryCard(plan, targets) {
+  var safeTargets = targets || {};
+  var totals = plan && plan.totals || {};
+  var kcal = asKroniaNumber(totals.kcal, 0) || asKroniaNumber(safeTargets.kcal, 0);
+  var protein = asKroniaNumber(totals.protein, 0) || asKroniaNumber(safeTargets.protein, 0);
+  var carbs = asKroniaNumber(totals.carbs, 0) || asKroniaNumber(safeTargets.carbs, 0);
+  var fat = asKroniaNumber(totals.fat, 0) || asKroniaNumber(safeTargets.fat, 0);
+  var fiber = asKroniaNumber(totals.fiber, 0) || asKroniaNumber(safeTargets.fiber, 0);
+  var macroCalories = Math.max((protein * 4) + (carbs * 4) + (fat * 9), 1);
+  function percent(value, factor) {
+    return Math.round((Math.max(asKroniaNumber(value, 0), 0) * factor / macroCalories) * 100);
+  }
+  return '<section class="diet-macro-summary-card" aria-label="Resumo de macros da dieta">'
+    + '<div class="diet-macro-kcal"><strong>' + escapeHTML(formatKroniaNumber(kcal, 'kcal')) + '</strong><span>Total do plano</span></div>'
+    + '<div class="diet-macro-summary-list">'
+    + '<div><span>Proteína</span><strong>' + escapeHTML(formatKroniaNumber(protein, 'g')) + '</strong><em>' + percent(protein, 4) + '%</em></div>'
+    + '<div><span>Carboidrato</span><strong>' + escapeHTML(formatKroniaNumber(carbs, 'g')) + '</strong><em>' + percent(carbs, 4) + '%</em></div>'
+    + '<div><span>Gordura</span><strong>' + escapeHTML(formatKroniaNumber(fat, 'g')) + '</strong><em>' + percent(fat, 9) + '%</em></div>'
+    + '<div><span>Fibra</span><strong>' + escapeHTML(formatKroniaNumber(fiber, 'g')) + '</strong><em></em></div>'
+    + '</div>'
+    + '</section>';
+}
+
 function buildDietItemSubtitle(item) {
   var safeItem = item && typeof item === 'object' ? item : {};
   var metrics = [];
-  if (asKroniaNumber(safeItem.kcal, 0) > 0) metrics.push(formatKroniaNumber(safeItem.kcal, 'kcal'));
-  if (asKroniaNumber(safeItem.protein, 0) > 0) metrics.push(formatKroniaNumber(safeItem.protein, 'g') + ' P');
-  if (asKroniaNumber(safeItem.carbs, 0) > 0) metrics.push(formatKroniaNumber(safeItem.carbs, 'g') + ' C');
-  if (asKroniaNumber(safeItem.fat, 0) > 0) metrics.push(formatKroniaNumber(safeItem.fat, 'g') + ' G');
+  var kcal = getDietKcalValue(safeItem);
+  var protein = getDietProteinValue(safeItem);
+  var carbs = getDietCarbsValue(safeItem);
+  var fat = getDietFatValue(safeItem);
+  if (kcal > 0) metrics.push(formatKroniaNumber(kcal, 'kcal'));
+  if (protein > 0) metrics.push(formatKroniaNumber(protein, 'g') + ' P');
+  if (carbs > 0) metrics.push(formatKroniaNumber(carbs, 'g') + ' C');
+  if (fat > 0) metrics.push(formatKroniaNumber(fat, 'g') + ' G');
   return metrics.join(' • ') || 'Troca rápida e ajuste fino';
 }
 
@@ -8632,24 +8693,19 @@ function renderDietMealCard(meal, mealIndex) {
     var hasMacros = itemP > 0 || itemC > 0 || itemG > 0;
     return '<div class="tp-food-row">'
       + '<button type="button" class="tp-food-main" onclick="abrirBottomSheet(' + bsArgs + ')">'
-      + '<div class="diet-premium-food-emoji">' + getDietFoodEmoji(item) + '</div>'
       + '<div class="tp-food-info">'
       + '<p class="diet-premium-food-name">' + escapeHTML(item.name || getDietItemName(item)) + '</p>'
-      + '<p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + (asKroniaNumber(item.kcal, 0) > 0 ? ' · ' + formatKroniaNumber(item.kcal, 'kcal') : '') + '</p>'
+      + '<p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + (subtitle ? ' · ' + escapeHTML(subtitle) : '') + '</p>'
       + (hasMacros ? '<p class="tp-food-macros">P ' + itemP + 'g&nbsp;·&nbsp;C ' + itemC + 'g&nbsp;·&nbsp;G ' + itemG + 'g</p>' : '')
       + '</div>'
       + '</button>'
       + '<div class="tp-food-actions">'
-      + '<button type="button" class="tp-food-edit-btn" onclick="abrirBottomSheet(' + bsArgs + ')" title="Editar">'
-      + '<i data-lucide="pencil" width="13" height="13" stroke-width="2.5"></i>'
-      + '</button>'
+      + '<button type="button" class="tp-food-edit-btn" onclick="abrirBottomSheet(' + bsArgs + ')" title="Editar">Editar</button>'
       + '<button type="button" class="tp-food-remove-btn" onclick="removeDietItemDirect(' + mealIndex + ',' + itemIndex + ')" title="Remover">−</button>'
       + '</div>'
       + '</div>';
   }).join('');
   var itemCount = (meal.items || []).length;
-  var slotIcon = _tpMealSlotIcon(meal.slot || meal.name);
-  var iconColorClass = _tpMealSlotColorClass(meal.slot || meal.name);
   var statusBadge = _tpMealStatusBadge(meal.time);
   var kcalText = asKroniaNumber(subtotal.kcal, 0) > 0 ? formatKroniaNumber(subtotal.kcal, 'kcal') : '— kcal';
   var mealP = dietRound(asKroniaNumber(subtotal.protein, 0), 1);
@@ -8664,7 +8720,6 @@ function renderDietMealCard(meal, mealIndex) {
   return '<div class="tp-meal-row">'
     + '<div class="tp-meal-header-card" onclick="toggleTpMealBody(' + mealIndex + ')">'
     + '<div class="tp-meal-header-left">'
-    + '<div class="tp-meal-icon-wrap ' + iconColorClass + '"><i data-lucide="' + slotIcon + '" width="24" height="24" stroke-width="1.75"></i></div>'
     + '<div class="tp-meal-info">'
     + (meal.time ? '<span class="tp-meal-time">' + escapeHTML(meal.time) + '</span>' : '')
     + '<h3 class="tp-meal-name">' + escapeHTML(meal.name || 'Refeição') + '</h3>'
@@ -8674,15 +8729,14 @@ function renderDietMealCard(meal, mealIndex) {
     + '</div>'
     + '<div class="tp-meal-header-right">'
     + statusBadge
-    + '<i data-lucide="chevron-right" class="tp-meal-chevron" width="16" height="16" stroke-width="2"></i>'
     + '</div>'
     + '</div>'
     + '<div id="tpMealBody_' + mealIndex + '" class="tp-meal-body">'
     + (loadingState || '')
-    + '<div class="tp-meal-foods">' + (items || '<div class="diet-premium-empty"><div class="diet-premium-empty-icon"><i data-lucide="utensils" stroke-width="1.5"></i></div><p>Nenhum item adicionado.</p></div>') + '</div>'
+    + '<div class="tp-meal-foods">' + (items || '<div class="diet-premium-empty"><p>Nenhum item adicionado.</p></div>') + '</div>'
     + '<div class="tp-meal-footer-row">'
-    + '<button type="button" class="diet-premium-add" style="flex:1" onclick="openDietAddItemSheet(' + mealIndex + ')"><i data-lucide="plus" stroke-width="2" width="16" height="16"></i>Adicionar alimento</button>'
-    + '<button type="button" class="tp-meal-ai-btn" onclick="openKronosFromDieta(\'Ajustar esta refeição mantendo os macros do plano salvo.\')"><i data-lucide="sparkles" stroke-width="1.5" width="16" height="16"></i></button>'
+    + '<button type="button" class="diet-premium-add" style="flex:1" onclick="openDietAddItemSheet(' + mealIndex + ')">Adicionar alimento</button>'
+    + '<button type="button" class="tp-meal-ai-btn" onclick="openKronosFromDieta(\'Ajustar esta refeição mantendo os macros do plano salvo.\')">KRONOS</button>'
     + '</div>'
     + '</div>'
     + '</div>';
@@ -8752,7 +8806,10 @@ function renderActiveDietPlan() {
     viewModel = generateDietViewModel(dietContext);
   }
   if (summary) {
-    summary.innerHTML = '';
+    var activeViewForSummary = typeof _dietCoreView !== 'undefined' ? _dietCoreView : 'home';
+    summary.innerHTML = activeViewForSummary === 'minha-dieta' || activeViewForSummary === 'plano'
+      ? renderDietMacroSummaryCard(plan, Object.assign({}, premiumTargets, { fiber: plan.totals && plan.totals.fiber || 0 }))
+      : '';
   }
   if (meals) {
     meals.innerHTML = hasCoreViewModel
@@ -8768,7 +8825,7 @@ function renderActiveDietPlan() {
     var guidanceRows = getDietVisualGuidance(plan).slice(0, 3).map(function(note) {
       return '<li>' + escapeHTML(note) + '</li>';
     }).join('');
-    progress.innerHTML = activeCoreView === 'home' || activeCoreView === 'minha-dieta' || activeCoreView === 'plano' ? '<div class="tp-why-card">'
+    progress.innerHTML = activeCoreView === 'home' ? '<div class="tp-why-card">'
       + '<div class="tp-why-header">'
       + '<div class="tp-why-icon"><i data-lucide="brain" width="24" height="24" stroke-width="1.5"></i></div>'
       + '<div><span class="tp-summary-kicker">POR QUE SUA DIETA ESTÁ ASSIM?</span>'
@@ -9311,20 +9368,26 @@ function exportActiveDietPlanPDF() {
   var cfg = safeJSON('kronia_config', {});
   var nome = cfg.nome || localStorage.getItem('kronia_nome') || 'Atleta';
   var data = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  var objetivo = getObjectiveLabel(plan.objective || cfg.objetivo || '');
   // Use getDietRenderableMeals so the PDF always reflects what's shown on screen
   var renderableMeals = getDietRenderableMeals(plan);
   var mealsHtml = renderableMeals.map(function(meal) {
     var rows = (meal.items || []).map(function(item) {
-      return '<tr><td>' + escapeHTML(item.name || getDietItemName(item)) + '</td><td>' + escapeHTML(item.quantity || (item.grams ? Math.round(item.grams) + 'g' : '-')) + '</td><td>' + escapeHTML(asKroniaNumber(item.kcal, 0) > 0 ? formatKroniaNumber(item.kcal, 'kcal') : '-') + '</td><td>' + escapeHTML(asKroniaNumber(item.protein, 0) > 0 ? formatKroniaNumber(item.protein, 'g') : '-') + '</td><td>' + escapeHTML(asKroniaNumber(item.carbs, 0) > 0 ? formatKroniaNumber(item.carbs, 'g') : '-') + '</td><td>' + escapeHTML(asKroniaNumber(item.fat, 0) > 0 ? formatKroniaNumber(item.fat, 'g') : '-') + '</td></tr>';
+      var itemKcal = getDietKcalValue(item);
+      var itemProtein = getDietProteinValue(item);
+      var itemCarbs = getDietCarbsValue(item);
+      var itemFat = getDietFatValue(item);
+      return '<tr><td>' + escapeHTML(item.name || getDietItemName(item)) + '</td><td>' + escapeHTML(item.quantity || (item.grams ? Math.round(item.grams) + ' g' : '1 porção')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemKcal, 'kcal')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemProtein, 'g')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemCarbs, 'g')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemFat, 'g')) + '</td></tr>';
     }).join('');
-    return '<section><h2>' + escapeHTML(meal.name || 'Refeição') + ' <small>' + escapeHTML(meal.time || '') + '</small></h2><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6" style="color:#888;font-style:italic">Nenhum item cadastrado</td></tr>') + '</tbody></table></section>';
+    return '<section><h2><span>' + escapeHTML(meal.name || 'Refeição') + '</span><small>' + escapeHTML(meal.time || '') + '</small></h2><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6" style="color:#555;font-style:italic">Nenhum item cadastrado</td></tr>') + '</tbody></table></section>';
   }).join('');
   var targets = plan.targets || {};
   var pdfKcal = plan.totals.kcal || targets.kcal || 0;
   var pdfProtein = plan.totals.protein > 0 ? plan.totals.protein : (targets.protein || 0);
   var pdfCarbs   = plan.totals.carbs   > 0 ? plan.totals.carbs   : (targets.carbs   || 0);
   var pdfFat     = plan.totals.fat     > 0 ? plan.totals.fat     : (targets.fat     || 0);
-  var html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Prescrição alimentar KRONIA</title><style>body{font-family:Arial,sans-serif;color:#111;padding:32px;max-width:920px;margin:auto}.header{background:#111;color:#fff;padding:22px;border-radius:10px;border-bottom:5px solid #f97316}.kicker{font-size:11px;letter-spacing:.14em;color:#f97316;text-transform:uppercase}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.metric{border:1px solid #ddd;border-radius:8px;padding:12px}.metric span{display:block;font-size:11px;color:#666;text-transform:uppercase}.metric strong{font-size:20px}section{margin:22px 0;border:1px solid #ddd;border-radius:8px;overflow:hidden}h2{margin:0;padding:12px 14px;background:#111;color:#fff;font-size:16px}h2 small{color:#f97316;font-size:12px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:12px}th{background:#f3f4f6;text-transform:uppercase;font-size:10px}.footer{margin-top:26px;color:#666;font-size:11px}@media print{.header,h2{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="header"><div class="kicker">KRONIA · Prescrição alimentar</div><h1>' + escapeHTML(plan.title || 'Plano alimentar') + '</h1><p>' + escapeHTML(nome) + ' · ' + escapeHTML(data) + '</p></div><div class="meta"><div class="metric"><span>Calorias</span><strong>' + escapeHTML(formatKroniaNumber(pdfKcal, 'kcal')) + '</strong></div><div class="metric"><span>Proteína</span><strong>' + escapeHTML(formatKroniaNumber(pdfProtein, 'g')) + '</strong></div><div class="metric"><span>Carboidrato</span><strong>' + escapeHTML(formatKroniaNumber(pdfCarbs, 'g')) + '</strong></div><div class="metric"><span>Gordura</span><strong>' + escapeHTML(formatKroniaNumber(pdfFat, 'g')) + '</strong></div></div>' + mealsHtml + '<div class="footer">Documento gerado a partir da versão ativa salva da dieta. Não substitui acompanhamento de nutricionista.</div><script>window.onload=function(){window.print()}<\/script></body></html>';
+  var pdfFiber = plan.totals.fiber > 0 ? plan.totals.fiber : (targets.fiber || 0);
+  var html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Prescrição alimentar KRONIA</title><style>*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;padding:28px;max-width:920px;margin:auto}.header{display:flex;align-items:center;gap:22px;border-bottom:4px solid #16a34a;padding-bottom:18px;margin-bottom:18px}.logo-wrap{width:160px;min-width:120px}.logo-wrap img{display:block;width:150px;max-width:100%;height:auto;object-fit:contain}.logo-fallback{display:none;font-size:28px;font-weight:900;letter-spacing:.04em;color:#111}.kicker{font-size:11px;letter-spacing:.12em;color:#15803d;text-transform:uppercase;font-weight:900}.header h1{margin:4px 0 8px;font-size:28px;line-height:1.05;color:#111}.header p{margin:0;color:#333;font-size:13px;font-weight:700}.meta{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.metric{border:1px solid #d8dee4;border-radius:10px;padding:12px;background:#fff}.metric span{display:block;font-size:10px;color:#555;text-transform:uppercase;font-weight:900;letter-spacing:.08em}.metric strong{display:block;margin-top:6px;font-size:19px;color:#111}section{margin:18px 0;border:1px solid #d8dee4;border-radius:10px;overflow:hidden;break-inside:avoid}h2{margin:0;padding:12px 14px;background:#111;color:#fff;font-size:16px;display:flex;justify-content:space-between;gap:12px;align-items:baseline}h2 small{color:#86efac;font-size:12px;white-space:nowrap}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:9px 8px;border-bottom:1px solid #edf0f2;text-align:left;font-size:12px;vertical-align:top;overflow-wrap:anywhere}th{background:#f3f7f4;color:#111;text-transform:uppercase;font-size:10px;font-weight:900}th:nth-child(1),td:nth-child(1){width:34%}th:nth-child(2),td:nth-child(2){width:18%}th:nth-child(n+3),td:nth-child(n+3){width:12%;text-align:right}.footer{margin-top:24px;color:#555;font-size:11px;line-height:1.45}@media(max-width:640px){body{padding:18px}.header{align-items:flex-start;gap:14px}.logo-wrap{width:124px;min-width:96px}.header h1{font-size:22px}.meta{grid-template-columns:repeat(2,1fr)}th,td{font-size:11px;padding:8px 6px}}@media print{body{padding:18px}.header,h2,th{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="header"><div class="logo-wrap"><img src="/Kronia.png" alt="KRONIA" onerror="this.style.display=&quot;none&quot;;this.nextElementSibling.style.display=&quot;block&quot;"><div class="logo-fallback">KRONIA</div></div><div><div class="kicker">Plano alimentar KRONIA</div><h1>' + escapeHTML(plan.title || 'Plano alimentar') + '</h1><p>' + escapeHTML(nome) + ' • ' + escapeHTML(data) + (objetivo ? ' • ' + escapeHTML(objetivo) : '') + '</p></div></div><div class="meta"><div class="metric"><span>Calorias</span><strong>' + escapeHTML(formatDietPdfMacro(pdfKcal, 'kcal')) + '</strong></div><div class="metric"><span>Proteína</span><strong>' + escapeHTML(formatDietPdfMacro(pdfProtein, 'g')) + '</strong></div><div class="metric"><span>Carboidrato</span><strong>' + escapeHTML(formatDietPdfMacro(pdfCarbs, 'g')) + '</strong></div><div class="metric"><span>Gordura</span><strong>' + escapeHTML(formatDietPdfMacro(pdfFat, 'g')) + '</strong></div><div class="metric"><span>Fibra</span><strong>' + escapeHTML(formatDietPdfMacro(pdfFiber, 'g')) + '</strong></div></div>' + mealsHtml + '<div class="footer">Documento gerado a partir da versão ativa salva da dieta. Não substitui acompanhamento de nutricionista.</div><script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>';
   var win = window.open('', '_blank');
   if (!win) { showToast('Permita pop-ups para gerar o PDF.', 'warning', 3000); return; }
   win.document.write(html);

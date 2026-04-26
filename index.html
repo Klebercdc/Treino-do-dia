@@ -1409,26 +1409,13 @@
 ══════════════════════════════════════════ -->
 
 <div id="dietDataScreen" class="kronia-data-screen app-scroll" aria-label="Dieta">
-  <header class="tp-diet-header">
-    <div class="tp-diet-header-inner">
-      <div>
-        <h1 class="tp-diet-title">Dieta</h1>
-        <p id="dietHeaderGreeting" class="tp-diet-greeting">Boa noite, Kleber 👋</p>
-        <p class="tp-diet-subtitle">Aqui está seu plano alimentar de hoje</p>
-      </div>
-      <div class="tp-diet-header-actions">
-        <button type="button" title="Gerar PDF" class="tp-header-icon-btn" onclick="exportActiveDietPlanPDF()">
-          <i data-lucide="file-text" stroke-width="1.5" width="18" height="18"></i>
-        </button>
-        <button type="button" title="Salvar versão ativa" class="tp-header-icon-btn" onclick="saveActiveDietPlan()">
-          <i data-lucide="save" stroke-width="1.5" width="18" height="18"></i>
-        </button>
-        <button type="button" class="tp-bell-btn" title="Notificações">
-          <i data-lucide="bell" stroke-width="1.5" width="22" height="22"></i>
-          <span class="tp-bell-dot"></span>
-        </button>
-      </div>
-    </div>
+  <header class="tp-diet-compact-header">
+    <button type="button" class="tp-diet-back-btn" onclick="openDietCorePanel('home')" aria-label="Voltar para Dieta">
+      <i data-lucide="arrow-left" stroke-width="2" width="18" height="18"></i>
+      <span>Dieta</span>
+    </button>
+    <h1>Minha Dieta</h1>
+    <button type="button" class="tp-diet-pdf-btn" onclick="exportActiveDietPlanPDF()">PDF</button>
   </header>
 
   <div id="dietDataPremium" class="diet-premium-content">

@@ -13,6 +13,14 @@ function loadDietRenderContext() {
   const code = fs.readFileSync('app.js', 'utf8');
   const snippet = [
     extract(code, /function getDietRenderableMeals\(plan\) \{[\s\S]*?\n\}/, 'getDietRenderableMeals'),
+    extract(code, /function getDietMacroValue\(source, keys\) \{[\s\S]*?\n\}/, 'getDietMacroValue'),
+    extract(code, /function getDietKcalValue\(source\) \{[\s\S]*?\n\}/, 'getDietKcalValue'),
+    extract(code, /function getDietProteinValue\(source\) \{[\s\S]*?\n\}/, 'getDietProteinValue'),
+    extract(code, /function getDietCarbsValue\(source\) \{[\s\S]*?\n\}/, 'getDietCarbsValue'),
+    extract(code, /function getDietFatValue\(source\) \{[\s\S]*?\n\}/, 'getDietFatValue'),
+    extract(code, /function getDietFiberValue\(source\) \{[\s\S]*?\n\}/, 'getDietFiberValue'),
+    extract(code, /function formatDietPdfMacro\(value, suffix\) \{[\s\S]*?\n\}/, 'formatDietPdfMacro'),
+    extract(code, /function renderDietMacroSummaryCard\(plan, targets\) \{[\s\S]*?\n\}/, 'renderDietMacroSummaryCard'),
     extract(code, /function buildDietItemSubtitle\(item\) \{[\s\S]*?\n\}/, 'buildDietItemSubtitle'),
     extract(code, /function renderDietMealCard\(meal, mealIndex\) \{[\s\S]*?\n\}/, 'renderDietMealCard'),
     extract(code, /function renderActiveDietPlan\(\) \{[\s\S]*?\n\}/, 'renderActiveDietPlan'),
@@ -63,6 +71,10 @@ function loadDietRenderContext() {
       const num = Number(value);
       return Number.isFinite(num) ? num : Number(fallback || 0);
     },
+    dietRound: (value, precision) => {
+      const factor = 10 ** Number(precision || 0);
+      return Math.round(Number(value || 0) * factor) / factor;
+    },
     normalizeDietFoodText: (value) => String(value || '').toLowerCase().replace(/\s+/g, '_'),
     parseDietVisualItem: (item) => {
       const text = String(item || '');
@@ -104,6 +116,8 @@ function loadDietRenderContext() {
       },
     },
     lucide: { createIcons() {} },
+    Number,
+    NaN,
   };
 
   vm.createContext(context);
@@ -111,6 +125,24 @@ function loadDietRenderContext() {
   context.__elements = elements;
   return context;
 }
+
+test('Minha Dieta shell uses compact header and removes legacy diet hero copy', () => {
+  const html = fs.readFileSync('index.html', 'utf8');
+
+  assert.match(html, /class="tp-diet-compact-header"/);
+  assert.match(html, />Minha Dieta</);
+  assert.match(html, /class="tp-diet-pdf-btn"[^>]*>PDF</);
+  assert.doesNotMatch(html, /Boa noite, Kleber/);
+  assert.doesNotMatch(html, /Aqui está seu plano alimentar de hoje/);
+  assert.doesNotMatch(html, /class="tp-bell-btn"/);
+});
+
+test('Minha Dieta CSS allows meal and food names to wrap instead of truncating', () => {
+  const css = fs.readFileSync('styles.css', 'utf8');
+
+  assert.match(css, /#dietDataScreen \.tp-meal-name \{[\s\S]*?white-space: normal;[\s\S]*?text-overflow: clip;/);
+  assert.match(css, /#dietDataScreen \.diet-premium-food-name \{[\s\S]*?white-space: normal;[\s\S]*?text-overflow: clip;/);
+});
 
 test('renderActiveDietPlan renders visualPrescription meals instead of legacy plan.meals', () => {
   const context = loadDietRenderContext();
@@ -149,7 +181,7 @@ test('renderActiveDietPlan renders visualPrescription meals instead of legacy pl
   assert.doesNotMatch(context.__elements.dietDataMeals.innerHTML, /ITEM LEGACY/);
 });
 
-test('renderDietMealCard preserves access to every meal item via preview chips', () => {
+test('renderDietMealCard preserves access to every meal item without preview icon columns', () => {
   const context = loadDietRenderContext();
   const html = context.renderDietMealCard({
     name: 'Almoço',
@@ -165,7 +197,8 @@ test('renderDietMealCard preserves access to every meal item via preview chips',
   assert.match(html, /Frango/);
   assert.match(html, /Arroz/);
   assert.match(html, /Feijão/);
-  assert.equal((html.match(/class="diet-premium-preview-chip"/g) || []).length, 3);
+  assert.doesNotMatch(html, /class="diet-premium-preview-chip"/);
+  assert.doesNotMatch(html, /diet-premium-food-emoji/);
 });
 
 test('renderActiveDietPlan preserves nutritional summary and KRONOS guidance blocks', () => {
@@ -196,4 +229,115 @@ test('renderActiveDietPlan preserves nutritional summary and KRONOS guidance blo
   assert.match(context.__elements.dietDataProgress.innerHTML, /POR QUE SUA DIETA ESTÁ ASSIM\?/);
   assert.match(context.__elements.dietDataProgress.innerHTML, /Proteínas distribuídas ao longo do dia/);
   assert.match(context.__elements.dietDataProgress.innerHTML, /Concentre carboidratos perto do treino/);
+});
+
+test('Minha Dieta renders compact macro card and does not render the old footer total/guidance block', () => {
+  const context = loadDietRenderContext();
+  context._dietCoreView = 'minha-dieta';
+  context.renderDietCoreContent = (view, vm) => context.renderDietMealCard(vm.plan.meals[0], 0);
+  context.analyzeDietContext = () => ({});
+  context.generateDietViewModel = (dietContext) => ({
+    plan: dietContext.activeDiet,
+    meals: dietContext.activeDiet.meals,
+  });
+  context.window._kroniaDietPlan = {
+    source: 'supabase_meal_plans',
+    totals: { kcal: 2190, protein: 160, carbs: 342, fat: 65, fiber: 28 },
+    targets: { kcal: 2190, protein: 160, carbs: 342, fat: 65 },
+    meals: [{ name: 'Almoço', subtotal: { kcal: 700 }, items: [{ name: 'Frango', quantity: '150 g', kcal: 248, protein: 46 }] }],
+  };
+
+  context.renderActiveDietPlan();
+
+  assert.match(context.__elements.dietDataSummary.innerHTML, /diet-macro-summary-card/);
+  assert.match(context.__elements.dietDataSummary.innerHTML, /2190 kcal/);
+  assert.match(context.__elements.dietDataSummary.innerHTML, /Proteína/);
+  assert.match(context.__elements.dietDataSummary.innerHTML, /Fibra/);
+  assert.doesNotMatch(context.__elements.dietDataProgress.innerHTML, /POR QUE SUA DIETA ESTÁ ASSIM/);
+});
+
+test('renderDietMealCard keeps meal and food layout text-only without meal or food icons', () => {
+  const context = loadDietRenderContext();
+  const html = context.renderDietMealCard({
+    name: 'Café da manhã reforçado para treino',
+    time: '07:00',
+    subtotal: { kcal: 520 },
+    items: [
+      { name: 'Ovos mexidos', quantity: '3 un', grams: 150, kcal: 210, protein: 18, carbs: 1, fat: 15 },
+    ],
+  }, 0);
+
+  assert.match(html, /Café da manhã reforçado para treino/);
+  assert.match(html, /Ovos mexidos/);
+  assert.doesNotMatch(html, /diet-premium-food-emoji/);
+  assert.doesNotMatch(html, /tp-meal-icon-wrap/);
+  assert.doesNotMatch(html, /data-lucide="utensils"/);
+  assert.doesNotMatch(html, /data-lucide="pencil"/);
+  assert.doesNotMatch(html, /text-overflow/);
+});
+
+test('PDF export contains KRONIA logo/fallback and fills macro aliases without dash placeholders', () => {
+  const code = fs.readFileSync('app.js', 'utf8');
+  const snippet = [
+    extract(code, /function getDietMacroValue\(source, keys\) \{[\s\S]*?\n\}/, 'getDietMacroValue'),
+    extract(code, /function getDietKcalValue\(source\) \{[\s\S]*?\n\}/, 'getDietKcalValue'),
+    extract(code, /function getDietProteinValue\(source\) \{[\s\S]*?\n\}/, 'getDietProteinValue'),
+    extract(code, /function getDietCarbsValue\(source\) \{[\s\S]*?\n\}/, 'getDietCarbsValue'),
+    extract(code, /function getDietFatValue\(source\) \{[\s\S]*?\n\}/, 'getDietFatValue'),
+    extract(code, /function formatDietPdfMacro\(value, suffix\) \{[\s\S]*?\n\}/, 'formatDietPdfMacro'),
+    extract(code, /function exportActiveDietPlanPDF\(\) \{[\s\S]*?\n\}/, 'exportActiveDietPlanPDF'),
+  ].join('\n\n');
+  let written = '';
+  const context = {
+    window: {
+      _kroniaDietPlan: {
+        title: 'Plano alimentar KRONIA',
+        objective: 'hipertrofia',
+        totals: { kcal: 2190, protein: 160, carbs: 342, fat: 65, fiber: 28 },
+        targets: {},
+        meals: [{
+          name: 'Almoço',
+          time: '12:30',
+          items: [{ name: 'Frango', quantity: '150 g', calories: 248, prot: 46, carb: 0, gord: 6 }],
+        }],
+      },
+      open() {
+        return {
+          document: {
+            write(html) { written = html; },
+            close() {},
+          },
+        };
+      },
+    },
+    document: {},
+    recalculateDietPlan: (plan) => plan,
+    readLocalActiveDietPlan: () => null,
+    buildFallbackActiveDietPlan: () => null,
+    safeJSON: () => ({ nome: 'Kleber' }),
+    localStorage: { getItem: () => null },
+    getObjectiveLabel: (value) => value,
+    getDietRenderableMeals: (plan) => plan.meals,
+    getDietItemName: (item) => item.name,
+    escapeHTML: (value) => String(value ?? ''),
+    asKroniaNumber: (value, fallback) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : Number(fallback || 0);
+    },
+    formatKroniaNumber: (value, suffix) => `${value}${suffix ? ` ${suffix}` : ''}`.trim(),
+    showToast() {},
+    Number,
+    NaN,
+  };
+  vm.createContext(context);
+  vm.runInContext(snippet, context, { filename: 'diet-pdf-snippet.js' });
+
+  context.exportActiveDietPlanPDF();
+
+  assert.match(written, /src="\/Kronia\.png"/);
+  assert.match(written, /logo-fallback">KRONIA/);
+  assert.match(written, /248 kcal/);
+  assert.match(written, /46 g/);
+  assert.match(written, /6 g/);
+  assert.doesNotMatch(written, />-</);
 });
