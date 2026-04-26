@@ -5949,12 +5949,30 @@ body.dark-mode .settings-row-value {
   gap: 7px;
   font-weight: 900;
   cursor: pointer;
+  flex-shrink: 0;
 }
-#dietDataScreen .diet-panel-header h2 {
+#dietDataScreen .diet-panel-header-title {
   margin: 0;
   color: #fff;
   font-size: 22px;
   font-weight: 900;
+  flex: 1;
+}
+#dietDataScreen .diet-panel-pdf-btn {
+  border: 1px solid rgba(34,197,94,.5) !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #86efac !important;
+  padding: 7px 11px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  cursor: pointer;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
 }
 #dietDataScreen .diet-action-grid {
   display: grid;
