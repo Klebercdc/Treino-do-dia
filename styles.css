@@ -5586,6 +5586,15 @@ body.dark-mode .settings-row-value {
 #dietDataScreen .tp-rebalancear-btn:hover  { background: #16a34a; }
 #dietDataScreen .tp-rebalancear-btn:active { transform: scale(.97); }
 
+#dietDataScreen .tp-rebalancear-btn--compact {
+  height: 56px;
+  border-radius: 16px;
+  padding: 0 18px;
+  font-size: 16px;
+  font-weight: 700;
+  justify-content: space-between;
+}
+
 /* Meals section */
 #dietDataScreen .tp-meals-section { margin-bottom: 16px; }
 #dietDataScreen .tp-section-header {
