@@ -4117,6 +4117,12 @@ body.light-mode #aiModal #aiSendBtn i {
 @keyframes nutritionOfficialSpin { to { transform:rotate(360deg); } }
 #nutritionFlowScreen .nutrition-official-processing { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center; }
 #nutritionFlowScreen .nutrition-official-spinner { width:64px; height:64px; border:4px solid var(--accent); border-top-color:transparent; border-radius:50%; animation:nutritionOfficialSpin 1s linear infinite; margin-bottom:24px; }
+#nutritionFlowScreen .clinical-bcm-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:var(--nutrition-flow-chip-bg); border:1px solid var(--nutrition-flow-border); border-radius:14px; color:var(--nutrition-flow-text); font-family:'Inter',var(--font),sans-serif; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; text-align:left; transition:border-color .2s; }
+#nutritionFlowScreen .clinical-bcm-toggle:hover { border-color:#22C55E; }
+#nutritionFlowScreen .clinical-bcm-arrow { font-size:14px; transition:transform .25s ease; display:inline-block; color:var(--nutrition-flow-muted); }
+#nutritionFlowScreen .clinical-bcm-arrow.open { transform:rotate(180deg); }
+#nutritionFlowScreen .clinical-exam-import { display:inline-flex; align-items:center; justify-content:center; overflow:hidden; }
+#nutritionFlowScreen .clinical-disclaimer { padding:10px 14px; border:1px solid rgba(34,197,94,.22); background:rgba(34,197,94,.06); border-radius:12px; color:#86EFAC; font-size:9px; font-weight:700; font-style:italic; line-height:1.55; }
 
 /* ── Plano Alimentar Premium ─────────────────────────────── */
 #dietDataScreen,
