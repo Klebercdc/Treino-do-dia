@@ -19,6 +19,13 @@ function loadDietRenderContext() {
     extract(code, /function getDietCarbsValue\(source\) \{[\s\S]*?\n\}/, 'getDietCarbsValue'),
     extract(code, /function getDietFatValue\(source\) \{[\s\S]*?\n\}/, 'getDietFatValue'),
     extract(code, /function getDietFiberValue\(source\) \{[\s\S]*?\n\}/, 'getDietFiberValue'),
+    extract(code, /function formatFoodDisplayNumber\(value\) \{[\s\S]*?\n\}/, 'formatFoodDisplayNumber'),
+    extract(code, /function normalizeFoodQuantityText\(quantity\) \{[\s\S]*?\n\}/, 'normalizeFoodQuantityText'),
+    extract(code, /function getFoodDisplayQuantity\(item\) \{[\s\S]*?\n\}/, 'getFoodDisplayQuantity'),
+    extract(code, /function getFoodDisplayValue\(item, keys\) \{[\s\S]*?\n\}/, 'getFoodDisplayValue'),
+    extract(code, /function formatFoodQuantityLine\(item\) \{[\s\S]*?\n\}/, 'formatFoodQuantityLine'),
+    extract(code, /function formatFoodMacrosLine\(item\) \{[\s\S]*?\n\}/, 'formatFoodMacrosLine'),
+    extract(code, /function renderFoodMacrosLineHtml\(item, className\) \{[\s\S]*?\n\}/, 'renderFoodMacrosLineHtml'),
     extract(code, /function formatDietPdfMacro\(value, suffix\) \{[\s\S]*?\n\}/, 'formatDietPdfMacro'),
     extract(code, /function renderDietMacroSummaryCard\(plan, targets\) \{[\s\S]*?\n\}/, 'renderDietMacroSummaryCard'),
     extract(code, /function buildDietItemSubtitle\(item\) \{[\s\S]*?\n\}/, 'buildDietItemSubtitle'),
@@ -142,6 +149,32 @@ test('Minha Dieta CSS allows meal and food names to wrap instead of truncating',
 
   assert.match(css, /#dietDataScreen \.tp-meal-name \{[\s\S]*?white-space: normal;[\s\S]*?text-overflow: clip;/);
   assert.match(css, /#dietDataScreen \.diet-premium-food-name \{[\s\S]*?white-space: normal;[\s\S]*?text-overflow: clip;/);
+});
+
+test('food macro helpers render standardized Brazilian diet text', () => {
+  const context = loadDietRenderContext();
+  const item = { name: 'Queijo minas frescal', quantity: '50g', kcal: 76, protein: 7, carbs: 1, fat: 5 };
+
+  assert.equal(context.formatFoodQuantityLine(item), '50 g · 76 kcal');
+  assert.equal(context.formatFoodMacrosLine(item), 'C: 1 g  P: 7 g  G: 5 g');
+  assert.equal(context.formatFoodQuantityLine({ quantity: '73.9g', kcal: 73.9 }), '73,9 g · 73,9 kcal');
+  assert.equal(context.formatFoodMacrosLine({}), 'C: 0 g  P: 0 g  G: 0 g');
+});
+
+test('diet food cards no longer duplicate kcal and macros on the same line', () => {
+  const context = loadDietRenderContext();
+  const html = context.renderDietMealCard({
+    name: 'Lanche',
+    subtotal: { kcal: 76, protein: 7, carbs: 1, fat: 5 },
+    items: [{ name: 'Queijo minas frescal', quantity: '50g', grams: 50, kcal: 76, protein: 7, carbs: 1, fat: 5 }],
+  }, 0);
+
+  assert.match(html, /Queijo minas frescal/);
+  assert.match(html, /50 g · 76 kcal/);
+  assert.match(html, /C: 1 g/);
+  assert.match(html, /P: 7 g/);
+  assert.match(html, /G: 5 g/);
+  assert.doesNotMatch(html, /7g(?:&nbsp;)?\s*P|1g(?:&nbsp;)?\s*C|5g(?:&nbsp;)?\s*G/);
 });
 
 test('renderActiveDietPlan renders visualPrescription meals instead of legacy plan.meals', () => {

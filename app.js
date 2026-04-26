@@ -8374,7 +8374,7 @@ function renderDietSubstitutionPanel(vm) {
   return '<div class="diet-core-view">' + renderDietBackHeader('Trocar alimento')
     + '<section class="diet-mini-title-card"><p>Busque ou escolha uma troca equivalente. O motor preserva os macros da refeição.</p><input class="diet-search-input" placeholder="Buscar alimento" aria-label="Buscar alimento"></section>'
     + '<div class="diet-sub-options">' + options.map(function(opt, index) {
-      return '<button type="button" class="diet-sub-option" onclick="selectDietMiniSubstitutionCandidate(' + index + ')"><span>' + escapeHTML(opt.name) + '</span><small>' + escapeHTML(formatKroniaNumber(opt.protein || 0, 'g')) + ' P | ' + escapeHTML(formatKroniaNumber(opt.carbs || 0, 'g')) + ' C | ' + escapeHTML(formatKroniaNumber(opt.fat || 0, 'g')) + ' G</small><strong>Compatibilidade ' + (index === 0 ? '94' : '88') + '%</strong></button>';
+      return '<button type="button" class="diet-sub-option" onclick="selectDietMiniSubstitutionCandidate(' + index + ')"><span>' + escapeHTML(opt.name) + '</span><small class="diet-sub-quantity-line">' + escapeHTML(formatFoodQuantityLine(opt)) + '</small>' + renderFoodMacrosLineHtml(opt, 'diet-sub-macro-line') + '<strong>Compatibilidade ' + (index === 0 ? '94' : '88') + '%</strong></button>';
     }).join('') + '</div><button type="button" class="tp-rebalancear-btn" onclick="applyDietMiniSubstitution()"><i data-lucide="check" width="18" height="18"></i>Aplicar troca</button></div>';
 }
 
@@ -8640,6 +8640,53 @@ function getDietFiberValue(source) {
   return getDietMacroValue(source, ['fiber', 'fibra', 'fibras', 'fiber_g']);
 }
 
+function formatFoodDisplayNumber(value) {
+  var rounded = Math.round(asKroniaNumber(value, 0) * 10) / 10;
+  return rounded.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+}
+
+function normalizeFoodQuantityText(quantity) {
+  var text = String(quantity == null || quantity === '' ? '0 g' : quantity).trim();
+  text = text.replace(/(\d+(?:[.,]\d+)?)\s*(kg|g|mg|ml|l|unid\.?|unidade(?:s)?|un)\b/gi, function(_, value, unit) {
+    return formatFoodDisplayNumber(String(value).replace(',', '.')) + ' ' + unit;
+  });
+  return text.replace(/\s+/g, ' ').trim() || '0 g';
+}
+
+function getFoodDisplayQuantity(item) {
+  var safeItem = item && typeof item === 'object' ? item : {};
+  var quantity = safeItem.quantity || safeItem.qtde || safeItem.porcao || safeItem.household_measure || safeItem.default_unit || safeItem.medida || '';
+  if (!quantity && asKroniaNumber(safeItem.grams || safeItem.gramas || safeItem.default_portion_g || safeItem.porcao_gramas, 0) > 0) {
+    quantity = formatFoodDisplayNumber(safeItem.grams || safeItem.gramas || safeItem.default_portion_g || safeItem.porcao_gramas) + ' g';
+  }
+  return normalizeFoodQuantityText(quantity);
+}
+
+function getFoodDisplayValue(item, keys) {
+  var safeItem = item && typeof item === 'object' ? item : {};
+  var value = getDietMacroValue(safeItem, keys);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function formatFoodQuantityLine(item) {
+  var kcal = getFoodDisplayValue(item, ['kcal', 'calories', 'calorias', 'energia_kcal', 'kcal_100g', 'kcal_por_100g']);
+  return getFoodDisplayQuantity(item) + ' · ' + formatFoodDisplayNumber(kcal) + ' kcal';
+}
+
+function formatFoodMacrosLine(item) {
+  var carbs = getFoodDisplayValue(item, ['carbs', 'carboidratos', 'carboidrato', 'carbo', 'carb', 'carbs_g', 'carbs_100g', 'carbo_por_100g']);
+  var protein = getFoodDisplayValue(item, ['protein', 'proteinas', 'proteína', 'proteina', 'prot', 'protein_g', 'protein_100g', 'proteina_por_100g']);
+  var fat = getFoodDisplayValue(item, ['fat', 'gorduras', 'gordura', 'gord', 'fat_g', 'fat_100g', 'gordura_por_100g']);
+  return 'C: ' + formatFoodDisplayNumber(carbs) + ' g  P: ' + formatFoodDisplayNumber(protein) + ' g  G: ' + formatFoodDisplayNumber(fat) + ' g';
+}
+
+function renderFoodMacrosLineHtml(item, className) {
+  var parts = formatFoodMacrosLine(item).split('  ');
+  return '<p class="' + escapeAttr(className || 'diet-food-macro-line') + '">'
+    + parts.map(function(part) { return '<span>' + escapeHTML(part) + '</span>'; }).join('  ')
+    + '</p>';
+}
+
 function formatDietPdfMacro(value, suffix) {
   return asKroniaNumber(value, 0) > 0 ? formatKroniaNumber(value, suffix || 'g') : '0 ' + (suffix || 'g');
 }
@@ -8668,17 +8715,7 @@ function renderDietMacroSummaryCard(plan, targets) {
 }
 
 function buildDietItemSubtitle(item) {
-  var safeItem = item && typeof item === 'object' ? item : {};
-  var metrics = [];
-  var kcal = getDietKcalValue(safeItem);
-  var protein = getDietProteinValue(safeItem);
-  var carbs = getDietCarbsValue(safeItem);
-  var fat = getDietFatValue(safeItem);
-  if (kcal > 0) metrics.push(formatKroniaNumber(kcal, 'kcal'));
-  if (protein > 0) metrics.push(formatKroniaNumber(protein, 'g') + ' P');
-  if (carbs > 0) metrics.push(formatKroniaNumber(carbs, 'g') + ' C');
-  if (fat > 0) metrics.push(formatKroniaNumber(fat, 'g') + ' G');
-  return metrics.join(' • ') || 'Troca rápida e ajuste fino';
+  return formatFoodQuantityLine(item);
 }
 
 function renderDietMealCard(meal, mealIndex) {
@@ -8687,16 +8724,12 @@ function renderDietMealCard(meal, mealIndex) {
     var subtitle = buildDietItemSubtitle(item);
     var grams = getDietDisplayGrams(item);
     var bsArgs = mealIndex + ',' + itemIndex + ',' + escapeAttr(JSON.stringify(item.name || 'Alimento')) + ',' + escapeAttr(JSON.stringify(subtitle)) + ',' + escapeAttr(JSON.stringify(String(Math.round(grams))));
-    var itemP = dietRound(asKroniaNumber(item.protein, 0), 1);
-    var itemC = dietRound(asKroniaNumber(item.carbs,   0), 1);
-    var itemG = dietRound(asKroniaNumber(item.fat,     0), 1);
-    var hasMacros = itemP > 0 || itemC > 0 || itemG > 0;
     return '<div class="tp-food-row">'
       + '<button type="button" class="tp-food-main" onclick="abrirBottomSheet(' + bsArgs + ')">'
       + '<div class="tp-food-info">'
       + '<p class="diet-premium-food-name">' + escapeHTML(item.name || getDietItemName(item)) + '</p>'
-      + '<p class="diet-premium-food-qty">' + escapeHTML(item.quantity || (Math.round(grams) + 'g')) + (subtitle ? ' · ' + escapeHTML(subtitle) : '') + '</p>'
-      + (hasMacros ? '<p class="tp-food-macros">P ' + itemP + 'g&nbsp;·&nbsp;C ' + itemC + 'g&nbsp;·&nbsp;G ' + itemG + 'g</p>' : '')
+      + '<p class="diet-premium-food-qty">' + escapeHTML(formatFoodQuantityLine(item)) + '</p>'
+      + renderFoodMacrosLineHtml(item, 'tp-food-macros')
       + '</div>'
       + '</button>'
       + '<div class="tp-food-actions">'
@@ -8712,7 +8745,7 @@ function renderDietMealCard(meal, mealIndex) {
   var mealC = dietRound(asKroniaNumber(subtotal.carbs,   0), 1);
   var mealG = dietRound(asKroniaNumber(subtotal.fat,     0), 1);
   var mealMacros = (mealP > 0 || mealC > 0 || mealG > 0)
-    ? '<p class="tp-meal-macros">P ' + mealP + 'g · C ' + mealC + 'g · G ' + mealG + 'g</p>'
+    ? '<p class="tp-meal-macros">' + escapeHTML(formatFoodMacrosLine({ carbs: mealC, protein: mealP, fat: mealG })) + '</p>'
     : '';
   var loadingState = meal._loading
     ? '<div class="tp-meal-loading"><div class="tp-meal-loading-spinner"></div>IA recalculando ' + escapeHTML(meal.name || 'refeição') + '...</div>'
@@ -8904,13 +8937,12 @@ function openDietSubstituirScreen(mealIndex, itemIndex) {
       listEl.innerHTML = '<p class="ds-empty">Nenhuma alternativa disponível para este alimento.</p>';
     } else {
       listEl.innerHTML = alternatives.map(function(opt, i) {
-        var macroLine = 'C: ' + opt.carbs + 'g&nbsp;&nbsp;P: ' + opt.protein + 'g&nbsp;&nbsp;G: ' + opt.fat + 'g';
         return '<div class="ds-option-card" onclick="selectDietSubstitutionOption(' + i + ')" id="dsOpt_' + i + '">'
           + '<div class="ds-option-emoji">' + getDietFoodEmoji(opt) + '</div>'
           + '<div class="ds-option-info">'
           + '<p class="ds-option-name">' + escapeHTML(opt.name) + '</p>'
-          + '<p class="ds-option-meta">' + escapeHTML(opt.quantity || '') + (asKroniaNumber(opt.kcal, 0) > 0 ? ' · ' + formatKroniaNumber(opt.kcal, 'kcal') : '') + '</p>'
-          + '<p class="ds-option-macros">' + macroLine + '</p>'
+          + '<p class="ds-option-meta">' + escapeHTML(formatFoodQuantityLine(opt)) + '</p>'
+          + renderFoodMacrosLineHtml(opt, 'ds-option-macros')
           + '</div>'
           + '</div>';
       }).join('');
@@ -9314,7 +9346,10 @@ function renderDietAddCatalog(mealIndex) {
   var query = document.getElementById('dietAddSearch')?.value || '';
   var items = findDietCatalogItems(query);
   list.innerHTML = items.map(function(item, idx) {
-    return '<button type="button" class="kronia-row" style="width:100%;text-align:left;background:transparent;color:var(--text);border:0;border-bottom:1px solid var(--border);padding:10px 0" onclick="addDietPlanItemFromCatalog(' + (mealIndex || 0) + ',' + idx + ')"><div><strong>' + escapeHTML(item.nome) + '</strong><br><span>' + escapeHTML(item.grupo || 'catálogo') + '</span></div><div>' + escapeHTML(formatKroniaNumber(item.kcal || item.calorias || 0, 'kcal')) + '</div></button>';
+    var displayItem = Object.assign({}, item, {
+      quantity: item.default_unit || item.medida || item.porcao || ((item.default_portion_g || item.porcao_gramas || 100) + ' g')
+    });
+    return '<button type="button" class="kronia-row diet-add-catalog-row" style="width:100%;text-align:left;background:transparent;color:var(--text);border:0;border-bottom:1px solid var(--border);padding:10px 0" onclick="addDietPlanItemFromCatalog(' + (mealIndex || 0) + ',' + idx + ')"><div><strong>' + escapeHTML(item.nome) + '</strong><br><span class="diet-add-catalog-meta">' + escapeHTML(formatFoodQuantityLine(displayItem)) + '</span>' + renderFoodMacrosLineHtml(displayItem, 'diet-add-catalog-macros') + '</div><div class="diet-add-catalog-group">' + escapeHTML(item.grupo || 'catálogo') + '</div></button>';
   }).join('') || '<div class="kronia-empty">Nenhum alimento encontrado.</div>';
 }
 
