@@ -6569,3 +6569,676 @@ body.dark-mode .settings-row-value {
   color: rgba(255,255,255,.4);
   font-size: 14px;
 }
+
+/* ══════════════════════════════════════════
+   DIETA — TELA DE ESCOLHA (TELA 1)
+══════════════════════════════════════════ */
+
+#dietChoiceScreen {
+  background: #05070A;
+  min-height: 100vh;
+}
+#dietChoiceScreen.show { display: block; }
+
+.diet-choice-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 52px 20px 20px;
+}
+.diet-choice-back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(34,197,94,.12);
+  border: 1px solid rgba(34,197,94,.25);
+  color: #22C55E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .12s;
+}
+.diet-choice-back-btn:active { transform: scale(.94); }
+.diet-choice-header-text { flex: 1; }
+.diet-choice-title {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -.01em;
+  color: #fff;
+  line-height: 1;
+}
+.diet-choice-greeting {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: rgba(203,213,225,.8);
+  font-weight: 600;
+}
+.diet-choice-body {
+  padding: 20px 20px calc(100px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.diet-choice-hero { text-align: center; padding: 8px 0 4px; }
+.diet-choice-question {
+  margin: 0 0 10px;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.2;
+  color: #fff;
+}
+.diet-choice-green { color: #22C55E; }
+.diet-choice-sub {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(203,213,225,.7);
+  line-height: 1.5;
+}
+.diet-choice-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.diet-choice-card {
+  border-radius: 22px;
+  padding: 20px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform .15s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+  overflow: hidden;
+}
+.diet-choice-card:active { transform: scale(.97); }
+.diet-choice-card--green {
+  background: rgba(15,23,42,.85);
+  border: 1.5px solid rgba(34,197,94,.45);
+  box-shadow: 0 0 28px rgba(34,197,94,.1), 0 16px 32px rgba(0,0,0,.3);
+}
+.diet-choice-card--orange {
+  background: rgba(28,15,8,.85);
+  border: 1.5px solid rgba(249,115,22,.45);
+  box-shadow: 0 0 28px rgba(249,115,22,.1), 0 16px 32px rgba(0,0,0,.3);
+}
+.diet-choice-card-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.diet-choice-card-icon-wrap--green {
+  background: rgba(34,197,94,.12);
+  box-shadow: 0 0 18px rgba(34,197,94,.2);
+}
+.diet-choice-card-icon-wrap--orange {
+  background: rgba(249,115,22,.12);
+  box-shadow: 0 0 18px rgba(249,115,22,.2);
+}
+.diet-choice-card-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: #fff;
+}
+.diet-choice-card-desc {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(203,213,225,.7);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.diet-choice-separator {
+  height: 1px;
+  background: rgba(255,255,255,.07);
+  margin: 4px 0;
+}
+.diet-choice-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid;
+  transition: transform .12s;
+  width: 100%;
+  justify-content: center;
+}
+.diet-choice-action-btn:active { transform: scale(.95); }
+.diet-choice-action-btn--green {
+  background: rgba(34,197,94,.1);
+  border-color: rgba(34,197,94,.45);
+  color: #22C55E;
+}
+.diet-choice-action-btn--orange {
+  background: rgba(249,115,22,.1);
+  border-color: rgba(249,115,22,.45);
+  color: #F97316;
+}
+.diet-choice-hint-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15,23,42,.75);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 18px;
+  padding: 16px;
+}
+.diet-choice-hint-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.diet-choice-hint-body { flex: 1; min-width: 0; }
+.diet-choice-hint-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.diet-choice-hint-body p {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(203,213,225,.7);
+  line-height: 1.4;
+}
+.diet-choice-hint-link {
+  background: transparent;
+  border: 0;
+  color: #22C55E;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════
+   DIETA — COMPACT CHOICE CARDS (TELA 2 TOP)
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-compact-choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+#dietDataScreen .diet-compact-choice-card {
+  border-radius: 18px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform .15s;
+}
+#dietDataScreen .diet-compact-choice-card:active { transform: scale(.97); }
+#dietDataScreen .diet-compact-choice-card--green {
+  background: rgba(15,23,42,.9);
+  border: 1.5px solid rgba(34,197,94,.35);
+  box-shadow: 0 0 18px rgba(34,197,94,.07);
+}
+#dietDataScreen .diet-compact-choice-card--orange {
+  background: rgba(28,15,8,.9);
+  border: 1.5px solid rgba(249,115,22,.35);
+  box-shadow: 0 0 18px rgba(249,115,22,.07);
+}
+#dietDataScreen .diet-compact-choice-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#dietDataScreen .diet-compact-choice-icon--green {
+  background: rgba(34,197,94,.1);
+}
+#dietDataScreen .diet-compact-choice-icon--orange {
+  background: rgba(249,115,22,.1);
+}
+#dietDataScreen .diet-compact-choice-text strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 2px;
+}
+#dietDataScreen .diet-compact-choice-text span {
+  font-size: 11px;
+  color: rgba(203,213,225,.65);
+  font-weight: 600;
+  line-height: 1.3;
+  display: block;
+}
+#dietDataScreen .diet-compact-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid;
+  transition: transform .12s;
+  white-space: nowrap;
+  width: 100%;
+  justify-content: center;
+}
+#dietDataScreen .diet-compact-action-btn:active { transform: scale(.95); }
+#dietDataScreen .diet-compact-action-btn--green {
+  background: rgba(34,197,94,.1);
+  border-color: rgba(34,197,94,.35);
+  color: #22C55E;
+}
+#dietDataScreen .diet-compact-action-btn--orange {
+  background: rgba(249,115,22,.1);
+  border-color: rgba(249,115,22,.35);
+  color: #F97316;
+}
+
+/* ══════════════════════════════════════════
+   DIETA — RESUMO DO DIA (TELA 2)
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-resumo-card {
+  background: rgba(15,23,42,.85);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 16px 32px rgba(0,0,0,.28);
+}
+#dietDataScreen .diet-resumo-kicker {
+  display: block;
+  margin-bottom: 14px;
+}
+#dietDataScreen .diet-resumo-kcal-row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+#dietDataScreen .diet-resumo-kcal-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#dietDataScreen .diet-resumo-kcal-label {
+  font-size: 12px;
+  color: rgba(203,213,225,.6);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+#dietDataScreen .diet-resumo-kcal-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -.01em;
+}
+#dietDataScreen .diet-resumo-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+#dietDataScreen .diet-resumo-ring {
+  flex-shrink: 0;
+  width: 110px;
+  height: 110px;
+}
+#dietDataScreen .diet-resumo-macros {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#dietDataScreen .diet-resumo-macro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#dietDataScreen .diet-resumo-macro-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#dietDataScreen .diet-resumo-macro-icon-wrap {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#dietDataScreen .tp-premium-macro--protein .diet-resumo-macro-icon-wrap { background: rgba(96,165,250,.12); color: #60A5FA; }
+#dietDataScreen .tp-premium-macro--carbs   .diet-resumo-macro-icon-wrap { background: rgba(34,197,94,.12);  color: #22C55E; }
+#dietDataScreen .tp-premium-macro--fat     .diet-resumo-macro-icon-wrap { background: rgba(251,191,36,.12); color: #FBBF24; }
+#dietDataScreen .diet-resumo-macro-name {
+  font-size: 13px;
+  color: rgba(203,213,225,.85);
+  font-weight: 700;
+  flex: 1;
+}
+#dietDataScreen .diet-resumo-macro-vals {
+  font-size: 12px;
+  color: rgba(203,213,225,.65);
+  font-weight: 700;
+  white-space: nowrap;
+}
+#dietDataScreen .diet-resumo-macro-item .tp-premium-macro-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(148,163,184,.12);
+  overflow: hidden;
+}
+#dietDataScreen .diet-resumo-macro-item.tp-premium-macro--protein .tp-premium-macro-track > div { background: #60A5FA; }
+#dietDataScreen .diet-resumo-macro-item.tp-premium-macro--carbs   .tp-premium-macro-track > div { background: #22C55E; }
+#dietDataScreen .diet-resumo-macro-item.tp-premium-macro--fat     .tp-premium-macro-track > div { background: #FBBF24; }
+#dietDataScreen .diet-resumo-macro-item .tp-premium-macro-track > div {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .5s ease;
+}
+
+/* ══════════════════════════════════════════
+   DIETA — REFEIÇÕES DE HOJE (TELA 2)
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-refeicoes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#dietDataScreen .diet-section-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 6px;
+}
+#dietDataScreen .diet-ver-horarios-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(34,197,94,.1);
+  border: 1px solid rgba(34,197,94,.25);
+  border-radius: 99px;
+  color: #22C55E;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: transform .12s;
+}
+#dietDataScreen .diet-ver-horarios-btn:active { transform: scale(.95); }
+#dietDataScreen .diet-meal-preview-card {
+  background: rgba(15,23,42,.75);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform .15s;
+}
+#dietDataScreen .diet-meal-preview-card:active { transform: scale(.98); }
+#dietDataScreen .diet-meal-preview-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+#dietDataScreen .diet-meal-preview-info { flex: 1; min-width: 0; }
+#dietDataScreen .diet-meal-preview-name {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+}
+#dietDataScreen .diet-meal-preview-time {
+  font-size: 12px;
+  color: #22C55E;
+  font-weight: 700;
+}
+#dietDataScreen .diet-meal-preview-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#dietDataScreen .diet-meal-preview-kcal {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255,255,255,.8);
+}
+#dietDataScreen .diet-meal-preview-macros {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#dietDataScreen .diet-macro-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+#dietDataScreen .diet-macro-dot--blue   { background: #60A5FA; }
+#dietDataScreen .diet-macro-dot--green  { background: #22C55E; }
+#dietDataScreen .diet-macro-dot--yellow { background: #FBBF24; }
+#dietDataScreen .diet-macro-label {
+  font-size: 12px;
+  color: rgba(203,213,225,.7);
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* ══════════════════════════════════════════
+   DIETA — COMPLETE SUA DIETA PREMIUM (TELA 3)
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-complete-card { }
+#dietDataScreen .diet-pendencias-badge {
+  color: #22C55E;
+  font-size: 14px;
+  font-weight: 900;
+}
+#dietDataScreen .diet-chip-group {
+  margin-bottom: 12px;
+}
+#dietDataScreen .diet-chip-group-title {
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(203,213,225,.55);
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+#dietDataScreen .diet-chip-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#dietDataScreen .diet-chip {
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(226,232,240,.75);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .16s, border-color .16s, color .16s, transform .12s cubic-bezier(.34,1.56,.64,1), box-shadow .16s;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#dietDataScreen .diet-chip:active {
+  transform: scale(.93);
+}
+#dietDataScreen .diet-chip:hover:not(.selected) {
+  border-color: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08);
+  color: #e2e8f0;
+}
+#dietDataScreen .diet-chip.selected {
+  background: rgba(34,197,94,.15);
+  border-color: #22C55E;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(34,197,94,.25), inset 0 0 0 1px rgba(34,197,94,.15);
+  transform: scale(1.02);
+}
+#dietDataScreen .diet-ver-mais-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1.5px dashed rgba(255,255,255,.15);
+  border-radius: 12px;
+  color: rgba(203,213,225,.6);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 14px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: border-color .15s, color .15s;
+}
+#dietDataScreen .diet-ver-mais-btn:hover { border-color: rgba(34,197,94,.4); color: #22C55E; }
+#dietDataScreen .diet-complete-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+#dietDataScreen .diet-responder-btn {
+  flex: 1;
+  background: #22C55E;
+  color: #052e16;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .12s, filter .12s;
+  box-shadow: 0 4px 18px rgba(34,197,94,.3);
+}
+#dietDataScreen .diet-responder-btn:active { transform: scale(.96); filter: brightness(.92); }
+#dietDataScreen .diet-pular-btn {
+  background: transparent;
+  border: 0;
+  color: rgba(203,213,225,.6);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px;
+  transition: color .15s;
+}
+#dietDataScreen .diet-pular-btn:hover { color: rgba(203,213,225,.9); }
+
+/* ══════════════════════════════════════════
+   DIETA — FEEDBACK CARD PREMIUM (TELA 3)
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-feedback-card .diet-feedback-label {
+  color: #22C55E;
+  font-size: 14px;
+}
+#dietDataScreen .diet-feedback-primary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: rgba(34,197,94,.08);
+  border: 1.5px solid rgba(34,197,94,.25);
+  border-radius: 14px;
+  padding: 15px 16px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 10px;
+  transition: transform .12s, background .14s;
+}
+#dietDataScreen .diet-feedback-primary:active { transform: scale(.97); background: rgba(34,197,94,.14); }
+#dietDataScreen .diet-feedback-check { flex-shrink: 0; }
+#dietDataScreen .diet-feedback-secondary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+#dietDataScreen .diet-feedback-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: rgba(226,232,240,.85);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .12s;
+}
+#dietDataScreen .diet-feedback-secondary:active { transform: scale(.96); }
+#dietDataScreen .diet-feedback-other {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: 13px 16px;
+  color: rgba(226,232,240,.8);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 8px;
+  transition: transform .12s;
+}
+#dietDataScreen .diet-feedback-other:active { transform: scale(.97); }
+
+/* ══════════════════════════════════════════
+   DIETA — MICROINTERAÇÕES GLOBAIS
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-core-view {
+  animation: dietFadeIn .32s ease both;
+}
+@keyframes dietFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#dietChoiceScreen.show .diet-choice-card {
+  animation: dietFadeIn .36s ease both;
+}
+#dietChoiceScreen.show .diet-choice-card:nth-child(2) {
+  animation-delay: .06s;
+}
