@@ -6432,6 +6432,12 @@ function openDietDataScreen() {
 }
 
 function openDietChoiceScreen() {
+  var existingPlan = typeof readLocalActiveDietPlan === 'function' ? readLocalActiveDietPlan() : null;
+  var hasPlan = existingPlan && Array.isArray(existingPlan.meals) && existingPlan.meals.length > 0;
+  if (hasPlan) {
+    openDietDataScreen();
+    return;
+  }
   syncDietaTheme(resolveKroniaThemeForDieta());
   setDietMiniAppChrome(false);
   document.getElementById('dietDataScreen')?.classList.remove('show');
@@ -8343,6 +8349,11 @@ function renderDietActionCards(vm) {
 }
 
 function renderDietCompactChoiceCards() {
+  var existingPlan = typeof readLocalActiveDietPlan === 'function' ? readLocalActiveDietPlan() : null;
+  var hasPlan = existingPlan && Array.isArray(existingPlan.meals) && existingPlan.meals.length > 0;
+  var iaLabel = hasPlan ? 'Regerar plano' : 'Gerar agora';
+  var manualLabel = hasPlan ? 'Editar dieta' : 'Criar dieta';
+  var iaIcon = hasPlan ? 'refresh-cw' : 'sparkles';
   return '<div class="diet-compact-choice-row">'
     + '<div class="diet-compact-choice-card diet-compact-choice-card--green" onclick="startAIDiet()">'
     + '<div class="diet-compact-choice-icon diet-compact-choice-icon--green">'
@@ -8353,7 +8364,7 @@ function renderDietCompactChoiceCards() {
     + '<span>Plano alimentar inteligente e automático</span>'
     + '</div>'
     + '<button type="button" class="diet-compact-action-btn diet-compact-action-btn--green" onclick="event.stopPropagation();startAIDiet()">'
-    + '<i data-lucide="sparkles" width="12" height="12"></i> Gerar agora <i data-lucide="chevron-right" width="12" height="12"></i>'
+    + '<i data-lucide="' + iaIcon + '" width="12" height="12"></i> ' + iaLabel + ' <i data-lucide="chevron-right" width="12" height="12"></i>'
     + '</button>'
     + '</div>'
     + '<div class="diet-compact-choice-card diet-compact-choice-card--orange" onclick="startManualDiet()">'
@@ -8365,7 +8376,7 @@ function renderDietCompactChoiceCards() {
     + '<span>Monte sua dieta do seu jeito</span>'
     + '</div>'
     + '<button type="button" class="diet-compact-action-btn diet-compact-action-btn--orange" onclick="event.stopPropagation();startManualDiet()">'
-    + '<i data-lucide="pencil" width="12" height="12"></i> Criar dieta <i data-lucide="chevron-right" width="12" height="12"></i>'
+    + '<i data-lucide="pencil" width="12" height="12"></i> ' + manualLabel + ' <i data-lucide="chevron-right" width="12" height="12"></i>'
     + '</button>'
     + '</div>'
     + '</div>';
@@ -8373,7 +8384,18 @@ function renderDietCompactChoiceCards() {
 
 function renderDietMealPreviewsSection(vm) {
   var meals = vm.meals || [];
-  if (!meals.length) return '';
+  if (!meals.length) {
+    return '<section class="diet-refeicoes-section">'
+      + '<div class="diet-section-row-head">'
+      + '<span class="tp-summary-kicker">REFEIÇÕES DE HOJE</span>'
+      + '</div>'
+      + '<div class="diet-meals-empty">'
+      + '<i data-lucide="utensils-crossed" width="32" height="32" stroke="rgba(148,163,184,.35)"></i>'
+      + '<p>Nenhuma refeição ainda.<br>Gere um plano com IA ou monte manualmente.</p>'
+      + '<button type="button" class="diet-responder-btn" onclick="startAIDiet()"><i data-lucide="sparkles" width="14" height="14"></i> Gerar plano agora</button>'
+      + '</div>'
+      + '</section>';
+  }
   var mealCards = meals.slice(0, 5).map(function(meal) {
     var p = dietRound(asKroniaNumber(meal.subtotal && meal.subtotal.protein, 0), 1);
     var c = dietRound(asKroniaNumber(meal.subtotal && meal.subtotal.carbs, 0), 1);
@@ -8452,11 +8474,17 @@ function renderDietProgressiveAnamnesisCard(vm) {
   var memory = vm.memory || readNutritionMemory();
   var missing = (memory.missing_fields || []).length;
   var score = memory.personalization_score || 0;
-  var mealCount = Number(memory.preferred_meal_count) || null;
-  var hasScale = memory.has_food_scale;
-  var style = memory.preferred_diet_style || null;
-  var workout = memory.workout_time || null;
-  var hunger = memory.hunger_period || null;
+
+  if (score >= 80 && missing === 0) {
+    return '<section class="diet-adaptive-card diet-complete-card diet-profile-done">'
+      + '<div class="diet-adaptive-card-head">'
+      + '<span class="tp-summary-kicker">PERFIL DA DIETA</span>'
+      + '<strong class="diet-profile-done-badge"><i data-lucide="check-circle" width="13" height="13"></i> Completo</strong>'
+      + '</div>'
+      + '<p class="diet-profile-done-text">Personalização em ' + escapeHTML(String(score)) + '%. Seu perfil alimentar está completo — a IA usa seus dados para ajustes automáticos.</p>'
+      + '<button type="button" class="diet-pular-btn" style="margin-top:8px" onclick="openNutritionProgressiveAnamnesis()">Editar preferências</button>'
+      + '</section>';
+  }
 
   return '<section class="diet-adaptive-card diet-complete-card">'
     + '<div class="diet-adaptive-card-head">'

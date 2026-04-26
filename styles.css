@@ -7242,3 +7242,39 @@ body.dark-mode .settings-row-value {
 #dietChoiceScreen.show .diet-choice-card:nth-child(2) {
   animation-delay: .06s;
 }
+
+/* ══════════════════════════════════════════
+   DIETA — PERFIL COMPLETO + EMPTY STATES
+══════════════════════════════════════════ */
+
+#dietDataScreen .diet-profile-done-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #22C55E;
+  font-size: 13px;
+  font-weight: 900;
+}
+#dietDataScreen .diet-profile-done-text {
+  font-size: 13px;
+  color: rgba(203,213,225,.75);
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+#dietDataScreen .diet-meals-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 16px;
+  background: rgba(15,23,42,.6);
+  border: 1px dashed rgba(148,163,184,.15);
+  border-radius: 16px;
+  text-align: center;
+}
+#dietDataScreen .diet-meals-empty p {
+  font-size: 13px;
+  color: rgba(148,163,184,.7);
+  line-height: 1.5;
+  margin: 0;
+}
