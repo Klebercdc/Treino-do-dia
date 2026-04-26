@@ -11432,9 +11432,8 @@ function nutritionHasBaseProfile(state) {
 function openNutritionFlow(context) {
   var state = getNutritionFlowState();
   state.returnTab = context && context.returnTab || state.returnTab || "dieta";
-  var shouldSkipProfile = nutritionHasBaseProfile(state);
-  state.step = shouldSkipProfile ? 1 : 0;
-  state.skipProfileStep = shouldSkipProfile;
+  state.step = 0;
+  state.skipProfileStep = false;
   window._nutritionFlowState = state;
   var screen = document.getElementById("nutritionFlowScreen");
   if (screen) screen.classList.add("show");
