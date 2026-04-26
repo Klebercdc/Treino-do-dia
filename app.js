@@ -8291,7 +8291,7 @@ function renderDietProgressCard(vm) {
     + renderResumoDiaMacroBar('Gorduras', 'droplets', p.fat && p.fat.current, p.fat && p.fat.target, 'tp-premium-macro--fat')
     + '</div>'
     + '</div>'
-    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="16" height="16"></i>Rebalancear automaticamente<i data-lucide="chevron-right" width="16" height="16" style="margin-left:auto"></i></button>'
+    + '<button type="button" class="tp-rebalancear-btn tp-rebalancear-btn--compact" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="16" height="16"></i>Rebalancear automaticamente<i data-lucide="chevron-right" width="16" height="16" style="margin-left:auto"></i></button>'
     + '</section>';
 }
 
@@ -8404,8 +8404,6 @@ function renderDietHome(vm) {
     + renderDietCompactChoiceCards()
     + renderDietProgressCard(vm)
     + renderDietMealPreviewsSection(vm)
-    + renderDietProgressiveAnamnesisCard(vm)
-    + renderDietDailyFeedbackCard(vm)
     + renderDietAdaptationCard(vm)
     + renderDietActionCards(vm)
     + '</div>';
@@ -8528,7 +8526,7 @@ function renderDietAdaptationCard(vm) {
 function renderDietPlanPanel(vm) {
   return '<div class="diet-core-view diet-core-view--plan">' + renderDietBackHeader('Minha Dieta')
     + vm.meals.map(function(meal, index) { return renderDietMealCard(vm.plan.meals[index] || meal, index); }).join('')
-    + '<button type="button" class="tp-rebalancear-btn" onclick="recalculateDietWithKronos()">Rebalancear automaticamente</button></div>';
+    + '<button type="button" class="tp-rebalancear-btn tp-rebalancear-btn--compact" onclick="recalculateDietWithKronos()"><i data-lucide="refresh-cw" width="16" height="16"></i>Rebalancear automaticamente<i data-lucide="chevron-right" width="16" height="16" style="margin-left:auto"></i></button></div>';
 }
 
 function renderDietSubstitutionPanel(vm) {
