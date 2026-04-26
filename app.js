@@ -11095,6 +11095,11 @@ function defaultNutritionFlowState() {
     selectedMealIndex: 0,
     registeredMeals: {},
     checkin: { aderencia: "parcial", fome: "controlada", energia: "boa", observacoes: "" },
+    healthConditions: [],
+    otherHealthCondition: "",
+    bcmManual: { dryWeightKg: "", bodyFatPercent: "", leanMassKg: "", muscleMassKg: "", totalBodyWaterLiters: "", bmi: "", waistCm: "", hipCm: "", notes: "" },
+    bcmManualOpen: false,
+    examContext: { useExistingExams: false, uploadedExamFile: null, uploadedExamName: null },
   };
 }
 
@@ -11136,6 +11141,45 @@ function nutritionSet(key, value) {
   renderNutritionFlow({ preserveScroll: true });
 }
 
+function toggleHealthCondition(value) {
+  var state = getNutritionFlowState();
+  var conditions = Array.isArray(state.healthConditions) ? state.healthConditions.slice() : [];
+  var idx = conditions.indexOf(value);
+  if (idx >= 0) conditions.splice(idx, 1); else conditions.push(value);
+  setNutritionFlowState({ healthConditions: conditions });
+  renderNutritionFlow({ preserveScroll: true });
+}
+
+function toggleBcmManualOpen() {
+  var state = getNutritionFlowState();
+  setNutritionFlowState({ bcmManualOpen: !state.bcmManualOpen });
+  renderNutritionFlow({ preserveScroll: true });
+}
+
+function setBcmManualField(key, value) {
+  var state = getNutritionFlowState();
+  var bcm = Object.assign({}, state.bcmManual || {});
+  bcm[key] = value;
+  setNutritionFlowState({ bcmManual: bcm });
+}
+
+function setExamUseExisting(val) {
+  var state = getNutritionFlowState();
+  var ctx = Object.assign({}, state.examContext || {});
+  ctx.useExistingExams = val === true || val === "true";
+  setNutritionFlowState({ examContext: ctx });
+  renderNutritionFlow({ preserveScroll: true });
+}
+
+function handleExamFileUpload(inputEl) {
+  var file = inputEl && inputEl.files && inputEl.files[0];
+  var state = getNutritionFlowState();
+  var ctx = Object.assign({}, state.examContext || {});
+  ctx.uploadedExamFile = file || null;
+  ctx.uploadedExamName = file ? file.name : null;
+  setNutritionFlowState({ examContext: ctx });
+  renderNutritionFlow({ preserveScroll: true });
+}
 
 function mapObjectiveToPremiumFlow(value) {
   var normalized = normalizeKroniaObjective(value);
@@ -11222,7 +11266,9 @@ function buildNutritionFlowInput() {
   syncNutritionFlowToLegacyDietForm();
   var state = getNutritionFlowState();
   var pathologies = Array.isArray(state.patologia) ? state.patologia : [];
-  var restrictionText = mergeUniqueDietList(state.sinaisClinicos, state.restricoesClinicas, pathologies.filter(function(item) { return item !== "nenhuma"; })).join(", ") || "nenhuma";
+  var flowConditions = Array.isArray(state.healthConditions) ? state.healthConditions : [];
+  var allPathologies = flowConditions.concat(pathologies.filter(function(item) { return item !== "nenhuma" && flowConditions.indexOf(item) === -1; }));
+  var restrictionText = mergeUniqueDietList(state.sinaisClinicos, state.restricoesClinicas, allPathologies).join(", ") || "nenhuma";
   var preferenceText = mergeUniqueDietList(state.preferencias, state.proteinas, state.carboidratos, state.gorduras, state.frutas, state.vegetais, state.laticinios, state.temperos).join(", ");
   return Object.assign({}, collectDietGenerationInput(), {
     objetivo: normalizeKroniaObjective(state.objetivo),
@@ -11240,7 +11286,7 @@ function buildNutritionFlowInput() {
     frequenciaTreino: state.treinoForca === "sim" ? (state.frequenciaTreino || document.getElementById("dietaFreqTreino")?.value || "3x por semana") : "não treino",
     horarioTreino: ({ manha: "Manhã", tarde: "Tarde", noite: "Noite", nao_treinei: "Não treinei" }[state.horarioTreino] || state.horarioTreino || ""),
     tipoTreino: state.treinoForca === "sim" ? "musculação" : "não treino",
-    patologia: pathologies.join(", ") || "nenhuma",
+    patologia: allPathologies.length ? allPathologies.join(", ") : (pathologies.join(", ") || "nenhuma"),
     medicamentos: state.medicamentos || "",
     padraoAlimentar: state.padraoAlimentar,
     restricoes: restrictionText,
@@ -11256,11 +11302,25 @@ function buildNutritionFlowInput() {
       horarioTreino: state.horarioTreino || "",
     }),
     clinicalFlow: {
-      patologias: pathologies,
-      diabetes: pathologies.some(function(item) { return /diabetes|insulina/i.test(String(item)); }),
+      patologias: allPathologies.length ? allPathologies : pathologies,
+      diabetes: allPathologies.some(function(item) { return /diabetes/i.test(String(item)); }) || pathologies.some(function(item) { return /diabetes|insulina/i.test(String(item)); }),
+      hipertensao: allPathologies.some(function(item) { return /hipertens/i.test(String(item)); }),
+      doencaRenal: allPathologies.some(function(item) { return /renal|hemodial/i.test(String(item)); }),
+      alergia: allPathologies.some(function(item) { return /alergia|intoler/i.test(String(item)); }),
       sinaisClinicos: state.sinaisClinicos,
       sinaisRelevantes: state.sinaisRelevantes,
       labsStatus: state.labsStatus,
+      bcmManual: state.bcmManual || null,
+      examContext: state.examContext || null,
+    },
+    clinicalData: {
+      healthConditions: flowConditions,
+      otherHealthCondition: state.otherHealthCondition || "",
+      bcmManual: state.bcmManual || null,
+      exams: {
+        useExistingExams: (state.examContext || {}).useExistingExams || false,
+        uploadedExamName: (state.examContext || {}).uploadedExamName || null,
+      },
     },
     nutritionFlowSelections: {
       proteinas: state.proteinas,
@@ -11867,6 +11927,23 @@ function renderNutritionFlowContent(key) {
   ];
   var atividadeButtons = [["sedentario", "Sedentário"], ["leve", "Leve"], ["moderado", "Moderado"], ["intenso", "Intenso"]];
   if (key === "perfil_base") {
+    var bcm = state.bcmManual || {};
+    var examCtx = state.examContext || {};
+    var hcList = Array.isArray(state.healthConditions) ? state.healthConditions : [];
+    var conditionsList = ["Diabetes", "Hipertensão", "Doença renal", "Hemodiálise", "Dislipidemia", "Gastrite/Refluxo", "Intolerância alimentar", "Alergia alimentar", "Esteatose hepática", "Hipotireoidismo", "SOP", "Gestação", "Pós-bariátrica", "Outra"];
+    var bcmFieldsHTML = state.bcmManualOpen ? `
+      <div class="nutrition-official-grid-2" style="margin-top:10px;gap:8px">
+        <div><label class="nutrition-official-input-label">Peso seco (kg)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.dryWeightKg)}" oninput="setBcmManualField('dryWeightKg',this.value)"></div>
+        <div><label class="nutrition-official-input-label">Gordura corporal (%)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.bodyFatPercent)}" oninput="setBcmManualField('bodyFatPercent',this.value)"></div>
+        <div><label class="nutrition-official-input-label">Massa magra (kg)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.leanMassKg)}" oninput="setBcmManualField('leanMassKg',this.value)"></div>
+        <div><label class="nutrition-official-input-label">Massa muscular (kg)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.muscleMassKg)}" oninput="setBcmManualField('muscleMassKg',this.value)"></div>
+        <div><label class="nutrition-official-input-label">Água corporal total (L)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.totalBodyWaterLiters)}" oninput="setBcmManualField('totalBodyWaterLiters',this.value)"></div>
+        <div><label class="nutrition-official-input-label">IMC</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.bmi)}" oninput="setBcmManualField('bmi',this.value)"></div>
+        <div><label class="nutrition-official-input-label">Cintura (cm)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.waistCm)}" oninput="setBcmManualField('waistCm',this.value)"></div>
+        <div><label class="nutrition-official-input-label">Quadril (cm)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.hipCm)}" oninput="setBcmManualField('hipCm',this.value)"></div>
+      </div>
+      <div style="margin-top:8px"><label class="nutrition-official-input-label">Observações</label><textarea class="input-dark nutrition-official-notes" oninput="setBcmManualField('notes',this.value)">${escapeHTML(bcm.notes || "")}</textarea></div>
+    ` : "";
     return `<section class="glass-card premium-step-card">
       <h2 class="nutrition-official-label">Objetivo</h2>
       <div class="nutrition-official-grid-2">
@@ -11887,6 +11964,38 @@ function renderNutritionFlowContent(key) {
             <button type="button" class="chip chip-compact ${nutritionSelected("sexo", "feminino") ? "active" : ""}" onclick="nutritionSet('sexo','feminino')">Feminino</button>
           </div>
         </div>
+      </div>
+    </section>
+    <section class="glass-card premium-step-card">
+      <h2 class="nutrition-official-label" style="color:#22C55E;letter-spacing:.14em">Saúde e dados clínicos</h2>
+      <p class="nutrition-official-hint" style="margin-bottom:14px">Opcional, mas ajuda o KroniA a personalizar sua dieta com mais segurança.</p>
+      <div class="nutrition-official-wrap">
+        ${conditionsList.map(function(cond) {
+          var isActive = hcList.indexOf(cond) !== -1;
+          return `<button type="button" class="chip ${isActive ? "active" : ""}" onclick="toggleHealthCondition('${escapeAttr(cond)}')">${escapeHTML(cond)}</button>`;
+        }).join("")}
+      </div>
+      ${hcList.indexOf("Outra") !== -1 ? `<div style="margin-top:12px"><label class="nutrition-official-input-label">Qual outra condição?</label><input type="text" class="input-dark" value="${escapeAttr(state.otherHealthCondition)}" oninput="setNutritionFlowState({ otherHealthCondition: this.value })" placeholder="Descreva..."></div>` : ""}
+      <div class="clinical-bcm-block" style="margin-top:14px">
+        <button type="button" class="clinical-bcm-toggle" onclick="toggleBcmManualOpen()">
+          <span>Inserir BCM manual / composição corporal</span>
+          <span class="clinical-bcm-arrow${state.bcmManualOpen ? " open" : ""}">▾</span>
+        </button>
+        ${bcmFieldsHTML}
+      </div>
+      <div style="margin-top:16px">
+        <h2 class="nutrition-official-label" style="margin-bottom:6px">Exames</h2>
+        <p class="nutrition-official-hint" style="margin-bottom:10px">Use exames já cadastrados ou importe um PDF/imagem para o KroniA considerar na dieta.</p>
+        <div class="nutrition-official-row">
+          <button type="button" class="chip${examCtx.useExistingExams ? " active" : ""}" onclick="setExamUseExisting(${examCtx.useExistingExams ? "false" : "true"})" style="flex:1;min-width:0">Usar exames já cadastrados</button>
+          <label class="chip clinical-exam-import" style="flex:1;min-width:0;cursor:pointer;position:relative">
+            ${examCtx.uploadedExamName ? "✓ " + escapeHTML(examCtx.uploadedExamName) : "Importar exame"}
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg" style="display:none;position:absolute;inset:0;opacity:0;cursor:pointer" onchange="handleExamFileUpload(this)">
+          </label>
+        </div>
+      </div>
+      <div class="clinical-disclaimer" style="margin-top:14px">
+        As sugestões alimentares não substituem acompanhamento com nutricionista ou médico.
       </div>
     </section>`;
   }
@@ -13551,7 +13660,9 @@ function buildDietRequestPayloadFromInput(input) {
       medicamentos: safeInput.medicamentos,
       sono: safeInput.sono,
       estresse: safeInput.estresse,
+      clinicalData: safeInput.clinicalData || null,
     },
+    clinicalData: safeInput.clinicalData || null,
     aderencia: safeInput.aderencia || null,
     trainingSnapshot: safeInput.trainingSnapshot || null,
     nutritionGoals: safeInput.nutritionGoals || null,
@@ -13589,7 +13700,9 @@ function buildDietRequestPayloadFromInput(input) {
         medicamentos: safeInput.medicamentos,
         sono: safeInput.sono,
         estresse: safeInput.estresse,
+        clinicalData: safeInput.clinicalData || null,
       },
+      clinicalData: safeInput.clinicalData || null,
       adherenceContext: safeInput.aderencia || null,
       trainingSnapshot: safeInput.trainingSnapshot || null,
       nutritionSnapshot: activeNutritionSnapshot,
