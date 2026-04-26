@@ -7306,3 +7306,85 @@ body.dark-mode .settings-row-value {
   line-height: 1.5;
   margin: 0;
 }
+
+
+/* =========================================================
+   FIX DIETA MOBILE — remove espaços mortos antes/depois dos cards
+   ========================================================= */
+
+body.diet-mini-app-active #container,
+body.diet-mini-app-active .app-scroll,
+body.diet-mini-app-active .diet-screen,
+body.diet-mini-app-active .diet-page,
+body.diet-mini-app-active .premium-diet-screen,
+body.diet-mini-app-active .diet-premium-screen {
+  height: calc(var(--vh, 1vh) * 100);
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  display: block !important;
+  justify-content: flex-start !important;
+  align-content: flex-start !important;
+}
+
+body.diet-mini-app-active .diet-content,
+body.diet-mini-app-active .diet-main,
+body.diet-mini-app-active .diet-sections,
+body.diet-mini-app-active .premium-diet-content {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 14px !important;
+  min-height: 0 !important;
+}
+
+body.diet-mini-app-active .diet-card,
+body.diet-mini-app-active .diet-action-card,
+body.diet-mini-app-active .diet-explain-card,
+body.diet-mini-app-active .premium-card,
+body.diet-mini-app-active .kronia-diet-card {
+  margin-top: 0 !important;
+  margin-bottom: 14px !important;
+}
+
+body.diet-mini-app-active .diet-card + .diet-card,
+body.diet-mini-app-active .diet-action-card + .diet-action-card,
+body.diet-mini-app-active .premium-card + .premium-card {
+  margin-top: 0 !important;
+}
+
+body.diet-mini-app-active .diet-spacer,
+body.diet-mini-app-active .premium-spacer,
+body.diet-mini-app-active .screen-spacer,
+body.diet-mini-app-active .bottom-spacer,
+body.diet-mini-app-active .safe-bottom-spacer {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.diet-mini-app-active [style*="height: 80px"],
+body.diet-mini-app-active [style*="height:80px"],
+body.diet-mini-app-active [style*="height: 100px"],
+body.diet-mini-app-active [style*="height:100px"],
+body.diet-mini-app-active [style*="height: 120px"],
+body.diet-mini-app-active [style*="height:120px"],
+body.diet-mini-app-active [style*="margin-top: 80px"],
+body.diet-mini-app-active [style*="margin-top:80px"],
+body.diet-mini-app-active [style*="margin-top: 100px"],
+body.diet-mini-app-active [style*="margin-top:100px"] {
+  height: auto !important;
+  min-height: 0 !important;
+  margin-top: 0 !important;
+}
+
+body.diet-mini-app-active .footer-actions {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
