@@ -6453,7 +6453,12 @@ function openDietChoiceScreen() {
 
 function startAIDiet() {
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
-  openNutritionFlow({ source: 'choice_screen_ia', returnTab: 'dieta' });
+  var userId = (typeof window !== 'undefined' && window._kronaUserId) || null;
+  if (typeof openDietProfileWizard === 'function') {
+    openDietProfileWizard(userId);
+  } else {
+    openNutritionFlow({ source: 'choice_screen_ia', returnTab: 'dieta' });
+  }
 }
 
 function startManualDiet() {

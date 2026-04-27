@@ -144,7 +144,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
   try {
     var profileQuery = adminClient
       .from('profiles')
-      .select('id,full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes')
+      .select('id,full_name,birth_date,sex,height_cm,current_weight_kg,activity_level,objective,dietary_pattern,allergies,intolerances,liked_foods,disliked_foods,clinical_notes,bcm_data,pcm_manual,body_composition_result,diet_flow_step,diet_flow_completed_at')
       .eq('id', userId)
       .maybeSingle();
     var bodyMetricsQuery = adminClient
@@ -156,7 +156,7 @@ async function loadDietSupabaseContext(adminClient, userId) {
       .maybeSingle();
     var goalsQuery = adminClient
       .from('nutrition_goals')
-      .select('calories_target,protein_g,carbs_g,fat_g,updated_at')
+      .select('calories_target,protein_g,carbs_g,fat_g,updated_at,training_context,metabolism_behavior,health_exam_context,food_context,goal_context,get_calculation_mode,behavior_adjustments,diet_alerts')
       .eq('user_id', userId)
       .eq('active', true)
       .order('updated_at', { ascending: false })
@@ -183,6 +183,14 @@ async function loadDietSupabaseContext(adminClient, userId) {
       bodyMetrics: responses[1].status === 'fulfilled' ? responses[1].value.data || null : null,
       nutritionGoals: responses[2].status === 'fulfilled' ? responses[2].value.data || null : null,
       supplements: responses[3].status === 'fulfilled' ? responses[3].value.data || [] : [],
+      // Campos expandidos do wizard 6 etapas (mapeados do perfil)
+      bcmData: (function() { var p = responses[0].status === 'fulfilled' ? responses[0].value.data : null; return p ? p.bcm_data || null : null; })(),
+      pcmManual: (function() { var p = responses[0].status === 'fulfilled' ? responses[0].value.data : null; return p ? p.pcm_manual || null : null; })(),
+      bodyComposition: (function() { var p = responses[0].status === 'fulfilled' ? responses[0].value.data : null; return p ? p.body_composition_result || null : null; })(),
+      currentStep: (function() { var p = responses[0].status === 'fulfilled' ? responses[0].value.data : null; return p ? p.diet_flow_step || 1 : 1; })(),
+      dietFlowCompletedAt: (function() { var p = responses[0].status === 'fulfilled' ? responses[0].value.data : null; return p ? p.diet_flow_completed_at || null : null; })(),
+      contextoTreino: (function() { var g = responses[2].status === 'fulfilled' ? responses[2].value.data : null; return g ? g.training_context || null : null; })(),
+      metabolismBehaviorContext: (function() { var g = responses[2].status === 'fulfilled' ? responses[2].value.data : null; return g ? g.metabolism_behavior || null : null; })(),
       latestLabReport: (function() {
         if (responses[4].status !== 'fulfilled' || !responses[4].value.data) return null;
         var d = responses[4].value.data;
@@ -229,10 +237,50 @@ async function loadDietSupabaseContext(adminClient, userId) {
   }
 }
 
+async function saveDietProfileContext(adminClient, userId, contextData) {
+  if (!adminClient || !userId || !contextData) return { ok: false, error: 'missing params' };
+  try {
+    var profileUpdates = {};
+    if (contextData.bcmData !== undefined)      profileUpdates.bcm_data                = contextData.bcmData;
+    if (contextData.pcmManual !== undefined)    profileUpdates.pcm_manual              = contextData.pcmManual;
+    if (contextData.bodyComposition !== undefined) profileUpdates.body_composition_result = contextData.bodyComposition;
+    if (contextData.currentStep !== undefined)  profileUpdates.diet_flow_step          = contextData.currentStep;
+    if (contextData.completedAt !== undefined)  profileUpdates.diet_flow_completed_at  = contextData.completedAt;
+
+    var goalsUpdates = {};
+    if (contextData.contextoTreino !== undefined)          goalsUpdates.training_context     = contextData.contextoTreino;
+    if (contextData.metabolismBehaviorContext !== undefined) goalsUpdates.metabolism_behavior  = contextData.metabolismBehaviorContext;
+    if (contextData.healthExamContext !== undefined)        goalsUpdates.health_exam_context  = contextData.healthExamContext;
+    if (contextData.foodContext !== undefined)              goalsUpdates.food_context         = contextData.foodContext;
+    if (contextData.goalContext !== undefined)              goalsUpdates.goal_context         = contextData.goalContext;
+    if (contextData.getCalculationMode !== undefined)       goalsUpdates.get_calculation_mode = contextData.getCalculationMode;
+    if (contextData.behaviorAdjustments !== undefined)      goalsUpdates.behavior_adjustments = contextData.behaviorAdjustments;
+    if (contextData.alerts !== undefined)                   goalsUpdates.diet_alerts          = contextData.alerts;
+
+    var ops = [];
+    if (Object.keys(profileUpdates).length) {
+      ops.push(adminClient.from('profiles').update(profileUpdates).eq('id', userId));
+    }
+    if (Object.keys(goalsUpdates).length) {
+      ops.push(
+        adminClient.from('nutrition_goals')
+          .update(goalsUpdates)
+          .eq('user_id', userId)
+          .eq('active', true)
+      );
+    }
+    if (ops.length) await Promise.allSettled(ops);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err && err.message ? err.message : 'unknown' };
+  }
+}
+
 module.exports = {
   buildDietProfileFromSupabase: buildDietProfileFromSupabase,
   enrichDietPayload: enrichDietPayload,
   enrichDietRequestBody: enrichDietRequestBody,
   loadDietSupabaseContext: loadDietSupabaseContext,
+  saveDietProfileContext: saveDietProfileContext,
   parseAgeFromBirthDate: parseAgeFromBirthDate,
 };

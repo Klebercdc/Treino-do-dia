@@ -1,0 +1,422 @@
+/* Diet Profile Wizard — 6 etapas — SPA vanilla */
+/* Depende de: diet-wizard-state.js, diet-step-*.js, diet-summary.js */
+
+(function(root) {
+  var WIZARD_SCREEN_ID = 'dietProfileWizardScreen';
+
+  function _q(id) { return document.getElementById(id); }
+
+  function renderDietWizardProgress(state) {
+    var prog = getDietWizardProgress(state);
+    var bar = document.getElementById('dietWizardProgressBar');
+    var label = document.getElementById('dietWizardProgressLabel');
+    if (bar) bar.style.width = prog.percent + '%';
+    if (label) label.textContent = 'Etapa ' + prog.current + ' de ' + prog.total;
+  }
+
+  function renderDietWizardStep(state) {
+    var container = document.getElementById('dietWizardStepContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (isDietWizardComplete(state)) {
+      container.innerHTML = renderDietSummary(state);
+      renderDietWizardProgress(state);
+      return;
+    }
+
+    var step = state.currentStep;
+    var html = '';
+    if (step === 1) html = renderDietStepBody(state.data.bodyComposition || {});
+    else if (step === 2) html = renderDietStepGoal(state.data.goal || {});
+    else if (step === 3) html = renderDietStepHealth(state.data.healthExams || {});
+    else if (step === 4) html = renderDietStepFood(state.data.food || {});
+    else if (step === 5) html = renderDietStepTraining(state.data.training || {});
+    else if (step === 6) html = renderDietStepMetabolism(state.data.metabolism || {});
+    container.innerHTML = html;
+    renderDietWizardProgress(state);
+    _bindStepChips(container);
+    _bindModalidadeExpand(container, state);
+    try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
+  }
+
+  function _bindStepChips(container) {
+    container.querySelectorAll('.dw-chip[data-group]').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        var group = chip.dataset.group;
+        var multi = chip.dataset.multi === 'true';
+        if (!multi) {
+          container.querySelectorAll('.dw-chip[data-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
+        }
+        chip.classList.toggle('active');
+      });
+    });
+    container.querySelectorAll('.dw-chip-single[data-group]').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        var group = chip.dataset.group;
+        container.querySelectorAll('.dw-chip-single[data-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+      });
+    });
+    container.querySelectorAll('.dw-bcm-toggle').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        container.querySelectorAll('.dw-bcm-toggle').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var showBcm = btn.dataset.show || '';
+        container.querySelectorAll('[data-bcm-section]').forEach(function(sec) {
+          sec.style.display = sec.dataset.bcmSection === showBcm ? '' : 'none';
+        });
+      });
+    });
+  }
+
+  function _bindModalidadeExpand(container, state) {
+    container.querySelectorAll('.dw-chip[data-group="modalidades"]').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        var tipo = chip.dataset.value;
+        var cardId = 'dw-modal-card-' + tipo;
+        var existing = container.querySelector('#' + cardId);
+        if (chip.classList.contains('active')) {
+          if (!existing) {
+            var card = document.createElement('div');
+            card.id = cardId;
+            card.className = 'dw-modal-sub-card';
+            card.innerHTML = _modalidadeSubCard(tipo);
+            container.querySelector('.dw-modalidades-expand').appendChild(card);
+          }
+        } else {
+          if (existing) existing.remove();
+        }
+      });
+    });
+  }
+
+  function _modalidadeSubCard(tipo) {
+    var label = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+    return '<div class="dw-card" style="margin-top:8px">' +
+      '<div class="dw-field-label">' + label + '</div>' +
+      '<div class="dw-row">' +
+        '<div class="dw-col">' +
+          '<label class="dw-label">Dias/semana</label>' +
+          '<select class="dw-select" name="modal_dias_' + tipo + '">' +
+            [1,2,3,4,5,6,7].map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div class="dw-col">' +
+          '<label class="dw-label">Duração (min)</label>' +
+          '<select class="dw-select" name="modal_dur_' + tipo + '">' +
+            ['30','45','60','75','90','120+'].map(function(d){ return '<option value="' + d + '">' + d + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<label class="dw-label">Intensidade</label>' +
+      '<div class="dw-chips-row">' +
+        ['leve','moderado','intenso'].map(function(i){
+          return '<button type="button" class="dw-chip-single" data-group="modal_int_' + tipo + '" data-value="' + i + '">' + i.charAt(0).toUpperCase() + i.slice(1) + '</button>';
+        }).join('') +
+      '</div>' +
+      '<label class="dw-label">Horário</label>' +
+      '<div class="dw-chips-row">' +
+        ['Manhã','Tarde','Noite'].map(function(h){
+          return '<button type="button" class="dw-chip-single" data-group="modal_hor_' + tipo + '" data-value="' + h.toLowerCase() + '">' + h + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
+  function _collectStepData(step) {
+    var container = document.getElementById('dietWizardStepContainer');
+    if (!container) return {};
+    var data = {};
+
+    function chip(group, multi) {
+      var active = container.querySelectorAll('.dw-chip[data-group="' + group + '"].active, .dw-chip-single[data-group="' + group + '"].active');
+      if (!active.length) return multi ? [] : null;
+      var vals = Array.from(active).map(function(c) { return c.dataset.value || c.textContent.trim(); });
+      return multi ? vals : vals[0];
+    }
+
+    function input(name) {
+      var el = container.querySelector('[name="' + name + '"]');
+      return el ? el.value.trim() : null;
+    }
+
+    if (step === 1) {
+      data.sex = chip('sex');
+      data.age = Number(input('age')) || null;
+      data.weight_kg = Number(input('weight_kg')) || null;
+      data.height_cm = Number(input('height_cm')) || null;
+      var bcmMode = chip('bcm_mode');
+      data.bcmMode = bcmMode;
+      if (bcmMode === 'bcm') {
+        data.bcmData = {
+          body_fat_percent: Number(input('body_fat_percent')) || null,
+          lean_mass_kg: Number(input('lean_mass_kg')) || null,
+          fat_mass_kg: Number(input('fat_mass_kg')) || null,
+          water_percent: Number(input('water_percent')) || null,
+          muscle_mass_kg: Number(input('muscle_mass_kg')) || null,
+          basal_metabolic_rate: Number(input('basal_metabolic_rate')) || null,
+          exam_date: input('exam_date'),
+        };
+      } else if (bcmMode === 'pcm') {
+        data.pcmManual = {
+          waist_cm: Number(input('waist_cm')) || null,
+          abdomen_cm: Number(input('abdomen_cm')) || null,
+          hip_cm: Number(input('hip_cm')) || null,
+          neck_cm: Number(input('neck_cm')) || null,
+        };
+      }
+      data.gordura_corporal_manual = Number(input('gordura_corporal_manual')) || null;
+      data.biotipo = chip('biotipo');
+    } else if (step === 2) {
+      data.objective = chip('objective');
+      data.prioridade = chip('prioridade');
+      data.refeicoesPorDia = chip('refeicoesPorDia') || input('refeicoesPorDia');
+      data.metaCaloricaManual = Number(input('metaCaloricaManual')) || null;
+    } else if (step === 3) {
+      data.patologias = chip('patologias', true);
+      data.observacoesClincias = input('observacoesClincias');
+      data.restricoesClinicas = input('restricoesClinicas');
+    } else if (step === 4) {
+      data.padraoAlimentar = chip('padraoAlimentar');
+      data.preferenciasAlimentares = input('preferenciasAlimentares');
+      data.alimentosQueEvita = input('alimentosQueEvita');
+      data.restricoesAlimentares = chip('restricoesAlimentares', true);
+      data.suplementos = chip('suplementos', true);
+    } else if (step === 5) {
+      data.statusTreino = chip('statusTreino');
+      data.perfilTreino = chip('perfilTreino');
+      data.intensidadeGeral = chip('intensidadeGeral');
+      var modalChips = container.querySelectorAll('.dw-chip[data-group="modalidades"].active');
+      data.modalidades = Array.from(modalChips).map(function(c) {
+        var tipo = c.dataset.value || c.textContent.trim().toLowerCase();
+        function selVal(group) {
+          var el = container.querySelector('.dw-chip-single[data-group="' + group + '"].active, .dw-chip-single[data-group="modal_int_' + tipo + '"].active');
+          return el ? el.dataset.value : null;
+        }
+        var diasEl = container.querySelector('[name="modal_dias_' + tipo + '"]');
+        var durEl  = container.querySelector('[name="modal_dur_' + tipo + '"]');
+        return {
+          tipo: tipo,
+          diasSemana: diasEl ? Number(diasEl.value) : 3,
+          duracaoMinutos: durEl ? (durEl.value === '120+' ? 120 : Number(durEl.value)) : 60,
+          intensidade: (function(){
+            var el = container.querySelector('[data-group="modal_int_' + tipo + '"].active');
+            return el ? el.dataset.value : 'moderado';
+          })(),
+          horario: (function(){
+            var el = container.querySelector('[data-group="modal_hor_' + tipo + '"].active');
+            return el ? el.dataset.value : null;
+          })(),
+          objetivo: null,
+        };
+      });
+      data.rotinaForaTreino = chip('rotinaForaTreino');
+      data.fadiga = Number(input('fadiga')) || null;
+      data.dorMuscular = chip('dorMuscular');
+      data.quedaRendimento = chip('quedaRendimento');
+    } else if (step === 6) {
+      data.respostaPeso = chip('respostaPeso');
+      data.apetite = chip('apetite');
+      data.historicoDieta = chip('historicoDieta');
+      data.adesao = chip('adesao');
+      data.rotina = chip('rotina');
+      data.sono = chip('sono');
+      data.estresse = chip('estresse');
+      data.usoHormonios = chip('usoHormonios');
+    }
+
+    return data;
+  }
+
+  function _validateStepData(step, data) {
+    if (step === 1) {
+      if (!data.sex) return 'Informe o sexo.';
+      if (!data.age || data.age < 14) return 'Informe uma idade válida.';
+      if (!data.weight_kg || data.weight_kg < 35) return 'Informe o peso em kg.';
+      if (!data.height_cm || data.height_cm < 100) return 'Informe a altura em cm.';
+      if (data.bcmMode === 'bcm' && (!data.bcmData || !data.bcmData.body_fat_percent)) return 'Informe o % de gordura do BCM.';
+      if (data.bcmMode === 'pcm' && (!data.pcmManual || !data.pcmManual.waist_cm || !data.pcmManual.abdomen_cm)) return 'Informe cintura e abdômen.';
+    }
+    if (step === 2 && !data.objective) return 'Selecione o objetivo.';
+    return null;
+  }
+
+  function openDietProfileWizard(userId, opts) {
+    var options = opts || {};
+    var screen = _q(WIZARD_SCREEN_ID);
+    if (!screen) {
+      screen = _createWizardScreen();
+      document.body.appendChild(screen);
+    }
+
+    var savedState = null;
+    try {
+      var raw = localStorage.getItem('kronia_diet_wizard_state_v1');
+      if (raw) savedState = JSON.parse(raw);
+    } catch(_) {}
+
+    var state;
+    if (savedState && savedState.userId === userId && !options.forceNew) {
+      state = savedState;
+    } else {
+      state = createDietWizardState(userId);
+    }
+
+    window._dietWizardState = state;
+    screen.classList.add('show');
+    var footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = 'none';
+    renderDietWizardStep(state);
+  }
+
+  function closeDietProfileWizard() {
+    var screen = _q(WIZARD_SCREEN_ID);
+    if (screen) screen.classList.remove('show');
+    var footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = '';
+  }
+
+  function dietWizardNext() {
+    var state = window._dietWizardState;
+    if (!state) return;
+
+    if (isDietWizardComplete(state)) {
+      _submitDietWizard(state);
+      return;
+    }
+
+    var stepData = _collectStepData(state.currentStep);
+    var err = _validateStepData(state.currentStep, stepData);
+    if (err) {
+      if (typeof showToast === 'function') showToast(err, 'warning', 3600);
+      return;
+    }
+
+    state = advanceDietWizardStep(state, state.currentStep, stepData);
+    window._dietWizardState = state;
+    try { localStorage.setItem('kronia_diet_wizard_state_v1', JSON.stringify(state)); } catch(_) {}
+    renderDietWizardStep(state);
+  }
+
+  function dietWizardBack() {
+    var state = window._dietWizardState;
+    if (!state) return;
+    if (isDietWizardComplete(state)) {
+      state.completedSteps = state.completedSteps.filter(function(s) { return s < 6; });
+      state.currentStep = 6;
+      delete state.completedAt;
+      window._dietWizardState = state;
+      renderDietWizardStep(state);
+      return;
+    }
+    if (state.currentStep <= 1) {
+      closeDietProfileWizard();
+      try { navTo('dieta'); openDietDataScreen(); } catch(_) {}
+      return;
+    }
+    state.currentStep -= 1;
+    window._dietWizardState = state;
+    renderDietWizardStep(state);
+  }
+
+  function dietWizardEditStep(step) {
+    var state = window._dietWizardState;
+    if (!state) return;
+    state.currentStep = step;
+    delete state.completedAt;
+    window._dietWizardState = state;
+    renderDietWizardStep(state);
+  }
+
+  async function _submitDietWizard(state) {
+    var btn = document.getElementById('dietWizardSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+
+    var body = state.data.bodyComposition || {};
+    var goal = state.data.goal || {};
+    var training = state.data.training || {};
+    var metabolism = state.data.metabolism || {};
+
+    var payload = {
+      sexo: body.sex,
+      sex: body.sex,
+      idade: body.age,
+      age: body.age,
+      peso: body.weight_kg,
+      weight_kg: body.weight_kg,
+      altura: body.height_cm,
+      height_cm: body.height_cm,
+      objetivo: goal.objective,
+      objective: goal.objective,
+      refeicoesPorDia: goal.refeicoesPorDia,
+      padraoAlimentar: (state.data.food || {}).padraoAlimentar,
+      bcmData: body.bcmData || null,
+      pcmManual: body.pcmManual || null,
+      statusTreino: training.statusTreino,
+      perfilTreino: training.perfilTreino,
+      intensidadeGeral: training.intensidadeGeral,
+      modalidades: training.modalidades || [],
+      rotinaForaTreino: training.rotinaForaTreino,
+      fadiga: training.fadiga,
+      dorMuscular: training.dorMuscular,
+      quedaRendimento: training.quedaRendimento,
+      respostaPeso: metabolism.respostaPeso,
+      apetite: metabolism.apetite,
+      historicoDieta: metabolism.historicoDieta,
+      adesao: metabolism.adesao,
+      rotina: metabolism.rotina,
+      sono: metabolism.sono,
+      estresse: metabolism.estresse,
+      usoHormonios: metabolism.usoHormonios,
+      patologias: (state.data.healthExams || {}).patologias || [],
+      restricoesAlimentares: (state.data.food || {}).restricoesAlimentares || [],
+      suplementos: (state.data.food || {}).suplementos || [],
+      dietWizardFlow: state,
+    };
+
+    try {
+      closeDietProfileWizard();
+      if (typeof openNutritionFlowFull === 'function') {
+        await openNutritionFlowFull({ autoGenerate: true, source: 'diet_wizard_6step', dietWizardPayload: payload });
+      } else {
+        try { navTo('dieta'); openDietDataScreen(); } catch(_) {}
+      }
+    } catch(err) {
+      if (typeof showToast === 'function') showToast('Erro ao gerar dieta. Tente novamente.', 'error', 4000);
+      if (btn) { btn.disabled = false; btn.textContent = 'Gerar minha dieta com KroniA'; }
+    }
+  }
+
+  function _createWizardScreen() {
+    var div = document.createElement('div');
+    div.id = WIZARD_SCREEN_ID;
+    div.className = 'diet-wizard-screen';
+    div.innerHTML = [
+      '<div class="diet-wizard-inner">',
+        '<div class="diet-wizard-header">',
+          '<button type="button" class="dw-back-btn" onclick="dietWizardBack()">&#8592;</button>',
+          '<div class="diet-wizard-progress-wrap">',
+            '<div class="diet-wizard-progress-track">',
+              '<div id="dietWizardProgressBar" class="diet-wizard-progress-fill"></div>',
+            '</div>',
+            '<span id="dietWizardProgressLabel" class="diet-wizard-progress-label">Etapa 1 de 6</span>',
+          '</div>',
+        '</div>',
+        '<div id="dietWizardStepContainer" class="diet-wizard-body"></div>',
+        '<div class="diet-wizard-footer">',
+          '<button type="button" id="dietWizardNextBtn" class="dw-btn-primary" onclick="dietWizardNext()">Continuar</button>',
+        '</div>',
+      '</div>',
+    ].join('');
+    return div;
+  }
+
+  // Expose globals
+  root.openDietProfileWizard = openDietProfileWizard;
+  root.closeDietProfileWizard = closeDietProfileWizard;
+  root.dietWizardNext = dietWizardNext;
+  root.dietWizardBack = dietWizardBack;
+  root.dietWizardEditStep = dietWizardEditStep;
+
+})(typeof window !== 'undefined' ? window : this);
