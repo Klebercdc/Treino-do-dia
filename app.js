@@ -6530,12 +6530,10 @@ function buildManualDietTemplate() {
 
 function startManualDiet() {
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
-  var existing = typeof readLocalActiveDietPlan === 'function' ? readLocalActiveDietPlan() : null;
-  if (!existing) {
-    var template = buildManualDietTemplate();
-    if (typeof setActiveDietPlan === 'function') setActiveDietPlan(template, { render: false });
-    else { window._kroniaDietPlan = template; try { localStorage.setItem(KRONIA_ACTIVE_DIET_PLAN_KEY, JSON.stringify(template)); } catch(_) {} }
-  }
+  var template = buildManualDietTemplate();
+  if (typeof setActiveDietPlan === 'function') setActiveDietPlan(template, { render: false });
+  else { window._kroniaDietPlan = template; try { localStorage.setItem(KRONIA_ACTIVE_DIET_PLAN_KEY, JSON.stringify(template)); } catch(_) {} }
+  _dietCoreView = 'minha-dieta';
   openDietDataScreen();
   if (typeof showToast === 'function') showToast('Modelo base carregado — edite à vontade!', 'info', 3000);
 }
