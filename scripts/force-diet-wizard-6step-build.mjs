@@ -6,10 +6,10 @@ const publicDir = path.join(root, 'public');
 const overridePath = path.join(publicDir, 'src/ui/diet/diet-wizard-force-6step.js');
 const indexPath = path.join(publicDir, 'index.html');
 
-const overrideCode = `/* Force KroniA Diet to the new 6-step wizard. */
+const overrideCode = String.raw`/* Force KroniA Diet to the new 6-step wizard. */
 (function(){
   function getUserId(){
-    try { return window.currentUser?.id || window.currentUser?.uid || window.authUser?.id || null; } catch(_) { return null; }
+    try { return (window.currentUser && (window.currentUser.id || window.currentUser.uid)) || (window.authUser && window.authUser.id) || null; } catch(_) { return null; }
   }
 
   function hideOldDietFlow(){
@@ -38,19 +38,13 @@ const overrideCode = `/* Force KroniA Diet to the new 6-step wizard. */
     ['openNutritionFlow','openNutritionFlowFull'].forEach(function(name){
       var original = window[name];
       window[name + 'LegacyDisabled'] = original;
-      window[name] = function(args){
-        var source = args && (args.source || args.returnTab || args.dietWizardPayload);
-        if (source || name === 'openNutritionFlow' || name === 'openNutritionFlowFull') {
-          return openSixStepDietWizard({ redirectedFrom: name });
-        }
+      window[name] = function(){
         return openSixStepDietWizard({ redirectedFrom: name });
       };
     });
 
     ['startAIDiet','startManualDiet','openDietWizard','openDietDataWizard'].forEach(function(name){
-      if (typeof window[name] === 'function') {
-        window[name + 'LegacyDisabled'] = window[name];
-      }
+      if (typeof window[name] === 'function') window[name + 'LegacyDisabled'] = window[name];
       window[name] = function(){
         return openSixStepDietWizard({ redirectedFrom: name });
       };
@@ -61,17 +55,17 @@ const overrideCode = `/* Force KroniA Diet to the new 6-step wizard. */
     if (document.getElementById('forceDietWizard6StepStyle')) return;
     var style = document.createElement('style');
     style.id = 'forceDietWizard6StepStyle';
-    style.textContent = `
-      #nutritionFlowScreen{display:none!important;visibility:hidden!important;pointer-events:none!important;}
-      .diet-wizard-screen{width:100vw!important;max-width:100vw!important;height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;background:#07090f!important;}
-      .diet-wizard-screen,.diet-wizard-screen *{box-sizing:border-box!important;min-width:0!important;}
-      .dw-body{overflow-x:hidden!important;max-width:100%!important;animation:dwStepIn .24s cubic-bezier(.22,1,.36,1);}
-      .dw-body *{max-width:100%!important;}
-      .dw-card{max-width:100%!important;overflow:hidden!important;}
-      .dw-row{max-width:100%!important;}
-      .dw-chips-row{max-width:100%!important;overflow:hidden!important;}
-      @keyframes dwStepIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
-    `;
+    style.textContent = [
+      '#nutritionFlowScreen{display:none!important;visibility:hidden!important;pointer-events:none!important;}',
+      '.diet-wizard-screen{width:100vw!important;max-width:100vw!important;height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;background:#07090f!important;}',
+      '.diet-wizard-screen,.diet-wizard-screen *{box-sizing:border-box!important;min-width:0!important;}',
+      '.dw-body{overflow-x:hidden!important;max-width:100%!important;animation:dwStepIn .24s cubic-bezier(.22,1,.36,1);}',
+      '.dw-body *{max-width:100%!important;}',
+      '.dw-card{max-width:100%!important;overflow:hidden!important;}',
+      '.dw-row{max-width:100%!important;}',
+      '.dw-chips-row{max-width:100%!important;overflow:hidden!important;}',
+      '@keyframes dwStepIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}'
+    ].join('\n');
     document.head.appendChild(style);
   }
 
