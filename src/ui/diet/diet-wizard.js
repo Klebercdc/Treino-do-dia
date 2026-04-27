@@ -386,7 +386,7 @@
   function _validateStepData(step, data) {
     if (step === 1) {
       if (!data.sex) return 'Informe o sexo.';
-      if (!data.age || data.age < 14) return 'Informe uma idade válida.';
+      if (!data.age || data.age < 14 || data.age > 120) return 'Informe uma idade válida (14–120).';
       if (!data.weight_kg || data.weight_kg < 35) return 'Informe o peso em kg.';
       if (!data.height_cm || data.height_cm < 100) return 'Informe a altura em cm.';
       if (data.bcmMode === 'bcm' && (!data.bcmData || !data.bcmData.body_fat_percent)) return 'Informe o % de gordura do BCM.';
@@ -497,6 +497,9 @@
     var training = state.data.training || {};
     var metabolism = state.data.metabolism || {};
 
+    var health = state.data.healthExams || {};
+    var food = state.data.food || {};
+
     var payload = {
       sexo: body.sex,
       sex: body.sex,
@@ -506,12 +509,23 @@
       weight_kg: body.weight_kg,
       altura: body.height_cm,
       height_cm: body.height_cm,
-      objetivo: goal.objective,
-      objective: goal.objective,
-      refeicoesPorDia: goal.refeicoesPorDia,
-      padraoAlimentar: (state.data.food || {}).padraoAlimentar,
+      biotipo: body.biotipo || null,
+      gorduraCorporal: body.gordura_corporal_manual || null,
       bcmData: body.bcmData || null,
       pcmManual: body.pcmManual || null,
+      objetivo: goal.objective,
+      objective: goal.objective,
+      prioridade: goal.prioridade || null,
+      refeicoesPorDia: goal.refeicoesPorDia,
+      metaCaloricaManual: goal.metaCaloricaManual || null,
+      patologias: health.patologias || [],
+      observacoesClincias: health.observacoesClincias || null,
+      restricoesClinicas: health.restricoesClinicas || null,
+      padraoAlimentar: food.padraoAlimentar,
+      preferenciasAlimentares: food.preferenciasAlimentares || null,
+      alimentosQueEvita: food.alimentosQueEvita || null,
+      restricoesAlimentares: food.restricoesAlimentares || [],
+      suplementos: food.suplementos || [],
       statusTreino: training.statusTreino,
       perfilTreino: training.perfilTreino,
       intensidadeGeral: training.intensidadeGeral,
@@ -528,9 +542,6 @@
       sono: metabolism.sono,
       estresse: metabolism.estresse,
       usoHormonios: metabolism.usoHormonios,
-      patologias: (state.data.healthExams || {}).patologias || [],
-      restricoesAlimentares: (state.data.food || {}).restricoesAlimentares || [],
-      suplementos: (state.data.food || {}).suplementos || [],
       dietWizardFlow: state,
     };
 

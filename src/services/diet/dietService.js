@@ -293,7 +293,7 @@ function buildDietResponse(action, normalizedInput) {
     ? `Plano inicial gerado com fallback seguro. Complete os dados ausentes para uma dieta mais precisa.`
     : plan.clinicalContext && plan.clinicalContext.mode === 'clinical'
       ? 'Plano alimentar gerado com ajustes clínicos conservadores baseados no exame mais recente.'
-      : `Plano alimentar gerado com ${plan.refeicoes.length} refeicoes.`;
+      : `Plano alimentar gerado com ${(plan.refeicoes || []).length} refeicoes.`;
 
   return {
     action,
