@@ -339,6 +339,51 @@ function buildStrategyFromInput(profileInput) {
   return calculateNutrition(profileInput);
 }
 
+// ─── Advanced GET (wizard 6 etapas) ──────────────────────────────────────────
+// NÃO substitui calculateGet(bmr, profile) que continua retornando number.
+
+var _pcmEngine = null;
+var _trainingEngine = null;
+var _behaviorEngine = null;
+
+function _lazyRequire() {
+  if (!_pcmEngine) _pcmEngine = require('./pcm_engine');
+  if (!_trainingEngine) _trainingEngine = require('./training_energy_engine');
+  if (!_behaviorEngine) _behaviorEngine = require('./metabolic_behavior_engine');
+}
+
+function calculateGetAdvanced(profile) {
+  _lazyRequire();
+  var bodyComposition = _pcmEngine.buildBodyComposition(profile);
+  var tmbResult = _pcmEngine.calculateTMB(profile, bodyComposition);
+  var tmb = tmbResult.tmb;
+  var tmb_method = tmbResult.tmb_method;
+  var getResult = _trainingEngine.calculateActivityAdjustedGet(profile, tmb);
+  var objective = profile.objective != null ? profile.objective : (profile.objetivo != null ? profile.objetivo : 'manutencao');
+  var weight_kg = profile.weight_kg != null ? profile.weight_kg : (profile.peso != null ? profile.peso : 70);
+  var macroBase = _behaviorEngine.getMacroBaseForObjective(objective, weight_kg, getResult.get);
+  var adjusted = null;
+  if (profile.metabolicBehavior) {
+    var behavior = _behaviorEngine.normalizeMetabolicBehavior(profile.metabolicBehavior);
+    var profileWithBehavior = Object.assign({}, profile, { metabolicBehavior: behavior });
+    adjusted = _behaviorEngine.applyBehaviorAdjustments(profileWithBehavior, macroBase.targetCalories, macroBase);
+  }
+  return {
+    get: getResult.get,
+    tmb: tmb,
+    tmb_method: tmb_method,
+    getCalculationMode: getResult.getCalculationMode,
+    trainingCaloriesDaily: getResult.training_daily_kcal,
+    trainingCaloriesWeekly: getResult.training_weekly_kcal,
+    neatCalories: getResult.neat_kcal,
+    bodyComposition: bodyComposition,
+    macros: adjusted ? adjusted.macros : macroBase,
+    targetCalories: adjusted ? adjusted.adjusted_calories : macroBase.targetCalories,
+    behaviorAdjustments: adjusted ? adjusted.flags : null,
+    alerts: adjusted ? adjusted.alerts : [],
+  };
+}
+
 module.exports = {
   ACTIVITY_FACTORS: ACTIVITY_FACTORS,
   OBJECTIVE_CONFIG: OBJECTIVE_CONFIG,
@@ -349,4 +394,5 @@ module.exports = {
   validateProfile: validateProfile,
   buildStrategy: buildStrategy,
   buildStrategyFromInput: buildStrategyFromInput,
+  calculateGetAdvanced: calculateGetAdvanced,
 };

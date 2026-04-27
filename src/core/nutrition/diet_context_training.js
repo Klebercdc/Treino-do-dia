@@ -49,6 +49,14 @@ function buildTrainingContext(input) {
     fadiga: pickNumber(training.fadiga, training.fatigue, adherence.fadiga, intakeTraining.fadiga),
     tendenciaForca: pickString(training.tendenciaForca, training.strengthTrend, adherence.tendenciaForca, intakeTraining.tendenciaForca),
     prioridadeMetabolica: pickString(training.prioridadeMetabolica, training.priority, adherence.prioridadeMetabolica, intakeTraining.prioridadeMetabolica),
+    // Campos expandidos do wizard 6 etapas
+    statusTreino: training.statusTreino != null ? training.statusTreino : null,
+    perfilTreino: training.perfilTreino != null ? training.perfilTreino : null,
+    intensidadeGeral: training.intensidadeGeral != null ? training.intensidadeGeral : null,
+    modalidades: Array.isArray(training.modalidades) ? training.modalidades : [],
+    rotinaForaTreino: training.rotinaForaTreino != null ? training.rotinaForaTreino : null,
+    dorMuscular: training.dorMuscular != null ? training.dorMuscular : null,
+    quedaRendimento: training.quedaRendimento != null ? training.quedaRendimento : null,
   };
 }
 

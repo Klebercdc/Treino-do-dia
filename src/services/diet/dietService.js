@@ -57,7 +57,17 @@ function normalizeDietPayload(payload) {
     gorduraCorporal: master.gorduraCorporal,
     biotipo: master.biotipo,
     padraoAlimentar: master.padraoAlimentar,
-    contextoTreino: training,
+    // Merge training (legacy fields) + wizard fields — legacy wins for existing fields
+    contextoTreino: Object.assign({}, training, {
+      statusTreino: safePayload.statusTreino != null ? safePayload.statusTreino : (training.statusTreino != null ? training.statusTreino : null),
+      perfilTreino: safePayload.perfilTreino != null ? safePayload.perfilTreino : (training.perfilTreino != null ? training.perfilTreino : null),
+      intensidadeGeral: safePayload.intensidadeGeral != null ? safePayload.intensidadeGeral : (training.intensidadeGeral != null ? training.intensidadeGeral : null),
+      modalidades: Array.isArray(safePayload.modalidades) ? safePayload.modalidades : (Array.isArray(training.modalidades) ? training.modalidades : []),
+      rotinaForaTreino: safePayload.rotinaForaTreino != null ? safePayload.rotinaForaTreino : (training.rotinaForaTreino != null ? training.rotinaForaTreino : null),
+      fadiga: safePayload.fadiga != null ? safePayload.fadiga : (training.fadiga != null ? training.fadiga : null),
+      dorMuscular: safePayload.dorMuscular != null ? safePayload.dorMuscular : (training.dorMuscular != null ? training.dorMuscular : null),
+      quedaRendimento: safePayload.quedaRendimento != null ? safePayload.quedaRendimento : (training.quedaRendimento != null ? training.quedaRendimento : null),
+    }),
     saude: clinical.saude,
     aderencia: adherence,
     nutritionGoals: master.nutritionGoals,
@@ -65,6 +75,22 @@ function normalizeDietPayload(payload) {
     intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
     nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
     supabaseSnapshot,
+    // Campos expandidos do wizard 6 etapas
+    bcmData: safePayload.bcmData != null ? safePayload.bcmData : null,
+    pcmManual: safePayload.pcmManual != null ? safePayload.pcmManual : null,
+    bodyComposition: safePayload.bodyComposition != null ? safePayload.bodyComposition : null,
+    metabolismBehaviorContext: {
+      respostaPeso: safePayload.respostaPeso != null ? safePayload.respostaPeso : null,
+      apetite: safePayload.apetite != null ? safePayload.apetite : null,
+      historicoDieta: safePayload.historicoDieta != null ? safePayload.historicoDieta : null,
+      adesao: safePayload.adesao != null ? safePayload.adesao : null,
+      rotina: safePayload.rotina != null ? safePayload.rotina : null,
+      sono: safePayload.sono != null ? safePayload.sono : null,
+      estresse: safePayload.estresse != null ? safePayload.estresse : null,
+      usoHormonios: safePayload.usoHormonios != null ? safePayload.usoHormonios : null,
+    },
+    patologias: Array.isArray(safePayload.patologias) ? safePayload.patologias : [],
+    examesDisponiveis: Array.isArray(safePayload.examesDisponiveis) ? safePayload.examesDisponiveis : [],
   };
 }
 

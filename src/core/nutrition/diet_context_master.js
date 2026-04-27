@@ -78,6 +78,20 @@ function buildMasterContext(input) {
     } : null,
     foodSelections: Object.keys(flowSel).length ? flowSel : null,
     observacoes: pickString(raw.observacoes, raw.notes, profile.observacoes, context.observacoes),
+    // Campos expandidos do wizard 6 etapas
+    bcmData: raw.bcmData != null ? raw.bcmData : (profile.bcmData != null ? profile.bcmData : (context.bcmData != null ? context.bcmData : null)),
+    pcmManual: raw.pcmManual != null ? raw.pcmManual : (profile.pcmManual != null ? profile.pcmManual : (context.pcmManual != null ? context.pcmManual : null)),
+    bodyComposition: raw.bodyComposition != null ? raw.bodyComposition : (profile.bodyComposition != null ? profile.bodyComposition : (context.bodyComposition != null ? context.bodyComposition : null)),
+    metabolismBehaviorContext: (raw.metabolismBehaviorContext || profile.metabolismBehaviorContext || context.metabolismBehaviorContext) || {
+      respostaPeso:   pickString(raw.respostaPeso,   profile.respostaPeso,   context.respostaPeso)   || null,
+      apetite:        pickString(raw.apetite,         profile.apetite,         context.apetite)         || null,
+      historicoDieta: pickString(raw.historicoDieta,  profile.historicoDieta,  context.historicoDieta)  || null,
+      adesao:         pickString(raw.adesao,           profile.adesao,          context.adesao)          || null,
+      rotina:         pickString(raw.rotina,           profile.rotina,          context.rotina)          || null,
+      sono:           pickString(raw.sono,             profile.sono,            context.sono)            || null,
+      estresse:       pickString(raw.estresse,         profile.estresse,        context.estresse)        || null,
+      usoHormonios:   pickString(raw.usoHormonios,     profile.usoHormonios,    context.usoHormonios)    || null,
+    },
   };
 }
 

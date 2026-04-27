@@ -28,7 +28,16 @@ const staticFiles = [
   'src/core/intelligence/kronia-intelligence.js',
   'src/core/intelligence/adminBridge.js',
   'src/application/kronia-application.js',
-  'src/lib/nutrition/tacoDatabase.json'
+  'src/lib/nutrition/tacoDatabase.json',
+  'src/ui/diet/diet-wizard-state.js',
+  'src/ui/diet/diet-wizard.js',
+  'src/ui/diet/diet-step-body.js',
+  'src/ui/diet/diet-step-goal.js',
+  'src/ui/diet/diet-step-health.js',
+  'src/ui/diet/diet-step-food.js',
+  'src/ui/diet/diet-step-training.js',
+  'src/ui/diet/diet-step-metabolism.js',
+  'src/ui/diet/diet-summary.js',
 ];
 
 await rm(outputDir, { recursive: true, force: true });
