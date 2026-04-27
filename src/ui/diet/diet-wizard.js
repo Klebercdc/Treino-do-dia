@@ -4,12 +4,62 @@
 (function(root) {
   var WIZARD_SCREEN_ID = 'dietProfileWizardScreen';
   var WIZARD_STATE_KEY = 'kronia_diet_wizard_state_v1';
+  var TOTAL_STEPS_FALLBACK = 6;
 
   function _q(id) { return document.getElementById(id); }
 
   function _safeCall(fn) {
-    try { if (typeof fn === 'function') return fn(); } catch(_) {}
+    try { if (typeof fn === 'function') return fn(); } catch(err) { console.warn('[diet-wizard] safeCall', err); }
     return null;
+  }
+
+  function _fallbackCreateState(userId) {
+    return {
+      userId: userId || null,
+      currentStep: 1,
+      totalSteps: TOTAL_STEPS_FALLBACK,
+      completedSteps: [],
+      data: {},
+      startedAt: new Date().toISOString(),
+    };
+  }
+
+  function _createState(userId) {
+    if (typeof root.createDietWizardState === 'function') return root.createDietWizardState(userId);
+    if (typeof createDietWizardState === 'function') return createDietWizardState(userId);
+    return _fallbackCreateState(userId);
+  }
+
+  function _isComplete(state) {
+    if (typeof root.isDietWizardComplete === 'function') return root.isDietWizardComplete(state);
+    if (typeof isDietWizardComplete === 'function') return isDietWizardComplete(state);
+    return !!(state && state.completedSteps && state.completedSteps.length >= TOTAL_STEPS_FALLBACK);
+  }
+
+  function _progress(state) {
+    if (typeof root.getDietWizardProgress === 'function') return root.getDietWizardProgress(state);
+    if (typeof getDietWizardProgress === 'function') return getDietWizardProgress(state);
+    var completed = state && state.completedSteps ? state.completedSteps.length : 0;
+    return {
+      current: state ? state.currentStep : 1,
+      total: TOTAL_STEPS_FALLBACK,
+      percent: Math.round((completed / TOTAL_STEPS_FALLBACK) * 100),
+    };
+  }
+
+  function _advance(state, stepNumber, stepData) {
+    if (typeof root.advanceDietWizardStep === 'function') return root.advanceDietWizardStep(state, stepNumber, stepData);
+    if (typeof advanceDietWizardStep === 'function') return advanceDietWizardStep(state, stepNumber, stepData);
+    var keyMap = { 1: 'bodyComposition', 2: 'goal', 3: 'healthExams', 4: 'food', 5: 'training', 6: 'metabolism' };
+    var updated = Object.assign({}, state || _fallbackCreateState(null));
+    updated.data = Object.assign({}, updated.data || {});
+    updated.data[keyMap[stepNumber]] = stepData;
+    var completed = (updated.completedSteps || []).slice();
+    if (completed.indexOf(stepNumber) === -1) completed.push(stepNumber);
+    updated.completedSteps = completed;
+    if (stepNumber < TOTAL_STEPS_FALLBACK) updated.currentStep = stepNumber + 1;
+    else updated.completedAt = new Date().toISOString();
+    return updated;
   }
 
   function _hideKnownBlockingLayers() {
@@ -24,6 +74,21 @@
       if (!el || id === WIZARD_SCREEN_ID) return;
       el.classList.remove('show');
     });
+  }
+
+  function _openLegacyDietFlow(source) {
+    closeDietProfileWizard();
+    if (typeof root.openNutritionFlow === 'function') {
+      root.openNutritionFlow({ source: source || 'diet_wizard_fallback', returnTab: 'dieta' });
+      return true;
+    }
+    if (typeof openNutritionFlow === 'function') {
+      openNutritionFlow({ source: source || 'diet_wizard_fallback', returnTab: 'dieta' });
+      return true;
+    }
+    _safeCall(function(){ if (typeof navTo === 'function') navTo('dieta'); });
+    _safeCall(function(){ if (typeof openDietDataScreen === 'function') openDietDataScreen(); });
+    return false;
   }
 
   function _activateWizardLayer(screen) {
@@ -43,11 +108,23 @@
   }
 
   function renderDietWizardProgress(state) {
-    var prog = getDietWizardProgress(state);
+    var prog = _progress(state);
     var bar = document.getElementById('dietWizardProgressBar');
     var label = document.getElementById('dietWizardProgressLabel');
     if (bar) bar.style.width = prog.percent + '%';
     if (label) label.textContent = 'Etapa ' + prog.current + ' de ' + prog.total;
+  }
+
+  function _safeRenderFallbackStep(step) {
+    return [
+      '<div class="dw-step-title">Criar dieta</div>',
+      '<p class="dw-step-desc">Não consegui carregar todos os componentes do wizard novo. Você pode continuar pelo fluxo seguro.</p>',
+      '<div class="dw-card">',
+        '<div class="dw-summary-card-title">Fluxo alternativo</div>',
+        '<p class="dw-info-text">Toque abaixo para abrir a criação de dieta sem travar a tela.</p>',
+        '<button type="button" class="dw-btn-primary" onclick="openNutritionFlow({source:\'diet_wizard_component_fallback\',returnTab:\'dieta\'})">Abrir criação de dieta</button>',
+      '</div>'
+    ].join('');
   }
 
   function renderDietWizardStep(state) {
@@ -55,27 +132,36 @@
     if (!container) return;
     container.innerHTML = '';
 
-    if (isDietWizardComplete(state)) {
-      container.innerHTML = renderDietSummary(state);
-      renderDietWizardProgress(state);
-      _syncFooterButton(true);
-      return;
-    }
+    try {
+      if (_isComplete(state)) {
+        if (typeof renderDietSummary !== 'function') throw new Error('renderDietSummary indisponível');
+        container.innerHTML = renderDietSummary(state);
+        renderDietWizardProgress(state);
+        _syncFooterButton(true);
+        return;
+      }
 
-    var step = state.currentStep;
-    var html = '';
-    if (step === 1) html = renderDietStepBody(state.data.bodyComposition || {});
-    else if (step === 2) html = renderDietStepGoal(state.data.goal || {});
-    else if (step === 3) html = renderDietStepHealth(state.data.healthExams || {});
-    else if (step === 4) html = renderDietStepFood(state.data.food || {});
-    else if (step === 5) html = renderDietStepTraining(state.data.training || {});
-    else if (step === 6) html = renderDietStepMetabolism(state.data.metabolism || {});
-    container.innerHTML = html;
-    renderDietWizardProgress(state);
-    _syncFooterButton(false);
-    _bindStepChips(container);
-    _bindModalidadeExpand(container, state);
-    try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
+      var step = state.currentStep;
+      var html = '';
+      if (step === 1) html = renderDietStepBody(state.data.bodyComposition || {});
+      else if (step === 2) html = renderDietStepGoal(state.data.goal || {});
+      else if (step === 3) html = renderDietStepHealth(state.data.healthExams || {});
+      else if (step === 4) html = renderDietStepFood(state.data.food || {});
+      else if (step === 5) html = renderDietStepTraining(state.data.training || {});
+      else if (step === 6) html = renderDietStepMetabolism(state.data.metabolism || {});
+      if (!html) throw new Error('html vazio etapa ' + step);
+      container.innerHTML = html;
+      renderDietWizardProgress(state);
+      _syncFooterButton(false);
+      _bindStepChips(container);
+      _bindModalidadeExpand(container, state);
+      try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
+    } catch(err) {
+      console.error('[diet-wizard] Falha ao renderizar etapa', err);
+      container.innerHTML = _safeRenderFallbackStep(state && state.currentStep);
+      renderDietWizardProgress(state || _fallbackCreateState(null));
+      _syncFooterButton(false);
+    }
   }
 
   function _syncFooterButton(isComplete) {
@@ -292,39 +378,35 @@
   }
 
   function openDietProfileWizard(userId, opts) {
-    var options = opts || {};
-    var screen = _q(WIZARD_SCREEN_ID);
-    if (!screen) {
-      screen = _createWizardScreen();
-      document.body.appendChild(screen);
-    }
-
-    var savedState = null;
     try {
-      var raw = localStorage.getItem(WIZARD_STATE_KEY);
-      if (raw) savedState = JSON.parse(raw);
-    } catch(_) {}
+      var options = opts || {};
+      var screen = _q(WIZARD_SCREEN_ID);
+      if (!screen) {
+        screen = _createWizardScreen();
+        document.body.appendChild(screen);
+      }
 
-    var state;
-    if (savedState && savedState.userId === userId && !options.forceNew) {
-      state = savedState;
-    } else {
-      state = createDietWizardState(userId);
-    }
+      var savedState = null;
+      try {
+        var raw = localStorage.getItem(WIZARD_STATE_KEY);
+        if (raw) savedState = JSON.parse(raw);
+      } catch(_) {}
 
-    window._dietWizardState = state;
-    _activateWizardLayer(screen);
-    screen.classList.add('show');
-    try {
+      var state;
+      if (savedState && savedState.userId === userId && !options.forceNew) {
+        state = savedState;
+      } else {
+        state = _createState(userId);
+      }
+
+      if (!state || !state.data) state = _fallbackCreateState(userId);
+      window._dietWizardState = state;
+      _activateWizardLayer(screen);
+      screen.classList.add('show');
       renderDietWizardStep(state);
     } catch(err) {
-      console.error('[diet-wizard] Falha ao renderizar wizard; voltando ao fluxo legado.', err);
-      closeDietProfileWizard();
-      if (typeof openNutritionFlow === 'function') {
-        openNutritionFlow({ source: 'diet_wizard_render_fallback', returnTab: 'dieta' });
-      } else {
-        _safeCall(function(){ navTo('dieta'); openDietDataScreen(); });
-      }
+      console.error('[diet-wizard] Falha ao abrir wizard; usando fluxo legado.', err);
+      _openLegacyDietFlow('diet_wizard_open_fallback');
     }
   }
 
@@ -338,7 +420,7 @@
     var state = window._dietWizardState;
     if (!state) return;
 
-    if (isDietWizardComplete(state)) {
+    if (_isComplete(state)) {
       _submitDietWizard(state);
       return;
     }
@@ -351,7 +433,7 @@
       return;
     }
 
-    state = advanceDietWizardStep(state, state.currentStep, stepData);
+    state = _advance(state, state.currentStep, stepData);
     window._dietWizardState = state;
     try { localStorage.setItem(WIZARD_STATE_KEY, JSON.stringify(state)); } catch(_) {}
     renderDietWizardStep(state);
@@ -360,7 +442,7 @@
   function dietWizardBack() {
     var state = window._dietWizardState;
     if (!state) return;
-    if (isDietWizardComplete(state)) {
+    if (_isComplete(state)) {
       state.completedSteps = state.completedSteps.filter(function(s) { return s < 6; });
       state.currentStep = 6;
       delete state.completedAt;
@@ -435,8 +517,12 @@
 
     try {
       closeDietProfileWizard();
-      if (typeof openNutritionFlowFull === 'function') {
+      if (typeof root.openNutritionFlowFull === 'function') {
+        await root.openNutritionFlowFull({ autoGenerate: true, source: 'diet_wizard_6step', dietWizardPayload: payload });
+      } else if (typeof openNutritionFlowFull === 'function') {
         await openNutritionFlowFull({ autoGenerate: true, source: 'diet_wizard_6step', dietWizardPayload: payload });
+      } else if (typeof root.openNutritionFlow === 'function') {
+        root.openNutritionFlow({ source: 'diet_wizard_6step_fallback', returnTab: 'dieta', dietWizardPayload: payload });
       } else if (typeof openNutritionFlow === 'function') {
         openNutritionFlow({ source: 'diet_wizard_6step_fallback', returnTab: 'dieta', dietWizardPayload: payload });
       } else {
@@ -458,6 +544,7 @@
     div.id = WIZARD_SCREEN_ID;
     div.className = 'diet-wizard-screen';
     div.style.zIndex = '12000';
+    div.style.pointerEvents = 'auto';
     div.innerHTML = [
       '<div class="diet-wizard-inner">',
         '<div class="diet-wizard-header">',
