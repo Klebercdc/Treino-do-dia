@@ -8310,8 +8310,18 @@ function switchDietMiniAppView(view) {
 }
 
 function openDietCorePanel(view) {
-  _dietCoreView = view || 'home';
-  renderActiveDietPlan();
+  var target = view || 'home';
+  var already = _dietCoreView === target;
+  _dietCoreView = target;
+  if (!already) renderActiveDietPlan();
+}
+
+function dietDataBackNav() {
+  if (_dietCoreView && _dietCoreView !== 'home') {
+    openDietCorePanel('home');
+  } else {
+    try { navTo('inicio'); openHome(); } catch(_) {}
+  }
 }
 
 function openDietMiniLabsScreen() {
@@ -9115,7 +9125,10 @@ function renderActiveDietPlan() {
 
 async function refreshDietDataScreen() {
   var remotePlan = await loadActiveDietPlanFromSupabase();
-  if (remotePlan) setActiveDietPlan(remotePlan);
+  if (!remotePlan) return;
+  var local = window._kroniaDietPlan;
+  var sameId = local && remotePlan.id && local.id === remotePlan.id;
+  if (!sameId) setActiveDietPlan(remotePlan);
 }
 
 function getDietSheetState() {
