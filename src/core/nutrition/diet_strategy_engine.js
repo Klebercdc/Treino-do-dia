@@ -158,6 +158,13 @@ function buildNutritionProfile(input) {
   var dietaryPattern = String(input.padraoAlimentar || input.dietaryPattern || '').trim();
   var dislikes = normalizeStringArray(input.alimentosEvitar || input.dislikes);
   var training = unifiedContext.training;
+
+  // Resolve clinicalData from normalized payload (set by dietService.normalizeDietPayload)
+  var clinicalDataRaw = input.clinicalData && typeof input.clinicalData === 'object' ? input.clinicalData : null;
+  var conditionFlags = clinicalDataRaw && clinicalDataRaw.flags
+    ? clinicalDataRaw.flags
+    : clinical.buildConditionFlags(clinicalDataRaw && clinicalDataRaw.healthConditions);
+
   return {
     sexo: normalizeSex(input.sexo),
     idade: Number(input.idade),
@@ -181,6 +188,7 @@ function buildNutritionProfile(input) {
     nutritionFlowSelections: unifiedContext.foodSelections,
     nutritionGoals: unifiedContext.goals || null,
     labContext: clinical.buildLabContext(unifiedContext.labs),
+    clinicalData: clinicalDataRaw ? Object.assign({}, clinicalDataRaw, { flags: conditionFlags }) : { healthConditions: [], flags: conditionFlags },
     contextoNutricional: unifiedContext
   };
 }

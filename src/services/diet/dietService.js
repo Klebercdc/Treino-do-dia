@@ -40,7 +40,7 @@ function normalizeDietPayload(payload) {
   const nutritionFlowSelections = normalizeObject(safePayload.nutritionFlowSelections || context.nutritionFlowSelections);
   const supabaseSnapshot = normalizeObject(safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot);
 
-  return {
+  const normalized = {
     objetivo: master.objetivo,
     sexo: master.sexo,
     idade: master.idade,
@@ -62,10 +62,23 @@ function normalizeDietPayload(payload) {
     aderencia: adherence,
     nutritionGoals: master.nutritionGoals,
     labContext: clinical.labContext,
+    clinicalData: clinical.clinicalData,
     intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
     nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
     supabaseSnapshot,
   };
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DIET_CLINICAL_DATA_PAYLOAD]', JSON.stringify({
+      healthConditions: normalized.clinicalData && normalized.clinicalData.healthConditions,
+      flags: normalized.clinicalData && normalized.clinicalData.flags,
+      bcmManual: normalized.clinicalData && normalized.clinicalData.bcmManual ? '(present)' : null,
+      exams: normalized.clinicalData && normalized.clinicalData.exams,
+      labContext: normalized.labContext ? { mode: normalized.labContext.mode, clinicalFlags: normalized.labContext.clinicalFlags } : null,
+    }));
+  }
+
+  return normalized;
 }
 
 function getMissingCriticalFields(normalizedInput) {

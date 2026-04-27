@@ -27,6 +27,11 @@ function buildPayload(body) {
     'observacoes', 'notes',
     'contextoTreino', 'trainingContext',
     'saude', 'healthContext',
+    'clinicalData',
+    'clinicalFlow',
+    'aderencia', 'adherenceContext',
+    'nutritionFlowSelections',
+    'trainingSnapshot',
     'nutritionGoals', 'goals',
     'supabaseSnapshot',
     'profile', 'context'
