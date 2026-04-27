@@ -3,7 +3,8 @@
 
 (function(root) {
   var WIZARD_SCREEN_ID = 'dietProfileWizardScreen';
-  var WIZARD_STATE_KEY = 'kronia_diet_wizard_state_v1';
+  var WIZARD_STATE_KEY = 'kronia_diet_wizard_state_v2';
+  var WIZARD_STATE_KEY_OLD = 'kronia_diet_wizard_state_v1';
   var TOTAL_STEPS_FALLBACK = 6;
   var STEP_META = {
     1: { badge: 'Perfil corporal', title: 'Composição corporal', subtitle: 'Base metabólica para calcular sua dieta com mais precisão.' },
@@ -405,6 +406,7 @@
         document.body.appendChild(screen);
       }
 
+      try { localStorage.removeItem(WIZARD_STATE_KEY_OLD); } catch(_) {}
       var savedState = null;
       try {
         var raw = localStorage.getItem(WIZARD_STATE_KEY);
@@ -412,7 +414,9 @@
       } catch(_) {}
 
       var state;
-      if (savedState && savedState.userId === userId && !options.forceNew) {
+      var savedIsValid = savedState && savedState.userId === userId &&
+        (savedState.totalSteps || 0) === TOTAL_STEPS_FALLBACK && !options.forceNew;
+      if (savedIsValid) {
         state = savedState;
       } else {
         state = _createState(userId);
