@@ -1,60 +1,95 @@
-/**
- * Fluxo de coleta de dados para dieta — KRONOS
- * Gerencia o estado da conversa passo a passo.
- * O estado é passado pelo cliente em cada requisição.
- */
+'use strict';
 
-var STEPS = [
-  { key: 'objetivo',    question: 'Qual seu objetivo? Ex.: emagrecer, hipertrofia ou manter.' },
-  { key: 'peso',        question: 'Qual seu peso atual em kg?' },
-  { key: 'altura',      question: 'Qual sua altura em cm?' },
-  { key: 'idade',       question: 'Qual sua idade?' },
-  { key: 'sexo',        question: 'Qual seu sexo? Ex.: masculino ou feminino.' },
-  { key: 'rotina',      question: 'Como é sua rotina? Ex.: sedentário, trabalho físico, academia, cardio.' },
-  { key: 'restricoes',  question: 'Tem alguma restrição alimentar ou alimento que evita? (Se não tiver, responda "não".)' }
-];
+var STEPS = {
+  BODY_COMPOSITION: 1,
+  GOAL: 2,
+  HEALTH_EXAMS: 3,
+  FOOD: 4,
+  TRAINING: 5,
+  METABOLISM: 6,
+};
 
-function startDietFlow() {
+var TOTAL_STEPS = 6;
+
+var STEP_KEYS = {
+  1: 'bodyComposition',
+  2: 'goal',
+  3: 'healthExams',
+  4: 'food',
+  5: 'training',
+  6: 'metabolism',
+};
+
+function startDietFlow(userId) {
   return {
-    mode:      'diet',
-    stepIndex: 0,
-    collected: {},
-    response:  STEPS[0].question
+    userId: userId,
+    currentStep: STEPS.BODY_COMPOSITION,
+    totalSteps: TOTAL_STEPS,
+    completedSteps: [],
+    data: {},
+    startedAt: new Date().toISOString(),
   };
 }
 
-function continueDietFlow(stepIndex, collected, message) {
-  var step        = STEPS[stepIndex];
-  var newCollected = {};
-
-  // Copia collected existente
-  Object.keys(collected || {}).forEach(function(k) { newCollected[k] = collected[k]; });
-  newCollected[step.key] = String(message || '').trim();
-
-  var nextIndex = stepIndex + 1;
-
-  if (nextIndex >= STEPS.length) {
-    return { finished: true, collected: newCollected };
+function continueDietFlow(flowState, stepNumber, stepData) {
+  if (!Number.isInteger(stepNumber) || stepNumber < 1 || stepNumber > 6) {
+    throw new Error('stepNumber deve ser inteiro entre 1 e 6');
+  }
+  if (stepNumber !== flowState.currentStep) {
+    throw new Error('stepNumber ' + stepNumber + ' não corresponde ao currentStep ' + flowState.currentStep);
   }
 
+  var key = STEP_KEYS[stepNumber];
+  var updated = Object.assign({}, flowState);
+  updated.data = Object.assign({}, flowState.data);
+  updated.data[key] = stepData;
+
+  var completed = flowState.completedSteps.slice();
+  if (completed.indexOf(stepNumber) === -1) {
+    completed.push(stepNumber);
+  }
+  updated.completedSteps = completed;
+
+  if (stepNumber < TOTAL_STEPS) {
+    updated.currentStep = stepNumber + 1;
+  } else {
+    updated.completedAt = new Date().toISOString();
+  }
+
+  return updated;
+}
+
+function isFlowComplete(flowState) {
+  return flowState && flowState.completedSteps && flowState.completedSteps.length === TOTAL_STEPS;
+}
+
+function getFlowProgress(flowState) {
+  var completed = flowState && flowState.completedSteps ? flowState.completedSteps.length : 0;
   return {
-    finished:   false,
-    mode:       'diet',
-    stepIndex:  nextIndex,
-    collected:  newCollected,
-    response:   STEPS[nextIndex].question
+    current: flowState ? flowState.currentStep : 1,
+    total: TOTAL_STEPS,
+    percent: Math.round((completed / TOTAL_STEPS) * 100),
   };
 }
 
-function isFlowComplete(state) {
-  return state && state.mode === 'diet' && STEPS.every(function(s) {
-    return state.collected && state.collected[s.key];
-  });
+function validateStepData(stepNumber, data) {
+  var errors = [];
+  if (stepNumber === 1) {
+    if (!data || data.weight_kg == null) errors.push('weight_kg obrigatório');
+    if (!data || data.height_cm == null) errors.push('height_cm obrigatório');
+  } else if (stepNumber === 2) {
+    if (!data || !data.objective) errors.push('objective obrigatório');
+  }
+  return { valid: errors.length === 0, errors: errors };
 }
 
 module.exports = {
-  startDietFlow:    startDietFlow,
+  STEPS: STEPS,
+  TOTAL_STEPS: TOTAL_STEPS,
+  STEP_KEYS: STEP_KEYS,
+  startDietFlow: startDietFlow,
   continueDietFlow: continueDietFlow,
-  isFlowComplete:   isFlowComplete,
-  STEPS:            STEPS
+  isFlowComplete: isFlowComplete,
+  getFlowProgress: getFlowProgress,
+  validateStepData: validateStepData,
 };

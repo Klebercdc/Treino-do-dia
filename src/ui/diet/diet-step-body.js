@@ -1,0 +1,101 @@
+/* Etapa 1 — Composição Corporal */
+
+function renderDietStepBody(data) {
+  data = data || {};
+  return [
+    '<div class="dw-step-title">Composição Corporal</div>',
+    '<p class="dw-step-desc">Essas informações permitem calcular seu metabolismo com precisão.</p>',
+
+    '<div class="dw-card">',
+      '<label class="dw-label">Sexo</label>',
+      '<div class="dw-chips-row">',
+        _chip('sex', 'masculino', 'Masculino', data.sex === 'masculino'),
+        _chip('sex', 'feminino',  'Feminino',  data.sex === 'feminino'),
+      '</div>',
+    '</div>',
+
+    '<div class="dw-card">',
+      '<label class="dw-label">Idade</label>',
+      '<input class="dw-input" type="number" name="age" placeholder="Ex: 28" value="' + (data.age || '') + '" min="14" max="90">',
+    '</div>',
+
+    '<div class="dw-card">',
+      '<div class="dw-row">',
+        '<div class="dw-col">',
+          '<label class="dw-label">Peso (kg)</label>',
+          '<input class="dw-input" type="number" name="weight_kg" placeholder="Ex: 75" value="' + (data.weight_kg || '') + '" step="0.1">',
+        '</div>',
+        '<div class="dw-col">',
+          '<label class="dw-label">Altura (cm)</label>',
+          '<input class="dw-input" type="number" name="height_cm" placeholder="Ex: 175" value="' + (data.height_cm || '') + '">',
+        '</div>',
+      '</div>',
+    '</div>',
+
+    '<div class="dw-card">',
+      '<label class="dw-label">Você tem resultado de bioimpedância (BCM/BIA)?</label>',
+      '<div class="dw-chips-row">',
+        '<button type="button" class="dw-bcm-toggle' + (data.bcmMode === 'bcm' ? ' active' : '') + '" data-show="bcm">Sim, tenho BCM</button>',
+        '<button type="button" class="dw-bcm-toggle' + (data.bcmMode === 'pcm' ? ' active' : '') + '" data-show="pcm">Não tenho, usar medidas manuais</button>',
+        '<button type="button" class="dw-bcm-toggle' + (!data.bcmMode || data.bcmMode === 'skip' ? ' active' : '') + '" data-show="">Pular por enquanto</button>',
+      '</div>',
+
+      '<div data-bcm-section="bcm" style="' + (data.bcmMode === 'bcm' ? '' : 'display:none') + '">',
+        '<label class="dw-label">% Gordura Corporal *</label>',
+        '<input class="dw-input" type="number" name="body_fat_percent" placeholder="Ex: 18.5" step="0.1" value="' + (data.bcmData && data.bcmData.body_fat_percent ? data.bcmData.body_fat_percent : '') + '">',
+        '<label class="dw-label">Massa Magra (kg)</label>',
+        '<input class="dw-input" type="number" name="lean_mass_kg" placeholder="Opcional" step="0.1" value="' + (data.bcmData && data.bcmData.lean_mass_kg ? data.bcmData.lean_mass_kg : '') + '">',
+        '<label class="dw-label">Massa Gorda (kg)</label>',
+        '<input class="dw-input" type="number" name="fat_mass_kg" placeholder="Opcional" step="0.1" value="' + (data.bcmData && data.bcmData.fat_mass_kg ? data.bcmData.fat_mass_kg : '') + '">',
+        '<label class="dw-label">% Água Corporal</label>',
+        '<input class="dw-input" type="number" name="water_percent" placeholder="Opcional" step="0.1" value="' + (data.bcmData && data.bcmData.water_percent ? data.bcmData.water_percent : '') + '">',
+        '<label class="dw-label">Massa Muscular (kg)</label>',
+        '<input class="dw-input" type="number" name="muscle_mass_kg" placeholder="Opcional" step="0.1" value="' + (data.bcmData && data.bcmData.muscle_mass_kg ? data.bcmData.muscle_mass_kg : '') + '">',
+        '<label class="dw-label">TMB do aparelho (kcal)</label>',
+        '<input class="dw-input" type="number" name="basal_metabolic_rate" placeholder="Opcional" value="' + (data.bcmData && data.bcmData.basal_metabolic_rate ? data.bcmData.basal_metabolic_rate : '') + '">',
+        '<label class="dw-label">Data do exame</label>',
+        '<input class="dw-input" type="date" name="exam_date" value="' + (data.bcmData && data.bcmData.exam_date ? data.bcmData.exam_date : '') + '">',
+      '</div>',
+
+      '<div data-bcm-section="pcm" style="' + (data.bcmMode === 'pcm' ? '' : 'display:none') + '">',
+        '<p class="dw-info-text">Informe apenas cintura e abdômen. Isso já ajuda o KroniA a acompanhar sua evolução.</p>',
+        '<div class="dw-row">',
+          '<div class="dw-col">',
+            '<label class="dw-label">Cintura (cm) *</label>',
+            '<input class="dw-input" type="number" name="waist_cm" placeholder="Ex: 82" step="0.1" value="' + (data.pcmManual && data.pcmManual.waist_cm ? data.pcmManual.waist_cm : '') + '">',
+          '</div>',
+          '<div class="dw-col">',
+            '<label class="dw-label">Abdômen (cm) *</label>',
+            '<input class="dw-input" type="number" name="abdomen_cm" placeholder="Ex: 84" step="0.1" value="' + (data.pcmManual && data.pcmManual.abdomen_cm ? data.pcmManual.abdomen_cm : '') + '">',
+          '</div>',
+        '</div>',
+        '<div class="dw-row">',
+          '<div class="dw-col">',
+            '<label class="dw-label">Quadril (cm)</label>',
+            '<input class="dw-input" type="number" name="hip_cm" placeholder="Opcional" step="0.1" value="' + (data.pcmManual && data.pcmManual.hip_cm ? data.pcmManual.hip_cm : '') + '">',
+          '</div>',
+          '<div class="dw-col">',
+            '<label class="dw-label">Pescoço (cm)</label>',
+            '<input class="dw-input" type="number" name="neck_cm" placeholder="Opcional" step="0.1" value="' + (data.pcmManual && data.pcmManual.neck_cm ? data.pcmManual.neck_cm : '') + '">',
+          '</div>',
+        '</div>',
+      '</div>',
+    '</div>',
+
+    '<div class="dw-card">',
+      '<label class="dw-label">% Gordura corporal (auto-informado, opcional)</label>',
+      '<input class="dw-input" type="number" name="gordura_corporal_manual" placeholder="Ex: 20" step="0.1" value="' + (data.gordura_corporal_manual || '') + '">',
+      '<label class="dw-label" style="margin-top:12px">Biotipo (opcional)</label>',
+      '<div class="dw-chips-row">',
+        _chip('biotipo', 'ectomorfo', 'Ectomorfo', data.biotipo === 'ectomorfo'),
+        _chip('biotipo', 'mesomorfo', 'Mesomorfo', data.biotipo === 'mesomorfo'),
+        _chip('biotipo', 'endomorfo', 'Endomorfo', data.biotipo === 'endomorfo'),
+      '</div>',
+    '</div>',
+  ].join('');
+}
+
+function _chip(group, value, label, active, multi) {
+  var cls = multi ? 'dw-chip' : 'dw-chip-single';
+  return '<button type="button" class="' + cls + (active ? ' active' : '') + '" data-group="' + group + '" data-value="' + value + '">' + label + '</button>';
+}

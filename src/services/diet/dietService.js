@@ -2,9 +2,26 @@ const dietCompat = require('../../server/apihelpers/_diet');
 const { buildMasterContext } = require('../../core/nutrition/diet_context_master');
 const { buildTrainingContext, buildAdherenceContext } = require('../../core/nutrition/diet_context_training');
 const { buildClinicalContext } = require('../../core/nutrition/diet_context_clinical');
+const adaptiveNutrition = require('../../lib/nutrition/adaptiveNutrition');
 
 function normalizeObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function normalizeArray(value) {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  if (typeof value === 'string') return value.split(/[,;\n]+/).map((item) => item.trim()).filter(Boolean);
+  return [];
+}
+
+function uniqueArray(values) {
+  const seen = new Set();
+  return normalizeArray(values).filter((item) => {
+    const key = item.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function pickString() {
@@ -27,18 +44,64 @@ function pickNumber() {
   return undefined;
 }
 
-function normalizeDietPayload(payload) {
-  const master = buildMasterContext(payload);
-  const training = buildTrainingContext(payload);
-  const adherence = buildAdherenceContext(payload);
-  const clinical = buildClinicalContext(payload);
+function unwrapDietPayload(payload) {
+  const safe = normalizeObject(payload);
+  const nested = normalizeObject(safe.dietWizardPayload || safe.payload && safe.payload.dietWizardPayload);
+  if (!Object.keys(nested).length) return safe;
+  return Object.assign({}, safe, nested, {
+    context: Object.assign({}, normalizeObject(safe.context), normalizeObject(nested.context)),
+    profile: Object.assign({}, normalizeObject(safe.profile), normalizeObject(nested.profile)),
+  });
+}
 
-  const safePayload = payload && typeof payload === 'object' ? payload : {};
+function readAdaptiveMemory(payload) {
+  const safe = normalizeObject(payload);
+  const supplied = normalizeObject(
+    safe.nutritionMemory ||
+    safe.adaptiveMemory ||
+    safe.context && safe.context.nutritionMemory ||
+    safe.profile && safe.profile.nutritionMemory
+  );
+  if (Object.keys(supplied).length) return adaptiveNutrition.normalizeMemory(supplied);
+  try {
+    return adaptiveNutrition.readNutritionMemory();
+  } catch (_) {
+    return adaptiveNutrition.normalizeMemory();
+  }
+}
+
+function normalizeDietPayload(payload) {
+  const safePayload = unwrapDietPayload(payload);
+  const master = buildMasterContext(safePayload);
+  const training = buildTrainingContext(safePayload);
+  const adherence = buildAdherenceContext(safePayload);
+  const clinical = buildClinicalContext(safePayload);
+  const adaptiveMemory = readAdaptiveMemory(safePayload);
+
   const context = normalizeObject(safePayload.context);
   const profile = normalizeObject(safePayload.profile);
   const intakeSnapshot = normalizeObject(safePayload.intakeSnapshot || context.intakeSnapshot);
   const nutritionFlowSelections = normalizeObject(safePayload.nutritionFlowSelections || context.nutritionFlowSelections);
   const supabaseSnapshot = normalizeObject(safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot);
+
+  const preferredMealCount = pickNumber(adaptiveMemory.preferred_meal_count);
+  const dislikedFoods = uniqueArray([].concat(
+    master.alimentosEvitar || [],
+    safePayload.alimentosQueEvita || [],
+    adaptiveMemory.disliked_foods || [],
+    adaptiveMemory.avoided_foods || [],
+    adaptiveMemory.frequent_rejections || []
+  ));
+  const likedFoods = uniqueArray([].concat(
+    master.preferencias || [],
+    safePayload.preferenciasAlimentares || [],
+    adaptiveMemory.liked_foods || []
+  ));
+  const restrictions = uniqueArray([].concat(
+    master.restricoes || [],
+    safePayload.restricoesAlimentares || [],
+    adaptiveMemory.preferred_diet_style ? [adaptiveMemory.preferred_diet_style] : []
+  ));
 
   const normalized = {
     objetivo: master.objetivo,
@@ -48,16 +111,25 @@ function normalizeDietPayload(payload) {
     altura: master.altura,
     rotina: master.rotina,
     nivelAtividade: master.nivelAtividade,
-    refeicoesPorDia: master.refeicoesPorDia,
-    restricoes: master.restricoes,
-    preferencias: master.preferencias,
-    alimentosEvitar: master.alimentosEvitar,
+    refeicoesPorDia: preferredMealCount || master.refeicoesPorDia,
+    restricoes: restrictions,
+    preferencias: likedFoods,
+    alimentosEvitar: dislikedFoods,
     suplementos: master.suplementos,
     observacoes: master.observacoes,
     gorduraCorporal: master.gorduraCorporal,
     biotipo: master.biotipo,
-    padraoAlimentar: master.padraoAlimentar,
-    contextoTreino: training,
+    padraoAlimentar: master.padraoAlimentar || adaptiveMemory.preferred_diet_style || null,
+    contextoTreino: Object.assign({}, training, {
+      statusTreino: safePayload.statusTreino != null ? safePayload.statusTreino : (training.statusTreino != null ? training.statusTreino : null),
+      perfilTreino: safePayload.perfilTreino != null ? safePayload.perfilTreino : (training.perfilTreino != null ? training.perfilTreino : null),
+      intensidadeGeral: safePayload.intensidadeGeral != null ? safePayload.intensidadeGeral : (training.intensidadeGeral != null ? training.intensidadeGeral : null),
+      modalidades: Array.isArray(safePayload.modalidades) ? safePayload.modalidades : (Array.isArray(training.modalidades) ? training.modalidades : []),
+      rotinaForaTreino: safePayload.rotinaForaTreino != null ? safePayload.rotinaForaTreino : (training.rotinaForaTreino != null ? training.rotinaForaTreino : null),
+      fadiga: safePayload.fadiga != null ? safePayload.fadiga : (training.fadiga != null ? training.fadiga : null),
+      dorMuscular: safePayload.dorMuscular != null ? safePayload.dorMuscular : (training.dorMuscular != null ? training.dorMuscular : null),
+      quedaRendimento: safePayload.quedaRendimento != null ? safePayload.quedaRendimento : (training.quedaRendimento != null ? training.quedaRendimento : null),
+    }),
     saude: clinical.saude,
     aderencia: adherence,
     nutritionGoals: master.nutritionGoals,
@@ -66,7 +138,29 @@ function normalizeDietPayload(payload) {
     intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
     nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
     supabaseSnapshot,
+    bcmData: safePayload.bcmData != null ? safePayload.bcmData : null,
+    pcmManual: safePayload.pcmManual != null ? safePayload.pcmManual : null,
+    bodyComposition: safePayload.bodyComposition != null ? safePayload.bodyComposition : null,
+    metabolismBehaviorContext: {
+      respostaPeso: safePayload.respostaPeso != null ? safePayload.respostaPeso : null,
+      apetite: safePayload.apetite != null ? safePayload.apetite : null,
+      historicoDieta: safePayload.historicoDieta != null ? safePayload.historicoDieta : null,
+      adesao: safePayload.adesao != null ? safePayload.adesao : null,
+      rotina: safePayload.rotina != null ? safePayload.rotina : null,
+      sono: safePayload.sono != null ? safePayload.sono : null,
+      estresse: safePayload.estresse != null ? safePayload.estresse : null,
+      usoHormonios: safePayload.usoHormonios != null ? safePayload.usoHormonios : null,
+    },
+    patologias: Array.isArray(safePayload.patologias) ? safePayload.patologias : [],
+    examesDisponiveis: Array.isArray(safePayload.examesDisponiveis) ? safePayload.examesDisponiveis : [],
+    adaptiveMemory,
   };
+
+  const score = adaptiveNutrition.calculateNutritionPersonalizationScore(normalized, adaptiveMemory);
+  normalized.adaptivePersonalization = Object.assign({}, score, {
+    memory: adaptiveMemory,
+    enabled: true,
+  });
 
   if (process.env.NODE_ENV === 'development') {
     console.log('[DIET_CLINICAL_DATA_PAYLOAD]', JSON.stringify({
@@ -168,16 +262,49 @@ function buildDietPlanWithFallback(normalizedInput) {
   };
 }
 
+function decoratePlanWithAdaptiveLayer(plan, normalizedInput) {
+  const safePlan = plan && typeof plan === 'object' ? plan : {};
+  const adaptive = normalizedInput && normalizedInput.adaptivePersonalization;
+  const memory = adaptive && adaptive.memory ? adaptive.memory : adaptiveNutrition.normalizeMemory();
+  const suggestions = adaptiveNutrition.suggestDietAdaptations(safePlan, memory, normalizedInput);
+  const observacoes = Array.isArray(safePlan.observacoes) ? safePlan.observacoes.slice() : [];
+  if (adaptive && adaptive.score >= 40) {
+    observacoes.push('Personalização adaptativa ativa: preferências, rejeições e feedbacks recentes foram considerados.');
+  }
+  suggestions.slice(0, 3).forEach((suggestion) => {
+    if (suggestion && suggestion.message) observacoes.push('Adaptação sugerida: ' + suggestion.message);
+  });
+  return Object.assign({}, safePlan, {
+    observacoes,
+    adaptiveNutrition: {
+      enabled: true,
+      score: adaptive ? adaptive.score : 0,
+      confidence_level: adaptive ? adaptive.confidence_level : 'baixo',
+      plan_status: adaptive ? adaptive.plan_status : 'provisório',
+      missing_fields: adaptive ? adaptive.missing_fields : [],
+      suggestions,
+      memory_summary: {
+        preferred_meal_count: memory.preferred_meal_count,
+        preferred_diet_style: memory.preferred_diet_style,
+        has_food_scale: memory.has_food_scale,
+        budget_level: memory.budget_level,
+        workout_time: memory.workout_time,
+        hunger_period: memory.hunger_period,
+      },
+    },
+  });
+}
+
 function buildDietResponse(action, normalizedInput) {
   const generation = buildDietPlanWithFallback(normalizedInput);
-  const plan = generation.plan;
+  const plan = decoratePlanWithAdaptiveLayer(generation.plan, normalizedInput);
   const missingFields = generation.missingFields;
   const isFallbackPlan = !!generation.generatedFromFallback;
   const message = isFallbackPlan
     ? `Plano inicial gerado com fallback seguro. Complete os dados ausentes para uma dieta mais precisa.`
     : plan.clinicalContext && plan.clinicalContext.mode === 'clinical'
       ? 'Plano alimentar gerado com ajustes clínicos conservadores baseados no exame mais recente.'
-      : `Plano alimentar gerado com ${plan.refeicoes.length} refeicoes.`;
+      : `Plano alimentar gerado com ${(plan.refeicoes || []).length} refeicoes.`;
 
   return {
     action,
@@ -188,6 +315,7 @@ function buildDietResponse(action, normalizedInput) {
     payload: {
       profile: normalizedInput,
       plan,
+      adaptive: plan.adaptiveNutrition,
       validation: {
         missingFields,
         generatedFromFallback: isFallbackPlan,
@@ -198,6 +326,7 @@ function buildDietResponse(action, normalizedInput) {
 
 function buildDietFallbackResponse(action, normalizedInput, err) {
   const generation = buildDietPlanWithFallback(normalizedInput);
+  const decoratedPlan = decoratePlanWithAdaptiveLayer(generation.plan, normalizedInput);
   const message = 'Erro ao gerar dieta principal. Aplicando versão básica segura...';
   if (err) console.error('Diet error:', err);
 
@@ -210,13 +339,14 @@ function buildDietFallbackResponse(action, normalizedInput, err) {
     errorCode: 'DIET_FALLBACK',
     payload: {
       profile: normalizedInput,
-      plan: Object.assign({}, generation.plan, {
+      plan: Object.assign({}, decoratedPlan, {
         failSafe: true,
-        flow_state: generation.plan.refeicoes && generation.plan.refeicoes.length ? 'failsafe_renderable' : 'failsafe',
-        observacoes: (Array.isArray(generation.plan.observacoes) ? generation.plan.observacoes : []).concat([
+        flow_state: decoratedPlan.refeicoes && decoratedPlan.refeicoes.length ? 'failsafe_renderable' : 'failsafe',
+        observacoes: (Array.isArray(decoratedPlan.observacoes) ? decoratedPlan.observacoes : []).concat([
           'Revise os dados do perfil e tente novamente.',
         ]),
       }),
+      adaptive: decoratedPlan.adaptiveNutrition,
       validation: {
         missingFields: generation.missingFields,
         generatedFromFallback: true,
@@ -276,10 +406,12 @@ async function execute(action, payload) {
           errorCode: null,
           payload: {
             profile: normalizedInput,
+            adaptive: normalizedInput.adaptivePersonalization,
             summary: {
               hasObjective: Boolean(normalizedInput.objetivo),
               hasRestrictions: normalizedInput.restricoes.length > 0,
               hasAnthropometrics: Boolean(normalizedInput.peso && normalizedInput.altura && normalizedInput.idade),
+              adaptiveScore: normalizedInput.adaptivePersonalization.score,
             },
           },
         };

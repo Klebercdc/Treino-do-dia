@@ -6453,7 +6453,12 @@ function openDietChoiceScreen() {
 
 function startAIDiet() {
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
-  openNutritionFlow({ source: 'choice_screen_ia', returnTab: 'dieta' });
+  var userId = (typeof window !== 'undefined' && window._kronaUserId) || null;
+  if (typeof openDietProfileWizard === 'function') {
+    openDietProfileWizard(userId);
+  } else {
+    openNutritionFlow({ source: 'choice_screen_ia', returnTab: 'dieta' });
+  }
 }
 
 function startManualDiet() {
@@ -11493,6 +11498,7 @@ function openNutritionFlow(context) {
   window._nutritionFlowState = state;
   var screen = document.getElementById("nutritionFlowScreen");
   if (screen) screen.classList.add("show");
+  if (document.body) document.body.classList.add("nutrition-flow-active");
   var footer = document.querySelector(".footer-actions");
   if (footer) footer.style.display = "none";
   persistCanonicalNutritionSnapshot({ source: context && context.source || "home_dieta_ia" });
@@ -11502,6 +11508,7 @@ function openNutritionFlow(context) {
 function closeNutritionFlow() {
   var screen = document.getElementById("nutritionFlowScreen");
   if (screen) screen.classList.remove("show");
+  if (document.body) document.body.classList.remove("nutrition-flow-active");
   var footer = document.querySelector(".footer-actions");
   if (footer) footer.style.display = "";
 }
