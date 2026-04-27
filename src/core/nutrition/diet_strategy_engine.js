@@ -236,7 +236,7 @@ function buildNutritionProfile(input) {
 function validateProfile(profile) {
   var errors = [];
   if (!profile.sexo) errors.push('sexo ausente');
-  if (!profile.idade || profile.idade < 14 || profile.idade > 90) errors.push('idade inválida');
+  if (!profile.idade || profile.idade < 14 || profile.idade > 120) errors.push('idade inválida');
   if (!profile.peso || profile.peso < 35 || profile.peso > 300) errors.push('peso inválido');
   if (!profile.altura || profile.altura < 130 || profile.altura > 230) errors.push('altura inválida');
   return { ok: errors.length === 0, errors: errors };
