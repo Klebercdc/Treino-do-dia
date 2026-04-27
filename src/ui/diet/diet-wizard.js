@@ -126,12 +126,12 @@
     var meta = _metaForState(state);
     var bar = document.getElementById('dietWizardProgressBar');
     var percent = document.getElementById('dietWizardPercent');
-    var title = document.getElementById('dietWizardStepTitle');
-    var subtitle = document.getElementById('dietWizardStepSub');
+    var label = document.getElementById('dietWizardStepLabel');
     if (bar) bar.style.width = prog.percent + '%';
-    if (title) title.textContent = meta.title;
-    if (subtitle) subtitle.textContent = meta.subtitle;
     if (percent) percent.textContent = _isComplete(state) ? '100%' : prog.percent + '%';
+    if (label) label.textContent = _isComplete(state)
+      ? 'Resumo final'
+      : 'Etapa ' + prog.current + ' de ' + prog.total + ' · ' + meta.title;
   }
 
   function _safeRenderFallbackStep(step) {
@@ -581,16 +581,14 @@
         '.diet-wizard-screen{position:fixed;inset:0;background:linear-gradient(180deg,#020617,#050b12);color:#fff;overflow:hidden;overflow-x:hidden;}',
         '.diet-wizard-screen,.diet-wizard-screen *{box-sizing:border-box;}',
         '.dw-wizard-inner{flex:1;width:100%;display:flex;flex-direction:column;overflow:hidden;}',
-        '.dw-header-wrap{display:block;padding:20px 16px;background:linear-gradient(180deg,rgba(2,6,23,.95),transparent);}',
-        '.dw-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;width:100%;max-width:100%;}',
-        '.dw-back{width:40px;height:40px;min-width:40px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff;}',
-        '.dw-title{flex:1;min-width:0;font-weight:900;font-size:1.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-        '.dw-percent{min-width:46px;text-align:right;font-size:.8rem;color:#22c55e;font-weight:800;}',
-        '.dw-hero{width:100%;max-width:100%;border-radius:20px;padding:16px;overflow:hidden;background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(16,185,129,.05));border:1px solid rgba(34,197,94,.2);box-shadow:0 0 28px rgba(34,197,94,.08);}',
-        '.dw-step-title{font-size:1.4rem;font-weight:900;margin-bottom:6px;word-break:break-word;color:#fff;}',
-        '.dw-step-sub{font-size:.85rem;line-height:1.4;color:rgba(255,255,255,.64);}',
-        '.dw-progress{margin-top:12px;height:8px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;}',
-        '.dw-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#a3e635);box-shadow:0 0 10px #22c55e;transition:width .3s ease;}',
+        '.dw-header-wrap{display:block;padding:12px 16px 8px;background:#020617;}',
+        '.dw-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;width:100%;}',
+        '.dw-back{width:36px;height:36px;min-width:36px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff;}',
+        '.dw-title{flex:1;min-width:0;font-weight:900;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.dw-percent{min-width:40px;text-align:right;font-size:.75rem;color:#22c55e;font-weight:800;}',
+        '.dw-step-label{display:block;font-size:.72rem;color:rgba(255,255,255,.45);margin-bottom:6px;}',
+        '.dw-progress{height:3px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;}',
+        '.dw-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#a3e635);transition:width .3s ease;}',
         '.dw-body{flex:1;min-height:0;padding:16px;padding-bottom:120px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}',
         '.diet-wizard-footer{position:fixed;bottom:0;left:0;right:0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#020617);}',
         '.dw-btn-primary{width:100%;height:56px;border-radius:16px;border:none;background:linear-gradient(135deg,#22c55e,#a3e635);font-weight:900;color:#022c22;box-shadow:0 14px 30px rgba(34,197,94,.24);}',
@@ -602,12 +600,9 @@
             '<div class="dw-title">KRONIA DIETA</div>',
             '<div id="dietWizardPercent" class="dw-percent">0%</div>',
           '</div>',
-          '<div class="dw-hero">',
-            '<div id="dietWizardStepTitle" class="dw-step-title">Composição corporal</div>',
-            '<div id="dietWizardStepSub" class="dw-step-sub">Base metabólica para calcular sua dieta com mais precisão.</div>',
-            '<div class="dw-progress">',
-              '<div id="dietWizardProgressBar" class="dw-progress-fill diet-wizard-progress-fill"></div>',
-            '</div>',
+          '<span id="dietWizardStepLabel" class="dw-step-label">Etapa 1 de 6 · Composição corporal</span>',
+          '<div class="dw-progress">',
+            '<div id="dietWizardProgressBar" class="dw-progress-fill diet-wizard-progress-fill"></div>',
           '</div>',
         '</div>',
         '<div id="dietWizardStepContainer" class="dw-body"></div>',
