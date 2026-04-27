@@ -3,8 +3,44 @@
 
 (function(root) {
   var WIZARD_SCREEN_ID = 'dietProfileWizardScreen';
+  var WIZARD_STATE_KEY = 'kronia_diet_wizard_state_v1';
 
   function _q(id) { return document.getElementById(id); }
+
+  function _safeCall(fn) {
+    try { if (typeof fn === 'function') return fn(); } catch(_) {}
+    return null;
+  }
+
+  function _hideKnownBlockingLayers() {
+    [
+      'dietChoiceScreen',
+      'nutritionFlowScreen',
+      'customModal',
+      'configSheet',
+      'timerSheet'
+    ].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el || id === WIZARD_SCREEN_ID) return;
+      el.classList.remove('show');
+    });
+  }
+
+  function _activateWizardLayer(screen) {
+    _hideKnownBlockingLayers();
+    if (!screen) return;
+    screen.style.zIndex = '12000';
+    screen.style.pointerEvents = 'auto';
+    document.body.classList.add('diet-wizard-active');
+    var footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = 'none';
+  }
+
+  function _deactivateWizardLayer() {
+    document.body.classList.remove('diet-wizard-active');
+    var footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.display = '';
+  }
 
   function renderDietWizardProgress(state) {
     var prog = getDietWizardProgress(state);
@@ -22,6 +58,7 @@
     if (isDietWizardComplete(state)) {
       container.innerHTML = renderDietSummary(state);
       renderDietWizardProgress(state);
+      _syncFooterButton(true);
       return;
     }
 
@@ -35,9 +72,16 @@
     else if (step === 6) html = renderDietStepMetabolism(state.data.metabolism || {});
     container.innerHTML = html;
     renderDietWizardProgress(state);
+    _syncFooterButton(false);
     _bindStepChips(container);
     _bindModalidadeExpand(container, state);
     try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(_) {}
+  }
+
+  function _syncFooterButton(isComplete) {
+    var btn = document.getElementById('dietWizardNextBtn');
+    if (!btn) return;
+    btn.textContent = isComplete ? 'Gerar minha dieta com KroniA' : 'Continuar';
   }
 
   function _bindStepChips(container) {
@@ -76,13 +120,16 @@
         var tipo = chip.dataset.value;
         var cardId = 'dw-modal-card-' + tipo;
         var existing = container.querySelector('#' + cardId);
+        var host = container.querySelector('.dw-modalidades-expand');
+        if (!host) return;
         if (chip.classList.contains('active')) {
           if (!existing) {
             var card = document.createElement('div');
             card.id = cardId;
             card.className = 'dw-modal-sub-card';
             card.innerHTML = _modalidadeSubCard(tipo);
-            container.querySelector('.dw-modalidades-expand').appendChild(card);
+            host.appendChild(card);
+            _bindStepChips(card);
           }
         } else {
           if (existing) existing.remove();
@@ -136,6 +183,12 @@
       return multi ? vals : vals[0];
     }
 
+    function bcmMode() {
+      var active = container.querySelector('.dw-bcm-toggle.active');
+      if (!active) return 'skip';
+      return active.dataset.show || 'skip';
+    }
+
     function input(name) {
       var el = container.querySelector('[name="' + name + '"]');
       return el ? el.value.trim() : null;
@@ -146,9 +199,9 @@
       data.age = Number(input('age')) || null;
       data.weight_kg = Number(input('weight_kg')) || null;
       data.height_cm = Number(input('height_cm')) || null;
-      var bcmMode = chip('bcm_mode');
-      data.bcmMode = bcmMode;
-      if (bcmMode === 'bcm') {
+      var mode = bcmMode();
+      data.bcmMode = mode;
+      if (mode === 'bcm') {
         data.bcmData = {
           body_fat_percent: Number(input('body_fat_percent')) || null,
           lean_mass_kg: Number(input('lean_mass_kg')) || null,
@@ -158,7 +211,7 @@
           basal_metabolic_rate: Number(input('basal_metabolic_rate')) || null,
           exam_date: input('exam_date'),
         };
-      } else if (bcmMode === 'pcm') {
+      } else if (mode === 'pcm') {
         data.pcmManual = {
           waist_cm: Number(input('waist_cm')) || null,
           abdomen_cm: Number(input('abdomen_cm')) || null,
@@ -190,10 +243,6 @@
       var modalChips = container.querySelectorAll('.dw-chip[data-group="modalidades"].active');
       data.modalidades = Array.from(modalChips).map(function(c) {
         var tipo = c.dataset.value || c.textContent.trim().toLowerCase();
-        function selVal(group) {
-          var el = container.querySelector('.dw-chip-single[data-group="' + group + '"].active, .dw-chip-single[data-group="modal_int_' + tipo + '"].active');
-          return el ? el.dataset.value : null;
-        }
         var diasEl = container.querySelector('[name="modal_dias_' + tipo + '"]');
         var durEl  = container.querySelector('[name="modal_dur_' + tipo + '"]');
         return {
@@ -252,7 +301,7 @@
 
     var savedState = null;
     try {
-      var raw = localStorage.getItem('kronia_diet_wizard_state_v1');
+      var raw = localStorage.getItem(WIZARD_STATE_KEY);
       if (raw) savedState = JSON.parse(raw);
     } catch(_) {}
 
@@ -264,17 +313,25 @@
     }
 
     window._dietWizardState = state;
+    _activateWizardLayer(screen);
     screen.classList.add('show');
-    var footer = document.querySelector('.footer-actions');
-    if (footer) footer.style.display = 'none';
-    renderDietWizardStep(state);
+    try {
+      renderDietWizardStep(state);
+    } catch(err) {
+      console.error('[diet-wizard] Falha ao renderizar wizard; voltando ao fluxo legado.', err);
+      closeDietProfileWizard();
+      if (typeof openNutritionFlow === 'function') {
+        openNutritionFlow({ source: 'diet_wizard_render_fallback', returnTab: 'dieta' });
+      } else {
+        _safeCall(function(){ navTo('dieta'); openDietDataScreen(); });
+      }
+    }
   }
 
   function closeDietProfileWizard() {
     var screen = _q(WIZARD_SCREEN_ID);
     if (screen) screen.classList.remove('show');
-    var footer = document.querySelector('.footer-actions');
-    if (footer) footer.style.display = '';
+    _deactivateWizardLayer();
   }
 
   function dietWizardNext() {
@@ -290,12 +347,13 @@
     var err = _validateStepData(state.currentStep, stepData);
     if (err) {
       if (typeof showToast === 'function') showToast(err, 'warning', 3600);
+      else _safeCall(function(){ dlgAlert(err); });
       return;
     }
 
     state = advanceDietWizardStep(state, state.currentStep, stepData);
     window._dietWizardState = state;
-    try { localStorage.setItem('kronia_diet_wizard_state_v1', JSON.stringify(state)); } catch(_) {}
+    try { localStorage.setItem(WIZARD_STATE_KEY, JSON.stringify(state)); } catch(_) {}
     renderDietWizardStep(state);
   }
 
@@ -330,7 +388,7 @@
   }
 
   async function _submitDietWizard(state) {
-    var btn = document.getElementById('dietWizardSubmitBtn');
+    var btn = document.getElementById('dietWizardSubmitBtn') || document.getElementById('dietWizardNextBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
 
     var body = state.data.bodyComposition || {};
@@ -379,12 +437,19 @@
       closeDietProfileWizard();
       if (typeof openNutritionFlowFull === 'function') {
         await openNutritionFlowFull({ autoGenerate: true, source: 'diet_wizard_6step', dietWizardPayload: payload });
+      } else if (typeof openNutritionFlow === 'function') {
+        openNutritionFlow({ source: 'diet_wizard_6step_fallback', returnTab: 'dieta', dietWizardPayload: payload });
       } else {
         try { navTo('dieta'); openDietDataScreen(); } catch(_) {}
       }
+      try { localStorage.removeItem(WIZARD_STATE_KEY); } catch(_) {}
     } catch(err) {
+      console.error('[diet-wizard] erro ao gerar dieta', err);
       if (typeof showToast === 'function') showToast('Erro ao gerar dieta. Tente novamente.', 'error', 4000);
       if (btn) { btn.disabled = false; btn.textContent = 'Gerar minha dieta com KroniA'; }
+      _activateWizardLayer(_q(WIZARD_SCREEN_ID));
+      var screen = _q(WIZARD_SCREEN_ID);
+      if (screen) screen.classList.add('show');
     }
   }
 
@@ -392,6 +457,7 @@
     var div = document.createElement('div');
     div.id = WIZARD_SCREEN_ID;
     div.className = 'diet-wizard-screen';
+    div.style.zIndex = '12000';
     div.innerHTML = [
       '<div class="diet-wizard-inner">',
         '<div class="diet-wizard-header">',
