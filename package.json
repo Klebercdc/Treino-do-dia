@@ -4,6 +4,61 @@
   "private": true,
   "description": "KRONIA — Sistema de Gestão Fisiológica e Periodização",
   "scripts": {
-    "build": "tsc --noEmit --pretty false && node scripts/build-static-public.mjs && node scripts/force-diet-wizard-6step-build.mjs"
+    "test": "node --test tests/unit/*.test.js tests/unit/*.test.mjs",
+    "test:e2e": "npm run db:push:test && playwright test",
+    "test:sanity": "playwright test tests/e2e/sanity.spec.ts --reporter=list",
+    "test:workout": "playwright test tests/e2e/workout-registration.spec.ts --reporter=list",
+    "test:diagnostics": "node --test tests/unit/diagnostics.test.js tests/unit/admin-diagnostics-route.test.js",
+    "test:chat": "node --import tsx --test tests/unit/chat-api-cta-inference.test.js tests/unit/chat-cta-delegation.test.js tests/unit/chat-intent-labs.test.js tests/unit/chat-pending-intent.test.js tests/unit/chat-rag-fallback.test.ts tests/unit/conversation-cta-render.test.js tests/unit/conversation-cta.test.js tests/unit/intent-pipeline-edge-cases.test.js tests/unit/training-intent-hydration.test.js",
+    "db:pull": "supabase db pull",
+    "db:push:test": "dotenv -e .env.test -- supabase db push --db-url \"$VITE_SUPABASE_DB_URL_TEST\"",
+    "serve": "npx serve . -p 3000 --no-clipboard",
+    "scraper": "node etl/scrapers/cli.js",
+    "scraper:wger": "node etl/scrapers/cli.js --sources wger --stats",
+    "scraper:exrx": "node etl/scrapers/cli.js --sources exrx --stats",
+    "scraper:all": "node etl/scrapers/cli.js --sources wger,exrx --csv --stats",
+    "system:check": "sh -c 'if command -v tsx >/dev/null 2>&1; then tsx scripts/system-check.ts; else npm run -s system:check:legacy; fi'",
+    "system:check:legacy": "tsc --pretty false --target ES2020 --module node16 --moduleResolution node16 --lib ES2020,DOM --types node --esModuleInterop --skipLibCheck --outDir .tmp-system-check scripts/system-check.ts src/lib/checks/*.ts src/lib/utils/env.ts && node .tmp-system-check/scripts/system-check.js",
+    "release:readiness": "sh -c 'if command -v tsx >/dev/null 2>&1; then tsx scripts/release-readiness.ts; else npm run -s release:readiness:legacy; fi'",
+    "release:readiness:legacy": "tsc --pretty false --target ES2020 --module node16 --moduleResolution node16 --lib ES2020,DOM --types node --esModuleInterop --skipLibCheck --outDir .tmp-release-readiness scripts/release-readiness.ts && node .tmp-release-readiness/release-readiness.js",
+    "launch:gate": "npm run system:check && npm run release:readiness",
+    "monitor:postdeploy": "sh -c 'if command -v tsx >/dev/null 2>&1; then tsx scripts/post-deploy-monitor.ts; else npm run -s monitor:postdeploy:legacy; fi'",
+    "monitor:postdeploy:legacy": "tsc --pretty false --target ES2020 --module node16 --moduleResolution node16 --lib ES2020,DOM --types node --esModuleInterop --skipLibCheck --outDir .tmp-post-deploy-monitor scripts/post-deploy-monitor.ts && node .tmp-post-deploy-monitor/post-deploy-monitor.js",
+    "launch:postdeploy": "npm run monitor:postdeploy",
+    "test:access": "node scripts/test-access.js",
+    "check:vercel-hobby": "node scripts/check-vercel-hobby.js",
+    "migrate": "tsx scripts/run-migrations.ts",
+    "migrate:dry": "tsx scripts/run-migrations.ts --dry-run",
+    "seed:exercises": "tsx scripts/seed-exercises.ts",
+    "import:exercises:catalog": "tsx scripts/import-exercises-catalog.ts",
+    "sync:exercises": "tsx scripts/sync-exercises-weekly.ts",
+    "enrich:exercises:media": "tsx scripts/enrich-exercises.ts",
+    "review:exercise-media": "tsx scripts/review-exercise-media-cache.ts",
+    "audit:admin-scope": "node scripts/admin-scope-audit.js",
+    "import:exercises": "node scripts/import-exercises.mjs",
+    "import:exercises:500": "DRY_RUN=false IMPORT_LIMIT=500 BATCH_SIZE=100 node scripts/import-exercises.mjs",
+    "exam:ocr:dev": "python -m uvicorn services.exam_ocr.app:app --host 0.0.0.0 --port 8010 --reload",
+    "exam:ocr:health": "node -e \"fetch(process.env.EXAM_OCR_SERVICE_URL||'http://localhost:8010').then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e.message);process.exit(1);})\"",
+    "exam:process:test": "tsx --test tests/unit/lab-reports-service.test.ts",
+    "test:labs": "node --test tests/unit/kronia-labs-handler.test.js",
+    "lint": "tsc --noEmit --pretty false",
+    "build": "tsc --noEmit --pretty false && node scripts/build-static-public.mjs && node scripts/force-diet-wizard-6step-build.mjs",
+    "check:labs-upload": "node --env-file=.env.local scripts/check-labs-upload.mjs",
+    "check:labs-pipeline": "tsx scripts/labs-pipeline-check.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^20.19.39",
+    "dotenv": "^16.4.5",
+    "dotenv-cli": "^7.4.2",
+    "serve": "^14.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20 <23"
   }
 }
