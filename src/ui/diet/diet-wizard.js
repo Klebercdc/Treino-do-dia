@@ -456,6 +456,8 @@
     window._dietWizardState = state;
     try { localStorage.setItem(WIZARD_STATE_KEY, JSON.stringify(state)); } catch(_) {}
     renderDietWizardStep(state);
+    var body = document.getElementById('dietWizardStepContainer');
+    if (body) body.scrollTop = 0;
   }
 
   function dietWizardBack() {
@@ -467,6 +469,8 @@
       delete state.completedAt;
       window._dietWizardState = state;
       renderDietWizardStep(state);
+      var body = document.getElementById('dietWizardStepContainer');
+      if (body) body.scrollTop = 0;
       return;
     }
     if (state.currentStep <= 1) {
@@ -477,6 +481,8 @@
     state.currentStep -= 1;
     window._dietWizardState = state;
     renderDietWizardStep(state);
+    var body = document.getElementById('dietWizardStepContainer');
+    if (body) body.scrollTop = 0;
   }
 
   function dietWizardEditStep(step) {
