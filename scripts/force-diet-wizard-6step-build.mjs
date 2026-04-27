@@ -40,11 +40,35 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
     return true;
   }
 
+  function enableAiDietButtons(){
+    var nodes = Array.prototype.slice.call(document.querySelectorAll('button,[role="button"],a,.btn,.diet-choice-card,.diet-card'));
+    nodes.forEach(function(el){
+      var text = (el.innerText || el.textContent || '').toLowerCase();
+      var onclick = String((el.getAttribute && el.getAttribute('onclick')) || '').toLowerCase();
+      var isManual = text.indexOf('manual') !== -1 || onclick.indexOf('startmanualdiet') !== -1;
+      var isAi = !isManual && (
+        text.indexOf('gerar dieta') !== -1 ||
+        text.indexOf('dieta com ia') !== -1 ||
+        text.indexOf('criar dieta') !== -1 ||
+        onclick.indexOf('startaidiet') !== -1 ||
+        onclick.indexOf('opennutritionflow') !== -1
+      );
+      if (!isAi) return;
+      el.disabled = false;
+      el.removeAttribute('disabled');
+      el.setAttribute('aria-disabled','false');
+      el.style.pointerEvents = 'auto';
+      el.style.opacity = '';
+      el.onclick = function(ev){
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        return openSixStepDietWizard({ redirectedFrom: 'ai_button_direct_handler' });
+      };
+    });
+  }
+
   function install(){
     window.openKroniaDietWizard6Step = openSixStepDietWizard;
 
-    // Bloqueia apenas o questionário antigo de 4 etapas.
-    // Preserva openNutritionFlowFull porque ele gera a dieta após o wizard.
     if (typeof window.openNutritionFlow === 'function' && !window.openNutritionFlowLegacyDisabled) {
       window.openNutritionFlowLegacyDisabled = window.openNutritionFlow;
     }
@@ -55,15 +79,12 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
       };
     }
 
-    // Entrada de IA sempre abre o wizard novo, mesmo se a função for carregada depois.
     if (typeof window.startAIDiet === 'function' && !window.startAIDietLegacyDisabled) {
       window.startAIDietLegacyDisabled = window.startAIDiet;
     }
-    window.startAIDiet = function(){
-      return openSixStepDietWizard({ redirectedFrom: 'startAIDiet' });
-    };
+    window.startAIDiet = function(){ return openSixStepDietWizard({ redirectedFrom: 'startAIDiet' }); };
 
-    // Dieta manual fica preservada. Não sobrescrever startManualDiet.
+    enableAiDietButtons();
   }
 
   function addStyles(){
@@ -90,14 +111,15 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
       while (el && el !== document.body) {
         var text = (el.innerText || el.textContent || '').toLowerCase();
         var onclick = String(el.getAttribute && el.getAttribute('onclick') || '').toLowerCase();
-        var looksLikeAiDiet =
+        var isManual = text.indexOf('manual') !== -1 || onclick.indexOf('startmanualdiet') !== -1;
+        var looksLikeAiDiet = !isManual && (
           onclick.indexOf('startaidiet') !== -1 ||
           onclick.indexOf('opennutritionflow') !== -1 ||
           text.indexOf('gerar dieta') !== -1 ||
           text.indexOf('dieta com ia') !== -1 ||
-          text.indexOf('criar dieta') !== -1;
-        var isManual = text.indexOf('manual') !== -1 || onclick.indexOf('startmanualdiet') !== -1;
-        if (looksLikeAiDiet && !isManual) {
+          text.indexOf('criar dieta') !== -1
+        );
+        if (looksLikeAiDiet) {
           ev.preventDefault();
           ev.stopPropagation();
           openSixStepDietWizard({ redirectedFrom: 'click_capture_ai_diet' });
@@ -113,7 +135,7 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
   captureAiGenerateClicks();
   document.addEventListener('DOMContentLoaded', function(){ addStyles(); install(); });
   window.addEventListener('load', function(){ addStyles(); install(); });
-  setInterval(install, 800);
+  setInterval(install, 500);
 })();
 `;
 
@@ -121,10 +143,10 @@ await mkdir(path.dirname(overridePath), { recursive: true });
 await writeFile(overridePath, overrideCode, 'utf8');
 
 let html = await readFile(indexPath, 'utf8');
-const tag = '<script src="src/ui/diet/diet-wizard-force-6step.js?v=20260427c"></script>';
+const tag = '<script src="src/ui/diet/diet-wizard-force-6step.js?v=20260427d"></script>';
 if (!html.includes('diet-wizard-force-6step.js')) {
   html = html.replace('</body>', `  ${tag}\n</body>`);
   await writeFile(indexPath, html, 'utf8');
 }
 
-console.log('Forced 6-step diet wizard enabled; old 4-step questionnaire blocked; AI generate/manual preserved.');
+console.log('Forced 6-step diet wizard enabled; AI button force-enabled; manual preserved.');
