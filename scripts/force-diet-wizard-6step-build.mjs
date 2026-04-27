@@ -41,31 +41,48 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
     return true;
   }
 
+  function textOf(el){ return String((el && (el.innerText || el.textContent)) || '').toLowerCase(); }
+  function onclickOf(el){ return String((el && el.getAttribute && el.getAttribute('onclick')) || '').toLowerCase(); }
+  function isManualEl(el){ var t=textOf(el), o=onclickOf(el); return t.indexOf('manual') !== -1 || t.indexOf('editar dieta') !== -1 || o.indexOf('startmanualdiet') !== -1; }
+  function isAiEl(el){
+    if (!el || isManualEl(el)) return false;
+    var t=textOf(el), o=onclickOf(el);
+    return t.indexOf('regenerar plano') !== -1 || t.indexOf('dieta com ia') !== -1 || t.indexOf('plano alimentar inteligente') !== -1 || t.indexOf('gerar dieta') !== -1 || t.indexOf('criar dieta') !== -1 || t.indexOf('inteligência artificial') !== -1 || o.indexOf('startaidiet') !== -1 || o.indexOf('opennutritionflow') !== -1 || o.indexOf('regenerate') !== -1 || o.indexOf('regenerar') !== -1;
+  }
+
+  function bindAiElement(el){
+    if (!el || el.dataset.kroniaAiDietBound === '1') return;
+    if (isManualEl(el)) return;
+    el.dataset.kroniaAiDietBound = '1';
+    el.disabled = false;
+    el.removeAttribute('disabled');
+    el.setAttribute('aria-disabled','false');
+    el.style.pointerEvents = 'auto';
+    el.style.opacity = '';
+    el.addEventListener('click', function(ev){
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      ev.stopPropagation();
+      openSixStepDietWizard({ redirectedFrom: 'regenerate_ai_plan_card' });
+      return false;
+    }, true);
+    el.onclick = function(ev){
+      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      return openSixStepDietWizard({ redirectedFrom: 'regenerate_ai_plan_onclick' });
+    };
+  }
+
   function enableAiDietButtons(){
-    var nodes = Array.prototype.slice.call(document.querySelectorAll('button,[role="button"],a,.btn,.diet-choice-card,.diet-card,[onclick]'));
+    var selector = 'button,[role="button"],a,.btn,.diet-choice-card,.diet-card,.choice-card,.action-card,.ai-card,[onclick],[class*="diet"],[class*="nutrition"]';
+    var nodes = Array.prototype.slice.call(document.querySelectorAll(selector));
     nodes.forEach(function(el){
-      var text = (el.innerText || el.textContent || '').toLowerCase();
-      var onclick = String((el.getAttribute && el.getAttribute('onclick')) || '').toLowerCase();
-      var isManual = text.indexOf('manual') !== -1 || onclick.indexOf('startmanualdiet') !== -1;
-      var isAi = !isManual && (
-        text.indexOf('gerar dieta') !== -1 ||
-        text.indexOf('dieta com ia') !== -1 ||
-        text.indexOf('criar dieta') !== -1 ||
-        text.indexOf('inteligência artificial') !== -1 ||
-        onclick.indexOf('startaidiet') !== -1 ||
-        onclick.indexOf('opennutritionflow') !== -1 ||
-        onclick.indexOf('opendietprofilewizard') !== -1
-      );
-      if (!isAi) return;
-      el.disabled = false;
-      el.removeAttribute('disabled');
-      el.setAttribute('aria-disabled','false');
-      el.style.pointerEvents = 'auto';
-      el.style.opacity = '';
-      el.onclick = function(ev){
-        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-        return openSixStepDietWizard({ redirectedFrom: 'ai_button_direct_handler' });
-      };
+      if (isAiEl(el)) {
+        bindAiElement(el);
+        var parent = el.parentElement;
+        for (var i=0; parent && i<3; i++, parent = parent.parentElement) {
+          if (parent && !isManualEl(parent)) bindAiElement(parent);
+        }
+      }
     });
   }
 
@@ -101,6 +118,7 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
       '.dw-card{max-width:100%!important;overflow:hidden!important;}',
       '.dw-row{max-width:100%!important;}',
       '.dw-chips-row{max-width:100%!important;overflow:hidden!important;}',
+      '[data-kronia-ai-diet-bound="1"]{pointer-events:auto!important;opacity:1!important;filter:none!important;cursor:pointer!important;}',
       '@keyframes dwStepIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}'
     ].join('\n');
     document.head.appendChild(style);
@@ -110,22 +128,11 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
     document.addEventListener('click', function(ev){
       var el = ev.target;
       while (el && el !== document.body) {
-        var text = (el.innerText || el.textContent || '').toLowerCase();
-        var onclick = String(el.getAttribute && el.getAttribute('onclick') || '').toLowerCase();
-        var isManual = text.indexOf('manual') !== -1 || onclick.indexOf('startmanualdiet') !== -1;
-        var looksLikeAiDiet = !isManual && (
-          onclick.indexOf('startaidiet') !== -1 ||
-          onclick.indexOf('opennutritionflow') !== -1 ||
-          onclick.indexOf('opendietprofilewizard') !== -1 ||
-          text.indexOf('gerar dieta') !== -1 ||
-          text.indexOf('dieta com ia') !== -1 ||
-          text.indexOf('criar dieta') !== -1 ||
-          text.indexOf('inteligência artificial') !== -1
-        );
-        if (looksLikeAiDiet) {
+        if (isAiEl(el)) {
           ev.preventDefault();
+          ev.stopImmediatePropagation();
           ev.stopPropagation();
-          openSixStepDietWizard({ redirectedFrom: 'click_capture_ai_diet' });
+          openSixStepDietWizard({ redirectedFrom: 'capture_regenerate_ai_plan' });
           return false;
         }
         el = el.parentElement;
@@ -138,7 +145,7 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
   captureAiGenerateClicks();
   document.addEventListener('DOMContentLoaded', function(){ addStyles(); install(); });
   window.addEventListener('load', function(){ addStyles(); install(); });
-  setInterval(install, 500);
+  setInterval(install, 250);
 })();
 `;
 
@@ -146,19 +153,17 @@ await mkdir(path.dirname(overridePath), { recursive: true });
 await writeFile(overridePath, overrideCode, 'utf8');
 
 let html = await readFile(indexPath, 'utf8');
-const tag = '<script src="src/ui/diet/diet-wizard-force-6step.js?v=20260427e"></script>';
+const tag = '<script src="src/ui/diet/diet-wizard-force-6step.js?v=20260427g"></script>';
 if (!html.includes('diet-wizard-force-6step.js')) {
   html = html.replace('</body>', `  ${tag}\n</body>`);
 }
 
-// Patch direct inline handlers in the generated HTML. This is safer than relying only on runtime capture.
 html = html
   .replace(/onclick="startAIDiet\(\)"/g, 'onclick="openKroniaDietWizard6Step()"')
   .replace(/onclick='startAIDiet\(\)'/g, "onclick='openKroniaDietWizard6Step()'")
   .replace(/onclick="openNutritionFlow\((?!\{source:\\'manual)[^\"]*\)"/g, 'onclick="openKroniaDietWizard6Step()"');
 await writeFile(indexPath, html, 'utf8');
 
-// Patch generated app.js when old entrypoint exists as plain code.
 try {
   let app = await readFile(appPath, 'utf8');
   const marker = 'function startAIDiet()';
@@ -171,4 +176,4 @@ try {
   console.warn('app.js direct patch skipped:', err.message);
 }
 
-console.log('Forced 6-step diet wizard enabled; generated index/app entrypoints patched; manual preserved.');
+console.log('Forced 6-step diet wizard enabled; Regenerar plano card bound; manual preserved.');
