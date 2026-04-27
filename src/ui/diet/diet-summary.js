@@ -31,7 +31,7 @@ function renderDietSummary(state) {
 
   return [
     '<div class="dw-step-title">Resumo do seu perfil</div>',
-    '<p class="dw-step-desc">Revise e depois gere sua dieta personalizada.</p>',
+    '<p class="dw-step-desc">Revise e depois toque no botão fixo abaixo para gerar sua dieta personalizada.</p>',
 
     '<div class="dw-card">',
       '<div class="dw-summary-card-title">Corpo</div>',
@@ -84,10 +84,6 @@ function renderDietSummary(state) {
     hasAlerts
       ? '<div class="dw-alert-hormonal">Condição de saúde ou hormônio identificado. Recomendamos acompanhamento profissional especializado.</div>'
       : '',
-
-    '<button type="button" id="dietWizardSubmitBtn" class="dw-btn-primary' + (!stepsOk ? ' dw-btn-disabled' : '') + '" ' + (!stepsOk ? 'disabled' : '') + ' onclick="dietWizardNext()">',
-      'Gerar minha dieta com KroniA',
-    '</button>',
 
     !stepsOk
       ? '<p class="dw-info-text" style="text-align:center;margin-top:8px">Complete as etapas 1 e 2 para continuar.</p>'
