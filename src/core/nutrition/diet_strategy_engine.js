@@ -194,6 +194,12 @@ function buildNutritionProfile(input) {
   var sexo = normalizeSex(safeInput.sexo || safeInput.sex);
   var metabolicBehavior = unifiedContext.metabolicBehavior;
 
+  // Resolve clinicalData from normalized payload (set by dietService.normalizeDietPayload)
+  var clinicalDataRaw = safeInput.clinicalData && typeof safeInput.clinicalData === 'object' ? safeInput.clinicalData : null;
+  var conditionFlags = clinicalDataRaw && clinicalDataRaw.flags
+    ? clinicalDataRaw.flags
+    : clinical.buildConditionFlags(clinicalDataRaw && clinicalDataRaw.healthConditions);
+
   return {
     sexo: sexo,
     sex: sexo,
@@ -227,6 +233,7 @@ function buildNutritionProfile(input) {
     nutritionFlowSelections: unifiedContext.foodSelections,
     nutritionGoals: unifiedContext.goals || null,
     labContext: clinical.buildLabContext(unifiedContext.labs),
+    clinicalData: clinicalDataRaw ? Object.assign({}, clinicalDataRaw, { flags: conditionFlags }) : { healthConditions: [], flags: conditionFlags },
     contextoNutricional: unifiedContext
   };
 }

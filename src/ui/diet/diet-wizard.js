@@ -126,12 +126,12 @@
     var meta = _metaForState(state);
     var bar = document.getElementById('dietWizardProgressBar');
     var percent = document.getElementById('dietWizardPercent');
-    var title = document.getElementById('dietWizardStepTitle');
-    var subtitle = document.getElementById('dietWizardStepSub');
+    var stepName = document.getElementById('dietWizardStepName');
+    var stepCounter = document.getElementById('dietWizardStepCounter');
     if (bar) bar.style.width = prog.percent + '%';
-    if (title) title.textContent = meta.title;
-    if (subtitle) subtitle.textContent = meta.subtitle;
     if (percent) percent.textContent = _isComplete(state) ? '100%' : prog.percent + '%';
+    if (stepName) stepName.textContent = _isComplete(state) ? 'Resumo do perfil' : meta.title;
+    if (stepCounter) stepCounter.textContent = _isComplete(state) ? '✓' : prog.current + '/' + prog.total;
   }
 
   function _safeRenderFallbackStep(step) {
@@ -420,9 +420,9 @@
 
       if (!state || !state.data) state = _fallbackCreateState(userId);
       window._dietWizardState = state;
+      renderDietWizardStep(state);
       _activateWizardLayer(screen);
       screen.classList.add('show');
-      renderDietWizardStep(state);
     } catch(err) {
       console.error('[diet-wizard] Falha ao abrir wizard; usando fluxo legado.', err);
       _openLegacyDietFlow('diet_wizard_open_fallback');
@@ -456,6 +456,8 @@
     window._dietWizardState = state;
     try { localStorage.setItem(WIZARD_STATE_KEY, JSON.stringify(state)); } catch(_) {}
     renderDietWizardStep(state);
+    var body = document.getElementById('dietWizardStepContainer');
+    if (body) body.scrollTop = 0;
   }
 
   function dietWizardBack() {
@@ -467,6 +469,8 @@
       delete state.completedAt;
       window._dietWizardState = state;
       renderDietWizardStep(state);
+      var body = document.getElementById('dietWizardStepContainer');
+      if (body) body.scrollTop = 0;
       return;
     }
     if (state.currentStep <= 1) {
@@ -477,6 +481,8 @@
     state.currentStep -= 1;
     window._dietWizardState = state;
     renderDietWizardStep(state);
+    var body = document.getElementById('dietWizardStepContainer');
+    if (body) body.scrollTop = 0;
   }
 
   function dietWizardEditStep(step) {
@@ -577,40 +583,65 @@
     div.style.pointerEvents = 'auto';
     div.innerHTML = [
       '<style>',
-        'body.diet-wizard-active{overflow-x:hidden;}',
-        '.diet-wizard-screen{position:fixed;inset:0;background:linear-gradient(180deg,#020617,#050b12);color:#fff;overflow:hidden;overflow-x:hidden;}',
+        'body.diet-wizard-active{overflow:hidden;}',
+        /* ── Screen ── */
+        '.diet-wizard-screen{position:fixed;inset:0;background:#07090f;color:#fff;overflow:hidden;display:none;}',
+        '.diet-wizard-screen.show{display:block;}',
         '.diet-wizard-screen,.diet-wizard-screen *{box-sizing:border-box;}',
-        '.diet-wizard-inner{flex:1;width:100%;display:flex;flex-direction:column;overflow:hidden;}',
-        '.diet-wizard-header{display:block!important;padding:20px 16px;background:linear-gradient(180deg,rgba(2,6,23,.95),transparent);}',
-        '.dw-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;width:100%;max-width:100%;}',
-        '.dw-back{width:40px;height:40px;min-width:40px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff;}',
-        '.dw-title{flex:1;min-width:0;font-weight:900;font-size:1.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-        '.dw-percent{min-width:46px;text-align:right;font-size:.8rem;color:#22c55e;font-weight:800;}',
-        '.dw-hero{width:100%;max-width:100%;border-radius:20px;padding:16px;overflow:hidden;background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(16,185,129,.05));border:1px solid rgba(34,197,94,.2);box-shadow:0 0 28px rgba(34,197,94,.08);}',
-        '.dw-step-title{font-size:1.4rem;font-weight:900;margin-bottom:6px;word-break:break-word;color:#fff;}',
-        '.dw-step-sub{font-size:.85rem;line-height:1.4;color:rgba(255,255,255,.64);}',
-        '.dw-progress{margin-top:12px;height:8px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;}',
-        '.dw-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#a3e635);box-shadow:0 0 10px #22c55e;transition:width .3s ease;}',
-        '.diet-wizard-body{flex:1;min-height:0;padding:16px!important;padding-bottom:120px!important;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}',
-        '.diet-wizard-footer{position:fixed;bottom:0;left:0;right:0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#020617);}',
-        '.dw-btn-primary{width:100%;height:56px;border-radius:16px;border:none;background:linear-gradient(135deg,#22c55e,#a3e635);font-weight:900;color:#022c22;box-shadow:0 14px 30px rgba(34,197,94,.24);}',
+        /* ── Layout ── */
+        '.dw-wizard-inner{width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;}',
+        /* ── Header ── */
+        '.dw-header-wrap{display:block;padding:14px 16px 12px;background:#07090f;border-bottom:1px solid rgba(255,255,255,.05);}',
+        '.dw-top{display:flex;align-items:center;gap:12px;margin-bottom:10px;width:100%;}',
+        '.dw-back{width:36px;height:36px;min-width:36px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);color:rgba(255,255,255,.85);font-size:16px;cursor:pointer;}',
+        '.dw-title{flex:1;min-width:0;font-size:.7rem;font-weight:600;letter-spacing:.1em;color:rgba(255,255,255,.55);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.dw-percent{font-size:.72rem;color:#22c55e;font-weight:700;background:rgba(34,197,94,.12);padding:2px 8px;border-radius:999px;border:1px solid rgba(34,197,94,.2);}',
+        '.dw-step-name{font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:-.3px;margin-bottom:8px;}',
+        '.dw-progress-row{display:flex;align-items:center;gap:10px;}',
+        '.dw-progress{flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden;}',
+        '.dw-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#16a34a,#22c55e,#a3e635);border-radius:999px;box-shadow:0 0 8px rgba(34,197,94,.45);transition:width .4s cubic-bezier(.4,0,.2,1);}',
+        '.dw-step-counter{font-size:.68rem;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums;white-space:nowrap;}',
+        /* ── Body ── */
+        '.dw-body{flex:1;min-height:0;padding:20px 16px 120px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}',
+        /* ── Step content ── */
+        '.dw-step-desc{font-size:.82rem;color:rgba(255,255,255,.7);margin:0 0 20px;line-height:1.5;}',
+        '.dw-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:16px;margin-bottom:12px;}',
+        '.dw-label{display:block;font-size:.72rem;font-weight:600;letter-spacing:.05em;color:rgba(255,255,255,.75);text-transform:uppercase;margin-bottom:10px;}',
+        '.dw-field-label{font-size:.88rem;font-weight:600;color:#fff;margin-bottom:8px;}',
+        '.dw-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;}',
+        '.dw-input:focus{outline:none;border-color:rgba(34,197,94,.5);box-shadow:0 0 0 3px rgba(34,197,94,.1);}',
+        '.dw-input::placeholder{color:rgba(255,255,255,.3);}',
+        '.dw-textarea{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;color:#fff;font-size:14px;min-height:72px;resize:vertical;}',
+        '.dw-select{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:11px 14px;color:#fff;font-size:14px;}',
+        '.dw-row{display:flex;gap:10px;}',
+        '.dw-col{flex:1;min-width:0;}',
+        '.dw-chips-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}',
+        '.dw-chip,.dw-chip-single{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:999px;color:rgba(255,255,255,.8);font-size:.8rem;padding:8px 16px;cursor:pointer;transition:all .18s ease;white-space:nowrap;}',
+        '.dw-chip.active,.dw-chip-single.active{background:#22c55e;border-color:#22c55e;color:#031a0b;font-weight:700;box-shadow:0 0 14px rgba(34,197,94,.35);}',
+        '.dw-bcm-toggle{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.8);font-size:.8rem;padding:9px 14px;cursor:pointer;transition:all .18s ease;}',
+        '.dw-bcm-toggle.active{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);color:#22c55e;font-weight:600;}',
+        '.dw-info-text{font-size:.75rem;color:rgba(255,255,255,.65);margin:4px 0 10px;line-height:1.5;}',
+        '.dw-summary-card-title{font-size:.8rem;font-weight:700;letter-spacing:.06em;color:rgba(255,255,255,.75);text-transform:uppercase;margin-bottom:10px;}',
+        /* ── Footer ── */
+        '.diet-wizard-footer{position:fixed;bottom:0;left:0;right:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(0deg,#07090f 65%,transparent);}',
+        '.dw-btn-primary{width:100%;height:56px;border-radius:16px;border:none;background:linear-gradient(135deg,#16a34a,#22c55e 50%,#a3e635);font-size:1rem;font-weight:800;color:#031a0b;letter-spacing:-.2px;box-shadow:0 6px 24px rgba(34,197,94,.3),0 2px 8px rgba(34,197,94,.15);cursor:pointer;}'
       '</style>',
-      '<div class="diet-wizard-inner">',
-        '<div class="diet-wizard-header">',
+      '<div class="dw-wizard-inner">',
+        '<div class="dw-header-wrap">',
           '<div class="dw-top">',
             '<button type="button" class="dw-back" onclick="dietWizardBack()">&#8592;</button>',
-            '<div class="dw-title">KRONIA DIETA</div>',
+            '<div class="dw-title">Kronia Dieta</div>',
             '<div id="dietWizardPercent" class="dw-percent">0%</div>',
           '</div>',
-          '<div class="dw-hero">',
-            '<div id="dietWizardStepTitle" class="dw-step-title">Composição corporal</div>',
-            '<div id="dietWizardStepSub" class="dw-step-sub">Base metabólica para calcular sua dieta com mais precisão.</div>',
+          '<div id="dietWizardStepName" class="dw-step-name">Composição corporal</div>',
+          '<div class="dw-progress-row">',
             '<div class="dw-progress">',
               '<div id="dietWizardProgressBar" class="dw-progress-fill diet-wizard-progress-fill"></div>',
             '</div>',
+            '<span id="dietWizardStepCounter" class="dw-step-counter">1/6</span>',
           '</div>',
         '</div>',
-        '<div id="dietWizardStepContainer" class="diet-wizard-body"></div>',
+        '<div id="dietWizardStepContainer" class="dw-body"></div>',
         '<div class="diet-wizard-footer">',
           '<button type="button" id="dietWizardNextBtn" class="dw-btn-primary" onclick="dietWizardNext()">Continuar</button>',
         '</div>',
