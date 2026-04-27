@@ -6461,9 +6461,83 @@ function startAIDiet() {
   }
 }
 
+function buildManualDietTemplate() {
+  var now = new Date().toISOString();
+  return {
+    title: 'Plano Alimentar Manual',
+    objective: 'equilibrado',
+    source: 'manual_template',
+    createdAt: now,
+    updatedAt: now,
+    meals: [
+      {
+        name: 'Café da Manhã',
+        time: '07:00',
+        slot: 'cafe_manha',
+        order: 1,
+        items: [
+          { name: 'Ovos mexidos', quantity: '3 unidades', grams: 150, kcal: 215, protein: 17, carbs: 1, fat: 16, order: 1 },
+          { name: 'Pão integral', quantity: '2 fatias', grams: 60, kcal: 150, protein: 5, carbs: 28, fat: 2, order: 2 },
+          { name: 'Banana', quantity: '1 unidade', grams: 100, kcal: 89, protein: 1, carbs: 23, fat: 0, order: 3 }
+        ]
+      },
+      {
+        name: 'Lanche da Manhã',
+        time: '10:00',
+        slot: 'lanche_manha',
+        order: 2,
+        items: [
+          { name: 'Iogurte natural', quantity: '1 pote (170g)', grams: 170, kcal: 99, protein: 17, carbs: 6, fat: 1, order: 1 },
+          { name: 'Granola', quantity: '30g', grams: 30, kcal: 120, protein: 3, carbs: 20, fat: 3, order: 2 }
+        ]
+      },
+      {
+        name: 'Almoço',
+        time: '12:30',
+        slot: 'almoco',
+        order: 3,
+        items: [
+          { name: 'Arroz branco cozido', quantity: '4 colheres', grams: 160, kcal: 208, protein: 4, carbs: 45, fat: 0, order: 1 },
+          { name: 'Feijão cozido', quantity: '1 concha', grams: 120, kcal: 130, protein: 8, carbs: 23, fat: 1, order: 2 },
+          { name: 'Frango grelhado', quantity: '150g', grams: 150, kcal: 248, protein: 46, carbs: 0, fat: 6, order: 3 },
+          { name: 'Salada verde', quantity: '1 prato', grams: 80, kcal: 20, protein: 1, carbs: 3, fat: 0, order: 4 }
+        ]
+      },
+      {
+        name: 'Lanche da Tarde',
+        time: '15:30',
+        slot: 'lanche_tarde',
+        order: 4,
+        items: [
+          { name: 'Maçã', quantity: '1 unidade', grams: 130, kcal: 68, protein: 0, carbs: 18, fat: 0, order: 1 },
+          { name: 'Castanha-do-pará', quantity: '30g', grams: 30, kcal: 196, protein: 4, carbs: 3, fat: 20, order: 2 }
+        ]
+      },
+      {
+        name: 'Jantar',
+        time: '19:00',
+        slot: 'jantar',
+        order: 5,
+        items: [
+          { name: 'Batata-doce cozida', quantity: '200g', grams: 200, kcal: 172, protein: 4, carbs: 40, fat: 0, order: 1 },
+          { name: 'Carne bovina patinho', quantity: '150g', grams: 150, kcal: 225, protein: 35, carbs: 0, fat: 9, order: 2 },
+          { name: 'Brócolis cozido', quantity: '100g', grams: 100, kcal: 35, protein: 3, carbs: 6, fat: 0, order: 3 }
+        ]
+      }
+    ]
+  };
+}
+
 function startManualDiet() {
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
+  var existing = typeof readLocalActiveDietPlan === 'function' ? readLocalActiveDietPlan() : null;
+  if (!existing) {
+    var template = buildManualDietTemplate();
+    if (typeof setActiveDietPlan === 'function') setActiveDietPlan(template, { render: false });
+    else { window._kroniaDietPlan = template; try { localStorage.setItem(KRONIA_ACTIVE_DIET_PLAN_KEY, JSON.stringify(template)); } catch(_) {} }
+  }
   openDietDataScreen();
+  if (typeof showToast === 'function') showToast('Modelo base carregado — edite à vontade!', 'info', 3000);
 }
 
 var KRONIA_ACTIVE_DIET_PLAN_KEY = 'kronia_active_diet_plan_v2';
@@ -8236,8 +8310,18 @@ function switchDietMiniAppView(view) {
 }
 
 function openDietCorePanel(view) {
-  _dietCoreView = view || 'home';
-  renderActiveDietPlan();
+  var target = view || 'home';
+  var already = _dietCoreView === target;
+  _dietCoreView = target;
+  if (!already) renderActiveDietPlan();
+}
+
+function dietDataBackNav() {
+  if (_dietCoreView && _dietCoreView !== 'home') {
+    openDietCorePanel('home');
+  } else {
+    try { navTo('inicio'); openHome(); } catch(_) {}
+  }
 }
 
 function openDietMiniLabsScreen() {
@@ -9041,7 +9125,10 @@ function renderActiveDietPlan() {
 
 async function refreshDietDataScreen() {
   var remotePlan = await loadActiveDietPlanFromSupabase();
-  if (remotePlan) setActiveDietPlan(remotePlan);
+  if (!remotePlan) return;
+  var local = window._kroniaDietPlan;
+  var sameId = local && remotePlan.id && local.id === remotePlan.id;
+  if (!sameId) setActiveDietPlan(remotePlan);
 }
 
 function getDietSheetState() {
