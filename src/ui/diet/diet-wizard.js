@@ -125,17 +125,13 @@
     var prog = _progress(state);
     var meta = _metaForState(state);
     var bar = document.getElementById('dietWizardProgressBar');
-    var label = document.getElementById('dietWizardProgressLabel');
-    var badge = document.getElementById('dietWizardStepBadge');
-    var title = document.getElementById('dietWizardHeaderTitle');
-    var subtitle = document.getElementById('dietWizardHeaderSubtitle');
-    var count = document.getElementById('dietWizardStepCount');
+    var percent = document.getElementById('dietWizardPercent');
+    var title = document.getElementById('dietWizardStepTitle');
+    var subtitle = document.getElementById('dietWizardStepSub');
     if (bar) bar.style.width = prog.percent + '%';
-    if (label) label.textContent = _isComplete(state) ? 'Perfil completo' : Math.max(1, Math.min(prog.total, prog.current)) + ' / ' + prog.total;
-    if (badge) badge.textContent = meta.badge;
     if (title) title.textContent = meta.title;
     if (subtitle) subtitle.textContent = meta.subtitle;
-    if (count) count.textContent = _isComplete(state) ? '100%' : prog.percent + '%';
+    if (percent) percent.textContent = _isComplete(state) ? '100%' : prog.percent + '%';
   }
 
   function _safeRenderFallbackStep(step) {
@@ -565,59 +561,41 @@
   function _createWizardScreen() {
     var div = document.createElement('div');
     div.id = WIZARD_SCREEN_ID;
-    div.className = 'diet-wizard-screen diet-wizard-premium-screen';
+    div.className = 'diet-wizard-screen';
     div.style.zIndex = '12000';
     div.style.pointerEvents = 'auto';
     div.innerHTML = [
       '<style>',
-        '.diet-wizard-premium-screen{background:radial-gradient(circle at 50% -10%,rgba(34,197,94,.26),transparent 34%),radial-gradient(circle at 95% 15%,rgba(16,185,129,.16),transparent 30%),linear-gradient(180deg,#020617 0%,#050b12 44%,#020617 100%)!important;color:#fff;}',
-        '.diet-wizard-premium-screen .diet-wizard-inner{min-height:100%;display:flex;flex-direction:column;background:transparent!important;}',
-        '.diet-wizard-premium-screen .diet-wizard-header{position:sticky;top:0;z-index:5;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 14px;background:linear-gradient(180deg,rgba(2,6,23,.98),rgba(2,6,23,.84) 70%,rgba(2,6,23,0));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(34,197,94,.08);}',
-        '.dw-premium-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}',
-        '.dw-premium-back{width:42px;height:42px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.35rem;box-shadow:0 12px 30px rgba(0,0,0,.28);}',
-        '.dw-premium-brand{flex:1;min-width:0;}',
-        '.dw-premium-kicker{font-size:.62rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#86efac;margin-bottom:4px;}',
-        '.dw-premium-title{font-size:1.42rem;line-height:1.02;font-weight:900;letter-spacing:-.04em;color:#f8fafc;}',
-        '.dw-premium-percent{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(34,197,94,.24),rgba(16,185,129,.08));border:1px solid rgba(34,197,94,.32);box-shadow:0 0 26px rgba(34,197,94,.16),inset 0 1px 0 rgba(255,255,255,.08);font-size:.82rem;font-weight:900;color:#bbf7d0;}',
-        '.dw-premium-hero{position:relative;overflow:hidden;border-radius:28px;padding:18px;background:linear-gradient(145deg,rgba(15,23,42,.92),rgba(6,78,59,.28));border:1px solid rgba(34,197,94,.18);box-shadow:0 20px 50px rgba(0,0,0,.36),0 0 34px rgba(34,197,94,.08);}',
-        '.dw-premium-hero:before{content:"";position:absolute;inset:-1px;background:radial-gradient(circle at 85% 0%,rgba(74,222,128,.25),transparent 38%);pointer-events:none;}',
-        '.dw-premium-badge{position:relative;display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.24);color:#86efac;font-size:.66rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}',
-        '.dw-premium-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 14px #22c55e;}',
-        '.dw-premium-step-title{position:relative;font-size:1.72rem;line-height:.98;font-weight:900;letter-spacing:-.055em;color:#fff;margin-bottom:8px;}',
-        '.dw-premium-step-sub{position:relative;color:rgba(226,232,240,.72);font-size:.88rem;line-height:1.42;max-width:310px;}',
-        '.dw-premium-progress-row{position:relative;margin-top:16px;display:flex;align-items:center;gap:10px;}',
-        '.dw-premium-progress-track{height:9px;flex:1;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.06);}',
-        '.dw-premium-progress-fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#a3e635);box-shadow:0 0 22px rgba(34,197,94,.55);transition:width .35s ease;}',
-        '.dw-premium-label{font-size:.72rem;font-weight:900;color:#d9f99d;min-width:38px;text-align:right;}',
-        '.diet-wizard-premium-screen .diet-wizard-body{padding:18px 16px 120px;overflow-y:auto;-webkit-overflow-scrolling:touch;}',
-        '.diet-wizard-premium-screen .dw-card{background:linear-gradient(145deg,rgba(15,23,42,.9),rgba(15,23,42,.62))!important;border:1px solid rgba(148,163,184,.14)!important;border-radius:24px!important;box-shadow:0 12px 34px rgba(0,0,0,.22)!important;}',
-        '.diet-wizard-premium-screen .dw-input,.diet-wizard-premium-screen .dw-select{background:rgba(2,6,23,.72)!important;border:1px solid rgba(148,163,184,.18)!important;border-radius:16px!important;color:#fff!important;}',
-        '.diet-wizard-premium-screen .dw-chip,.diet-wizard-premium-screen .dw-chip-single,.diet-wizard-premium-screen .dw-bcm-toggle{border-radius:999px!important;border:1px solid rgba(148,163,184,.18)!important;background:rgba(255,255,255,.06)!important;color:#d1d5db!important;}',
-        '.diet-wizard-premium-screen .dw-chip.active,.diet-wizard-premium-screen .dw-chip-single.active,.diet-wizard-premium-screen .dw-bcm-toggle.active{background:linear-gradient(135deg,rgba(34,197,94,.26),rgba(132,204,22,.13))!important;border-color:rgba(34,197,94,.5)!important;color:#ecfccb!important;box-shadow:0 0 20px rgba(34,197,94,.13)!important;}',
-        '.diet-wizard-premium-screen .diet-wizard-footer{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(2,6,23,0),rgba(2,6,23,.94) 28%,#020617 100%);}',
-        '.diet-wizard-premium-screen .dw-btn-primary{width:100%;min-height:56px;border:0;border-radius:22px;background:linear-gradient(135deg,#22c55e,#a3e635)!important;color:#02140a!important;font-weight:950!important;font-size:1rem!important;box-shadow:0 16px 40px rgba(34,197,94,.28),0 0 28px rgba(34,197,94,.18)!important;}',
-        '.diet-wizard-premium-screen .dw-step-title{font-size:1.32rem!important;letter-spacing:-.03em!important;}',
-        '.diet-wizard-premium-screen .dw-step-desc{color:rgba(226,232,240,.7)!important;}',
+        'body.diet-wizard-active{overflow-x:hidden;}',
+        '.diet-wizard-screen{position:fixed;inset:0;background:linear-gradient(180deg,#020617,#050b12);color:#fff;overflow:hidden;overflow-x:hidden;}',
+        '.diet-wizard-screen,.diet-wizard-screen *{box-sizing:border-box;}',
+        '.diet-wizard-inner{width:100%;max-width:100%;min-height:100%;display:flex;flex-direction:column;overflow:hidden;overflow-x:hidden;}',
+        '.diet-wizard-header{padding:20px 16px;background:linear-gradient(180deg,rgba(2,6,23,.95),transparent);}',
+        '.dw-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;width:100%;max-width:100%;}',
+        '.dw-back{width:40px;height:40px;min-width:40px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff;}',
+        '.dw-title{flex:1;min-width:0;font-weight:900;font-size:1.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '.dw-percent{min-width:46px;text-align:right;font-size:.8rem;color:#22c55e;font-weight:800;}',
+        '.dw-hero{width:100%;max-width:100%;border-radius:20px;padding:16px;overflow:hidden;background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(16,185,129,.05));border:1px solid rgba(34,197,94,.2);box-shadow:0 0 28px rgba(34,197,94,.08);}',
+        '.dw-step-title{font-size:1.4rem;font-weight:900;margin-bottom:6px;word-break:break-word;color:#fff;}',
+        '.dw-step-sub{font-size:.85rem;line-height:1.4;color:rgba(255,255,255,.64);}',
+        '.dw-progress{margin-top:12px;height:8px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;}',
+        '.dw-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#a3e635);box-shadow:0 0 10px #22c55e;transition:width .3s ease;}',
+        '.diet-wizard-body{padding:16px!important;padding-bottom:120px!important;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}',
+        '.diet-wizard-footer{position:fixed;bottom:0;left:0;right:0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#020617);}',
+        '.dw-btn-primary{width:100%;height:56px;border-radius:16px;border:none;background:linear-gradient(135deg,#22c55e,#a3e635);font-weight:900;color:#022c22;box-shadow:0 14px 30px rgba(34,197,94,.24);}',
       '</style>',
       '<div class="diet-wizard-inner">',
         '<div class="diet-wizard-header">',
-          '<div class="dw-premium-top">',
-            '<button type="button" class="dw-premium-back" onclick="dietWizardBack()">&#8592;</button>',
-            '<div class="dw-premium-brand">',
-              '<div class="dw-premium-kicker">KRONIA DIETA</div>',
-              '<div class="dw-premium-title">Plano alimentar inteligente</div>',
-            '</div>',
-            '<div id="dietWizardStepCount" class="dw-premium-percent">0%</div>',
+          '<div class="dw-top">',
+            '<button type="button" class="dw-back" onclick="dietWizardBack()">&#8592;</button>',
+            '<div class="dw-title">KRONIA DIETA</div>',
+            '<div id="dietWizardPercent" class="dw-percent">0%</div>',
           '</div>',
-          '<div class="dw-premium-hero">',
-            '<div id="dietWizardStepBadge" class="dw-premium-badge">Perfil corporal</div>',
-            '<div id="dietWizardHeaderTitle" class="dw-premium-step-title">Composição corporal</div>',
-            '<div id="dietWizardHeaderSubtitle" class="dw-premium-step-sub">Base metabólica para calcular sua dieta com mais precisão.</div>',
-            '<div class="dw-premium-progress-row">',
-              '<div class="dw-premium-progress-track">',
-                '<div id="dietWizardProgressBar" class="dw-premium-progress-fill diet-wizard-progress-fill"></div>',
-              '</div>',
-              '<span id="dietWizardProgressLabel" class="dw-premium-label diet-wizard-progress-label">1 / 6</span>',
+          '<div class="dw-hero">',
+            '<div id="dietWizardStepTitle" class="dw-step-title">Composição corporal</div>',
+            '<div id="dietWizardStepSub" class="dw-step-sub">Base metabólica para calcular sua dieta com mais precisão.</div>',
+            '<div class="dw-progress">',
+              '<div id="dietWizardProgressBar" class="dw-progress-fill diet-wizard-progress-fill"></div>',
             '</div>',
           '</div>',
         '</div>',
