@@ -137,6 +137,82 @@ function applyMedicalAdjustments(profile, targetCalories, macros) {
   };
 }
 
+// ─── Health condition flags (from user-selected clinicalData.healthConditions) ─
+
+function normalizeCondition(item) {
+  return String(item || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Derives boolean condition flags from the structured healthConditions array
+ * (e.g. ['Diabetes', 'Hipertensão']) provided by the nutrition flow UI.
+ */
+function buildConditionFlags(healthConditions) {
+  var conditions = Array.isArray(healthConditions)
+    ? healthConditions.map(normalizeCondition).filter(Boolean)
+    : [];
+
+  return {
+    healthConditions: healthConditions || [],
+    hasDiabetes: conditions.some(function(c) { return /diabet|insulina|glicemia/.test(c); }),
+    hasHipertensao: conditions.some(function(c) { return /hipertens/.test(c); }),
+    hasDoencaRenal: conditions.some(function(c) { return /renal|hemodial|nefropat/.test(c); }),
+    hasDislipidemia: conditions.some(function(c) { return /dislipid|colesterol|triglice/.test(c); }),
+    hasGastriteRefluxo: conditions.some(function(c) { return /gastrit|refluxo|gerd/.test(c); }),
+    hasAlergiaIntolerancia: conditions.some(function(c) { return /alergia|intoler/.test(c); }),
+    hasGestacao: conditions.some(function(c) { return /gesta|gravid/.test(c); }),
+    hasPosBariatrica: conditions.some(function(c) { return /bariatr|pos-cirurg/.test(c); }),
+  };
+}
+
+/**
+ * Picks clinicalData (healthConditions + bcmManual) from the payload,
+ * searching all nested locations where the client may have placed it.
+ */
+function pickClinicalData(raw, context, profile, health) {
+  var sources = [
+    raw.clinicalData,
+    health.clinicalData,
+    profile.clinicalData,
+    context.clinicalData,
+  ];
+
+  var clinicalDataObj = null;
+  for (var i = 0; i < sources.length; i += 1) {
+    var s = sources[i];
+    if (s && typeof s === 'object' && Array.isArray(s.healthConditions)) {
+      clinicalDataObj = s;
+      break;
+    }
+  }
+
+  // Also check clinicalFlow.patologias as fallback (set by buildNutritionFlowInput)
+  var patologias = null;
+  var flowSources = [raw.clinicalFlow, profile.clinicalFlow, context.clinicalFlow];
+  for (var j = 0; j < flowSources.length; j += 1) {
+    var f = flowSources[j];
+    if (f && Array.isArray(f.patologias) && f.patologias.length) {
+      patologias = f.patologias;
+      break;
+    }
+  }
+
+  var healthConditions = (clinicalDataObj && clinicalDataObj.healthConditions) || patologias || [];
+  var bcmManual = (clinicalDataObj && clinicalDataObj.bcmManual) || null;
+  var exams = (clinicalDataObj && clinicalDataObj.exams) || null;
+
+  return {
+    healthConditions: healthConditions,
+    bcmManual: bcmManual,
+    exams: exams,
+    flags: buildConditionFlags(healthConditions),
+  };
+}
+
 // ─── Context builder (payload → clinical context) ──────────────────────────
 
 function pickLabSource(raw, context, profile, health, supabase) {
@@ -150,7 +226,8 @@ function pickLabSource(raw, context, profile, health, supabase) {
 }
 
 /**
- * Extracts health context (pathologies, medications, sleep, stress) and
+ * Extracts health context (pathologies, medications, sleep, stress),
+ * structured clinicalData (healthConditions, bcmManual) and
  * lab/biomarker context from any payload shape.
  * Canonical source for clinical signals that influence diet strategy.
  */
@@ -163,6 +240,7 @@ function buildClinicalContext(input) {
 
   var labSource = pickLabSource(raw, context, profile, health, supabase);
   var labContext = labSource ? buildLabContext(labSource) : null;
+  var clinicalData = pickClinicalData(raw, context, profile, health);
 
   return {
     saude: {
@@ -172,6 +250,7 @@ function buildClinicalContext(input) {
       estresse: pickString(health.estresse, health.stress),
     },
     labContext: labContext,
+    clinicalData: clinicalData,
   };
 }
 
@@ -182,6 +261,8 @@ module.exports = {
   resolveDietMode: resolveDietMode,
   applyClinicalRules: applyClinicalRules,
   buildLabContext: buildLabContext,
+  buildConditionFlags: buildConditionFlags,
+  pickClinicalData: pickClinicalData,
   hasClinicalFlag: hasClinicalFlag,
   hasCriticalLabFlag: hasCriticalLabFlag,
   shouldAvoidFoodForClinical: shouldAvoidFoodForClinical,

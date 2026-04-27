@@ -593,6 +593,113 @@ function capPlanCalories(plan, maxCalories) {
   return recalculatePlanTotals(scaled);
 }
 
+/**
+ * Builds condition-based clinical notes and adjustment summary from
+ * user-selected healthConditions (e.g. Diabetes, Hipertensão).
+ * These notes are explicit, mandatory, and appear in every plan that has conditions.
+ */
+function buildConditionClinicalNotes(profile) {
+  var flags = profile.clinicalData && profile.clinicalData.flags ? profile.clinicalData.flags : {};
+  var conditions = (profile.clinicalData && profile.clinicalData.healthConditions) || [];
+  var notes = [];
+  var adjustments = [];
+
+  if (flags.hasDiabetes) {
+    notes.push('Diabetes identificada: carboidratos distribuídos ao longo do dia para controlar carga glicêmica. Fontes simples de açúcar e ultraprocessados foram evitados.');
+    adjustments.push('Diabetes: controle glicêmico aplicado — distribuição de carboidratos e evitar açúcar simples');
+  }
+  if (flags.hasHipertensao) {
+    notes.push('Hipertensão identificada: plano elaborado com baixo teor de sódio. Ultraprocessados e embutidos foram excluídos das sugestões.');
+    adjustments.push('Hipertensão: baixo sódio — evitar ultraprocessados e embutidos');
+  }
+  if (flags.hasDoencaRenal) {
+    notes.push('Doença renal / hemodiálise identificada: abordagem conservadora aplicada. Recomenda-se acompanhamento rigoroso com nefrologista e nutricionista para controle de sódio, potássio, fósforo e proteína.');
+    adjustments.push('Doença renal: abordagem conservadora — sódio, potássio, fósforo e proteína controlados com orientação profissional');
+  }
+  if (flags.hasDislipidemia) {
+    notes.push('Dislipidemia identificada: priorizadas fontes proteicas magras e gorduras insaturadas. Gordura saturada reduzida.');
+    adjustments.push('Dislipidemia: gordura saturada reduzida, gorduras boas priorizadas');
+  }
+  if (flags.hasGastriteRefluxo) {
+    notes.push('Gastrite/Refluxo identificado: alimentos irritantes como frituras, excesso de café, pimenta e alimentos muito gordurosos foram evitados nas sugestões.');
+    adjustments.push('Gastrite/Refluxo: sem irritantes — sem frituras, café excessivo, pimenta');
+  }
+  if (flags.hasAlergiaIntolerancia) {
+    notes.push('Intolerância/Alergia alimentar informada: o alimento indicado é tratado como proibido no plano.');
+    adjustments.push('Intolerância/Alergia: alimento informado tratado como proibido');
+  }
+  if (flags.hasGestacao) {
+    notes.push('Gestação identificada: abordagem conservadora aplicada. Recomenda-se acompanhamento com nutricionista ou obstetra para ajustes específicos.');
+    adjustments.push('Gestação: abordagem conservadora com recomendação de acompanhamento profissional');
+  }
+  if (flags.hasPosBariatrica) {
+    notes.push('Pós-cirurgia bariátrica identificada: porções menores sugeridas, proteína adequada priorizada e progressão segura recomendada.');
+    adjustments.push('Pós-bariátrica: porções menores, proteína adequada e progressão segura');
+  }
+
+  var bcmManual = profile.clinicalData && profile.clinicalData.bcmManual;
+  if (bcmManual && typeof bcmManual === 'object') {
+    notes.push('Composição corporal manual (BCM) utilizada para ajustar estratégia nutricional.');
+    adjustments.push('BCM manual: composição corporal usada para refinamento da estratégia');
+  }
+
+  var exams = profile.clinicalData && profile.clinicalData.exams;
+  if (exams && exams.useExistingExams) {
+    notes.push('Exames cadastrados incluídos no contexto clínico.');
+    adjustments.push('Exames: dados laboratoriais existentes incluídos no contexto');
+  }
+
+  if (conditions.length > 0) {
+    notes.push('A dieta não substitui acompanhamento com nutricionista ou médico.');
+  }
+
+  return { notes: notes, adjustments: adjustments };
+}
+
+/**
+ * Generates the mandatory REGRAS CLÍNICAS OBRIGATÓRIAS prompt block
+ * based on the user's selected health conditions.
+ * This string is attached to the plan so any downstream AI context builder
+ * can include it verbatim in the model prompt.
+ */
+function buildClinicalPromptBlock(profile) {
+  var flags = profile.clinicalData && profile.clinicalData.flags ? profile.clinicalData.flags : {};
+  var conditions = (profile.clinicalData && profile.clinicalData.healthConditions) || [];
+
+  if (!conditions.length) return null;
+
+  var lines = ['REGRAS CLÍNICAS OBRIGATÓRIAS:'];
+  lines.push('Patologias declaradas: ' + conditions.join(', ') + '.');
+  lines.push('Sempre considerar clinicalData.healthConditions ao gerar este plano.');
+
+  if (flags.hasDiabetes) lines.push('- Diabetes: controlar açúcar simples, carga glicêmica e distribuir carboidratos ao longo do dia.');
+  if (flags.hasHipertensao) lines.push('- Hipertensão: reduzir sódio, evitar ultraprocessados e embutidos.');
+  if (flags.hasDoencaRenal) lines.push('- Doença renal ou Hemodiálise: aplicar regra conservadora, controlar sódio, potássio, fósforo e proteína conforme contexto; nunca prometer tratamento.');
+  if (flags.hasDislipidemia) lines.push('- Dislipidemia: reduzir gordura saturada e priorizar gorduras boas.');
+  if (flags.hasGastriteRefluxo) lines.push('- Gastrite/Refluxo: evitar irritantes como fritura, excesso de café, pimenta e alimentos muito gordurosos.');
+  if (flags.hasAlergiaIntolerancia) lines.push('- Intolerância/Alergia alimentar: alimento informado deve ser tratado como proibido.');
+  if (flags.hasGestacao) lines.push('- Gestação: usar abordagem conservadora e recomendar acompanhamento profissional.');
+  if (flags.hasPosBariatrica) lines.push('- Pós-bariátrica: usar porções menores, proteína adequada e progressão segura.');
+
+  var bcmManual = profile.clinicalData && profile.clinicalData.bcmManual;
+  if (bcmManual && typeof bcmManual === 'object') {
+    lines.push('- BCM manual disponível: usar composição corporal para ajustar estratégia, sem inventar diagnóstico.');
+  }
+
+  var exams = profile.clinicalData && profile.clinicalData.exams;
+  if (exams && exams.useExistingExams) {
+    lines.push('- Exames cadastrados disponíveis: incluir no contexto clínico.');
+  }
+
+  lines.push('- Sempre incluir alerta: "A dieta não substitui acompanhamento com nutricionista ou médico."');
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DIET_CLINICAL_PROMPT_CONTEXT]', lines.join('\n'));
+  }
+
+  return lines.join('\n');
+}
+
 function buildNutritionPrescription(strategy) {
   var calc = strategy;
   if (calc.failSafe) return calc;
@@ -602,6 +709,8 @@ function buildNutritionPrescription(strategy) {
   if (clinical.hasCriticalLabFlag(calc.profile)) {
     plan = capPlanCalories(plan, calc.result.targetCalories);
   }
+
+  // Lab-based clinical notes (biomarker flags)
   var clinicalNotes = [];
   if (calc.profile.labContext && calc.profile.labContext.mode === 'clinical') {
     clinicalNotes.push('Plano ajustado com base no seu exame recente.');
@@ -618,6 +727,10 @@ function buildNutritionPrescription(strategy) {
       clinicalNotes.push('Valores críticos recentes mantiveram o plano em modo conservador, sem estratégia agressiva de cutting ou bulking.');
     }
   }
+
+  // Condition-based clinical notes (user-selected healthConditions)
+  var conditionResult = buildConditionClinicalNotes(calc.profile);
+  clinicalNotes = clinicalNotes.concat(conditionResult.notes);
   var visual = visualPrescription.buildVisualPrescription({
     plan: plan,
     calculation: {
@@ -637,6 +750,9 @@ function buildNutritionPrescription(strategy) {
   var templateClinicalAlerts = dietTemplates.clinicalFlags(calc.profile || {}).length
     ? [dietTemplates.CLINICAL_ALERT]
     : [];
+
+  var clinicalPromptBlock = buildClinicalPromptBlock(calc.profile);
+  var conditionAdjustments = conditionResult.adjustments;
 
   return {
     profile: calc.profile,
@@ -681,7 +797,11 @@ function buildNutritionPrescription(strategy) {
     },
     clinicalSafety: 'Plano esportivo educacional. Não substitui conduta clínica, terapêutica ou nutricional individualizada em casos complexos.',
     professionalAlerts: (selectedTemplate.alertas_profissionais || []).concat(templateClinicalAlerts),
-    clinicalNotes: clinicalNotes
+    clinicalNotes: clinicalNotes,
+    ajustesClinicosConsiderados: conditionAdjustments.length
+      ? { aplicados: conditionAdjustments, alerta: 'A dieta não substitui acompanhamento com nutricionista ou médico.' }
+      : null,
+    clinicalPromptBlock: clinicalPromptBlock,
   };
 }
 
