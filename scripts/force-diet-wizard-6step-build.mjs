@@ -5,6 +5,7 @@ const root = process.cwd();
 const publicDir = path.join(root, 'public');
 const overridePath = path.join(publicDir, 'src/ui/diet/diet-wizard-force-6step.js');
 const indexPath = path.join(publicDir, 'index.html');
+const appPath = path.join(publicDir, 'app.js');
 
 const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wizard without breaking manual/generate actions. */
 (function(){
@@ -41,7 +42,7 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
   }
 
   function enableAiDietButtons(){
-    var nodes = Array.prototype.slice.call(document.querySelectorAll('button,[role="button"],a,.btn,.diet-choice-card,.diet-card'));
+    var nodes = Array.prototype.slice.call(document.querySelectorAll('button,[role="button"],a,.btn,.diet-choice-card,.diet-card,[onclick]'));
     nodes.forEach(function(el){
       var text = (el.innerText || el.textContent || '').toLowerCase();
       var onclick = String((el.getAttribute && el.getAttribute('onclick')) || '').toLowerCase();
@@ -50,8 +51,10 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
         text.indexOf('gerar dieta') !== -1 ||
         text.indexOf('dieta com ia') !== -1 ||
         text.indexOf('criar dieta') !== -1 ||
+        text.indexOf('inteligência artificial') !== -1 ||
         onclick.indexOf('startaidiet') !== -1 ||
-        onclick.indexOf('opennutritionflow') !== -1
+        onclick.indexOf('opennutritionflow') !== -1 ||
+        onclick.indexOf('opendietprofilewizard') !== -1
       );
       if (!isAi) return;
       el.disabled = false;
@@ -69,9 +72,7 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
   function install(){
     window.openKroniaDietWizard6Step = openSixStepDietWizard;
 
-    if (typeof window.openNutritionFlow === 'function' && !window.openNutritionFlowLegacyDisabled) {
-      window.openNutritionFlowLegacyDisabled = window.openNutritionFlow;
-    }
+    if (typeof window.openNutritionFlow === 'function' && !window.openNutritionFlowLegacyDisabled) window.openNutritionFlowLegacyDisabled = window.openNutritionFlow;
     if (window.openNutritionFlowLegacyDisabled) {
       window.openNutritionFlow = function(args){
         if (shouldRedirectNutritionFlow(args)) return openSixStepDietWizard({ redirectedFrom: 'openNutritionFlow' });
@@ -79,10 +80,10 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
       };
     }
 
-    if (typeof window.startAIDiet === 'function' && !window.startAIDietLegacyDisabled) {
-      window.startAIDietLegacyDisabled = window.startAIDiet;
-    }
+    if (typeof window.startAIDiet === 'function' && !window.startAIDietLegacyDisabled) window.startAIDietLegacyDisabled = window.startAIDiet;
     window.startAIDiet = function(){ return openSixStepDietWizard({ redirectedFrom: 'startAIDiet' }); };
+    window.openDietWizard = function(){ return openSixStepDietWizard({ redirectedFrom: 'openDietWizard' }); };
+    window.openDietDataWizard = function(){ return openSixStepDietWizard({ redirectedFrom: 'openDietDataWizard' }); };
 
     enableAiDietButtons();
   }
@@ -115,9 +116,11 @@ const overrideCode = String.raw`/* Force KroniA Diet entry to the new 6-step wiz
         var looksLikeAiDiet = !isManual && (
           onclick.indexOf('startaidiet') !== -1 ||
           onclick.indexOf('opennutritionflow') !== -1 ||
+          onclick.indexOf('opendietprofilewizard') !== -1 ||
           text.indexOf('gerar dieta') !== -1 ||
           text.indexOf('dieta com ia') !== -1 ||
-          text.indexOf('criar dieta') !== -1
+          text.indexOf('criar dieta') !== -1 ||
+          text.indexOf('inteligência artificial') !== -1
         );
         if (looksLikeAiDiet) {
           ev.preventDefault();
@@ -143,10 +146,29 @@ await mkdir(path.dirname(overridePath), { recursive: true });
 await writeFile(overridePath, overrideCode, 'utf8');
 
 let html = await readFile(indexPath, 'utf8');
-const tag = '<script src="src/ui/diet/diet-wizard-force-6step.js?v=20260427d"></script>';
+const tag = '<script src="src/ui/diet/diet-wizard-force-6step.js?v=20260427e"></script>';
 if (!html.includes('diet-wizard-force-6step.js')) {
   html = html.replace('</body>', `  ${tag}\n</body>`);
-  await writeFile(indexPath, html, 'utf8');
 }
 
-console.log('Forced 6-step diet wizard enabled; AI button force-enabled; manual preserved.');
+// Patch direct inline handlers in the generated HTML. This is safer than relying only on runtime capture.
+html = html
+  .replace(/onclick="startAIDiet\(\)"/g, 'onclick="openKroniaDietWizard6Step()"')
+  .replace(/onclick='startAIDiet\(\)'/g, "onclick='openKroniaDietWizard6Step()'")
+  .replace(/onclick="openNutritionFlow\((?!\{source:\\'manual)[^\"]*\)"/g, 'onclick="openKroniaDietWizard6Step()"');
+await writeFile(indexPath, html, 'utf8');
+
+// Patch generated app.js when old entrypoint exists as plain code.
+try {
+  let app = await readFile(appPath, 'utf8');
+  const marker = 'function startAIDiet()';
+  if (app.includes(marker) && !app.includes('startAIDietForcedToSixStep')) {
+    app = app.replace(marker, 'function startAIDietForcedToSixStep(){return window.openKroniaDietWizard6Step ? window.openKroniaDietWizard6Step({redirectedFrom:"patched_app_startAIDiet"}) : null;}\nfunction startAIDiet()');
+    app = app.replace(/function startAIDiet\(\)\s*\{/, 'function startAIDiet() { return startAIDietForcedToSixStep(); /* old body disabled */ ');
+    await writeFile(appPath, app, 'utf8');
+  }
+} catch (err) {
+  console.warn('app.js direct patch skipped:', err.message);
+}
+
+console.log('Forced 6-step diet wizard enabled; generated index/app entrypoints patched; manual preserved.');
