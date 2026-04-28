@@ -1,23 +1,37 @@
-const CACHE = 'kronia-v4-2026-04-08-1';
+const CACHE = 'kronia-v5-2026-04-28-diet-wizard-cache';
+const BUILD_VERSION = '2026-04-28-diet-wizard-cache';
+
 const STATIC = [
   '/',
   '/index.html',
-  '/app.js?v=2026-04-08-1',
-  '/auth.js?v=2026-04-08-1',
-  '/styles.css?v=20260408',
+  '/app.js?v=' + BUILD_VERSION,
+  '/auth.js?v=' + BUILD_VERSION,
+  '/styles.css?v=' + BUILD_VERSION,
   '/Kronia.png',
   '/splash.png',
-  '/manifest.json'
+  '/manifest.json',
+  '/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-wizard-state.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-step-body.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-step-goal.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-step-health.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-step-food.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-step-training.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-step-metabolism.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-summary.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-wizard.js?v=' + BUILD_VERSION
 ];
 
-// Instala e cacheia os arquivos estáticos
+// Instala e cacheia os arquivos estáticos sem travar a instalação se algum asset falhar.
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => Promise.allSettled(STATIC.map(url => c.add(url))))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Remove caches antigos
+// Remove caches antigos e assume clientes abertos imediatamente.
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -66,12 +80,7 @@ self.addEventListener('sync', e => {
   }
 });
 
-// ══ Network-first para arquivos do app ══════════════
-// Cache fallback apenas quando offline
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
-  // Deixa passar: supabase, google, cdn, APIs externas
+function shouldBypassCache(url) {
   if (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('googleapis.com') ||
@@ -79,21 +88,32 @@ self.addEventListener('fetch', e => {
     url.hostname.includes('cdnjs.cloudflare.com') ||
     url.hostname.includes('openai.com') ||
     url.hostname.includes('anthropic.com')
-  ) return;
+  ) return true;
 
-  // Só intercepta requisições do mesmo origin
+  if (url.pathname.startsWith('/api/')) return true;
+
+  // Dieta/wizard precisam sempre tentar rede primeiro para evitar JS antigo no iPhone/PWA.
+  if (url.pathname.startsWith('/src/ui/diet/')) return false;
+
+  return false;
+}
+
+// ══ Network-first para arquivos do app ══════════════
+// Cache fallback apenas quando offline.
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/')) return;
+  if (shouldBypassCache(url)) return;
+
   e.respondWith(
-    fetch(e.request).then(res => {
-      // Detecta mismatch de build via header customizado (se implementado no futuro) ou via status
+    fetch(e.request, { cache: 'no-store' }).then(res => {
       if (res.ok) {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
       }
       return res;
     }).catch(() => {
-      // Offline: serve do cache
       return caches.match(e.request).then(cached => {
         if (cached) return cached;
 
