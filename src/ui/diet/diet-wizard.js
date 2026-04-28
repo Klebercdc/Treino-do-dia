@@ -643,7 +643,7 @@
         '.dw-chips-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}',
         /* ── Footer ── */
         '.diet-wizard-footer{position:fixed;bottom:0;left:0;right:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(0deg,#07090f 65%,transparent);}',
-        '.dw-btn-primary{width:100%;height:56px;border-radius:16px;border:none;background:linear-gradient(135deg,#16a34a,#22c55e 50%,#a3e635);font-size:1rem;font-weight:800;color:#031a0b;letter-spacing:-.2px;box-shadow:0 6px 24px rgba(34,197,94,.3),0 2px 8px rgba(34,197,94,.15);cursor:pointer;}'
+        '.dw-btn-primary{width:100%;height:56px;border-radius:16px;border:none;background:linear-gradient(135deg,#16a34a,#22c55e 50%,#a3e635);font-size:1rem;font-weight:800;color:#031a0b;letter-spacing:-.2px;box-shadow:0 6px 24px rgba(34,197,94,.3),0 2px 8px rgba(34,197,94,.15);cursor:pointer;}',
       '</style>',
       '<div class="dw-wizard-inner">',
         '<div class="dw-header-wrap">',

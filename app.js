@@ -6426,7 +6426,15 @@ function openDietDataScreen() {
   try { closeAllDietGenerationLayers({ keepDietData: true }); } catch (_) {}
   setDietMiniAppChrome(false);
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
-  document.getElementById('dietDataScreen')?.classList.add('show');
+  var dataScreen = document.getElementById('dietDataScreen');
+  if (dataScreen) {
+    dataScreen.style.display = '';
+    dataScreen.style.visibility = '';
+    dataScreen.style.opacity = '';
+    dataScreen.style.pointerEvents = '';
+    dataScreen.removeAttribute('aria-hidden');
+    dataScreen.classList.add('show');
+  }
   document.body.classList.remove('overlay-open');
   var greetingEl = document.getElementById('dietHeaderGreeting');
   if (greetingEl) greetingEl.textContent = getDietGreeting(readLocalUserAnamnesis().nome);
@@ -11676,7 +11684,14 @@ function openNutritionFlow(context) {
   state.skipProfileStep = shouldSkipProfile;
   window._nutritionFlowState = state;
   var screen = document.getElementById("nutritionFlowScreen");
-  if (screen) screen.classList.add("show");
+  if (screen) {
+    screen.style.display = '';
+    screen.style.visibility = '';
+    screen.style.opacity = '';
+    screen.style.pointerEvents = '';
+    screen.removeAttribute('aria-hidden');
+    screen.classList.add("show");
+  }
   if (document.body) document.body.classList.add("nutrition-flow-active");
   var footer = document.querySelector(".footer-actions");
   if (footer) footer.style.display = "none";

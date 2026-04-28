@@ -1,6 +1,6 @@
 (function () {
   function hideLegacyDietScreens() {
-    ['nutritionFlowScreen','dietDataScreen','dietChoiceScreen','dietEmergencyWizardScreen'].forEach(function(id){
+    ['dietChoiceScreen','dietEmergencyWizardScreen'].forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
       el.classList.remove('show','active','open');
@@ -37,11 +37,7 @@
     return false;
   }
 
-  window.openDieta = openNewDietWizard;
-  window.openDietDataScreen = openNewDietWizard;
   window.openDietaLegacy = openNewDietWizard;
-  window.openNutritionFlow = openNewDietWizard;
-  window.openNutritionFlowFull = openNewDietWizard;
   window.startAIDiet = openNewDietWizard;
   window.createDietPlan = openNewDietWizard;
   window.generateDietPlan = openNewDietWizard;
@@ -61,6 +57,5 @@
     openNewDietWizard();
   }, true);
 
-  setInterval(hideLegacyDietScreens, 500);
   document.addEventListener('DOMContentLoaded', hideLegacyDietScreens);
 })();

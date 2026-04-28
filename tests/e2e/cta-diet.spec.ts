@@ -192,10 +192,15 @@ test.describe('CTA and Diet flows', () => {
         (window as Window & { openDietaSheet?: () => void }).openDietaSheet?.();
       }
     });
-    await expect.poll(async () => {
-      return page.evaluate(() => document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true);
-    }).toBe(true);
-    await dismissCustomModal(page);
+    await expect.poll(async () => page.evaluate(() => ({
+      wizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
+      nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+      currentStep: (window as Window & { _dietWizardState?: { currentStep?: number } })._dietWizardState?.currentStep,
+    }))).toEqual({
+      wizard: true,
+      nutritionFlow: false,
+      currentStep: 1,
+    });
 
     await page.evaluate(() => {
       const runtime = window as Window & {
@@ -216,7 +221,6 @@ test.describe('CTA and Diet flows', () => {
         frutas: ['Banana', 'Maçã'],
         vegetais: ['Brócolis cozido', 'Salada verde'],
       });
-      runtime.renderNutritionFlow?.();
     });
 
     await page.evaluate(async () => {
