@@ -75,6 +75,7 @@
   function _hideKnownBlockingLayers() {
     [
       'dietChoiceScreen',
+      'dietDataScreen',
       'nutritionFlowScreen',
       'customModal',
       'configSheet',

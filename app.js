@@ -6453,9 +6453,13 @@ function openDietChoiceScreen() {
 
 function startAIDiet() {
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
+  document.getElementById('dietDataScreen')?.classList.remove('show');
+  if (window.KroniaDiet && typeof window.KroniaDiet.ai === 'function') {
+    return window.KroniaDiet.ai();
+  }
   var userId = (typeof window !== 'undefined' && window._kronaUserId) || null;
   if (typeof openDietProfileWizard === 'function') {
-    openDietProfileWizard(userId);
+    openDietProfileWizard(userId, { forceNew: true });
   } else {
     openNutritionFlow({ source: 'choice_screen_ia', returnTab: 'dieta' });
   }
