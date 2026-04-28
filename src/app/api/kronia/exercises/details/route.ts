@@ -36,22 +36,33 @@ function buildExerciseDetailsErrorPayload(message: string, code: string, meta: R
 }
 
 function normalizeExerciseDetailsEnvelope(result: { status: 'success' | 'error'; data: unknown; meta: Record<string, unknown>; errors: Array<{ code: string; message: string }> }) {
+  const meta = result.meta ?? {};
+  const knownResolution = Number(meta?.confidenceScore ?? 0) >= 0.9;
+
   if (result.status === 'success' && result.data) {
-    return buildExerciseDetailsSuccessPayload(result.data, { ...(result.meta ?? {}), knownResolution: Number(result.meta?.confidenceScore ?? 0) >= 0.9 });
+    return buildExerciseDetailsSuccessPayload(result.data, { ...meta, knownResolution });
   }
+
   if (!result.data) {
     return buildExerciseDetailsErrorPayload(
       result.errors?.[0]?.message || 'Não foi possível carregar os detalhes do exercício.',
       result.errors?.[0]?.code || 'EXERCISE_ERROR',
-      result.meta ?? {},
+      meta,
       null,
     );
   }
+
   return buildExerciseDetailsPartialPayload(
     result.errors?.[0]?.message || 'Não foi possível enriquecer os detalhes do exercício agora.',
     result.data,
-    { ...(result.meta ?? {}), code: result.errors?.[0]?.code || 'EXERCISE_PARTIAL', knownResolution: Number(result.meta?.confidenceScore ?? 0) >= 0.9 },
+    { ...meta, code: result.errors?.[0]?.code || 'EXERCISE_PARTIAL', knownResolution },
   );
+}
+
+function resolveExerciseDetailsHttpStatus(envelope: ReturnType<typeof normalizeExerciseDetailsEnvelope>) {
+  if (envelope.success) return 200;
+  if (envelope.type === 'exercise_partial') return 206;
+  return ((envelope as any).error?.code === 'EXERCISE_NOT_FOUND') ? 404 : 422;
 }
 
 export async function GET(req: NextRequest) {
@@ -78,12 +89,9 @@ export async function GET(req: NextRequest) {
       exerciseName: lookupKey || slug || undefined,
       locale: 'pt',
     });
-    if (result.status === 'success' && result.data) {
-      return NextResponse.json(result.data, { status: 200 });
-    }
+
     const envelope = normalizeExerciseDetailsEnvelope(result);
-    const statusCode = envelope.type === 'exercise_partial' ? 206 : (((envelope as any).error?.code === 'EXERCISE_NOT_FOUND') ? 404 : 422);
-    return NextResponse.json(envelope, { status: statusCode });
+    return NextResponse.json(envelope, { status: resolveExerciseDetailsHttpStatus(envelope) });
   } catch (error) {
     console.error('[kronia/exercises/details][GET] erro interno:', error instanceof Error ? error.message : error);
     return NextResponse.json(
@@ -129,8 +137,7 @@ export async function POST(req: NextRequest) {
     if (envelope.success && Number((envelope as any)?.data?.completeness_score ?? 0) < 55) {
       console.info('[kronia_exercise] exercise_detail_low_value_detected', { key: (envelope as any)?.data?.slug, completeness: (envelope as any)?.data?.completeness_score });
     }
-    const statusCode = envelope.success ? 200 : (envelope.type === 'exercise_partial' ? 206 : 422);
-    return NextResponse.json(envelope, { status: statusCode });
+    return NextResponse.json(envelope, { status: resolveExerciseDetailsHttpStatus(envelope) });
   } catch (error) {
     console.error('[kronia/exercises/details] erro interno:', error instanceof Error ? error.message : error);
     return NextResponse.json(
