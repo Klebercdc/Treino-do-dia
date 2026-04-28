@@ -1,5 +1,5 @@
-const CACHE = 'kronia-remove-legacy-diet-v1';
-const BUILD_VERSION = 'remove-legacy-diet-v1';
+const CACHE = 'kronia-remove-profile-base-v3';
+const BUILD_VERSION = 'remove-profile-base-v3';
 
 const STATIC = [
   '/',
@@ -24,7 +24,48 @@ const STATIC = [
   '/src/ui/diet/diet-wizard.js?v=' + BUILD_VERSION
 ];
 
-const DIET_CONTROLLER_TAG = '<script src="/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION + '" data-kronia-diet-entry="1"></script>';
+const LEGACY_PROFILE_BASE_KILLER = `
+<style id="kronia-profile-base-killer-style">
+  #dietDataScreen,
+  #nutritionFlowScreen,
+  .diet-profile-base-legacy,
+  [data-legacy-diet-profile-base="1"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+</style>
+<script id="kronia-profile-base-killer-script">
+(function(){
+  var KILL_IDS = ['dietDataScreen','nutritionFlowScreen'];
+  function txt(el){ return String((el && el.textContent) || '').slice(0, 800); }
+  function isBad(el){ return !!(el && /Perfil base|Dados base|25%/i.test(txt(el))); }
+  function kill(el){
+    if(!el) return;
+    el.setAttribute('data-legacy-diet-profile-base','1');
+    el.classList && el.classList.remove('show','active','open');
+    el.style.setProperty('display','none','important');
+    el.style.setProperty('visibility','hidden','important');
+    el.style.setProperty('opacity','0','important');
+    el.style.setProperty('pointer-events','none','important');
+    el.setAttribute('aria-hidden','true');
+  }
+  function scan(){
+    KILL_IDS.forEach(function(id){ var el=document.getElementById(id); if(el && isBad(el)) kill(el); });
+    document.querySelectorAll('.screen,.modal,.sheet,[id*="diet"],[id*="Diet"],[class*="diet"],[class*="Diet"]').forEach(function(el){ if(isBad(el)) kill(el); });
+  }
+  window.__kroniaKillLegacyProfileBase = scan;
+  document.addEventListener('DOMContentLoaded', scan, true);
+  document.addEventListener('click', function(){ setTimeout(scan,0); setTimeout(scan,120); }, true);
+  setInterval(scan, 250);
+  scan();
+})();
+</script>`;
+
+const DIET_SCRIPTS = LEGACY_PROFILE_BASE_KILLER + '\n' +
+  '<script src="/src/ui/diet/disable-legacy-diet.js?v=' + BUILD_VERSION + '" data-kronia-disable-legacy-diet="1"></script>\n' +
+  '<script src="/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION + '" data-kronia-diet-entry="1"></script>';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -100,14 +141,21 @@ async function injectDietController(response) {
     if (!contentType.includes('text/html')) return response;
     let html = await response.text();
 
-    // Remove versões antigas para evitar conflito/cache duplicado.
     html = html.replace(/<script[^>]+src=["']\/src\/ui\/diet\/diet-entry-controller\.js[^>]*><\/script>/g, '');
+    html = html.replace(/<script[^>]+src=["']\/src\/ui\/diet\/disable-legacy-diet\.js[^>]*><\/script>/g, '');
+    html = html.replace(/<style[^>]+id=["']kronia-profile-base-killer-style["'][\s\S]*?<\/style>/g, '');
+    html = html.replace(/<script[^>]+id=["']kronia-profile-base-killer-script["'][\s\S]*?<\/script>/g, '');
 
-    // Injeta no fim do body para rodar depois de app.js e sobrescrever chamadas antigas.
-    if (html.includes('</body>')) {
-      html = html.replace('</body>', DIET_CONTROLLER_TAG + '\n</body>');
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', LEGACY_PROFILE_BASE_KILLER + '\n</head>');
     } else {
-      html += DIET_CONTROLLER_TAG;
+      html = LEGACY_PROFILE_BASE_KILLER + html;
+    }
+
+    if (html.includes('</body>')) {
+      html = html.replace('</body>', DIET_SCRIPTS + '\n</body>');
+    } else {
+      html += DIET_SCRIPTS;
     }
 
     return new Response(html, {
