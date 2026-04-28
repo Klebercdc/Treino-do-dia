@@ -4246,11 +4246,16 @@ function consumePendingConversationIntentFromHome(reason) {
     }
     if (intent.type === 'open_diet' || intent.type === 'generate_diet') {
       var hydratedDietPayload = hydrateDietFromConversationIntent(intent.payload || {});
-      openDietaSheet?.(Object.assign({}, hydratedDietPayload, {
-        source: 'chat',
-        fromChatIntent: true,
-        autoGenerate: intent.type === 'generate_diet',
-      }));
+      if (intent.type === 'generate_diet') {
+        openDietaSheet?.(Object.assign({}, hydratedDietPayload, {
+          source: 'chat',
+          fromChatIntent: true,
+          autoGenerate: true,
+        }));
+      } else {
+        navTo?.('dieta');
+        openDietDataScreen?.();
+      }
       trackKroniaCta('home_card_auto_opened', 'success', { type: intent.type, target: intent.target });
       trackKroniaCta('home_card_hydrated_from_chat', 'success', { type: intent.type, hasPayload: !!Object.keys(hydratedDietPayload).length });
       return true;
@@ -6001,11 +6006,8 @@ async function generateDietForGlobalObjective(objective) {
     fat: baseline.gorduraMeta
   };
   setActiveDietPlan(basePlan, { render: false });
-  await saveActiveDietPlan({ silent: true, contextSnapshot: analyzeUserContext() });
-  _dietCoreView = 'home';
-  navTo('dieta');
-  openDietDataScreen();
-  showToast('Nova dieta gerada para ' + getObjectiveLabel(objective) + '.', 'success', 3200);
+  var savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: analyzeUserContext() });
+  finishDietGenerationSuccess(savedPlan || basePlan);
 }
 
 function handleGlobalObjectiveChange(value) {
@@ -6421,6 +6423,7 @@ function renderKroniaProgress(label, consumed, target, cssClass, unit) {
 
 function openDietDataScreen() {
   syncDietaTheme(resolveKroniaThemeForDieta());
+  try { closeAllDietGenerationLayers({ keepDietData: true }); } catch (_) {}
   setDietMiniAppChrome(false);
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
   document.getElementById('dietDataScreen')?.classList.add('show');
@@ -6433,25 +6436,17 @@ function openDietDataScreen() {
 }
 
 function openDietChoiceScreen() {
+  try { closeAllDietGenerationLayers({ keepDietChoice: true }); } catch (_) {}
   var existingPlan = typeof readLocalActiveDietPlan === 'function' ? readLocalActiveDietPlan() : null;
   var hasPlan = existingPlan && Array.isArray(existingPlan.meals) && existingPlan.meals.length > 0;
-  if (hasPlan) {
-    openDietDataScreen();
-    return;
+  if (!hasPlan) {
+    try { setActiveDietPlan(buildFallbackActiveDietPlan(), { render: false }); } catch (_) {}
   }
-  syncDietaTheme(resolveKroniaThemeForDieta());
-  setDietMiniAppChrome(false);
-  document.getElementById('dietDataScreen')?.classList.remove('show');
-  var screen = document.getElementById('dietChoiceScreen');
-  if (screen) screen.classList.add('show');
-  document.body.classList.remove('overlay-open');
-  var nome = readLocalUserAnamnesis().nome;
-  var greetingEl = document.getElementById('dietChoiceGreeting');
-  if (greetingEl) greetingEl.textContent = getDietGreeting(nome);
-  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+  openDietDataScreen();
 }
 
 function startAIDiet() {
+  try { closeAllDietGenerationLayers(); } catch (_) {}
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
   document.getElementById('dietDataScreen')?.classList.remove('show');
   if (window.KroniaDiet && typeof window.KroniaDiet.ai === 'function') {
@@ -6549,6 +6544,100 @@ var KRONIA_DIET_HISTORY_KEY = 'kronia_diet_history_v1';
 var KRONIA_NUTRITION_MEMORY_KEY = 'kronia_nutrition_memory_v1';
 var _dietCoreView = 'home';
 var _labsReturnDietMiniChrome = false;
+
+function resetDietGenerationDraftState() {
+  try { localStorage.removeItem('kronia_diet_wizard_state_v1'); } catch (_) {}
+  try {
+    if (window._nutritionFlowState && typeof defaultNutritionFlowState === 'function') {
+      window._nutritionFlowState = defaultNutritionFlowState();
+    }
+  } catch (_) {}
+}
+
+function closeAllDietGenerationLayers(options) {
+  var opts = options && typeof options === 'object' ? options : {};
+  var ids = [
+    'dietProfileWizardScreen',
+    'nutritionFlowScreen',
+    'dietResultScreen',
+    'dietGeneratedScreen',
+    'dietaSheet',
+    'dietAddItemSheet'
+  ];
+  if (!opts.keepDietChoice) ids.push('dietChoiceScreen');
+  if (!opts.keepDietData) ids.push('dietDataScreen');
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'dietAddItemSheet') {
+      el.remove();
+      return;
+    }
+    el.classList.remove('show', 'active', 'open');
+    if (id === 'dietaSheet') {
+      el.setAttribute('aria-hidden', 'true');
+      try { el.setAttribute('inert', ''); } catch (_) {}
+    }
+  });
+  ['modalBackdrop', 'bottomSheet'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('show', 'active', 'open');
+  });
+  document.querySelectorAll('#dietProfileWizardScreen .show,#dietProfileWizardScreen .active,#nutritionFlowScreen .show,#nutritionFlowScreen .active,#dietResultScreen .show,#dietResultScreen .active,#dietGeneratedScreen .show,#dietGeneratedScreen .active').forEach(function(el) {
+    el.classList.remove('show', 'active');
+  });
+  if (document.body) {
+    document.body.classList.remove('diet-wizard-active', 'nutrition-flow-active', 'overlay-open');
+    document.body.style.overflow = window._dietPremiumPrevBodyOverflow || '';
+  }
+  window._dietPremiumPrevBodyOverflow = undefined;
+  window._dietPremiumSheetState = null;
+  var footer = document.querySelector('.footer-actions');
+  if (footer) footer.style.display = '';
+}
+
+function finishDietGenerationSuccess(savedDiet) {
+  var normalizedPlan = null;
+  try {
+    normalizedPlan = savedDiet && Array.isArray(savedDiet.meals)
+      ? recalculateDietPlan(savedDiet)
+      : normalizeDietGeneratedPlan(savedDiet || (window._nutritionFlowState && window._nutritionFlowState.generatedPlan) || buildFallbackActiveDietPlan(), {
+          source: savedDiet && savedDiet.source || 'diet_generation_success'
+        });
+    setActiveDietPlan(normalizedPlan, { render: false });
+  } catch (_) {
+    normalizedPlan = window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan();
+    try { setActiveDietPlan(normalizedPlan, { render: false }); } catch (__ ) {}
+  }
+  closeAllDietGenerationLayers({ keepDietData: true });
+  try { localStorage.removeItem('kronia_diet_wizard_state_v1'); } catch (_) {}
+  _dietCoreView = 'minha-dieta';
+  try { navTo('dieta'); } catch (_) {}
+  var dataScreen = document.getElementById('dietDataScreen');
+  if (dataScreen) dataScreen.classList.add('show');
+  renderActiveDietPlan();
+  var now = Date.now();
+  if (!window._kroniaDietSuccessToastAt || now - window._kroniaDietSuccessToastAt > 1500) {
+    window._kroniaDietSuccessToastAt = now;
+    showToast('Dieta gerada e salva.', 'success', 3200);
+  }
+  try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch (_) {}
+  return normalizedPlan;
+}
+
+function createAnotherDiet() {
+  closeAllDietGenerationLayers();
+  resetDietGenerationDraftState();
+  if (typeof openDietProfileWizard === 'function') {
+    openDietProfileWizard((typeof window !== 'undefined' && window._kronaUserId) || null);
+  } else {
+    openNutritionFlow({ source: 'create_another_diet', returnTab: 'dieta' });
+  }
+}
+
+window.closeAllDietGenerationLayers = closeAllDietGenerationLayers;
+window.finishDietGenerationSuccess = finishDietGenerationSuccess;
+window.createAnotherDiet = createAnotherDiet;
 
 function getDefaultNutritionMemory() {
   return {
@@ -11579,6 +11668,7 @@ function nutritionHasBaseProfile(state) {
 }
 
 function openNutritionFlow(context) {
+  try { closeAllDietGenerationLayers(); } catch (_) {}
   var state = getNutritionFlowState();
   state.returnTab = context && context.returnTab || state.returnTab || "dieta";
   var shouldSkipProfile = nutritionHasBaseProfile(state);
@@ -12560,9 +12650,9 @@ async function nutritionFlowGeneratePlan() {
   } catch (_) {}
   persistDietGenerationPrefs(input);
   persistCanonicalNutritionSnapshot({ source: "nutrition_plan_generated" });
-  try { await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
-  closeNutritionFlow();
-  try { navTo("dieta"); openDietDataScreen(); } catch (_) {}
+  var savedPlan = null;
+  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
+  finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || finalPlan);
 }
 
 function selDietaSingleChip(el, groupId) {
@@ -12969,7 +13059,7 @@ async function openDietaSheet(context) {
 }
 function closeDietaSheet() {
   document.getElementById("dietaSheet").classList.remove("show");
-  closeNutritionFlow();
+  closeAllDietGenerationLayers({ keepDietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true });
 }
 
 // ── Busca dados do perfil no Supabase e preenche o formulário ──
@@ -14844,10 +14934,8 @@ async function gerarDieta() {
         contextSnapshot: intakeSnapshot,
         rawGeneratedPlan: renderModel,
       }), { render: false });
-      await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
-      closeDietaSheet();
-      navTo("dieta");
-      openDietDataScreen();
+      var savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
+      finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || renderModel);
     } catch (_) {}
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({

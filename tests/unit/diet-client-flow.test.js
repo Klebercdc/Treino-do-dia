@@ -54,6 +54,7 @@ function loadNutritionFlowGeneratePlan(overrides = {}) {
     setActiveDietPlan: [],
     saveActiveDietPlan: [],
     setNutritionFlowState: [],
+    finishDietGenerationSuccess: [],
   };
   const context = {
     NUTRITION_FLOW_STEPS: [{ key: 'gerar' }, { key: 'final' }],
@@ -87,11 +88,12 @@ function loadNutritionFlowGeneratePlan(overrides = {}) {
     validateScientificGenerationGuard: async () => ({ ok: true }),
     generateDietWithModernEngine: async () => { throw new Error('falha no motor'); },
     normalizeDietGeneratedPlan: (plan, meta) => ({ normalized: true, plan, meta }),
-    setActiveDietPlan: (plan, options) => { calls.setActiveDietPlan.push({ plan, options }); },
+    setActiveDietPlan: (plan, options) => { calls.setActiveDietPlan.push({ plan, options }); context.window._kroniaDietPlan = plan; },
     setNutritionFlowState: (patch) => { calls.setNutritionFlowState.push(patch); },
     persistDietGenerationPrefs: () => {},
     persistCanonicalNutritionSnapshot: () => {},
     saveActiveDietPlan: async (options) => { calls.saveActiveDietPlan.push(options); },
+    finishDietGenerationSuccess: (plan) => { calls.finishDietGenerationSuccess.push(plan); },
     closeNutritionFlow: () => {},
     navTo: () => {},
     openDietDataScreen: () => {},
@@ -433,4 +435,6 @@ test('nutritionFlowGeneratePlan promotes local fallback plan to active state whe
   assert.equal(calls.saveActiveDietPlan.length, 1);
   assert.equal(calls.saveActiveDietPlan[0].generatedPlan.refeicoes[0].nome, 'Café da manhã');
   assert.equal(calls.setNutritionFlowState[0].generatedPlan.refeicoes[0].nome, 'Café da manhã');
+  assert.equal(calls.finishDietGenerationSuccess.length, 1);
+  assert.equal(calls.finishDietGenerationSuccess[0].normalized, true);
 });

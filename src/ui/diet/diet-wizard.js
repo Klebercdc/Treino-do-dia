@@ -73,6 +73,9 @@
   }
 
   function _hideKnownBlockingLayers() {
+    if (typeof root.closeAllDietGenerationLayers === 'function') {
+      root.closeAllDietGenerationLayers({ keepDietData: false });
+    }
     [
       'dietChoiceScreen',
       'dietDataScreen',
@@ -401,6 +404,9 @@
   function openDietProfileWizard(userId, opts) {
     try {
       var options = opts || {};
+      if (typeof root.closeAllDietGenerationLayers === 'function') {
+        root.closeAllDietGenerationLayers();
+      }
       var screen = _q(WIZARD_SCREEN_ID);
       if (!screen) {
         screen = _createWizardScreen();

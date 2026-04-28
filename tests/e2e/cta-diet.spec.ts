@@ -30,7 +30,7 @@ async function mockAgentCta(
   payload: Record<string, unknown>,
   message: string,
 ) {
-  await page.route('**/api/agent', async (route) => {
+  const fulfillCta = async (route: import('@playwright/test').Route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -50,7 +50,9 @@ async function mockAgentCta(
         },
       }),
     });
-  });
+  };
+  await page.route('**/api/agent', fulfillCta);
+  await page.route('**/api/chat', fulfillCta);
 }
 
 async function openAiAndSend(page: import('@playwright/test').Page, prompt: string) {
@@ -147,7 +149,7 @@ test.describe('CTA and Diet flows', () => {
         nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
       }));
     }).toEqual({ dietTab: true, dietData: true, nutritionFlow: false });
-    await expect(page.locator('#dietDataScreen')).toContainText(/Adicionar alimento|Registrar água|Ver substituições/);
+    await expect(page.locator('#dietDataScreen')).toContainText(/Dieta com IA|REFEIÇÕES DE HOJE|Minha Dieta/);
 
     await page.locator('#nav-inicio').click();
     await page.locator('#nav-dieta').click();
@@ -229,7 +231,77 @@ test.describe('CTA and Diet flows', () => {
       dietData: document.getElementById('dietDataScreen')?.classList.contains('show') === true,
       nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
       hasSavedPlan: Boolean((window as Window & { _kroniaDietPlan?: unknown })._kroniaDietPlan),
-    }))).toEqual({ dietData: true, nutritionFlow: false, hasSavedPlan: true });
+      dietWizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
+      dietChoice: document.getElementById('dietChoiceScreen')?.classList.contains('show') === true,
+      modalOpen: document.getElementById('modalBackdrop')?.classList.contains('open') === true,
+      bottomSheetOpen: document.getElementById('bottomSheet')?.classList.contains('open') === true,
+      dietTab: document.getElementById('nav-dieta')?.classList.contains('active') === true,
+    }))).toEqual({
+      dietData: true,
+      nutritionFlow: false,
+      hasSavedPlan: true,
+      dietWizard: false,
+      dietChoice: false,
+      modalOpen: false,
+      bottomSheetOpen: false,
+      dietTab: true,
+    });
     await expect(page.locator('#dietDataScreen')).toContainText(/Totais do plano|Proteína/);
+
+    await expect.poll(async () => page.evaluate(() => {
+      const bodyText = document.body.innerText || '';
+      const count = (label: string) => (bodyText.match(new RegExp(label, 'gi')) || []).length;
+      return {
+        createAnother: count('Criar outra dieta'),
+        viewDiet: count('Ver dieta'),
+        saveAndView: count('Salvar e ver na Dieta'),
+        success: count('Dieta gerada e salva'),
+      };
+    })).toEqual({
+      createAnother: 0,
+      viewDiet: 0,
+      saveAndView: 0,
+      success: 1,
+    });
+  });
+
+  test('new diet generation starts clean and leaves mobile UI clickable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await waitForSplash(page);
+
+    await page.evaluate(() => {
+      const login = document.getElementById('loginScreen');
+      if (login) {
+        login.style.display = 'none';
+        login.style.pointerEvents = 'none';
+      }
+      document.getElementById('nutritionFlowScreen')?.classList.add('show');
+      document.getElementById('modalBackdrop')?.classList.add('open');
+      document.getElementById('bottomSheet')?.classList.add('open');
+      localStorage.setItem('kronia_diet_wizard_state_v1', JSON.stringify({ userId: null, currentStep: 6, data: { stale: true } }));
+      (window as Window & { createAnotherDiet?: () => void }).createAnotherDiet?.();
+    });
+
+    await expect.poll(async () => page.evaluate(() => ({
+      wizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
+      nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
+      modalOpen: document.getElementById('modalBackdrop')?.classList.contains('open') === true,
+      bottomSheetOpen: document.getElementById('bottomSheet')?.classList.contains('open') === true,
+      staleWizardState: localStorage.getItem('kronia_diet_wizard_state_v1'),
+      currentStep: (window as Window & { _dietWizardState?: { currentStep?: number } })._dietWizardState?.currentStep,
+    }))).toEqual({
+      wizard: true,
+      nutritionFlow: false,
+      modalOpen: false,
+      bottomSheetOpen: false,
+      staleWizardState: null,
+      currentStep: 1,
+    });
+
+    await expect.poll(async () => page.evaluate(() => {
+      const element = document.elementFromPoint(window.innerWidth / 2, window.innerHeight - 34);
+      return Boolean(element && !element.closest('#modalBackdrop.open,#bottomSheet.open,#nutritionFlowScreen.show'));
+    })).toBe(true);
   });
 });

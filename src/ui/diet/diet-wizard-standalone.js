@@ -32,6 +32,42 @@
   }
   function saveState(s){ try{ localStorage.setItem(STATE_KEY,JSON.stringify(s)); }catch(_){} }
   function clearState(){ try{ localStorage.removeItem(STATE_KEY); }catch(_){} }
+  function toActiveDietPlan(plan){
+    var meals = Array.isArray(plan && plan.meals) ? plan.meals : [];
+    return {
+      title: plan && plan.title || 'Plano alimentar KroniA',
+      source: plan && plan.source || 'diet_wizard_standalone',
+      status: 'active',
+      objective: plan && plan.requestPayload && (plan.requestPayload.objective || plan.requestPayload.objetivo) || 'recomposicao',
+      targets: {
+        kcal: round(plan && plan.target && plan.target.kcal),
+        protein: round(plan && plan.target && plan.target.protein),
+        carbs: round(plan && plan.target && plan.target.carbs),
+        fat: round(plan && plan.target && plan.target.fat)
+      },
+      meals: meals.map(function(m, mealIndex){
+        return {
+          id: 'standalone_meal_' + (mealIndex + 1),
+          name: m.name || 'Refeição',
+          time: m.time || '',
+          slot: m.name || 'refeicao',
+          items: (Array.isArray(m.items) ? m.items : []).map(function(i, itemIndex){
+            return {
+              id: 'standalone_item_' + (mealIndex + 1) + '_' + (itemIndex + 1),
+              name: i.name || 'Alimento',
+              quantity: i.qty || i.quantity || '1 porção',
+              kcal: round(i.kcal),
+              protein: Number(i.protein || 0),
+              carbs: Number(i.carbs || 0),
+              fat: Number(i.fat || 0)
+            };
+          })
+        };
+      }),
+      orientacoes: Array.isArray(plan && plan.warnings) ? plan.warnings : [],
+      rawGeneratedPlan: plan || null
+    };
+  }
 
   function chip(group,value,label,multi){ return '<button type="button" class="kdw-chip" data-group="'+esc(group)+'" data-value="'+esc(value)+'" data-multi="'+(multi?'1':'0')+'">'+esc(label)+'</button>'; }
   function field(label,name,type,ph){ return '<label class="kdw-label">'+label+'</label><input class="kdw-input" name="'+esc(name)+'" type="'+(type||'text')+'" inputmode="'+(type==='number'?'decimal':'text')+'" placeholder="'+esc(ph||'')+'">'; }
@@ -168,7 +204,7 @@
     return {
       success:true,
       type:'visual_diet_plan',
-      source: apiOk ? 'api_with_local_visual_normalization' : 'local_generator_fallback',
+      source: apiOk ? 'api_with_local_visual_normalization' : 'standalone_local_generation',
       apiResponse: apiJson || null,
       title: objective === 'emagrecimento' ? 'Dieta para emagrecimento' : objective === 'hipertrofia' ? 'Dieta para hipertrofia' : objective === 'performance' ? 'Dieta para performance' : 'Dieta personalizada KroniA',
       target: target,
@@ -201,7 +237,12 @@
     }catch(err){ console.warn('[diet-standalone] API indisponível; usando gerador local',err); }
     var plan = hasRenderablePlan(json) ? Object.assign(generateLocalPlan(payload,json,ok), json) : generateLocalPlan(payload,json,ok);
     try{ localStorage.setItem(LAST_PLAN_KEY,JSON.stringify(plan)); localStorage.setItem('kronia_diet_wizard_last_payload',JSON.stringify(payload)); }catch(_){}
-    clearState(); renderResult(plan);
+    clearState();
+    if(typeof window.finishDietGenerationSuccess === 'function'){
+      window.finishDietGenerationSuccess(toActiveDietPlan(plan));
+      return;
+    }
+    renderResult(plan);
   }
 
   function renderMeal(m){
@@ -214,20 +255,15 @@
     var screen=document.createElement('div'); screen.id=SCREEN_ID; screen.className='kdw-screen';
     var meals = Array.isArray(plan.meals) ? plan.meals : [];
     var warnings = Array.isArray(plan.warnings) ? plan.warnings : [];
-    screen.innerHTML='<div class="kdw-head"><div class="kdw-top"><button class="kdw-back" id="kdwCloseTop">×</button><div style="flex:1"><div class="kdw-badge">Dieta gerada</div><div class="kdw-title">'+esc(plan.title||'Plano alimentar pronto')+'</div><div class="kdw-sub">Plano visual criado e salvo. Fonte: '+esc(plan.source||'local')+'</div></div></div></div><div class="kdw-body"><div class="kdw-card"><div class="kdw-result-title">✅ Plano alimentar pronto</div><p class="kdw-sub">Meta diária aproximada: '+round(plan.target && plan.target.kcal)+' kcal. Total montado: '+round(plan.totals && plan.totals.kcal)+' kcal.</p><div class="kdw-macros"><div class="kdw-macro"><strong>'+round(plan.totals && plan.totals.protein)+'g</strong><span>Proteína</span></div><div class="kdw-macro"><strong>'+round(plan.totals && plan.totals.carbs)+'g</strong><span>Carbo</span></div><div class="kdw-macro"><strong>'+round(plan.totals && plan.totals.fat)+'g</strong><span>Gordura</span></div></div>'+meals.map(renderMeal).join('')+'<div class="kdw-plan-note">'+warnings.map(esc).join('<br><br>')+'</div><div class="kdw-plan-actions"><button class="kdw-next" id="kdwGoDietInline">Salvar e ver na Dieta</button><button class="kdw-secondary" id="kdwNewDietInline">Criar outra dieta</button></div></div></div><div class="kdw-foot"><button class="kdw-next" id="kdwGoDiet">Ver dieta</button><button class="kdw-secondary" id="kdwNewDiet">Criar outra dieta</button></div>';
+    screen.innerHTML='<div class="kdw-head"><div class="kdw-top"><button class="kdw-back" id="kdwCloseTop">×</button><div style="flex:1"><div class="kdw-badge">Dieta gerada</div><div class="kdw-title">'+esc(plan.title||'Plano alimentar pronto')+'</div><div class="kdw-sub">Plano visual criado e salvo. Fonte: '+esc(plan.source||'local')+'</div></div></div></div><div class="kdw-body"><div class="kdw-card"><div class="kdw-result-title">Plano alimentar pronto</div><p class="kdw-sub">Meta diária aproximada: '+round(plan.target && plan.target.kcal)+' kcal. Total montado: '+round(plan.totals && plan.totals.kcal)+' kcal.</p><div class="kdw-macros"><div class="kdw-macro"><strong>'+round(plan.totals && plan.totals.protein)+'g</strong><span>Proteína</span></div><div class="kdw-macro"><strong>'+round(plan.totals && plan.totals.carbs)+'g</strong><span>Carbo</span></div><div class="kdw-macro"><strong>'+round(plan.totals && plan.totals.fat)+'g</strong><span>Gordura</span></div></div>'+meals.map(renderMeal).join('')+'<div class="kdw-plan-note">'+warnings.map(esc).join('<br><br>')+'</div></div></div><div class="kdw-foot"><button class="kdw-next" id="kdwGoDiet">Abrir plano salvo</button></div>';
     document.body.appendChild(screen); document.body.classList.add('diet-wizard-active');
     function go(){
       try{ localStorage.setItem(LAST_PLAN_KEY,JSON.stringify(plan)); }catch(_){}
-      closeDietProfileWizard();
-      if(typeof window.renderDietFromPlan==='function') window.renderDietFromPlan(plan);
-      else if(typeof window.renderDietPlan==='function') window.renderDietPlan(plan);
-      if(typeof window.navTo==='function') window.navTo('dieta');
-      toast('Dieta gerada e salva com sucesso.','success');
+      if(typeof window.finishDietGenerationSuccess === 'function') window.finishDietGenerationSuccess(toActiveDietPlan(plan));
+      else { closeDietProfileWizard(); if(typeof window.navTo==='function') window.navTo('dieta'); toast('Plano salvo.','success'); }
     }
     $('kdwCloseTop').onclick=closeDietProfileWizard;
-    $('kdwGoDiet').onclick=go; $('kdwGoDietInline').onclick=go;
-    $('kdwNewDiet').onclick=function(){ openDietProfileWizard(null,{forceNew:true}); };
-    $('kdwNewDietInline').onclick=function(){ openDietProfileWizard(null,{forceNew:true}); };
+    $('kdwGoDiet').onclick=go;
   }
 
   function render(state){
@@ -241,7 +277,7 @@
     $('kdwNext').onclick=function(){ var data=collectStep(); var err=validate(state,data); if(err){toast(err,'warning');return;} state.data[steps[state.current].key]=data; if(state.current<steps.length-1){state.current+=1;saveState(state);render(state);return;} submit(state); };
   }
 
-  function openDietProfileWizard(userId,opts){ var state=readState(userId,opts&&opts.forceNew); render(state); return true; }
+  function openDietProfileWizard(userId,opts){ if(typeof window.closeAllDietGenerationLayers === 'function') window.closeAllDietGenerationLayers(); var state=readState(userId,opts&&opts.forceNew); render(state); return true; }
   function closeDietProfileWizard(){ var screen=$(SCREEN_ID); if(screen) screen.remove(); document.body.classList.remove('diet-wizard-active'); }
   window.openDietProfileWizard=openDietProfileWizard; window.closeDietProfileWizard=closeDietProfileWizard; window.__kroniaDietWizardStandaloneLoaded=true;
 })();
