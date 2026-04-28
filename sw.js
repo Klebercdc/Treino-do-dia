@@ -1,5 +1,5 @@
-const CACHE = 'kronia-v5-2026-04-28-diet-wizard-cache';
-const BUILD_VERSION = '2026-04-28-diet-wizard-cache';
+const CACHE = 'kronia-v6-2026-04-28-diet-wizard-hotfix';
+const BUILD_VERSION = '2026-04-28-diet-wizard-hotfix-v6';
 
 const STATIC = [
   '/',
@@ -11,6 +11,7 @@ const STATIC = [
   '/splash.png',
   '/manifest.json',
   '/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/diet-wizard-standalone.js?v=' + BUILD_VERSION,
   '/src/ui/diet/diet-wizard-state.js?v=' + BUILD_VERSION,
   '/src/ui/diet/diet-step-body.js?v=' + BUILD_VERSION,
   '/src/ui/diet/diet-step-goal.js?v=' + BUILD_VERSION,
@@ -22,7 +23,8 @@ const STATIC = [
   '/src/ui/diet/diet-wizard.js?v=' + BUILD_VERSION
 ];
 
-// Instala e cacheia os arquivos estáticos sem travar a instalação se algum asset falhar.
+const DIET_CONTROLLER_TAG = '<script src="/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION + '" data-kronia-diet-entry="1"></script>';
+
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
@@ -31,7 +33,6 @@ self.addEventListener('install', e => {
   );
 });
 
-// Remove caches antigos e assume clientes abertos imediatamente.
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -40,7 +41,6 @@ self.addEventListener('activate', e => {
   );
 });
 
-// ══ PWA PUSH NOTIFICATIONS ══════════════════════════
 self.addEventListener('push', e => {
   let data = { title: 'KRONIA', body: 'Você tem uma atualização.' };
   try { data = e.data ? e.data.json() : data; } catch (err) {}
@@ -69,7 +69,6 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
-// ══ BACKGROUND SYNC — workout cloud backup ══════════
 self.addEventListener('sync', e => {
   if (e.tag === 'kronia-workout-sync') {
     e.waitUntil(
@@ -91,20 +90,56 @@ function shouldBypassCache(url) {
   ) return true;
 
   if (url.pathname.startsWith('/api/')) return true;
-
-  // Dieta/wizard precisam sempre tentar rede primeiro para evitar JS antigo no iPhone/PWA.
-  if (url.pathname.startsWith('/src/ui/diet/')) return false;
-
   return false;
 }
 
-// ══ Network-first para arquivos do app ══════════════
-// Cache fallback apenas quando offline.
+async function injectDietController(response) {
+  try {
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return response;
+    let html = await response.text();
+
+    // Remove versões antigas para evitar conflito/cache duplicado.
+    html = html.replace(/<script[^>]+src=["']\/src\/ui\/diet\/diet-entry-controller\.js[^>]*><\/script>/g, '');
+
+    // Injeta no fim do body para rodar depois de app.js e sobrescrever chamadas antigas.
+    if (html.includes('</body>')) {
+      html = html.replace('</body>', DIET_CONTROLLER_TAG + '\n</body>');
+    } else {
+      html += DIET_CONTROLLER_TAG;
+    }
+
+    return new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Kronia-Diet-Hotfix': BUILD_VERSION
+      }
+    });
+  } catch (err) {
+    return response;
+  }
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
   if (url.origin !== self.location.origin) return;
   if (shouldBypassCache(url)) return;
+
+  if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' })
+        .then(res => injectDietController(res))
+        .catch(() => caches.match('/index.html').then(cached => {
+          if (cached) return injectDietController(cached);
+          return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+        }))
+    );
+    return;
+  }
 
   e.respondWith(
     fetch(e.request, { cache: 'no-store' }).then(res => {
@@ -116,17 +151,6 @@ self.addEventListener('fetch', e => {
     }).catch(() => {
       return caches.match(e.request).then(cached => {
         if (cached) return cached;
-
-        if (e.request.mode === 'navigate') {
-          return caches.match('/index.html').then(indexCached => {
-            if (indexCached) return indexCached;
-            return new Response('Offline', {
-              status: 503,
-              headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-            });
-          });
-        }
-
         return new Response('Offline', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
