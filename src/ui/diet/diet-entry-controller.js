@@ -8,6 +8,8 @@
   var originalOpenNutritionFlow = window.openNutritionFlow;
   var originalOpenNutritionFlowFull = window.openNutritionFlowFull;
   var opening = false;
+  var LAST_PLAN_KEY = 'kronia_last_generated_diet';
+  window.__kroniaDietGenerationCompleted = window.__kroniaDietGenerationCompleted === true;
 
   function loadScriptOnce(src, marker, testFn){
     if (typeof testFn === 'function' && testFn()) return Promise.resolve(true);
@@ -37,7 +39,7 @@
     if (loadingPromise) return loadingPromise;
     loadingPromise = Promise.all([
       loadRenderer(),
-      loadScriptOnce(ASSET, 'diet-standalone', function(){ return typeof window.openDietProfileWizard === 'function'; })
+      loadScriptOnce(ASSET, 'diet-standalone', function(){ return window.__kroniaDietWizardStandaloneLoaded === true && typeof window.openDietProfileWizard === 'function'; })
     ]).then(function(results){ return !!results[1]; }).catch(function(){ loadingPromise = null; return false; });
     return loadingPromise;
   }
@@ -58,10 +60,41 @@
     });
   }
 
+  function hasLastGeneratedDiet(){
+    try { return !!localStorage.getItem(LAST_PLAN_KEY); } catch(_) { return false; }
+  }
+
+  function isPlanVisualVisible(){
+    var el = document.getElementById('kroniaDietPlanVisualScreen');
+    return !!(el && (el.classList.contains('kdp-screen') || el.offsetParent || getComputedStyle(el).display !== 'none'));
+  }
+
+  function isRenderContext(context){
+    var ctx = context && typeof context === 'object' ? context : {};
+    var src = String(ctx.source || ctx.from || ctx.mode || '');
+    return ctx.viewLastPlan === true || ctx.render === true || ctx.success === true || /view|success|render|last_generated|generated_diet|post_generation/i.test(src);
+  }
+
+  function isExplicitCreateContext(context){
+    var ctx = context && typeof context === 'object' ? context : {};
+    var src = String(ctx.source || ctx.from || ctx.mode || '');
+    return ctx.forceNew === true || /button_click|create_plan|regenerate_plan|diet_ai|diet_create|diet_regenerate|create_another|diet_button/i.test(src);
+  }
+
+  async function openLastPlan(){
+    await loadRenderer();
+    if (typeof window.openLastGeneratedDiet === 'function') return window.openLastGeneratedDiet();
+    return false;
+  }
+
   async function open(context){
     if (opening) return false;
     opening = true;
     try {
+      if ((window.__kroniaDietGenerationCompleted === true || isRenderContext(context)) && hasLastGeneratedDiet() && !isExplicitCreateContext(context)) {
+        return await openLastPlan();
+      }
+      window.__kroniaDietGenerationCompleted = false;
       hideOldDietScreens();
       await loadRenderer();
       var ok = await loadStandalone();
@@ -155,6 +188,7 @@
   };
 
   function legacyWatchdog(){
+    if (isPlanVisualVisible()) return;
     var old = document.getElementById('nutritionFlowScreen') || document.getElementById('dietDataScreen');
     if (!old) return;
     var visible = old.classList.contains('show') || old.style.display === 'block' || old.style.display === 'flex';
@@ -162,6 +196,12 @@
     var txt = (old.textContent || '').slice(0, 300);
     if (/Perfil base|25%|Dados base/i.test(txt)) {
       hideOldDietScreens();
+      if (hasLastGeneratedDiet()) {
+        window.__kroniaDietGenerationCompleted = true;
+        openLastPlan();
+        return;
+      }
+      if (window.__kroniaDietGenerationCompleted === true) return;
       open({ source:'legacy_watchdog_profile_base' });
     }
   }

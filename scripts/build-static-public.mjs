@@ -30,6 +30,7 @@ const staticFiles = [
   'src/application/kronia-application.js',
   'src/lib/nutrition/tacoDatabase.json',
   'src/ui/diet/diet-entry-controller.js',
+  'src/ui/diet/diet-plan-renderer.js',
   'src/ui/diet/diet-wizard-standalone.js',
   'src/ui/diet/diet-wizard-state.js',
   'src/ui/diet/diet-wizard.js',

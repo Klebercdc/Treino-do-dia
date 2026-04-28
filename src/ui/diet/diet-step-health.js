@@ -40,7 +40,7 @@ function renderDietStepHealth(data) {
     '<div class="dw-card">',
       '<label class="dw-label">Exames de laboratório</label>',
       '<p class="dw-info-text">Seus exames carregados anteriormente são considerados automaticamente.</p>',
-      '<button type="button" class="dw-btn-secondary" onclick="try{openLabsSheet();}catch(_){}">Ver meus exames</button>',
+      '<button type="button" class="dw-btn-secondary" data-action="open-labs">Ver meus exames</button>',
     '</div>',
   ].join('');
 }

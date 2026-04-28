@@ -193,9 +193,11 @@ test.describe('CTA and Diet flows', () => {
       }
     });
     await expect.poll(async () => page.evaluate(() => ({
-      wizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
+      wizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('kdw-screen') === true
+        || document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
       nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
-      currentStep: (window as Window & { _dietWizardState?: { currentStep?: number } })._dietWizardState?.currentStep,
+      currentStep: (window as Window & { _dietWizardState?: { currentStep?: number }; __kroniaDietWizardState?: { current?: number } })._dietWizardState?.currentStep
+        ?? (((window as Window & { __kroniaDietWizardState?: { current?: number } }).__kroniaDietWizardState?.current ?? 0) + 1),
     }))).toEqual({
       wizard: true,
       nutritionFlow: false,
@@ -288,12 +290,14 @@ test.describe('CTA and Diet flows', () => {
     });
 
     await expect.poll(async () => page.evaluate(() => ({
-      wizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
+      wizard: document.getElementById('dietProfileWizardScreen')?.classList.contains('kdw-screen') === true
+        || document.getElementById('dietProfileWizardScreen')?.classList.contains('show') === true,
       nutritionFlow: document.getElementById('nutritionFlowScreen')?.classList.contains('show') === true,
       modalOpen: document.getElementById('modalBackdrop')?.classList.contains('open') === true,
       bottomSheetOpen: document.getElementById('bottomSheet')?.classList.contains('open') === true,
       staleWizardState: localStorage.getItem('kronia_diet_wizard_state_v1'),
-      currentStep: (window as Window & { _dietWizardState?: { currentStep?: number } })._dietWizardState?.currentStep,
+      currentStep: (window as Window & { _dietWizardState?: { currentStep?: number }; __kroniaDietWizardState?: { current?: number } })._dietWizardState?.currentStep
+        ?? (((window as Window & { __kroniaDietWizardState?: { current?: number } }).__kroniaDietWizardState?.current ?? 0) + 1),
     }))).toEqual({
       wizard: true,
       nutritionFlow: false,

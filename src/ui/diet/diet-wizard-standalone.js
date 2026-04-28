@@ -3,6 +3,7 @@
   var SCREEN_ID = 'dietProfileWizardScreen';
   var STATE_KEY = 'kronia_diet_wizard_state_v6_standalone';
   var LAST_PLAN_KEY = 'kronia_last_generated_diet';
+  window.__kroniaDietGenerationCompleted = window.__kroniaDietGenerationCompleted === true;
   var steps = [
     { key:'body', badge:'Etapa 1/6', title:'Composição corporal', sub:'Base metabólica, BCM/manual e medidas para calcular sua dieta com precisão.' },
     { key:'goal', badge:'Etapa 2/6', title:'Objetivo e estratégia', sub:'Foco, velocidade de resultado, refeições e meta calórica.' },
@@ -17,6 +18,10 @@
   function num(v){ var n = Number(String(v || '').replace(',','.')); return Number.isFinite(n) ? n : null; }
   function round(n){ return Math.round(Number(n)||0); }
   function toast(msg,type){ if(typeof window.showToast==='function') window.showToast(msg,type||'info',3500); else alert(msg); }
+  function getUserId(){
+    try { return (window.currentUser && (window.currentUser.id || window.currentUser.uid)) || (window.authUser && window.authUser.id) || null; }
+    catch(_) { return null; }
+  }
 
   function freshState(userId){ return { userId:userId||null, current:0, data:{}, startedAt:new Date().toISOString() }; }
   function readState(userId, forceNew){
@@ -30,7 +35,7 @@
     s.userId=userId||null;
     return s;
   }
-  function saveState(s){ try{ localStorage.setItem(STATE_KEY,JSON.stringify(s)); }catch(_){} }
+  function saveState(s){ window.__kroniaDietWizardState=s; try{ localStorage.setItem(STATE_KEY,JSON.stringify(s)); }catch(_){} }
   function clearState(){ try{ localStorage.removeItem(STATE_KEY); }catch(_){} }
   function toActiveDietPlan(plan){
     var meals = Array.isArray(plan && plan.meals) ? plan.meals : [];
@@ -92,6 +97,7 @@
     if(k==='health') return ''+
       section('Patologias e alertas', chipsHtml([['hipertensao','Hipertensão'],['diabetes','Diabetes'],['renal','Doença renal'],['gastrite','Gastrite/refluxo'],['hepatico','Hepática'],['dislipidemia','Colesterol/triglicerídeos'],['tireoide','Tireoide'],['nenhuma','Nenhuma']], 'pathologies', true))+
       section('Exames e cuidados', textarea('Exames alterados / observações clínicas','clinical_notes','Ex: ferritina baixa, TSH, glicemia, creatinina, potássio, restrição médica...') + textarea('Restrições clínicas','clinical_restrictions','Ex: reduzir sódio, controlar potássio, intolerância, alergia...'))+
+      '<button type="button" class="kdw-secondary" data-action="open-labs">Ver meus exames</button>'+
       '<div class="kdw-alert">⚠️ O KroniA usa essas informações para alertas e personalização, mas não substitui avaliação de nutricionista/médico.</div>';
 
     if(k==='food') return ''+
@@ -113,7 +119,7 @@
   function installStyles(){
     if($('kdwStyles')) return;
     var st=document.createElement('style'); st.id='kdwStyles';
-    st.textContent='.kdw-screen,.kdw-screen *{box-sizing:border-box}.kdw-screen{position:fixed;inset:0;z-index:14000;background:#07090f;color:#fff;font-family:Inter,DM Sans,system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}.kdw-head{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);background:#07090f}.kdw-top{display:flex;gap:12px;align-items:center}.kdw-back{width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:22px}.kdw-badge{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#22c55e}.kdw-title{font-size:24px;font-weight:950;letter-spacing:-.05em;line-height:1.05}.kdw-sub{font-size:13px;color:rgba(255,255,255,.62);line-height:1.45;margin-top:4px}.kdw-bar{height:4px;background:rgba(255,255,255,.08);border-radius:999px;margin-top:14px;overflow:hidden}.kdw-fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e,#a3e635);border-radius:999px;transition:width .25s}.kdw-body{flex:1;overflow:auto;padding:18px 16px 126px;-webkit-overflow-scrolling:touch}.kdw-card{border:1px solid rgba(34,197,94,.20);background:linear-gradient(180deg,rgba(34,197,94,.10),rgba(255,255,255,.035));border-radius:24px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.35)}.kdw-mini{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);border-radius:18px;padding:14px;margin:0 0 12px}.kdw-section-title{font-size:14px;font-weight:900;color:#fff;margin:2px 0 10px}.kdw-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kdw-label{display:block;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin:10px 0 6px}.kdw-input,.kdw-textarea{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.11);background:#101722;color:#fff;padding:0 12px;font-size:16px;outline:none}.kdw-input{height:48px}.kdw-textarea{height:82px;padding:12px;resize:none}.kdw-chips{display:flex;flex-wrap:wrap;gap:9px;margin:10px 0 12px}.kdw-chip{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;border-radius:999px;padding:11px 13px;font-weight:800;font-size:13px}.kdw-chip.active{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.55);color:#4ade80}.kdw-alert{border:1px solid rgba(250,204,21,.22);background:rgba(250,204,21,.08);color:rgba(255,255,255,.78);padding:12px;border-radius:16px;font-size:13px;line-height:1.45}.kdw-foot{position:fixed;left:0;right:0;bottom:0;z-index:14001;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(7,9,15,0),#07090f 22%,#07090f)}.kdw-next{width:100%;height:56px;border:0;border-radius:18px;background:#22c55e;color:#06110a;font-weight:950;font-size:16px;box-shadow:0 0 28px rgba(34,197,94,.28)}.kdw-secondary{width:100%;height:46px;margin-top:10px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-weight:850}.kdw-result-title{font-size:25px;font-weight:950;letter-spacing:-.05em}.kdw-meal{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);border-radius:18px;padding:14px;margin:12px 0}.kdw-meal-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.kdw-meal-name{font-weight:950;font-size:17px}.kdw-meal-kcal{color:#4ade80;font-weight:950}.kdw-food{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13px}.kdw-macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.kdw-macro{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;text-align:center}.kdw-macro strong{display:block;color:#fff;font-size:17px}.kdw-macro span{font-size:11px;color:rgba(255,255,255,.58);font-weight:850;text-transform:uppercase}.kdw-plan-note{border:1px solid rgba(34,197,94,.25);background:rgba(34,197,94,.08);border-radius:16px;padding:12px;color:rgba(255,255,255,.78);font-size:13px;line-height:1.45}.kdw-plan-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}@media(max-width:360px){.kdw-grid2,.kdw-macros{grid-template-columns:1fr}.kdw-title{font-size:21px}}';
+    st.textContent='.kdw-screen,.kdw-screen *{box-sizing:border-box}.kdw-screen{position:fixed;inset:0;z-index:14000;background:#07090f;color:#fff;font-family:Inter,DM Sans,system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}.kdw-head{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);background:#07090f}.kdw-top{display:flex;gap:12px;align-items:center}.kdw-back{width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:22px}.kdw-badge{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#22c55e}.kdw-title{font-size:24px;font-weight:950;letter-spacing:-.05em;line-height:1.05}.kdw-sub{font-size:13px;color:rgba(255,255,255,.62);line-height:1.45;margin-top:4px}.kdw-bar{height:4px;background:rgba(255,255,255,.08);border-radius:999px;margin-top:14px;overflow:hidden}.kdw-fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e,#a3e635);border-radius:999px;transition:width .25s}.kdw-body{flex:1;overflow:auto;padding:18px 16px 126px;-webkit-overflow-scrolling:touch}.kdw-card{border:1px solid rgba(34,197,94,.20);background:linear-gradient(180deg,rgba(34,197,94,.10),rgba(255,255,255,.035));border-radius:24px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.35)}.kdw-mini{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);border-radius:18px;padding:14px;margin:0 0 12px}.kdw-section-title{font-size:14px;font-weight:900;color:#fff;margin:2px 0 10px}.kdw-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kdw-label{display:block;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin:10px 0 6px}.kdw-input,.kdw-textarea{width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.11);background:#101722;color:#fff;padding:0 12px;font-size:16px;outline:none}.kdw-input{height:48px}.kdw-textarea{height:82px;padding:12px;resize:none}.kdw-chips{display:flex;flex-wrap:wrap;gap:9px;margin:10px 0 12px}.kdw-chip{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;border-radius:999px;padding:11px 13px;font-weight:800;font-size:13px}.kdw-chip.active{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.55);color:#4ade80}.kdw-alert{border:1px solid rgba(250,204,21,.22);background:rgba(250,204,21,.08);color:rgba(255,255,255,.78);padding:12px;border-radius:16px;font-size:13px;line-height:1.45;margin-top:10px}.kdw-foot{position:fixed;left:0;right:0;bottom:0;z-index:14001;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(7,9,15,0),#07090f 22%,#07090f)}.kdw-next{width:100%;height:56px;border:0;border-radius:18px;background:#22c55e;color:#06110a;font-weight:950;font-size:16px;box-shadow:0 0 28px rgba(34,197,94,.28)}.kdw-secondary{width:100%;height:46px;margin-top:10px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-weight:850;pointer-events:auto;touch-action:manipulation;position:relative;z-index:14002;cursor:pointer}.kdw-result-title{font-size:25px;font-weight:950;letter-spacing:-.05em}.kdw-meal{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);border-radius:18px;padding:14px;margin:12px 0}.kdw-meal-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.kdw-meal-name{font-weight:950;font-size:17px}.kdw-meal-kcal{color:#4ade80;font-weight:950}.kdw-food{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13px}.kdw-macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.kdw-macro{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;text-align:center}.kdw-macro strong{display:block;color:#fff;font-size:17px}.kdw-macro span{font-size:11px;color:rgba(255,255,255,.58);font-weight:850;text-transform:uppercase}.kdw-plan-note{border:1px solid rgba(34,197,94,.25);background:rgba(34,197,94,.08);border-radius:16px;padding:12px;color:rgba(255,255,255,.78);font-size:13px;line-height:1.45}.kdw-plan-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}@media(max-width:360px){.kdw-grid2,.kdw-macros{grid-template-columns:1fr}.kdw-title{font-size:21px}}';
     document.head.appendChild(st);
   }
 
@@ -236,13 +242,28 @@
       json=await res.json().catch(function(){return null;}); ok=!!(res && res.ok);
     }catch(err){ console.warn('[diet-standalone] API indisponível; usando gerador local',err); }
     var plan = hasRenderablePlan(json) ? Object.assign(generateLocalPlan(payload,json,ok), json) : generateLocalPlan(payload,json,ok);
-    try{ localStorage.setItem(LAST_PLAN_KEY,JSON.stringify(plan)); localStorage.setItem('kronia_diet_wizard_last_payload',JSON.stringify(payload)); }catch(_){}
+    try{
+      localStorage.setItem(LAST_PLAN_KEY,JSON.stringify(plan));
+      localStorage.setItem('kronia_diet_wizard_last_payload',JSON.stringify(payload));
+    }catch(_){}
     clearState();
-    if(typeof window.finishDietGenerationSuccess === 'function'){
-      window.finishDietGenerationSuccess(toActiveDietPlan(plan));
-      return;
+    window.__kroniaDietGenerationCompleted = true;
+    window.__kroniaDietWizardState = null;
+    try { if(typeof window.setActiveDietPlan === 'function') window.setActiveDietPlan(toActiveDietPlan(plan), { render:false }); } catch(_) {}
+    var screen = $(SCREEN_ID);
+    if(screen) screen.remove();
+    document.body.classList.remove('diet-wizard-active','kdw-active','nutrition-flow-active','overlay-open');
+    var rendered = false;
+    try {
+      if(typeof window.renderDietFromPlan === 'function') rendered = window.renderDietFromPlan(plan) !== false;
+      else if(typeof window.openLastGeneratedDiet === 'function') rendered = window.openLastGeneratedDiet() !== false;
+      else console.warn('[diet] renderer indisponível após geração');
+    } catch(err) {
+      console.error('[diet-standalone] falha ao renderizar dieta gerada', err);
+      rendered = false;
     }
-    renderResult(plan);
+    if(!rendered) renderResult(plan);
+    toast('Dieta gerada e salva com sucesso.','success');
   }
 
   function renderMeal(m){
@@ -259,8 +280,9 @@
     document.body.appendChild(screen); document.body.classList.add('diet-wizard-active');
     function go(){
       try{ localStorage.setItem(LAST_PLAN_KEY,JSON.stringify(plan)); }catch(_){}
-      if(typeof window.finishDietGenerationSuccess === 'function') window.finishDietGenerationSuccess(toActiveDietPlan(plan));
-      else { closeDietProfileWizard(); if(typeof window.navTo==='function') window.navTo('dieta'); toast('Plano salvo.','success'); }
+      if(typeof window.renderDietFromPlan === 'function' && window.renderDietFromPlan(plan) !== false) return;
+      if(typeof window.openLastGeneratedDiet === 'function' && window.openLastGeneratedDiet() !== false) return;
+      closeDietProfileWizard(); if(typeof window.navTo==='function') window.navTo('dieta'); toast('Plano salvo.','success');
     }
     $('kdwCloseTop').onclick=closeDietProfileWizard;
     $('kdwGoDiet').onclick=go;
@@ -268,6 +290,8 @@
 
   function render(state){
     state=sanitizeState(state,state.userId); installStyles(); var old=$(SCREEN_ID); if(old) old.remove();
+    window.__kroniaDietGenerationCompleted = false;
+    window.__kroniaDietWizardState = state;
     var idx=state.current, s=steps[idx], percent=Math.round(((idx+1)/steps.length)*100);
     var screen=document.createElement('div'); screen.id=SCREEN_ID; screen.className='kdw-screen';
     screen.innerHTML='<div class="kdw-head"><div class="kdw-top"><button class="kdw-back" id="kdwBack">‹</button><div style="min-width:0;flex:1"><div class="kdw-badge">'+esc(s.badge)+'</div><div class="kdw-title">'+esc(s.title)+'</div><div class="kdw-sub">'+esc(s.sub)+'</div></div></div><div class="kdw-bar"><div class="kdw-fill" style="width:'+percent+'%"></div></div></div><div class="kdw-body"><div class="kdw-card">'+renderStepHtml(state)+'</div></div><div class="kdw-foot"><button class="kdw-next" id="kdwNext">'+(idx===steps.length-1?'Gerar dieta premium':'Continuar')+'</button><button class="kdw-secondary" id="kdwClose">Fechar</button></div>';
@@ -277,7 +301,38 @@
     $('kdwNext').onclick=function(){ var data=collectStep(); var err=validate(state,data); if(err){toast(err,'warning');return;} state.data[steps[state.current].key]=data; if(state.current<steps.length-1){state.current+=1;saveState(state);render(state);return;} submit(state); };
   }
 
-  function openDietProfileWizard(userId,opts){ if(typeof window.closeAllDietGenerationLayers === 'function') window.closeAllDietGenerationLayers(); var state=readState(userId,opts&&opts.forceNew); render(state); return true; }
-  function closeDietProfileWizard(){ var screen=$(SCREEN_ID); if(screen) screen.remove(); document.body.classList.remove('diet-wizard-active'); }
+  function openDietProfileWizard(userId,opts){ window.__kroniaDietGenerationCompleted = false; if(typeof window.closeAllDietGenerationLayers === 'function') window.closeAllDietGenerationLayers(); var state=readState(userId,opts&&opts.forceNew); render(state); return true; }
+  function closeDietProfileWizard(){ var screen=$(SCREEN_ID); if(screen) screen.remove(); document.body.classList.remove('diet-wizard-active','kdw-active'); }
+  document.addEventListener('click', function(e) {
+    var target = e.target;
+    var btn = target && target.closest && target.closest('[data-action="open-labs"]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      var state = window.__kroniaDietWizardState || readState(getUserId(), false);
+      saveState(state);
+    } catch(err) {
+      console.warn('[diet-standalone] falha ao preservar estado antes de abrir exames', err);
+    }
+    var candidates = [
+      'openLabsSheet',
+      'openExamsScreen',
+      'openLabExams',
+      'openCheckupsScreen',
+      'openMedicalExamsScreen',
+      'openUserExams',
+      'openLabsScreen',
+      'openLabsUploadScreen'
+    ];
+    for (var i = 0; i < candidates.length; i += 1) {
+      var name = candidates[i];
+      if (typeof window[name] === 'function') {
+        window[name]({ source: 'diet_wizard_health_step', returnTo: 'diet_wizard' });
+        return;
+      }
+    }
+    toast('Nenhum módulo de exames encontrado ainda. Seus exames carregados serão considerados quando disponíveis.', 'info');
+  }, true);
   window.openDietProfileWizard=openDietProfileWizard; window.closeDietProfileWizard=closeDietProfileWizard; window.__kroniaDietWizardStandaloneLoaded=true;
 })();
