@@ -1,5 +1,5 @@
-const CACHE = 'kronia-v6-2026-04-28-diet-wizard-hotfix';
-const BUILD_VERSION = '2026-04-28-diet-wizard-hotfix-v6';
+const CACHE = 'kronia-remove-legacy-diet-v1';
+const BUILD_VERSION = 'remove-legacy-diet-v1';
 
 const STATIC = [
   '/',
@@ -11,6 +11,7 @@ const STATIC = [
   '/splash.png',
   '/manifest.json',
   '/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION,
+  '/src/ui/diet/disable-legacy-diet.js?v=' + BUILD_VERSION,
   '/src/ui/diet/diet-wizard-standalone.js?v=' + BUILD_VERSION,
   '/src/ui/diet/diet-wizard-state.js?v=' + BUILD_VERSION,
   '/src/ui/diet/diet-step-body.js?v=' + BUILD_VERSION,
