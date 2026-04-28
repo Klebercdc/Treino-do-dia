@@ -1,29 +1,44 @@
 /* KroniA Diet Entry Controller — rota única e segura para criação/regeneração de dieta */
 (function(){
   var ASSET = 'src/ui/diet/diet-wizard-standalone.js';
-  var VERSION = '20260428-diet-button-stable-v7';
+  var RENDERER_ASSET = 'src/ui/diet/diet-plan-renderer.js';
+  var VERSION = '20260428-diet-button-stable-v8-renderer';
   var loadingPromise = null;
+  var rendererPromise = null;
   var originalOpenNutritionFlow = window.openNutritionFlow;
   var originalOpenNutritionFlowFull = window.openNutritionFlowFull;
   var opening = false;
 
-  function loadStandalone(){
-    if (window.__kroniaDietWizardStandaloneLoaded && typeof window.openDietProfileWizard === 'function') {
-      return Promise.resolve(true);
-    }
-    if (loadingPromise) return loadingPromise;
-    loadingPromise = new Promise(function(resolve){
-      var existing = document.querySelector('script[data-kronia-diet-standalone="1"]');
+  function loadScriptOnce(src, marker, testFn){
+    if (typeof testFn === 'function' && testFn()) return Promise.resolve(true);
+    return new Promise(function(resolve){
+      var existing = document.querySelector('script[data-kronia-loader="' + marker + '"]');
       if (existing) existing.remove();
       var s = document.createElement('script');
-      s.src = '/' + ASSET + '?v=' + VERSION + '&t=' + Date.now();
+      s.src = '/' + src + '?v=' + VERSION + '&t=' + Date.now();
       s.async = false;
       s.defer = false;
-      s.dataset.kroniaDietStandalone = '1';
-      s.onload = function(){ resolve(typeof window.openDietProfileWizard === 'function'); };
-      s.onerror = function(){ loadingPromise = null; resolve(false); };
+      s.dataset.kroniaLoader = marker;
+      s.onload = function(){ resolve(typeof testFn === 'function' ? !!testFn() : true); };
+      s.onerror = function(){ resolve(false); };
       document.head.appendChild(s);
     });
+  }
+
+  function loadRenderer(){
+    if (window.__kroniaDietPlanRendererLoaded || typeof window.renderDietFromPlan === 'function') return Promise.resolve(true);
+    if (rendererPromise) return rendererPromise;
+    rendererPromise = loadScriptOnce(RENDERER_ASSET, 'diet-renderer', function(){ return typeof window.renderDietFromPlan === 'function'; });
+    return rendererPromise;
+  }
+
+  function loadStandalone(){
+    if (window.__kroniaDietWizardStandaloneLoaded && typeof window.openDietProfileWizard === 'function') return Promise.resolve(true);
+    if (loadingPromise) return loadingPromise;
+    loadingPromise = Promise.all([
+      loadRenderer(),
+      loadScriptOnce(ASSET, 'diet-standalone', function(){ return typeof window.openDietProfileWizard === 'function'; })
+    ]).then(function(results){ return !!results[1]; }).catch(function(){ loadingPromise = null; return false; });
     return loadingPromise;
   }
 
@@ -48,6 +63,7 @@
     opening = true;
     try {
       hideOldDietScreens();
+      await loadRenderer();
       var ok = await loadStandalone();
       hideOldDietScreens();
       if (ok && typeof window.openDietProfileWizard === 'function') {
@@ -112,8 +128,10 @@
     ai: function(){ return open({ source:'diet_ai' }); },
     createPlan: function(){ return open({ source:'diet_create_plan' }); },
     regenerate: function(){ return open({ source:'diet_regenerate_plan' }); },
+    viewLastPlan: async function(){ await loadRenderer(); return typeof window.openLastGeneratedDiet === 'function' ? window.openLastGeneratedDiet() : false; },
     bindButtons: makeTouchable,
-    hideLegacyScreens: hideOldDietScreens
+    hideLegacyScreens: hideOldDietScreens,
+    loadRenderer: loadRenderer
   });
 
   window.startAIDiet = function(){ return window.KroniaDiet.ai(); };
@@ -123,8 +141,6 @@
   window.regenerateDietPlan = function(){ return window.KroniaDiet.regenerate(); };
   window.regeneratePlan = function(){ return window.KroniaDiet.regenerate(); };
 
-  // Ponte segura: o app antigo ainda chama openNutritionFlow e abria “Perfil base 25%”.
-  // Agora qualquer chamada de criação/regeneração volta para o wizard novo.
   window.openNutritionFlow = function(){
     if (isLegacyCreateContext(arguments)) return window.KroniaDiet.createPlan();
     if (typeof originalOpenNutritionFlow === 'function') return originalOpenNutritionFlow.apply(this, arguments);
@@ -138,7 +154,6 @@
     return window.KroniaDiet.createPlan();
   };
 
-  // Watchdog: se a tela antiga “Perfil base” aparecer, fecha e abre o wizard novo.
   function legacyWatchdog(){
     var old = document.getElementById('nutritionFlowScreen') || document.getElementById('dietDataScreen');
     if (!old) return;
@@ -151,7 +166,7 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', makeTouchable);
+  document.addEventListener('DOMContentLoaded', function(){ makeTouchable(); loadRenderer(); });
   setInterval(legacyWatchdog, 900);
   setTimeout(makeTouchable, 250);
   setTimeout(makeTouchable, 1000);
