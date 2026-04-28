@@ -1,7 +1,7 @@
-/* KroniA Diet Entry Controller — rota única para o wizard standalone de 6 etapas */
+/* KroniA Diet Entry Controller — rota única e segura para criação/regeneração de dieta */
 (function(){
   var ASSET = 'src/ui/diet/diet-wizard-standalone.js';
-  var VERSION = '20260428-standalone-6-steps';
+  var VERSION = '20260428-diet-button-stable-v6';
   var loadingPromise = null;
 
   function loadStandalone(){
@@ -18,7 +18,10 @@
       s.defer = false;
       s.dataset.kroniaDietStandalone = '1';
       s.onload = function(){ resolve(typeof window.openDietProfileWizard === 'function'); };
-      s.onerror = function(){ resolve(false); };
+      s.onerror = function(){
+        loadingPromise = null;
+        resolve(false);
+      };
       document.head.appendChild(s);
     });
     return loadingPromise;
@@ -30,12 +33,13 @@
   }
 
   function hideOldDietScreens(){
-    ['nutritionFlowScreen','dietChoiceScreen','dietDataScreen','dietEmergencyWizardScreen'].forEach(function(id){
+    ['nutritionFlowScreen','dietChoiceScreen','dietDataScreen','dietEmergencyWizardScreen','customModal','configSheet','timerSheet'].forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
       el.classList.remove('show');
       el.style.display = 'none';
       el.setAttribute('aria-hidden','true');
+      el.style.pointerEvents = 'none';
     });
   }
 
@@ -43,10 +47,10 @@
     hideOldDietScreens();
     var ok = await loadStandalone();
     if (ok && typeof window.openDietProfileWizard === 'function') {
-      return window.openDietProfileWizard(getUserId(), Object.assign({ forceNew:true, source:'diet_entry_controller_6_steps' }, context || {}));
+      return window.openDietProfileWizard(getUserId(), Object.assign({ forceNew:true, source:'diet_entry_controller_button' }, context || {}));
     }
-    if (typeof window.showToast === 'function') window.showToast('Não consegui abrir o wizard de dieta.', 'error', 3500);
-    else alert('Não consegui abrir o wizard de dieta.');
+    if (typeof window.showToast === 'function') window.showToast('Não consegui abrir a criação de dieta. Atualize a página e tente novamente.', 'error', 3500);
+    else alert('Não consegui abrir a criação de dieta. Atualize a página e tente novamente.');
     return false;
   }
 
@@ -54,23 +58,26 @@
     if (!target || typeof target.closest !== 'function') return null;
     return target.closest([
       '#regenerateDietPlanBtn', '#dietRegeneratePlanBtn', '#createDietPlanBtn', '#dietCreatePlanBtn',
+      '#generateDietPlanBtn', '#dietGeneratePlanBtn', '#btnGenerateDiet', '#btnCreateDiet',
       '[data-action="regenerate-diet"]', '[data-action="generate-diet"]', '[data-action="create-diet"]',
       '[data-diet-action="regenerate"]', '[data-diet-action="generate"]', '[data-diet-action="create"]',
-      '.regenerate-diet-plan', '.diet-regenerate-plan', '.generate-diet-plan', '.diet-generate-plan'
+      '.regenerate-diet-plan', '.diet-regenerate-plan', '.generate-diet-plan', '.diet-generate-plan', '.create-diet-plan'
     ].join(','));
   }
 
   function makeTouchable(){
     document.querySelectorAll([
       '#regenerateDietPlanBtn', '#dietRegeneratePlanBtn', '#createDietPlanBtn', '#dietCreatePlanBtn',
+      '#generateDietPlanBtn', '#dietGeneratePlanBtn', '#btnGenerateDiet', '#btnCreateDiet',
       '[data-action="regenerate-diet"]', '[data-action="generate-diet"]', '[data-action="create-diet"]',
       '[data-diet-action="regenerate"]', '[data-diet-action="generate"]', '[data-diet-action="create"]',
-      '.regenerate-diet-plan', '.diet-regenerate-plan', '.generate-diet-plan', '.diet-generate-plan'
+      '.regenerate-diet-plan', '.diet-regenerate-plan', '.generate-diet-plan', '.diet-generate-plan', '.create-diet-plan'
     ].join(',')).forEach(function(btn){
       btn.style.pointerEvents = 'auto';
       btn.style.touchAction = 'manipulation';
       if (!btn.style.position) btn.style.position = 'relative';
-      if (!btn.style.zIndex) btn.style.zIndex = '40';
+      if (!btn.style.zIndex) btn.style.zIndex = '80';
+      btn.setAttribute('aria-disabled','false');
     });
   }
 
@@ -90,13 +97,13 @@
     bindButtons: makeTouchable
   });
 
-  // Sobrescreve entradas antigas que levavam ao fluxo “Perfil base 25%”.
+  // Entradas antigas do botão continuam apontando para a criação nova, sem substituir openNutritionFlow.
   window.startAIDiet = function(){ return window.KroniaDiet.ai(); };
   window.createDietPlan = function(){ return window.KroniaDiet.createPlan(); };
+  window.generateDietPlan = function(){ return window.KroniaDiet.createPlan(); };
   window.regenerateDiet = function(){ return window.KroniaDiet.regenerate(); };
   window.regenerateDietPlan = function(){ return window.KroniaDiet.regenerate(); };
   window.regeneratePlan = function(){ return window.KroniaDiet.regenerate(); };
-  window.openNutritionFlow = function(){ return window.KroniaDiet.createPlan(); };
 
   document.addEventListener('DOMContentLoaded', makeTouchable);
   setTimeout(makeTouchable, 250);
