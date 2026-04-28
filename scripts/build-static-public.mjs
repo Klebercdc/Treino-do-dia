@@ -29,6 +29,7 @@ const staticFiles = [
   'src/core/intelligence/adminBridge.js',
   'src/application/kronia-application.js',
   'src/lib/nutrition/tacoDatabase.json',
+  'src/ui/diet/diet-entry-controller.js',
   'src/ui/diet/diet-wizard-state.js',
   'src/ui/diet/diet-wizard.js',
   'src/ui/diet/diet-step-body.js',
