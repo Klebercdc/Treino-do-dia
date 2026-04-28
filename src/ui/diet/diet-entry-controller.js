@@ -1,9 +1,9 @@
 /*
  * KroniA Diet Entry Controller
- * Ponto único e estável para entrada nos fluxos de dieta.
- * - IA e regenerar plano: wizard novo de 6 etapas
+ * Arquitetura final: ponto único e estável para entrada nos fluxos de dieta.
+ * - Criar plano / IA: wizard novo de 6 etapas
  * - Manual: preserva fluxo manual existente
- * - Não usa captura global de cards/DOM
+ * - Sem captura global agressiva, sem MutationObserver, sem bind em cards genéricos
  */
 (function () {
   function getUserId() {
@@ -63,8 +63,12 @@
     ai: function () {
       return openWizard({ source: 'diet_entry_ai' });
     },
+    createPlan: function () {
+      return openWizard({ source: 'diet_entry_create_plan' });
+    },
     regenerate: function () {
-      return openWizard({ source: 'diet_entry_regenerate' });
+      // Compatibilidade com chamadas antigas: agora significa criar plano.
+      return openWizard({ source: 'diet_entry_create_plan' });
     },
     manual: openManual
   };
@@ -72,5 +76,21 @@
   // Compatibilidade: chamadas antigas de IA passam a abrir o wizard novo.
   window.startAIDiet = function () {
     return window.KroniaDiet.ai();
+  };
+
+  window.createDietPlan = function () {
+    return window.KroniaDiet.createPlan();
+  };
+
+  window.regenerateDiet = function () {
+    return window.KroniaDiet.createPlan();
+  };
+
+  window.regenerateDietPlan = function () {
+    return window.KroniaDiet.createPlan();
+  };
+
+  window.regeneratePlan = function () {
+    return window.KroniaDiet.createPlan();
   };
 })();
