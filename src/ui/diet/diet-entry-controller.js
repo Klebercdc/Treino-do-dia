@@ -6,6 +6,20 @@
  * - Botões de gerar/regenerar dieta usam delegação segura para sobreviver a re-render
  */
 (function () {
+  var DIET_WIZARD_ASSETS = [
+    'src/ui/diet/diet-wizard-state.js',
+    'src/ui/diet/diet-step-body.js',
+    'src/ui/diet/diet-step-goal.js',
+    'src/ui/diet/diet-step-health.js',
+    'src/ui/diet/diet-step-food.js',
+    'src/ui/diet/diet-step-training.js',
+    'src/ui/diet/diet-step-metabolism.js',
+    'src/ui/diet/diet-summary.js',
+    'src/ui/diet/diet-wizard.js'
+  ];
+
+  var wizardLoadPromise = null;
+
   function getUserId() {
     try {
       return (
@@ -35,7 +49,57 @@
     try { window.alert(text); } catch (_) {}
   }
 
-  function openWizard(context) {
+  function assetUrl(path) {
+    var version = 'v=20260428-diet-wizard-loader';
+    return '/' + path + (path.indexOf('?') >= 0 ? '&' : '?') + version;
+  }
+
+  function loadScriptOnce(path) {
+    return new Promise(function (resolve, reject) {
+      var existing = document.querySelector('script[data-kronia-diet-asset="' + path + '"]');
+      if (existing && existing.dataset.loaded === '1') {
+        resolve();
+        return;
+      }
+      if (existing) {
+        existing.addEventListener('load', function () { resolve(); }, { once: true });
+        existing.addEventListener('error', function () { reject(new Error('Falha ao carregar ' + path)); }, { once: true });
+        return;
+      }
+
+      var script = document.createElement('script');
+      script.src = assetUrl(path);
+      script.async = false;
+      script.defer = false;
+      script.dataset.kroniaDietAsset = path;
+      script.onload = function () {
+        script.dataset.loaded = '1';
+        resolve();
+      };
+      script.onerror = function () {
+        reject(new Error('Falha ao carregar ' + path));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  function ensureWizardLoaded() {
+    if (typeof window.openDietProfileWizard === 'function') {
+      return Promise.resolve(true);
+    }
+
+    if (!wizardLoadPromise) {
+      wizardLoadPromise = DIET_WIZARD_ASSETS.reduce(function (chain, path) {
+        return chain.then(function () { return loadScriptOnce(path); });
+      }, Promise.resolve()).then(function () {
+        return typeof window.openDietProfileWizard === 'function';
+      });
+    }
+
+    return wizardLoadPromise;
+  }
+
+  async function openWizard(context) {
     var payload = Object.assign(
       {
         source: 'diet_entry_controller',
@@ -46,8 +110,13 @@
 
     hideLegacyQuestionnaire();
 
-    if (typeof window.openDietProfileWizard === 'function') {
-      return window.openDietProfileWizard(getUserId(), payload);
+    try {
+      var loaded = await ensureWizardLoaded();
+      if (loaded && typeof window.openDietProfileWizard === 'function') {
+        return window.openDietProfileWizard(getUserId(), payload);
+      }
+    } catch (err) {
+      console.error('[KroniaDiet] erro ao carregar wizard de dieta.', err);
     }
 
     console.error('[KroniaDiet] openDietProfileWizard indisponível.');
@@ -129,10 +198,10 @@
       return openWizard({ source: 'diet_entry_regenerate_plan' });
     },
     manual: openManual,
-    bindButtons: bindExistingButtons
+    bindButtons: bindExistingButtons,
+    ensureWizardLoaded: ensureWizardLoaded
   };
 
-  // Delegação em capture: funciona mesmo quando a tela da dieta é recriada.
   document.addEventListener('click', function (event) {
     var button = isDietCreateOrRegenerateTarget(event.target);
     if (!button) return;
@@ -148,7 +217,6 @@
   setTimeout(bindExistingButtons, 250);
   setTimeout(bindExistingButtons, 1000);
 
-  // Compatibilidade: chamadas antigas de IA passam a abrir o wizard novo.
   window.startAIDiet = function () {
     return window.KroniaDiet.ai();
   };
