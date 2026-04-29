@@ -120,7 +120,7 @@ body {
   z-index: 9999; align-items: center; justify-content: center;
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
-#customModal.show { display: flex; }
+#customModal.show { display: none !important; }
 #customModal .cm-box {
   background: var(--card); border: 1px solid var(--border); border-radius: 20px;
   padding: 28px 22px 20px; width: min(88vw, 340px); text-align: center;
