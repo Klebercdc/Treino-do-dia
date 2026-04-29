@@ -86,3 +86,52 @@ test('openExerciseDetailsByName keeps explicit slug and lookupKey together', asy
   assert.match(calls.urls[0], /slug=bench-press/);
   assert.match(calls.urls[0], /lookupKey=supino_reto/);
 });
+
+test('renderExercise accepts exercise_partial envelope with usable data', () => {
+  const code = fs.readFileSync('app.js', 'utf8');
+  const snippets = [
+    extract(code, /function normalizeExerciseLookupKey\(name\) \{[\s\S]*?\n\}/, 'normalizeExerciseLookupKey'),
+    extract(code, /function normalizeExerciseDetails\(result\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetails'),
+    extract(code, /function normalizeExerciseDetailsPayload\(payload\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetailsPayload'),
+    extract(code, /function renderExercise\(data\) \{[\s\S]*?\n\}/, 'renderExercise'),
+  ].join('\n\n');
+
+  const state = { mode: '', rendered: null, errorMessage: '' };
+  const context = {
+    _renderExerciseDiscResult(payload, mode) {
+      state.rendered = { payload, mode };
+    },
+    _exerciseDiscSetState(mode) {
+      state.mode = mode;
+    },
+    document: {
+      getElementById() {
+        return {
+          set textContent(value) { state.errorMessage = value; },
+          get textContent() { return state.errorMessage; },
+        };
+      },
+    },
+  };
+
+  vm.createContext(context);
+  vm.runInContext(snippets, context, { filename: 'exercise-details-partial-envelope.js' });
+
+  context.renderExercise({
+    success: true,
+    type: 'exercise_partial',
+    message: 'Detalhes parciais carregados.',
+    data: {
+      id: 'ex-partial-1',
+      names: { pt: 'Agachamento Livre' },
+      target_muscle: 'quadriceps',
+      instructions: ['Desça com controle.'],
+    },
+  });
+
+  assert.equal(state.mode, 'result');
+  assert.equal(state.rendered.mode, 'enriched');
+  assert.equal(state.rendered.payload.names.pt, 'Agachamento Livre');
+  assert.deepEqual(state.rendered.payload.instructions, ['Desça com controle.']);
+  assert.equal(state.errorMessage, '');
+});

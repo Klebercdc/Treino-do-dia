@@ -119,8 +119,18 @@ body {
   background: rgba(0,0,0,0.75);
   z-index: 9999; align-items: center; justify-content: center;
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
 }
-#customModal.show { display: none !important; }
+#customModal.show {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+}
+#customModal:not(.show) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
 #customModal .cm-box {
   background: var(--card); border: 1px solid var(--border); border-radius: 20px;
   padding: 28px 22px 20px; width: min(88vw, 340px); text-align: center;
@@ -7508,3 +7518,22 @@ body.diet-mini-app-active .footer-actions {
 .dw-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
 .dw-summary-key { font-size: 12px; color: #6b7280; }
 .dw-summary-val { font-size: 13px; color: #d1d5db; text-align: right; max-width: 60%; }
+
+body.kronia-ui-unblocked #customModal:not(.show),
+body.kronia-ui-unblocked #timerSheet:not(.show),
+body.kronia-ui-unblocked #configSheet:not(.show) {
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+#dietProfileWizardScreen,
+#dietProfileWizardScreen *,
+#kroniaDietPlanVisualScreen,
+#kroniaDietPlanVisualScreen *,
+[data-action="open-labs"],
+[data-action="view-labs"],
+[data-diet-action="labs"],
+.exercise-card button,
+.exercise-card [role="button"] {
+  pointer-events: auto;
+}

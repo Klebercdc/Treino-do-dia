@@ -79,7 +79,7 @@
     } catch {}
   })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260322d">
+  <link rel="stylesheet" href="styles.css?v=20260429-clean-ui">
 
 </head>
 <body>
@@ -3174,7 +3174,7 @@
 <script src="src/core/intelligence/kronia-intelligence.js"></script>
 <script src="src/core/intelligence/adminBridge.js"></script>
 
-<script src="app.js?v=2026-04-18-diet-editor-1"></script>
+<script src="app.js?v=20260429-clean-ui"></script>
 
 <script src="transforms_patch.js"></script>
 <script src="machine_engine.js"></script>
@@ -3397,7 +3397,7 @@
 </div>
 
 <script src="src/application/kronia-application.js"></script>
-<script src="auth.js?v=2026-04-05-2"></script>
+<script src="auth.js?v=20260429-clean-ui"></script>
 
 <script src="plans.js"></script>
 
@@ -3424,7 +3424,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=2026-04-05-2', { updateViaCache: 'none' })
+      navigator.serviceWorker.register('/sw.js?v=20260429-clean-ui', { updateViaCache: 'none' })
         .then(() => console.log('KRONIA PWA ativo ✅'))
         .catch(err => console.log('SW erro:', err));
     });
@@ -3448,8 +3448,8 @@
 <script src="src/ui/diet/diet-step-metabolism.js"></script>
 <script src="src/ui/diet/diet-summary.js"></script>
 <script src="src/ui/diet/diet-wizard.js"></script>
-<script src="src/ui/diet/diet-entry-controller.js"></script>
+<script src="src/ui/diet/diet-entry-controller.js?v=20260429-clean-ui"></script>
 
-<script src="/src/ui/diet/disable-legacy-diet.js?v=20260428-remove-legacy"></script>
+<script src="/src/ui/diet/disable-legacy-diet.js?v=20260429-clean-ui"></script>
 </body>
 </html>

@@ -2,11 +2,9 @@
 (function(){
   var ASSET = 'src/ui/diet/diet-wizard-standalone.js';
   var RENDERER_ASSET = 'src/ui/diet/diet-plan-renderer.js';
-  var VERSION = '20260428-diet-button-stable-v8-renderer';
+  var VERSION = '20260429-clean-ui';
   var loadingPromise = null;
   var rendererPromise = null;
-  var originalOpenNutritionFlow = window.openNutritionFlow;
-  var originalOpenNutritionFlowFull = window.openNutritionFlowFull;
   var opening = false;
   var LAST_PLAN_KEY = 'kronia_last_generated_diet';
   window.__kroniaDietGenerationCompleted = window.__kroniaDietGenerationCompleted === true;
@@ -50,14 +48,24 @@
   }
 
   function hideOldDietScreens(){
+    if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') {
+      window.KroniaUI.unblockScreens('diet-entry-hide-old-before');
+    }
+    if (window.KroniaDiet && typeof window.KroniaDiet.hideLegacyScreens === 'function' && window.KroniaDiet.hideLegacyScreens !== hideOldDietScreens) {
+      try { window.KroniaDiet.hideLegacyScreens(); } catch (_) {}
+    }
     ['nutritionFlowScreen','dietChoiceScreen','dietDataScreen','dietEmergencyWizardScreen','customModal','configSheet','timerSheet'].forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
       el.classList.remove('show');
       el.style.display = 'none';
+      el.style.visibility = 'hidden';
       el.setAttribute('aria-hidden','true');
       el.style.pointerEvents = 'none';
     });
+    if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') {
+      window.KroniaUI.unblockScreens('diet-entry-hide-old-after');
+    }
   }
 
   function hasLastGeneratedDiet(){
@@ -92,9 +100,11 @@
     opening = true;
     try {
       if ((window.__kroniaDietGenerationCompleted === true || isRenderContext(context)) && hasLastGeneratedDiet() && !isExplicitCreateContext(context)) {
+        if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('before-diet-open-last-plan');
         return await openLastPlan();
       }
       window.__kroniaDietGenerationCompleted = false;
+      if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('before-diet-open');
       hideOldDietScreens();
       await loadRenderer();
       var ok = await loadStandalone();
@@ -175,16 +185,11 @@
   window.regeneratePlan = function(){ return window.KroniaDiet.regenerate(); };
 
   window.openNutritionFlow = function(){
-    if (isLegacyCreateContext(arguments)) return window.KroniaDiet.createPlan();
-    if (typeof originalOpenNutritionFlow === 'function') return originalOpenNutritionFlow.apply(this, arguments);
-    return window.KroniaDiet.createPlan();
+    return window.KroniaDiet.open(Object.assign({ source:'open_nutrition_flow_route' }, (arguments && arguments[0] && typeof arguments[0] === 'object') ? arguments[0] : {}));
   };
 
   window.openNutritionFlowFull = function(){
-    if (isLegacyCreateContext(arguments)) return window.KroniaDiet.createPlan();
-    if (typeof originalOpenNutritionFlowFull === 'function') return originalOpenNutritionFlowFull.apply(this, arguments);
-    if (typeof originalOpenNutritionFlow === 'function') return originalOpenNutritionFlow.apply(this, arguments);
-    return window.KroniaDiet.createPlan();
+    return window.KroniaDiet.open(Object.assign({ source:'open_nutrition_flow_full_route' }, (arguments && arguments[0] && typeof arguments[0] === 'object') ? arguments[0] : {}));
   };
 
   function legacyWatchdog(){
@@ -206,8 +211,8 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function(){ makeTouchable(); loadRenderer(); });
-  setInterval(legacyWatchdog, 900);
+  document.addEventListener('DOMContentLoaded', function(){ makeTouchable(); loadRenderer(); hideOldDietScreens(); });
+  document.addEventListener('kronia:navigation', function(){ setTimeout(legacyWatchdog, 150); });
   setTimeout(makeTouchable, 250);
   setTimeout(makeTouchable, 1000);
   setTimeout(makeTouchable, 2500);
