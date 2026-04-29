@@ -1,4 +1,4 @@
-/* KroniA safe legacy diet guard — explicit, non-aggressive, no interval */
+/* KroniA safe legacy diet guard: passive, non-aggressive, no route override. */
 (function () {
   var LEGACY_IDS = [
     'nutritionFlowScreen',
@@ -6,6 +6,7 @@
     'dietDataScreen',
     'dietEmergencyWizardScreen'
   ];
+
   var PROTECTED_IDS = [
     'kroniaDietPlanVisualScreen',
     'dietProfileWizardScreen'

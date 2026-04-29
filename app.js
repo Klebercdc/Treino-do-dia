@@ -142,6 +142,7 @@ function atualizarBtnConfirm(input) {
   const inputs = row.querySelectorAll("input");
   const temDado = Array.from(inputs).some(i => i.value.trim() !== "");
   row.classList.toggle("has-data", temDado);
+  if (!temDado) row.classList.remove("done");
 }
 
 function mostrarDicaTimer(msg) {
@@ -425,14 +426,15 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
     const repsVal = cur ? cur.reps ?? "" : "";
     const rpeVal  = cur ? cur.rpe  ?? "" : "";
     const rmNow   = cur?.rm ?? (cur?.kg && cur?.reps ? roundRM(calcRM(cur.kg, cur.reps)) : 0);
-    return `<div class="series-grid${(kgVal||repsVal||rpeVal)?' has-data':''}" data-row="1">
+    const isDone = cur?.done === true || cur?.completed === true || cur?.isDone === true;
+    return `<div class="series-grid${(kgVal||repsVal||rpeVal)?' has-data':''}${isDone?' done':''}" data-row="1">
       <span class="setcell" onclick="onPressSetCell(this)">
         <span class="slabel">S${s+1}</span>
         <span class="rmmini" id="rm-${id}-${s}">RM: ${escapeHTML(rmNow ? rmNow+"kg" : "-")}</span>
       </span>
-      <div class="input-box"><input type="number" inputmode="decimal" placeholder="" value="${escapeAttr(kgVal)}"  oninput="updateSuggests('${id}');atualizarBtnConfirm(this)"></div>
-      <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}');atualizarBtnConfirm(this)"></div>
-      <div class="input-box"><input type="number"                    placeholder="" value="${escapeAttr(rpeVal)}"  oninput="updateSuggests('${id}');checkRPEAlert(this);atualizarBtnConfirm(this)"></div>
+      <div class="input-box"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="" value="${escapeAttr(kgVal)}"  oninput="updateSuggests('${id}');atualizarBtnConfirm(this)"></div>
+      <div class="input-box"><input type="number" inputmode="numeric" min="0" step="1" placeholder="" value="${escapeAttr(repsVal)}" oninput="updateSuggests('${id}');atualizarBtnConfirm(this)"></div>
+      <div class="input-box"><input type="number" inputmode="decimal" min="0" max="10" step="0.5" placeholder="" value="${escapeAttr(rpeVal)}"  oninput="updateSuggests('${id}');checkRPEAlert(this);atualizarBtnConfirm(this)"></div>
       <button class="btn-confirm" onclick="onPressSetCell(this.closest('.series-grid').querySelector('.setcell'))" type="button">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       </button>
@@ -708,9 +710,9 @@ function adicionarSerie(btn) {
       <span class="slabel">S${sNum}</span>
       <span class="rmmini" id="rm-${id}-${sNum-1}">-</span>
     </span>
-    <div class="input-box"><input type="number" inputmode="decimal" placeholder="" oninput="updateSuggests('${id}')"></div>
-    <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}')"></div>
-    <div class="input-box"><input type="number" placeholder="" oninput="updateSuggests('${id}');checkRPEAlert(this)"></div>`;
+    <div class="input-box"><input type="number" inputmode="decimal" min="0" step="0.5" placeholder="" oninput="updateSuggests('${id}');atualizarBtnConfirm(this)"></div>
+    <div class="input-box"><input type="number" inputmode="numeric" min="0" step="1" placeholder="" oninput="updateSuggests('${id}');atualizarBtnConfirm(this)"></div>
+    <div class="input-box"><input type="number" inputmode="decimal" min="0" max="10" step="0.5" placeholder="" oninput="updateSuggests('${id}');checkRPEAlert(this);atualizarBtnConfirm(this)"></div>`;
   const sugDiv = document.createElement("div");
   sugDiv.className = "row-suggest";
   sugDiv.id = `sug-${id}-${sNum-1}`;
@@ -850,19 +852,31 @@ function getActiveIdx() {
   const a = p.find(x => x.classList.contains("active"));
   return p.indexOf(a) >= 0 ? p.indexOf(a) : 0;
 }
-function serializeCurrentState() {
+function rowHasWorkoutData(row) {
+  const inputs = row ? row.querySelectorAll("input") : [];
+  if (inputs.length !== 3) return false;
+  return Array.from(inputs).some(input => String(input.value || "").trim().length > 0);
+}
+
+function serializeCurrentState(options) {
+  const opts = options && typeof options === "object" ? options : {};
   const freq = document.getElementById("freq")?.value || "3";
   const obj  = document.getElementById("obj")?.value  || "hipertrofia";
   const pills = Array.from(document.querySelectorAll("#nav .pill:not(.add-pill)")).map((p,i) => ({ idx:i, label: p.textContent.replace("×","").trim() }));
-  const sections = Array.from(document.querySelectorAll("#container .section")).map((sec, secIdx) => {
-    const treinoKey = sec.getAttribute("data-treino-key") || pills[secIdx]?.label || `Treino ${secIdx+1}`;
+  let activeIdx = getActiveIdx();
+  const rawSections = Array.from(document.querySelectorAll("#container .section"));
+  const sourceSections = opts.activeOnly ? rawSections.filter((_, idx) => idx === activeIdx) : rawSections;
+  const sections = sourceSections.map((sec, secIdx) => {
+    const originalIdx = rawSections.indexOf(sec);
+    const treinoKey = sec.getAttribute("data-treino-key") || pills[originalIdx >= 0 ? originalIdx : secIdx]?.label || `Treino ${secIdx+1}`;
     const cards = Array.from(sec.querySelectorAll(".exercise-card")).map((card, cardIdx) => {
       const rows = Array.from(card.querySelectorAll(".series-grid")).filter(r => r.querySelectorAll("input").length===3);
-      const values = rows.map(r => {
+      const sourceRows = opts.completedOnly ? rows.filter(rowHasWorkoutData) : rows;
+      const values = sourceRows.map(r => {
         const i = r.querySelectorAll("input");
         const kg=i[0].value, reps=i[1].value, rpe=i[2].value;
         const rm = roundRM(calcRM(kg,reps));
-        return { kg, reps, rpe, rm: rm ? rm : "" };
+        return { kg, reps, rpe, rm: rm ? rm : "", done: r.classList.contains("done") };
       });
       const rawName = card.querySelector(".ex-title")?.textContent || "";
       const cleanName = getExerciseCardTitle({ display_name: rawName, name: rawName }, cardIdx);
@@ -870,10 +884,15 @@ function serializeCurrentState() {
       try { parsedRef = JSON.parse(card.getAttribute("data-ex-ref") || "null"); } catch {}
       const exerciseRef = ensureExerciseRef(parsedRef || { display_name: cleanName, normalized_lookup_key: card.getAttribute("data-ex-lookup-key") || normalizeExerciseLookupKey(cleanName) }, cleanName, "serialized_state");
       return { name: cleanName, nome: cleanName, display_name: cleanName, exerciseRef, sets: values.length, meta: card.querySelector(".ex-target")?.textContent||"", values };
-    });
-    return { treinoKey, cards };
-  });
-  return { v:3, savedAt: new Date().toISOString(), freq, obj, activeIdx: getActiveIdx(), pills, sections };
+    }).filter(card => !opts.completedOnly || (card.values || []).length > 0);
+    return { treinoKey, cards, originalIdx: originalIdx >= 0 ? originalIdx : secIdx };
+  }).filter(sec => !opts.completedOnly || (sec.cards || []).length > 0);
+  if (opts.activeOnly) activeIdx = 0;
+  const outputPills = opts.activeOnly
+    ? sections.map((sec, idx) => ({ idx, label: pills[sec.originalIdx]?.label || treinoLabel(sec.treinoKey) }))
+    : pills;
+  const serializedSections = sections.map(sec => ({ treinoKey: sec.treinoKey, cards: sec.cards }));
+  return { v:3, savedAt: new Date().toISOString(), freq, obj, activeIdx, pills: outputPills, sections: serializedSections };
 }
 function loadState(state) {
   if (!state || !Array.isArray(state.sections) || state.sections.length === 0) return false;
@@ -911,7 +930,10 @@ function loadState(state) {
 function clearAllInputsToGhost() {
   document.querySelectorAll(".exercise-card").forEach(card => {
     Array.from(card.querySelectorAll(".series-grid")).filter(r => r.querySelectorAll("input").length===3)
-      .forEach(r => r.querySelectorAll("input").forEach(inp => inp.value = ""));
+      .forEach(r => {
+        r.querySelectorAll("input").forEach(inp => inp.value = "");
+        r.classList.remove("done", "has-data");
+      });
   });
   scheduleDraftSave();
 }
@@ -922,7 +944,11 @@ function clearAllInputsToGhost() {
 async function salvarTreino() {
   try {
     const peso = await dlgPrompt("Peso corporal atual (kg)?", "number");
-    const st   = serializeCurrentState();
+    const st   = serializeCurrentState({ activeOnly: true, completedOnly: true });
+    if (!st.sections.length) {
+      showToast("Preencha ao menos uma série antes de salvar.", "warning", 3000);
+      return;
+    }
     const prMap = buildPRMap();
     const prs  = detectPRs(st, prMap);
     const dur  = getSessionDuration();
@@ -1450,7 +1476,8 @@ function updateStreakUI() {
 ═══════════════════════════════════════════════════ */
 function updateWorkoutProgress() {
   let total=0, done=0;
-  document.querySelectorAll(".series-grid").forEach(r => {
+  const scope = document.querySelector("#container .section.active") || document;
+  scope.querySelectorAll(".series-grid").forEach(r => {
     if (r.querySelectorAll("input").length!==3) return;
     total++;
     if (r.classList.contains("done")) done++;
@@ -5028,9 +5055,18 @@ function checkRPEAlert(input) {
   const prev = row.nextElementSibling;
   if (prev && prev.classList.contains("rpe-inline-alert")) prev.remove();
   const inputs = row.querySelectorAll("input");
-  const rpe  = parseFloat(inputs[2]?.value);
+  let rpe  = parseFloat(inputs[2]?.value);
   const kg   = parseFloat(inputs[0]?.value);
   const reps = parseFloat(inputs[1]?.value);
+  if (Number.isFinite(rpe) && rpe > 10) {
+    inputs[2].value = "10";
+    rpe = 10;
+    showToast("RPE vai de 0 a 10. Ajustei para 10.", "warning", 2500);
+  } else if (Number.isFinite(rpe) && rpe < 0) {
+    inputs[2].value = "0";
+    rpe = 0;
+    showToast("RPE não pode ser negativo.", "warning", 2500);
+  }
   if (!kg || !rpe) return;
   // Base científica: RPE alvo = 8 (2 RIR) para hipertrofia
   // Ajuste: 2,5% por ponto de RPE (Zourdos et al. 2016; Helms et al. 2016; Tuchscherer RTS)
@@ -12765,6 +12801,19 @@ function normalizeExerciseDetails(result) {
   };
 }
 
+function normalizeExerciseDetailsPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (payload.data && typeof payload.data === "object") {
+    const hasUsableEnvelope =
+      payload.success === true ||
+      payload.status === "success" ||
+      payload.type === "exercise_details" ||
+      payload.type === "exercise_partial";
+    if (hasUsableEnvelope) return payload.data;
+  }
+  return payload;
+}
+
 async function openExerciseDetailsFromCard(card) {
   if (!card) return;
   const exerciseName = card.getAttribute("data-ex-name") || card.querySelector(".ex-title")?.textContent || "Exercício";
@@ -12911,16 +12960,17 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
 }
 
 function renderExercise(data) {
-  const normalized = normalizeExerciseDetails(data);
+  const details = normalizeExerciseDetailsPayload(data);
+  const normalized = normalizeExerciseDetails(details);
   if (!normalized) {
     document.getElementById("exerciseDiscErrorMsg").textContent = "Resposta inválida do endpoint de exercício.";
     _exerciseDiscSetState("error");
     return;
   }
 
-  normalized.instructions = Array.isArray(data?.instructions) ? data.instructions : [];
-  normalized.common_errors = Array.isArray(data?.common_errors) ? data.common_errors : [];
-  normalized.breathing_tip = data?.breathing_tip ?? null;
+  normalized.instructions = Array.isArray(details?.instructions) ? details.instructions : [];
+  normalized.common_errors = Array.isArray(details?.common_errors) ? details.common_errors : [];
+  normalized.breathing_tip = details?.breathing_tip ?? null;
 
   _renderExerciseDiscResult(normalized, "enriched");
   _exerciseDiscSetState("result");

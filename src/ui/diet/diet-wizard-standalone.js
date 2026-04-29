@@ -245,6 +245,7 @@
     try{
       localStorage.setItem(LAST_PLAN_KEY,JSON.stringify(plan));
       localStorage.setItem('kronia_diet_wizard_last_payload',JSON.stringify(payload));
+      localStorage.removeItem(STATE_KEY);
     }catch(_){}
     clearState();
     window.__kroniaDietGenerationCompleted = true;
