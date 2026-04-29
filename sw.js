@@ -1,49 +1,38 @@
-const CACHE = 'kronia-clean-runtime-20260429-v1';
-const BUILD_VERSION = '20260429-clean-runtime-v1';
+const CACHE = 'kronia-clean-ui-20260429';
+const BUILD_VERSION = '20260429-clean-ui';
 
-const STATIC = [
-  '/',
-  '/index.html',
-  '/app.js?v=' + BUILD_VERSION,
-  '/auth.js?v=' + BUILD_VERSION,
-  '/styles.css?v=' + BUILD_VERSION,
-  '/Kronia.png',
-  '/splash.png',
+const STATIC_ASSET_RE = /\.(?:css|js|png|jpg|jpeg|webp|svg|ico|json|woff2?)$/i;
+const STATIC_ALLOWLIST = [
+  '/styles.css',
+  '/app.js',
+  '/auth.js',
+  '/plans.js',
+  '/icons.js',
   '/manifest.json',
-  '/src/ui/diet/diet-entry-controller.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/disable-legacy-diet.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-wizard-standalone.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-wizard-state.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-step-body.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-step-goal.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-step-health.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-step-food.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-step-training.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-step-metabolism.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-summary.js?v=' + BUILD_VERSION,
-  '/src/ui/diet/diet-wizard.js?v=' + BUILD_VERSION
+  '/Kronia.png',
+  '/splash.png'
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
+self.addEventListener('install', event => {
+  event.waitUntil(
     caches.open(CACHE)
-      .then(c => Promise.allSettled(STATIC.map(url => c.add(url))))
+      .then(cache => cache.addAll(STATIC_ALLOWLIST.map(path => path + '?v=' + BUILD_VERSION)).catch(() => undefined))
       .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('push', e => {
+self.addEventListener('push', event => {
   let data = { title: 'KRONIA', body: 'Você tem uma atualização.' };
-  try { data = e.data ? e.data.json() : data; } catch (err) {}
-  e.waitUntil(
+  try { data = event.data ? event.data.json() : data; } catch (_) {}
+  event.waitUntil(
     self.registration.showNotification(data.title || 'KRONIA', {
       body: data.body || '',
       icon: '/Kronia.png',
@@ -55,75 +44,74 @@ self.addEventListener('push', e => {
   );
 });
 
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || '/';
-  e.waitUntil(
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data && event.notification.data.url || '/';
+  event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const c of list) {
-        if (c.url.includes(self.location.origin) && 'focus' in c) return c.focus();
+      for (const client of list) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) return client.focus();
       }
       if (clients.openWindow) return clients.openWindow(url);
+      return undefined;
     })
   );
 });
 
-self.addEventListener('sync', e => {
-  if (e.tag === 'kronia-workout-sync') {
-    e.waitUntil(
+self.addEventListener('sync', event => {
+  if (event.tag === 'kronia-workout-sync') {
+    event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-        list.forEach(c => c.postMessage({ type: 'KRONIA_SYNC_WORKOUT' }));
+        list.forEach(client => client.postMessage({ type: 'KRONIA_SYNC_WORKOUT' }));
       })
     );
   }
 });
 
-function shouldBypassCache(url) {
-  if (
-    url.hostname.includes('supabase.co') ||
-    url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('jsdelivr.net') ||
-    url.hostname.includes('cdnjs.cloudflare.com') ||
-    url.hostname.includes('openai.com') ||
-    url.hostname.includes('anthropic.com')
-  ) return true;
-
-  if (url.pathname.startsWith('/api/')) return true;
+function shouldBypass(requestUrl) {
+  if (requestUrl.origin !== self.location.origin) return true;
+  if (requestUrl.pathname.startsWith('/api/')) return true;
+  if (/supabase|googleapis|gstatic|jsdelivr|cdnjs|unpkg|openai|anthropic/i.test(requestUrl.hostname)) return true;
   return false;
 }
 
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response && response.ok && request.method === 'GET') {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone()).catch(() => undefined);
+    }
+    return response;
+  } catch (_) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+}
 
-  if (url.origin !== self.location.origin) return;
-  if (shouldBypassCache(url)) return;
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response && response.ok && request.method === 'GET') {
+    const cache = await caches.open(CACHE);
+    cache.put(request, response.clone()).catch(() => undefined);
+  }
+  return response;
+}
 
-  if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
-    e.respondWith(
-      fetch(e.request, { cache: 'no-store' })
-        .catch(() => caches.match('/index.html').then(cached => {
-          if (cached) return cached;
-          return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-        }))
-    );
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (shouldBypass(url)) return;
+
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 
-  e.respondWith(
-    fetch(e.request, { cache: 'no-store' }).then(res => {
-      if (res.ok) {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-      }
-      return res;
-    }).catch(() => {
-      return caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return new Response('Offline', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      });
-    })
-  );
+  if (STATIC_ASSET_RE.test(url.pathname)) {
+    event.respondWith(cacheFirst(event.request));
+  }
 });

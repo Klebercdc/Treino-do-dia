@@ -1,6 +1,78 @@
 /* ═══════════════════════════════════════════════════
    MODAL CUSTOMIZADO
 ═══════════════════════════════════════════════════ */
+window.KroniaUI = window.KroniaUI || {};
+window.KroniaUI.unblockScreens = function(reason) {
+  const protectedIds = [
+    'dietProfileWizardScreen',
+    'kroniaDietPlanVisualScreen',
+    'trainingScreen',
+    'treinoScreen',
+    'mainScreen',
+    'homeScreen'
+  ];
+  const allowedOpenIds = new Set(protectedIds);
+
+  document.documentElement.style.pointerEvents = 'auto';
+  document.body.style.pointerEvents = 'auto';
+  document.body.classList.add('kronia-ui-unblocked');
+
+  document.querySelectorAll('#customModal, #timerSheet, #configSheet, .modal, .sheet, .overlay, [data-overlay]').forEach(function(el) {
+    if (!el || allowedOpenIds.has(el.id)) return;
+
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    const zIndex = Number.parseInt(style.zIndex, 10) || 0;
+    const coversScreen =
+      rect.width >= window.innerWidth * 0.75 &&
+      rect.height >= window.innerHeight * 0.55;
+    const isFixed = style.position === 'fixed';
+    const isHigh = zIndex >= 900;
+    const isInvisible =
+      style.opacity === '0' ||
+      style.visibility === 'hidden' ||
+      style.display === 'none' ||
+      el.getAttribute('aria-hidden') === 'true';
+    const isOpen = el.classList.contains('show') || el.classList.contains('active') || el.classList.contains('open');
+    const isSuspicious = isFixed && isHigh && coversScreen && !allowedOpenIds.has(el.id);
+
+    if ((isSuspicious && !isOpen) || isInvisible) {
+      el.classList.remove('show', 'active', 'open');
+      el.style.pointerEvents = 'none';
+      el.style.display = 'none';
+      el.style.visibility = 'hidden';
+      el.setAttribute('aria-hidden', 'true');
+      console.info('[KroniaUI] overlay desbloqueado:', {
+        reason: reason || 'unspecified',
+        id: el.id,
+        className: el.className
+      });
+    }
+  });
+};
+
+function scheduleKroniaUIUnblock(reason) {
+  if (!window.KroniaUI || typeof window.KroniaUI.unblockScreens !== 'function') return;
+  window.KroniaUI.unblockScreens(reason);
+  setTimeout(function() { window.KroniaUI.unblockScreens(reason + ':0ms'); }, 0);
+  setTimeout(function() { window.KroniaUI.unblockScreens(reason + ':150ms'); }, 150);
+  setTimeout(function() { window.KroniaUI.unblockScreens(reason + ':500ms'); }, 500);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() { scheduleKroniaUIUnblock('domcontentloaded'); }, { once: true });
+} else {
+  scheduleKroniaUIUnblock('boot');
+}
+
+function closeCustomModalElement(modal) {
+  if (!modal) return;
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden", "true");
+  modal.style.pointerEvents = "none";
+  scheduleKroniaUIUnblock('custom-modal-close');
+}
+
 function _showModal(msg, withInput, inputPlaceholder) {
   return new Promise((resolve) => {
     const modal   = document.getElementById("customModal");
@@ -18,9 +90,13 @@ function _showModal(msg, withInput, inputPlaceholder) {
     } else {
       inputEl.style.display = "none";
     }
+    modal.style.display = "";
+    modal.style.visibility = "";
+    modal.style.pointerEvents = "auto";
+    modal.setAttribute("aria-hidden", "false");
     modal.classList.add("show");
     function done(ok) {
-      modal.classList.remove("show");
+      closeCustomModalElement(modal);
       okBtn.removeEventListener("click", onOk);
       noBtn.removeEventListener("click", onNo);
       if (!ok) { resolve(null); return; }
@@ -155,6 +231,7 @@ function fecharTimer() {
   document.getElementById("timerSheet")?.classList.remove("show");
   clearInterval(timerInt); isRunning = false;
   timeLeft = baseTime; updateT();
+  scheduleKroniaUIUnblock('timer-close');
 }
 
 function ajustarTimer(delta) {
@@ -2158,6 +2235,7 @@ function gerarTreinoDoPrograma() {
 }
 
 function openConfig(context) {
+  scheduleKroniaUIUnblock('before-training-config-open');
   document.getElementById("configWarning").style.display="none";
   if (context && typeof context === 'object') {
     var safeContext = sanitizeCtaObject(context);
@@ -2188,7 +2266,7 @@ function openConfig(context) {
   if (nivelChip) { document.querySelectorAll("#nivelChips .config-chip").forEach(c=>c.classList.remove("active")); nivelChip.classList.add("active"); }
   document.getElementById("configSheet").classList.add("show");
 }
-function closeConfig() { document.getElementById("configSheet").classList.remove("show"); }
+function closeConfig() { document.getElementById("configSheet").classList.remove("show"); scheduleKroniaUIUnblock('config-close'); }
 async function applyConfig() {
   var fromChat = !!window._kroniaChatTrainingHydratedContext;
   if (fromChat) {
@@ -2685,6 +2763,8 @@ function setDietMiniAppChrome(active) {
 }
 
 function navTo(tab) {
+  if (tab === "treino") scheduleKroniaUIUnblock('before-training-open');
+  if (tab === "dieta") scheduleKroniaUIUnblock('before-diet-tab');
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
   if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
@@ -2703,6 +2783,8 @@ function navTo(tab) {
     el.classList.toggle('diet-active', tab === 'dieta');
   }
   syncMainScrollArea();
+  try { document.dispatchEvent(new CustomEvent('kronia:navigation', { detail: { tab: tab } })); } catch (_) {}
+  scheduleKroniaUIUnblock('after-nav-' + tab);
 }
 
 function openLabsUploadScreen(context) {
@@ -5095,7 +5177,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=2026-04-05-2', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=20260429-clean-ui', { updateViaCache: 'none' }).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════
@@ -5393,6 +5475,7 @@ function kronaNotify(title, body, tag) {
 // TELA DE INÍCIO
 // ══════════════════════════════════════════
 function openHome() {
+  scheduleKroniaUIUnblock('before-home-open');
   document.getElementById('dietDataScreen')?.classList.remove('show');
   document.getElementById('evolutionDataScreen')?.classList.remove('show');
   document.getElementById('perfilScreen')?.classList.remove('show');
@@ -5404,6 +5487,7 @@ function openHome() {
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
   document.body.classList.remove('overlay-open');
+  scheduleKroniaUIUnblock('after-home-open');
   // Atualiza dados no próximo frame — tela aparece antes de qualquer cálculo
   requestAnimationFrame(() => {
     try { updateHomeScreen(); } catch(e) { console.error('[openHome] updateHomeScreen falhou:', e); }
@@ -6412,8 +6496,13 @@ window.addEventListener("kronia:theme-changed", function(event) {
   syncDietaTheme(event && event.detail && event.detail.theme || resolveKroniaThemeForDieta());
 });
 function openDieta() {
+  scheduleKroniaUIUnblock('before-diet-open');
+  try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
   syncDietaTheme(resolveKroniaThemeForDieta());
   try { navTo("dieta"); } catch (_) {}
+  if (window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
+    return window.KroniaDiet.open({ source: 'open_dieta' });
+  }
   try { openDietDataScreen(); } catch (_) {}
   return;
 }
@@ -6458,6 +6547,7 @@ function renderKroniaProgress(label, consumed, target, cssClass, unit) {
 }
 
 function openDietDataScreen() {
+  scheduleKroniaUIUnblock('before-diet-data-open');
   syncDietaTheme(resolveKroniaThemeForDieta());
   try { closeAllDietGenerationLayers({ keepDietData: true }); } catch (_) {}
   setDietMiniAppChrome(false);
@@ -6477,22 +6567,22 @@ function openDietDataScreen() {
   renderActiveDietPlan();
   refreshDietDataScreen();
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+  scheduleKroniaUIUnblock('after-diet-data-open');
 }
 
 function openDietChoiceScreen() {
+  scheduleKroniaUIUnblock('before-diet-choice-open');
+  try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
   try { closeAllDietGenerationLayers({ keepDietChoice: true }); } catch (_) {}
-  var existingPlan = typeof readLocalActiveDietPlan === 'function' ? readLocalActiveDietPlan() : null;
-  var hasPlan = existingPlan && Array.isArray(existingPlan.meals) && existingPlan.meals.length > 0;
-  if (!hasPlan) {
-    try { setActiveDietPlan(buildFallbackActiveDietPlan(), { render: false }); } catch (_) {}
+  if (window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
+    return window.KroniaDiet.open({ source: 'diet_choice_screen', forceNew: true });
   }
   openDietDataScreen();
 }
 
 function startAIDiet() {
-  try { closeAllDietGenerationLayers(); } catch (_) {}
-  document.getElementById('dietChoiceScreen')?.classList.remove('show');
-  document.getElementById('dietDataScreen')?.classList.remove('show');
+  scheduleKroniaUIUnblock('before-start-ai-diet');
+  try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
   if (window.KroniaDiet && typeof window.KroniaDiet.ai === 'function') {
     return window.KroniaDiet.ai();
   }
@@ -11712,6 +11802,11 @@ function nutritionHasBaseProfile(state) {
 }
 
 function openNutritionFlow(context) {
+  if (!(context && context.__allowLegacyNutritionFlow === true) && window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
+    scheduleKroniaUIUnblock('before-open-nutrition-flow-route');
+    try { window.KroniaDiet.hideLegacyScreens?.(); } catch (_) {}
+    return window.KroniaDiet.open(Object.assign({ source: 'open_nutrition_flow_route' }, context || {}));
+  }
   try { closeAllDietGenerationLayers(); } catch (_) {}
   var state = getNutritionFlowState();
   state.returnTab = context && context.returnTab || state.returnTab || "dieta";
@@ -13079,6 +13174,11 @@ function formatMuscleLabel(value) {
 
 
 async function openNutritionFlowFull(context) {
+  if (!(context && context.__allowLegacyNutritionFlow === true) && window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
+    scheduleKroniaUIUnblock('before-open-nutrition-flow-full-route');
+    try { window.KroniaDiet.hideLegacyScreens?.(); } catch (_) {}
+    return window.KroniaDiet.open(Object.assign({ source: 'open_nutrition_flow_full_route' }, context || {}));
+  }
   syncDietaTheme(resolveKroniaThemeForDieta());
   if (context && typeof context === 'object') {
     var safeContext = sanitizeCtaObject(context);

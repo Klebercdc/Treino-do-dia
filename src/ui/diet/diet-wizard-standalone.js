@@ -250,6 +250,7 @@
     clearState();
     window.__kroniaDietGenerationCompleted = true;
     window.__kroniaDietWizardState = null;
+    if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('diet-generation-success');
     try { if(typeof window.setActiveDietPlan === 'function') window.setActiveDietPlan(toActiveDietPlan(plan), { render:false }); } catch(_) {}
     var screen = $(SCREEN_ID);
     if(screen) screen.remove();
@@ -302,8 +303,8 @@
     $('kdwNext').onclick=function(){ var data=collectStep(); var err=validate(state,data); if(err){toast(err,'warning');return;} state.data[steps[state.current].key]=data; if(state.current<steps.length-1){state.current+=1;saveState(state);render(state);return;} submit(state); };
   }
 
-  function openDietProfileWizard(userId,opts){ window.__kroniaDietGenerationCompleted = false; if(typeof window.closeAllDietGenerationLayers === 'function') window.closeAllDietGenerationLayers(); var state=readState(userId,opts&&opts.forceNew); render(state); return true; }
-  function closeDietProfileWizard(){ var screen=$(SCREEN_ID); if(screen) screen.remove(); document.body.classList.remove('diet-wizard-active','kdw-active'); }
+  function openDietProfileWizard(userId,opts){ window.__kroniaDietGenerationCompleted = false; if(window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('before-open-diet-profile-wizard'); if(typeof window.KroniaDiet?.hideLegacyScreens === 'function') window.KroniaDiet.hideLegacyScreens(); if(typeof window.closeAllDietGenerationLayers === 'function') window.closeAllDietGenerationLayers(); var state=readState(userId,opts&&opts.forceNew); render(state); return true; }
+  function closeDietProfileWizard(){ var screen=$(SCREEN_ID); if(screen) screen.remove(); document.body.classList.remove('diet-wizard-active','kdw-active'); if(window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('after-close-diet-profile-wizard'); }
   document.addEventListener('click', function(e) {
     var target = e.target;
     var btn = target && target.closest && target.closest('[data-action="open-labs"]');
