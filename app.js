@@ -21,7 +21,7 @@ window.KroniaUI.unblockScreens = function(reason) {
     '#customModal', '#timerSheet', '#configSheet', '#loginScreen', '#onboarding', '#kronaSetup',
     '#paywallModal', '#legalModal', '#modalBackdrop', '#bottomSheet',
     '#exerciseDiscSheet', '#guiaModal', '#breathingModal', '#evoModal', '#summaryModal',
-    '#settingsScreen', '#orientacaoScreen', '#labsScreen',
+    '#settingsScreen', '#perfilScreen', '#orientacaoScreen', '#labsScreen',
     '#nutritionFlowScreen', '#dietChoiceScreen',
     '.modal', '.sheet', '.overlay', '.bottom-sheet', '[data-overlay]'
   ].join(',');
@@ -49,7 +49,7 @@ window.KroniaUI.unblockScreens = function(reason) {
       && el.id !== 'timerSheet'
       && el.id !== 'customModal';
 
-    if ((isSuspicious && !isOpen) || (isSuspicious && isAggressiveRouteCleanup)) {
+    if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
       el.style.pointerEvents = 'none';
       el.style.display = 'none';
