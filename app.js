@@ -16002,30 +16002,3 @@ function updateHomeBanner() {
   if (t) t.textContent = m.t;
   if (s) s.textContent = m.s;
 }
-
-/* PATCH PR485 — Perfil não pode ficar oculto por limpeza global */
-function restorePerfilScreenVisibility() {
-  var el = document.getElementById('perfilScreen');
-  if (!el) return;
-  el.style.display = '';
-  el.style.visibility = '';
-  el.style.opacity = '';
-  el.style.pointerEvents = '';
-  el.removeAttribute('aria-hidden');
-  el.classList.add('show', 'active');
-}
-
-(function patchPerfilNavAfterPR485() {
-  var oldNavTo = window.navTo || (typeof navTo === 'function' ? navTo : null);
-  if (typeof oldNavTo !== 'function') return;
-
-  window.navTo = function(tab) {
-    var result = oldNavTo.apply(this, arguments);
-    if (String(tab || '').toLowerCase() === 'perfil' || String(tab || '').toLowerCase() === 'profile') {
-      setTimeout(restorePerfilScreenVisibility, 0);
-      setTimeout(restorePerfilScreenVisibility, 150);
-      setTimeout(restorePerfilScreenVisibility, 500);
-    }
-    return result;
-  };
-})();
