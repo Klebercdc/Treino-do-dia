@@ -118,7 +118,7 @@ test('renderExercise accepts exercise_partial envelope with usable data', () => 
   vm.runInContext(snippets, context, { filename: 'exercise-details-partial-envelope.js' });
 
   context.renderExercise({
-    success: true,
+    success: false,
     type: 'exercise_partial',
     message: 'Detalhes parciais carregados.',
     data: {
@@ -133,5 +133,56 @@ test('renderExercise accepts exercise_partial envelope with usable data', () => 
   assert.equal(state.rendered.mode, 'enriched');
   assert.equal(state.rendered.payload.names.pt, 'Agachamento Livre');
   assert.deepEqual(state.rendered.payload.instructions, ['Desça com controle.']);
+  assert.equal(state.errorMessage, '');
+});
+
+test('renderExercise accepts exercise_details envelope with success:true', () => {
+  const code = fs.readFileSync('app.js', 'utf8');
+  const snippets = [
+    extract(code, /function normalizeExerciseLookupKey\(name\) \{[\s\S]*?\n\}/, 'normalizeExerciseLookupKey'),
+    extract(code, /function normalizeExerciseDetails\(result\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetails'),
+    extract(code, /function normalizeExerciseDetailsPayload\(payload\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetailsPayload'),
+    extract(code, /function renderExercise\(data\) \{[\s\S]*?\n\}/, 'renderExercise'),
+  ].join('\n\n');
+
+  const state = { mode: '', rendered: null, errorMessage: '' };
+  const context = {
+    _renderExerciseDiscResult(payload, mode) {
+      state.rendered = { payload, mode };
+    },
+    _exerciseDiscSetState(mode) {
+      state.mode = mode;
+    },
+    document: {
+      getElementById() {
+        return {
+          set textContent(value) { state.errorMessage = value; },
+          get textContent() { return state.errorMessage; },
+        };
+      },
+    },
+  };
+
+  vm.createContext(context);
+  vm.runInContext(snippets, context, { filename: 'exercise-details-success-envelope.js' });
+
+  context.renderExercise({
+    success: true,
+    type: 'exercise_details',
+    message: 'Detalhes do exercício carregados com sucesso.',
+    data: {
+      id: 'ex-full-1',
+      slug: 'supino-inclinado',
+      names: { pt: 'Supino Inclinado', en: 'Incline Bench Press' },
+      target_muscle: 'peitoral superior',
+      instructions: ['Incline o banco a 30-45 graus.', 'Desça a barra com controle.'],
+    },
+  });
+
+  assert.equal(state.mode, 'result');
+  assert.equal(state.rendered.mode, 'enriched');
+  assert.equal(state.rendered.payload.names.pt, 'Supino Inclinado');
+  assert.equal(state.rendered.payload.slug, 'supino-inclinado');
+  assert.deepEqual(state.rendered.payload.instructions, ['Incline o banco a 30-45 graus.', 'Desça a barra com controle.']);
   assert.equal(state.errorMessage, '');
 });
