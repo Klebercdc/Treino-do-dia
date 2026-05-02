@@ -86,13 +86,13 @@ async function applyCuratedContentIfNeeded(exercise: ExerciseEntity, repository:
     });
 
     await repository.updateExerciseEnrichmentById(merged.id, {
-      name_pt: merged.name_pt || null,
-      target_muscle: merged.target_muscle || null,
+      name_pt: merged.name_pt || undefined,
+      target_muscle: merged.target_muscle || undefined,
       secondary_muscles: merged.secondary_muscles || [],
       instructions: merged.instructions || [],
       common_errors: merged.common_errors || [],
-      breathing_tip: merged.breathing_tip || null,
-      range_of_motion: merged.range_of_motion || null,
+      breathing_tip: merged.breathing_tip || undefined,
+      range_of_motion: merged.range_of_motion || undefined,
       completeness_score: afterScore,
       quality_flags: flags,
       content_source: 'curated_layer',
@@ -305,9 +305,9 @@ export class KroniaExerciseApplication {
         fallback: resolvedMedia.fallback,
         provider: cached?.provider || 'cache',
         thumbnailUrl: cachedThumb,
-        score: cached.verified_score,
+        score: cached?.verified_score ?? 0,
         cacheHit: true,
-        mediaType: cached.media_type ?? (cachedVideo ? 'video' : 'image'),
+        mediaType: cached?.media_type ?? (cachedVideo ? 'video' : 'image'),
       };
     }
 
