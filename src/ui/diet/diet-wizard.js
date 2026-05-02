@@ -79,7 +79,6 @@
     [
       'dietChoiceScreen',
       'dietDataScreen',
-      'nutritionFlowScreen',
       'customModal',
       'configSheet',
       'timerSheet'

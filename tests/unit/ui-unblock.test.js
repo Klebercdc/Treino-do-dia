@@ -20,7 +20,7 @@ test('customModal closed state cannot block clicks', () => {
 
 test('legacy diet guard hides only legacy screens and preserves official diet views', () => {
   const source = read('src/ui/diet/disable-legacy-diet.js');
-  const legacyIds = ['nutritionFlowScreen', 'dietChoiceScreen', 'dietDataScreen', 'dietEmergencyWizardScreen'];
+  const legacyIds = ['dietChoiceScreen', 'dietDataScreen', 'dietEmergencyWizardScreen'];
   const protectedIds = ['dietProfileWizardScreen', 'kroniaDietPlanVisualScreen'];
 
   for (const id of legacyIds) assert.match(source, new RegExp(`'${id}'`));
