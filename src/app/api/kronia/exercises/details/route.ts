@@ -74,9 +74,10 @@ export async function GET(req: NextRequest) {
     const exerciseId = searchParams.get('id')?.trim() || '';
     const slug = searchParams.get('slug')?.trim() || '';
     const lookupKey = (searchParams.get('lookupKey') || searchParams.get('normalized_lookup_key') || '').trim();
+    const exerciseName = searchParams.get('exerciseName')?.trim() || '';
 
-    if (!exerciseId && !slug && !lookupKey) {
-      return NextResponse.json(buildExerciseDetailsErrorPayload('Informe id, slug ou lookupKey.', 'VALIDATION_ERROR'), { status: 400 });
+    if (!exerciseId && !slug && !lookupKey && !exerciseName) {
+      return NextResponse.json(buildExerciseDetailsErrorPayload('Informe id, slug, lookupKey ou exerciseName.', 'VALIDATION_ERROR'), { status: 400 });
     }
 
     const adminClient = createAdminSupabaseClient();
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
       exerciseId: exerciseId || undefined,
       slug: slug || undefined,
       normalizedLookupKey: lookupKey || undefined,
-      exerciseName: lookupKey || slug || undefined,
+      exerciseName: exerciseName || lookupKey || slug || undefined,
       locale: 'pt',
     });
 

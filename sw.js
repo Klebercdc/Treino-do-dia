@@ -70,6 +70,7 @@ self.addEventListener('sync', event => {
 
 function shouldBypass(requestUrl) {
   if (requestUrl.origin !== self.location.origin) return true;
+  if (requestUrl.pathname === '/api/kronia/exercises/details') return true;
   if (requestUrl.pathname.startsWith('/api/')) return true;
   if (/supabase|googleapis|gstatic|jsdelivr|cdnjs|unpkg|openai|anthropic/i.test(requestUrl.hostname)) return true;
   return false;
@@ -107,6 +108,11 @@ self.addEventListener('fetch', event => {
   if (shouldBypass(url)) return;
 
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  if (/\.(?:js|css)$/i.test(url.pathname) || url.pathname.startsWith('/src/ui/diet/')) {
     event.respondWith(networkFirst(event.request));
     return;
   }
