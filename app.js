@@ -49,7 +49,7 @@ window.KroniaUI.unblockScreens = function(reason) {
       && el.id !== 'timerSheet'
       && el.id !== 'customModal';
 
-    if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
+    if ((isSuspicious && !isOpen) || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
       el.style.pointerEvents = 'none';
       el.style.display = 'none';
@@ -2832,7 +2832,9 @@ function openLabsScreen() {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
   try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
-  document.getElementById('labsScreen').classList.add('show');
+  const _ls = document.getElementById('labsScreen');
+  _ls.style.display = ''; _ls.style.visibility = ''; _ls.style.pointerEvents = ''; _ls.removeAttribute('aria-hidden');
+  _ls.classList.add('show');
   document.body.classList.add('overlay-open');
   var footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
@@ -5875,7 +5877,9 @@ function openSettingsScreen() {
     const unidadeVal = document.getElementById('settingsUnidadeVal');
     if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
   } catch(e) {}
-  document.getElementById('settingsScreen').classList.add('show');
+  const _ss = document.getElementById('settingsScreen');
+  _ss.style.display = ''; _ss.style.visibility = ''; _ss.style.pointerEvents = ''; _ss.removeAttribute('aria-hidden');
+  _ss.classList.add('show');
   document.body.classList.add('overlay-open');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -12657,6 +12661,10 @@ function selDietaSingleChip(el, groupId) {
 // ══════════════════════════════════════════
 function openExerciseDiscSheet() {
   const sheet = document.getElementById('exerciseDiscSheet');
+  sheet.style.display = '';
+  sheet.style.visibility = '';
+  sheet.style.pointerEvents = '';
+  sheet.removeAttribute('aria-hidden');
   sheet.classList.add('show');
   // re-init lucide dentro do sheet
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -16002,30 +16010,3 @@ function updateHomeBanner() {
   if (t) t.textContent = m.t;
   if (s) s.textContent = m.s;
 }
-
-/* PATCH PR485 — Perfil não pode ficar oculto por limpeza global */
-function restorePerfilScreenVisibility() {
-  var el = document.getElementById('perfilScreen');
-  if (!el) return;
-  el.style.display = '';
-  el.style.visibility = '';
-  el.style.opacity = '';
-  el.style.pointerEvents = '';
-  el.removeAttribute('aria-hidden');
-  el.classList.add('show', 'active');
-}
-
-(function patchPerfilNavAfterPR485() {
-  var oldNavTo = window.navTo || (typeof navTo === 'function' ? navTo : null);
-  if (typeof oldNavTo !== 'function') return;
-
-  window.navTo = function(tab) {
-    var result = oldNavTo.apply(this, arguments);
-    if (String(tab || '').toLowerCase() === 'perfil' || String(tab || '').toLowerCase() === 'profile') {
-      setTimeout(restorePerfilScreenVisibility, 0);
-      setTimeout(restorePerfilScreenVisibility, 150);
-      setTimeout(restorePerfilScreenVisibility, 500);
-    }
-    return result;
-  };
-})();
