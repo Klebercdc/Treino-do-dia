@@ -49,7 +49,7 @@ window.KroniaUI.unblockScreens = function(reason) {
       && el.id !== 'timerSheet'
       && el.id !== 'customModal';
 
-    if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
+    if ((isSuspicious && !isOpen) || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
       el.style.pointerEvents = 'none';
       el.style.display = 'none';
@@ -2832,7 +2832,9 @@ function openLabsScreen() {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
   try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
-  document.getElementById('labsScreen').classList.add('show');
+  const _ls = document.getElementById('labsScreen');
+  _ls.style.display = ''; _ls.style.visibility = ''; _ls.style.pointerEvents = ''; _ls.removeAttribute('aria-hidden');
+  _ls.classList.add('show');
   document.body.classList.add('overlay-open');
   var footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
@@ -5875,7 +5877,9 @@ function openSettingsScreen() {
     const unidadeVal = document.getElementById('settingsUnidadeVal');
     if (unidadeVal) unidadeVal.textContent = (localStorage.getItem('kronia_unidade') || 'kg');
   } catch(e) {}
-  document.getElementById('settingsScreen').classList.add('show');
+  const _ss = document.getElementById('settingsScreen');
+  _ss.style.display = ''; _ss.style.visibility = ''; _ss.style.pointerEvents = ''; _ss.removeAttribute('aria-hidden');
+  _ss.classList.add('show');
   document.body.classList.add('overlay-open');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -12657,6 +12661,10 @@ function selDietaSingleChip(el, groupId) {
 // ══════════════════════════════════════════
 function openExerciseDiscSheet() {
   const sheet = document.getElementById('exerciseDiscSheet');
+  sheet.style.display = '';
+  sheet.style.visibility = '';
+  sheet.style.pointerEvents = '';
+  sheet.removeAttribute('aria-hidden');
   sheet.classList.add('show');
   // re-init lucide dentro do sheet
   if (typeof lucide !== 'undefined') lucide.createIcons();
