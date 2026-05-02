@@ -30,25 +30,38 @@ function ensureModulesLoaded() {
 }
 
 // Lazy-loaded exercise modules (loaded only when kronia-exercise-details route is hit)
-var _ExerciseApp   = null;
-var _adminClient   = null;
+var _ExerciseApp     = null;
 var _exLoadAttempted = false;
-var _exLoadError   = null;
+var _exLoadError     = null;
 
 function ensureExerciseModulesLoaded() {
   if (_exLoadAttempted) return _exLoadError;
   _exLoadAttempted = true;
   try {
-    var appMod      = require('../src/lib/exercises/application');
-    var supabaseMod = require('../src/lib/supabase/admin');
+    var appMod   = require('../src/lib/exercises/application');
     _ExerciseApp = appMod.KroniaExerciseApplication;
-    _adminClient = supabaseMod.createAdminSupabaseClient;
     return null;
   } catch (err) {
     _exLoadError = err;
     console.error('[api/science] exercise dependency load failed:', err && err.message ? err.message : String(err));
     return err;
   }
+}
+
+// Uses same flexible env-reading as _auth.js to avoid strict requireEnv() throws
+function createExerciseAdminClient() {
+  var supabaseJs = require('@supabase/supabase-js');
+  var url = process.env.SUPABASE_URL
+    || process.env.NEXT_PUBLIC_SUPABASE_URL
+    || process.env.VITE_SUPABASE_URL
+    || '';
+  var serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_SERVICE_KEY
+    || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+    || '';
+  if (!url)        throw new Error('SUPABASE_URL not configured');
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
+  return supabaseJs.createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 function buildExerciseSuccessPayload(data, meta) {
@@ -100,7 +113,7 @@ async function handleKroniaExerciseDetails(req, res, user) {
     if (!exerciseId && !slug && !lookupKey) {
       return res.status(400).json(buildExerciseErrorPayload('Informe id, slug ou lookupKey.', 'VALIDATION_ERROR'));
     }
-    var adminClient = _adminClient();
+    var adminClient = createExerciseAdminClient();
     var service     = new _ExerciseApp(adminClient);
     var result      = await service.getExerciseDetailsByName({
       userId: user.id,
