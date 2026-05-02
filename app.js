@@ -12610,12 +12610,14 @@ function normalizeExerciseDetails(result) {
 function normalizeExerciseDetailsPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
   if (payload.data && typeof payload.data === "object") {
+    const d = payload.data;
     const hasUsableEnvelope =
       payload.success === true ||
       payload.status === "success" ||
       payload.type === "exercise_details" ||
       payload.type === "exercise_partial";
-    if (hasUsableEnvelope) return payload.data;
+    if (hasUsableEnvelope) return d;
+    if (d.id || d.slug || d.names || d.name || d.instructions || d.target_muscle) return d;
   }
   return payload;
 }
@@ -12674,13 +12676,14 @@ async function fetchExerciseDetailsResponse(endpoint) {
   const relativeEndpoint = buildRelativeEndpoint(endpoint);
   const attempts = [
     async function tryApiFetch() {
-      return apiFetch(endpoint);
+      return apiFetch(endpoint, { cache: "no-store" });
     },
     async function tryAbsoluteFetch() {
       return fetch(endpoint, {
         method: "GET",
         headers: await buildFallbackHeaders(),
         credentials: "same-origin",
+        cache: "no-store",
       });
     },
     async function tryRelativeFetch() {
@@ -12688,12 +12691,14 @@ async function fetchExerciseDetailsResponse(endpoint) {
         method: "GET",
         headers: await buildFallbackHeaders(),
         credentials: "same-origin",
+        cache: "no-store",
       });
     },
     async function tryRelativeFetchWithoutHeaders() {
       return fetch(relativeEndpoint, {
         method: "GET",
         credentials: "same-origin",
+        cache: "no-store",
       });
     }
   ];
@@ -12740,12 +12745,24 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
       throw new Error(
         looksHtml
           ? "A rota de exercícios retornou uma página em vez de JSON. Atualize o app e faça login novamente."
-          : "Resposta inválida ao carregar detalhes do exercício."
+          : `HTTP ${resp.status} · Resposta inválida ao carregar detalhes do exercício.`
       );
     }
 
     if (!resp.ok) {
-      throw new Error(json?.message || "Falha ao carregar detalhes do exercício.");
+      const d = json?.data;
+      const hasUsableData = d && typeof d === "object" && (d.id || d.slug || d.names || d.name || d.instructions || d.target_muscle);
+      if (hasUsableData) {
+        renderExercise(json);
+        return;
+      }
+      const parts = [
+        `HTTP ${resp.status}`,
+        json?.type || null,
+        json?.error?.code || null,
+        json?.message || json?.error?.message || "Falha ao carregar detalhes do exercício.",
+      ].filter(Boolean);
+      throw new Error(parts.join(" · "));
     }
 
     renderExercise(json);
@@ -12769,7 +12786,9 @@ function renderExercise(data) {
   const details = normalizeExerciseDetailsPayload(data);
   const normalized = normalizeExerciseDetails(details);
   if (!normalized) {
-    document.getElementById("exerciseDiscErrorMsg").textContent = "Resposta inválida do endpoint de exercício.";
+    const parts = [data?.type, data?.error?.code, data?.message || data?.error?.message].filter(Boolean);
+    document.getElementById("exerciseDiscErrorMsg").textContent =
+      parts.length ? `Detalhes indisponíveis: ${parts.join(" · ")}` : "Resposta inválida do endpoint de exercício.";
     _exerciseDiscSetState("error");
     return;
   }

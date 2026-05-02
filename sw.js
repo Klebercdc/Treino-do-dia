@@ -1,5 +1,5 @@
-const CACHE = 'kronia-fix-nav-20260502';
-const BUILD_VERSION = '20260502-fix-nav';
+const CACHE = 'kronia-exercise-details-20260502';
+const BUILD_VERSION = '20260502-exercise-details';
 
 const STATIC_ASSET_RE = /\.(?:css|js|png|jpg|jpeg|webp|svg|ico|json|woff2?)$/i;
 const STATIC_ALLOWLIST = [

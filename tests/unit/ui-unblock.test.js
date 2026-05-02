@@ -94,8 +94,8 @@ test('KroniaDiet.open performs overlay cleanup and legacy guard before opening w
 test('service worker is clean UI cache only and does not mutate HTML or inject diet scripts', () => {
   const source = read('sw.js');
 
-  assert.match(source, /const CACHE = 'kronia-fix-nav-20260502'/);
-  assert.match(source, /const BUILD_VERSION = '20260502-fix-nav'/);
+  assert.match(source, /const CACHE = 'kronia-exercise-details-20260502'/);
+  assert.match(source, /const BUILD_VERSION = '20260502-exercise-details'/);
   assert.doesNotMatch(source, /injectDietController/);
   assert.doesNotMatch(source, /LEGACY_PROFILE_BASE_KILLER/);
   assert.doesNotMatch(source, /DIET_SCRIPTS/);
