@@ -99,7 +99,7 @@ async function handleKroniaExerciseDetails(req, res, user) {
       exerciseId   = String(q.id || '').trim();
       slug         = String(q.slug || '').trim();
       lookupKey    = String(q.lookupKey || q.normalized_lookup_key || '').trim();
-      exerciseName = lookupKey || slug;
+      exerciseName = String(q.exerciseName || q.exercisename || '').trim() || lookupKey || slug;
     } else {
       var body = req.body || {};
       if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) { body = {}; } }

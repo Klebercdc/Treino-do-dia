@@ -12732,6 +12732,8 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
     if (exerciseId) params.set("id", exerciseId);
     if (exerciseSlug) params.set("slug", exerciseSlug);
     if (lookupKey) params.set("lookupKey", lookupKey);
+    const displayName = exerciseRef.display_name || exerciseName;
+    if (displayName) params.set("exerciseName", displayName);
 
     const endpoint = resolveAppApiUrl(`/api/kronia/exercises/details?${params.toString()}`);
     const resp = await fetchExerciseDetailsResponse(endpoint);

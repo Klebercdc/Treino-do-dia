@@ -633,7 +633,12 @@ export class KroniaExerciseApplication {
       exerciseName: lookupName || null,
     });
     let exercise = lookupResult.exercise;
-    const externalFetch = false;
+    let externalFetch = false;
+
+    if (!exercise) {
+      exercise = await this.fetchExerciseFromExternalSource(context);
+      externalFetch = Boolean(exercise);
+    }
 
     if (!exercise) {
       return fail('EXERCISE_NOT_FOUND', 'Nenhum exercício encontrado para os identificadores informados.', {
