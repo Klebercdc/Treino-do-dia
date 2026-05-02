@@ -96,6 +96,7 @@ test('service worker is clean UI cache only and does not mutate HTML or inject d
 
   assert.match(source, /const CACHE = 'kronia-exercise-details-20260502'/);
   assert.match(source, /const BUILD_VERSION = '20260502-exercise-details'/);
+  assert.ok(source.includes("requestUrl.pathname === '/api/kronia/exercises/details'"));
   assert.doesNotMatch(source, /injectDietController/);
   assert.doesNotMatch(source, /LEGACY_PROFILE_BASE_KILLER/);
   assert.doesNotMatch(source, /DIET_SCRIPTS/);

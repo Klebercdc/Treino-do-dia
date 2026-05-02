@@ -18,6 +18,8 @@ function loadRuntime() {
     extract(code, /function buildExerciseStubFromPayload\(source = \{\}, fallbackName = "Exercício"\) \{[\s\S]*?\n\}/, 'buildExerciseStubFromPayload'),
     extract(code, /function ensureExerciseRef\(source = \{\}, fallbackName = "Exercício", origin = "workout_builder"\) \{[\s\S]*?\n\}/, 'ensureExerciseRef'),
     extract(code, /function resolveAppApiUrl\(path\) \{[\s\S]*?\n\}/, 'resolveAppApiUrl'),
+    extract(code, /function normalizeExerciseDetails\(result\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetails'),
+    extract(code, /function normalizeExerciseDetailsPayload\(payload\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetailsPayload'),
     extract(code, /async function fetchExerciseDetailsResponse\(endpoint\) \{[\s\S]*?\n\}/, 'fetchExerciseDetailsResponse'),
     extract(code, /async function openExerciseDetailsByName\(exerciseName, options = \{\}\) \{[\s\S]*?\n\}/, 'openExerciseDetailsByName'),
   ].join('\n\n');
@@ -83,6 +85,8 @@ test('openExerciseDetailsByName retries after iOS PWA pattern error', async () =
     extract(code, /function buildExerciseStubFromPayload\(source = \{\}, fallbackName = "Exercício"\) \{[\s\S]*?\n\}/, 'buildExerciseStubFromPayload'),
     extract(code, /function ensureExerciseRef\(source = \{\}, fallbackName = "Exercício", origin = "workout_builder"\) \{[\s\S]*?\n\}/, 'ensureExerciseRef'),
     extract(code, /function resolveAppApiUrl\(path\) \{[\s\S]*?\n\}/, 'resolveAppApiUrl'),
+    extract(code, /function normalizeExerciseDetails\(result\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetails'),
+    extract(code, /function normalizeExerciseDetailsPayload\(payload\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetailsPayload'),
     extract(code, /async function fetchExerciseDetailsResponse\(endpoint\) \{[\s\S]*?\n\}/, 'fetchExerciseDetailsResponse'),
     extract(code, /async function openExerciseDetailsByName\(exerciseName, options = \{\}\) \{[\s\S]*?\n\}/, 'openExerciseDetailsByName'),
   ].join('\n\n');

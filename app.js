@@ -5189,7 +5189,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=20260429-clean-ui', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=20260502-exercise-details', { updateViaCache: 'none' }).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════
@@ -12570,7 +12570,12 @@ function _writeExerciseDetailsCache(cache) {
 
 function normalizeExerciseDetails(result) {
   if (!result || typeof result !== "object") return null;
-  const namePt = result.names?.pt || result.name_pt || result.display_name || result.exerciseName || result.names?.en || "Exercício";
+  const hasUsableData =
+    Boolean(result.id || result.slug || result.name || result.name_pt || result.name_en || result.display_name || result.exerciseName || result.target_muscle) ||
+    Boolean(result.names && typeof result.names === "object" && (result.names.pt || result.names.en)) ||
+    (Array.isArray(result.instructions) && result.instructions.length > 0);
+  if (!hasUsableData) return null;
+  const namePt = result.names?.pt || result.name_pt || result.display_name || result.exerciseName || result.name || result.names?.en || "Exercício";
   const lookupKey = result.normalized_lookup_key || result.metadata?.normalizedLookupKey || normalizeExerciseLookupKey(namePt);
   return {
     id: result.id || result.slug || "",
@@ -12609,15 +12614,30 @@ function normalizeExerciseDetails(result) {
 
 function normalizeExerciseDetailsPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
+  const hasUsableExerciseData = function(candidate) {
+    if (!candidate || typeof candidate !== "object") return false;
+    return Boolean(
+      candidate.id ||
+      candidate.slug ||
+      candidate.name ||
+      candidate.name_pt ||
+      candidate.name_en ||
+      candidate.display_name ||
+      candidate.exerciseName ||
+      candidate.target_muscle ||
+      (candidate.names && typeof candidate.names === "object" && (candidate.names.pt || candidate.names.en)) ||
+      (Array.isArray(candidate.instructions) && candidate.instructions.length > 0)
+    );
+  };
   if (payload.data && typeof payload.data === "object") {
     const d = payload.data;
     const hasUsableEnvelope =
       payload.success === true ||
+      payload.success === false ||
       payload.status === "success" ||
       payload.type === "exercise_details" ||
       payload.type === "exercise_partial";
-    if (hasUsableEnvelope) return d;
-    if (d.id || d.slug || d.names || d.name || d.instructions || d.target_muscle) return d;
+    if (hasUsableEnvelope && hasUsableExerciseData(d)) return d;
   }
   return payload;
 }
@@ -12676,7 +12696,10 @@ async function fetchExerciseDetailsResponse(endpoint) {
   const relativeEndpoint = buildRelativeEndpoint(endpoint);
   const attempts = [
     async function tryApiFetch() {
-      return apiFetch(endpoint, { cache: "no-store" });
+      return apiFetch(endpoint, {
+        method: "GET",
+        cache: "no-store",
+      });
     },
     async function tryAbsoluteFetch() {
       return fetch(endpoint, {
@@ -12751,20 +12774,16 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
       );
     }
 
-    if (!resp.ok) {
-      const d = json?.data;
-      const hasUsableData = d && typeof d === "object" && (d.id || d.slug || d.names || d.name || d.instructions || d.target_muscle);
-      if (hasUsableData) {
-        renderExercise(json);
-        return;
-      }
-      const parts = [
-        `HTTP ${resp.status}`,
-        json?.type || null,
-        json?.error?.code || null,
+    const details = normalizeExerciseDetailsPayload(json);
+    const normalizedDetails = normalizeExerciseDetails(details);
+    if (!resp.ok && !normalizedDetails) {
+      const errorParts = [
+        `status HTTP ${resp.status || "desconhecido"}`,
+        json?.type ? `type ${json.type}` : "",
+        json?.error?.code ? `code ${json.error.code}` : "",
         json?.message || json?.error?.message || "Falha ao carregar detalhes do exercício.",
       ].filter(Boolean);
-      throw new Error(parts.join(" · "));
+      throw new Error(errorParts.join(" | "));
     }
 
     renderExercise(json);

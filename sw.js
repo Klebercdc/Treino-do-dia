@@ -70,6 +70,7 @@ self.addEventListener('sync', event => {
 
 function shouldBypass(requestUrl) {
   if (requestUrl.origin !== self.location.origin) return true;
+  if (requestUrl.pathname === '/api/kronia/exercises/details') return true;
   if (requestUrl.pathname.startsWith('/api/')) return true;
   if (/supabase|googleapis|gstatic|jsdelivr|cdnjs|unpkg|openai|anthropic/i.test(requestUrl.hostname)) return true;
   return false;

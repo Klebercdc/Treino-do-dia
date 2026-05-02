@@ -38,8 +38,9 @@ function loadRuntime() {
         return { textContent: '' };
       },
     },
-    apiFetch(url) {
+    apiFetch(url, options) {
       calls.urls.push(String(url));
+      calls.lastOptions = options;
       return Promise.resolve({
         ok: true,
         headers: { get() { return 'application/json'; } },
@@ -68,6 +69,7 @@ test('openExerciseDetailsByName sends lookupKey when card has no real slug', asy
   assert.equal(calls.urls.length, 1);
   assert.match(calls.urls[0], /lookupKey=supino_reto/);
   assert.doesNotMatch(calls.urls[0], /slug=supino_reto/);
+  assert.equal(calls.lastOptions.cache, 'no-store');
 });
 
 test('openExerciseDetailsByName keeps explicit slug and lookupKey together', async () => {
@@ -87,7 +89,24 @@ test('openExerciseDetailsByName keeps explicit slug and lookupKey together', asy
   assert.match(calls.urls[0], /lookupKey=supino_reto/);
 });
 
-test('renderExercise accepts exercise_partial envelope with usable data', () => {
+test('openExerciseDetailsByName sends exerciseName fallback with lookupKey when id and slug are absent', async () => {
+  const { context, calls } = loadRuntime();
+
+  await context.openExerciseDetailsByName('Supino Reto', {
+    origin: 'direct',
+    exerciseRef: {
+      display_name: 'Supino Reto',
+      normalized_lookup_key: 'supino_reto',
+      slug: null,
+    },
+  });
+
+  assert.equal(calls.urls.length, 1);
+  assert.match(calls.urls[0], /lookupKey=supino_reto/);
+  assert.match(calls.urls[0], /exerciseName=Supino\+Reto/);
+});
+
+test('renderExercise accepts success false exercise_partial envelope with usable data', () => {
   const code = fs.readFileSync('app.js', 'utf8');
   const snippets = [
     extract(code, /function normalizeExerciseLookupKey\(name\) \{[\s\S]*?\n\}/, 'normalizeExerciseLookupKey'),
@@ -136,7 +155,7 @@ test('renderExercise accepts exercise_partial envelope with usable data', () => 
   assert.equal(state.errorMessage, '');
 });
 
-test('renderExercise accepts exercise_details envelope with success:true', () => {
+test('renderExercise accepts exercise_details envelope with usable data', () => {
   const code = fs.readFileSync('app.js', 'utf8');
   const snippets = [
     extract(code, /function normalizeExerciseLookupKey\(name\) \{[\s\S]*?\n\}/, 'normalizeExerciseLookupKey'),
@@ -169,20 +188,65 @@ test('renderExercise accepts exercise_details envelope with success:true', () =>
   context.renderExercise({
     success: true,
     type: 'exercise_details',
-    message: 'Detalhes do exercício carregados com sucesso.',
+    message: 'Detalhes carregados.',
     data: {
-      id: 'ex-full-1',
-      slug: 'supino-inclinado',
-      names: { pt: 'Supino Inclinado', en: 'Incline Bench Press' },
-      target_muscle: 'peitoral superior',
-      instructions: ['Incline o banco a 30-45 graus.', 'Desça a barra com controle.'],
+      slug: 'bench-press',
+      names: { pt: 'Supino Reto', en: 'Bench Press' },
+      target_muscle: 'peito',
+      instructions: ['Desça a barra com controle.'],
     },
   });
 
   assert.equal(state.mode, 'result');
   assert.equal(state.rendered.mode, 'enriched');
-  assert.equal(state.rendered.payload.names.pt, 'Supino Inclinado');
-  assert.equal(state.rendered.payload.slug, 'supino-inclinado');
-  assert.deepEqual(state.rendered.payload.instructions, ['Incline o banco a 30-45 graus.', 'Desça a barra com controle.']);
+  assert.equal(state.rendered.payload.slug, 'bench-press');
+  assert.equal(state.rendered.payload.names.pt, 'Supino Reto');
+  assert.deepEqual(state.rendered.payload.instructions, ['Desça a barra com controle.']);
+  assert.equal(state.errorMessage, '');
+});
+
+test('renderExercise accepts exercise_partial envelope without success flag when data is usable', () => {
+  const code = fs.readFileSync('app.js', 'utf8');
+  const snippets = [
+    extract(code, /function normalizeExerciseLookupKey\(name\) \{[\s\S]*?\n\}/, 'normalizeExerciseLookupKey'),
+    extract(code, /function normalizeExerciseDetails\(result\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetails'),
+    extract(code, /function normalizeExerciseDetailsPayload\(payload\) \{[\s\S]*?\n\}/, 'normalizeExerciseDetailsPayload'),
+    extract(code, /function renderExercise\(data\) \{[\s\S]*?\n\}/, 'renderExercise'),
+  ].join('\n\n');
+
+  const state = { mode: '', rendered: null, errorMessage: '' };
+  const context = {
+    _renderExerciseDiscResult(payload, mode) {
+      state.rendered = { payload, mode };
+    },
+    _exerciseDiscSetState(mode) {
+      state.mode = mode;
+    },
+    document: {
+      getElementById() {
+        return {
+          set textContent(value) { state.errorMessage = value; },
+          get textContent() { return state.errorMessage; },
+        };
+      },
+    },
+  };
+
+  vm.createContext(context);
+  vm.runInContext(snippets, context, { filename: 'exercise-details-type-only-envelope.js' });
+
+  context.renderExercise({
+    type: 'exercise_partial',
+    message: 'Detalhes parciais carregados.',
+    data: {
+      name: 'Remada Curvada',
+      target_muscle: 'dorsais',
+    },
+  });
+
+  assert.equal(state.mode, 'result');
+  assert.equal(state.rendered.mode, 'enriched');
+  assert.equal(state.rendered.payload.names.pt, 'Remada Curvada');
+  assert.equal(state.rendered.payload.target_muscle, 'dorsais');
   assert.equal(state.errorMessage, '');
 });
