@@ -8,7 +8,8 @@ window.KroniaUI.unblockScreens = function(reason) {
     'trainingScreen',
     'treinoScreen',
     'mainScreen',
-    'homeScreen'
+    'homeScreen',
+    'perfilScreen'
   ];
   const allowedOpenIds = new Set(protectedIds);
 
@@ -20,7 +21,7 @@ window.KroniaUI.unblockScreens = function(reason) {
     '#customModal', '#timerSheet', '#configSheet', '#loginScreen', '#onboarding', '#kronaSetup',
     '#paywallModal', '#legalModal', '#modalBackdrop', '#bottomSheet',
     '#exerciseDiscSheet', '#guiaModal', '#breathingModal', '#evoModal', '#summaryModal',
-    '#settingsScreen', '#perfilScreen', '#orientacaoScreen', '#labsScreen',
+    '#settingsScreen', '#orientacaoScreen', '#labsScreen',
     '#nutritionFlowScreen', '#dietChoiceScreen',
     '.modal', '.sheet', '.overlay', '.bottom-sheet', '[data-overlay]'
   ].join(',');
@@ -5209,7 +5210,7 @@ function checkRPEAlert(input) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register('/sw.js?v=20260502-exercise-details', { updateViaCache: 'none' }).catch(() => {});
+  navigator.serviceWorker.register('/sw.js?v=20260502-pr485-hotfix-profile-exercise', { updateViaCache: 'none' }).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════
@@ -12920,7 +12921,7 @@ async function openExerciseDetailsByName(exerciseName, options = {}) {
       throw new Error(errorParts.join(" | "));
     }
 
-    renderExercise(json);
+    renderExercise(normalizedDetails || normalizeExerciseDetailsPayload(json) || json);
     logExerciseDetailsEvent("exercise_detail_loaded_from_api", {
       lookupKey,
       exerciseId,
@@ -16001,3 +16002,30 @@ function updateHomeBanner() {
   if (t) t.textContent = m.t;
   if (s) s.textContent = m.s;
 }
+
+/* PATCH PR485 — Perfil não pode ficar oculto por limpeza global */
+function restorePerfilScreenVisibility() {
+  var el = document.getElementById('perfilScreen');
+  if (!el) return;
+  el.style.display = '';
+  el.style.visibility = '';
+  el.style.opacity = '';
+  el.style.pointerEvents = '';
+  el.removeAttribute('aria-hidden');
+  el.classList.add('show', 'active');
+}
+
+(function patchPerfilNavAfterPR485() {
+  var oldNavTo = window.navTo || (typeof navTo === 'function' ? navTo : null);
+  if (typeof oldNavTo !== 'function') return;
+
+  window.navTo = function(tab) {
+    var result = oldNavTo.apply(this, arguments);
+    if (String(tab || '').toLowerCase() === 'perfil' || String(tab || '').toLowerCase() === 'profile') {
+      setTimeout(restorePerfilScreenVisibility, 0);
+      setTimeout(restorePerfilScreenVisibility, 150);
+      setTimeout(restorePerfilScreenVisibility, 500);
+    }
+    return result;
+  };
+})();
