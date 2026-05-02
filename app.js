@@ -2772,6 +2772,18 @@ function navTo(tab) {
   if (tab !== "dieta") document.getElementById("dietChoiceScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
   if (tab !== "perfil") document.getElementById("perfilScreen")?.classList.remove("show");
+  try {
+    var _nfs = document.getElementById('nutritionFlowScreen');
+    if (_nfs) {
+      _nfs.classList.remove('show');
+      _nfs.style.display = 'none';
+      _nfs.style.visibility = 'hidden';
+      _nfs.setAttribute('aria-hidden', 'true');
+    }
+    if (document.body) document.body.classList.remove('nutrition-flow-active');
+    var _footer = document.querySelector('.footer-actions');
+    if (_footer) _footer.style.display = '';
+  } catch (_) {}
   setDietMiniAppChrome(false);
   document.querySelectorAll('.btn-nav').forEach(b => {
     b.classList.remove('active');
