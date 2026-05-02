@@ -7122,118 +7122,6 @@ body.diet-mini-app-active .footer-actions {
 }
 
 
-/* ─── Diet Profile Wizard 6 etapas ───────────────────────────────────────── */
-.diet-wizard-screen {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  background: #0f0f0f;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.diet-wizard-screen.show { display: flex; flex-direction: column; }
-.diet-wizard-inner { display: flex; flex-direction: column; min-height: 100%; max-width: 480px; margin: 0 auto; width: 100%; }
-.diet-wizard-header { display: flex; align-items: center; gap: 12px; padding: 16px 16px 8px; position: sticky; top: 0; z-index: 10; background: #0f0f0f; }
-.dw-back-btn { background: none; border: none; color: #9ca3af; font-size: 20px; cursor: pointer; padding: 4px 8px; }
-.diet-wizard-progress-wrap { flex: 1; }
-.diet-wizard-progress-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-.diet-wizard-progress-fill { height: 100%; background: #22c55e; border-radius: 2px; transition: width .3s ease; }
-.diet-wizard-progress-label { font-size: 11px; color: #6b7280; display: block; margin-top: 4px; }
-.diet-wizard-body { flex: 1; padding: 8px 16px 100px; }
-.diet-wizard-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #0f0f0f; border-top: 1px solid rgba(255,255,255,0.06); }
-.dw-step-title { font-size: 22px; font-weight: 700; color: #fff; margin: 8px 0 4px; }
-.dw-step-desc { font-size: 13px; color: #9ca3af; margin: 0 0 16px; }
-.dw-info-text { font-size: 12px; color: #6b7280; margin: 4px 0 10px; }
-.dw-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
-.dw-label { display: block; font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
-.dw-field-label { font-size: 14px; font-weight: 600; color: #e5e7eb; margin-bottom: 8px; }
-.dw-input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; color: #fff; font-size: 15px; box-sizing: border-box; }
-.dw-input::placeholder { color: #4b5563; }
-.dw-textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; color: #fff; font-size: 14px; box-sizing: border-box; min-height: 72px; resize: vertical; }
-.dw-select { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 9px 12px; color: #fff; font-size: 14px; }
-.dw-row { display: flex; gap: 10px; }
-.dw-col { flex: 1; min-width: 0; }
-.dw-chips-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-.dw-chips-col { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
-.dw-chips-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
-.dw-chips-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-.dw-chip, .dw-chip-single {
-  background: transparent;
-  border: 1px solid #374151;
-  border-radius: 20px;
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-  white-space: nowrap;
-}
-.dw-chip.active, .dw-chip-single.active {
-  background: #22c55e;
-  border-color: #22c55e;
-  color: #000;
-  font-weight: 700;
-}
-.dw-bcm-toggle {
-  background: transparent;
-  border: 1px solid #374151;
-  border-radius: 10px;
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 9px 14px;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  margin-bottom: 6px;
-}
-.dw-bcm-toggle.active { border-color: #22c55e; color: #22c55e; }
-.dw-btn-primary {
-  width: 100%;
-  height: 56px;
-  background: #22c55e;
-  color: #000;
-  font-weight: 700;
-  font-size: 16px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-}
-.dw-btn-primary.dw-btn-disabled { background: #374151; color: #6b7280; cursor: not-allowed; }
-.dw-btn-secondary {
-  background: transparent;
-  border: 1px solid #374151;
-  border-radius: 10px;
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 9px 16px;
-  cursor: pointer;
-}
-.dw-btn-link { background: none; border: none; color: #22c55e; font-size: 12px; padding: 4px 0; cursor: pointer; display: block; margin-top: 8px; }
-.dw-alert-legal {
-  background: rgba(234,179,8,0.08);
-  border: 1px solid rgba(234,179,8,0.25);
-  border-radius: 10px;
-  color: #fbbf24;
-  font-size: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-}
-.dw-alert-hormonal {
-  background: rgba(239,68,68,0.08);
-  border: 1px solid rgba(239,68,68,0.25);
-  border-radius: 10px;
-  color: #f87171;
-  font-size: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-}
-.dw-modal-sub-card { margin-top: 4px; }
-.dw-summary-card-title { font-size: 14px; font-weight: 700; color: #e5e7eb; margin-bottom: 10px; }
-.dw-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-.dw-summary-key { font-size: 12px; color: #6b7280; }
-.dw-summary-val { font-size: 13px; color: #d1d5db; text-align: right; max-width: 60%; }
-
 body.kronia-ui-unblocked #customModal:not(.show),
 body.kronia-ui-unblocked #timerSheet:not(.show),
 body.kronia-ui-unblocked #configSheet:not(.show) {
@@ -7241,12 +7129,8 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   visibility: hidden !important;
 }
 
-#dietProfileWizardScreen,
-#dietProfileWizardScreen *,
 #kroniaDietPlanVisualScreen,
 #kroniaDietPlanVisualScreen *,
-[data-action="open-labs"],
-[data-action="view-labs"],
 [data-diet-action="labs"],
 .exercise-card button,
 .exercise-card [role="button"] {

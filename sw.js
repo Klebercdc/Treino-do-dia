@@ -112,6 +112,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (/\.(?:js|css)$/i.test(url.pathname) || url.pathname.startsWith('/src/ui/diet/')) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
   if (STATIC_ASSET_RE.test(url.pathname)) {
     event.respondWith(cacheFirst(event.request));
   }

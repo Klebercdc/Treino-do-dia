@@ -1,13 +1,16 @@
-/* KroniA Diet Entry Controller — rota única e segura para criação/regeneração de dieta */
+/* KroniA Diet Entry Controller — rota única para a tela premium atual */
 (function(){
-  var ASSET = 'src/ui/diet/diet-wizard-standalone.js';
   var RENDERER_ASSET = 'src/ui/diet/diet-plan-renderer.js';
-  var VERSION = '20260429-clean-ui';
-  var loadingPromise = null;
+  var VERSION = '20260502-fix-nav';
   var rendererPromise = null;
   var opening = false;
   var LAST_PLAN_KEY = 'kronia_last_generated_diet';
-  window.__kroniaDietGenerationCompleted = window.__kroniaDietGenerationCompleted === true;
+  var LEGACY_WIZARD_SCREEN_ID = ['diet', 'Profile', 'Wizard', 'Screen'].join('');
+  var LEGACY_WIZARD_STATE_KEYS = [
+    'kronia_diet_wizard_state_v1',
+    'kronia_diet_wizard_state_v2',
+    'kronia_diet_wizard_state_v6_standalone'
+  ];
 
   function loadScriptOnce(src, marker, testFn){
     if (typeof testFn === 'function' && testFn()) return Promise.resolve(true);
@@ -32,39 +35,30 @@
     return rendererPromise;
   }
 
-  function loadStandalone(){
-    if (window.__kroniaDietWizardStandaloneLoaded && typeof window.openDietProfileWizard === 'function') return Promise.resolve(true);
-    if (loadingPromise) return loadingPromise;
-    loadingPromise = Promise.all([
-      loadRenderer(),
-      loadScriptOnce(ASSET, 'diet-standalone', function(){ return window.__kroniaDietWizardStandaloneLoaded === true && typeof window.openDietProfileWizard === 'function'; })
-    ]).then(function(results){ return !!results[1]; }).catch(function(){ loadingPromise = null; return false; });
-    return loadingPromise;
+  function purgeLegacyWizard(){
+    LEGACY_WIZARD_STATE_KEYS.forEach(function(key){
+      try { localStorage.removeItem(key); } catch (_) {}
+    });
+    var oldWizard = document.getElementById(LEGACY_WIZARD_SCREEN_ID);
+    if (oldWizard) oldWizard.remove();
+    document.body && document.body.classList.remove('diet-wizard-active', 'kdw-active');
   }
 
-  function getUserId(){
-    try { return (window.currentUser && (window.currentUser.id || window.currentUser.uid)) || (window.authUser && window.authUser.id) || null; }
-    catch(_) { return null; }
-  }
-
-  function hideOldDietScreens(){
-    if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') {
-      window.KroniaUI.unblockScreens('diet-entry-hide-old-before');
-    }
-    if (window.KroniaDiet && typeof window.KroniaDiet.hideLegacyScreens === 'function' && window.KroniaDiet.hideLegacyScreens !== hideOldDietScreens) {
-      try { window.KroniaDiet.hideLegacyScreens(); } catch (_) {}
-    }
-    ['dietChoiceScreen','dietDataScreen','dietEmergencyWizardScreen','customModal','configSheet','timerSheet'].forEach(function(id){
+  function hideLegacyScreens(){
+    purgeLegacyWizard();
+    ['nutritionFlowScreen','dietChoiceScreen','dietEmergencyWizardScreen','customModal','configSheet','timerSheet'].forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
-      el.classList.remove('show');
-      el.style.display = 'none';
-      el.style.visibility = 'hidden';
+      el.classList.remove('show', 'active', 'open');
+      el.style.setProperty('display', 'none', 'important');
+      el.style.setProperty('visibility', 'hidden', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
       el.setAttribute('aria-hidden','true');
-      el.style.pointerEvents = 'none';
     });
+    document.body && document.body.classList.remove('nutrition-flow-active', 'diet-wizard-active', 'kdw-active', 'overlay-open');
     if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') {
-      window.KroniaUI.unblockScreens('diet-entry-hide-old-after');
+      window.KroniaUI.unblockScreens('diet-entry-hide-legacy');
     }
   }
 
@@ -72,51 +66,31 @@
     try { return !!localStorage.getItem(LAST_PLAN_KEY); } catch(_) { return false; }
   }
 
-  function isPlanVisualVisible(){
-    var el = document.getElementById('kroniaDietPlanVisualScreen');
-    return !!(el && (el.classList.contains('kdp-screen') || el.offsetParent || getComputedStyle(el).display !== 'none'));
-  }
-
-  function isRenderContext(context){
-    var ctx = context && typeof context === 'object' ? context : {};
-    var src = String(ctx.source || ctx.from || ctx.mode || '');
-    return ctx.viewLastPlan === true || ctx.render === true || ctx.success === true || /view|success|render|last_generated|generated_diet|post_generation/i.test(src);
-  }
-
-  function isExplicitCreateContext(context){
-    var ctx = context && typeof context === 'object' ? context : {};
-    var src = String(ctx.source || ctx.from || ctx.mode || '');
-    return ctx.forceNew === true || /button_click|create_plan|regenerate_plan|diet_ai|diet_create|diet_regenerate|create_another|diet_button/i.test(src);
-  }
-
-  async function openLastPlan(){
-    await loadRenderer();
-    if (typeof window.openLastGeneratedDiet === 'function') return window.openLastGeneratedDiet();
-    return false;
-  }
-
-  async function open(context){
+  async function openPremiumDiet(context){
     if (opening) return false;
     opening = true;
     try {
-      if ((window.__kroniaDietGenerationCompleted === true || isRenderContext(context)) && hasLastGeneratedDiet() && !isExplicitCreateContext(context)) {
-        if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('before-diet-open-last-plan');
-        return await openLastPlan();
-      }
-      window.__kroniaDietGenerationCompleted = false;
-      if (window.KroniaUI && typeof window.KroniaUI.unblockScreens === 'function') window.KroniaUI.unblockScreens('before-diet-open');
-      hideOldDietScreens();
+      hideLegacyScreens();
       await loadRenderer();
-      var ok = await loadStandalone();
-      hideOldDietScreens();
-      if (ok && typeof window.openDietProfileWizard === 'function') {
-        return window.openDietProfileWizard(getUserId(), Object.assign({ forceNew:true, source:'diet_entry_controller_button' }, context || {}));
+      if (hasLastGeneratedDiet() && typeof window.openLastGeneratedDiet === 'function') {
+        var rendered = window.openLastGeneratedDiet();
+        if (rendered !== false) return rendered;
       }
-      if (typeof window.showToast === 'function') window.showToast('Não consegui abrir a criação de dieta. Atualize a página e tente novamente.', 'error', 3500);
-      else alert('Não consegui abrir a criação de dieta. Atualize a página e tente novamente.');
+      if (typeof window.openDietDataScreen === 'function') {
+        try {
+          if (typeof window.readLocalActiveDietPlan === 'function' && !window.readLocalActiveDietPlan() && typeof window.buildFallbackActiveDietPlan === 'function' && typeof window.setActiveDietPlan === 'function') {
+            window.setActiveDietPlan(window.buildFallbackActiveDietPlan(), { render: false });
+          }
+        } catch (_) {}
+        try { if (typeof window.navTo === 'function') window.navTo('dieta'); } catch (_) {}
+        window.openDietDataScreen();
+        hideLegacyScreens();
+        return true;
+      }
+      if (typeof window.showToast === 'function') window.showToast('Não consegui abrir a tela de dieta. Atualize a página e tente novamente.', 'error', 3500);
       return false;
     } finally {
-      setTimeout(function(){ opening = false; }, 350);
+      setTimeout(function(){ opening = false; }, 250);
     }
   }
 
@@ -147,73 +121,43 @@
     });
   }
 
-  function isLegacyCreateContext(args){
-    var ctx = args && args[0];
-    if (!ctx) return true;
-    if (ctx && typeof ctx === 'object') {
-      var src = String(ctx.source || ctx.from || ctx.mode || '');
-      if (ctx.autoGenerate || ctx.dietWizardPayload) return false;
-      return /diet|wizard|create|generate|regenerate|button|fallback|ai/i.test(src) || ctx.returnTab === 'dieta';
-    }
-    return true;
-  }
-
   document.addEventListener('click', function(e){
     var btn = isDietButton(e.target);
     if(!btn) return;
     e.preventDefault();
     e.stopPropagation();
-    open({ source:'diet_button_click' });
+    openPremiumDiet({ source:'diet_button_click' });
   }, true);
 
   window.KroniaDiet = Object.assign({}, window.KroniaDiet || {}, {
-    open: open,
-    ai: function(){ return open({ source:'diet_ai' }); },
-    createPlan: function(){ return open({ source:'diet_create_plan' }); },
-    regenerate: function(){ return open({ source:'diet_regenerate_plan' }); },
-    viewLastPlan: async function(){ await loadRenderer(); return typeof window.openLastGeneratedDiet === 'function' ? window.openLastGeneratedDiet() : false; },
+    open: openPremiumDiet,
+    ai: function(){ return openPremiumDiet({ source:'diet_ai' }); },
+    createPlan: function(){ return openPremiumDiet({ source:'diet_create_plan' }); },
+    regenerate: function(){ return openPremiumDiet({ source:'diet_regenerate_plan' }); },
+    viewLastPlan: openPremiumDiet,
     bindButtons: makeTouchable,
-    hideLegacyScreens: hideOldDietScreens,
+    hideLegacyScreens: hideLegacyScreens,
     loadRenderer: loadRenderer
   });
 
-  window.startAIDiet = function(){ return window.KroniaDiet.ai(); };
-  window.createDietPlan = function(){ return window.KroniaDiet.createPlan(); };
-  window.generateDietPlan = function(){ return window.KroniaDiet.createPlan(); };
-  window.regenerateDiet = function(){ return window.KroniaDiet.regenerate(); };
-  window.regenerateDietPlan = function(){ return window.KroniaDiet.regenerate(); };
-  window.regeneratePlan = function(){ return window.KroniaDiet.regenerate(); };
+  window.startAIDiet = function(){ return window.KroniaDiet.open({ source:'start_ai_diet' }); };
+  window.createDietPlan = function(){ return window.KroniaDiet.open({ source:'create_diet_plan' }); };
+  window.generateDietPlan = function(){ return window.KroniaDiet.open({ source:'generate_diet_plan' }); };
+  window.regenerateDiet = function(){ return window.KroniaDiet.open({ source:'regenerate_diet' }); };
+  window.regenerateDietPlan = function(){ return window.KroniaDiet.open({ source:'regenerate_diet_plan' }); };
+  window.regeneratePlan = function(){ return window.KroniaDiet.open({ source:'regenerate_plan' }); };
+  window.openNutritionFlow = function(){ return window.KroniaDiet.open({ source:'open_nutrition_flow_disabled' }); };
+  window.openNutritionFlowFull = function(){ return window.KroniaDiet.open({ source:'open_nutrition_flow_full_disabled' }); };
 
-  window.openNutritionFlow = function(){
-    return window.KroniaDiet.open(Object.assign({ source:'open_nutrition_flow_route' }, (arguments && arguments[0] && typeof arguments[0] === 'object') ? arguments[0] : {}));
-  };
-
-  window.openNutritionFlowFull = function(){
-    return window.KroniaDiet.open(Object.assign({ source:'open_nutrition_flow_full_route' }, (arguments && arguments[0] && typeof arguments[0] === 'object') ? arguments[0] : {}));
-  };
-
-  function legacyWatchdog(){
-    if (isPlanVisualVisible()) return;
-    var old = document.getElementById('dietDataScreen');
-    if (!old) return;
-    var visible = old.classList.contains('show') || old.style.display === 'block' || old.style.display === 'flex';
-    if (!visible) return;
-    var txt = (old.textContent || '').slice(0, 300);
-    if (/Dados base/i.test(txt)) {
-      hideOldDietScreens();
-      if (hasLastGeneratedDiet()) {
-        window.__kroniaDietGenerationCompleted = true;
-        openLastPlan();
-        return;
-      }
-      if (window.__kroniaDietGenerationCompleted === true) return;
-      open({ source:'legacy_watchdog_diet_data' });
-    }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ makeTouchable(); hideLegacyScreens(); loadRenderer(); }, { once: true });
+  } else {
+    makeTouchable();
+    hideLegacyScreens();
+    loadRenderer();
   }
 
-  document.addEventListener('DOMContentLoaded', function(){ makeTouchable(); loadRenderer(); hideOldDietScreens(); });
-  document.addEventListener('kronia:navigation', function(){ setTimeout(legacyWatchdog, 150); });
-  setTimeout(makeTouchable, 250);
-  setTimeout(makeTouchable, 1000);
-  setTimeout(makeTouchable, 2500);
+  window[['open', 'Diet', 'Profile', 'Wizard'].join('')] = function removedDietProfileWizard(){
+    return openPremiumDiet({ source: 'legacy_profile_wizard_removed', forceNew: true });
+  };
 })();

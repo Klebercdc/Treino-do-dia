@@ -20,8 +20,8 @@ test('customModal closed state cannot block clicks', () => {
 
 test('legacy diet guard hides only legacy screens and preserves official diet views', () => {
   const source = read('src/ui/diet/disable-legacy-diet.js');
-  const legacyIds = ['dietChoiceScreen', 'dietDataScreen', 'dietEmergencyWizardScreen'];
-  const protectedIds = ['dietProfileWizardScreen', 'kroniaDietPlanVisualScreen'];
+  const legacyIds = ['nutritionFlowScreen', 'dietChoiceScreen', 'dietEmergencyWizardScreen'];
+  const protectedIds = ['kroniaDietPlanVisualScreen'];
 
   for (const id of legacyIds) assert.match(source, new RegExp(`'${id}'`));
   for (const id of protectedIds) assert.match(source, new RegExp(`'${id}'`));
@@ -81,14 +81,27 @@ test('legacy diet guard hides only legacy screens and preserves official diet vi
   }
 });
 
-test('KroniaDiet.open performs overlay cleanup and legacy guard before opening wizard', () => {
+test('KroniaDiet.open performs overlay cleanup and opens premium diet without profile wizard', () => {
   const source = read('src/ui/diet/diet-entry-controller.js');
 
-  assert.match(source, /window\.KroniaUI\.unblockScreens\('before-diet-open'\)/);
-  assert.match(source, /window\.KroniaDiet\.hideLegacyScreens\(\)/);
+  assert.match(source, /hideLegacyScreens\(\)/);
+  assert.match(source, /purgeLegacyWizard\(\)/);
+  assert.match(source, /openDietDataScreen/);
   assert.match(source, /window\.openNutritionFlow\s*=\s*function\(\)\{[\s\S]*?window\.KroniaDiet\.open/);
   assert.match(source, /window\.openNutritionFlowFull\s*=\s*function\(\)\{[\s\S]*?window\.KroniaDiet\.open/);
-  assert.doesNotMatch(source, /setInterval\(legacyWatchdog/);
+  assert.doesNotMatch(source, /openDietProfileWizard|dietProfileWizardScreen|diet-wizard-standalone|diet-standalone|setInterval\(legacyWatchdog/);
+});
+
+test('legacy profile base flow is not shipped in active entry files', () => {
+  const activeSources = [
+    read('index.html'),
+    read('app.js'),
+    read('styles.css'),
+    read('src/ui/diet/diet-entry-controller.js'),
+    read('src/ui/diet/disable-legacy-diet.js')
+  ].join('\n');
+
+  assert.doesNotMatch(activeSources, /dietProfileWizardScreen|openDietProfileWizard|Perfil base|diet-wizard\.js|diet-wizard-state|diet-step-|diet-summary/);
 });
 
 test('service worker is clean UI cache only and does not mutate HTML or inject diet scripts', () => {
@@ -96,6 +109,7 @@ test('service worker is clean UI cache only and does not mutate HTML or inject d
 
   assert.match(source, /const CACHE = 'kronia-exercise-details-20260502'/);
   assert.match(source, /const BUILD_VERSION = '20260502-exercise-details'/);
+  assert.ok(source.includes("url.pathname.startsWith('/src/ui/diet/')"));
   assert.ok(source.includes("requestUrl.pathname === '/api/kronia/exercises/details'"));
   assert.doesNotMatch(source, /injectDietController/);
   assert.doesNotMatch(source, /LEGACY_PROFILE_BASE_KILLER/);
