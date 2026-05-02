@@ -54,7 +54,7 @@
     if (window.KroniaDiet && typeof window.KroniaDiet.hideLegacyScreens === 'function' && window.KroniaDiet.hideLegacyScreens !== hideOldDietScreens) {
       try { window.KroniaDiet.hideLegacyScreens(); } catch (_) {}
     }
-    ['nutritionFlowScreen','dietChoiceScreen','dietDataScreen','dietEmergencyWizardScreen','customModal','configSheet','timerSheet'].forEach(function(id){
+    ['dietChoiceScreen','dietDataScreen','dietEmergencyWizardScreen','customModal','configSheet','timerSheet'].forEach(function(id){
       var el = document.getElementById(id);
       if (!el) return;
       el.classList.remove('show');
@@ -194,12 +194,12 @@
 
   function legacyWatchdog(){
     if (isPlanVisualVisible()) return;
-    var old = document.getElementById('nutritionFlowScreen') || document.getElementById('dietDataScreen');
+    var old = document.getElementById('dietDataScreen');
     if (!old) return;
     var visible = old.classList.contains('show') || old.style.display === 'block' || old.style.display === 'flex';
     if (!visible) return;
     var txt = (old.textContent || '').slice(0, 300);
-    if (/Perfil base|25%|Dados base/i.test(txt)) {
+    if (/Dados base/i.test(txt)) {
       hideOldDietScreens();
       if (hasLastGeneratedDiet()) {
         window.__kroniaDietGenerationCompleted = true;
@@ -207,7 +207,7 @@
         return;
       }
       if (window.__kroniaDietGenerationCompleted === true) return;
-      open({ source:'legacy_watchdog_profile_base' });
+      open({ source:'legacy_watchdog_diet_data' });
     }
   }
 

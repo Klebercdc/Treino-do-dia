@@ -20,7 +20,7 @@ test('customModal closed state cannot block clicks', () => {
 
 test('legacy diet guard hides only legacy screens and preserves official diet views', () => {
   const source = read('src/ui/diet/disable-legacy-diet.js');
-  const legacyIds = ['nutritionFlowScreen', 'dietChoiceScreen', 'dietDataScreen', 'dietEmergencyWizardScreen'];
+  const legacyIds = ['dietChoiceScreen', 'dietDataScreen', 'dietEmergencyWizardScreen'];
   const protectedIds = ['dietProfileWizardScreen', 'kroniaDietPlanVisualScreen'];
 
   for (const id of legacyIds) assert.match(source, new RegExp(`'${id}'`));
@@ -94,8 +94,8 @@ test('KroniaDiet.open performs overlay cleanup and legacy guard before opening w
 test('service worker is clean UI cache only and does not mutate HTML or inject diet scripts', () => {
   const source = read('sw.js');
 
-  assert.match(source, /const CACHE = 'kronia-clean-ui-20260429'/);
-  assert.match(source, /const BUILD_VERSION = '20260429-clean-ui'/);
+  assert.match(source, /const CACHE = 'kronia-fix-nav-20260502'/);
+  assert.match(source, /const BUILD_VERSION = '20260502-fix-nav'/);
   assert.doesNotMatch(source, /injectDietController/);
   assert.doesNotMatch(source, /LEGACY_PROFILE_BASE_KILLER/);
   assert.doesNotMatch(source, /DIET_SCRIPTS/);

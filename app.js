@@ -2772,6 +2772,18 @@ function navTo(tab) {
   if (tab !== "dieta") document.getElementById("dietChoiceScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
   if (tab !== "perfil") document.getElementById("perfilScreen")?.classList.remove("show");
+  try {
+    var _nfs = document.getElementById('nutritionFlowScreen');
+    if (_nfs) {
+      _nfs.classList.remove('show');
+      _nfs.style.display = 'none';
+      _nfs.style.visibility = 'hidden';
+      _nfs.setAttribute('aria-hidden', 'true');
+    }
+    if (document.body) document.body.classList.remove('nutrition-flow-active');
+    var _footer = document.querySelector('.footer-actions');
+    if (_footer) _footer.style.display = '';
+  } catch (_) {}
   setDietMiniAppChrome(false);
   document.querySelectorAll('.btn-nav').forEach(b => {
     b.classList.remove('active');
@@ -6692,7 +6704,6 @@ function closeAllDietGenerationLayers(options) {
   var opts = options && typeof options === 'object' ? options : {};
   var ids = [
     'dietProfileWizardScreen',
-    'nutritionFlowScreen',
     'dietResultScreen',
     'dietGeneratedScreen',
     'dietaSheet',
@@ -6717,7 +6728,7 @@ function closeAllDietGenerationLayers(options) {
     var el = document.getElementById(id);
     if (el) el.classList.remove('show', 'active', 'open');
   });
-  document.querySelectorAll('#dietProfileWizardScreen .show,#dietProfileWizardScreen .active,#nutritionFlowScreen .show,#nutritionFlowScreen .active,#dietResultScreen .show,#dietResultScreen .active,#dietGeneratedScreen .show,#dietGeneratedScreen .active').forEach(function(el) {
+  document.querySelectorAll('#dietProfileWizardScreen .show,#dietProfileWizardScreen .active,#dietResultScreen .show,#dietResultScreen .active,#dietGeneratedScreen .show,#dietGeneratedScreen .active').forEach(function(el) {
     el.classList.remove('show', 'active');
   });
   if (document.body) {
@@ -11300,12 +11311,7 @@ function dietMasterCheckIn() {
 }
 
 var KRONIA_NUTRITION_SNAPSHOT_KEY = "kronia_nutrition_snapshot_v1";
-var NUTRITION_FLOW_STEPS = [
-  { key: "perfil_base", title: "Perfil base", subtitle: "Objetivo, atividade e dados físicos para montar sua base metabólica." },
-  { key: "ajuste_dia", title: "Ajuste do dia", subtitle: "Ajuste refeições, fome, treino e preferências rápidas do dia." },
-  { key: "resumo", title: "Resumo", subtitle: "Revise suas escolhas antes de gerar a dieta com IA." },
-  { key: "gerar_dieta", title: "Gerar dieta", subtitle: "Confirme para gerar sua dieta personalizada." },
-];
+var NUTRITION_FLOW_STEPS = [];
 
 var NUTRITION_FOOD_CATALOG = [
   { id: "prot_frango", nome: "Frango grelhado", grupo: "proteinas", subgrupo: "aves", porcao: "120 g", unidade: "g", kcal: 198, proteina: 37, carboidrato: 0, gordura: 4, fibra: 0, tags: ["força", "prático"], restricoes: [], practicalScore: 5, costScore: 4 },
@@ -11802,74 +11808,19 @@ function nutritionHasBaseProfile(state) {
 }
 
 function openNutritionFlow(context) {
-  if (!(context && context.__allowLegacyNutritionFlow === true) && window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
-    scheduleKroniaUIUnblock('before-open-nutrition-flow-route');
-    try { window.KroniaDiet.hideLegacyScreens?.(); } catch (_) {}
+  scheduleKroniaUIUnblock('before-open-nutrition-flow-route');
+  try { window.KroniaDiet && window.KroniaDiet.hideLegacyScreens && window.KroniaDiet.hideLegacyScreens(); } catch (_) {}
+  if (window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
     return window.KroniaDiet.open(Object.assign({ source: 'open_nutrition_flow_route' }, context || {}));
   }
-  try { closeAllDietGenerationLayers(); } catch (_) {}
-  var state = getNutritionFlowState();
-  state.returnTab = context && context.returnTab || state.returnTab || "dieta";
-  var shouldSkipProfile = nutritionHasBaseProfile(state);
-  state.step = shouldSkipProfile ? 1 : 0;
-  state.skipProfileStep = shouldSkipProfile;
-  window._nutritionFlowState = state;
-  var screen = document.getElementById("nutritionFlowScreen");
-  if (screen) {
-    screen.style.display = '';
-    screen.style.visibility = '';
-    screen.style.opacity = '';
-    screen.style.pointerEvents = '';
-    screen.removeAttribute('aria-hidden');
-    screen.classList.add("show");
-  }
-  if (document.body) document.body.classList.add("nutrition-flow-active");
-  var footer = document.querySelector(".footer-actions");
-  if (footer) footer.style.display = "none";
-  persistCanonicalNutritionSnapshot({ source: context && context.source || "home_dieta_ia" });
-  renderNutritionFlow();
 }
 
 function closeNutritionFlow() {
-  var screen = document.getElementById("nutritionFlowScreen");
-  if (screen) screen.classList.remove("show");
-  if (document.body) document.body.classList.remove("nutrition-flow-active");
-  var footer = document.querySelector(".footer-actions");
-  if (footer) footer.style.display = "";
+  if (document.body) document.body.classList.remove('nutrition-flow-active');
 }
 
-function nutritionFlowBack() {
-  var state = getNutritionFlowState();
-  if (state.step <= 0) {
-    closeNutritionFlow();
-    var returnTab = state.returnTab || "dieta";
-    try { navTo(returnTab); } catch (_) {}
-    if (returnTab === "dieta") {
-      try { openDietDataScreen(); } catch (_) {}
-    }
-    return;
-  }
-  state.step -= 1;
-  setNutritionFlowState({ step: state.step });
-  renderNutritionFlow();
-}
-
-function nutritionFlowNext() {
-  var validation = validateNutritionFlowStep();
-  if (!validation.ok) {
-    showToast(validation.message, "warning", 3600);
-    return;
-  }
-  var state = getNutritionFlowState();
-  var current = NUTRITION_FLOW_STEPS[state.step] || {};
-  if (current.key === "gerar_dieta") {
-    nutritionFlowGeneratePlan();
-    return;
-  }
-  state.step = Math.min(NUTRITION_FLOW_STEPS.length - 1, state.step + 1);
-  setNutritionFlowState({ step: state.step });
-  renderNutritionFlow();
-}
+function nutritionFlowBack() {}
+function nutritionFlowNext() {}
 
 function validateNutritionFlowStep() {
   var state = getNutritionFlowState();
@@ -12304,141 +12255,6 @@ function renderNutritionFoodStep(key, options, minRequired) {
   </div>`;
 }
 
-function renderNutritionFlowContent(key) {
-  var state = getNutritionFlowState();
-  var objetivoButtons = [
-    ["perder_peso", "Perder peso"],
-    ["manter_peso", "Manter peso"],
-    ["ganhar_massa", "Ganhar massa"],
-    ["definicao", "Definição"],
-  ];
-  var atividadeButtons = [["sedentario", "Sedentário"], ["leve", "Leve"], ["moderado", "Moderado"], ["intenso", "Intenso"]];
-  if (key === "perfil_base") {
-    var bcm = state.bcmManual || {};
-    var examCtx = state.examContext || {};
-    var hcList = Array.isArray(state.healthConditions) ? state.healthConditions : [];
-    var conditionsList = ["Diabetes", "Hipertensão", "Doença renal", "Hemodiálise", "Dislipidemia", "Gastrite/Refluxo", "Intolerância alimentar", "Alergia alimentar", "Esteatose hepática", "Hipotireoidismo", "SOP", "Gestação", "Pós-bariátrica", "Outra"];
-    var bcmFieldsHTML = state.bcmManualOpen ? `
-      <div class="nutrition-official-grid-2" style="margin-top:10px;gap:8px">
-        <div><label class="nutrition-official-input-label">Peso seco (kg)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.dryWeightKg)}" oninput="setBcmManualField('dryWeightKg',this.value)"></div>
-        <div><label class="nutrition-official-input-label">Gordura corporal (%)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.bodyFatPercent)}" oninput="setBcmManualField('bodyFatPercent',this.value)"></div>
-        <div><label class="nutrition-official-input-label">Massa magra (kg)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.leanMassKg)}" oninput="setBcmManualField('leanMassKg',this.value)"></div>
-        <div><label class="nutrition-official-input-label">Massa muscular (kg)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.muscleMassKg)}" oninput="setBcmManualField('muscleMassKg',this.value)"></div>
-        <div><label class="nutrition-official-input-label">Água corporal total (L)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.totalBodyWaterLiters)}" oninput="setBcmManualField('totalBodyWaterLiters',this.value)"></div>
-        <div><label class="nutrition-official-input-label">IMC</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.bmi)}" oninput="setBcmManualField('bmi',this.value)"></div>
-        <div><label class="nutrition-official-input-label">Cintura (cm)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.waistCm)}" oninput="setBcmManualField('waistCm',this.value)"></div>
-        <div><label class="nutrition-official-input-label">Quadril (cm)</label><input type="text" inputmode="decimal" class="input-dark" value="${escapeAttr(bcm.hipCm)}" oninput="setBcmManualField('hipCm',this.value)"></div>
-      </div>
-      <div style="margin-top:8px"><label class="nutrition-official-input-label">Observações</label><textarea class="input-dark nutrition-official-notes" oninput="setBcmManualField('notes',this.value)">${escapeHTML(bcm.notes || "")}</textarea></div>
-    ` : "";
-    return `<section class="glass-card premium-step-card">
-      <h2 class="nutrition-official-label">Objetivo</h2>
-      <div class="nutrition-official-grid-2">
-        ${objetivoButtons.map(function(item) { return `<button type="button" class="chip ${nutritionSelected("objetivo", item[0]) ? "active" : ""}" onclick="nutritionSet('objetivo','${item[0]}')">${item[1]}</button>`; }).join("")}
-      </div>
-      <h2 class="nutrition-official-label" style="margin-top:12px">Nível de atividade</h2>
-      <div class="nutrition-official-grid-2">
-        ${atividadeButtons.map(function(item) { return `<button type="button" class="chip ${nutritionSelected("nivelAtividade", item[0]) ? "active" : ""}" onclick="nutritionSet('nivelAtividade','${item[0]}')">${item[1]}</button>`; }).join("")}
-      </div>
-      <h2 class="nutrition-official-label" style="margin-top:12px">Dados básicos</h2>
-      <div class="nutrition-official-grid-2">
-        <div><label class="nutrition-official-input-label">Peso (kg)</label><input type="number" class="input-dark" value="${escapeAttr(state.peso)}" oninput="setNutritionFlowState({ peso: this.value })"></div>
-        <div><label class="nutrition-official-input-label">Altura (cm)</label><input type="number" class="input-dark" value="${escapeAttr(state.altura)}" oninput="setNutritionFlowState({ altura: this.value })"></div>
-        <div><label class="nutrition-official-input-label">Idade</label><input type="number" class="input-dark" value="${escapeAttr(state.idade)}" oninput="setNutritionFlowState({ idade: this.value })"></div>
-        <div><label class="nutrition-official-input-label">Sexo</label>
-          <div class="nutrition-official-row">
-            <button type="button" class="chip chip-compact ${nutritionSelected("sexo", "masculino") ? "active" : ""}" onclick="nutritionSet('sexo','masculino')">Masculino</button>
-            <button type="button" class="chip chip-compact ${nutritionSelected("sexo", "feminino") ? "active" : ""}" onclick="nutritionSet('sexo','feminino')">Feminino</button>
-          </div>
-        </div>
-      </div>
-    </section>
-    <section class="glass-card premium-step-card">
-      <h2 class="nutrition-official-label" style="color:#22C55E;letter-spacing:.14em">Saúde e dados clínicos</h2>
-      <p class="nutrition-official-hint" style="margin-bottom:14px">Opcional, mas ajuda o KroniA a personalizar sua dieta com mais segurança.</p>
-      <div class="nutrition-official-wrap">
-        ${conditionsList.map(function(cond) {
-          var isActive = hcList.indexOf(cond) !== -1;
-          return `<button type="button" class="chip ${isActive ? "active" : ""}" onclick="toggleHealthCondition('${escapeAttr(cond)}')">${escapeHTML(cond)}</button>`;
-        }).join("")}
-      </div>
-      ${hcList.indexOf("Outra") !== -1 ? `<div style="margin-top:12px"><label class="nutrition-official-input-label">Qual outra condição?</label><input type="text" class="input-dark" value="${escapeAttr(state.otherHealthCondition)}" oninput="setNutritionFlowState({ otherHealthCondition: this.value })" placeholder="Descreva..."></div>` : ""}
-      <div class="clinical-bcm-block" style="margin-top:14px">
-        <button type="button" class="clinical-bcm-toggle" onclick="toggleBcmManualOpen()">
-          <span>Inserir BCM manual / composição corporal</span>
-          <span class="clinical-bcm-arrow${state.bcmManualOpen ? " open" : ""}">▾</span>
-        </button>
-        ${bcmFieldsHTML}
-      </div>
-      <div style="margin-top:16px">
-        <h2 class="nutrition-official-label" style="margin-bottom:6px">Exames</h2>
-        <p class="nutrition-official-hint" style="margin-bottom:10px">Use exames já cadastrados ou importe um PDF/imagem para o KroniA considerar na dieta.</p>
-        <div class="nutrition-official-row">
-          <button type="button" class="chip${examCtx.useExistingExams ? " active" : ""}" onclick="setExamUseExisting(${examCtx.useExistingExams ? "false" : "true"})" style="flex:1;min-width:0">Usar exames já cadastrados</button>
-          <label class="chip clinical-exam-import" style="flex:1;min-width:0;cursor:pointer;position:relative">
-            ${examCtx.uploadedExamName ? "✓ " + escapeHTML(examCtx.uploadedExamName) : "Importar exame"}
-            <input type="file" accept=".pdf,.png,.jpg,.jpeg" style="display:none;position:absolute;inset:0;opacity:0;cursor:pointer" onchange="handleExamFileUpload(this)">
-          </label>
-        </div>
-      </div>
-      <div class="clinical-disclaimer" style="margin-top:14px">
-        As sugestões alimentares não substituem acompanhamento com nutricionista ou médico.
-      </div>
-    </section>`;
-  }
-  if (key === "ajuste_dia") {
-    var prefCatalog = ["econômica", "flexível", "alta proteína", "marmita", "sem lactose", "menos carbo", "mais saudável", "mais opções"];
-    return `<section class="glass-card premium-step-card">
-      <h2 class="nutrition-official-label">Quantas refeições por dia</h2>
-      <div class="nutrition-official-grid-4">
-        ${[3,4,5,6].map(function(n) { return `<button type="button" class="chip ${Number(state.refeicoesPorDia)===n ? "active" : ""}" onclick="setNutritionFlowState({ refeicoesPorDia: ${n} }); renderNutritionFlow({ preserveScroll: true })">${n}</button>`; }).join("")}
-      </div>
-      <h2 class="nutrition-official-label" style="margin-top:12px">Como está sua fome hoje</h2>
-      <div class="nutrition-official-grid-2">
-        ${[["baixa","Baixa"],["normal","Normal"],["alta","Alta"],["fome_noturna","Fome à noite"]].map(function(item){return `<button type="button" class="chip ${nutritionSelected("fomeHoje", item[0]) ? "active" : ""}" onclick="nutritionSet('fomeHoje','${item[0]}')">${item[1]}</button>`;}).join("")}
-      </div>
-      <h2 class="nutrition-official-label" style="margin-top:12px">Quando você treina</h2>
-      <div class="nutrition-official-grid-2">
-        ${[["manha","Manhã"],["tarde","Tarde"],["noite","Noite"],["nao_treinei","Não treinei"]].map(function(item){return `<button type="button" class="chip ${nutritionSelected("horarioTreino", item[0]) ? "active" : ""}" onclick="nutritionSet('horarioTreino','${item[0]}')">${item[1]}</button>`;}).join("")}
-      </div>
-      <h2 class="nutrition-official-label" style="margin-top:12px">Preferências rápidas</h2>
-      <div class="nutrition-chip-grid">
-        ${prefCatalog.map(function(item){
-          var active = nutritionSelected('preferenciasRapidas', item);
-          return `<button type="button" class="nutrition-chip ${active ? "active" : ""}" onclick="nutritionToggleArray('preferenciasRapidas','${escapeAttr(item)}', null)">${escapeHTML(item)}</button>`;
-        }).join('')}
-      </div>
-    </section>`;
-  }
-  if (key === "resumo") {
-    var resumo = [
-      ["Objetivo", humanizePremiumFlowValue("objetivo", state.objetivo)],
-      ["Atividade", humanizePremiumFlowValue("nivelAtividade", state.nivelAtividade)],
-      ["Peso", `${state.peso || '--'} kg`],
-      ["Altura", `${state.altura || '--'} cm`],
-      ["Idade", state.idade || '--'],
-      ["Sexo", humanizePremiumFlowValue("sexo", state.sexo)],
-      ["Refeições", state.refeicoesPorDia || '--'],
-      ["Fome hoje", humanizePremiumFlowValue("fomeHoje", state.fomeHoje)],
-      ["Treino", humanizePremiumFlowValue("horarioTreino", state.horarioTreino)],
-      ["Preferências", (state.preferenciasRapidas || []).join(', ') || '--'],
-    ];
-    return `<section class="glass-card premium-step-card">
-      <p class="nutrition-official-final-kicker">Resumo das suas escolhas</p>
-      ${resumo.map(function(item){ return nutritionOfficialSummaryRow(item[0], escapeHTML(String(item[1]))); }).join('')}
-      <div class="nutrition-official-reason">Com essas informações, a IA vai montar sua dieta personalizada para hoje.</div>
-    </section>`;
-  }
-  if (key === "gerar_dieta") {
-    var input = buildNutritionFlowInput();
-    var result = computeNutritionFlowResult(input);
-    return `<section class="glass-card premium-step-card">
-      <div class="nutrition-metric"><span>Meta inicial estimada</span><strong>${result.metaCalorias.toLocaleString("pt-BR")} kcal</strong><small>P ${result.proteinaMeta}g · C ${result.carboMeta}g · G ${result.gorduraMeta}g</small></div>
-      <p class="nutrition-official-hint" style="margin-top:12px">Toque em gerar para finalizar seu plano completo.</p>
-    </section>`;
-  }
-  return "";
-}
 
 function renderNutritionResultScreen() {
   var input = buildNutritionFlowInput();
@@ -12690,116 +12506,11 @@ function nutritionUpdateCheckin(key, value) {
   setNutritionFlowState({ checkin: checkin });
 }
 
-function captureNutritionFlowScrollSnapshot() {
-  var flowBody = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
-  var pathologyList = document.querySelector("#nutritionFlowScreen .nutrition-pathology-list");
-  return {
-    flowBody: flowBody ? flowBody.scrollTop : 0,
-    pathologyList: pathologyList ? pathologyList.scrollTop : 0,
-  };
-}
+function captureNutritionFlowScrollSnapshot() { return {}; }
+function restoreNutritionFlowScrollSnapshot() {}
 
-function restoreNutritionFlowScrollSnapshot(snapshot) {
-  if (!snapshot) return;
-  requestAnimationFrame(function() {
-    var flowBody = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
-    var pathologyList = document.querySelector("#nutritionFlowScreen .nutrition-pathology-list");
-    if (flowBody) flowBody.scrollTop = snapshot.flowBody || 0;
-    if (pathologyList) pathologyList.scrollTop = snapshot.pathologyList || 0;
-  });
-}
+function renderNutritionFlow() {}
 
-function renderNutritionFlow(options) {
-  var opts = options && typeof options === "object" ? options : {};
-  var scrollSnapshot = opts.preserveScroll ? captureNutritionFlowScrollSnapshot() : null;
-  var state = getNutritionFlowState();
-  var step = NUTRITION_FLOW_STEPS[state.step] || NUTRITION_FLOW_STEPS[0];
-  var body = document.getElementById("nutritionFlowBody");
-  var label = document.getElementById("nutritionFlowStepLabel");
-  var title = document.getElementById("nutritionFlowStepTitle");
-  var percent = document.getElementById("nutritionFlowPercent");
-  var bar = document.getElementById("nutritionFlowProgressBar");
-  var primary = document.getElementById("nutritionFlowPrimary");
-  var back = document.getElementById("nutritionFlowBackBtn");
-  var progress = Math.round(((state.step + 1) / NUTRITION_FLOW_STEPS.length) * 100);
-  if (label) label.textContent = "Etapa " + (state.step + 1) + " de " + NUTRITION_FLOW_STEPS.length;
-  if (title) title.textContent = step.title;
-  if (percent) percent.textContent = progress + "%";
-  if (bar) bar.style.width = progress + "%";
-  if (body) body.innerHTML = renderNutritionFlowContent(step.key);
-  if (primary) {
-    primary.disabled = false;
-    primary.textContent = step.key === "gerar_dieta" ? "Gerar minha dieta com IA ✨" : "Continuar";
-  }
-  if (back) back.style.display = state.step > 0 ? "block" : "none";
-  try { if (typeof lucide !== "undefined") lucide.createIcons(); } catch (_) {}
-  var shell = document.querySelector("#nutritionFlowScreen .nutrition-flow-body");
-  if (scrollSnapshot) restoreNutritionFlowScrollSnapshot(scrollSnapshot);
-  else if (shell) shell.scrollTop = 0;
-}
-
-async function nutritionFlowGeneratePlan() {
-  var primary = document.getElementById("nutritionFlowPrimary");
-  if (primary) {
-    primary.disabled = true;
-    primary.textContent = "PROCESSANDO";
-  }
-  var body = document.getElementById("nutritionFlowBody");
-  if (body) {
-    body.innerHTML = `<div class="nutrition-official-processing">
-      <div class="nutrition-official-spinner"></div>
-      <h2 class="font-kronia" style="color:#F97316;font-size:20px;margin:0 0 8px">Processando Plano</h2>
-      <p style="color:#94A3B8;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;line-height:1.5;margin:0">Cruzando motor físico, metabólico e bioquímico...</p>
-    </div>`;
-  }
-  var intakeSnapshot = buildNutritionIntakeSnapshot();
-  var input = buildNutritionFlowInput();
-  var dietPayload = buildDietRequestPayloadFromInput(input);
-  dietPayload.context = Object.assign({}, dietPayload.context || {}, { intakeSnapshot: intakeSnapshot, source: "nutrition_intake_v2" });
-  dietPayload.intakeSnapshot = intakeSnapshot;
-  var localBasePlan = buildLocalDietPlan(input);
-  var localPlan = Object.assign({}, localBasePlan, {
-    visualPrescription: buildDietVisualPrescriptionFromLegacyPlan(localBasePlan)
-  });
-  var finalPlan = localPlan;
-  var finalText = buildLocalDietRenderText(input, "Plano inicial gerado localmente pelo KRONOS.");
-  var resolvedFromEngine = false;
-  try {
-    var guard = await validateScientificGenerationGuard("diet", input.objetivo, dietPayload, { respectedCardContext: true, respectedAnamnesisContext: true });
-    if (guard && guard.ok) {
-      var renderModel = await generateDietWithModernEngine(input, dietPayload, 12000);
-      finalPlan = renderModel;
-      finalText = renderDietModelAsText(renderModel) || finalText;
-      resolvedFromEngine = true;
-    }
-  } catch (err) {
-    finalText = buildLocalDietRenderText(input, err && err.message ? err.message : "Falha temporária ao sincronizar dieta. Prévia local temporária exibida sem substituir o plano ativo.");
-  }
-  setNutritionFlowState({
-    generatedPlan: finalPlan,
-    generatedText: finalText,
-    step: NUTRITION_FLOW_STEPS.length - 1,
-  });
-  try {
-    setActiveDietPlan(Object.assign(normalizeDietGeneratedPlan(finalPlan, {
-      source: resolvedFromEngine ? "nutrition_intake_generated" : "nutrition_intake_local_fallback"
-    }), {
-      contextSnapshot: intakeSnapshot,
-      rawGeneratedPlan: finalPlan,
-    }), { render: false });
-  } catch (_) {}
-  try {
-    var txt = document.getElementById("dietaTexto");
-    var res = document.getElementById("dietaResultado");
-    if (txt) txt.textContent = finalText;
-    if (res) res.style.display = "block";
-  } catch (_) {}
-  persistDietGenerationPrefs(input);
-  persistCanonicalNutritionSnapshot({ source: "nutrition_plan_generated" });
-  var savedPlan = null;
-  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
-  finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || finalPlan);
-}
 
 function selDietaSingleChip(el, groupId) {
   document.querySelectorAll("#" + groupId + " .bs-chip").forEach(function(chip) { chip.classList.remove("active"); });
@@ -13174,49 +12885,10 @@ function formatMuscleLabel(value) {
 
 
 async function openNutritionFlowFull(context) {
-  if (!(context && context.__allowLegacyNutritionFlow === true) && window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
-    scheduleKroniaUIUnblock('before-open-nutrition-flow-full-route');
-    try { window.KroniaDiet.hideLegacyScreens?.(); } catch (_) {}
+  scheduleKroniaUIUnblock('before-open-nutrition-flow-full-route');
+  try { window.KroniaDiet && window.KroniaDiet.hideLegacyScreens && window.KroniaDiet.hideLegacyScreens(); } catch (_) {}
+  if (window.KroniaDiet && typeof window.KroniaDiet.open === 'function') {
     return window.KroniaDiet.open(Object.assign({ source: 'open_nutrition_flow_full_route' }, context || {}));
-  }
-  syncDietaTheme(resolveKroniaThemeForDieta());
-  if (context && typeof context === 'object') {
-    var safeContext = sanitizeCtaObject(context);
-    window._kroniaLastDietContext = safeContext;
-  }
-  preencherDietaDosPerfil();
-  atualizarBasalDieta();
-  await _preencherDietaDoSupabase();
-  try {
-    hydrateNutritionFlowFromLegacyForm(context || {});
-    openNutritionFlow(context || {});
-  } catch (_) {}
-  if (context && typeof context === 'object') {
-    var hydratedDiet = hydrateDietFromConversationIntent(context);
-    if (context.fromChatIntent) {
-      window._kroniaChatDietHydratedContext = hydratedDiet;
-      trackKroniaCta('home_card_hydrated_from_chat', 'success', {
-        type: context.autoGenerate ? 'generate_diet' : 'open_diet',
-        hasPayload: !!Object.keys(hydratedDiet).length,
-      });
-    }
-    atualizarBasalDieta();
-    try {
-      hydrateNutritionFlowFromLegacyForm(context || {});
-      renderNutritionFlow();
-    } catch (_) {}
-  }
-  if (context && context.autoGenerate === true) {
-    var peso = Number(window._nutritionFlowState && window._nutritionFlowState.peso || parseFloat(document.getElementById("dietaPeso")?.value));
-    var altura = Number(window._nutritionFlowState && window._nutritionFlowState.altura || parseFloat(document.getElementById("dietaAltura")?.value));
-    var idade = Number(window._nutritionFlowState && window._nutritionFlowState.idade || parseInt(document.getElementById("dietaIdade")?.value, 10));
-    if (peso > 0 && altura > 0 && idade > 0) {
-      await nutritionFlowGeneratePlan();
-    } else {
-      trackKroniaCta('diet_auto_generate_skipped', 'success', {
-        reason: 'missing_required_fields',
-      });
-    }
   }
 }
 async function openDietaSheet(context) {

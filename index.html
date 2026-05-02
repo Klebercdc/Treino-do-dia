@@ -79,7 +79,7 @@
     } catch {}
   })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260429-clean-ui">
+  <link rel="stylesheet" href="styles.css?v=20260502-fix-nav">
 
 </head>
 <body>
@@ -1447,36 +1447,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════
-     DIETA IA — FLUXO NATIVO
-══════════════════════════════════════════ -->
-
-<div id="nutritionFlowScreen" aria-label="KRONIA - Intake Oficial">
-  <div class="nutrition-intake-shell max-w-md mx-auto min-h-screen relative pb-32">
-    <header class="nutrition-flow-header p-6 sticky top-0 bg-[#0F172A]/90 backdrop-blur-md z-50">
-      <div class="nutrition-flow-head-row flex justify-between items-end mb-3">
-        <div>
-          <p id="nutritionFlowStepLabel" class="nutrition-flow-kicker font-black text-[10px] uppercase tracking-widest">Etapa 1 de 4</p>
-          <h1 id="nutritionFlowStepTitle" class="nutrition-flow-title-small text-xl font-kronia italic uppercase">Perfil base</h1>
-        </div>
-        <div id="nutritionFlowPercent" class="nutrition-flow-percent text-slate-500 font-bold text-xs">25%</div>
-      </div>
-      <div class="nutrition-flow-progress w-full h-1.5 bg-slate-800 rounded-full">
-        <div id="nutritionFlowProgressBar" class="w-1/4 h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,.55)] transition-all duration-500"></div>
-      </div>
-    </header>
-
-    <main id="nutritionFlowBody" class="nutrition-flow-body app-scroll px-6 space-y-6 pt-2"></main>
-
-    <footer class="nutrition-flow-footer fixed bottom-0 left-0 right-0 p-6 bg-[#0F172A]/90 backdrop-blur-md border-t border-white/5 z-50">
-      <div class="nutrition-flow-footer-row max-w-md mx-auto flex gap-3">
-        <button id="nutritionFlowBackBtn" type="button" class="nutrition-flow-back hidden w-1/4 bg-slate-800 text-white py-5 rounded-2xl font-kronia text-[10px] uppercase tracking-widest transition-all active:scale-95" onclick="nutritionFlowBack()">Voltar</button>
-        <button id="nutritionFlowPrimary" type="button" class="nutrition-flow-primary flex-1 py-5 rounded-2xl font-kronia text-sm tracking-widest transition-all active:scale-95" onclick="nutritionFlowNext()">Continuar</button>
-      </div>
-    </footer>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
      DIETA — PAINEL DE DADOS
 ══════════════════════════════════════════ -->
 
@@ -2658,8 +2628,7 @@
   </div>
 </div>
 
-<!-- Compatibilidade: campos legados usados apenas como backing store do intake canônico de 4 etapas.
-     A anamnese longa foi aposentada como UI principal; openDietaSheet() abre nutritionFlowScreen. -->
+<!-- Compatibilidade: campos legados usados apenas como backing store para o wizard de dieta. -->
 
 <div id="dietaSheet" class="bottom-sheet diet-legacy-compat" aria-hidden="true" inert onclick="if(event.target===this)closeDietaSheet()">
   <div class="bs-box">
@@ -3174,7 +3143,7 @@
 <script src="src/core/intelligence/kronia-intelligence.js"></script>
 <script src="src/core/intelligence/adminBridge.js"></script>
 
-<script src="app.js?v=20260429-clean-ui"></script>
+<script src="app.js?v=20260502-fix-nav"></script>
 
 <script src="transforms_patch.js"></script>
 <script src="machine_engine.js"></script>
@@ -3397,7 +3366,7 @@
 </div>
 
 <script src="src/application/kronia-application.js"></script>
-<script src="auth.js?v=20260429-clean-ui"></script>
+<script src="auth.js?v=20260502-fix-nav"></script>
 
 <script src="plans.js"></script>
 
@@ -3424,7 +3393,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=20260429-clean-ui', { updateViaCache: 'none' })
+      navigator.serviceWorker.register('/sw.js?v=20260502-fix-nav', { updateViaCache: 'none' })
         .then(() => console.log('KRONIA PWA ativo ✅'))
         .catch(err => console.log('SW erro:', err));
     });
@@ -3448,8 +3417,8 @@
 <script src="src/ui/diet/diet-step-metabolism.js"></script>
 <script src="src/ui/diet/diet-summary.js"></script>
 <script src="src/ui/diet/diet-wizard.js"></script>
-<script src="src/ui/diet/diet-entry-controller.js?v=20260429-clean-ui"></script>
+<script src="src/ui/diet/diet-entry-controller.js?v=20260502-fix-nav"></script>
 
-<script src="/src/ui/diet/disable-legacy-diet.js?v=20260429-clean-ui"></script>
+<script src="/src/ui/diet/disable-legacy-diet.js?v=20260502-fix-nav"></script>
 </body>
 </html>
