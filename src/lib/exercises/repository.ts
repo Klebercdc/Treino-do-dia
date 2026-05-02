@@ -238,17 +238,32 @@ export class ExerciseRepository {
     return this.mapExercise(data);
   }
 
+  private isMissingTableError(error: any, table: string): boolean {
+    return !!(error && typeof error.message === 'string' && (
+      error.message.includes(table) ||
+      /relation.*does not exist|table.*not found|undefined table/i.test(error.message)
+    ));
+  }
+
   async getApprovedMediaCache(exerciseId: string): Promise<ExerciseMediaCacheEntity | null> {
-    const { data, error } = await this.db
-      .from('exercise_media_cache')
-      .select('*')
-      .eq('exercise_id', exerciseId)
-      .eq('approved', true)
-      .order('verified_score', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw error;
-    return data ? this.mapMedia(data) : null;
+    try {
+      const { data, error } = await this.db
+        .from('exercise_media_cache')
+        .select('*')
+        .eq('exercise_id', exerciseId)
+        .eq('approved', true)
+        .order('verified_score', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        if (this.isMissingTableError(error, 'exercise_media_cache')) return null;
+        throw error;
+      }
+      return data ? this.mapMedia(data) : null;
+    } catch (err: any) {
+      if (this.isMissingTableError(err, 'exercise_media_cache')) return null;
+      throw err;
+    }
   }
 
   async saveMediaCache(input: Omit<ExerciseMediaCacheEntity, 'id' | 'created_at' | 'updated_at'>): Promise<ExerciseMediaCacheEntity> {
@@ -257,40 +272,54 @@ export class ExerciseRepository {
       .upsert(input, { onConflict: 'provider,provider_media_id' })
       .select('*')
       .single();
-    if (error) throw error;
+    if (error) {
+      if (this.isMissingTableError(error, 'exercise_media_cache')) {
+        console.warn('[kronia_exercise] exercise_media_cache table missing — skipping media cache save');
+        return input as ExerciseMediaCacheEntity;
+      }
+      throw error;
+    }
     return this.mapMedia(data);
   }
 
   async saveAlias(exerciseId: string, alias: string, language: string, aliasType: string): Promise<void> {
-    const aliasKey = this.normalizeLookup(alias).replace(/\s+/g, '_');
-    let canonicalLookupKey: string | null = null;
-    if (await this.canUseNormalizedLookupKey()) {
-      const { data: exercise, error } = await this.db.from('exercises').select('normalized_lookup_key').eq('id', exerciseId).maybeSingle();
-      if (error && !this.isMissingColumnError(error, 'normalized_lookup_key')) throw error;
-      canonicalLookupKey = exercise?.normalized_lookup_key ?? null;
-    }
+    try {
+      const aliasKey = this.normalizeLookup(alias).replace(/\s+/g, '_');
+      let canonicalLookupKey: string | null = null;
+      if (await this.canUseNormalizedLookupKey()) {
+        const { data: exercise, error } = await this.db.from('exercises').select('normalized_lookup_key').eq('id', exerciseId).maybeSingle();
+        if (error && !this.isMissingColumnError(error, 'normalized_lookup_key')) throw error;
+        canonicalLookupKey = exercise?.normalized_lookup_key ?? null;
+      }
 
-    if (!canonicalLookupKey) {
-      const { data: fallbackExercise, error: fallbackError } = await this.db.from('exercises').select('slug,name_en,name_pt').eq('id', exerciseId).maybeSingle();
-      if (fallbackError) throw fallbackError;
-      canonicalLookupKey = this.normalizeLookup(fallbackExercise?.slug || fallbackExercise?.name_en || fallbackExercise?.name_pt || alias);
-    }
+      if (!canonicalLookupKey) {
+        const { data: fallbackExercise, error: fallbackError } = await this.db.from('exercises').select('slug,name_en,name_pt').eq('id', exerciseId).maybeSingle();
+        if (fallbackError) throw fallbackError;
+        canonicalLookupKey = this.normalizeLookup(fallbackExercise?.slug || fallbackExercise?.name_en || fallbackExercise?.name_pt || alias);
+      }
 
-    const { error } = await this.db.from('exercise_aliases').upsert({
-      exercise_id: exerciseId,
-      alias,
-      alias_key: aliasKey,
-      canonical_lookup_key: canonicalLookupKey,
-      locale: language === 'pt' ? 'pt_BR' : 'en_US',
-      language,
-      alias_type: aliasType,
-    }, { onConflict: 'alias_key' });
-    if (error) throw error;
+      const { error } = await this.db.from('exercise_aliases').upsert({
+        exercise_id: exerciseId,
+        alias,
+        alias_key: aliasKey,
+        canonical_lookup_key: canonicalLookupKey,
+        locale: language === 'pt' ? 'pt_BR' : 'en_US',
+        language,
+        alias_type: aliasType,
+      }, { onConflict: 'alias_key' });
+      if (error) {
+        if (this.isMissingTableError(error, 'exercise_aliases')) return;
+        throw error;
+      }
+    } catch (err: any) {
+      if (this.isMissingTableError(err, 'exercise_aliases')) return;
+      throw err;
+    }
   }
 
   async logSearch(entry: Record<string, unknown>): Promise<void> {
     const { error } = await this.db.from('exercise_search_logs').insert(entry);
-    if (error) throw error;
+    if (error && !this.isMissingTableError(error, 'exercise_search_logs')) throw error;
   }
 
   async getCatalogAdminSummary() {

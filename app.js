@@ -78,6 +78,17 @@ if (document.readyState === 'loading') {
   scheduleKroniaUIUnblock('boot');
 }
 
+function _showEl(id) {
+  var el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!el) return;
+  el.style.display = '';
+  el.style.visibility = '';
+  el.style.opacity = '';
+  el.style.pointerEvents = '';
+  el.removeAttribute('aria-hidden');
+  el.classList.add('show');
+}
+
 function closeCustomModalElement(modal) {
   if (!modal) return;
   modal.classList.remove("show");
@@ -2852,7 +2863,7 @@ function closeLabsScreen() {
   var footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
   if (_labsReturnDietMiniChrome) {
-    document.getElementById('dietDataScreen')?.classList.add('show');
+    _showEl('dietDataScreen');
     setDietMiniAppChrome(false);
   }
   _labsReturnDietMiniChrome = false;
@@ -5839,7 +5850,7 @@ function openPerfil() {
       deslogado.style.display = 'block';
     }
   }).catch(() => {});
-  document.getElementById("perfilScreen").classList.add("show");
+  _showEl('perfilScreen');
   document.body.classList.remove('overlay-open');
   const footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
@@ -6838,7 +6849,7 @@ function finishDietGenerationSuccess(savedDiet) {
   _dietCoreView = 'minha-dieta';
   try { navTo('dieta'); } catch (_) {}
   var dataScreen = document.getElementById('dietDataScreen');
-  if (dataScreen) dataScreen.classList.add('show');
+  if (dataScreen) _showEl(dataScreen);
   renderActiveDietPlan();
   var now = Date.now();
   if (!window._kroniaDietSuccessToastAt || now - window._kroniaDietSuccessToastAt > 1500) {
@@ -9509,7 +9520,7 @@ function openDietSubstituirScreen(mealIndex, itemIndex) {
     }
   }
   var screen = document.getElementById('dietSubstituirScreen');
-  if (screen) screen.classList.add('show');
+  if (screen) _showEl(screen);
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
 }
 
@@ -9991,7 +10002,7 @@ function exportActiveDietPlanPDF() {
 
 function openEvolutionDataScreen() {
   setDietMiniAppChrome(false);
-  document.getElementById('evolutionDataScreen')?.classList.add('show');
+  _showEl('evolutionDataScreen');
   document.body.classList.remove('overlay-open');
   refreshEvolutionDataScreen();
   try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
@@ -11056,7 +11067,7 @@ function iniciarFluxoDietaNutri() {
   } catch (_) {}
   // Garante que a tela de orientação está aberta
   const screen = document.getElementById('orientacaoScreen');
-  if (screen && !screen.classList.contains('show')) screen.classList.add('show');
+  if (screen && !screen.classList.contains('show')) _showEl(screen);
 
   // Remove card anterior
   document.getElementById('wdCard')?.remove();
@@ -15790,7 +15801,7 @@ const BREATH_SEQ = [
 function abrirRespiracao() {
   closeSummary();
   setTimeout(() => {
-    document.getElementById('breathingModal').classList.add('show');
+    _showEl('breathingModal');
     _breathRunning = true;
     runBreathPhase(0, 1);
   }, 200);
@@ -15940,7 +15951,7 @@ function renderDesafios() {
 let _mesoConf = { dur:4, obj:'hipertrofia' }, _mesoAtual = null;
 
 function abrirMesociclo() {
-  document.getElementById('mesocicloSheet').classList.add('show');
+  _showEl('mesocicloSheet');
 }
 function fecharMesociclo() {
   document.getElementById('mesocicloSheet').classList.remove('show');
