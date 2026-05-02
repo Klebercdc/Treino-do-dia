@@ -151,7 +151,7 @@
     },
     {
       "source": "/api/kronia/exercises/details",
-      "destination": "/api/kronia-exercises"
+      "destination": "/api/science?__route=kronia-exercise-details"
     },
     {
       "source": "/api/(.*)",
