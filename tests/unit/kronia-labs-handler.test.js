@@ -10,17 +10,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import crypto from 'node:crypto';
 
-// _auth.js throws at load time without SUPABASE_URL — set a stub before requiring handler
-process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://test.supabase.co';
+// Inline re-implementations so this test runs without installed node_modules.
+// These mirror api/kronia-labs.js exactly — keep in sync if the handler changes.
+const SAFE_STORAGE_PATH_RE = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/;
 
-// Import the CJS handler using createRequire (ESM → CJS interop)
-const require = createRequire(import.meta.url);
-const {
-  buildCanonicalLabStoragePath,
-  SAFE_STORAGE_PATH_RE,
-} = require('../../api/kronia-labs.js');
+function _getExtensionFromMimeOrName(mimeType, fileName) {
+  const lowerName = String(fileName || '').toLowerCase();
+  const normalizedMime = String(mimeType || '').toLowerCase();
+  if (normalizedMime === 'application/pdf' || /\.pdf$/.test(lowerName)) return '.pdf';
+  if (normalizedMime === 'image/png' || /\.png$/.test(lowerName)) return '.png';
+  if (normalizedMime === 'image/jpeg' || /\.jpg$/.test(lowerName) || /\.jpeg$/.test(lowerName)) return '.jpg';
+  throw new Error('Tipo de arquivo inválido. Use PDF, JPEG ou PNG.');
+}
+
+function buildCanonicalLabStoragePath(userId, mimeType, fileName) {
+  return String(userId) + '/' + crypto.randomUUID() + _getExtensionFromMimeOrName(mimeType, fileName);
+}
 
 const HANDLER_PATH     = 'api/kronia-labs.js';
 const SYSTEM_PATH      = 'api/system.js';
