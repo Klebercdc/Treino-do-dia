@@ -134,6 +134,9 @@ function fail<T>(code: string, message: string, meta: Record<string, unknown>, d
 
 export async function buildExerciseDetails(exercise: ExerciseEntity): Promise<NormalizedExerciseDetails> {
   const media = resolveExerciseMediaFields(exercise);
+  const gifUrl = sanitizeMediaUrl(exercise.gif_url);
+  const resolvedPrimary = (media.primary !== INTERNAL_EXERCISE_MEDIA_FALLBACK ? media.primary : null) ?? gifUrl ?? null;
+  const resolvedType = media.mediaType !== 'none' ? media.mediaType : (gifUrl ? 'gif' : 'none');
   return {
     id: exercise.id,
     slug: exercise.slug,
@@ -141,10 +144,12 @@ export async function buildExerciseDetails(exercise: ExerciseEntity): Promise<No
       pt: exercise.name_pt,
       en: exercise.name_en,
     },
+    gif_url: gifUrl ?? null,
     media: {
-      primary: media.primary ?? null,
-      thumbnailUrl: media.thumbnailUrl,
-      type: media.mediaType,
+      url: resolvedPrimary,
+      primary: resolvedPrimary,
+      thumbnailUrl: media.thumbnailUrl ?? gifUrl ?? null,
+      type: resolvedType,
       provider: media.provider,
       confidenceScore: Number(exercise.media_confidence_score ?? 0),
     },
@@ -569,14 +574,22 @@ export class KroniaExerciseApplication {
     const safeInstructions = exercise.instructions?.length
       ? exercise.instructions
       : ['Mantenha execução controlada, postura neutra e ajuste a carga para técnica consistente.'];
+    const gifUrl = sanitizeMediaUrl(exercise.gif_url);
+    const resolvedPrimary = (media.primary !== INTERNAL_EXERCISE_MEDIA_FALLBACK ? media.primary : null)
+      ?? sanitizeMediaUrl(exercise.media_url)
+      ?? gifUrl
+      ?? null;
+    const resolvedType = media.mediaType !== 'none' ? media.mediaType : (gifUrl ? 'gif' : 'none');
     return {
       id: exercise.id,
       slug: exercise.slug,
       names: { pt: exercise.name_pt, en: exercise.name_en },
+      gif_url: gifUrl ?? null,
       media: {
-        primary: media.primary ?? null,
-        thumbnailUrl: media.thumbnailUrl,
-        type: media.mediaType,
+        url: resolvedPrimary,
+        primary: resolvedPrimary,
+        thumbnailUrl: media.thumbnailUrl ?? gifUrl ?? null,
+        type: resolvedType,
         provider: media.provider,
         confidenceScore: exercise.media_confidence_score,
       },

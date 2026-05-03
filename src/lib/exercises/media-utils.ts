@@ -97,7 +97,7 @@ export function resolveExerciseMediaFields(exercise: Partial<ExerciseEntity>) {
   let mediaType: 'video' | 'gif' | 'image' | 'none' = 'none';
 
   if (mediaUrl && explicitType === 'video') mediaType = 'video';
-  else if (mediaUrl && /\.gif($|\?)/i.test(mediaUrl)) mediaType = 'gif';
+  else if (mediaUrl && (explicitType === 'gif' || /\.gif($|\?)/i.test(mediaUrl))) mediaType = 'gif';
   else if (mediaUrl) mediaType = explicitType === 'image' ? 'image' : 'video';
   else if (gifUrl) mediaType = 'gif';
   else if (imageUrl) mediaType = 'image';

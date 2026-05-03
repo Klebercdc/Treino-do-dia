@@ -12731,18 +12731,21 @@ function normalizeExerciseDetails(result) {
   if (!hasUsableData) return null;
   const namePt = result.names?.pt || result.name_pt || result.display_name || result.exerciseName || result.name || result.names?.en || "Exercício";
   const lookupKey = result.normalized_lookup_key || result.metadata?.normalizedLookupKey || normalizeExerciseLookupKey(namePt);
+  const mediaPrimary = result.media?.primary || result.media?.url || result.gif_url || null;
+  const mediaType = result.media?.type || (/\.(mp4|webm)$/i.test(mediaPrimary || "") ? "video" : (/\.gif($|\?)/i.test(mediaPrimary || "") || result.media?.type === "gif") ? "gif" : mediaPrimary ? "image" : "none");
   return {
     id: result.id || result.slug || "",
     slug: result.slug || lookupKey,
     normalized_lookup_key: lookupKey,
+    gif_url: result.gif_url || null,
     names: {
       pt: namePt,
       en: result.names?.en || result.name_en || namePt || "Exercise",
     },
     media: {
-      primary: result.media?.primary || null,
-      thumbnailUrl: result.media?.thumbnailUrl || null,
-      type: result.media?.type || (/\.(mp4|webm)$/i.test(result.media?.primary || "") ? "video" : result.media?.primary ? "image" : "none"),
+      primary: mediaPrimary,
+      thumbnailUrl: result.media?.thumbnailUrl || mediaPrimary || null,
+      type: mediaType,
       provider: result.media?.provider || "internal",
     },
     instructions: Array.isArray(result.instructions) ? result.instructions : [],
@@ -13002,11 +13005,11 @@ async function openExerciseDiscovery(query) {
 function _renderExerciseDiscResult(d, renderMode = "enriched") {
   d = normalizeExerciseDetails(d) || d;
   const mediaEl = document.getElementById('exerciseDiscMedia');
-  const mediaSrc = d.media?.primary;
-  const mediaType = d.media?.type || (mediaSrc && /\.(mp4|webm)/i.test(mediaSrc) ? "video" : mediaSrc ? "image" : "none");
+  const mediaSrc = d.media?.primary || d.media?.url || d.gif_url || null;
+  const mediaType = d.media?.type || (/\.(mp4|webm)/i.test(mediaSrc || "") ? "video" : mediaSrc ? "gif" : "none");
   const usingPlaceholder = !mediaSrc;
   if (mediaSrc && mediaType === "video") {
-    mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:240px;object-fit:cover"></video>`;
+    mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media?.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:240px;object-fit:cover"></video>`;
   } else if (mediaSrc) {
     mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover">`;
   } else {

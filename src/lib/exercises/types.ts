@@ -180,7 +180,9 @@ export interface NormalizedExerciseDetails {
   id: string;
   slug: string;
   names: { pt: string; en: string };
+  gif_url?: string | null;
   media: {
+    url?: string | null;
     primary: string | null;
     thumbnailUrl: string | null;
     type: 'video' | 'gif' | 'image' | 'none';

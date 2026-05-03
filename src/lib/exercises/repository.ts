@@ -434,7 +434,7 @@ export class ExerciseRepository {
   private mapExercise(raw: any): ExerciseEntity {
     const gifUrl = sanitizeMediaUrl(raw.gif_url);
     const imageUrl = sanitizeMediaUrl(raw.image_url);
-    const mediaUrl = sanitizeMediaUrl(raw.media_url) ?? (String(raw.media_type || '').toLowerCase() === 'gif' ? gifUrl : null);
+    const mediaUrl = sanitizeMediaUrl(raw.media_url);
     const mediaThumbnailUrl = sanitizeMediaUrl(raw.media_thumbnail_url ?? raw.thumbnail_url) ?? imageUrl ?? gifUrl;
     const mediaType = mediaUrl
       ? (String(raw.media_type || '').toLowerCase() === 'gif' ? 'gif' : (String(raw.media_type || '').toLowerCase() === 'image' ? 'image' : 'video'))
