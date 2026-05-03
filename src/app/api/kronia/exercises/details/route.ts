@@ -65,16 +65,120 @@ function resolveExerciseDetailsHttpStatus(envelope: ReturnType<typeof normalizeE
   return ((envelope as any).error?.code === 'EXERCISE_NOT_FOUND') ? 404 : 422;
 }
 
+function normalizeLookupKey(value: string) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s_-]/g, ' ')
+    .replace(/[-\s]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
+function toTitleFromLookup(value: string) {
+  return String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+type ExerciseDetailsFallbackInput = {
+  exerciseId?: string;
+  slug?: string;
+  lookupKey?: string;
+  exerciseName?: string;
+  context?: unknown;
+};
+
+function buildFallbackExerciseDetails(input: ExerciseDetailsFallbackInput = {}, cause: unknown = null) {
+  const rawName = String(input.exerciseName || input.lookupKey || input.slug || input.exerciseId || 'Exercício').trim();
+  const safeName = toTitleFromLookup(rawName) || 'Exercício';
+  const normalizedLookupKey = normalizeLookupKey(input.lookupKey || input.exerciseName || input.slug || safeName);
+  const slug = String(input.slug || normalizedLookupKey.replace(/_/g, '-')).trim() || null;
+  const causeMessage = cause instanceof Error ? cause.message : (cause ? String(cause) : 'unknown');
+
+  return {
+    id: input.exerciseId || `fallback-${normalizedLookupKey || 'exercise'}`,
+    slug,
+    names: {
+      pt: safeName,
+      en: safeName,
+    },
+    gif_url: null,
+    media: {
+      url: null,
+      primary: null,
+      thumbnailUrl: null,
+      type: 'none',
+      provider: 'fallback',
+      confidenceScore: 0,
+    },
+    instructions: [
+      'Execute o movimento com controle e amplitude segura.',
+      'Mantenha postura estável durante toda a série.',
+      'Ajuste a carga para preservar a técnica antes de aumentar intensidade.',
+    ],
+    target_muscle: null,
+    secondary_muscles: [],
+    body_part: null,
+    equipment: null,
+    variations: [],
+    source: 'fallback',
+    common_errors: [
+      'Usar impulso em vez de controle.',
+      'Perder a postura para tentar aumentar a carga.',
+    ],
+    breathing_tip: 'Expire na fase de esforço e inspire no retorno controlado.',
+    range_of_motion: 'Use amplitude confortável e sem dor.',
+    completeness_score: 35,
+    media_confidence_score: 0,
+    content_source: 'client_safe_fallback',
+    last_enriched_at: null,
+    quality_flags: ['fallback_details', 'api_enrichment_failed'],
+    metadata: {
+      cacheHit: false,
+      externalFetch: false,
+      responseTimeMs: 0,
+      normalizedLookupKey,
+      confidenceScore: 0,
+      knownResolution: false,
+      fallback: true,
+      cause: causeMessage,
+      context: input.context ?? null,
+    },
+  };
+}
+
+function buildResilientPartialResponse(input: ExerciseDetailsFallbackInput, error: unknown, method: 'GET' | 'POST') {
+  const data = buildFallbackExerciseDetails(input, error);
+  return NextResponse.json(
+    buildExerciseDetailsPartialPayload(
+      'Detalhes básicos carregados. O enriquecimento avançado ficou indisponível agora.',
+      data,
+      {
+        code: 'EXERCISE_DETAILS_FALLBACK',
+        resilient: true,
+        fallback: true,
+        method,
+        cause: error instanceof Error ? error.message : 'unknown',
+      },
+    ),
+    { status: 206 },
+  );
+}
+
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const exerciseId = searchParams.get('id')?.trim() || '';
+  const slug = searchParams.get('slug')?.trim() || '';
+  const lookupKey = (searchParams.get('lookupKey') || searchParams.get('normalized_lookup_key') || '').trim();
+  const exerciseName = searchParams.get('exerciseName')?.trim() || '';
+
   try {
     const auth = await requireBearerAuth(req);
     if (!auth.ok || !('user' in auth)) return auth.response;
-
-    const { searchParams } = new URL(req.url);
-    const exerciseId = searchParams.get('id')?.trim() || '';
-    const slug = searchParams.get('slug')?.trim() || '';
-    const lookupKey = (searchParams.get('lookupKey') || searchParams.get('normalized_lookup_key') || '').trim();
-    const exerciseName = searchParams.get('exerciseName')?.trim() || '';
 
     if (!exerciseId && !slug && !lookupKey && !exerciseName) {
       return NextResponse.json(buildExerciseDetailsErrorPayload('Informe id, slug, lookupKey ou exerciseName.', 'VALIDATION_ERROR'), { status: 400 });
@@ -94,17 +198,14 @@ export async function GET(req: NextRequest) {
     const envelope = normalizeExerciseDetailsEnvelope(result);
     return NextResponse.json(envelope, { status: resolveExerciseDetailsHttpStatus(envelope) });
   } catch (error) {
-    console.error('[kronia/exercises/details][GET] erro interno:', error instanceof Error ? error.message : error);
-    return NextResponse.json(
-      buildExerciseDetailsErrorPayload('Falha ao buscar detalhes do exercício.', 'INTERNAL_ERROR', {
-        cause: error instanceof Error ? error.message : 'unknown',
-      }),
-      { status: 500 },
-    );
+    console.error('[kronia/exercises/details][GET] fallback resiliente:', error instanceof Error ? error.message : error);
+    return buildResilientPartialResponse({ exerciseId, slug, lookupKey, exerciseName }, error, 'GET');
   }
 }
 
 export async function POST(req: NextRequest) {
+  let fallbackInput: ExerciseDetailsFallbackInput = {};
+
   try {
     const auth = await requireBearerAuth(req);
     if (!auth.ok || !('user' in auth)) return auth.response;
@@ -120,18 +221,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(buildExerciseDetailsErrorPayload('Payload inválido.', 'VALIDATION_ERROR'), { status: 400 });
     }
 
+    fallbackInput = {
+      exerciseId: typeof (body as any).exerciseId === 'string' ? (body as any).exerciseId.slice(0, 120) : undefined,
+      slug: typeof (body as any).slug === 'string' ? (body as any).slug.slice(0, 240) : undefined,
+      lookupKey: typeof (body as any).normalized_lookup_key === 'string'
+        ? (body as any).normalized_lookup_key.slice(0, 240)
+        : (typeof (body as any).normalizedLookupKey === 'string' ? (body as any).normalizedLookupKey.slice(0, 240) : undefined),
+      exerciseName: typeof (body as any).exerciseName === 'string' ? (body as any).exerciseName.slice(0, 240) : undefined,
+      context: (body as any).context,
+    };
+
     const adminClient = createAdminSupabaseClient();
     const service = new KroniaExerciseApplication(adminClient);
     const result = await service.getExerciseDetailsByName({
       userId,
-      exerciseId: typeof body.exerciseId === 'string' ? body.exerciseId.slice(0, 120) : undefined,
-      slug: typeof body.slug === 'string' ? body.slug.slice(0, 240) : undefined,
-      normalizedLookupKey: typeof body.normalized_lookup_key === 'string'
-        ? body.normalized_lookup_key.slice(0, 240)
-        : (typeof body.normalizedLookupKey === 'string' ? body.normalizedLookupKey.slice(0, 240) : undefined),
-      exerciseName: typeof body.exerciseName === 'string' ? body.exerciseName.slice(0, 240) : undefined,
-      locale: body.locale === 'en' ? 'en' : 'pt',
-      context: body.context,
+      exerciseId: fallbackInput.exerciseId,
+      slug: fallbackInput.slug,
+      normalizedLookupKey: fallbackInput.lookupKey,
+      exerciseName: fallbackInput.exerciseName,
+      locale: (body as any).locale === 'en' ? 'en' : 'pt',
+      context: (body as any).context,
     });
 
     const envelope = normalizeExerciseDetailsEnvelope(result);
@@ -140,14 +249,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(envelope, { status: resolveExerciseDetailsHttpStatus(envelope) });
   } catch (error) {
-    console.error('[kronia/exercises/details] erro interno:', error instanceof Error ? error.message : error);
-    return NextResponse.json(
-      buildExerciseDetailsErrorPayload(
-        'Falha ao buscar detalhes do exercício.',
-        'INTERNAL_ERROR',
-        { cause: error instanceof Error ? error.message : 'unknown' },
-      ),
-      { status: 500 },
-    );
+    console.error('[kronia/exercises/details][POST] fallback resiliente:', error instanceof Error ? error.message : error);
+    return buildResilientPartialResponse(fallbackInput, error, 'POST');
   }
 }
