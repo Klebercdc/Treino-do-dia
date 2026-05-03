@@ -9,7 +9,6 @@ import { resolveFallbackKey } from './fallback-map';
 import { resolveLocalCatalogMedia } from './local-catalog';
 import { pickBestExerciseMedia } from './media-ranking';
 import { buildPexelsSearchQueries, INTERNAL_EXERCISE_MEDIA_FALLBACK, resolveExerciseMediaFields, sanitizeMediaUrl } from './media-utils';
-import { resolveLocalCatalogMedia } from './local-catalog';
 import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseDetailsInput, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput, NormalizedExerciseDetails } from './types';
 
 const MIN_KNOWN_INSTRUCTIONS = [
