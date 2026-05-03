@@ -1,0 +1,133 @@
+PROBLEMA E SOLUÇÃO — 503 SERVICE_UNAVAILABLE
+/api/kronia/exercises/details
+Data: 2026-05-03
+================================================================================
+
+
+PROBLEMA
+────────
+
+O endpoint "Ver exercício" retorna 503 em produção desde o último deploy.
+
+Mensagem de erro que o usuário vê:
+  "Serviço de exercícios temporariamente indisponível."
+
+Erro real no log da Vercel:
+  "Failed to load the ES module: /var/task/src/lib/exercises/local-catalog.js.
+   Make sure to set "type": "module" in the nearest package.json file
+   or use the .mjs extension."
+
+O que causou:
+  Em sessão anterior foi adicionada esta linha em local-catalog.ts (linha 160):
+
+      const alt = path.join(
+        path.dirname(new URL(import.meta.url).pathname),  ← PROBLEMA
+        '../../../data/exercises.json'
+      );
+
+  `import.meta.url` só existe em módulos ES (ESM).
+  A Vercel compila TypeScript para CommonJS — onde import.meta não existe.
+  O arquivo compilado fica inválido e o Node.js recusa carregá-lo.
+  Como application.ts depende de local-catalog, toda a rota trava com 503.
+
+Segundo problema (erro de tipo — mesma sessão):
+  A interface LocalCatalogMatch declara `gifUrl: string` (não-nulo),
+  mas o código agora pode retornar `gifUrl: null`. O TypeScript já
+  sinalizou no build:
+
+      error TS2322: Type 'string | null' is not assignable to type 'string'.
+
+
+================================================================================
+
+
+SOLUÇÃO
+───────
+
+Arquivo: src/lib/exercises/local-catalog.ts
+
+FIX 1 — Remover import.meta.url da função loadCatalogIndex
+
+  ANTES (quebrado):
+  ┌─────────────────────────────────────────────────────────────┐
+  │  try {                                                      │
+  │    raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE));   │
+  │  } catch {                                                  │
+  │    try {                                                    │
+  │      const alt = path.join(                                 │
+  │        path.dirname(new URL(import.meta.url).pathname),     │
+  │        '../../../data/exercises.json'                       │
+  │      );                                                     │
+  │      raw = JSON.parse(fs.readFileSync(alt));                │
+  │    } catch {                                                │
+  │      cachedIndex = [];                                      │
+  │      return cachedIndex;                                    │
+  │    }                                                        │
+  │  }                                                          │
+  └─────────────────────────────────────────────────────────────┘
+
+  DEPOIS (correto):
+  ┌─────────────────────────────────────────────────────────────┐
+  │  try {                                                      │
+  │    raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE));   │
+  │  } catch {                                                  │
+  │    cachedIndex = [];                                        │
+  │    return cachedIndex;                                      │
+  │  }                                                          │
+  └─────────────────────────────────────────────────────────────┘
+
+  Justificativa: process.cwd() já funciona na Vercel — aponta para
+  /var/task que é a raiz do projeto onde data/exercises.json existe.
+  O fallback com import.meta.url era desnecessário e fatal.
+
+
+FIX 2 — Corrigir tipo LocalCatalogMatch.gifUrl
+
+  ANTES:
+      export type LocalCatalogMatch = {
+        gifUrl: string;     ← não aceita null
+        ...
+      };
+
+  DEPOIS:
+      export type LocalCatalogMatch = {
+        gifUrl: string | null;
+        ...
+      };
+
+
+FIX 3 — Adicionar noEmitOnError ao tsconfig.json (prevenção futura)
+
+  ANTES:
+      "compilerOptions": {
+        "strict": true,
+        ...
+      }
+
+  DEPOIS:
+      "compilerOptions": {
+        "strict": true,
+        "noEmitOnError": true,   ← adicionar
+        ...
+      }
+
+  Justificativa: sem isso, o TypeScript emite JS mesmo com erros,
+  permitindo que código inválido chegue à produção. Com noEmitOnError,
+  o build da Vercel falharia explicitamente antes do deploy.
+
+
+================================================================================
+
+ARQUIVOS ALTERADOS
+──────────────────
+1. src/lib/exercises/local-catalog.ts  (remoção import.meta + tipo)
+2. tsconfig.json                        (noEmitOnError)
+
+RISCO DA MUDANÇA: BAIXO
+  - Remove apenas uma linha problemática
+  - Restaura comportamento que funcionava antes desta sessão
+  - process.cwd() já era o caminho original e funcionava em produção
+
+TEMPO ESTIMADO: ~5 minutos
+
+================================================================================
