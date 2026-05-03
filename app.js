@@ -13084,7 +13084,7 @@ async function openExerciseDiscovery(query) {
 }
 
 function _exerciseEquipmentLabel(eq) {
-  const map = { cable: 'Cabo', barbell: 'Barra', dumbbell: 'Haltere', 'body weight': 'Peso corporal', machine: 'Máquina', kettlebell: 'Kettlebell', 'resistance band': 'Elástico', 'smith machine': 'Smith', 'ez barbell': 'Barra EZ', band: 'Elástico', assisted: 'Assistido', weighted: 'Com peso', leverage machine: 'Máquina', 'upper body ergometer': 'Ergômetro', sled machine: 'Trenó', roller: 'Rolo', rope: 'Corda', bosu ball: 'Bosu', tire: 'Pneu', trap bar: 'Trap Bar' };
+  const map = { cable: 'Cabo', barbell: 'Barra', dumbbell: 'Haltere', 'body weight': 'Peso corporal', machine: 'Máquina', kettlebell: 'Kettlebell', 'resistance band': 'Elástico', 'smith machine': 'Smith', 'ez barbell': 'Barra EZ', band: 'Elástico', assisted: 'Assistido', weighted: 'Com peso', 'leverage machine': 'Máquina', 'upper body ergometer': 'Ergômetro', 'sled machine': 'Trenó', roller: 'Rolo', rope: 'Corda', 'bosu ball': 'Bosu', tire: 'Pneu', 'trap bar': 'Trap Bar' };
   const k = String(eq || '').toLowerCase().trim();
   return map[k] || (k ? k.charAt(0).toUpperCase() + k.slice(1) : '');
 }
