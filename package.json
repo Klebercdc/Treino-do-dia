@@ -29,6 +29,7 @@
     "check:vercel-hobby": "node scripts/check-vercel-hobby.js",
     "migrate": "tsx scripts/run-migrations.ts",
     "migrate:dry": "tsx scripts/run-migrations.ts --dry-run",
+    "migrate:exercise-discovery": "bash scripts/apply-exercise-discovery-module.sh",
     "seed:exercises": "tsx scripts/seed-exercises.ts",
     "import:exercises:catalog": "tsx scripts/import-exercises-catalog.ts",
     "sync:exercises": "tsx scripts/sync-exercises-weekly.ts",
