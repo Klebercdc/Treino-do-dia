@@ -152,8 +152,20 @@ function scoreMatch(record: IndexedLocalRecord, input: ResolverInput): { score: 
 function loadCatalogIndex(): IndexedLocalRecord[] {
   if (cachedIndex) return cachedIndex;
 
-  const raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
-  const list: LocalExerciseRecord[] = Array.isArray(raw) ? raw : Array.isArray(raw?.exercises) ? raw.exercises : [];
+  let raw: unknown;
+  try {
+    raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
+  } catch {
+    try {
+      const alt = path.join(path.dirname(new URL(import.meta.url).pathname), '../../../data/exercises.json');
+      raw = JSON.parse(fs.readFileSync(alt, 'utf8'));
+    } catch {
+      cachedIndex = [];
+      return cachedIndex;
+    }
+  }
+
+  const list: LocalExerciseRecord[] = Array.isArray(raw) ? raw : Array.isArray((raw as Record<string, unknown>)?.exercises) ? (raw as Record<string, unknown[]>).exercises as LocalExerciseRecord[] : [];
 
   cachedIndex = list.map((item) => {
     const names = [
@@ -175,7 +187,7 @@ function loadCatalogIndex(): IndexedLocalRecord[] {
       targetMuscle: normalizeToken(item.target_muscle || item.target || ''),
       equipment: normalizeToken(item.equipment || ''),
     };
-  }).filter((item) => item.gifUrl);
+  }).filter((item) => item.names.length > 0);
 
   return cachedIndex;
 }
@@ -186,7 +198,7 @@ export function resolveLocalCatalogMedia(input: ResolverInput): LocalCatalogMatc
 
   for (const record of index) {
     const { score, matchedBy } = scoreMatch(record, input);
-    if (score < 0.52 || !record.gifUrl) continue;
+    if (score < 0.52) continue;
 
     const candidate: LocalCatalogMatch = {
       gifUrl: record.gifUrl,

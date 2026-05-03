@@ -10,6 +10,7 @@ const INVALID_MEDIA_HOSTS = new Set([
   'placeholder.com',
   'localhost',
   '127.0.0.1',
+  'cdn.treino-do-dia.app',
 ]);
 
 function normalizeToken(value: string): string {
