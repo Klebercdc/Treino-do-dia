@@ -41,6 +41,14 @@ export class ExerciseRepository {
     return data ? this.mapExercise(data) : null;
   }
 
+  async findBySourceId(sourceId: string): Promise<ExerciseEntity | null> {
+    const id = String(sourceId || '').trim();
+    if (!id) return null;
+    const { data, error } = await this.db.from('exercises').select('*').eq('source_id', id).eq('is_active', true).maybeSingle();
+    if (error) throw error;
+    return data ? this.mapExercise(data) : null;
+  }
+
   async findBySlug(slug: string): Promise<ExerciseEntity | null> {
     const normalizedSlug = this.normalizeLookup(String(slug || '')).replace(/\s+/g, '-');
     if (!normalizedSlug) return null;
