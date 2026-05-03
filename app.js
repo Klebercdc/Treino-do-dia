@@ -13002,28 +13002,43 @@ async function openExerciseDiscovery(query) {
   }
 }
 
+function _exerciseEquipmentLabel(eq) {
+  const map = { cable: 'Cabo', barbell: 'Barra', dumbbell: 'Haltere', 'body weight': 'Peso corporal', machine: 'Máquina', kettlebell: 'Kettlebell', 'resistance band': 'Elástico', 'smith machine': 'Smith', 'ez barbell': 'Barra EZ', band: 'Elástico', assisted: 'Assistido', weighted: 'Com peso', leverage machine: 'Máquina', 'upper body ergometer': 'Ergômetro', sled machine: 'Trenó', roller: 'Rolo', rope: 'Corda', bosu ball: 'Bosu', tire: 'Pneu', trap bar: 'Trap Bar' };
+  const k = String(eq || '').toLowerCase().trim();
+  return map[k] || (k ? k.charAt(0).toUpperCase() + k.slice(1) : '');
+}
+
 function _renderExerciseDiscResult(d, renderMode = "enriched") {
   d = normalizeExerciseDetails(d) || d;
   const mediaEl = document.getElementById('exerciseDiscMedia');
   const mediaSrc = d.media?.primary || d.media?.url || d.gif_url || null;
   const mediaType = d.media?.type || (/\.(mp4|webm)/i.test(mediaSrc || "") ? "video" : mediaSrc ? "gif" : "none");
   const usingPlaceholder = !mediaSrc;
+
+  const eqLabel = _exerciseEquipmentLabel(d.equipment);
+  const eqBadge = eqLabel ? `<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:.04em;pointer-events:none">${eqLabel}</span>` : '';
+
   if (mediaSrc && mediaType === "video") {
-    mediaEl.innerHTML = `<video src="${mediaSrc}" poster="${d.media?.thumbnailUrl || ''}" controls playsinline muted style="width:100%;border-radius:16px;max-height:240px;object-fit:cover"></video>`;
+    mediaEl.innerHTML = `<div style="position:relative;background:#111;border-radius:16px;overflow:hidden"><video src="${mediaSrc}" poster="${d.media?.thumbnailUrl || ''}" controls playsinline muted style="width:100%;display:block;max-height:300px;object-fit:contain"></video>${eqBadge}</div>`;
   } else if (mediaSrc) {
-    mediaEl.innerHTML = `<img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover">`;
+    mediaEl.innerHTML = `<div style="position:relative;background:#111;border-radius:16px;overflow:hidden"><img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;display:block;max-height:300px;object-fit:contain" loading="lazy">${eqBadge}</div>`;
   } else {
-    mediaEl.innerHTML = `<div style="min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));color:var(--text-2);font-size:0.82rem;text-align:center;padding:18px">Sem demonstração visual</div>`;
+    mediaEl.innerHTML = `<div style="min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02);color:var(--text-2);font-size:0.82rem;text-align:center;padding:18px">Sem demonstração visual</div>`;
   }
 
-  const primaryMuscle = formatMuscleLabel(d.target_muscle);
-  const secondaryMuscles = Array.isArray(d.secondary_muscles) ? d.secondary_muscles.map(formatMuscleLabel).filter(Boolean) : [];
-  const muscleList = [primaryMuscle, ...secondaryMuscles].filter(Boolean);
-  const musclesText = muscleList.length <= 1 ? (muscleList[0] || '') : `${muscleList.slice(0, -1).join(', ')} e ${muscleList[muscleList.length - 1]}`;
+  const primaryMuscle = formatMuscleLabel(d.target_muscle || d.muscles?.target);
+  const rawSecondary = Array.isArray(d.secondary_muscles) ? d.secondary_muscles : (Array.isArray(d.muscles?.secondary) ? d.muscles.secondary : []);
+  const secondaryMuscles = rawSecondary.map(formatMuscleLabel).filter(Boolean);
+  const allMuscles = [primaryMuscle, ...secondaryMuscles].filter(Boolean);
+
+  const muscleChips = allMuscles.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${allMuscles.map((m, i) => `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;border-radius:20px;${i === 0 ? 'background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);color:var(--accent)' : 'background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-2)'}">${m}</span>`).join('')}</div>`
+    : '';
 
   document.getElementById('exerciseDiscInfo').innerHTML = `
-    <div style="font-family:var(--display);font-size:1.14rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:4px">${d.names?.pt || d.names?.en || '—'}</div>
-    ${d.names?.en ? `<div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px">${d.names.en}</div>` : ''}
+    <div style="font-family:var(--display);font-size:1.35rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:2px;line-height:1.1">${d.names?.pt || d.names?.en || '—'}</div>
+    ${d.names?.en && d.names?.en !== d.names?.pt ? `<div style="font-size:0.7rem;color:var(--text-2);margin-bottom:10px;letter-spacing:.01em">${d.names.en}</div>` : '<div style="margin-bottom:10px"></div>'}
+    ${muscleChips}
   `;
 
   const instrs = Array.isArray(d.instructions) ? d.instructions.filter(Boolean) : [];
@@ -13031,33 +13046,30 @@ function _renderExerciseDiscResult(d, renderMode = "enriched") {
   const blocks = [];
 
   if (instrs.length) {
-    blocks.push(`<section style="margin-bottom:14px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div><ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">${instrs.map((step, idx) => `<li style="font-size:0.84rem;color:var(--text);line-height:1.5"><strong style="color:#FFB347">${idx + 1}.</strong> ${step}</li>`).join('')}</ol></section>`);
-  }
-
-  if (musclesText) {
-    blocks.push(`<section style="margin-bottom:14px"><div style="margin-bottom:6px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Músculos trabalhados</div><div style="font-size:0.82rem;line-height:1.45;color:var(--text)">${musclesText}</div></section>`);
+    const steps = instrs.map((step, idx) => `<li style="font-size:0.84rem;color:var(--text);line-height:1.55;padding:8px 0;border-bottom:1px solid var(--border-soft, rgba(255,255,255,0.04))"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(249,115,22,0.12);border-radius:50%;font-size:0.7rem;font-weight:800;color:var(--accent);margin-right:8px;flex-shrink:0;vertical-align:middle">${idx + 1}</span>${step}</li>`).join('');
+    blocks.push(`<section style="margin-bottom:16px"><div style="margin-bottom:8px;font-size:0.7rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div><ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column">${steps}</ol></section>`);
   }
 
   if (commonErrors.length) {
-    blocks.push(`<section style="margin-bottom:14px"><div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Erros para evitar</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${commonErrors.map((err) => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45">${err}</li>`).join('')}</ul></section>`);
+    blocks.push(`<section style="margin-bottom:16px;padding:12px;border:1px solid rgba(239,68,68,0.15);border-radius:12px;background:rgba(239,68,68,0.04)"><div style="margin-bottom:8px;font-size:0.7rem;font-weight:800;color:rgba(239,68,68,0.7);letter-spacing:.08em;text-transform:uppercase">Erros comuns</div><ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">${commonErrors.map((err) => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45;padding-left:14px;position:relative"><span style="position:absolute;left:0;color:rgba(239,68,68,0.6)">✕</span>${err}</li>`).join('')}</ul></section>`);
   }
 
   if (d.breathing_tip) {
-    blocks.push(`<section style="margin-bottom:14px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)"><div style="font-size:.72rem;text-transform:uppercase;color:var(--text-2);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Respiração</div><div style="font-size:.82rem;line-height:1.45;color:var(--text)">${d.breathing_tip}</div>${d.range_of_motion ? `<div style="margin-top:8px;font-size:.78rem;color:var(--text-2)"><strong>Amplitude:</strong> ${d.range_of_motion}</div>` : ''}</section>`);
+    blocks.push(`<section style="margin-bottom:16px;padding:11px 12px;border:1px solid rgba(99,179,237,0.15);border-radius:12px;background:rgba(99,179,237,0.04)"><div style="font-size:.7rem;text-transform:uppercase;color:rgba(99,179,237,0.7);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Respiração</div><div style="font-size:.82rem;line-height:1.5;color:var(--text)">${d.breathing_tip}</div>${d.range_of_motion ? `<div style="margin-top:7px;font-size:.75rem;color:var(--text-2)"><strong style="color:var(--text)">Amplitude:</strong> ${d.range_of_motion}</div>` : ''}</section>`);
   }
 
   document.getElementById('exerciseDiscInstructions').innerHTML = blocks.join('');
 
   const vars = d.variations || [];
   const varHtml = vars.length
-    ? `<div style="margin-bottom:8px;font-size:0.72rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Variações</div>
-       <div style="display:flex;flex-wrap:wrap;gap:6px">
+    ? `<div style="margin-bottom:8px;font-size:0.7rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Variações</div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
          ${vars.map(v => `<button onclick="openExerciseDetailsByName('${(v.names?.pt || v.names?.en || '').replace(/'/g,"\'")}')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.names?.pt || v.names?.en}</button>`).join('')}
        </div>`
     : '';
   const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${d.names?.pt || d.names?.en} execução correta`)}`;
-  const fallbackLabel = renderMode === "minimal" ? "Ver referência complementar" : "Fonte externa complementar";
-  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}${varHtml ? '' : ''}<div style="margin-top:14px"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.85">${fallbackLabel}</a></div>`;
+  const fallbackLabel = renderMode === "minimal" ? "Ver referência complementar" : "Ver no YouTube";
+  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}<div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.75">${fallbackLabel}</a>${mediaSrc ? `<span style="font-size:.65rem;color:var(--text-2);opacity:.5">GIF via ExerciseDB</span>` : ''}</div>`;
 
   if (usingPlaceholder && !blocks.length) {
     logExerciseDetailsEvent('exercise_detail_rendered_with_placeholder_only', { lookupKey: d.normalized_lookup_key || d.slug || '' });
