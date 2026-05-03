@@ -5799,17 +5799,83 @@ function _renderExercisePreviewList(cards) {
   const list = document.getElementById("exercisePreviewList");
   if (!list) return;
   if (!cards.length) { list.innerHTML = ""; return; }
-  const muscleIcons = { peito:"💪", costas:"🔙", pernas:"🦵", ombros:"🙆", biceps:"💪", triceps:"💪", abdomen:"🧱", gluteos:"🍑" };
+  const cache = _readExerciseDetailsCache();
   list.innerHTML = cards.slice(0, 6).map((c, i) => {
     const exSource = c?.exercicios?.[0] || c;
     const ex = getExerciseCardTitle(exSource, i);
-    return `<div class="exercise-preview-item">
-      <div class="exercise-preview-thumb">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.6)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
-      </div>
-      <div class="exercise-preview-label">${ex}</div>
+    const lookupKey = normalizeExerciseLookupKey(ex);
+    const cached = cache[lookupKey] || null;
+    const thumb = cached?.media?.primary || cached?.gif_url || null;
+    const muscle = cached?.target_muscle ? formatMuscleLabel(cached.target_muscle) : "";
+    const safeId = `exp-${lookupKey.replace(/[^a-z0-9]/g, "").slice(0, 24)}`;
+    const safeEx = ex.replace(/'/g, "\\'");
+    const thumbHTML = thumb
+      ? `<img src="${thumb}" alt="${escapeHTML(ex)}" style="width:100%;height:100%;object-fit:cover;border-radius:0">`
+      : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.5)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>`;
+    return `<div class="exercise-preview-item exercise-preview-item--tap" id="${safeId}" onclick="openExerciseDetailsByName('${safeEx}',{origin:'preview_list'})">
+      <div class="exercise-preview-thumb" id="${safeId}-thumb">${thumbHTML}</div>
+      <div class="exercise-preview-label">${escapeHTML(ex)}</div>
+      ${muscle ? `<div class="exercise-preview-muscle">${muscle}</div>` : ""}
     </div>`;
   }).join("");
+  _prefetchExerciseThumbnails(cards);
+}
+
+// Silently fetches thumbnails for exercises not yet in the local cache,
+// then updates the preview cards in-place — same pattern used by Hevy/Strong.
+async function _prefetchExerciseThumbnails(cards) {
+  if (!cards || !cards.length) return;
+  const cache = _readExerciseDetailsCache();
+  const toFetch = cards.slice(0, 6).filter(c => {
+    const name = getExerciseCardTitle(c?.exercicios?.[0] || c, 0);
+    const key = normalizeExerciseLookupKey(name);
+    const hit = cache[key];
+    return !hit || (!hit.media?.primary && !hit.gif_url);
+  });
+  if (!toFetch.length) return;
+
+  for (const c of toFetch) {
+    const exSource = c?.exercicios?.[0] || c;
+    const name = getExerciseCardTitle(exSource, 0);
+    const lookupKey = normalizeExerciseLookupKey(name);
+    const safeId = `exp-${lookupKey.replace(/[^a-z0-9]/g, "").slice(0, 24)}`;
+    try {
+      const params = new URLSearchParams({ exerciseName: name, lookupKey });
+      const endpoint = resolveAppApiUrl(`/api/kronia/exercises/details?${params}`);
+      const resp = await fetch(endpoint, { signal: AbortSignal.timeout(10000) });
+      if (!resp.ok) continue;
+      const json = await resp.json();
+      const normalized = normalizeExerciseDetails(normalizeExerciseDetailsPayload(json));
+      if (!normalized) continue;
+
+      const freshCache = _readExerciseDetailsCache();
+      freshCache[lookupKey] = {
+        gif_url: normalized.gif_url || null,
+        media: normalized.media || null,
+        target_muscle: normalized.target_muscle || null,
+        names: normalized.names || null,
+        cached_at: Date.now(),
+      };
+      _writeExerciseDetailsCache(freshCache);
+
+      const thumb = normalized.media?.primary || normalized.gif_url || null;
+      if (!thumb) continue;
+
+      const thumbEl = document.getElementById(`${safeId}-thumb`);
+      if (thumbEl) {
+        thumbEl.innerHTML = `<img src="${thumb}" alt="${escapeHTML(name)}" style="width:100%;height:100%;object-fit:cover;border-radius:0">`;
+      }
+      if (normalized.target_muscle) {
+        const card = document.getElementById(safeId);
+        if (card && !card.querySelector(".exercise-preview-muscle")) {
+          const label = card.querySelector(".exercise-preview-label");
+          if (label) label.insertAdjacentHTML("afterend", `<div class="exercise-preview-muscle">${formatMuscleLabel(normalized.target_muscle)}</div>`);
+        }
+      }
+    } catch (_) {
+      // background fetch — fail silently
+    }
+  }
 }
 
 function _updateHomeBannerFast(streak, totalTreinos) {
@@ -12974,6 +13040,21 @@ function renderExercise(data) {
   normalized.instructions = Array.isArray(details?.instructions) ? details.instructions : [];
   normalized.common_errors = Array.isArray(details?.common_errors) ? details.common_errors : [];
   normalized.breathing_tip = details?.breathing_tip ?? null;
+
+  // Persist to cache so preview cards can read thumbnails instantly
+  if (normalized.normalized_lookup_key) {
+    try {
+      const cache = _readExerciseDetailsCache();
+      cache[normalized.normalized_lookup_key] = {
+        gif_url: normalized.gif_url || null,
+        media: normalized.media || null,
+        target_muscle: normalized.target_muscle || null,
+        names: normalized.names || null,
+        cached_at: Date.now(),
+      };
+      _writeExerciseDetailsCache(cache);
+    } catch (_) {}
+  }
 
   _renderExerciseDiscResult(normalized, "enriched");
   _exerciseDiscSetState("result");
