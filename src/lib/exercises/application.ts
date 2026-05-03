@@ -9,6 +9,7 @@ import { resolveFallbackKey } from './fallback-map';
 import { resolveLocalCatalogMedia } from './local-catalog';
 import { pickBestExerciseMedia } from './media-ranking';
 import { buildPexelsSearchQueries, INTERNAL_EXERCISE_MEDIA_FALLBACK, resolveExerciseMediaFields, sanitizeMediaUrl } from './media-utils';
+import { resolveLocalCatalogMedia } from './local-catalog';
 import type { AppResult, DetectedExerciseContext, ExerciseDbItem, ExerciseDetailsInput, ExerciseEntity, ExerciseResponsePayload, ExerciseSearchInput, NormalizedExerciseDetails } from './types';
 
 const MIN_KNOWN_INSTRUCTIONS = [
@@ -646,8 +647,63 @@ export class KroniaExerciseApplication {
       exerciseName: lookupName || null,
     });
     let exercise = lookupResult.exercise;
+    let effectiveConfidence = lookupResult.confidenceScore;
     let externalFetch = false;
 
+    // Fallback layer 1: resolveFallbackKey (PT → EN canonical, in-memory)
+    if (!exercise && lookupKey) {
+      const canonicalKey = resolveFallbackKey(lookupKey);
+      if (canonicalKey && canonicalKey !== lookupKey) {
+        const r = await this.repository.findExerciseByIdentity({
+          exerciseId: null, slug: null,
+          normalizedLookupKey: canonicalKey,
+          exerciseName: null,
+        });
+        if (r.exercise) {
+          exercise = r.exercise;
+          effectiveConfidence = r.confidenceScore * 0.92;
+          console.info('[kronia_exercise] exercise_found_via_fallback_key', { lookupKey, canonicalKey });
+        }
+      }
+    }
+
+    // Fallback layer 2: local catalog fuzzy match (PT names → English slug/sourceId)
+    if (!exercise) {
+      try {
+        const catalogMatch = resolveLocalCatalogMedia({
+          name: lookupName || lookupKey.replace(/_/g, ' '),
+          slug: lookupSlug || undefined,
+          normalizedLookupKey: lookupKey,
+        });
+        if (catalogMatch && catalogMatch.score >= 0.52) {
+          // 2a: try by normalized English key from catalog
+          if (catalogMatch.normalizedLookupKey && catalogMatch.normalizedLookupKey !== lookupKey) {
+            const r = await this.repository.findExerciseByIdentity({
+              exerciseId: null, slug: catalogMatch.slug || null,
+              normalizedLookupKey: catalogMatch.normalizedLookupKey,
+              exerciseName: catalogMatch.nameEn || null,
+            });
+            if (r.exercise) {
+              exercise = r.exercise;
+              effectiveConfidence = r.confidenceScore * catalogMatch.score * 0.9;
+              console.info('[kronia_exercise] exercise_found_via_local_catalog_key', { lookupKey, catalogKey: catalogMatch.normalizedLookupKey, score: catalogMatch.score });
+            }
+          }
+          // 2b: try by source_id (ExerciseDB ID)
+          if (!exercise && catalogMatch.sourceId) {
+            exercise = await this.repository.findBySourceId(catalogMatch.sourceId);
+            if (exercise) {
+              effectiveConfidence = catalogMatch.score * 0.88;
+              console.info('[kronia_exercise] exercise_found_via_source_id', { lookupKey, sourceId: catalogMatch.sourceId });
+            }
+          }
+        }
+      } catch (catalogErr) {
+        console.info('[kronia_exercise] local_catalog_fallback_skipped', { reason: catalogErr instanceof Error ? catalogErr.message : 'unknown' });
+      }
+    }
+
+    // Fallback layer 3: external source (ExerciseDB API, if key available)
     if (!exercise) {
       exercise = await this.fetchExerciseFromExternalSource(context);
       externalFetch = Boolean(exercise);
@@ -672,14 +728,14 @@ export class KroniaExerciseApplication {
       responseTimeMs,
       externalFetch,
       lookupKey,
-      confidenceScore: lookupResult.confidenceScore,
+      confidenceScore: effectiveConfidence,
     });
 
     return ok(payload, {
       normalizedLookupKey: lookupKey,
       responseTimeMs,
       externalFetch,
-      confidenceScore: lookupResult.confidenceScore,
+      confidenceScore: effectiveConfidence,
     });
   }
 
