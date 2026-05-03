@@ -1,0 +1,233 @@
+================================================================================
+INCIDENT REPORT — SERVICE_UNAVAILABLE 503
+Serviço: /api/kronia/exercises/details
+Data: 2026-05-03
+Ambiente: Produção (Vercel) — kronia.app.br
+Severidade: CRÍTICA (funcionalidade "Ver exercício" completamente indisponível)
+Status: PENDENTE CORREÇÃO
+================================================================================
+
+
+1. SINTOMA OBSERVADO
+────────────────────
+Todas as requisições autenticadas para /api/kronia/exercises/details retornam:
+
+    HTTP 503
+    {
+      "type": "exercise_error",
+      "code": "SERVICE_UNAVAILABLE",
+      "message": "Serviço de exercícios temporariamente indisponível."
+    }
+
+Logs da Vercel confirmam o problema (requestId dvsww-1777832799471):
+
+    level: "error"
+    message: "(node:4) Warning: Failed to load the ES module:
+              /var/task/src/lib/exercises/local-catalog.js.
+              Make sure to set \"type\": \"module\" in the nearest
+              package.json file or use the .mjs extension."
+    requestPath: "/api/kronia/exercises/details"
+    responseStatusCode: 503
+
+
+2. CAUSA RAIZ
+─────────────
+2.1  O bug
+
+Em sessão anterior (2026-05-03), ao tentar tornar a leitura de
+`data/exercises.json` resiliente para o ambiente serverless da Vercel,
+foi adicionado o seguinte código em `src/lib/exercises/local-catalog.ts`,
+linha 158–165:
+
+    try {
+      raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
+    } catch {
+      try {
+        const alt = path.join(
+          path.dirname(new URL(import.meta.url).pathname),  // ← BUG
+          '../../../data/exercises.json'
+        );
+        raw = JSON.parse(fs.readFileSync(alt, 'utf8'));
+      } catch {
+        cachedIndex = [];
+        return cachedIndex;
+      }
+    }
+
+A expressão `import.meta.url` é válida apenas em módulos ES (ESM).
+
+2.2  Por que quebrou na Vercel e não localmente
+
+O `tsconfig.json` do projeto declara `"module": "node16"`. Em contexto
+de funções serverless Next.js (que é o que a Vercel usa para
+`src/app/api/**`), o TypeScript compila para CommonJS — não para ESM.
+
+Em CommonJS, `import.meta` não existe. O TypeScript já sinalizou isso
+durante o build:
+
+    src/lib/exercises/local-catalog.ts(160,50): error TS1470:
+    The 'import.meta' meta-property is not allowed in files which
+    will build into CommonJS output.
+
+No entanto, o `tsconfig.json` NÃO tem `"noEmitOnError": true`, então o
+compilador emitiu o arquivo `.js` mesmo com o erro — gerando um arquivo
+CommonJS com sintaxe ESM embutida.
+
+Quando o Node.js 22 (serverless Vercel) tenta carregar esse módulo via
+`require()`, ele detecta que o arquivo contém `import.meta` e rejeita
+o módulo inteiro com:
+
+    Failed to load the ES module: local-catalog.js
+
+2.3  Cadeia de falha
+
+    [Requisição GET /api/kronia/exercises/details]
+              ↓
+    [Next.js inicializa o route handler (details/route.ts)]
+              ↓
+    [import KroniaExerciseApplication from 'application.ts']
+              ↓
+    [application.ts importa resolveLocalCatalogMedia de 'local-catalog']
+              ↓
+    [Node.js tenta require('local-catalog.js')]
+              ↓
+    [FALHA: "Failed to load ES module" — import.meta em CommonJS]
+              ↓
+    [Módulo não carrega → exceção não capturada na inicialização]
+              ↓
+    [Next.js retorna 503 SERVICE_UNAVAILABLE]
+
+
+3. SEGUNDO PROBLEMA: ERRO DE TIPO
+──────────────────────────────────
+O build também reporta:
+
+    src/lib/exercises/local-catalog.ts(204,7): error TS2322:
+    Type 'string | null' is not assignable to type 'string'.
+
+A interface `LocalCatalogMatch` (linha 22) declara `gifUrl: string`
+(não-nulo), mas após a refatoração que removeu o filtro
+`.filter(item => item.gifUrl)`, `record.gifUrl` pode ser `null`
+(quando sanitizeMediaUrl retorna null para URLs do CDN inativo
+cdn.treino-do-dia.app).
+
+A atribuição `gifUrl: record.gifUrl` em linha 204 quebra o contrato
+de tipos. Não causa crash em runtime neste caso (o valor null é tratado
+adiante), mas é tecnicamente incorreto e impede type-safety.
+
+
+4. O QUE NÃO ESTÁ QUEBRADO
+────────────────────────────
+- Supabase: queries ao banco funcionam normalmente
+- Autenticação: todas as rotas protegidas respondem 401/200 corretamente
+- /api/plan-features e /api/plan-current: 200 OK
+- resolveFallbackKey (mapeamento PT→EN em memória): intacto
+- ExerciseDB client externo: intacto
+- app.js frontend: sintaxe válida (SyntaxError anterior foi corrigido)
+- Service worker: cache atualizado
+
+
+5. COMMIT CAUSADOR
+──────────────────
+Commit: fd5788d (cherry-picked de aad94b9)
+Mensagem: "fix: corrigir 3 problemas no pipeline de mídia de exercícios"
+Arquivo afetado: src/lib/exercises/local-catalog.ts
+Linha introduzida: 160 — `new URL(import.meta.url).pathname`
+
+O commit foi pushed direto para main e chegou ao deploy
+dpl_FrBnN1FWpEVu4Qk1ZjgNgLrZkE7E (commit 1220237 no log da Vercel).
+
+
+6. PLANO DE CORREÇÃO
+─────────────────────
+6.1  Remover `import.meta.url` de local-catalog.ts
+
+O fallback com `import.meta.url` foi adicionado desnecessariamente.
+A Vercel executa funções Next.js com `process.cwd()` apontando para
+`/var/task` (raiz do projeto). O `data/exercises.json` está lá e é
+incluído automaticamente pelo file-tracing do Next.js.
+
+ANTES (quebrado):
+    try {
+      raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
+    } catch {
+      try {
+        const alt = path.join(
+          path.dirname(new URL(import.meta.url).pathname),
+          '../../../data/exercises.json'
+        );
+        raw = JSON.parse(fs.readFileSync(alt, 'utf8'));
+      } catch {
+        cachedIndex = [];
+        return cachedIndex;
+      }
+    }
+
+DEPOIS (correto):
+    try {
+      raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
+    } catch {
+      cachedIndex = [];
+      return cachedIndex;
+    }
+
+6.2  Corrigir tipo LocalCatalogMatch.gifUrl
+
+    // ANTES:
+    export type LocalCatalogMatch = {
+      gifUrl: string;
+      ...
+    };
+
+    // DEPOIS:
+    export type LocalCatalogMatch = {
+      gifUrl: string | null;
+      ...
+    };
+
+    E nos consumidores (application.ts): verificar `if (catalogMatch.gifUrl)`
+    antes de usar o valor.
+
+6.3  Adicionar noEmitOnError ao tsconfig (prevenção)
+
+    "compilerOptions": {
+      "noEmitOnError": true,  // ← adicionar
+      ...
+    }
+
+    Isso garante que erros de tipo bloqueiem o deploy, impedindo que
+    código TypeScript inválido chegue à produção silenciosamente.
+
+6.4  Atualizar o teste de regressão
+
+    ui-unblock.test.js verifica o nome do cache do sw.js.
+    Após o fix, um novo deploy não requer alteração do cache name
+    (o fix é só TypeScript, não afeta assets estáticos).
+
+
+7. TEMPO ESTIMADO DE CORREÇÃO
+──────────────────────────────
+- Remoção do import.meta.url:      2 min
+- Correção do tipo gifUrl:         2 min
+- Testes locais:                   1 min
+- Commit + push:                   1 min
+- Deploy Vercel (automático):      ~60s
+
+Total: ~7 minutos até a produção estar restaurada.
+
+
+8. LIÇÃO APRENDIDA
+──────────────────
+Ao adicionar um "fallback de resiliência" para produção, foi usado uma
+API (import.meta.url) que só existe em ESM, em um arquivo que compila
+para CommonJS. O ambiente local (onde os testes passam) usava o arquivo
+TypeScript via tsx, que suporta import.meta nativamente. A divergência
+entre o ambiente de teste e o ambiente de compilação da Vercel não foi
+detectada antes do deploy.
+
+A proteção correta seria `"noEmitOnError": true` no tsconfig — o build
+da Vercel teria falhado explicitamente em vez de emitir código inválido.
+
+================================================================================
+Fim do relatório
+================================================================================
