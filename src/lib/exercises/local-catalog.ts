@@ -19,7 +19,7 @@ type LocalExerciseRecord = {
 };
 
 export type LocalCatalogMatch = {
-  gifUrl: string;
+  gifUrl: string | null;
   sourceId: string | null;
   slug: string | null;
   normalizedLookupKey: string;
@@ -156,13 +156,8 @@ function loadCatalogIndex(): IndexedLocalRecord[] {
   try {
     raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
   } catch {
-    try {
-      const alt = path.join(path.dirname(new URL(import.meta.url).pathname), '../../../data/exercises.json');
-      raw = JSON.parse(fs.readFileSync(alt, 'utf8'));
-    } catch {
-      cachedIndex = [];
-      return cachedIndex;
-    }
+    cachedIndex = [];
+    return cachedIndex;
   }
 
   const list: LocalExerciseRecord[] = Array.isArray(raw) ? raw : Array.isArray((raw as Record<string, unknown>)?.exercises) ? (raw as Record<string, unknown[]>).exercises as LocalExerciseRecord[] : [];

@@ -107,8 +107,8 @@ test('legacy profile base flow is not shipped in active entry files', () => {
 test('service worker is clean UI cache only and does not mutate HTML or inject diet scripts', () => {
   const source = read('sw.js');
 
-  assert.match(source, /const CACHE = 'kronia-exercise-media-fix-20260503'/);
-  assert.match(source, /const BUILD_VERSION = '20260503-exercise-media-fix'/);
+  assert.match(source, /const CACHE = 'kronia-503-hotfix-20260504'/);
+  assert.match(source, /const BUILD_VERSION = '20260504-503-hotfix'/);
   assert.ok(source.includes("url.pathname.startsWith('/src/ui/diet/')"));
   assert.ok(source.includes("requestUrl.pathname === '/api/kronia/exercises/details'"));
   assert.doesNotMatch(source, /injectDietController/);
