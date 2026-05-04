@@ -47,7 +47,9 @@ window.KroniaUI.unblockScreens = function(reason) {
     const isAggressiveRouteCleanup = /before-training|after-nav-treino|before-diet/.test(String(reason || ''))
       && el.id !== 'configSheet'
       && el.id !== 'timerSheet'
-      && el.id !== 'customModal';
+      && el.id !== 'customModal'
+      && el.id !== 'dietDataScreen'
+      && el.id !== 'dietChoiceScreen';
 
     if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
@@ -2800,6 +2802,7 @@ function navTo(tab) {
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
   if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
+  if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
   if (tab !== "dieta") document.getElementById("dietChoiceScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
