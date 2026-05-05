@@ -2801,6 +2801,10 @@ function navTo(tab) {
   if (tab === "dieta") scheduleKroniaUIUnblock('before-diet-tab');
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
+  const _cont = document.getElementById("container");
+  if (_cont) _cont.style.display = tab === "treino" ? "" : "none";
+  const _nav = document.getElementById("nav");
+  if (_nav) _nav.style.display = tab === "treino" ? "" : "none";
   if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
   if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
