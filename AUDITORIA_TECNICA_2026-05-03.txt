@@ -1,0 +1,411 @@
+================================================================================
+AUDITORIA TÉCNICA COMPLETA — KRONIA / Treino-do-dia
+Data: 2026-05-03
+Repositório: /home/user/Treino-do-dia
+Ambiente: Node.js 22, Vercel Serverless, Supabase
+Status Geral: CRÍTICO (bug ativo em produção)
+================================================================================
+
+
+1. ESTRUTURA DO PROJETO
+───────────────────────
+
+Treino-do-dia/
+├── api/                          Funções Vercel serverless (CommonJS .js)
+│   ├── plan.js                   Gestão de planos (current, features, config)
+│   ├── science.js                Nutrição, artigos, exercícios, dieta
+│   ├── affiliate.js              Sistema de afiliados e comissões
+│   ├── system.js                 Admin, diagnósticos, imports, LGPD
+│   ├── chat.js                   Chat com IA
+│   ├── agent.js                  Agentes IA
+│   ├── memory.js                 Persistência de memória de usuário
+│   ├── kronia-labs.js            Exames laboratoriais
+│   ├── payment-webhook.js        Webhooks de pagamento
+│   └── admin-import-exercises-auto.js
+├── src/
+│   ├── app/api/                  Next.js route handlers (TypeScript ESM)
+│   │   ├── kronia/               Rotas principais da aplicação
+│   │   ├── chat/                 Endpoints de chat
+│   │   ├── science/              Ciência e nutrição
+│   │   ├── labs/                 Processamento de exames
+│   │   ├── cron/                 Cron jobs agendados
+│   │   └── system/               Health checks
+│   ├── ai/                       Motor IA (~20 módulos TypeScript)
+│   │   ├── modelClient.ts
+│   │   ├── intentAgent.ts
+│   │   ├── chatService.ts
+│   │   └── rag.ts
+│   ├── lib/                      Lógica de negócio reutilizável
+│   │   ├── exercises/            Catálogo, resolução PT→EN, mídia
+│   │   ├── supabase/             Clientes do banco
+│   │   ├── utils/                Rate limit, env, helpers
+│   │   └── plans/                Regras de plano
+│   ├── server/                   Backend Node.js puro
+│   │   ├── internal/labReports   Processamento de exames OCR
+│   │   ├── apihelpers/           Auth, rate limit
+│   │   └── legacy/               Código legado (cron-scraper)
+│   └── types/                    Tipos TypeScript compartilhados
+├── tests/
+│   ├── unit/                     64 arquivos de testes unitários
+│   └── e2e/                      Testes Playwright
+├── supabase/
+│   ├── migrations/               10+ migrations SQL
+│   └── functions/                Edge Functions do Supabase
+├── data/
+│   └── exercises.json            Catálogo local (810 KB, ~1300 exercícios)
+├── scripts/                      Build, deploy, seed, monitor
+├── docs/                         Documentação interna
+├── index.html                    SPA principal (229 KB, 7.4k linhas)
+├── app.js                        Core lógica frontend (806 KB — monolítico)
+├── sw.js                         Service Worker
+├── styles.css                    Estilos globais
+├── tsconfig.json                 TypeScript config (PROBLEMA: sem noEmitOnError)
+├── vercel.json                   Roteamento, functions, crons Vercel
+└── package.json                  1 dep produção, 6 dev
+
+
+2. STACK TECNOLÓGICA
+────────────────────
+
+Linguagens:
+  TypeScript 5.9.3 (backend/lib)
+  JavaScript ES2020 (frontend/api)
+  Python 3.12 (services/exam_ocr — OCR de exames)
+  SQL/PostgreSQL (migrations Supabase)
+
+Plataforma:
+  Node.js 22 (Vercel serverless)
+  Vercel (deploy, hosting, crons)
+  Supabase (banco, auth, storage, edge functions)
+
+Integrações externas:
+  ExerciseDB     — banco de exercícios com GIFs
+  Groq API       — IA de chat (env: GROQ_API_KEY)
+  Pexels API     — imagens de exercícios (env: PEXELS_API_KEY)
+  Upstash Redis  — rate limiting (env: UPSTASH_REDIS_URL)
+
+Dependências (package.json):
+  Produção:
+    @supabase/supabase-js  ^2.103.0
+  Dev:
+    @playwright/test       ^1.59.1
+    @types/node            ^20.19.39
+    typescript             ^5.9.3
+    tsx                    ^4.21.0
+    dotenv                 ^16.4.5
+    dotenv-cli             ^7.4.2
+
+
+3. ROTAS DE API — LISTA COMPLETA
+─────────────────────────────────
+
+Vercel Serverless (api/*.js via vercel.json rewrites):
+
+  PLANOS
+  GET  /api/plan-current           → api/plan.js   Plano ativo do usuário
+  GET  /api/plan-features          → api/plan.js   Features por plano
+  GET  /api/config                 → api/plan.js   Config geral
+
+  AFILIADOS
+  POST /api/affiliate-referral     → api/affiliate.js
+  GET  /api/affiliate-commissions  → api/affiliate.js
+  POST /api/affiliate-sale         → api/affiliate.js
+  POST /api/billing-sync           → api/affiliate.js
+
+  CIÊNCIA / NUTRIÇÃO
+  GET  /api/science-articles       → api/science.js
+  POST /api/nutrition-calc         → api/science.js
+  POST /api/nutrition-plan         → api/science.js
+  POST /api/nutrition-selftest     → api/science.js
+  POST /api/kronia/diet/*          → api/science.js
+
+  EXERCÍCIOS
+  GET  /api/kronia/exercises/details     → api/science.js  [503 BUG CRÍTICO]
+  POST /api/kronia/exercises/discovery   → api/science.js
+
+  EXAMES (LABS)
+  POST /api/kronia/labs/init-upload      → api/kronia-labs.js
+  POST /api/kronia/labs/register         → api/kronia-labs.js
+  GET  /api/kronia/labs/reports          → api/kronia-labs.js
+  GET  /api/kronia/labs/reports/:id      → api/kronia-labs.js
+
+  ADMIN / SISTEMA
+  GET  /api/lgpd-export            → api/system.js
+  POST /api/lgpd-delete            → api/system.js
+  GET  /api/machine                → api/system.js
+  POST /api/admin-diagnostics      → api/system.js
+  POST /api/admin-import-exercises → api/system.js
+
+  MEMORIA / IA
+  POST /api/internal/process-memory-queue → api/memory.js
+  POST /api/chat                          → api/chat.js
+
+Next.js Route Handlers (src/app/api/**):
+
+  POST /api/kronia/chat            Bearer Auth  Chat KRONOS
+  POST /api/kronia/diet            Bearer Auth  Geração de dieta
+  POST /api/kronia/workout         Bearer Auth  Geração de treino
+  GET  /api/kronia/workout/templates Bearer Auth Templates
+  POST /api/kronia/intent          Bearer Auth  Classificação de intenção
+  POST /api/kronia/intelligence    Bearer Auth  Inteligência
+  GET  /api/kronia/exercises/details  Bearer Auth  [503 BUG]
+  POST /api/kronia/exercises/discovery Bearer Auth
+  POST /api/kronia/exercises/catalog-admin Bearer Auth
+  GET  /api/kronia/labs/reports    Bearer Auth
+  GET  /api/kronia/labs/reports/:id Bearer Auth
+  POST /api/labs/process           Bearer Auth
+  POST /api/labs/upload            Bearer Auth
+  GET  /api/system/health          público      Health check
+  GET  /api/cron/daily-dispatch    CRON Secret  Dispatch diário (04:00 UTC)
+  GET  /api/cron/sync-exercises    CRON Secret
+  GET  /api/cron/labs-watchdog     CRON Secret
+
+
+4. BUGS E PROBLEMAS ATIVOS
+───────────────────────────
+
+P0 — CRÍTICO (em produção, bloqueando feature)
+──────────────────────────────────────────────
+
+4.1  503 SERVICE_UNAVAILABLE em /api/kronia/exercises/details
+     Arquivo: src/lib/exercises/local-catalog.ts (linha 160)
+     Commit causador: 4243ed3 / fd5788d (2026-05-03)
+
+     Erro no log Vercel (requestId dvsww-1777832799471):
+       "Failed to load the ES module: /var/task/src/lib/exercises/local-catalog.js.
+        Make sure to set "type": "module" or use .mjs extension."
+
+     Código quebrado (linha 158-165):
+       try {
+         raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
+       } catch {
+         try {
+           const alt = path.join(
+             path.dirname(new URL(import.meta.url).pathname),  ← CAUSA RAIZ
+             '../../../data/exercises.json'
+           );
+           raw = JSON.parse(fs.readFileSync(alt, 'utf8'));
+         } catch {
+           cachedIndex = [];
+           return cachedIndex;
+         }
+       }
+
+     Por que falha:
+       1. import.meta.url só existe em ESM
+       2. Vercel compila TypeScript para CommonJS
+       3. tsconfig falta noEmitOnError → arquivo inválido é emitido
+       4. Node.js 22 rejeita o módulo ao carregar
+       5. Toda a rota trava em 503
+
+     Erro TypeScript (detectado no build, ignorado):
+       TS1470: The 'import.meta' meta-property is not allowed in files
+       which will build into CommonJS output.
+
+4.2  Tipo incorreto em LocalCatalogMatch
+     Arquivo: src/lib/exercises/local-catalog.ts (linha 22 e 204)
+
+     Erro TypeScript:
+       TS2322: Type 'string | null' is not assignable to type 'string'.
+
+     Causa: gifUrl declarado como string (não-nulo) mas
+     sanitizeMediaUrl retorna null para CDN inativo.
+     Linha 22: gifUrl: string  ← deveria ser string | null
+     Linha 204: gifUrl: record.gifUrl  ← atribuição quebra tipo
+
+
+P1 — ALTO
+──────────
+
+4.3  Falta noEmitOnError no tsconfig.json
+     Arquivo: tsconfig.json
+     Impacto: TypeScript emite JS com erros → código inválido chega a produção
+
+4.4  Tipos ausentes em devDependencies (@types/node, @playwright/test)
+     Impacto: Warnings de tipo no build, pode bloquear type-check
+
+4.5  Lógica de plano duplicada (JS + SQL)
+     api/_plans.js vs supabase/migrations/008_plan_access_and_usage.sql
+     Risco: Drift de comportamento entre JS e SQL
+
+
+P2 — MÉDIO
+───────────
+
+4.6  Trial duration em múltiplas fontes
+     Node.js usa env var TRIAL_DAYS, SQL hardcoda 7
+     Risco: Inconsistência se TRIAL_DAYS mudar
+
+4.7  CDN inexistente referenciado em data/exercises.json
+     Todas as 1300+ entradas têm gifUrl: "https://cdn.treino-do-dia.app/..."
+     CDN não resolve (host não existe)
+     Mitigação: cdn.treino-do-dia.app adicionado a INVALID_MEDIA_HOSTS
+
+4.8  Feature usage logs sem idempotência forte
+     Risco: Duplicidade de logs em reprocessamento
+
+
+P3 — BAIXO
+───────────
+
+4.9  app.js monolítico (806 KB, ~20k linhas)
+     Todo UI + state + utils em um arquivo
+     Dificulta manutenção e debugging
+
+4.10 index.html grande (229 KB, 7.4k linhas)
+     Anormal — provavelmente contém CSS/JS inline
+
+4.11 Cache name do sw.js com data hardcoded
+     const CACHE = 'kronia-exercise-media-fix-20260503'
+     Deve ser atualizado manualmente em cada release
+
+4.12 Crons não agendados em vercel.json
+     /api/cron/sync-exercises e /api/cron/labs-watchdog
+     existem no código mas não têm schedule em vercel.json
+
+
+5. TESTES
+─────────
+
+Resultado atual: 351 pass, 0 fail, 1 skipped (ambiente local)
+
+Arquivos de teste: 64 em tests/unit/
+  - Cobertura: chat, diet, exercises, labs, diagnostics, plans, admin
+  - Framework: Node.js native test runner
+  - E2E: Playwright (sanity.spec.ts, workout-registration.spec.ts)
+
+Testes que podem falhar em CI (node_modules ausente):
+  - exercise-local-catalog.test.ts (depende de local-catalog compilado)
+  - kronia-labs-handler.test.js (corrigido — usa inline em vez de require)
+
+
+6. DEPENDÊNCIAS
+───────────────
+
+Produção (package.json):
+  @supabase/supabase-js ^2.103.0  ✓ Sem vulnerabilidades conhecidas
+
+Dev (package.json):
+  @playwright/test ^1.59.1        ✓ Recente
+  @types/node ^20.19.39           ✓ Compatível com Node 20
+  typescript ^5.9.3               ✓ Recente
+  tsx ^4.21.0                     ✓ OK
+
+Alerta: 1 vulnerabilidade moderada reportada pelo npm audit
+  (Verificar com: npm audit)
+
+api/package.json (funções Vercel CJS):
+  @supabase/supabase-js ^2.100.1  ⚠️ 3 versões atrás do root (2.103.0)
+
+
+7. CONFIGURAÇÃO VERCEL
+──────────────────────
+
+vercel.json:
+  47 rewrites definidos
+  Functions: maxDuration 60s para api/*.js
+  Crons: apenas /api/cron/daily-dispatch (0 4 * * *)
+  Build: npm run build
+  Output: public/
+  Install: npm ci --include=dev
+
+Observações:
+  ⚠️ sync-exercises e labs-watchdog não têm cron agendado
+  ✓ maxDuration 60s adequado para operações longas (ExerciseDB, IA)
+  ✓ Rewrites corretos para todas as rotas documentadas
+
+
+8. QUALIDADE DO CÓDIGO
+──────────────────────
+
+app.js (806 KB):
+  ✓ Sintaxe válida (SyntaxError corrigido em commit bb6bcbc)
+  ✓ Sem imports/requires (IIFE standalone)
+  ✗ Monolítico — tudo em um arquivo
+  ✗ Sem separação de responsabilidades
+  ✗ Sem type safety
+  ⚠ Difícil de testar e manter
+
+sw.js:
+  ✓ Sintaxe válida
+  ✓ install, activate, push, sync, fetch events implementados
+  ✓ Network-first para API, cache-first para assets estáticos
+  ⚠ Cache name com data hardcoded
+
+src/lib/exercises/:
+  ✓ Arquitetura bem organizada em módulos especializados
+  ✓ Separação: application.ts, repository.ts, media-utils.ts, local-catalog.ts
+  ✓ Fallback em 3 camadas PT→EN para nomes de exercícios
+  ✗ local-catalog.ts com bug crítico (import.meta)
+  ✗ Tipo LocalCatalogMatch.gifUrl incorreto
+
+
+9. DOCUMENTAÇÃO EXISTENTE
+──────────────────────────
+
+Arquivos de incidente/solução no repositório:
+
+  INCIDENT_REPORT_503_2026-05-03.txt   Análise detalhada do bug atual
+  FIX_PLAN_503_local-catalog.txt        Plano de correção (este bug)
+  AUDITORIA_FECHAMENTO_TECNICO.txt      Auditoria anterior (planos, trial)
+  DOC_EXPLICACAO_AJUSTE_CASING_PLANOS.md
+  DOC_FIX_503_SUPABASE_MIGRATIONS.md
+  DOC_VALIDACAO_E2E_STATUS_2026-03-26.md
+  PROXIMOS-PASSOS.md                    Roadmap pós-deploy
+  ARCHITECTURE.md                       Arquitetura em camadas
+  AGENTS.md                             Documentação de agentes IA
+  README.md                             Documentação geral
+
+
+10. PLANO DE AÇÃO — PRIORIZADO
+───────────────────────────────
+
+IMEDIATO (resolve produção):
+
+  1. REMOVER import.meta.url de local-catalog.ts linha 160
+     Arquivo: src/lib/exercises/local-catalog.ts
+     Risco: ZERO — restaura comportamento anterior que funcionava
+
+  2. CORRIGIR tipo LocalCatalogMatch.gifUrl
+     Arquivo: src/lib/exercises/local-catalog.ts linha 22
+     Mudar: gifUrl: string  →  gifUrl: string | null
+
+  3. ADICIONAR noEmitOnError ao tsconfig.json
+     Previne que erros TS cheguem a produção silenciosamente
+
+  4. TESTAR: npm run build && npm run test
+  5. COMMIT + PUSH → Vercel faz deploy automático
+  6. VERIFICAR: log Vercel deve mostrar 200 em exercises/details
+
+  Tempo estimado: 10 minutos
+
+CURTO PRAZO (próximos dias):
+
+  7. Unificar lógica de plano (JS + SQL)
+  8. Centralizar TRIAL_DAYS em uma fonte única
+  9. Atualizar @supabase/supabase-js em api/package.json para 2.103.0
+  10. Agendar sync-exercises e labs-watchdog em vercel.json
+
+MÉDIO PRAZO (próximas sprints):
+
+  11. Modularizar app.js (atualmente 806 KB monolítico)
+  12. Configurar CDN para data/exercises.json ou usar ExerciseDB GIFs direto
+  13. Adicionar testes de integração para exercises/details
+
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+
+CRÍTICO:   2 bugs em local-catalog.ts causam 503 em produção (fix: 10 min)
+ALTO:      tsconfig sem noEmitOnError permite código inválido chegar a produção
+MÉDIO:     Lógica de plano e trial duration duplicados, CDN de exercícios ausente
+BAIXO:     app.js monolítico, cache manual no sw.js, crons não agendados
+
+O endpoint /api/kronia/exercises/details está completamente indisponível.
+Todos os outros endpoints estão funcionando normalmente.
+A correção é cirúrgica e de baixo risco.
+
+================================================================================
+Fim da auditoria
+================================================================================

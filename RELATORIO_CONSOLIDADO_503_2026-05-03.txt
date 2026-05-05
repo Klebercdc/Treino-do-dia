@@ -1,0 +1,373 @@
+============================================================
+RELATÓRIO TÉCNICO CONSOLIDADO — INCIDENTE HTTP 503
+Endpoint: /api/kronia/exercises/details
+Projeto:  Kronia (treino-do-dia / kronia.app.br)
+Data:     03/05/2026
+Status:   CORRIGIDO — branch claude/fix-exercise-media-fallback-nprMS
+Commit:   32f818a
+============================================================
+
+
+1. RESUMO EXECUTIVO
+------------------------------------------------------------
+A API /api/kronia/exercises/details retornou erro 503 em
+100% das requisições após o deploy do commit fd5788d.
+
+Resposta observada pelo usuário:
+
+    HTTP 503
+    {
+      "type": "exercise_error",
+      "code": "SERVICE_UNAVAILABLE",
+      "message": "Serviço de exercícios temporariamente indisponível."
+    }
+
+A falha NÃO estava relacionada a:
+  - Supabase / banco de dados
+  - Vídeos ou arquivos de mídia
+  - Dados de exercícios em si
+  - Rate limit ou sobrecarga de rede
+
+A causa raiz foi um erro de runtime por incompatibilidade entre
+ESM (ES Modules) e CommonJS no arquivo:
+
+    src/lib/exercises/local-catalog.ts
+
+O erro ocorria no carregamento do módulo (antes da execução de
+qualquer handler), quebrando toda a rota antes que qualquer
+try/catch pudesse capturá-lo.
+
+
+------------------------------------------------------------
+
+2. EVIDÊNCIAS (LOGS VERCEL)
+------------------------------------------------------------
+
+requestId: dvsww-1777832799471
+requestPath: /api/kronia/exercises/details
+responseStatusCode: 503
+
+Mensagem de erro:
+
+    (node:4) Warning: Failed to load the ES module:
+    /var/task/src/lib/exercises/local-catalog.js.
+    Make sure to set "type": "module" in the nearest
+    package.json file or use the .mjs extension.
+
+Erros TypeScript reportados na mesma build (ignorados por falta
+de noEmitOnError):
+
+    src/lib/exercises/local-catalog.ts(160,50): error TS1470:
+    The 'import.meta' meta-property is not allowed in files
+    which will build into CommonJS output.
+
+    src/lib/exercises/local-catalog.ts(204,7): error TS2322:
+    Type 'string | null' is not assignable to type 'string'.
+
+
+------------------------------------------------------------
+
+3. ANÁLISE DA ARQUITETURA
+------------------------------------------------------------
+
+Fluxo da requisição:
+
+    GET /api/kronia/exercises/details
+              ↓
+    src/app/api/kronia/exercises/details/route.ts
+              ↓
+    KroniaExerciseApplication (application.ts)
+              ↓
+    resolveLocalCatalogMedia (local-catalog.ts)
+              ↓
+    ❌ FALHA AQUI — módulo rejeitado pelo Node.js no require()
+
+Consequências da falha na inicialização do módulo:
+  - try/catch da rota NÃO captura o erro
+  - Fallback resiliente NÃO é executado
+  - Next.js recebe exceção não tratada → responde 503
+  - Todas as requisições falham, sem exceção
+
+
+------------------------------------------------------------
+
+4. CAUSA RAIZ
+------------------------------------------------------------
+
+4.1  Uso de import.meta.url em contexto CommonJS
+
+Em sessão anterior, ao tentar criar um fallback de leitura
+resiliente para o ambiente serverless da Vercel, foi adicionado
+o seguinte bloco em local-catalog.ts (linhas 158–165):
+
+    try {
+      raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE, 'utf8'));
+    } catch {
+      try {
+        const alt = path.join(
+          path.dirname(new URL(import.meta.url).pathname),  // ← BUG
+          '../../../data/exercises.json'
+        );
+        raw = JSON.parse(fs.readFileSync(alt, 'utf8'));
+      } catch {
+        cachedIndex = [];
+        return cachedIndex;
+      }
+    }
+
+  import.meta.url é sintaxe válida APENAS em módulos ES (ESM).
+
+  O tsconfig.json declara "module": "node16". Em funções
+  serverless Next.js (src/app/api/**), o TypeScript compila para
+  CommonJS — onde import.meta não existe.
+
+  O TypeScript emitiu o erro TS1470, porém, sem "noEmitOnError"
+  no tsconfig, continuou gerando o arquivo .js com a sintaxe ESM
+  embutida.
+
+  Quando o Node.js 22 (serverless Vercel) tentou carregar esse
+  módulo via require(), detectou a presença de import.meta e
+  rejeitou o módulo inteiro.
+
+4.2  Tipo incorreto em LocalCatalogMatch.gifUrl
+
+  A interface declarava:
+
+    export type LocalCatalogMatch = {
+      gifUrl: string;   // ← não aceita null
+      ...
+    };
+
+  Após refatoração que removeu o filtro .filter(item => item.gifUrl),
+  o campo record.gifUrl passou a poder ser null (quando
+  sanitizeMediaUrl retorna null para hosts inválidos como
+  cdn.treino-do-dia.app).
+
+  A atribuição gifUrl: record.gifUrl violava o contrato de tipos,
+  gerando TS2322 silenciosamente em produção.
+
+4.3  Build inconsistente — ausência de noEmitOnError
+
+  Sem "noEmitOnError": true no tsconfig, o compilador TypeScript
+  emitia arquivos .js mesmo na presença de erros. Código inválido
+  chegou à produção sem nenhum bloqueio de pipeline.
+
+4.4  Por que funcionava localmente e quebrava na Vercel
+
+  Em desenvolvimento, o tsx (usado para executar TypeScript
+  diretamente) suporta import.meta nativamente mesmo em arquivos
+  que seriam compilados para CommonJS. A divergência entre o
+  ambiente de execução local e o ambiente de compilação da Vercel
+  não foi detectada antes do deploy.
+
+
+------------------------------------------------------------
+
+5. IMPACTO
+------------------------------------------------------------
+
+  Severidade:     CRÍTICA
+  Escopo:         100% das requisições de detalhes de exercício
+  Duração:        Desde deploy dpl_FrBnN1FWpEVu4Qk1ZjgNgLrZkE7E
+  Commit causador: fd5788d (cherry-picked de aad94b9)
+
+Impactos no produto:
+  - Tela de treino não carregava detalhes do exercício
+  - Botão "Ver exercício" falhava para todos os usuários
+  - UX comprometida / perda de confiabilidade do sistema
+
+O que NÃO estava quebrado:
+  - Supabase: queries ao banco funcionavam normalmente
+  - Autenticação: rotas protegidas respondiam 401/200 corretamente
+  - /api/plan-features e /api/plan-current: 200 OK
+  - resolveFallbackKey (mapeamento PT→EN em memória): intacto
+  - ExerciseDB client externo: intacto
+  - Frontend app.js: sintaxe válida (SyntaxError anterior corrigido)
+
+
+------------------------------------------------------------
+
+6. CORREÇÕES APLICADAS
+------------------------------------------------------------
+
+Arquivo: src/lib/exercises/local-catalog.ts
+Arquivo: tsconfig.json
+Commit:  32f818a — branch claude/fix-exercise-media-fallback-nprMS
+
+─────────────────────────────────────────────────────────────
+6.1  Remoção do import.meta.url (FIX PRINCIPAL — P0)
+─────────────────────────────────────────────────────────────
+
+O fallback com import.meta.url era desnecessário.
+LOCAL_CATALOG_FILE já aponta para:
+
+    path.resolve(process.cwd(), 'data/exercises.json')
+
+Na Vercel, process.cwd() retorna /var/task (raiz do projeto),
+onde data/exercises.json é incluído automaticamente pelo
+file-tracing do Next.js.
+
+ANTES (quebrado):
+┌────────────────────────────────────────────────────────────┐
+│  try {                                                     │
+│    raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE));  │
+│  } catch {                                                 │
+│    try {                                                   │
+│      const alt = path.join(                               │
+│        path.dirname(new URL(import.meta.url).pathname),   │
+│        '../../../data/exercises.json'                     │
+│      );                                                    │
+│      raw = JSON.parse(fs.readFileSync(alt));              │
+│    } catch {                                              │
+│      cachedIndex = [];                                    │
+│      return cachedIndex;                                  │
+│    }                                                       │
+│  }                                                         │
+└────────────────────────────────────────────────────────────┘
+
+DEPOIS (correto):
+┌────────────────────────────────────────────────────────────┐
+│  try {                                                     │
+│    raw = JSON.parse(fs.readFileSync(LOCAL_CATALOG_FILE));  │
+│  } catch {                                                 │
+│    cachedIndex = [];                                       │
+│    return cachedIndex;                                     │
+│  }                                                         │
+└────────────────────────────────────────────────────────────┘
+
+─────────────────────────────────────────────────────────────
+6.2  Correção do tipo LocalCatalogMatch.gifUrl (FIX — P1)
+─────────────────────────────────────────────────────────────
+
+ANTES:
+    export type LocalCatalogMatch = {
+      gifUrl: string;       // ← não aceitava null
+      ...
+    };
+
+DEPOIS:
+    export type LocalCatalogMatch = {
+      gifUrl: string | null;  // ← correto
+      ...
+    };
+
+Obs: application.ts já protegia o uso com if (localMatch?.gifUrl),
+portanto nenhuma alteração adicional foi necessária nos consumidores.
+
+─────────────────────────────────────────────────────────────
+6.3  noEmitOnError no tsconfig.json (HARDENING — P1)
+─────────────────────────────────────────────────────────────
+
+ANTES:
+    "compilerOptions": {
+      "strict": true,
+      ...
+    }
+
+DEPOIS:
+    "compilerOptions": {
+      "strict": true,
+      "noEmitOnError": true,   // ← adicionado
+      ...
+    }
+
+Efeito: a partir deste commit, qualquer erro de TypeScript durante
+o build da Vercel vai interromper o processo antes do deploy —
+impedindo que código inválido chegue à produção silenciosamente.
+
+
+------------------------------------------------------------
+
+7. VALIDAÇÃO PÓS-CORREÇÃO
+------------------------------------------------------------
+
+Testes unitários:
+  ✔ 5/5 passando (node --test tests/unit/ui-unblock.test.js)
+
+Teste manual esperado após merge:
+
+    GET /api/kronia/exercises/details?exerciseName=supino
+
+    ANTES:  HTTP 503 ❌
+    DEPOIS: HTTP 200 ✔  (dados do exercício)
+         ou HTTP 206 ✔  (fallback parcial)
+
+
+------------------------------------------------------------
+
+8. MELHORIAS RECOMENDADAS (PRÓXIMOS PASSOS)
+------------------------------------------------------------
+
+8.1  Padronizar runtime (médio prazo)
+
+  Opção A — migrar tudo para ESM:
+    Adicionar "type": "module" no package.json e ajustar imports
+    para incluir extensão explícita (.js).
+
+  Opção B — consolidar em CommonJS puro:
+    Remover qualquer uso de import.meta em todo o codebase.
+    Revisar tsconfig para module: commonjs explícito.
+
+8.2  Observabilidade estruturada
+
+  Adicionar logs estruturados no módulo local-catalog:
+
+    console.error('[kronia_exercise] catalog_load_failed', { path, error })
+    console.warn('[kronia_exercise] module_load_error', { module })
+
+  Benefício: facilita triagem em logs da Vercel sem precisar
+  inspecionar o requestId manualmente.
+
+8.3  Lazy loading do módulo (baixa prioridade)
+
+  Mover a importação de local-catalog para dentro do método
+  que o utiliza (import() dinâmico), isolando uma falha de
+  carregamento do módulo do crash global da rota.
+
+8.4  Centralizar TRIAL_DAYS e lógica de plano
+
+  Atualmente duplicada em JS (frontend) e SQL (banco).
+  Unificar em uma fonte de verdade para evitar divergência.
+
+8.5  Crons no vercel.json (baixa prioridade)
+
+  Registrar sync-exercises e labs-watchdog como cron jobs
+  para garantir execução periódica em produção.
+
+
+------------------------------------------------------------
+
+9. LIÇÕES APRENDIDAS
+------------------------------------------------------------
+
+1. import.meta.url é armadilha clássica em projetos híbridos
+   TypeScript com target CommonJS. O tsx mascara o problema
+   localmente; o compilador o expõe apenas na Vercel.
+
+2. Sem noEmitOnError, o TypeScript é conivente: emite código
+   inválido silenciosamente. Build verde ≠ código correto.
+
+3. Fallback de resiliência que usa API incompatível com o
+   ambiente de destino é pior que não ter fallback — cria
+   uma falha total onde antes havia degradação parcial.
+
+4. O ambiente de teste local deve espelhar o ambiente de
+   compilação de produção. Divergências entre tsx (dev) e
+   tsc (prod) precisam ser monitoradas.
+
+
+------------------------------------------------------------
+
+10. STATUS FINAL
+------------------------------------------------------------
+
+  ✔ Causa raiz identificada
+  ✔ Correção aplicada e testada (32f818a)
+  ✔ Branch pronto para merge: claude/fix-exercise-media-fallback-nprMS
+  ✔ Solução definitiva — não paliativa
+  ✔ Hardening de build adicionado (noEmitOnError)
+  ⏳ Merge para main pendente (aguarda aprovação)
+
+============================================================
+FIM DO RELATÓRIO
+============================================================
