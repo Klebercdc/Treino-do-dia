@@ -551,7 +551,7 @@ function criarCard(nome, sectionId, series=null, reps=null, rpe=null, values=nul
   card.innerHTML = `
     <div class="card-header">
       <span class="ex-title" id="${id}" onclick="abrirLibParaTrocar('${id}')">${escapeHTML(displayTitle)}</span>
-      <button onclick="openExerciseDetailsFromCard(this.closest('.exercise-card'))" title="Ver exercício" style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-family:var(--font);font-size:0.68rem;font-weight:700;-webkit-tap-highlight-color:transparent;flex-shrink:0" type="button">
+      <button onclick="openExerciseOnYouTube(this.closest('.exercise-card'))" title="Ver exercício" style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--accent);font-family:var(--font);font-size:0.68rem;font-weight:700;-webkit-tap-highlight-color:transparent;flex-shrink:0" type="button">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
         VER
       </button>
@@ -898,7 +898,7 @@ function selecionar(n) {
         card.setAttribute("data-ex-lookup-key", nextRef.normalized_lookup_key);
         card.setAttribute("data-ex-ref", JSON.stringify(nextRef));
         const guideBtn = card.querySelector(".card-header button[title='Ver exercício']");
-        if (guideBtn) guideBtn.setAttribute("onclick", "openExerciseDetailsFromCard(this.closest('.exercise-card'))");
+        if (guideBtn) guideBtn.setAttribute("onclick", "openExerciseOnYouTube(this.closest('.exercise-card'))");
         const sec = card.closest(".section");
         const treinoKey = sec?.getAttribute("data-treino-key") || "";
         const oldKey = prevKeyOf(treinoKey, oldName), newKey = prevKeyOf(treinoKey, safeTitle);
@@ -5811,83 +5811,17 @@ function _renderExercisePreviewList(cards) {
   const list = document.getElementById("exercisePreviewList");
   if (!list) return;
   if (!cards.length) { list.innerHTML = ""; return; }
-  const cache = _readExerciseDetailsCache();
   list.innerHTML = cards.slice(0, 6).map((c, i) => {
     const exSource = c?.exercicios?.[0] || c;
     const ex = getExerciseCardTitle(exSource, i);
-    const lookupKey = normalizeExerciseLookupKey(ex);
-    const cached = cache[lookupKey] || null;
-    const thumb = cached?.media?.primary || cached?.gif_url || null;
-    const muscle = cached?.target_muscle ? formatMuscleLabel(cached.target_muscle) : "";
-    const safeId = `exp-${lookupKey.replace(/[^a-z0-9]/g, "").slice(0, 24)}`;
     const safeEx = ex.replace(/'/g, "\\'");
-    const thumbHTML = thumb
-      ? `<img src="${thumb}" alt="${escapeHTML(ex)}" style="width:100%;height:100%;object-fit:cover;border-radius:0">`
-      : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.5)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>`;
-    return `<div class="exercise-preview-item exercise-preview-item--tap" id="${safeId}" onclick="openExerciseDetailsByName('${safeEx}',{origin:'preview_list'})">
-      <div class="exercise-preview-thumb" id="${safeId}-thumb">${thumbHTML}</div>
+    return `<div class="exercise-preview-item exercise-preview-item--tap" onclick="openExerciseOnYouTube(null,'${safeEx}')">
+      <div class="exercise-preview-thumb">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.5)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+      </div>
       <div class="exercise-preview-label">${escapeHTML(ex)}</div>
-      ${muscle ? `<div class="exercise-preview-muscle">${muscle}</div>` : ""}
     </div>`;
   }).join("");
-  _prefetchExerciseThumbnails(cards);
-}
-
-// Silently fetches thumbnails for exercises not yet in the local cache,
-// then updates the preview cards in-place — same pattern used by Hevy/Strong.
-async function _prefetchExerciseThumbnails(cards) {
-  if (!cards || !cards.length) return;
-  const cache = _readExerciseDetailsCache();
-  const toFetch = cards.slice(0, 6).filter(c => {
-    const name = getExerciseCardTitle(c?.exercicios?.[0] || c, 0);
-    const key = normalizeExerciseLookupKey(name);
-    const hit = cache[key];
-    return !hit || (!hit.media?.primary && !hit.gif_url);
-  });
-  if (!toFetch.length) return;
-
-  for (const c of toFetch) {
-    const exSource = c?.exercicios?.[0] || c;
-    const name = getExerciseCardTitle(exSource, 0);
-    const lookupKey = normalizeExerciseLookupKey(name);
-    const safeId = `exp-${lookupKey.replace(/[^a-z0-9]/g, "").slice(0, 24)}`;
-    try {
-      const params = new URLSearchParams({ exerciseName: name, lookupKey });
-      const endpoint = resolveAppApiUrl(`/api/kronia/exercises/details?${params}`);
-      const resp = await fetch(endpoint, { signal: AbortSignal.timeout(10000) });
-      if (!resp.ok) continue;
-      const json = await resp.json();
-      const normalized = normalizeExerciseDetails(normalizeExerciseDetailsPayload(json));
-      if (!normalized) continue;
-
-      const freshCache = _readExerciseDetailsCache();
-      freshCache[lookupKey] = {
-        gif_url: normalized.gif_url || null,
-        media: normalized.media || null,
-        target_muscle: normalized.target_muscle || null,
-        names: normalized.names || null,
-        cached_at: Date.now(),
-      };
-      _writeExerciseDetailsCache(freshCache);
-
-      const thumb = normalized.media?.primary || normalized.gif_url || null;
-      if (!thumb) continue;
-
-      const thumbEl = document.getElementById(`${safeId}-thumb`);
-      if (thumbEl) {
-        thumbEl.innerHTML = `<img src="${thumb}" alt="${escapeHTML(name)}" style="width:100%;height:100%;object-fit:cover;border-radius:0">`;
-      }
-      if (normalized.target_muscle) {
-        const card = document.getElementById(safeId);
-        if (card && !card.querySelector(".exercise-preview-muscle")) {
-          const label = card.querySelector(".exercise-preview-label");
-          if (label) label.insertAdjacentHTML("afterend", `<div class="exercise-preview-muscle">${formatMuscleLabel(normalized.target_muscle)}</div>`);
-        }
-      }
-    } catch (_) {
-      // background fetch — fail silently
-    }
-  }
 }
 
 function _updateHomeBannerFast(streak, totalTreinos) {
@@ -12746,41 +12680,9 @@ function selDietaSingleChip(el, groupId) {
 }
 
 // ══════════════════════════════════════════
-// EXERCISE DISCOVERY
+// EXERCISE — YouTube redirect
 // ══════════════════════════════════════════
-function openExerciseDiscSheet() {
-  const sheet = document.getElementById('exerciseDiscSheet');
-  sheet.style.display = '';
-  sheet.style.visibility = '';
-  sheet.style.opacity = '';
-  sheet.style.pointerEvents = '';
-  sheet.removeAttribute('aria-hidden');
-  sheet.classList.add('show');
-  // re-init lucide dentro do sheet
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-function closeExerciseDiscSheet() {
-  document.getElementById('exerciseDiscSheet').classList.remove('show');
-}
-
-function _exerciseDiscSetState(state) {
-  document.getElementById('exerciseDiscLoading').style.display = state === 'loading' ? 'flex' : 'none';
-  document.getElementById('exerciseDiscResult').style.display  = state === 'result'  ? 'block' : 'none';
-  document.getElementById('exerciseDiscError').style.display   = state === 'error'   ? 'block' : 'none';
-}
-
-function logExerciseDetailsEvent(eventName, payload = {}) {
-  try { console.info(`[kronia_exercise] ${eventName}`, payload); } catch {}
-  try {
-    window.KroniaIntelligence?.track?.({
-      module: 'exercise',
-      action: eventName === 'exercise_details_opened' ? 'exercise_click' : 'exercise_detail',
-      status: /failed|error/.test(eventName) ? 'error' : 'success',
-      source: 'exercise_details',
-      metadata: { eventName, payload }
-    });
-  } catch (_) {}
-}
+function closeExerciseDiscSheet() {}
 
 function normalizeExerciseLookupKey(name) {
   return String(name || "")
@@ -12793,100 +12695,11 @@ function normalizeExerciseLookupKey(name) {
     .replace(/\s+/g, "_");
 }
 
-function _readExerciseDetailsCache() {
-  try { return JSON.parse(localStorage.getItem(STORAGE.exerciseDetailsCacheKey) || "{}"); }
-  catch { return {}; }
-}
-function _writeExerciseDetailsCache(cache) {
-  try { localStorage.setItem(STORAGE.exerciseDetailsCacheKey, JSON.stringify(cache)); } catch {}
-}
 
-function normalizeExerciseDetails(result) {
-  if (!result || typeof result !== "object") return null;
-  const hasUsableData =
-    Boolean(result.id || result.slug || result.name || result.name_pt || result.name_en || result.display_name || result.exerciseName || result.target_muscle) ||
-    Boolean(result.names && typeof result.names === "object" && (result.names.pt || result.names.en)) ||
-    (Array.isArray(result.instructions) && result.instructions.length > 0);
-  if (!hasUsableData) return null;
-  const namePt = result.names?.pt || result.name_pt || result.display_name || result.exerciseName || result.name || result.names?.en || "Exercício";
-  const lookupKey = result.normalized_lookup_key || result.metadata?.normalizedLookupKey || normalizeExerciseLookupKey(namePt);
-  const mediaPrimary = result.media?.primary || result.media?.url || result.gif_url || null;
-  const mediaType = result.media?.type || (/\.(mp4|webm)$/i.test(mediaPrimary || "") ? "video" : (/\.gif($|\?)/i.test(mediaPrimary || "") || result.media?.type === "gif") ? "gif" : mediaPrimary ? "image" : "none");
-  return {
-    id: result.id || result.slug || "",
-    slug: result.slug || lookupKey,
-    normalized_lookup_key: lookupKey,
-    gif_url: result.gif_url || null,
-    names: {
-      pt: namePt,
-      en: result.names?.en || result.name_en || namePt || "Exercise",
-    },
-    media: {
-      primary: mediaPrimary,
-      thumbnailUrl: result.media?.thumbnailUrl || mediaPrimary || null,
-      type: mediaType,
-      provider: result.media?.provider || "internal",
-    },
-    instructions: Array.isArray(result.instructions) ? result.instructions : [],
-    target_muscle: result.target_muscle || result.muscles?.target || null,
-    secondary_muscles: Array.isArray(result.secondary_muscles) ? result.secondary_muscles : (result.muscles?.secondary || []),
-    body_part: result.body_part || result.muscles?.bodyPart || null,
-    equipment: result.equipment || null,
-    variations: Array.isArray(result.variations) ? result.variations.map(v => ({
-      id: v.id || v.slug || "",
-      slug: v.slug || normalizeExerciseLookupKey(v.names?.pt || v.name_pt || ""),
-      names: {
-        pt: v.names?.pt || v.name_pt || v.name_en || "Variação",
-        en: v.names?.en || v.name_en || v.name_pt || "Variation",
-      },
-    })) : [],
-    source: result.source || "internal",
-    common_errors: Array.isArray(result.common_errors) ? result.common_errors : [],
-    breathing_tip: result.breathing_tip || null,
-    range_of_motion: result.range_of_motion || null,
-    metadata: result.metadata || {},
-  };
-}
-
-function normalizeExerciseDetailsPayload(payload) {
-  if (!payload || typeof payload !== "object") return null;
-  const hasUsableExerciseData = function(candidate) {
-    if (!candidate || typeof candidate !== "object") return false;
-    return Boolean(
-      candidate.id ||
-      candidate.slug ||
-      candidate.name ||
-      candidate.name_pt ||
-      candidate.name_en ||
-      candidate.display_name ||
-      candidate.exerciseName ||
-      candidate.target_muscle ||
-      (candidate.names && typeof candidate.names === "object" && (candidate.names.pt || candidate.names.en)) ||
-      (Array.isArray(candidate.instructions) && candidate.instructions.length > 0)
-    );
-  };
-  if (payload.data && typeof payload.data === "object") {
-    const d = payload.data;
-    const hasUsableEnvelope =
-      payload.success === true ||
-      payload.success === false ||
-      payload.status === "success" ||
-      payload.type === "exercise_details" ||
-      payload.type === "exercise_partial";
-    if (hasUsableEnvelope && hasUsableExerciseData(d)) return d;
-  }
-  return payload;
-}
-
-async function openExerciseDetailsFromCard(card) {
-  if (!card) return;
-  const exerciseName = card.getAttribute("data-ex-name") || card.querySelector(".ex-title")?.textContent || "Exercício";
-  let exerciseRef = null;
-  try { exerciseRef = JSON.parse(card.getAttribute("data-ex-ref") || "null"); } catch {}
-  const fallbackRef = ensureExerciseRef(exerciseRef || { display_name: exerciseName, normalized_lookup_key: card.getAttribute("data-ex-lookup-key") }, exerciseName, "card_open");
-  card.setAttribute("data-ex-ref", JSON.stringify(fallbackRef));
-  card.setAttribute("data-ex-lookup-key", fallbackRef.normalized_lookup_key);
-  await openExerciseDetailsByName(fallbackRef.display_name || exerciseName, { origin: "card", exerciseRef: fallbackRef });
+function openExerciseOnYouTube(card, nameOverride) {
+  var name = nameOverride || (card && (card.getAttribute('data-ex-name') || card.querySelector('.ex-title')?.textContent)) || 'exercício';
+  var url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent('como fazer ' + name + ' execução correta');
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function resolveAppApiUrl(path) {
@@ -12913,265 +12726,7 @@ function resolveInternalApiPath(path) {
   return safePath.startsWith('/') ? safePath : ('/' + safePath);
 }
 
-async function fetchExerciseDetailsResponse(endpoint) {
-  const buildFallbackHeaders = async function() {
-    return typeof getAuthHeaders === "function"
-      ? await getAuthHeaders()
-      : { "Content-Type": "application/json" };
-  };
 
-  const buildRelativeEndpoint = function(url) {
-    try {
-      const resolved = new URL(String(url || ""), window.location.href);
-      return resolved.pathname + resolved.search;
-    } catch (_) {
-      return String(url || "");
-    }
-  };
-
-  const relativeEndpoint = buildRelativeEndpoint(endpoint);
-  const attempts = [
-    async function tryApiFetch() {
-      return apiFetch(endpoint, {
-        method: "GET",
-        cache: "no-store",
-      });
-    },
-    async function tryAbsoluteFetch() {
-      return fetch(endpoint, {
-        method: "GET",
-        headers: await buildFallbackHeaders(),
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-    },
-    async function tryRelativeFetch() {
-      return fetch(relativeEndpoint, {
-        method: "GET",
-        headers: await buildFallbackHeaders(),
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-    },
-    async function tryRelativeFetchWithoutHeaders() {
-      return fetch(relativeEndpoint, {
-        method: "GET",
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-    }
-  ];
-
-  let lastError = null;
-  for (const attempt of attempts) {
-    try {
-      return await attempt();
-    } catch (error) {
-      lastError = error;
-      const message = String(error && error.message ? error.message : error || "");
-      const isRecoverable = /string did not match the expected pattern|failed to fetch|load failed|networkerror/i.test(message);
-      if (!isRecoverable) throw error;
-    }
-  }
-  throw lastError || new Error("Falha ao abrir detalhes do exercício.");
-}
-
-async function openExerciseDetailsByName(exerciseName, options = {}) {
-  const exerciseRef = ensureExerciseRef(options.exerciseRef || { display_name: exerciseName }, exerciseName, options.origin || "direct_open");
-  const lookupKey = exerciseRef.normalized_lookup_key || normalizeExerciseLookupKey(exerciseName);
-  const exerciseId = exerciseRef.exercise_id || exerciseRef.id || "";
-  const exerciseSlug = exerciseRef.slug || "";
-
-  logExerciseDetailsEvent("exercise_details_opened", { exerciseName, lookupKey, exerciseId, origin: options.origin || "unknown" });
-  openExerciseDiscSheet();
-  _exerciseDiscSetState("loading");
-
-  try {
-    const params = new URLSearchParams();
-    if (exerciseId) params.set("id", exerciseId);
-    if (exerciseSlug) params.set("slug", exerciseSlug);
-    if (lookupKey) params.set("lookupKey", lookupKey);
-    const displayName = exerciseRef.display_name || exerciseName;
-    if (displayName) params.set("exerciseName", displayName);
-
-    const endpoint = resolveAppApiUrl(`/api/kronia/exercises/details?${params.toString()}`);
-    const resp = await fetchExerciseDetailsResponse(endpoint);
-    const rawText = await resp.text();
-    let json = null;
-    try {
-      json = rawText ? JSON.parse(rawText) : null;
-    } catch (_parseError) {
-      const contentType = resp.headers?.get("content-type") || "";
-      const looksHtml = /text\/html/i.test(contentType) || /^\s*</.test(String(rawText || ""));
-      throw new Error(
-        looksHtml
-          ? "A rota de exercícios retornou uma página em vez de JSON. Atualize o app e faça login novamente."
-          : `HTTP ${resp.status} · Resposta inválida ao carregar detalhes do exercício.`
-      );
-    }
-
-    const details = normalizeExerciseDetailsPayload(json);
-    const normalizedDetails = normalizeExerciseDetails(details);
-    if (!resp.ok && !normalizedDetails) {
-      const errorParts = [
-        `status HTTP ${resp.status || "desconhecido"}`,
-        json?.type ? `type ${json.type}` : "",
-        json?.error?.code ? `code ${json.error.code}` : "",
-        json?.message || json?.error?.message || "Falha ao carregar detalhes do exercício.",
-      ].filter(Boolean);
-      throw new Error(errorParts.join(" | "));
-    }
-
-    renderExercise(normalizedDetails || normalizeExerciseDetailsPayload(json) || json);
-    logExerciseDetailsEvent("exercise_detail_loaded_from_api", {
-      lookupKey,
-      exerciseId,
-      slug: exerciseSlug,
-    });
-  } catch (e) {
-    const rawMessage = e?.message || "";
-    const normalizedMessage = /string did not match the expected pattern|failed to fetch|load failed|networkerror/i.test(rawMessage)
-      ? "Não consegui sincronizar os detalhes do exercício agora. Atualize o app e tente novamente."
-      : (rawMessage || "Erro ao carregar detalhes do exercício.");
-    document.getElementById("exerciseDiscErrorMsg").textContent = normalizedMessage;
-    _exerciseDiscSetState("error");
-    logExerciseDetailsEvent("exercise_details_external_fetch_failed", { lookupKey, message: rawMessage || String(e) });
-  }
-}
-
-function renderExercise(data) {
-  const details = normalizeExerciseDetailsPayload(data);
-  const normalized = normalizeExerciseDetails(details);
-  if (!normalized) {
-    const parts = [data?.type, data?.error?.code, data?.message || data?.error?.message].filter(Boolean);
-    document.getElementById("exerciseDiscErrorMsg").textContent =
-      parts.length ? `Detalhes indisponíveis: ${parts.join(" · ")}` : "Resposta inválida do endpoint de exercício.";
-    _exerciseDiscSetState("error");
-    return;
-  }
-
-  normalized.instructions = Array.isArray(details?.instructions) ? details.instructions : [];
-  normalized.common_errors = Array.isArray(details?.common_errors) ? details.common_errors : [];
-  normalized.breathing_tip = details?.breathing_tip ?? null;
-
-  // Persist to cache so preview cards can read thumbnails instantly
-  if (normalized.normalized_lookup_key) {
-    try {
-      const cache = _readExerciseDetailsCache();
-      cache[normalized.normalized_lookup_key] = {
-        gif_url: normalized.gif_url || null,
-        media: normalized.media || null,
-        target_muscle: normalized.target_muscle || null,
-        names: normalized.names || null,
-        cached_at: Date.now(),
-      };
-      _writeExerciseDetailsCache(cache);
-    } catch (_) {}
-  }
-
-  _renderExerciseDiscResult(normalized, "enriched");
-  _exerciseDiscSetState("result");
-}
-
-async function openExerciseDiscovery(query) {
-  openExerciseDiscSheet();
-  _exerciseDiscSetState('loading');
-  try {
-    const resp = await apiFetch(resolveAppApiUrl("/api/kronia/exercises/discovery"), {
-      method: 'POST',
-      body: JSON.stringify({ message: query, locale: 'pt' })
-    });
-    const json = await resp.json();
-    if (json.status !== 'success' || !json.data) {
-      document.getElementById('exerciseDiscErrorMsg').textContent =
-        json.errors?.[0]?.message || 'Exercício não encontrado. Tente descrever de outra forma.';
-      _exerciseDiscSetState('error');
-      return;
-    }
-    _renderExerciseDiscResult(normalizeExerciseDetails(json.data));
-    _exerciseDiscSetState('result');
-  } catch(e) {
-    document.getElementById('exerciseDiscErrorMsg').textContent = 'Erro de conexão: ' + e.message;
-    _exerciseDiscSetState('error');
-  }
-}
-
-function _exerciseEquipmentLabel(eq) {
-  const map = { cable: 'Cabo', barbell: 'Barra', dumbbell: 'Haltere', 'body weight': 'Peso corporal', machine: 'Máquina', kettlebell: 'Kettlebell', 'resistance band': 'Elástico', 'smith machine': 'Smith', 'ez barbell': 'Barra EZ', band: 'Elástico', assisted: 'Assistido', weighted: 'Com peso', 'leverage machine': 'Máquina', 'upper body ergometer': 'Ergômetro', 'sled machine': 'Trenó', roller: 'Rolo', rope: 'Corda', 'bosu ball': 'Bosu', tire: 'Pneu', 'trap bar': 'Trap Bar' };
-  const k = String(eq || '').toLowerCase().trim();
-  return map[k] || (k ? k.charAt(0).toUpperCase() + k.slice(1) : '');
-}
-
-function _renderExerciseDiscResult(d, renderMode = "enriched") {
-  d = normalizeExerciseDetails(d) || d;
-  const mediaEl = document.getElementById('exerciseDiscMedia');
-  const mediaSrc = d.media?.primary || d.media?.url || d.gif_url || null;
-  const mediaType = d.media?.type || (/\.(mp4|webm)/i.test(mediaSrc || "") ? "video" : mediaSrc ? "gif" : "none");
-  const usingPlaceholder = !mediaSrc;
-
-  const eqLabel = _exerciseEquipmentLabel(d.equipment);
-  const eqBadge = eqLabel ? `<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:.04em;pointer-events:none">${eqLabel}</span>` : '';
-
-  if (mediaSrc && mediaType === "video") {
-    mediaEl.innerHTML = `<div style="position:relative;background:#111;border-radius:16px;overflow:hidden"><video src="${mediaSrc}" poster="${d.media?.thumbnailUrl || ''}" controls playsinline muted style="width:100%;display:block;max-height:300px;object-fit:contain"></video>${eqBadge}</div>`;
-  } else if (mediaSrc) {
-    mediaEl.innerHTML = `<div style="position:relative;background:#111;border-radius:16px;overflow:hidden"><img src="${mediaSrc}" alt="${d.names?.pt || ''}" style="width:100%;display:block;max-height:300px;object-fit:contain" loading="lazy">${eqBadge}</div>`;
-  } else {
-    mediaEl.innerHTML = `<div style="min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02);color:var(--text-2);font-size:0.82rem;text-align:center;padding:18px">Sem demonstração visual</div>`;
-  }
-
-  const primaryMuscle = formatMuscleLabel(d.target_muscle || d.muscles?.target);
-  const rawSecondary = Array.isArray(d.secondary_muscles) ? d.secondary_muscles : (Array.isArray(d.muscles?.secondary) ? d.muscles.secondary : []);
-  const secondaryMuscles = rawSecondary.map(formatMuscleLabel).filter(Boolean);
-  const allMuscles = [primaryMuscle, ...secondaryMuscles].filter(Boolean);
-
-  const muscleChips = allMuscles.length
-    ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">${allMuscles.map((m, i) => `<span style="font-size:0.68rem;font-weight:700;padding:4px 10px;border-radius:20px;${i === 0 ? 'background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);color:var(--accent)' : 'background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-2)'}">${m}</span>`).join('')}</div>`
-    : '';
-
-  document.getElementById('exerciseDiscInfo').innerHTML = `
-    <div style="font-family:var(--display);font-size:1.35rem;font-weight:900;color:var(--text);letter-spacing:.04em;margin-bottom:2px;line-height:1.1">${d.names?.pt || d.names?.en || '—'}</div>
-    ${d.names?.en && d.names?.en !== d.names?.pt ? `<div style="font-size:0.7rem;color:var(--text-2);margin-bottom:10px;letter-spacing:.01em">${d.names.en}</div>` : '<div style="margin-bottom:10px"></div>'}
-    ${muscleChips}
-  `;
-
-  const instrs = Array.isArray(d.instructions) ? d.instructions.filter(Boolean) : [];
-  const commonErrors = Array.isArray(d.common_errors) ? d.common_errors.filter(Boolean) : [];
-  const blocks = [];
-
-  if (instrs.length) {
-    const steps = instrs.map((step, idx) => `<li style="font-size:0.84rem;color:var(--text);line-height:1.55;padding:8px 0;border-bottom:1px solid var(--border-soft, rgba(255,255,255,0.04))"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(249,115,22,0.12);border-radius:50%;font-size:0.7rem;font-weight:800;color:var(--accent);margin-right:8px;flex-shrink:0;vertical-align:middle">${idx + 1}</span>${step}</li>`).join('');
-    blocks.push(`<section style="margin-bottom:16px"><div style="margin-bottom:8px;font-size:0.7rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Como fazer</div><ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column">${steps}</ol></section>`);
-  }
-
-  if (commonErrors.length) {
-    blocks.push(`<section style="margin-bottom:16px;padding:12px;border:1px solid rgba(239,68,68,0.15);border-radius:12px;background:rgba(239,68,68,0.04)"><div style="margin-bottom:8px;font-size:0.7rem;font-weight:800;color:rgba(239,68,68,0.7);letter-spacing:.08em;text-transform:uppercase">Erros comuns</div><ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">${commonErrors.map((err) => `<li style="font-size:0.8rem;color:var(--text);line-height:1.45;padding-left:14px;position:relative"><span style="position:absolute;left:0;color:rgba(239,68,68,0.6)">✕</span>${err}</li>`).join('')}</ul></section>`);
-  }
-
-  if (d.breathing_tip) {
-    blocks.push(`<section style="margin-bottom:16px;padding:11px 12px;border:1px solid rgba(99,179,237,0.15);border-radius:12px;background:rgba(99,179,237,0.04)"><div style="font-size:.7rem;text-transform:uppercase;color:rgba(99,179,237,0.7);font-weight:800;letter-spacing:.08em;margin-bottom:5px">Respiração</div><div style="font-size:.82rem;line-height:1.5;color:var(--text)">${d.breathing_tip}</div>${d.range_of_motion ? `<div style="margin-top:7px;font-size:.75rem;color:var(--text-2)"><strong style="color:var(--text)">Amplitude:</strong> ${d.range_of_motion}</div>` : ''}</section>`);
-  }
-
-  document.getElementById('exerciseDiscInstructions').innerHTML = blocks.join('');
-
-  const vars = d.variations || [];
-  const varHtml = vars.length
-    ? `<div style="margin-bottom:8px;font-size:0.7rem;font-weight:800;color:var(--text-2);letter-spacing:.08em;text-transform:uppercase">Variações</div>
-       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-         ${vars.map(v => `<button onclick="openExerciseDetailsByName('${(v.names?.pt || v.names?.en || '').replace(/'/g,"\'")}')" style="font-size:0.72rem;font-weight:700;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent">${v.names?.pt || v.names?.en}</button>`).join('')}
-       </div>`
-    : '';
-  const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${d.names?.pt || d.names?.en} execução correta`)}`;
-  const fallbackLabel = renderMode === "minimal" ? "Ver referência complementar" : "Ver no YouTube";
-  document.getElementById('exerciseDiscVariations').innerHTML = `${varHtml}<div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between"><a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="logExerciseDetailsEvent('exercise_details_youtube_fallback_opened',{lookupKey:'${d.normalized_lookup_key || ''}'})" style="font-size:.72rem;color:var(--text-2);text-decoration:underline;opacity:.75">${fallbackLabel}</a>${mediaSrc ? `<span style="font-size:.65rem;color:var(--text-2);opacity:.5">GIF via ExerciseDB</span>` : ''}</div>`;
-
-  if (usingPlaceholder && !blocks.length) {
-    logExerciseDetailsEvent('exercise_detail_rendered_with_placeholder_only', { lookupKey: d.normalized_lookup_key || d.slug || '' });
-  }
-  if (blocks.length) {
-    logExerciseDetailsEvent('exercise_detail_rendered_with_curated_content', { lookupKey: d.normalized_lookup_key || d.slug || '', sections: blocks.length });
-  }
-}
 
 function formatMuscleLabel(value) {
   const dict = {
@@ -15397,11 +14952,7 @@ let _guiaStepIdx = 0;
 let _guiaStepTimer = null;
 
 function abrirGuia(nome) {
-  logExerciseDetailsEvent("exercise_details_fallback_used", { origin: "legacy_abrirGuia_redirect", exerciseName: nome });
-  return openExerciseDetailsByName(nome, {
-    origin: "legacy_guide_redirect",
-    exerciseRef: ensureExerciseRef({ display_name: nome, source: "legacy_guide" }, nome, "legacy_guide"),
-  });
+  openExerciseOnYouTube(null, nome);
 }
 
 function fecharGuia() {
