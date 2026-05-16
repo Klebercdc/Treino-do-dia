@@ -2809,6 +2809,8 @@ function navTo(tab) {
   if (_cont) _cont.style.display = tab === "treino" ? "" : "none";
   const _nav = document.getElementById("nav");
   if (_nav) _nav.style.display = tab === "treino" ? "" : "none";
+  const _addEx = document.querySelector('.btn-add-ex');
+  if (_addEx) _addEx.style.display = tab === "treino" ? "" : "none";
   if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
   if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
   if (tab !== "treino") { try { closeExerciseDiscSheet?.(); } catch(_) {} }
@@ -6614,6 +6616,8 @@ function openDietDataScreen() {
   document.getElementById('dietChoiceScreen')?.classList.remove('show');
   var dataScreen = document.getElementById('dietDataScreen');
   if (dataScreen) {
+    dataScreen.removeAttribute('hidden');
+    dataScreen.hidden = false;
     dataScreen.style.display = '';
     dataScreen.style.visibility = '';
     dataScreen.style.opacity = '';
