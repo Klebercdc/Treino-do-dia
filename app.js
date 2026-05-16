@@ -49,7 +49,8 @@ window.KroniaUI.unblockScreens = function(reason) {
       && el.id !== 'timerSheet'
       && el.id !== 'customModal'
       && el.id !== 'dietDataScreen'
-      && el.id !== 'dietChoiceScreen';
+      && el.id !== 'dietChoiceScreen'
+      && el.id !== 'exerciseDiscSheet';
 
     if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
@@ -2807,6 +2808,7 @@ function navTo(tab) {
   if (_nav) _nav.style.display = tab === "treino" ? "" : "none";
   if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
   if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
+  if (tab !== "treino") { try { closeExerciseDiscSheet?.(); } catch(_) {} }
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
   if (tab !== "dieta") document.getElementById("dietChoiceScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
