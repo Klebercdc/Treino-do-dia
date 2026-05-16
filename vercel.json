@@ -150,10 +150,6 @@
       "destination": "/api/science?__route=krona-diet-print"
     },
     {
-      "source": "/api/kronia/exercises/details",
-      "destination": "/api/science?__route=kronia-exercise-details"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
