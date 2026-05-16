@@ -62,7 +62,14 @@
     document.body.classList.add('diet-plan-visual-active');
     $('kdpClose').onclick = closeDietPlanVisual;
     $('kdpBackDiet').onclick = closeDietPlanVisual;
-    $('kdpNewDiet').onclick = function(){ window.__kroniaDietGenerationCompleted = false; closeDietPlanVisual(); if(window.KroniaDiet && typeof window.KroniaDiet.createPlan==='function') window.KroniaDiet.createPlan(); else if(typeof window.createDietPlan==='function') window.createDietPlan(); };
+    $('kdpNewDiet').onclick = function(){
+      window.__kroniaDietGenerationCompleted = false;
+      closeDietPlanVisual();
+      try { localStorage.removeItem(LAST_PLAN_KEY); } catch(_) {}
+      if (typeof window.startAIDiet === 'function') { window.startAIDiet(); }
+      else if(window.KroniaDiet && typeof window.KroniaDiet.createPlan==='function') { window.KroniaDiet.createPlan(); }
+      else if(typeof window.createDietPlan==='function') { window.createDietPlan(); }
+    };
     return true;
   }
 

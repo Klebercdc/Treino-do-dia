@@ -129,23 +129,36 @@
     openPremiumDiet({ source:'diet_button_click' });
   }, true);
 
+  function triggerAIDietGeneration() {
+    if (typeof window.preencherDietaDosPerfil === 'function') {
+      try { window.preencherDietaDosPerfil(); } catch (_) {}
+    }
+    try { if (typeof window.navTo === 'function') window.navTo('dieta'); } catch (_) {}
+    hideLegacyScreens();
+    if (typeof window.openDietDataScreen === 'function') {
+      try { window.openDietDataScreen(); } catch (_) {}
+    }
+    if (typeof window.gerarDieta === 'function') return window.gerarDieta();
+    return openPremiumDiet({ source: 'ai_diet_gerarDieta_missing' });
+  }
+
   window.KroniaDiet = Object.assign({}, window.KroniaDiet || {}, {
     open: openPremiumDiet,
-    ai: function(){ return openPremiumDiet({ source:'diet_ai' }); },
-    createPlan: function(){ return openPremiumDiet({ source:'diet_create_plan' }); },
-    regenerate: function(){ return openPremiumDiet({ source:'diet_regenerate_plan' }); },
+    ai: triggerAIDietGeneration,
+    createPlan: triggerAIDietGeneration,
+    regenerate: triggerAIDietGeneration,
     viewLastPlan: openPremiumDiet,
     bindButtons: makeTouchable,
     hideLegacyScreens: hideLegacyScreens,
     loadRenderer: loadRenderer
   });
 
-  window.startAIDiet = function(){ return window.KroniaDiet.open({ source:'start_ai_diet' }); };
-  window.createDietPlan = function(){ return window.KroniaDiet.open({ source:'create_diet_plan' }); };
-  window.generateDietPlan = function(){ return window.KroniaDiet.open({ source:'generate_diet_plan' }); };
-  window.regenerateDiet = function(){ return window.KroniaDiet.open({ source:'regenerate_diet' }); };
-  window.regenerateDietPlan = function(){ return window.KroniaDiet.open({ source:'regenerate_diet_plan' }); };
-  window.regeneratePlan = function(){ return window.KroniaDiet.open({ source:'regenerate_plan' }); };
+  window.startAIDiet = triggerAIDietGeneration;
+  window.createDietPlan = triggerAIDietGeneration;
+  window.generateDietPlan = triggerAIDietGeneration;
+  window.regenerateDiet = triggerAIDietGeneration;
+  window.regenerateDietPlan = triggerAIDietGeneration;
+  window.regeneratePlan = triggerAIDietGeneration;
   window.openNutritionFlow = function(){ return window.KroniaDiet.open({ source:'open_nutrition_flow_disabled' }); };
   window.openNutritionFlowFull = function(){ return window.KroniaDiet.open({ source:'open_nutrition_flow_full_disabled' }); };
 

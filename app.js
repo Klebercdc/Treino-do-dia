@@ -6644,7 +6644,11 @@ function openDietChoiceScreen() {
 function startAIDiet() {
   scheduleKroniaUIUnblock('before-start-ai-diet');
   try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
-  return openOfficialDietEntry({ source: 'choice_screen_ia', forceNew: true });
+  try { if (typeof preencherDietaDosPerfil === 'function') preencherDietaDosPerfil(); } catch (_) {}
+  try { if (typeof navTo === 'function') navTo('dieta'); } catch (_) {}
+  try { if (typeof openDietDataScreen === 'function') openDietDataScreen(); } catch (_) {}
+  if (typeof gerarDieta === 'function') { gerarDieta(); return; }
+  return openOfficialDietEntry({ source: 'choice_screen_ia_fallback', forceNew: true });
 }
 
 function loadDietScriptOnceFromApp(src, marker, testFn) {
@@ -11196,11 +11200,7 @@ function wdSelect(btn, campo, valor) {
 }
 
 async function gerarDietaComRespostas() {
-  try {
-    closeOrientacao();
-    await openDietaSheet({ source: "legacy_chat_answers_redirect", returnTab: "dieta", autoGenerate: true });
-    return;
-  } catch (_) {}
+  try { closeOrientacao(); } catch (_) {}
   document.getElementById('wdCard')?.remove();
 
   const r = _wdRespostas;
@@ -14585,6 +14585,8 @@ async function generateDietWithModernEngine(input, dietPayload, timeoutMs) {
 }
 
 async function gerarDieta() {
+  if (window._dietGenerating) { showToast('Dieta já está sendo gerada...', 'info', 2000); return; }
+  window._dietGenerating = true;
   const input = collectDietGenerationInput();
   if (input.fromChatDiet) {
     trackKroniaCta('diet_apply_started_from_chat', 'success', {
@@ -14607,14 +14609,16 @@ async function gerarDieta() {
   const res = document.getElementById("dietaResultado");
   const txt = document.getElementById("dietaTexto");
   const btn = document.getElementById("btnGerarDieta");
-  res.style.display = "block";
-  txt.textContent = buildLocalDietRenderText(input, "Plano inicial gerado localmente. Sincronizando versão completa...");
-  btn.disabled = true;
+  if (res) res.style.display = "block";
+  if (txt) txt.textContent = buildLocalDietRenderText(input, "Plano inicial gerado localmente. Sincronizando versão completa...");
+  if (btn) btn.disabled = true;
+  showToast('Gerando sua dieta com IA...', 'info', 5000);
   persistDietGenerationPrefs(input);
 
   if (!guard.ok) {
-    txt.textContent = buildLocalDietRenderText(input, "Não foi possível validar todos os critérios científicos agora. Aplicando plano local conservador.");
-    btn.disabled = false;
+    if (txt) txt.textContent = buildLocalDietRenderText(input, "Não foi possível validar todos os critérios científicos agora. Aplicando plano local conservador.");
+    if (btn) btn.disabled = false;
+    showToast('Não foi possível validar critérios agora. Tente novamente.', 'warning', 4000);
     return;
   }
   if (shouldShowScientificWarningToast(guard)) {
@@ -14657,9 +14661,11 @@ async function gerarDieta() {
       context: "gerarDieta.catch",
       error: e && e.message ? e.message : "unknown",
     });
-    txt.textContent = buildLocalDietRenderText(input, e && e.message ? e.message : "Falha de rede ao gerar dieta.");
+    if (txt) txt.textContent = buildLocalDietRenderText(input, e && e.message ? e.message : "Falha de rede ao gerar dieta.");
+    showToast(e && e.message ? e.message : 'Falha de rede ao gerar dieta. Tente novamente.', 'error', 5000);
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
+    window._dietGenerating = false;
   }
 
   if (input.fromChatDiet) {
