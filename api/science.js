@@ -73,6 +73,40 @@ function buildExercisePartialPayload(message, data, meta) {
 function buildExerciseErrorPayload(message, code, meta, data) {
   return { success: false, type: 'exercise_error', message: message, error: { code: code || 'EXERCISE_ERROR' }, data: data || null, meta: meta || {} };
 }
+function buildFallbackExerciseData(input, causeErr) {
+  var rawName = String(input.exerciseName || input.lookupKey || input.slug || input.exerciseId || 'Exercício').trim();
+  var safeName = rawName.replace(/[_-]+/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }).trim() || 'Exercício';
+  var normalizedKey = rawName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  var cause = causeErr instanceof Error ? causeErr.message : (causeErr ? String(causeErr) : 'unknown');
+  return {
+    id: input.exerciseId || ('fallback-' + normalizedKey),
+    slug: input.slug || normalizedKey.replace(/_/g, '-'),
+    normalized_lookup_key: normalizedKey,
+    names: { pt: safeName, en: safeName },
+    gif_url: null,
+    media: { url: null, primary: null, thumbnailUrl: null, type: 'none', provider: 'fallback', confidenceScore: 0 },
+    instructions: [
+      'Execute o movimento com controle e amplitude segura.',
+      'Mantenha postura estável durante toda a série.',
+      'Ajuste a carga para preservar a técnica antes de aumentar intensidade.',
+    ],
+    target_muscle: null,
+    secondary_muscles: [],
+    body_part: null,
+    equipment: null,
+    variations: [],
+    source: 'fallback',
+    common_errors: ['Usar impulso em vez de controle.', 'Perder a postura para aumentar a carga.'],
+    breathing_tip: 'Expire na fase de esforço e inspire no retorno controlado.',
+    range_of_motion: null,
+    completeness_score: 35,
+    media_confidence_score: 0,
+    content_source: 'client_safe_fallback',
+    last_enriched_at: null,
+    quality_flags: ['fallback_details', 'api_enrichment_failed'],
+    metadata: { cacheHit: false, externalFetch: false, responseTimeMs: 0, normalizedLookupKey: normalizedKey, confidenceScore: 0, knownResolution: false, fallback: true, cause: cause },
+  };
+}
 function normalizeExerciseEnvelope(result) {
   var meta = result.meta || {};
   var knownResolution = Number((meta && meta.confidenceScore) || 0) >= 0.9;
@@ -110,8 +144,8 @@ async function handleKroniaExerciseDetails(req, res, user) {
       exerciseName = typeof body.exerciseName === 'string'          ? body.exerciseName.slice(0, 240)          : '';
       locale       = body.locale === 'en' ? 'en' : 'pt';
     }
-    if (!exerciseId && !slug && !lookupKey) {
-      return res.status(400).json(buildExerciseErrorPayload('Informe id, slug ou lookupKey.', 'VALIDATION_ERROR'));
+    if (!exerciseId && !slug && !lookupKey && !exerciseName) {
+      return res.status(400).json(buildExerciseErrorPayload('Informe id, slug, lookupKey ou exerciseName.', 'VALIDATION_ERROR'));
     }
     var adminClient = createExerciseAdminClient();
     var service     = new _ExerciseApp(adminClient);
@@ -127,7 +161,12 @@ async function handleKroniaExerciseDetails(req, res, user) {
     return res.status(envelope.httpStatus).json(envelope.payload);
   } catch (err) {
     console.error('[api/science][kronia-exercise-details] erro interno:', err && err.message ? err.message : String(err));
-    return res.status(500).json(buildExerciseErrorPayload('Falha ao buscar detalhes do exercício.', 'INTERNAL_ERROR', { cause: err && err.message ? err.message : 'unknown' }));
+    var fallbackData = buildFallbackExerciseData({ exerciseId: exerciseId, slug: slug, lookupKey: lookupKey, exerciseName: exerciseName }, err);
+    return res.status(206).json(buildExercisePartialPayload(
+      'Detalhes básicos carregados. O enriquecimento avançado ficou indisponível agora.',
+      fallbackData,
+      { code: 'EXERCISE_DETAILS_FALLBACK', resilient: true, fallback: true, cause: err && err.message ? err.message : 'unknown' }
+    ));
   }
 }
 
