@@ -50,7 +50,10 @@ window.KroniaUI.unblockScreens = function(reason) {
       && el.id !== 'customModal'
       && el.id !== 'dietDataScreen'
       && el.id !== 'dietChoiceScreen'
-      && el.id !== 'exerciseDiscSheet';
+      && el.id !== 'exerciseDiscSheet'
+      && el.id !== 'evoModal'
+      && el.id !== 'summaryModal'
+      && el.id !== 'breathingModal';
 
     if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
@@ -12749,6 +12752,7 @@ function openExerciseDiscSheet() {
   const sheet = document.getElementById('exerciseDiscSheet');
   sheet.style.display = '';
   sheet.style.visibility = '';
+  sheet.style.opacity = '';
   sheet.style.pointerEvents = '';
   sheet.removeAttribute('aria-hidden');
   sheet.classList.add('show');
