@@ -2096,7 +2096,7 @@
           <span class="orient-chip-icon"><i data-lucide="flame" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
           <span class="orient-chip-name">Calculadora Basal</span>
         </div>
-        <div class="orient-chip" onclick="closeOrientacao();(window.KroniaDiet&&typeof window.KroniaDiet.generate==='function'?window.KroniaDiet.generate({source:'kronos_shortcut'}):(typeof window.generateDietPlan==='function'?window.generateDietPlan({source:'kronos_shortcut'}):(navTo('dieta'),openDietDataScreen&&openDietDataScreen())))">
+        <div class="orient-chip" onclick="closeOrientacao();navTo('dieta');openDietDataScreen()">
           <span class="orient-chip-icon"><i data-lucide="utensils" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
           <span class="orient-chip-name">Gerar Dieta</span>
         </div>

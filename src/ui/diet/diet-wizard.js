@@ -1,57 +1,81 @@
-/* Legacy diet profile wizard removed.
- * Keep this compatibility shim so cached imports cannot recreate the old overlay.
+/* KroniA Diet Wizard Compatibility
+ * Este arquivo não deve mais bloquear a criação de dieta.
+ * Ele apenas redireciona chamadas antigas para a entrada única:
+ * window.KroniaDiet.generate()
  */
 (function(root) {
-  var SCREEN_ID = 'dietProfileWizardScreen';
-  var STATE_KEYS = [
-    'kronia_diet_wizard_state_v1',
-    'kronia_diet_wizard_state_v2',
-    'kronia_diet_wizard_state_v6_standalone'
-  ];
+  'use strict';
 
-  function clearLegacyDietWizardState() {
-    STATE_KEYS.forEach(function(key) {
-      try { root.localStorage && root.localStorage.removeItem(key); } catch (_) {}
-    });
-    try { root.__kroniaDietWizardState = null; } catch (_) {}
-  }
-
-  function removeLegacyDietWizardOverlay() {
-    clearLegacyDietWizardState();
-    var screen = root.document && root.document.getElementById(SCREEN_ID);
+  function cleanupLegacyOverlay() {
+    var screen = root.document && root.document.getElementById('dietProfileWizardScreen');
     if (screen && screen.parentNode) screen.parentNode.removeChild(screen);
+
+    try {
+      [
+        'kronia_diet_wizard_state_v1',
+        'kronia_diet_wizard_state_v2',
+        'kronia_diet_wizard_state_v6_standalone'
+      ].forEach(function(key) {
+        root.localStorage && root.localStorage.removeItem(key);
+      });
+    } catch (_) {}
+
     if (root.document && root.document.body) {
-      root.document.body.classList.remove('diet-wizard-active', 'kdw-active', 'overlay-open');
+      root.document.body.classList.remove(
+        'diet-wizard-active',
+        'kdw-active',
+        'nutrition-flow-active',
+        'overlay-open'
+      );
     }
-    var footer = root.document && root.document.querySelector('.footer-actions');
-    if (footer) footer.style.display = '';
   }
 
-  function openPremiumDietFallback(source) {
-    removeLegacyDietWizardOverlay();
+  function openGenerateDietFlow(context) {
+    cleanupLegacyOverlay();
+
+    if (root.KroniaDiet && typeof root.KroniaDiet.generate === 'function') {
+      return root.KroniaDiet.generate(Object.assign({
+        source: 'diet_wizard_compat'
+      }, context || {}));
+    }
+
+    if (typeof root.generateDietPlan === 'function' && root.generateDietPlan !== openGenerateDietFlow) {
+      return root.generateDietPlan(Object.assign({
+        source: 'diet_wizard_compat_generateDietPlan'
+      }, context || {}));
+    }
+
     if (root.KroniaDiet && typeof root.KroniaDiet.open === 'function') {
-      return root.KroniaDiet.open({ source: source || 'legacy_diet_profile_wizard_removed', forceNew: true });
+      return root.KroniaDiet.open({
+        source: 'diet_wizard_compat_fallback_open',
+        forceNew: true
+      });
     }
-    if (typeof root.openDietDataScreen === 'function') {
-      try { if (typeof root.navTo === 'function') root.navTo('dieta'); } catch (_) {}
-      root.openDietDataScreen();
-      return true;
+
+    try {
+      if (typeof root.navTo === 'function') root.navTo('dieta');
+      if (typeof root.openDietDataScreen === 'function') {
+        root.openDietDataScreen();
+        return true;
+      }
+    } catch (_) {}
+
+    if (typeof root.showToast === 'function') {
+      root.showToast('Não consegui abrir a criação da dieta. Atualize o app e tente novamente.', 'error', 3500);
     }
-    if (typeof root.navTo === 'function') return root.navTo('dieta');
+
     return false;
   }
 
-  root.openDietProfileWizard = function removedDietProfileWizard() {
-    return openPremiumDietFallback('legacy_diet_profile_wizard_removed');
-  };
-  root.closeDietProfileWizard = removeLegacyDietWizardOverlay;
-  root.__kroniaDietWizardStandaloneLoaded = false;
+  root.openDietProfileWizard = openGenerateDietFlow;
+  root.closeDietProfileWizard = cleanupLegacyOverlay;
+  root.__kroniaDietWizardStandaloneLoaded = true;
 
   if (root.document) {
     if (root.document.readyState === 'loading') {
-      root.document.addEventListener('DOMContentLoaded', removeLegacyDietWizardOverlay, { once: true });
+      root.document.addEventListener('DOMContentLoaded', cleanupLegacyOverlay, { once: true });
     } else {
-      removeLegacyDietWizardOverlay();
+      cleanupLegacyOverlay();
     }
   }
 })(window);
