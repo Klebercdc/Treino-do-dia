@@ -557,7 +557,7 @@
       intent: decision.intent,
       message: decision.message,
       cta: decision.ctaAction ? {
-        label: decision.ctaAction === 'open_training' ? 'Abrir treino' : (decision.ctaAction === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'),
+        label: decision.ctaAction === 'open_training' ? 'Abrir treino' : (decision.ctaAction === 'generate_diet' ? 'Gerar dieta' : (decision.ctaAction === 'open_labs_upload' ? 'Enviar exame' : 'Abrir dieta')),
         action: decision.ctaAction,
       } : null,
       targetModule: decision.targetModule,

@@ -4,11 +4,6 @@ import { analyzeEvents } from '../../../../core/intelligence/analysisEngine';
 import { buildOperationalBacklog } from '../../../../core/intelligence/decisionEngine';
 import { requireBearerAuth } from '../../../_shared/requireBearerAuth';
 
-function isAdminEmail(email?: string | null): boolean {
-  const allowlist = String(process.env.KRONIA_ADMIN_EMAILS || '').split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
-  return Boolean(email && allowlist.includes(email.toLowerCase()));
-}
-
 function safeText(value: unknown, max = 220) {
   return typeof value === 'string' ? value.slice(0, max) : null;
 }
@@ -52,9 +47,18 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const auth = await requireBearerAuth(req);
-  if (!auth.ok || !isAdminEmail(auth.user.email)) {
+  if (!auth.ok) return auth.response;
+
+  const dbAdmin = createAdminSupabaseClient();
+  const { data: profile } = await dbAdmin
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', auth.user.id)
+    .maybeSingle();
+  if (!profile?.is_admin) {
     return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED' } }, { status: 401 });
   }
+
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action') || 'overview';
   const severity = searchParams.get('severity');
