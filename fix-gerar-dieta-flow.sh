@@ -1,4 +1,169 @@
-/* KroniA Diet Entry Controller
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔎 KRONIA — Correção direcionada: Gerar Dieta"
+
+FILES=(
+  "src/ui/diet/diet-entry-controller.js"
+  "src/ui/diet/diet-wizard.js"
+  "src/ui/diet/diet-wizard-standalone.js"
+  "index.html"
+  "sw.js"
+)
+
+TS="$(date +%Y%m%d%H%M%S)"
+BACKUP_DIR="backup/fix-gerar-dieta-$TS"
+
+echo "💾 Criando backup em $BACKUP_DIR"
+mkdir -p "$BACKUP_DIR"
+
+for f in "${FILES[@]}"; do
+  if [ -f "$f" ]; then
+    mkdir -p "$BACKUP_DIR/$(dirname "$f")"
+    cp "$f" "$BACKUP_DIR/$f"
+    echo "  ✅ backup: $f"
+  else
+    echo "  ⚠️ não encontrado: $f"
+  fi
+done
+
+echo "🛠️ Aplicando correção..."
+
+node <<'NODE'
+const fs = require('fs');
+
+function read(file) {
+  if (!fs.existsSync(file)) throw new Error(`Arquivo não encontrado: ${file}`);
+  return fs.readFileSync(file, 'utf8');
+}
+
+function write(file, content) {
+  fs.writeFileSync(file, content, 'utf8');
+  console.log(`✅ atualizado: ${file}`);
+}
+
+function patchIndexHtml() {
+  const file = 'index.html';
+  let html = read(file);
+
+  const oldInline = `closeOrientacao();navTo('dieta');openDietDataScreen()`;
+  const newInline = `closeOrientacao();(window.KroniaDiet&&typeof window.KroniaDiet.generate==='function'?window.KroniaDiet.generate({source:'kronos_shortcut'}):(typeof window.generateDietPlan==='function'?window.generateDietPlan({source:'kronos_shortcut'}):(navTo('dieta'),openDietDataScreen&&openDietDataScreen())))`;
+
+  if (html.includes(oldInline)) {
+    html = html.split(oldInline).join(newInline);
+  }
+
+  write(file, html);
+}
+
+function patchServiceWorker() {
+  const file = 'sw.js';
+  let sw = read(file);
+
+  const stamp = new Date().toISOString().slice(0,10).replace(/-/g, '');
+  sw = sw.replace(
+    /const CACHE = ['"][^'"]+['"];/,
+    `const CACHE = 'kronia-diet-generate-fix-${stamp}';`
+  );
+
+  sw = sw.replace(
+    /const BUILD_VERSION = ['"][^'"]+['"];/,
+    `const BUILD_VERSION = '${stamp}-diet-generate-fix';`
+  );
+
+  write(file, sw);
+}
+
+function writeDietWizardShim() {
+  const content = `/* KroniA Diet Wizard Compatibility
+ * Este arquivo não deve mais bloquear a criação de dieta.
+ * Ele apenas redireciona chamadas antigas para a entrada única:
+ * window.KroniaDiet.generate()
+ */
+(function(root) {
+  'use strict';
+
+  function cleanupLegacyOverlay() {
+    var screen = root.document && root.document.getElementById('dietProfileWizardScreen');
+    if (screen && screen.parentNode) screen.parentNode.removeChild(screen);
+
+    try {
+      [
+        'kronia_diet_wizard_state_v1',
+        'kronia_diet_wizard_state_v2',
+        'kronia_diet_wizard_state_v6_standalone'
+      ].forEach(function(key) {
+        root.localStorage && root.localStorage.removeItem(key);
+      });
+    } catch (_) {}
+
+    if (root.document && root.document.body) {
+      root.document.body.classList.remove(
+        'diet-wizard-active',
+        'kdw-active',
+        'nutrition-flow-active',
+        'overlay-open'
+      );
+    }
+  }
+
+  function openGenerateDietFlow(context) {
+    cleanupLegacyOverlay();
+
+    if (root.KroniaDiet && typeof root.KroniaDiet.generate === 'function') {
+      return root.KroniaDiet.generate(Object.assign({
+        source: 'diet_wizard_compat'
+      }, context || {}));
+    }
+
+    if (typeof root.generateDietPlan === 'function' && root.generateDietPlan !== openGenerateDietFlow) {
+      return root.generateDietPlan(Object.assign({
+        source: 'diet_wizard_compat_generateDietPlan'
+      }, context || {}));
+    }
+
+    if (root.KroniaDiet && typeof root.KroniaDiet.open === 'function') {
+      return root.KroniaDiet.open({
+        source: 'diet_wizard_compat_fallback_open',
+        forceNew: true
+      });
+    }
+
+    try {
+      if (typeof root.navTo === 'function') root.navTo('dieta');
+      if (typeof root.openDietDataScreen === 'function') {
+        root.openDietDataScreen();
+        return true;
+      }
+    } catch (_) {}
+
+    if (typeof root.showToast === 'function') {
+      root.showToast('Não consegui abrir a criação da dieta. Atualize o app e tente novamente.', 'error', 3500);
+    }
+
+    return false;
+  }
+
+  root.openDietProfileWizard = openGenerateDietFlow;
+  root.closeDietProfileWizard = cleanupLegacyOverlay;
+  root.__kroniaDietWizardStandaloneLoaded = true;
+
+  if (root.document) {
+    if (root.document.readyState === 'loading') {
+      root.document.addEventListener('DOMContentLoaded', cleanupLegacyOverlay, { once: true });
+    } else {
+      cleanupLegacyOverlay();
+    }
+  }
+})(window);
+`;
+
+  write('src/ui/diet/diet-wizard.js', content);
+  write('src/ui/diet/diet-wizard-standalone.js', content);
+}
+
+function writeDietEntryController() {
+  const content = `/* KroniA Diet Entry Controller
  * Correção: separa abrir dieta existente de gerar nova dieta.
  */
 (function() {
@@ -424,3 +589,58 @@
     loadRenderer();
   }
 })();
+`;
+
+  write('src/ui/diet/diet-entry-controller.js', content);
+}
+
+writeDietEntryController();
+writeDietWizardShim();
+patchIndexHtml();
+patchServiceWorker();
+
+console.log('✅ Correção JS aplicada.');
+NODE
+
+echo "🔍 Verificando sintaxe JS..."
+node --check src/ui/diet/diet-entry-controller.js
+node --check src/ui/diet/diet-wizard.js
+node --check src/ui/diet/diet-wizard-standalone.js
+node --check sw.js
+
+echo "🧪 Rodando validações disponíveis..."
+if [ -f package.json ]; then
+  if npm run | grep -q "lint"; then
+    npm run lint || echo "⚠️ lint falhou — revisar output acima"
+  else
+    echo "ℹ️ sem script lint"
+  fi
+
+  if npm run | grep -q "build"; then
+    npm run build || echo "⚠️ build falhou — revisar output acima"
+  else
+    echo "ℹ️ sem script build"
+  fi
+
+  if npm run | grep -q "test"; then
+    npm test || echo "⚠️ test falhou — revisar output acima"
+  else
+    echo "ℹ️ sem script test"
+  fi
+fi
+
+echo "📌 Diff resumido:"
+git diff -- src/ui/diet/diet-entry-controller.js src/ui/diet/diet-wizard.js src/ui/diet/diet-wizard-standalone.js index.html sw.js | sed -n '1,220p'
+
+echo ""
+echo "✅ Finalizado."
+echo ""
+echo "Agora teste no console do navegador:"
+echo "typeof window.KroniaDiet.generate"
+echo "typeof window.generateDietPlan"
+echo "typeof window.openDietProfileWizard"
+echo ""
+echo "Se estiver tudo ok:"
+echo "git add src/ui/diet/diet-entry-controller.js src/ui/diet/diet-wizard.js src/ui/diet/diet-wizard-standalone.js index.html sw.js backup/"
+echo "git commit -m \"fix(diet): restore generate diet flow entrypoint\""
+echo "git push"
