@@ -2805,6 +2805,7 @@ function navTo(tab) {
   if (tab === "dieta") scheduleKroniaUIUnblock('before-diet-tab');
   const pt = document.getElementById("posTreinoSection");
   if (pt) pt.style.display = tab === "treino" ? "block" : "none";
+  document.body.classList.toggle("kronia-on-treino", tab === "treino");
   const _cont = document.getElementById("container");
   if (_cont) _cont.style.display = tab === "treino" ? "" : "none";
   const _nav = document.getElementById("nav");
