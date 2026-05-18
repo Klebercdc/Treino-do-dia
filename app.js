@@ -4133,8 +4133,8 @@ function buildCanonicalConversationIntent(data) {
   return {
     type: intentType,
     eligible: true,
-    label: intentType === 'open_training' ? 'Abrir treino' : (intentType === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'),
-    target: intentType === 'open_training' ? 'home_training_card' : 'home_diet_card',
+    label: intentType === 'open_training' ? 'Abrir treino' : (intentType === 'generate_diet' ? 'Gerar dieta' : (intentType === 'open_labs_upload' ? 'Enviar exame' : 'Abrir dieta')),
+    target: intentType === 'open_training' ? 'home_training_card' : (intentType === 'open_labs_upload' ? 'home_labs_card' : 'home_diet_card'),
     source: source,
     payload: sanitizeConversationIntentPayload(intentType, data.payload || {}),
     meta: sanitizeCtaObject(data.meta || {}),
@@ -4228,11 +4228,11 @@ function buildCtaFromCanonicalIntent(intent) {
   if (!action) return null;
   return {
     action: action,
-    label: String(intent.label || (action === 'open_training' ? 'Abrir treino' : (action === 'generate_diet' ? 'Gerar dieta' : 'Abrir dieta'))),
+    label: String(intent.label || (action === 'open_training' ? 'Abrir treino' : (action === 'generate_diet' ? 'Gerar dieta' : (action === 'open_labs_upload' ? 'Enviar exame' : 'Abrir dieta')))),
     payload: sanitizeConversationIntentPayload(action, intent.payload || {}),
     meta: sanitizeCtaObject(intent.meta || {}),
     intentSource: intent.source || 'agent',
-    targetModule: intent.target === 'home_training_card' ? 'programa' : 'dieta',
+    targetModule: intent.target === 'home_training_card' ? 'programa' : (intent.target === 'home_labs_card' ? 'labs' : 'dieta'),
   };
 }
 
