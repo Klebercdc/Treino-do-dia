@@ -172,6 +172,7 @@
 
       if (typeof fn !== 'function') continue;
       if (fn === openDietGenerationFlow) continue;
+      if (fn === openDietAnamneseFirstFlow) continue;
       if (fn.__kroniaDietEntryWrapper) continue;
 
       try {
@@ -187,7 +188,83 @@
     return { called: false, value: false };
   }
 
-  async function openDietGenerationFlow(context) {
+  var WIZARD_ASSETS = [
+    'src/ui/diet/diet-wizard-standalone.js',
+    'src/ui/diet/diet-wizard.js'
+  ];
+
+  function unwrapDietProfileWizardIfNeeded() {
+    try {
+      if (
+        typeof window.openDietProfileWizard === 'function' &&
+        window.openDietProfileWizard.__kroniaDietEntryWrapper
+      ) {
+        delete window.openDietProfileWizard;
+      }
+    } catch (_) {
+      try { window.openDietProfileWizard = undefined; } catch (__) {}
+    }
+  }
+
+  async function loadDietWizardAssets() {
+    unwrapDietProfileWizardIfNeeded();
+
+    for (var i = 0; i < WIZARD_ASSETS.length; i++) {
+      var src = WIZARD_ASSETS[i];
+
+      await loadScriptOnce(src, 'diet-anamnese-' + i, function() {
+        return (
+          typeof window.openDietProfileWizard === 'function' &&
+          !window.openDietProfileWizard.__kroniaDietEntryWrapper
+        ) || (
+          typeof window.openDietWizardStandalone === 'function' &&
+          !window.openDietWizardStandalone.__kroniaDietEntryWrapper
+        );
+      });
+
+      if (
+        typeof window.openDietProfileWizard === 'function' &&
+        !window.openDietProfileWizard.__kroniaDietEntryWrapper
+      ) return true;
+
+      if (
+        typeof window.openDietWizardStandalone === 'function' &&
+        !window.openDietWizardStandalone.__kroniaDietEntryWrapper
+      ) return true;
+    }
+
+    return false;
+  }
+
+  async function generateDietAfterAnamnese(profileData, context) {
+    safeToast('Gerando sua dieta com IA...', 'info', 2500);
+
+    var generation = callFirstAvailable([
+      'gerarDieta',
+      'generateAIDiet',
+      'generateDiet',
+      'createAIDiet',
+      'createDiet',
+      'startNutritionGeneration',
+      'startDietGeneration'
+    ], Object.assign({
+      source: 'kronia_diet_after_anamnese',
+      profileData: profileData || null
+    }, context || {}));
+
+    if (generation.called) return generation.value;
+
+    if (typeof window.openDietDataScreen === 'function') {
+      window.openDietDataScreen();
+      safeToast('Anamnese concluída. Motor de geração não encontrado no runtime.', 'warning', 4500);
+      return true;
+    }
+
+    safeToast('Anamnese concluída, mas não encontrei o motor de geração da dieta.', 'error', 4500);
+    return false;
+  }
+
+  async function openDietAnamneseFirstFlow(context) {
     if (generating) return false;
     generating = true;
 
@@ -199,59 +276,65 @@
       } catch (_) {}
 
       await loadRenderer();
+      await loadDietWizardAssets();
 
-      /*
-       * Ordem proposital:
-       * 1. Primeiro tenta funções reais de geração, se existirem no app.
-       * 2. Depois tenta fluxos visuais de criação/configuração.
-       * 3. Só no final cai na tela premium existente como fallback.
-       */
-      var realGeneration = callFirstAvailable([
-        'gerarDieta',
-        'generateAIDiet',
-        'generateDiet',
-        'createAIDiet',
-        'createDiet',
-        'startNutritionGeneration',
-        'startDietGeneration',
+      var payload = Object.assign({
+        mode: context && context.mode ? context.mode : 'regenerate',
+        source: 'diet_ai_card_anamnese_first',
+        forceAnamnese: true,
+        skipAutoGenerate: true,
+        onComplete: function(profileData) {
+          return generateDietAfterAnamnese(profileData, context || {});
+        },
+        onFinish: function(profileData) {
+          return generateDietAfterAnamnese(profileData, context || {});
+        },
+        onSubmit: function(profileData) {
+          return generateDietAfterAnamnese(profileData, context || {});
+        }
+      }, context || {});
+
+      var candidates = [
+        'openDietProfileWizard',
+        'openDietWizardStandalone',
+        'openNutritionFlow',
+        'openDietSetupWizard',
         'openDietGenerationWizard',
         'openNutritionWizard',
-        'openDietWizard',
-        'openDietSetupWizard',
-        'openDietEmergencyWizard',
-        'openNutritionFlowFull'
-      ], Object.assign({ source: 'kronia_diet_generate' }, context || {}));
+        'openDietWizard'
+      ];
 
-      if (realGeneration.called) {
-        return realGeneration.value;
-      }
+      for (var i = 0; i < candidates.length; i++) {
+        var name = candidates[i];
+        var fn = window[name];
 
-      if (typeof window.preencherDietaDosPerfil === 'function') {
+        if (typeof fn !== 'function') continue;
+        if (fn.__kroniaDietEntryWrapper) continue;
+        if (fn === openDietAnamneseFirstFlow) continue;
+        if (fn === openDietGenerationFlow) continue;
+
         try {
-          window.preencherDietaDosPerfil();
+          var result = fn.call(window, payload);
+          if (result !== false) return result;
         } catch (err) {
-          console.warn('[KroniA Diet] preencherDietaDosPerfil falhou', err);
+          console.warn('[KRONIA_DIET_FLOW] Falha ao abrir anamnese via ' + name, err);
         }
       }
 
-      /*
-       * Fallback controlado:
-       * se não existe motor exposto no runtime, abre a tela de dieta e mostra aviso claro,
-       * em vez de parecer que o botão não funciona.
-       */
-      if (typeof window.openDietDataScreen === 'function') {
-        window.openDietDataScreen();
-        safeToast('Abrindo Dieta. Motor de geração não encontrado no runtime; verifique exports do motor/API.', 'warning', 4500);
-        return true;
-      }
-
-      safeToast('Não encontrei o fluxo de geração de dieta no app.', 'error', 4000);
+      safeToast('Não encontrei a anamnese da dieta no runtime. Verifique diet-wizard e exports.', 'error', 5000);
       return false;
     } finally {
       setTimeout(function() {
         generating = false;
       }, 350);
     }
+  }
+
+  async function openDietGenerationFlow(context) {
+    return openDietAnamneseFirstFlow(Object.assign({
+      mode: 'regenerate',
+      source: 'diet_generation_entry_redirected_to_anamnese'
+    }, context || {}));
   }
 
   function isGenerateDietButton(target) {
@@ -372,28 +455,24 @@
 
   window.KroniaDiet = Object.assign({}, window.KroniaDiet || {}, {
     open: openPremiumDiet,
-    generate: openDietGenerationFlow,
-    ai: openDietGenerationFlow,
-    createPlan: openDietGenerationFlow,
-    regenerate: openDietGenerationFlow,
+    generate: openDietAnamneseFirstFlow,
+    ai: openDietAnamneseFirstFlow,
+    createPlan: openDietAnamneseFirstFlow,
+    regenerate: openDietAnamneseFirstFlow,
     viewLastPlan: openPremiumDiet,
     bindButtons: makeTouchable,
     hideLegacyScreens: hideLegacyScreens,
     loadRenderer: loadRenderer
   });
 
-  window.startAIDiet = markWrapper(openDietGenerationFlow);
-  window.createDietPlan = markWrapper(openDietGenerationFlow);
-  window.generateDietPlan = markWrapper(openDietGenerationFlow);
-  window.regenerateDiet = markWrapper(openDietGenerationFlow);
-  window.regenerateDietPlan = markWrapper(openDietGenerationFlow);
-  window.regeneratePlan = markWrapper(openDietGenerationFlow);
+  window.startAIDiet = markWrapper(openDietAnamneseFirstFlow);
+  window.createDietPlan = markWrapper(openDietAnamneseFirstFlow);
+  window.generateDietPlan = markWrapper(openDietAnamneseFirstFlow);
+  window.regenerateDiet = markWrapper(openDietAnamneseFirstFlow);
+  window.regenerateDietPlan = markWrapper(openDietAnamneseFirstFlow);
+  window.regeneratePlan = markWrapper(openDietAnamneseFirstFlow);
 
-  /*
-   * Compatibilidade:
-   * chamadas antigas de wizard agora abrem o fluxo de geração,
-   * não mais a tela premium existente.
-   */
+  /* Marked wrapper so loadDietWizardAssets knows it's not the real wizard form. */
   window.openDietProfileWizard = markWrapper(openDietGenerationFlow);
 
   /*

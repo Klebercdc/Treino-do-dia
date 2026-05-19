@@ -81,34 +81,35 @@ test('legacy diet guard hides only legacy screens and preserves official diet vi
   }
 });
 
-test('KroniaDiet.open performs overlay cleanup and opens premium diet without profile wizard', () => {
+test('KroniaDiet.generate opens anamnesis wizard before AI diet generation', () => {
   const source = read('src/ui/diet/diet-entry-controller.js');
 
   assert.match(source, /hideLegacyScreens\(\)/);
   assert.match(source, /purgeLegacyWizard\(\)/);
   assert.match(source, /openDietDataScreen/);
-  assert.match(source, /window\.openNutritionFlow\s*=\s*function\(\)\{[\s\S]*?window\.KroniaDiet\.open/);
-  assert.match(source, /window\.openNutritionFlowFull\s*=\s*function\(\)\{[\s\S]*?window\.KroniaDiet\.open/);
-  assert.doesNotMatch(source, /openDietProfileWizard|dietProfileWizardScreen|diet-wizard-standalone|diet-standalone|setInterval\(legacyWatchdog/);
+  assert.match(source, /async function openDietAnamneseFirstFlow/);
+  assert.match(source, /async function loadDietWizardAssets/);
+  assert.match(source, /async function generateDietAfterAnamnese/);
+  assert.match(source, /function openDietGenerationFlow[\s\S]*?openDietAnamneseFirstFlow/);
+  assert.doesNotMatch(source, /setInterval\(legacyWatchdog/);
 });
 
-test('legacy profile base flow is not shipped in active entry files', () => {
+test('legacy profile base multi-step forms are not shipped in eager-loaded entry files', () => {
   const activeSources = [
     read('index.html'),
     read('app.js'),
     read('styles.css'),
-    read('src/ui/diet/diet-entry-controller.js'),
     read('src/ui/diet/disable-legacy-diet.js')
   ].join('\n');
 
-  assert.doesNotMatch(activeSources, /dietProfileWizardScreen|openDietProfileWizard|Perfil base|diet-wizard\.js|diet-wizard-state|diet-step-|diet-summary/);
+  assert.doesNotMatch(activeSources, /dietProfileWizardScreen|openDietProfileWizard|Perfil base|diet-wizard-state|diet-step-|diet-summary/);
 });
 
 test('service worker is clean UI cache only and does not mutate HTML or inject diet scripts', () => {
   const source = read('sw.js');
 
-  assert.match(source, /const CACHE = 'kronia-503-hotfix-20260504'/);
-  assert.match(source, /const BUILD_VERSION = '20260504-503-hotfix'/);
+  assert.match(source, /const CACHE = 'kronia-diet-anamnese-first-\d+'/);
+  assert.match(source, /const BUILD_VERSION = '\d+-diet-anamnese-first'/);
   assert.ok(source.includes("url.pathname.startsWith('/src/ui/diet/')"));
   assert.ok(source.includes("requestUrl.pathname === '/api/kronia/exercises/details'"));
   assert.doesNotMatch(source, /injectDietController/);
