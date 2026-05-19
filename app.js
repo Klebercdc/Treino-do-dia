@@ -2857,7 +2857,6 @@ var _labsScreenInited = false;
 function openLabsScreen() {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
-  try { schedulePendingConversationIntentConsumption('kronia_action_labs'); } catch (_) {}
   const _ls = document.getElementById('labsScreen');
   _ls.style.display = ''; _ls.style.visibility = ''; _ls.style.pointerEvents = ''; _ls.removeAttribute('aria-hidden');
   _ls.classList.add('show');
