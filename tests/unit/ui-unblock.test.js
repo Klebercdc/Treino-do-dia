@@ -108,8 +108,8 @@ test('legacy profile base multi-step forms are not shipped in eager-loaded entry
 test('service worker is clean UI cache only and does not mutate HTML or inject diet scripts', () => {
   const source = read('sw.js');
 
-  assert.match(source, /const CACHE = 'kronia-diet-anamnese-first-\d+'/);
-  assert.match(source, /const BUILD_VERSION = '\d+-diet-anamnese-first'/);
+  assert.match(source, /const CACHE = 'kronia-[a-z0-9-]+-\d+'/);
+  assert.match(source, /const BUILD_VERSION = '\d+-[a-z0-9-]+'/);
   assert.ok(source.includes("url.pathname.startsWith('/src/ui/diet/')"));
   assert.ok(source.includes("requestUrl.pathname === '/api/kronia/exercises/details'"));
   assert.doesNotMatch(source, /injectDietController/);

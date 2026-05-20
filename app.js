@@ -2819,6 +2819,18 @@ function navTo(tab) {
   if (tab !== "dieta") document.getElementById("dietChoiceScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
   if (tab !== "perfil") document.getElementById("perfilScreen")?.classList.remove("show");
+  if (tab !== 'labs') {
+    try {
+      var _labsEl = document.getElementById('labsScreen');
+      if (_labsEl) {
+        _labsEl.classList.remove('show');
+        _labsEl.style.display = 'none';
+        _labsEl.style.visibility = 'hidden';
+        _labsEl.style.pointerEvents = 'none';
+        document.body.classList.remove('overlay-open');
+      }
+    } catch (_) {}
+  }
   try {
     var _nfs = document.getElementById('nutritionFlowScreen');
     if (_nfs) {
@@ -2857,12 +2869,40 @@ var _labsScreenInited = false;
 function openLabsScreen() {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
+
+  // Hide every main screen and treino-specific layer before showing labs
+  ['homeScreen', 'dietDataScreen', 'dietChoiceScreen', 'evolutionDataScreen',
+   'perfilScreen', 'settingsScreen', 'orientacaoScreen'].forEach(function(id) {
+    var s = document.getElementById(id);
+    if (s) s.classList.remove('show');
+  });
+  document.body.classList.remove('kronia-on-treino');
+  try { closeStartWorkoutScreen?.(); } catch (_) {}
+  var _cont = document.getElementById('container');
+  if (_cont) _cont.style.display = 'none';
+  var _navEl = document.getElementById('nav');
+  if (_navEl) _navEl.style.display = 'none';
+  var _addEx = document.querySelector('.btn-add-ex');
+  if (_addEx) _addEx.style.display = 'none';
+  var _pt = document.getElementById('posTreinoSection');
+  if (_pt) _pt.style.display = 'none';
+
+  // Update bottom-nav active state
+  document.querySelectorAll('.btn-nav').forEach(function(b) { b.classList.remove('active', 'diet-active'); });
+  var _navLabs = document.getElementById('nav-labs');
+  if (_navLabs) _navLabs.classList.add('active');
+
   const _ls = document.getElementById('labsScreen');
-  _ls.style.display = ''; _ls.style.visibility = ''; _ls.style.pointerEvents = ''; _ls.removeAttribute('aria-hidden');
+  if (!_ls) { console.error('[LABS] labsScreen não encontrado no DOM'); return; }
+  _ls.style.display = '';
+  _ls.style.visibility = '';
+  _ls.style.pointerEvents = '';
+  _ls.removeAttribute('aria-hidden');
   _ls.classList.add('show');
   document.body.classList.add('overlay-open');
   var footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = 'none';
+  window.scrollTo(0, 0);
   if (!_labsScreenInited) {
     _labsScreenInited = true;
     _initLabsScreen();
@@ -2872,16 +2912,29 @@ function openLabsScreen() {
 
 function closeLabsScreen() {
   stopLabsPolling();
-  document.getElementById('labsScreen').classList.remove('show');
+  var _ls = document.getElementById('labsScreen');
+  if (_ls) {
+    _ls.classList.remove('show');
+    _ls.style.display = 'none';
+    _ls.style.visibility = 'hidden';
+    _ls.style.pointerEvents = 'none';
+  }
   document.body.classList.remove('overlay-open');
   var footer = document.querySelector('.footer-actions');
   if (footer) footer.style.display = '';
   if (_labsReturnDietMiniChrome) {
     _showEl('dietDataScreen');
     setDietMiniAppChrome(false);
+    _labsReturnDietMiniChrome = false;
+    return;
   }
   _labsReturnDietMiniChrome = false;
+  try { navTo('inicio'); openHome(); } catch (_) {}
 }
+
+window.openLabsScreen = openLabsScreen;
+window.closeLabsScreen = closeLabsScreen;
+window.openLabsUploadScreen = openLabsUploadScreen;
 
 function _initLabsScreen() {
   var fileInput = document.getElementById('labsFile');

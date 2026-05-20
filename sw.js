@@ -1,5 +1,5 @@
-const CACHE = 'kronia-diet-anamnese-first-20260519';
-const BUILD_VERSION = '20260519-diet-anamnese-first';
+const CACHE = 'kronia-fix-exams-navigation-20260520';
+const BUILD_VERSION = '20260520-fix-exams-navigation';
 
 const STATIC_ASSET_RE = /\.(?:css|js|png|jpg|jpeg|webp|svg|ico|json|woff2?)$/i;
 const STATIC_ALLOWLIST = [
