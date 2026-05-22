@@ -340,12 +340,27 @@
 
   async function openLabsUploadScreen(source) {
     log('open', source || 'unknown', BRIDGE_VERSION);
+
+    // Ensure the app is on the home tab so the modal has the correct context
+    // (prevents the training/workout screen from showing through the overlay).
+    try {
+      if (typeof window.navTo === 'function') window.navTo('inicio');
+    } catch (_) {}
+
     openModal();
     await loadIndicators();
   }
 
   // Override the app.js definition so the home CTA uses the modal instead of navigating away.
   window.openLabsUploadScreen = openLabsUploadScreen;
+
+  // Safety net: if this script loads before app.js defines openLabsUploadScreen,
+  // or if something re-defines it later, re-apply the override after DOMContentLoaded.
+  document.addEventListener('DOMContentLoaded', function () {
+    window.openLabsUploadScreen = openLabsUploadScreen;
+    ensureModal();
+    log('bridge ready', BRIDGE_VERSION);
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     ensureModal();
