@@ -3,6 +3,24 @@ var auth = require('../src/server/apihelpers/_auth');
 var rl   = require('../src/server/apihelpers/_ratelimit');
 var plans = require('../src/server/apihelpers/_plans');
 var kroniaLabsHandler = require('./kronia-labs');
+
+// ─── KRONOS AGENT ─────────────────────────────────────────────────────────────
+async function handleKronos(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
+  auth.requireAuth(req, res, function (user) {
+    rl.rateLimit(req, res, async function () {
+      try {
+        var message = req.body && typeof req.body.message === 'string' ? req.body.message.trim() : '';
+        if (!message) return res.status(400).json({ success: false, error: 'O campo "message" é obrigatório.' });
+        var agentModule = await import('../src/lib/agents/kronosAgent.js');
+        var result = await agentModule.runKronosAgent(user.id, message);
+        return res.status(200).json({ success: true, resposta: result.resposta, iteracoes: result.iteracoes });
+      } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno do agente KRONOS.', meta: { message: err && err.message ? err.message : String(err || 'unknown') } });
+      }
+    });
+  });
+}
 var https = require('https');
 
 var SUPABASE_URL = (
@@ -227,6 +245,8 @@ module.exports = function(req, res) {
     case 'kronia-labs-report-by-id':
       // handleReportById handles both GET and DELETE internally
       return kroniaLabsHandler.handleReportById(req, res);
+    case 'kronos':
+      return handleKronos(req, res);
     default:
       return res.status(404).json({ error: 'rota não encontrada' });
   }
