@@ -43,6 +43,7 @@ const staticFiles = [
   'src/ui/diet/diet-summary.js',
   'src/ui/diet/disable-legacy-diet.js',
   'src/ui/labs/home-labs-cta-bridge.js',
+  'src/ui/labs/home-labs-reports-auth-fix.js',
 ];
 
 await rm(outputDir, { recursive: true, force: true });
