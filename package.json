@@ -45,7 +45,8 @@
     "lint": "npx tsc --noEmit --pretty false",
     "build": "npx tsc --noEmit --pretty false && node scripts/build-static-public.mjs && node scripts/force-diet-wizard-6step-build.mjs",
     "check:labs-upload": "node --env-file=.env.local scripts/check-labs-upload.mjs",
-    "check:labs-pipeline": "tsx scripts/labs-pipeline-check.ts"
+    "check:labs-pipeline": "tsx scripts/labs-pipeline-check.ts",
+    "fix:home-labs-cta": "node scripts/fix-home-labs-cta.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0"
