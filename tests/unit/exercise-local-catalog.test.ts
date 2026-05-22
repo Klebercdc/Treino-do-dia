@@ -11,7 +11,7 @@ test('resolveLocalCatalogMedia encontra gif canônico para push up', () => {
   });
 
   assert.ok(match);
-  assert.ok(match?.gifUrl.includes('cdn.treino-do-dia.app/exercises/'));
+  assert.ok(match?.gifUrl?.includes('cdn.treino-do-dia.app/exercises/'));
   assert.equal(match?.normalizedLookupKey.includes('push_up'), true);
 });
 
@@ -24,7 +24,7 @@ test('resolveLocalCatalogMedia converte shoulder press para overhead press com m
   });
 
   assert.ok(match);
-  assert.ok(match?.gifUrl.includes('cdn.treino-do-dia.app/exercises/'));
+  assert.ok(match?.gifUrl?.includes('cdn.treino-do-dia.app/exercises/'));
   assert.ok((match?.matchedBy || '').length > 0);
 });
 
@@ -37,5 +37,5 @@ test('resolveLocalCatalogMedia usa alias seguro para pec deck', () => {
   });
 
   assert.ok(match);
-  assert.ok(match?.gifUrl.includes('cdn.treino-do-dia.app/exercises/'));
+  assert.ok(match?.gifUrl?.includes('cdn.treino-do-dia.app/exercises/'));
 });
