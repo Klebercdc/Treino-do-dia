@@ -41,6 +41,8 @@ const staticFiles = [
   'src/ui/diet/diet-step-training.js',
   'src/ui/diet/diet-step-metabolism.js',
   'src/ui/diet/diet-summary.js',
+  'src/ui/diet/disable-legacy-diet.js',
+  'src/ui/labs/home-labs-cta-bridge.js',
 ];
 
 await rm(outputDir, { recursive: true, force: true });
