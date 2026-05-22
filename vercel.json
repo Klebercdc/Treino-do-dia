@@ -58,6 +58,10 @@
       "destination": "/api/science?__route=nutrition-selftest"
     },
     {
+      "source": "/api/kronos",
+      "destination": "/api/system?__route=kronos"
+    },
+    {
       "source": "/api/lgpd-export",
       "destination": "/api/system?__route=lgpd-export"
     },

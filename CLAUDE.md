@@ -204,6 +204,28 @@ created_at  timestamptz
 - Retornar `{ data, error }` padronizado
 - Status codes corretos (401, 403, 404, 500)
 
+## Limite de Serverless Functions — Vercel Hobby
+
+O plano Hobby do Vercel aceita no máximo **12 Serverless Functions** por deploy.
+Funções atuais (10 JS + 1 Python + 1 cron = 12 — no limite):
+
+| Arquivo | Tipo |
+|---|---|
+| `api/admin-import-exercises-auto.js` | JS |
+| `api/affiliate.js` | JS |
+| `api/agent.js` | JS |
+| `api/chat.js` | JS |
+| `api/kronia-labs.js` | JS |
+| `api/memory.js` | JS |
+| `api/payment-webhook.js` | JS |
+| `api/plan.js` | JS |
+| `api/science.js` | JS |
+| `api/system.js` | JS |
+| `api/exam_ocr.py` | Python |
+| `api/cron/auto-import-exercises.js` | JS (cron) |
+
+**Regra obrigatória**: nunca criar um novo arquivo em `api/` sem antes remover outro ou consolidar a rota dentro de `api/system.js` via rewrite em `vercel.json` (padrão `__route=nome`).
+
 ## Arquivos que NÃO devem ser modificados sem aviso
 
 - `public/logo.png`
