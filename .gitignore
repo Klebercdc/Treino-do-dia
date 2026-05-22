@@ -39,3 +39,4 @@ etl/scrapers/output/
 .vercel
 .env*.local
 __pycache__/
+.claude/settings.local.json
