@@ -6644,11 +6644,10 @@ function openDietChoiceScreen() {
 function startAIDiet() {
   scheduleKroniaUIUnblock('before-start-ai-diet');
   try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
-  try { if (typeof preencherDietaDosPerfil === 'function') preencherDietaDosPerfil(); } catch (_) {}
-  try { if (typeof navTo === 'function') navTo('dieta'); } catch (_) {}
-  try { if (typeof openDietDataScreen === 'function') openDietDataScreen(); } catch (_) {}
-  if (typeof gerarDieta === 'function') { gerarDieta(); return; }
-  return openOfficialDietEntry({ source: 'choice_screen_ia_fallback', forceNew: true });
+  if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+    return window.KroniaDiet.generate({ source: 'start_ai_diet' });
+  }
+  return openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
 }
 
 function loadDietScriptOnceFromApp(src, marker, testFn) {
@@ -6681,10 +6680,7 @@ function hideLegacyDietSurfaces(reason) {
   try { localStorage.removeItem('kronia_diet_wizard_state_v1'); } catch (_) {}
   try { localStorage.removeItem('kronia_diet_wizard_state_v2'); } catch (_) {}
   try { localStorage.removeItem('kronia_diet_wizard_state_v6_standalone'); } catch (_) {}
-  var oldWizard = document.getElementById(['diet', 'Profile', 'Wizard', 'Screen'].join(''));
-  if (oldWizard) oldWizard.remove();
   document.body?.classList.remove('nutrition-flow-active', 'overlay-open');
-  document.body?.classList.remove('diet-wizard-active', 'kdw-active');
   scheduleKroniaUIUnblock(reason || 'hide-legacy-diet-surfaces');
 }
 
