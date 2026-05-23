@@ -9991,25 +9991,78 @@ function exportActiveDietPlanPDF() {
   var nome = cfg.nome || localStorage.getItem('kronia_nome') || 'Atleta';
   var data = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   var objetivo = getObjectiveLabel(plan.objective || cfg.objetivo || '');
-  // Use getDietRenderableMeals so the PDF always reflects what's shown on screen
-  var renderableMeals = getDietRenderableMeals(plan);
-  var mealsHtml = renderableMeals.map(function(meal) {
-    var rows = (meal.items || []).map(function(item) {
-      var itemKcal = getDietKcalValue(item);
-      var itemProtein = getDietProteinValue(item);
-      var itemCarbs = getDietCarbsValue(item);
-      var itemFat = getDietFatValue(item);
-      return '<tr><td>' + escapeHTML(item.name || getDietItemName(item)) + '</td><td>' + escapeHTML(item.quantity || (item.grams ? Math.round(item.grams) + ' g' : '1 porção')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemKcal, 'kcal')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemProtein, 'g')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemCarbs, 'g')) + '</td><td>' + escapeHTML(formatDietPdfMacro(itemFat, 'g')) + '</td></tr>';
-    }).join('');
-    return '<section><div class="meal-header"><div class="meal-header-name"><span class="meal-dot"></span>' + escapeHTML(meal.name || 'Refeição') + '</div>' + (meal.time ? '<span class="meal-time">' + escapeHTML(meal.time) + '</span>' : '') + '</div><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6" style="color:#9ca3af;font-style:italic;font-size:12px">Nenhum item cadastrado</td></tr>') + '</tbody></table></section>';
-  }).join('');
+
   var targets = plan.targets || {};
-  var pdfKcal = plan.totals.kcal || targets.kcal || 0;
+  var pdfKcal    = plan.totals.kcal    > 0 ? plan.totals.kcal    : (targets.kcal    || 0);
   var pdfProtein = plan.totals.protein > 0 ? plan.totals.protein : (targets.protein || 0);
   var pdfCarbs   = plan.totals.carbs   > 0 ? plan.totals.carbs   : (targets.carbs   || 0);
   var pdfFat     = plan.totals.fat     > 0 ? plan.totals.fat     : (targets.fat     || 0);
-  var pdfFiber = plan.totals.fiber > 0 ? plan.totals.fiber : (targets.fiber || 0);
-  var html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prescrição alimentar KRONIA</title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:#111;background:#fff;padding:32px;max-width:880px;margin:auto;line-height:1.4}.header{display:flex;align-items:center;gap:20px;padding-bottom:20px;margin-bottom:24px;border-bottom:2px solid #f0f0f0;position:relative}.header::after{content:"";position:absolute;bottom:-2px;left:0;width:56px;height:2px;background:#16a34a}.logo-k{width:68px;height:68px;border-radius:16px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:40px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-0.04em;font-family:Arial,sans-serif;text-decoration:none}.header-text{flex:1;min-width:0}.kicker{font-size:10px;letter-spacing:.14em;color:#16a34a;text-transform:uppercase;font-weight:800;margin-bottom:4px}.header h1{margin:0 0 5px;font-size:26px;line-height:1.05;color:#0a0a0a;font-weight:800;letter-spacing:-0.02em}.header-meta{color:#6b7280;font-size:12.5px;font-weight:500;margin:0}.macro-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:0 0 24px}.macro-card{border:1px solid #e8ecf0;border-radius:12px;padding:14px 12px;background:#fafbfc;border-top-width:3px}.macro-card--kcal{border-top-color:#16a34a}.macro-card--prot{border-top-color:#2563eb}.macro-card--carb{border-top-color:#f59e0b}.macro-card--fat{border-top-color:#ef4444}.macro-card--fib{border-top-color:#8b5cf6}.macro-card span{display:block;font-size:9.5px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.08em}.macro-card strong{display:block;margin-top:5px;font-size:18px;color:#111;font-weight:700;letter-spacing:-0.02em}section{margin:0 0 14px;border:1px solid #e8ecf0;border-radius:12px;overflow:hidden;break-inside:avoid}.meal-header{margin:0;padding:11px 16px;background:#1a2e1a;color:#fff;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:12px;letter-spacing:-0.01em}.meal-header-name{display:flex;align-items:center;gap:8px}.meal-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex-shrink:0}.meal-time{color:#86efac;font-size:11.5px;font-weight:500;white-space:nowrap}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:9px 10px;border-bottom:1px solid #f0f2f5;text-align:left;font-size:12px;vertical-align:middle;overflow-wrap:anywhere}th{background:#f7f9f7;color:#374151;text-transform:uppercase;font-size:9.5px;font-weight:800;letter-spacing:.07em}tbody tr:last-child td{border-bottom:none}th:nth-child(1),td:nth-child(1){width:34%}th:nth-child(2),td:nth-child(2){width:18%}th:nth-child(n+3),td:nth-child(n+3){width:12%;text-align:right}.footer{margin-top:28px;padding-top:16px;border-top:1px solid #f0f0f0;color:#9ca3af;font-size:10.5px;line-height:1.5}@media(max-width:640px){body{padding:18px}.header{gap:14px}.logo-k{width:52px;height:52px;font-size:30px}.header h1{font-size:20px}.macro-bar{grid-template-columns:repeat(2,1fr)}th,td{font-size:11px;padding:8px 7px}}@media print{body{padding:20px}.meal-header,th,.macro-card{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="header"><div class="logo-k">K</div><div class="header-text"><div class="kicker">Plano alimentar KRONIA</div><h1>' + escapeHTML(plan.title || 'Plano alimentar') + '</h1><p class="header-meta">' + escapeHTML(nome) + ' • ' + escapeHTML(data) + (objetivo ? ' • ' + escapeHTML(objetivo) : '') + '</p></div></div><div class="macro-bar"><div class="macro-card macro-card--kcal"><span>Calorias</span><strong>' + escapeHTML(formatDietPdfMacro(pdfKcal, 'kcal')) + '</strong></div><div class="macro-card macro-card--prot"><span>Proteína</span><strong>' + escapeHTML(formatDietPdfMacro(pdfProtein, 'g')) + '</strong></div><div class="macro-card macro-card--carb"><span>Carboidrato</span><strong>' + escapeHTML(formatDietPdfMacro(pdfCarbs, 'g')) + '</strong></div><div class="macro-card macro-card--fat"><span>Gordura</span><strong>' + escapeHTML(formatDietPdfMacro(pdfFat, 'g')) + '</strong></div><div class="macro-card macro-card--fib"><span>Fibra</span><strong>' + escapeHTML(formatDietPdfMacro(pdfFiber, 'g')) + '</strong></div></div>' + mealsHtml + '<div class="footer">Documento gerado a partir da versão ativa salva da dieta. Não substitui acompanhamento de nutricionista.</div><script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>';
+  var pdfFiber   = plan.totals.fiber   > 0 ? plan.totals.fiber   : (targets.fiber   || 0);
+
+  /* Distribui macros do plano entre as refeições quando os itens não têm dados individuais. */
+  var renderableMeals = getDietRenderableMeals(plan);
+  var numMeals = renderableMeals.length || 1;
+
+  function pdfItemMacros(item, mealKcal, mealProtein, mealCarbs, mealFat, mealFiber, totalGrams, itemCount) {
+    var kcal    = getDietKcalValue(item);
+    var protein = getDietProteinValue(item);
+    var carbs   = getDietCarbsValue(item);
+    var fat     = getDietFatValue(item);
+    var fiber   = getDietFiberValue(item);
+    /* Se o item tem dados reais, usa-os diretamente */
+    if (kcal > 0 || protein > 0 || carbs > 0 || fat > 0) {
+      return { kcal: kcal, protein: protein, carbs: carbs, fat: fat, fiber: fiber, estimated: false };
+    }
+    /* Distribui o subtotal da refeição proporcionalmente por gramagem */
+    var grams = asKroniaNumber(item.grams, 0);
+    var ratio = (totalGrams > 0 && grams > 0) ? grams / totalGrams : (1 / itemCount);
+    return {
+      kcal:    dietRound(mealKcal    * ratio, 1),
+      protein: dietRound(mealProtein * ratio, 1),
+      carbs:   dietRound(mealCarbs   * ratio, 1),
+      fat:     dietRound(mealFat     * ratio, 1),
+      fiber:   dietRound(mealFiber   * ratio, 1),
+      estimated: true
+    };
+  }
+
+  var mealsHtml = renderableMeals.map(function(meal) {
+    var items = meal.items || [];
+    /* Subtotal da refeição: usa o calculado; se 0, distribui o total do plano */
+    var sub = meal.subtotal || {};
+    var mealKcal    = asKroniaNumber(sub.kcal,    0) || dietRound(pdfKcal    / numMeals, 1);
+    var mealProtein = asKroniaNumber(sub.protein, 0) || dietRound(pdfProtein / numMeals, 1);
+    var mealCarbs   = asKroniaNumber(sub.carbs,   0) || dietRound(pdfCarbs   / numMeals, 1);
+    var mealFat     = asKroniaNumber(sub.fat,     0) || dietRound(pdfFat     / numMeals, 1);
+    var mealFiber   = asKroniaNumber(sub.fiber,   0) || dietRound(pdfFiber   / numMeals, 1);
+    var totalGrams  = items.reduce(function(s, it) { return s + asKroniaNumber(it.grams, 0); }, 0);
+
+    var hasEstimates = false;
+    var rows = items.map(function(item) {
+      var m = pdfItemMacros(item, mealKcal, mealProtein, mealCarbs, mealFat, mealFiber, totalGrams, items.length || 1);
+      if (m.estimated) hasEstimates = true;
+      var kcalTxt    = m.kcal    > 0 ? formatKroniaNumber(m.kcal,    'kcal') : '0 kcal';
+      var proteinTxt = m.protein > 0 ? formatKroniaNumber(m.protein, 'g')    : '0 g';
+      var carbsTxt   = m.carbs   > 0 ? formatKroniaNumber(m.carbs,   'g')    : '0 g';
+      var fatTxt     = m.fat     > 0 ? formatKroniaNumber(m.fat,     'g')    : '0 g';
+      var fiberTxt   = m.fiber   > 0 ? formatKroniaNumber(m.fiber,   'g')    : '0 g';
+      if (m.estimated) { kcalTxt = '~' + kcalTxt; proteinTxt = '~' + proteinTxt; carbsTxt = '~' + carbsTxt; fatTxt = '~' + fatTxt; fiberTxt = '~' + fiberTxt; }
+      var qty = item.quantity || (item.grams ? Math.round(item.grams) + ' g' : '1 porção');
+      return '<tr><td>' + escapeHTML(item.name || getDietItemName(item)) + '</td><td>' + escapeHTML(qty) + '</td><td>' + escapeHTML(kcalTxt) + '</td><td>' + escapeHTML(proteinTxt) + '</td><td>' + escapeHTML(carbsTxt) + '</td><td>' + escapeHTML(fatTxt) + '</td><td>' + escapeHTML(fiberTxt) + '</td></tr>';
+    }).join('');
+
+    var subtotalRow = '<tr class="meal-subtotal-row"><td colspan="2"><strong>Total da refeição</strong></td>'
+      + '<td><strong>' + escapeHTML(formatKroniaNumber(mealKcal, 'kcal')) + '</strong></td>'
+      + '<td><strong>' + escapeHTML(formatKroniaNumber(mealProtein, 'g')) + '</strong></td>'
+      + '<td><strong>' + escapeHTML(formatKroniaNumber(mealCarbs, 'g')) + '</strong></td>'
+      + '<td><strong>' + escapeHTML(formatKroniaNumber(mealFat, 'g')) + '</strong></td>'
+      + '<td><strong>' + escapeHTML(formatKroniaNumber(mealFiber, 'g')) + '</strong></td></tr>';
+
+    var estimateNote = hasEstimates ? '<div class="meal-estimate-note">~ Estimativa proporcional baseada nos totais do plano</div>' : '';
+    var emptyRow = '<tr><td colspan="7" style="color:#9ca3af;font-style:italic;font-size:12px">Nenhum item cadastrado</td></tr>';
+    return '<section><div class="meal-header"><div class="meal-header-name"><span class="meal-dot"></span>' + escapeHTML(meal.name || 'Refeição') + '</div>' + (meal.time ? '<span class="meal-time">' + escapeHTML(meal.time) + '</span>' : '') + '</div><table><thead><tr><th>Alimento</th><th>Quantidade</th><th>Kcal</th><th>Prot.</th><th>Carb.</th><th>Gord.</th><th>Fibra</th></tr></thead><tbody>' + (rows || emptyRow) + subtotalRow + '</tbody></table>' + estimateNote + '</section>';
+  }).join('');
+  var html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prescrição alimentar KRONIA</title><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:#111;background:#fff;padding:32px;max-width:960px;margin:auto;line-height:1.4}.header{display:flex;align-items:center;gap:20px;padding-bottom:20px;margin-bottom:24px;border-bottom:2px solid #f0f0f0;position:relative}.header::after{content:"";position:absolute;bottom:-2px;left:0;width:56px;height:2px;background:#16a34a}.logo-k{width:68px;height:68px;border-radius:16px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:40px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-0.04em;font-family:Arial,sans-serif}.header-text{flex:1;min-width:0}.kicker{font-size:10px;letter-spacing:.14em;color:#16a34a;text-transform:uppercase;font-weight:800;margin-bottom:4px}.header h1{margin:0 0 5px;font-size:26px;line-height:1.05;color:#0a0a0a;font-weight:800;letter-spacing:-0.02em}.header-meta{color:#6b7280;font-size:12.5px;font-weight:500;margin:0}.macro-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:0 0 24px}.macro-card{border:1px solid #e8ecf0;border-radius:12px;padding:14px 12px;background:#fafbfc;border-top-width:3px}.macro-card--kcal{border-top-color:#16a34a}.macro-card--prot{border-top-color:#2563eb}.macro-card--carb{border-top-color:#f59e0b}.macro-card--fat{border-top-color:#ef4444}.macro-card--fib{border-top-color:#8b5cf6}.macro-card span{display:block;font-size:9.5px;color:#6b7280;text-transform:uppercase;font-weight:700;letter-spacing:.08em}.macro-card strong{display:block;margin-top:5px;font-size:18px;color:#111;font-weight:700;letter-spacing:-0.02em}section{margin:0 0 14px;border:1px solid #e8ecf0;border-radius:12px;overflow:hidden;break-inside:avoid}.meal-header{margin:0;padding:11px 16px;background:#1a2e1a;color:#fff;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:12px;letter-spacing:-0.01em}.meal-header-name{display:flex;align-items:center;gap:8px}.meal-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex-shrink:0}.meal-time{color:#86efac;font-size:11.5px;font-weight:500;white-space:nowrap}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:9px 8px;border-bottom:1px solid #f0f2f5;text-align:left;font-size:11.5px;vertical-align:middle;overflow-wrap:anywhere}th{background:#f7f9f7;color:#374151;text-transform:uppercase;font-size:9px;font-weight:800;letter-spacing:.07em}tbody tr:last-child td{border-bottom:none}th:nth-child(1),td:nth-child(1){width:30%}th:nth-child(2),td:nth-child(2){width:16%}th:nth-child(n+3),td:nth-child(n+3){width:10.8%;text-align:right}.meal-subtotal-row td{background:#f0fdf4;color:#15803d;font-weight:700;border-top:2px solid #bbf7d0}.meal-estimate-note{padding:6px 12px 8px;font-size:10px;color:#9ca3af;font-style:italic}.footer{margin-top:28px;padding-top:16px;border-top:1px solid #f0f0f0;color:#9ca3af;font-size:10.5px;line-height:1.5}@media(max-width:640px){body{padding:18px}.header{gap:14px}.logo-k{width:52px;height:52px;font-size:30px}.header h1{font-size:20px}.macro-bar{grid-template-columns:repeat(2,1fr)}th,td{font-size:10px;padding:7px 5px}}@media print{body{padding:20px}.meal-header,th,.macro-card,.meal-subtotal-row td{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="header"><div class="logo-k">K</div><div class="header-text"><div class="kicker">Plano alimentar KRONIA</div><h1>' + escapeHTML(plan.title || 'Plano alimentar') + '</h1><p class="header-meta">' + escapeHTML(nome) + ' • ' + escapeHTML(data) + (objetivo ? ' • ' + escapeHTML(objetivo) : '') + '</p></div></div><div class="macro-bar"><div class="macro-card macro-card--kcal"><span>Calorias</span><strong>' + escapeHTML(formatDietPdfMacro(pdfKcal, 'kcal')) + '</strong></div><div class="macro-card macro-card--prot"><span>Prote\xedna</span><strong>' + escapeHTML(formatDietPdfMacro(pdfProtein, 'g')) + '</strong></div><div class="macro-card macro-card--carb"><span>Carboidrato</span><strong>' + escapeHTML(formatDietPdfMacro(pdfCarbs, 'g')) + '</strong></div><div class="macro-card macro-card--fat"><span>Gordura</span><strong>' + escapeHTML(formatDietPdfMacro(pdfFat, 'g')) + '</strong></div><div class="macro-card macro-card--fib"><span>Fibra</span><strong>' + escapeHTML(formatDietPdfMacro(pdfFiber, 'g')) + '</strong></div></div>' + mealsHtml + '<div class="footer">Documento gerado a partir da vers\xe3o ativa salva da dieta. Valores marcados com ~ s\xe3o estimativas proporcionais baseadas nos totais do plano. N\xe3o substitui acompanhamento de nutricionista.</div><script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>';
   var win = window.open('', '_blank');
   if (!win) { showToast('Permita pop-ups para gerar o PDF.', 'warning', 3000); return; }
   win.document.write(html);
