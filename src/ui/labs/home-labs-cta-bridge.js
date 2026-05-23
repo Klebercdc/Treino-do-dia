@@ -1,25 +1,20 @@
 /* Home Labs CTA Bridge — KRONIA
- * Overrides window.openLabsUploadScreen so the Home CTA opens a bottom-sheet
- * modal instead of navigating away. Uses the canonical two-step upload flow:
- *   1. POST /api/kronia/labs/init-upload  → signed URL + labReportId
- *   2. PUT   signedUrl (Supabase Storage, via SDK or raw PUT)
- *   3. POST /api/kronia/labs/register     → confirm + queue processing
+ * Bottom-sheet de exames com upload, leitura de indicadores e status real do pipeline.
  */
 (function () {
   'use strict';
 
-  var BRIDGE_VERSION = '20260523-home-labs-auth-fetch';
-  var MODAL_ID       = 'labsCtaModal';
-  var FILE_INPUT_ID  = 'labsCtaFileInput';
-  var REPORTS_URL    = '/api/kronia/labs/reports?limit=5';
-  var INIT_URL       = '/api/kronia/labs/init-upload';
-  var REGISTER_URL   = '/api/kronia/labs/register';
+  var BRIDGE_VERSION = '20260523-home-labs-indicators-render';
+  var MODAL_ID = 'labsCtaModal';
+  var FILE_INPUT_ID = 'labsCtaFileInput';
+  var REPORTS_URL = '/api/kronia/labs/reports?limit=5';
+  var REPORT_BY_ID_URL = '/api/kronia/labs/reports/';
+  var INIT_URL = '/api/kronia/labs/init-upload';
+  var REGISTER_URL = '/api/kronia/labs/register';
+  var lastReports = [];
 
   function log() {
-    try {
-      var args = ['[LabsCTA]'].concat(Array.prototype.slice.call(arguments));
-      console.info.apply(console, args);
-    } catch (_) {}
+    try { console.info.apply(console, ['[LabsCTA]'].concat(Array.prototype.slice.call(arguments))); } catch (_) {}
   }
 
   function escapeHtml(v) {
@@ -39,7 +34,7 @@
   function normalizeMime(file) {
     var EXT = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
     var ext = ((file.name || '').split('.').pop() || '').toLowerCase();
-    var m   = String(file.type || '').toLowerCase();
+    var m = String(file.type || '').toLowerCase();
     if (m === 'image/jpg' || m === 'image/pjpeg') m = 'image/jpeg';
     if (m === 'image/x-png') m = 'image/png';
     if (!['application/pdf','image/jpeg','image/png'].includes(m)) m = EXT[ext] || m;
@@ -66,21 +61,74 @@
     return fetcher(url, options || {});
   }
 
+  function getStatusKey(r) {
+    return String((r && (r.canonicalStatus || r.reviewStatus || r.status || r.parseStatus)) || '').toLowerCase();
+  }
+
+  function statusLabel(key) {
+    if (/released|completed|parsed|ready|success/.test(key)) return 'Leitura concluída';
+    if (/processing|queued|uploaded|pending|extracted/.test(key)) return 'Processando leitura';
+    if (/failed|error|invalid/.test(key)) return 'Falha na leitura';
+    return 'Status do exame';
+  }
+
+  function statusColor(key) {
+    if (/failed|error|invalid/.test(key)) return '#fca5a5';
+    if (/processing|queued|uploaded|pending|extracted/.test(key)) return '#fde68a';
+    return '#a7f3d0';
+  }
+
+  function normalizeBiomarker(item) {
+    item = item || {};
+    var name = item.marker_name || item.biomarker_name || item.name || item.nome || item.marker || item.marker_key || 'Marcador';
+    var value = item.released_value;
+    if (value == null || value === '') value = item.reviewed_value_override;
+    if (value == null || value === '') value = item.value_numeric;
+    if (value == null || value === '') value = item.value;
+    if (value == null || value === '') value = item.value_text;
+    var unit = item.unit || item.unidade || '';
+    var flag = String(item.released_flag || item.flag || item.lab_flag || item.context_flag || '').toLowerCase();
+    return { name: String(name), value: value, unit: String(unit || ''), flag: flag };
+  }
+
+  function extractBiomarkers(report) {
+    var payload = report && report.normalizedPayload && typeof report.normalizedPayload === 'object' ? report.normalizedPayload : null;
+    var ai = report && report.aiInsights && typeof report.aiInsights === 'object' ? report.aiInsights : null;
+    var candidates = [];
+    if (Array.isArray(report && report.biomarkers)) candidates = candidates.concat(report.biomarkers);
+    if (payload && Array.isArray(payload.biomarkers)) candidates = candidates.concat(payload.biomarkers);
+    if (ai && Array.isArray(ai.marker_interpretations)) candidates = candidates.concat(ai.marker_interpretations);
+    var seen = {};
+    return candidates.map(normalizeBiomarker).filter(function (b) {
+      var key = (b.name + '|' + b.value + '|' + b.unit).toLowerCase();
+      if (!b.name || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function scoreLine(ai) {
+    var scores = ai && ai.scores && typeof ai.scores === 'object' ? ai.scores : null;
+    if (!scores) return '';
+    var labels = [
+      ['metabolic_score', 'Metabólico'], ['kidney_score', 'Rim'], ['hematologic_score', 'Sangue'],
+      ['hormonal_score', 'Hormonal'], ['safety_score', 'Segurança']
+    ];
+    var parts = labels.map(function (pair) {
+      var v = scores[pair[0]];
+      return typeof v === 'number' ? pair[1] + ': ' + Math.round(v) : '';
+    }).filter(Boolean).slice(0, 4);
+    return parts.length ? '<div style="font-size:.76rem;color:#a7f3d0;margin-top:8px">Scores: ' + escapeHtml(parts.join(' • ')) + '</div>' : '';
+  }
+
   function ensureModal() {
     var el = document.getElementById(MODAL_ID);
     if (el) return el;
-
     el = document.createElement('div');
     el.id = MODAL_ID;
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.style.cssText = [
-      'display:none', 'position:fixed', 'inset:0', 'z-index:99999',
-      'background:rgba(0,0,0,.78)',
-      'backdrop-filter:blur(18px)', '-webkit-backdrop-filter:blur(18px)',
-      'align-items:flex-end', 'justify-content:center'
-    ].join(';');
-
+    el.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);align-items:flex-end;justify-content:center';
     el.innerHTML = [
       '<div style="width:100%;max-width:520px;max-height:88vh;overflow:auto;background:linear-gradient(180deg,#101a16,#070908);border:1px solid rgba(16,185,129,.32);border-radius:28px 28px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.55),0 0 36px rgba(16,185,129,.12);padding:18px 18px calc(22px + env(safe-area-inset-bottom));font-family:Inter,DM Sans,system-ui,sans-serif;color:#fff;">',
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div><div style="font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:#34d399;margin-bottom:4px">KRONOS IA</div><div style="font-size:1.2rem;font-weight:900;letter-spacing:-.03em">Exames &amp; Indicadores</div></div><button type="button" data-labs-close style="width:38px;height:38px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:22px;line-height:1;cursor:pointer">&times;</button></div>',
@@ -91,14 +139,14 @@
         '<div style="margin-top:12px;font-size:.74rem;line-height:1.45;color:rgba(255,255,255,.46)">O KRONIA usa seus exames para personalizar dieta, treino e alertas do KRONOS. A análise não substitui avaliação médica ou nutricional.</div>',
       '</div>'
     ].join('');
-
     document.body.appendChild(el);
     el.addEventListener('click', function (ev) {
-      if (ev.target === el || ev.target.closest('[data-labs-close]'))  { closeModal(); return; }
+      var reportBtn = ev.target.closest('[data-labs-report-id]');
+      if (reportBtn) { openReportDetails(reportBtn.getAttribute('data-labs-report-id')); return; }
+      if (ev.target === el || ev.target.closest('[data-labs-close]')) { closeModal(); return; }
       if (ev.target.closest('[data-labs-pick-file]')) { var inp = document.getElementById(FILE_INPUT_ID); if (inp) inp.click(); return; }
-      if (ev.target.closest('[data-labs-refresh]'))   { loadIndicators(); return; }
+      if (ev.target.closest('[data-labs-refresh]')) { loadIndicators(); return; }
     });
-
     var fileInput = el.querySelector('#' + FILE_INPUT_ID);
     if (fileInput) {
       fileInput.addEventListener('change', function () {
@@ -110,24 +158,9 @@
     return el;
   }
 
-  function setState(html) {
-    var el = document.getElementById('labsCtaState');
-    if (el) el.innerHTML = html;
-  }
-
-  function openModal() {
-    var m = ensureModal();
-    m.style.display = 'flex';
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeModal() {
-    var m = document.getElementById(MODAL_ID);
-    if (m) m.style.display = 'none';
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
-  }
+  function setState(html) { var el = document.getElementById('labsCtaState'); if (el) el.innerHTML = html; }
+  function openModal() { var m = ensureModal(); m.style.display = 'flex'; document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden'; }
+  function closeModal() { var m = document.getElementById(MODAL_ID); if (m) m.style.display = 'none'; document.documentElement.style.overflow = ''; document.body.style.overflow = ''; }
 
   var SPIN_STYLE = '<style>@keyframes labsCtaSpin{to{transform:rotate(360deg)}}</style><div style="display:flex;align-items:center;gap:10px"><div style="width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:#34d399;border-radius:50%;animation:labsCtaSpin .8s linear infinite"></div><div>{msg}</div></div>';
   function spinnerHtml(msg) { return SPIN_STYLE.replace('{msg}', escapeHtml(msg)); }
@@ -135,26 +168,19 @@
   async function loadIndicators() {
     setState(spinnerHtml('Carregando indicadores…'));
     try {
-      var resp = await apiRequest(REPORTS_URL, {
-        credentials: 'include',
-        headers: await buildApiHeaders()
-      });
+      var resp = await apiRequest(REPORTS_URL, { credentials: 'include', headers: await buildApiHeaders() });
       var payload = await resp.json().catch(function () { return {}; });
       if (!resp.ok || payload.ok === false) {
         log('reports failed:', { status: resp.status, payload: payload });
         throw new Error(payload.error || payload.message || 'HTTP ' + resp.status);
       }
-      var reports = Array.isArray(payload.reports) ? payload.reports : Array.isArray(payload.data) ? payload.data : [];
-      renderReports(reports);
-      try { window.dispatchEvent(new CustomEvent('kronia:labs:loaded', { detail: { reports: reports } })); } catch (_) {}
-      return reports;
+      lastReports = Array.isArray(payload.reports) ? payload.reports : Array.isArray(payload.data) ? payload.data : [];
+      renderReports(lastReports);
+      try { window.dispatchEvent(new CustomEvent('kronia:labs:loaded', { detail: { reports: lastReports } })); } catch (_) {}
+      return lastReports;
     } catch (err) {
       log('reports exception:', err && err.message ? err.message : err);
-      setState([
-        '<div style="font-weight:900;color:#fecaca;margin-bottom:6px">Não foi possível carregar seus exames agora.</div>',
-        '<div style="color:rgba(255,255,255,.68);margin-bottom:10px">Verifique sua conexão, login ou tente novamente.</div>',
-        '<button type="button" data-labs-refresh style="border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.12);color:#fecaca;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer">Tentar novamente</button>'
-      ].join(''));
+      setState('<div style="font-weight:900;color:#fecaca;margin-bottom:6px">Não foi possível carregar seus exames agora.</div><div style="color:rgba(255,255,255,.68);margin-bottom:10px">Verifique sua conexão, login ou tente novamente.</div><button type="button" data-labs-refresh style="border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.12);color:#fecaca;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer">Tentar novamente</button>');
       return [];
     }
   }
@@ -164,13 +190,53 @@
       setState('<div style="font-weight:900;color:#fff;margin-bottom:6px">Nenhum exame enviado ainda</div><div style="color:rgba(255,255,255,.68)">Envie um PDF ou imagem para liberar sua análise clínica e seus indicadores.</div>');
       return;
     }
-    var cards = reports.slice(0, 5).map(function (r, i) {
-      var markers  = (Array.isArray(r.biomarkers) ? r.biomarkers : []).map(function (b) { return b.name || b.nome || b.marker; }).filter(Boolean).slice(0, 4);
-      var flags    = Array.isArray(r.clinicalFlags) ? r.clinicalFlags : [];
-      var critical = Array.isArray(r.criticalFlags) ? r.criticalFlags : [];
-      return '<div style="padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(0,0,0,.16);' + (i ? 'margin-top:10px' : '') + '"><div style="font-size:.92rem;font-weight:900;color:#fff;margin-bottom:4px">' + escapeHtml(r.fileName || r.name || ('Exame ' + (i + 1))) + '</div><div style="font-size:.74rem;color:rgba(255,255,255,.55);margin-bottom:8px">' + escapeHtml(formatDate(r.processedAt || r.createdAt)) + '</div>' + (markers.length ? '<div style="font-size:.8rem;color:#a7f3d0;margin-bottom:5px">Biomarcadores: ' + escapeHtml(markers.join(', ')) + '</div>' : '') + (flags.length ? '<div style="font-size:.78rem;color:#fde68a;margin-bottom:5px">Alertas: ' + escapeHtml(flags.slice(0,3).join(', ')) + '</div>' : '') + (critical.length ? '<div style="font-size:.78rem;color:#fca5a5">Críticos: ' + escapeHtml(critical.slice(0,2).join(', ')) + '</div>' : '') + '</div>';
-    }).join('');
+    var cards = reports.slice(0, 5).map(renderReportCard).join('');
     setState('<div style="font-weight:900;color:#fff;margin-bottom:10px">Indicadores carregados</div>' + cards);
+  }
+
+  function renderReportCard(r, i) {
+    var biomarkers = extractBiomarkers(r);
+    var key = getStatusKey(r);
+    var ai = r && r.aiInsights && typeof r.aiInsights === 'object' ? r.aiInsights : null;
+    var summary = ai && ai.summary ? '<div style="font-size:.78rem;color:rgba(255,255,255,.72);margin-top:8px">' + escapeHtml(String(ai.summary).slice(0, 180)) + '</div>' : '';
+    var chips = biomarkers.slice(0, 8).map(function (b) {
+      var value = b.value == null || b.value === '' ? '—' : String(b.value).replace('.', ',');
+      var flag = b.flag === 'high' ? ' ↑' : b.flag === 'low' ? ' ↓' : '';
+      return '<div style="border:1px solid rgba(255,255,255,.10);background:rgba(16,185,129,.08);border-radius:12px;padding:8px 10px"><div style="font-size:.68rem;color:rgba(255,255,255,.55);font-weight:800">' + escapeHtml(b.name) + '</div><div style="font-size:.9rem;color:#fff;font-weight:900">' + escapeHtml(value + (b.unit ? ' ' + b.unit : '') + flag) + '</div></div>';
+    }).join('');
+    var empty = '';
+    if (!biomarkers.length) {
+      var msg = /processing|queued|uploaded|pending|extracted/.test(key)
+        ? 'Arquivo recebido. A leitura OCR/IA ainda está processando ou não liberou biomarcadores. Toque em “Recarregar indicadores” em alguns instantes.'
+        : 'Nenhum biomarcador foi extraído deste arquivo. Pode ser rotina/escala, imagem pouco legível ou PDF sem resultado laboratorial.';
+      if (r && r.processingError) msg = 'Falha na leitura: ' + r.processingError;
+      empty = '<div style="font-size:.78rem;color:rgba(255,255,255,.64);margin-top:8px">' + escapeHtml(msg) + '</div>';
+    }
+    return '<button type="button" data-labs-report-id="' + escapeHtml(r.id || '') + '" style="display:block;text-align:left;width:100%;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(0,0,0,.16);color:#fff;cursor:pointer;' + (i ? 'margin-top:10px' : '') + '"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:.96rem;font-weight:900;color:#fff;margin-bottom:4px">' + escapeHtml(r.fileName || r.name || ('Exame ' + (i + 1))) + '</div><div style="font-size:.74rem;color:rgba(255,255,255,.55)">' + escapeHtml(formatDate(r.processedAt || r.createdAt)) + '</div></div><div style="font-size:.62rem;font-weight:900;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 8px;color:' + statusColor(key) + '">' + escapeHtml(statusLabel(key)) + '</div></div>' + (chips ? '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px">' + chips + '</div>' : empty) + summary + scoreLine(ai) + '<div style="font-size:.7rem;color:#34d399;font-weight:900;margin-top:10px">Tocar para ver leitura completa</div></button>';
+  }
+
+  async function openReportDetails(id) {
+    if (!id) return;
+    setState(spinnerHtml('Abrindo leitura completa…'));
+    try {
+      var resp = await apiRequest(REPORT_BY_ID_URL + encodeURIComponent(id), { credentials: 'include', headers: await buildApiHeaders() });
+      var payload = await resp.json().catch(function () { return {}; });
+      if (!resp.ok || payload.ok === false) throw new Error(payload.error || payload.message || 'HTTP ' + resp.status);
+      var report = payload.report || lastReports.find(function (r) { return String(r.id) === String(id); }) || {};
+      if (Array.isArray(payload.biomarkers) && payload.biomarkers.length) report.biomarkers = payload.biomarkers;
+      var biomarkers = extractBiomarkers(report);
+      var extraction = Array.isArray(payload.extractions) && payload.extractions[0] ? payload.extractions[0] : null;
+      var rawText = extraction && extraction.raw_text ? String(extraction.raw_text).slice(0, 900) : '';
+      var markerHtml = biomarkers.length ? biomarkers.slice(0, 20).map(function (b) {
+        var value = b.value == null || b.value === '' ? '—' : String(b.value).replace('.', ',');
+        var flag = b.flag === 'high' ? 'Alto' : b.flag === 'low' ? 'Baixo' : b.flag === 'normal' ? 'Normal' : '';
+        return '<div style="display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(255,255,255,.08);padding:9px 0"><div><div style="font-weight:900;color:#fff">' + escapeHtml(b.name) + '</div>' + (flag ? '<div style="font-size:.68rem;color:rgba(255,255,255,.55)">' + escapeHtml(flag) + '</div>' : '') + '</div><div style="font-weight:900;color:#a7f3d0;text-align:right">' + escapeHtml(value + (b.unit ? ' ' + b.unit : '')) + '</div></div>';
+      }).join('') : '<div style="color:#fde68a;font-weight:800">Esse arquivo foi salvo, mas a IA/OCR ainda não retornou biomarcadores estruturados.</div>';
+      setState('<button type="button" data-labs-refresh style="margin-bottom:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#d1fae5;border-radius:12px;padding:8px 10px;font-weight:900">← Voltar</button><div style="font-weight:900;color:#fff;margin-bottom:4px">' + escapeHtml(report.fileName || 'Exame') + '</div><div style="font-size:.74rem;color:rgba(255,255,255,.55);margin-bottom:12px">' + escapeHtml(formatDate(report.processedAt || report.createdAt)) + '</div>' + markerHtml + (rawText ? '<details style="margin-top:12px"><summary style="color:#34d399;font-weight:900;cursor:pointer">Texto lido do exame</summary><div style="white-space:pre-wrap;font-size:.74rem;color:rgba(255,255,255,.68);margin-top:8px">' + escapeHtml(rawText) + '</div></details>' : ''));
+    } catch (err) {
+      log('details failed:', err && err.message ? err.message : err);
+      renderReports(lastReports);
+    }
   }
 
   async function uploadFile(file) {
@@ -183,7 +249,6 @@
       var initResp = await apiRequest(INIT_URL, { method: 'POST', credentials: 'include', headers: authHeaders, body: JSON.stringify({ fileName: file.name, mimeType: mime, fileSize: file.size }) });
       var initPayload = await initResp.json().catch(function () { return {}; });
       if (!initResp.ok || initPayload.ok === false) throw new Error(initPayload.error || initPayload.message || 'init-upload falhou HTTP ' + initResp.status);
-      var labReportId = initPayload.labReportId;
       var storagePath = initPayload.storagePath;
       var uploadToken = initPayload.uploadToken;
       var bucket = initPayload.bucket || 'lab-reports';
@@ -204,7 +269,7 @@
         if (!putResp.ok) throw new Error('Upload storage falhou: HTTP ' + putResp.status);
       }
       setState(spinnerHtml('Registrando exame…'));
-      var regResp = await apiRequest(REGISTER_URL, { method: 'POST', credentials: 'include', headers: authHeaders, body: JSON.stringify({ labReportId: labReportId, storagePath: storagePath, fileName: file.name, mimeType: mime }) });
+      var regResp = await apiRequest(REGISTER_URL, { method: 'POST', credentials: 'include', headers: authHeaders, body: JSON.stringify({ labReportId: initPayload.labReportId, storagePath: storagePath, fileName: file.name, mimeType: mime }) });
       var regPayload = await regResp.json().catch(function () { return {}; });
       if (!regResp.ok || regPayload.ok === false) throw new Error(regPayload.error || regPayload.message || 'register falhou HTTP ' + regResp.status);
       setState('<div style="font-weight:900;color:#bbf7d0;margin-bottom:6px">Exame enviado com sucesso.</div><div style="color:rgba(255,255,255,.68)">Atualizando seus indicadores…</div>');
