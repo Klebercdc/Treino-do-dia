@@ -1,5 +1,5 @@
-const CACHE = 'kronia-diet-wizard-v3-20260523-v5';
-const BUILD_VERSION = '20260523-diet-wizard-v3-v5';
+const CACHE = 'kronia-v1-20260523-rebuild';
+const BUILD_VERSION = '20260523-rebuild-v1';
 
 const STATIC_ASSET_RE = /\.(?:css|js|png|jpg|jpeg|webp|svg|ico|json|woff2?)$/i;
 const STATIC_ALLOWLIST = [
@@ -12,40 +12,12 @@ const STATIC_ALLOWLIST = [
   '/Kronia.png',
   '/splash.png',
   '/transforms_patch.js',
+  '/src/ui/diet/kronia-diet-runtime.js',
   '/src/ui/diet/diet-entry-controller.js',
-  '/src/ui/diet/diet-wizard.js',
   '/src/ui/diet/diet-wizard-standalone.js',
   '/src/ui/diet/disable-legacy-diet.js',
   '/src/ui/labs/home-labs-cta-bridge.js'
 ];
-
-const DIET_WIZARD_V3_BOOTSTRAP = `
-<script id="kronia-diet-wizard-v3-bootstrap">
-(function(){
-  if(window.__kroniaDietWizardV3BootstrapV5)return;
-  window.__kroniaDietWizardV3BootstrapV5=true;
-  var VERSION='20260523-wizard-v3-v5';
-  function load(src,id){return new Promise(function(resolve){var old=document.getElementById(id);if(old)old.remove();var s=document.createElement('script');s.id=id;s.src=src+'?v='+VERSION+'&t='+Date.now();s.async=false;s.onload=function(){resolve(true)};s.onerror=function(){resolve(false)};document.head.appendChild(s);});}
-  function hideBlockers(){['kroniaForcedDietAnamnese','nutritionFlowScreen','dietChoiceScreen','dietEmergencyWizardScreen','customModal','bottomSheet','modalBackdrop','configSheet'].forEach(function(id){var el=document.getElementById(id);if(!el)return; if(id==='kroniaForcedDietAnamnese'){el.remove();return;} el.classList.remove('show','active','open');el.style.pointerEvents='none';});}
-  async function openWizard(context){
-    hideBlockers();
-    try{if(typeof navTo==='function')navTo('dieta')}catch(e){}
-    await load('/src/ui/diet/diet-wizard.js','kronia-diet-wizard-compat-v3-force');
-    var fn=typeof window.openDietProfileWizard==='function'?window.openDietProfileWizard:null;
-    if(!fn){await load('/src/ui/diet/diet-wizard-standalone.js','kronia-diet-wizard-standalone-v3-force');fn=typeof window.openDietProfileWizard==='function'?window.openDietProfileWizard:(typeof window.openDietWizardStandalone==='function'?window.openDietWizardStandalone:null);}
-    if(!fn){try{showToast&&showToast('Não carregou a anamnese V3. Atualize o app.','error',4000)}catch(e){} return false;}
-    return fn(Object.assign({source:'sw_diet_wizard_v3_compat_bootstrap',forceAnamnese:true},context||{}));
-  }
-  function wrapper(context){return openWizard(context||{});} 
-  window.KroniaDiet=Object.assign({},window.KroniaDiet||{},{forceAnamnese:wrapper,generate:wrapper,ai:wrapper,regenerate:wrapper,createPlan:wrapper});
-  ['startAIDiet','generateDietPlan','regenerateDiet','regenerateDietPlan','createDietPlan','createAnotherDiet'].forEach(function(n){window[n]=wrapper});
-  document.addEventListener('click',function(e){
-    var el=e.target&&e.target.closest&&e.target.closest('button,a,div,section');if(!el)return;
-    var txt=(el.innerText||el.textContent||'').toLowerCase();
-    if(txt.indexOf('regenerar plano')>-1||txt.indexOf('dieta com ia')>-1||txt.indexOf('gerar dieta')>-1||txt.indexOf('criar dieta')>-1){e.preventDefault();e.stopPropagation();wrapper({source:'text_click_wizard_v3_v5'});}
-  },true);
-})();
-</script>`;
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -124,20 +96,6 @@ async function networkFirst(request) {
   }
 }
 
-async function htmlWithDietBootstrap(request) {
-  try {
-    const response = await fetch(request, { cache: 'no-store' });
-    const html = await response.text();
-    const cleaned = html
-      .replace(/<script id="kronia-diet-anamnese-force-inline">[\s\S]*?<\/script>/g, '')
-      .replace(/<script id="kronia-diet-wizard-v3-bootstrap">[\s\S]*?<\/script>/g, '');
-    const patched = cleaned.replace('</body>', DIET_WIZARD_V3_BOOTSTRAP + '\n</body>');
-    return new Response(patched, { status: response.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-  } catch (_) {
-    return networkFirst(request);
-  }
-}
-
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -155,7 +113,7 @@ self.addEventListener('fetch', event => {
   if (shouldBypass(url)) return;
 
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
-    event.respondWith(htmlWithDietBootstrap(event.request));
+    event.respondWith(networkFirst(event.request));
     return;
   }
 

@@ -5,7 +5,7 @@
     'dietChoiceScreen',
     'dietEmergencyWizardScreen'
   ];
-  var LEGACY_WIZARD_SCREEN_ID = ['diet', 'Profile', 'Wizard', 'Screen'].join('');
+
   var LEGACY_WIZARD_STATE_KEYS = [
     'kronia_diet_wizard_state_v1',
     'kronia_diet_wizard_state_v2',
@@ -13,7 +13,8 @@
   ];
 
   var PROTECTED_IDS = [
-    'kroniaDietPlanVisualScreen'
+    'kroniaDietPlanVisualScreen',
+    'dietProfileWizardScreen'
   ];
 
   function isProtected(el) {
@@ -37,6 +38,8 @@
     document.querySelectorAll([
       '#kroniaDietPlanVisualScreen',
       '#kroniaDietPlanVisualScreen *',
+      '#dietProfileWizardScreen',
+      '#dietProfileWizardScreen *',
       '[data-diet-action="labs"]'
     ].join(',')).forEach(function (el) {
       el.style.pointerEvents = 'auto';
@@ -48,9 +51,7 @@
     LEGACY_WIZARD_STATE_KEYS.forEach(function (key) {
       try { localStorage.removeItem(key); } catch (_) {}
     });
-    var oldWizard = document.getElementById(LEGACY_WIZARD_SCREEN_ID);
-    if (oldWizard) oldWizard.remove();
-    document.body && document.body.classList.remove('diet-wizard-active', 'kdw-active');
+    document.body && document.body.classList.remove('kdw-active');
     LEGACY_IDS.forEach(function (id) { hide(document.getElementById(id)); });
     unblockValidDietTargets();
     window.__kroniaLegacyDietRemoved = true;
@@ -66,14 +67,6 @@
   } else {
     hideLegacyScreens();
   }
-  try {
-    var observer = new MutationObserver(function () {
-      var oldWizard = document.getElementById(LEGACY_WIZARD_SCREEN_ID);
-      if (oldWizard || document.body.classList.contains('diet-wizard-active') || document.body.classList.contains('kdw-active')) {
-        hideLegacyScreens();
-      }
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-  } catch (_) {}
+
   document.addEventListener('kronia:diet:hide-legacy', hideLegacyScreens);
 })();

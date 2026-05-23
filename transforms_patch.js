@@ -364,18 +364,26 @@ Garante que a anamnese abra mesmo se o controller externo não tiver sido import
   }
 
   function installDietHooks() {
+    /* Se o controller oficial já está carregado com open() real, não sobrescreve. */
+    var ctrl = window.KroniaDiet;
+    var controllerReady = ctrl && typeof ctrl.open === 'function' && !ctrl.open.__kroniaDietEntryWrapper;
+    if (controllerReady) {
+      ensureController();
+      return;
+    }
+
     ensureController();
 
     var forceWrapper = function(context) { return openAnamneseForced(context || {}); };
     forceWrapper.__kroniaForcedAnamnese = true;
 
-    window.startAIDiet = forceWrapper;
-    window.createAnotherDiet = forceWrapper;
-    window.createDietPlan = forceWrapper;
-    window.generateDietPlan = forceWrapper;
-    window.regenerateDiet = forceWrapper;
-    window.regenerateDietPlan = forceWrapper;
-    window.regeneratePlan = forceWrapper;
+    if (!window.startAIDiet || window.startAIDiet.__kroniaForcedAnamnese) window.startAIDiet = forceWrapper;
+    if (!window.createAnotherDiet || window.createAnotherDiet.__kroniaForcedAnamnese) window.createAnotherDiet = forceWrapper;
+    if (!window.createDietPlan || window.createDietPlan.__kroniaForcedAnamnese) window.createDietPlan = forceWrapper;
+    if (!window.generateDietPlan || window.generateDietPlan.__kroniaForcedAnamnese) window.generateDietPlan = forceWrapper;
+    if (!window.regenerateDiet || window.regenerateDiet.__kroniaForcedAnamnese) window.regenerateDiet = forceWrapper;
+    if (!window.regenerateDietPlan || window.regenerateDietPlan.__kroniaForcedAnamnese) window.regenerateDietPlan = forceWrapper;
+    if (!window.regeneratePlan || window.regeneratePlan.__kroniaForcedAnamnese) window.regeneratePlan = forceWrapper;
 
     window.KroniaDiet = Object.assign({}, window.KroniaDiet || {}, {
       generate: forceWrapper,
