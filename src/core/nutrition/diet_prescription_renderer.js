@@ -433,6 +433,14 @@ function buildMealItems(template, profile, macros, index, aiStrategy, aiBlueprin
   var weightPesado = !!(mealIntent && mealIntent.weight === 'pesado');
   var weightLeve = !!(mealIntent && mealIntent.weight === 'leve');
 
+  // Objective-based rotation offset prevents identical food patterns across different goals
+  var OBJ_OFFSETS = { emagrecimento: 4, hipertrofia: 0, manutencao: 2, recomposicao_corporal: 7, saude_geral: 5 };
+  var objKey = normalizeFreeText(profile.objetivo || '').replace(/\s+/g, '_');
+  var objectiveOffset = OBJ_OFFSETS[objKey] != null ? OBJ_OFFSETS[objKey] : 1;
+  var effectiveIndex = index + objectiveOffset;
+
+  var isCutting = /emagrecimento/.test(objKey);
+
   var proteinSource;
   var supportCarb;
   var fatSource;
@@ -441,9 +449,9 @@ function buildMealItems(template, profile, macros, index, aiStrategy, aiBlueprin
   var breadSource;
   var oatsSource;
   var breakfastFruit;
-  var beanSource = selectFoodByPattern('mealCarbs', profile, [/feij/], index);
-  var riceSource = selectFoodByPattern('mealCarbs', profile, [/arroz/], index);
-  var saladSource = selectFoodByPattern('veggies', profile, [/salada|folhas|repolho|pepino/], index);
+  var beanSource = selectFoodByPattern('mealCarbs', profile, [/feij/], effectiveIndex);
+  var riceSource = selectFoodByPattern('mealCarbs', profile, [/arroz/], effectiveIndex);
+  var saladSource = selectFoodByPattern('veggies', profile, [/salada|folhas|repolho|pepino/], effectiveIndex);
 
   var isMainMeal = /almoco|jantar/.test(template.tipo) || (weightPesado && !weightLeve);
   var isBreakfast = template.tipo === 'cafe_da_manha';
@@ -451,26 +459,34 @@ function buildMealItems(template, profile, macros, index, aiStrategy, aiBlueprin
   var isWorkoutMeal = isPreworkout || isPostworkout;
 
   if (isPreworkout && !isMainMeal) {
-    proteinSource = selectFoodByPattern('fastProteins', profile, [/whey|iogurte/], index);
-    breakfastFruit = selectFoodByPattern('fastCarbs', profile, [/banana|granola/], index);
+    proteinSource = selectFoodByPattern('fastProteins', profile, [/whey|iogurte/], effectiveIndex);
+    breakfastFruit = selectFoodByPattern('fastCarbs', profile, [/banana|granola/], effectiveIndex);
     if (carbFocus === 'complexo') {
-      oatsSource = selectFoodByPattern('breakfastCarbs', profile, [/aveia/], index);
+      oatsSource = selectFoodByPattern('breakfastCarbs', profile, [/aveia/], effectiveIndex);
     }
   } else if (isBreakfast || isSnack) {
-    proteinSource = selectFoodByPattern(isBreakfast ? 'breakfastProteins' : 'fastProteins', profile, [/ovo/, /leite/, /iogurte/, /tofu/, /whey/], index);
-    breadSource = selectFoodByPattern(isBreakfast ? 'breakfastCarbs' : 'fastCarbs', profile, [/pao|pão|tapioca/], index);
-    oatsSource = selectFoodByPattern(isBreakfast ? 'breakfastCarbs' : 'fastCarbs', profile, [/aveia|granola/], index);
-    breakfastFruit = selectFoodByPattern('supportCarbs', profile, [/banana/, /maca|maçã/, /fruta/], index);
-    milkSource = selectFoodByPattern('fastProteins', profile, [/leite/, /iogurte/, /bebida vegetal/], index);
+    // Prefer low-fat dairy proteins first (avoid high-fat eggs overrunning snack fat budget)
+    var bfProtPatterns = isCutting
+      ? [/iogurte.grego|skyr|cottage/, /claras.de.ovo/, /whey/, /ovo/, /tofu/]
+      : [/iogurte.grego|skyr|cottage/, /claras.de.ovo/, /ovo/, /whey/, /tofu/];
+    proteinSource = selectFoodByPattern(isBreakfast ? 'breakfastProteins' : 'fastProteins', profile, bfProtPatterns, effectiveIndex);
+    breadSource = selectFoodByPattern(isBreakfast ? 'breakfastCarbs' : 'fastCarbs', profile, [/pao|pão|tapioca/], effectiveIndex);
+    oatsSource = selectFoodByPattern(isBreakfast ? 'breakfastCarbs' : 'fastCarbs', profile, [/aveia|granola/], effectiveIndex);
+    breakfastFruit = selectFoodByPattern('supportCarbs', profile, [/frutas.vermelhas|morango|kiwi/, /banana/, /maca|maçã/], effectiveIndex);
+    milkSource = selectFoodByPattern('fastProteins', profile, [/leite/, /iogurte/, /bebida vegetal/], effectiveIndex);
   } else {
-    proteinSource = selectFoodByPattern('mealProteins', profile, [/frango|patinho|tilapia|tofu|sardinha|peixe/], index);
-    veggieSource = selectFoodByPattern('veggies', profile, [/legume|brocol|brócol|cenoura|abobrinha|chuchu|abobora|abóbora|couve/], index);
+    // Cutting: prefer lean fish first; Bulking: chicken/patinho/tilapia grouped for reliable rotation
+    var mainProtPatterns = isCutting
+      ? [/tilapia|atum|camarao|merluza|pescada|linguado/, /frango/, /sardinha|salmao|cavalinha/, /patinho|musculo|carne.moida/, /tofu/]
+      : [/frango|patinho|tilapia/, /salmao|sardinha|cavalinha|musculo/, /carne.moida/, /tofu/];
+    proteinSource = selectFoodByPattern('mealProteins', profile, mainProtPatterns, effectiveIndex);
+    veggieSource = selectFoodByPattern('veggies', profile, [/brocol|couve|espinafre|abobrinha|cenoura|chuchu|abobora/], effectiveIndex);
     if (!avoidFat) {
-      fatSource = selectFoodByPattern('fats', profile, [/azeite/], index);
+      fatSource = selectFoodByPattern('fats', profile, [/azeite/], effectiveIndex);
     }
   }
 
-  supportCarb = selectFoodByPattern('supportCarbs', profile, [/banana|maca|maçã|fruta/], index);
+  supportCarb = selectFoodByPattern('supportCarbs', profile, [/banana|maca|maçã|fruta/], effectiveIndex);
 
   var proteinScaleMod = proteinFocusHigh ? 1.12 : 1.0;
 
@@ -499,7 +515,9 @@ function buildMealItems(template, profile, macros, index, aiStrategy, aiBlueprin
       if (breakfastFruit) items.push(cloneFoodItem(breakfastFruit, Math.max(0.8, Math.min(1.5, (macros.carbs * 0.5) / Math.max(breakfastFruit.carbs, 1)))));
     } else {
       if (breadSource) items.push(cloneFoodItem(breadSource, Math.max(0.7, Math.min(1.35, (macros.carbs * 0.35) / Math.max(breadSource.carbs, 1)))));
-      if (milkSource && (!proteinSource || milkSource.code !== proteinSource.code)) items.push(cloneFoodItem(milkSource, Math.max(0.7, Math.min(1.2, (macros.protein * 0.25) / Math.max(milkSource.protein || 1, 1)))));
+      var estProtFromSource = proteinSource ? proteinSource.protein * Math.max(isSnack ? 0.7 : 0.9, Math.min(1.4, (macros.protein * (isSnack ? 0.7 : 0.85)) / Math.max(proteinSource.protein, 1))) : 0;
+      var estProtFromMilk = milkSource ? milkSource.protein * 0.7 : 0;
+      if (milkSource && (!proteinSource || milkSource.code !== proteinSource.code) && (estProtFromSource + estProtFromMilk) < macros.protein * 1.25) items.push(cloneFoodItem(milkSource, Math.max(0.7, Math.min(1.2, (macros.protein * 0.25) / Math.max(milkSource.protein || 1, 1)))));
       if (breakfastFruit) items.push(cloneFoodItem(breakfastFruit, Math.max(0.65, Math.min(1.1, (macros.carbs * 0.22) / Math.max(breakfastFruit.carbs, 1)))));
       if (oatsSource && (!breadSource || oatsSource.code !== breadSource.code)) items.push(cloneFoodItem(oatsSource, Math.max(0.55, Math.min(1.0, (macros.carbs * 0.25) / Math.max(oatsSource.carbs, 1)))));
     }

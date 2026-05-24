@@ -240,7 +240,7 @@ var FOOD_OVERRIDES = {
   'abacate': { kcal: 96, protein: 1.2, carbs: 6, fat: 8.4, fiber: 6.3, portion: 100, unitLabel: '100 g' },
   'azeitona_verde': { kcal: 145, protein: 1, carbs: 3.8, fat: 15, fiber: 3.3, portion: 30, unitLabel: '6 unidades' },
   'azeitona_preta': { kcal: 115, protein: 0.8, carbs: 6, fat: 11, fiber: 3, portion: 30, unitLabel: '6 unidades' },
-  // Vegetais — key sem acento
+  // Vegetais — keys sem acento. kcal = TACO/USDA (calorimetria real; diferença com 4/4/9 é esperada em vegetais por fibra/água)
   'brocolis_cozido': { kcal: 25, protein: 3, carbs: 4.4, fat: 0.5, fiber: 3.4, portion: 100, unitLabel: '100 g' },
   'couve_flor_cozida': { kcal: 22, protein: 2, carbs: 4, fat: 0.3, fiber: 2.5, portion: 100, unitLabel: '100 g' },
   'repolho_roxo': { kcal: 25, protein: 1.3, carbs: 5.8, fat: 0.1, fiber: 2.1, portion: 100, unitLabel: '100 g' },
@@ -256,6 +256,15 @@ var FOOD_OVERRIDES = {
   'rucula': { kcal: 25, protein: 2.6, carbs: 3.7, fat: 0.7, fiber: 1.6, portion: 80, unitLabel: '1 prato' },
   'espinafre': { kcal: 23, protein: 2.9, carbs: 3.6, fat: 0.4, fiber: 2.2, portion: 100, unitLabel: '100 g' },
   'couve_refogada': { kcal: 30, protein: 3.3, carbs: 5, fat: 0.7, fiber: 2, portion: 80, unitLabel: '80 g' },
+  // Vegetais aromáticos e cogumelos — overrides explícitos para evitar variação por índice
+  'tomate': { kcal: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, portion: 100, unitLabel: '100 g' },
+  'pimentao': { kcal: 20, protein: 0.9, carbs: 4.6, fat: 0.3, fiber: 1.7, portion: 100, unitLabel: '100 g' },
+  'cebola_roxa': { kcal: 38, protein: 1.2, carbs: 8.6, fat: 0.1, fiber: 1.7, portion: 80, unitLabel: '80 g' },
+  'alho_poro': { kcal: 31, protein: 1.8, carbs: 7.3, fat: 0.3, fiber: 1.8, portion: 80, unitLabel: '80 g' },
+  'agriao': { kcal: 11, protein: 2.3, carbs: 1.3, fat: 0.3, fiber: 0.5, portion: 100, unitLabel: '100 g' },
+  'cogumelo_paris': { kcal: 22, protein: 3.1, carbs: 3.3, fat: 0.3, fiber: 1.0, portion: 100, unitLabel: '100 g' },
+  'shitake': { kcal: 34, protein: 1.6, carbs: 6.8, fat: 0.5, fiber: 2.5, portion: 80, unitLabel: '80 g' },
+  'shimeji': { kcal: 22, protein: 2.5, carbs: 3.3, fat: 0.4, fiber: 2.0, portion: 80, unitLabel: '80 g' },
   // Laticínios — iogurte natural com proteína correta
   'bebida_vegetal_de_soja': { kcal: 41, protein: 3.3, carbs: 2.3, fat: 2, fiber: 0.6, portion: 200, unitLabel: '200 ml' },
   'bebida_vegetal_de_amendoas': { kcal: 16, protein: 0.6, carbs: 0.6, fat: 1.5, fiber: 0.4, portion: 200, unitLabel: '200 ml' },
