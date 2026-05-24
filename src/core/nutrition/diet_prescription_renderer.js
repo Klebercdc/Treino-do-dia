@@ -208,6 +208,10 @@ function rebalanceMealItems(items, target, options) {
     var carbGap = round(Number(target.carbs || 0) - subtotal.carbs, 1);
     var fatGap = round(Number(target.fat || 0) - subtotal.fat, 1);
 
+    if (process.env.NODE_ENV === 'development' && pass === 0 && (Math.abs(proteinGap) > 2 || Math.abs(carbGap) > 4 || Math.abs(fatGap) > 1.5)) {
+      console.log('[NUTRITION_VALIDATION] Rebalance needed — protein gap:', proteinGap, '| carb gap:', carbGap, '| fat gap:', fatGap);
+    }
+
     if (Math.abs(proteinGap) > 2) {
       var proteinIndex = selectAdjustableItemIndex(balanced, 'proteinas', { excludeVeggies: true });
       if (proteinIndex >= 0) {
@@ -354,9 +358,22 @@ function buildSubstitutions(item, profile) {
     });
 }
 
-function buildMealItems(template, profile, macros, index) {
+function buildMealItems(template, profile, macros, index, aiStrategy) {
+  var mealIntent = aiStrategy && aiStrategy.mealIntentions && aiStrategy.mealIntentions[template.tipo];
+
+  if (process.env.NODE_ENV === 'development' && mealIntent) {
+    console.log('[AI_FOOD_INTENT]', template.tipo + ':', mealIntent.description || JSON.stringify(mealIntent));
+  }
+
+  var isPreworkout = !!(mealIntent && mealIntent.preworkout);
+  var isPostworkout = !!(mealIntent && mealIntent.postworkout);
+  var avoidFat = !!(mealIntent && mealIntent.avoidFat);
+  var carbFocus = mealIntent ? String(mealIntent.carbFocus || '') : '';
+  var proteinFocusHigh = !!(mealIntent && mealIntent.proteinFocus === 'alto');
+  var weightPesado = !!(mealIntent && mealIntent.weight === 'pesado');
+  var weightLeve = !!(mealIntent && mealIntent.weight === 'leve');
+
   var proteinSource;
-  var carbSource;
   var supportCarb;
   var fatSource;
   var veggieSource;
@@ -367,12 +384,19 @@ function buildMealItems(template, profile, macros, index) {
   var beanSource = selectFoodByPattern('mealCarbs', profile, [/feij/], index);
   var riceSource = selectFoodByPattern('mealCarbs', profile, [/arroz/], index);
   var saladSource = selectFoodByPattern('veggies', profile, [/salada|folhas|repolho|pepino/], index);
-  var isMainMeal = /almoco|jantar/.test(template.tipo);
-  var isBreakfast = template.tipo === 'cafe_da_manha';
-  var isSnack = /lanche|ceia/.test(template.tipo);
-  var isWorkoutMeal = false;
 
-  if (isBreakfast || isSnack) {
+  var isMainMeal = /almoco|jantar/.test(template.tipo) || (weightPesado && !weightLeve);
+  var isBreakfast = template.tipo === 'cafe_da_manha';
+  var isSnack = /lanche|ceia/.test(template.tipo) || (weightLeve && !isBreakfast);
+  var isWorkoutMeal = isPreworkout || isPostworkout;
+
+  if (isPreworkout && !isMainMeal) {
+    proteinSource = selectFoodByPattern('fastProteins', profile, [/whey|iogurte/], index);
+    breakfastFruit = selectFoodByPattern('fastCarbs', profile, [/banana|granola/], index);
+    if (carbFocus === 'complexo') {
+      oatsSource = selectFoodByPattern('breakfastCarbs', profile, [/aveia/], index);
+    }
+  } else if (isBreakfast || isSnack) {
     proteinSource = selectFoodByPattern(isBreakfast ? 'breakfastProteins' : 'fastProteins', profile, [/ovo/, /leite/, /iogurte/, /tofu/, /whey/], index);
     breadSource = selectFoodByPattern(isBreakfast ? 'breakfastCarbs' : 'fastCarbs', profile, [/pao|pão|tapioca/], index);
     oatsSource = selectFoodByPattern(isBreakfast ? 'breakfastCarbs' : 'fastCarbs', profile, [/aveia|granola/], index);
@@ -381,26 +405,46 @@ function buildMealItems(template, profile, macros, index) {
   } else {
     proteinSource = selectFoodByPattern('mealProteins', profile, [/frango|patinho|tilapia|tofu|sardinha|peixe/], index);
     veggieSource = selectFoodByPattern('veggies', profile, [/legume|brocol|brócol|cenoura|abobrinha|chuchu|abobora|abóbora|couve/], index);
-    fatSource = selectFoodByPattern('fats', profile, [/azeite/], index);
+    if (!avoidFat) {
+      fatSource = selectFoodByPattern('fats', profile, [/azeite/], index);
+    }
   }
 
   supportCarb = selectFoodByPattern('supportCarbs', profile, [/banana|maca|maçã|fruta/], index);
 
+  var proteinScaleMod = proteinFocusHigh ? 1.12 : 1.0;
+
   var items = [];
   if (isMainMeal) {
-    if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(0.95, Math.min(1.55, macros.protein / Math.max(proteinSource.protein, 1)))));
-    if (riceSource) items.push(cloneFoodItem(riceSource, Math.max(0.9, Math.min(1.7, (macros.carbs * 0.56) / Math.max(riceSource.carbs, 1)))));
-    if (beanSource) items.push(cloneFoodItem(beanSource, Math.max(0.8, Math.min(1.5, (macros.carbs * 0.24) / Math.max(beanSource.carbs, 1)))));
+    if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(0.95, Math.min(1.55, (macros.protein / Math.max(proteinSource.protein, 1)) * proteinScaleMod))));
+
+    if (carbFocus === 'pre_treino' || carbFocus === 'simples') {
+      if (riceSource) items.push(cloneFoodItem(riceSource, Math.max(0.7, Math.min(1.3, (macros.carbs * 0.45) / Math.max(riceSource.carbs, 1)))));
+    } else {
+      if (riceSource) items.push(cloneFoodItem(riceSource, Math.max(0.9, Math.min(1.7, (macros.carbs * 0.56) / Math.max(riceSource.carbs, 1)))));
+      if (beanSource) items.push(cloneFoodItem(beanSource, Math.max(0.8, Math.min(1.5, (macros.carbs * 0.24) / Math.max(beanSource.carbs, 1)))));
+    }
+
     if (veggieSource) items.push(cloneFoodItem(veggieSource, 1.2));
     if (saladSource) items.push(cloneFoodItem(saladSource, 1));
-    if (fatSource && macros.fat > 2) items.push(cloneFoodItem(fatSource, Math.max(0.5, Math.min(1.25, macros.fat / Math.max(fatSource.fat, 1)))));
+    if (!avoidFat && fatSource && macros.fat > 2) items.push(cloneFoodItem(fatSource, Math.max(0.5, Math.min(1.25, macros.fat / Math.max(fatSource.fat, 1)))));
+  } else if (isPreworkout && !isMainMeal) {
+    if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(0.6, Math.min(1.1, (macros.protein * 0.75) / Math.max(proteinSource.protein, 1)))));
+    if (breakfastFruit) items.push(cloneFoodItem(breakfastFruit, Math.max(0.7, Math.min(1.5, (macros.carbs * 0.55) / Math.max(breakfastFruit.carbs, 1)))));
+    if (oatsSource) items.push(cloneFoodItem(oatsSource, Math.max(0.5, Math.min(1.0, (macros.carbs * 0.30) / Math.max(oatsSource.carbs, 1)))));
   } else {
-    if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(isSnack ? 0.7 : 0.9, Math.min(1.4, (macros.protein * (isSnack ? 0.7 : 0.85)) / Math.max(proteinSource.protein, 1)))));
-    if (breadSource) items.push(cloneFoodItem(breadSource, Math.max(0.7, Math.min(1.35, (macros.carbs * 0.35) / Math.max(breadSource.carbs, 1)))));
-    if (milkSource && (!proteinSource || milkSource.code !== proteinSource.code)) items.push(cloneFoodItem(milkSource, Math.max(0.7, Math.min(1.2, (macros.protein * 0.25) / Math.max(milkSource.protein || 1, 1)))));
-    if (breakfastFruit) items.push(cloneFoodItem(breakfastFruit, Math.max(0.65, Math.min(1.1, (macros.carbs * 0.22) / Math.max(breakfastFruit.carbs, 1)))));
-    if (oatsSource && (!breadSource || oatsSource.code !== breadSource.code)) items.push(cloneFoodItem(oatsSource, Math.max(0.55, Math.min(1.0, (macros.carbs * 0.25) / Math.max(oatsSource.carbs, 1)))));
-    if (!isBreakfast && supportCarb && (!breakfastFruit || supportCarb.code !== breakfastFruit.code) && macros.carbs > 24) {
+    if (proteinSource) items.push(cloneFoodItem(proteinSource, Math.max(isSnack ? 0.7 : 0.9, Math.min(1.4, ((macros.protein * (isSnack ? 0.7 : 0.85)) / Math.max(proteinSource.protein, 1)) * proteinScaleMod))));
+
+    if (carbFocus === 'pre_treino') {
+      if (breakfastFruit) items.push(cloneFoodItem(breakfastFruit, Math.max(0.8, Math.min(1.5, (macros.carbs * 0.5) / Math.max(breakfastFruit.carbs, 1)))));
+    } else {
+      if (breadSource) items.push(cloneFoodItem(breadSource, Math.max(0.7, Math.min(1.35, (macros.carbs * 0.35) / Math.max(breadSource.carbs, 1)))));
+      if (milkSource && (!proteinSource || milkSource.code !== proteinSource.code)) items.push(cloneFoodItem(milkSource, Math.max(0.7, Math.min(1.2, (macros.protein * 0.25) / Math.max(milkSource.protein || 1, 1)))));
+      if (breakfastFruit) items.push(cloneFoodItem(breakfastFruit, Math.max(0.65, Math.min(1.1, (macros.carbs * 0.22) / Math.max(breakfastFruit.carbs, 1)))));
+      if (oatsSource && (!breadSource || oatsSource.code !== breadSource.code)) items.push(cloneFoodItem(oatsSource, Math.max(0.55, Math.min(1.0, (macros.carbs * 0.25) / Math.max(oatsSource.carbs, 1)))));
+    }
+
+    if (!isBreakfast && !isPreworkout && supportCarb && (!breakfastFruit || supportCarb.code !== breakfastFruit.code) && macros.carbs > 24) {
       items.push(cloneFoodItem(supportCarb, Math.max(0.4, Math.min(0.8, (macros.carbs * 0.12) / Math.max(supportCarb.carbs, 1)))));
     }
   }
@@ -465,28 +509,59 @@ function getMealTemplates(profile, selectedTemplate) {
   });
 }
 
-function distributeMacrosAcrossMeals(profile, macros, selectedTemplate) {
+function validateAIMacroDistribution(aiDist, templates) {
+  if (!aiDist || typeof aiDist !== 'object') return false;
+  var proteinSum = 0;
+  var carbSum = 0;
+  var fatSum = 0;
+  for (var i = 0; i < templates.length; i++) {
+    var dist = aiDist[templates[i].tipo];
+    if (!dist) return false;
+    var ps = Number(dist.proteinShare);
+    var cs = Number(dist.carbShare);
+    var fs = Number(dist.fatShare);
+    if (!Number.isFinite(ps) || !Number.isFinite(cs) || !Number.isFinite(fs)) return false;
+    proteinSum += ps;
+    carbSum += cs;
+    fatSum += fs;
+  }
+  var tol = 0.10;
+  return Math.abs(proteinSum - 1.0) <= tol && Math.abs(carbSum - 1.0) <= tol && Math.abs(fatSum - 1.0) <= tol;
+}
+
+function distributeMacrosAcrossMeals(profile, macros, selectedTemplate, aiStrategy) {
   var templates = getMealTemplates(profile, selectedTemplate);
+  var aiDist = aiStrategy && aiStrategy.macroDistribution;
+  var useAI = aiDist && validateAIMacroDistribution(aiDist, templates);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AI_MACRO_DISTRIBUTION] Using AI distribution:', useAI);
+  }
+
   return templates.map(function(template, index) {
+    var dist = useAI ? (aiDist[template.tipo] || template) : template;
+    var ps = Number(dist.proteinShare != null ? dist.proteinShare : template.proteinShare);
+    var cs = Number(dist.carbShare != null ? dist.carbShare : template.carbShare);
+    var fs = Number(dist.fatShare != null ? dist.fatShare : template.fatShare);
     return {
       ordem: index + 1,
       tipo: template.tipo,
       nome: template.nome,
       horario: template.horario,
       meta: {
-        calories: round((macros.protein * template.proteinShare * 4) + (macros.carbs * template.carbShare * 4) + (macros.fat * template.fatShare * 9)),
-        protein: round(macros.protein * template.proteinShare, 1),
-        carbs: round(macros.carbs * template.carbShare, 1),
-        fat: round(macros.fat * template.fatShare, 1)
+        calories: round((macros.protein * ps * 4) + (macros.carbs * cs * 4) + (macros.fat * fs * 9)),
+        protein: round(macros.protein * ps, 1),
+        carbs: round(macros.carbs * cs, 1),
+        fat: round(macros.fat * fs, 1)
       }
     };
   });
 }
 
-function buildInitialNutritionPlan(profile, calc, selectedTemplate) {
-  var mealTargets = distributeMacrosAcrossMeals(profile, calc.macros, selectedTemplate);
+function buildInitialNutritionPlan(profile, calc, selectedTemplate, aiStrategy) {
+  var mealTargets = distributeMacrosAcrossMeals(profile, calc.macros, selectedTemplate, aiStrategy);
   var meals = mealTargets.map(function(target, index) {
-    var items = buildMealItems(target, profile, target.meta, index);
+    var items = buildMealItems(target, profile, target.meta, index, aiStrategy);
     var subtotal = sumMeal(items);
     return {
       ordem: target.ordem,
@@ -704,8 +779,14 @@ function buildNutritionPrescription(strategy) {
   var calc = strategy;
   if (calc.failSafe) return calc;
 
+  var aiStrategy = calc.profile && calc.profile.aiNutritionStrategy || null;
+
+  if (process.env.NODE_ENV === 'development' && aiStrategy) {
+    console.log('[AI_NUTRITION_STRATEGY] Applying strategy to prescription:', aiStrategy.strategyType);
+  }
+
   var selectedTemplate = dietTemplates.selectDietTemplate(calc.profile, calc.result);
-  var plan = buildInitialNutritionPlan(calc.profile, calc.result, selectedTemplate);
+  var plan = buildInitialNutritionPlan(calc.profile, calc.result, selectedTemplate, aiStrategy);
   if (clinical.hasCriticalLabFlag(calc.profile)) {
     plan = capPlanCalories(plan, calc.result.targetCalories);
   }
@@ -744,7 +825,8 @@ function buildNutritionPrescription(strategy) {
       },
       objective: calc.result.objective
     },
-    clinicalNotes: clinicalNotes
+    clinicalNotes: clinicalNotes,
+    aiStrategy: aiStrategy
   });
   plan.visualPrescription = visual;
   var templateClinicalAlerts = dietTemplates.clinicalFlags(calc.profile || {}).length
