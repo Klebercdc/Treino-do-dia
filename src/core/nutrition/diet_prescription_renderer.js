@@ -7,6 +7,10 @@ var strategyEngine = require('./diet_strategy_engine');
 var dietTemplates = require('../diet/dietTemplates');
 var validatedFoodSelector = require('./validatedFoodSelector');
 var nutritionRealityValidator = require('./nutritionRealityValidator');
+var semanticNutritionValidator = require('./semanticNutritionValidator');
+var nutritionConfidenceScore = require('./nutritionConfidenceScore');
+var nutritionAuditTrail = require('./nutritionAuditTrail');
+var nutritionProductionGate = require('./nutritionProductionGate');
 
 function round(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 0;
@@ -79,7 +83,7 @@ var FOOD_LIBRARY = {
   ],
   breakfastCarbs: [
     { code: 'aveia_40', name: 'Aveia', portionLabel: '40 g', grams: 40, calories: 156, protein: 6.8, carbs: 26.5, fat: 3.4, fiber: 4.2, source: 'USDA FoodData Central (adaptado)' },
-    { code: 'pao_2', name: 'Pão integral', portionLabel: '2 fatias', grams: 50, calories: 128, protein: 6, carbs: 24, fat: 2, fiber: 4, source: 'TACO/USDA (adaptado)' },
+    { code: 'pao_2', name: 'Pão integral', portionLabel: '2 fatias (50g)', grams: 50, calories: 128, protein: 6, carbs: 24, fat: 2, fiber: 4, source: 'TACO/USDA (adaptado)' },
     { code: 'banana_1', name: 'Banana', portionLabel: '1 un média', grams: 90, calories: 80, protein: 1, carbs: 20.7, fat: 0.2, fiber: 2.1, source: 'TACO (adaptado)' }
   ],
   fastCarbs: [
@@ -936,9 +940,61 @@ function buildNutritionPrescription(strategy) {
 
   var selectedTemplate = dietTemplates.selectDietTemplate(calc.profile, calc.result);
   var plan = buildInitialNutritionPlan(calc.profile, calc.result, selectedTemplate, aiStrategy, aiBlueprint);
+
+  // Step 1: recalculate totals after initial construction
+  plan = recalculatePlanTotals(plan);
+
   if (clinical.hasCriticalLabFlag(calc.profile)) {
     plan = capPlanCalories(plan, calc.result.targetCalories);
   }
+
+  // Step 2: audit trail
+  var trail = nutritionAuditTrail.createNutritionAuditTrail();
+  nutritionAuditTrail.addAuditEvent(trail, {
+    type: aiBlueprint ? 'ai_active' : (aiStrategy ? 'ai_active' : 'fallback_used'),
+    detail: aiBlueprint ? ('Blueprint: ' + aiBlueprint.strategyName) : (aiStrategy ? ('Strategy: ' + aiStrategy.strategyType) : 'Motor local sem IA')
+  });
+
+  // Step 3: semantic validation
+  var foodLibForSemantic = premiumCatalog.buildPremiumFoodLibrary();
+  plan = semanticNutritionValidator.validatePlanSemantic(plan, foodLibForSemantic);
+
+  // Step 4: rebalance after semantic repair + recalculate totals
+  plan = recalculatePlanTotals(plan);
+
+  // Log semantic repairs to audit trail
+  (plan.refeicoes || []).forEach(function(meal) {
+    (meal.itens || []).forEach(function(item) {
+      if (item && item.semanticStatus && item.semanticStatus !== 'valid') {
+        nutritionAuditTrail.addAuditEvent(trail, {
+          type: 'semantic_repair',
+          detail: item.semanticStatus + ': ' + (item.nome || item.name || '?'),
+          foodCode: item.foodCode || item.code
+        });
+      }
+    });
+  });
+
+  // Step 5: confidence score
+  plan.nutritionConfidence = nutritionConfidenceScore.scorePlanConfidence(plan);
+
+  // Step 6: audit trail summary
+  plan.nutritionAuditTrail = nutritionAuditTrail.summarizeAuditTrail(trail);
+
+  // Step 7: production gate
+  plan.productionReadiness = nutritionProductionGate.validateNutritionProductionReadiness(plan);
+
+  // Step 8: premiumValidation metadata
+  plan.premiumValidation = Object.assign({}, plan.premiumValidation || {}, {
+    tier: 'Premium Production',
+    aiStrategy: aiBlueprint ? 'active' : (aiStrategy ? 'active' : 'fallback'),
+    catalogValidation: true,
+    semanticValidation: !!(plan.premiumValidation && plan.premiumValidation.semanticValidation),
+    confidenceScore: plan.nutritionConfidence.score,
+    clinicalSafety: true,
+    productionReady: plan.productionReadiness.ready,
+    warnings: plan.productionReadiness.warnings
+  });
 
   // Lab-based clinical notes (biomarker flags)
   var clinicalNotes = [];

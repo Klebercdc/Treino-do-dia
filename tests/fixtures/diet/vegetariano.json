@@ -1,0 +1,22 @@
+{
+  "objetivo": "manutencao",
+  "sexo": "feminino",
+  "idade": 26,
+  "peso": 58,
+  "altura": 163,
+  "nivelAtividade": "ativo",
+  "refeicoesPorDia": 4,
+  "restricoes": ["vegetariano"],
+  "preferencias": ["tofu", "lentilha", "quinoa", "ovos"],
+  "alimentosEvitar": ["carne", "frango", "peixe"],
+  "contextoTreino": {
+    "hasTraining": true,
+    "modalidades": ["yoga", "corrida"],
+    "fadiga": 3
+  },
+  "clinicalData": {
+    "flags": {},
+    "healthConditions": []
+  },
+  "_scenario": "Usuária vegetariana ativa, sem restrições clínicas"
+}

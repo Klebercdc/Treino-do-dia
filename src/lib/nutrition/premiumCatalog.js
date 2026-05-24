@@ -116,8 +116,8 @@ var MACRO_PRESETS = {
 // Keys must match slugify() output (no diacritics, lowercase, underscores)
 var FOOD_OVERRIDES = {
   // Aves
-  'frango_grelhado': { kcal: 165, protein: 31, carbs: 0, fat: 3.6, portion: 120, unitLabel: '120 g', tags: ['high_protein', 'facil_preparo', 'pos_treino'] },
-  'frango_desfiado': { kcal: 165, protein: 31, carbs: 0, fat: 3.6, portion: 120, unitLabel: '120 g', tags: ['high_protein', 'pos_treino'] },
+  'frango_grelhado': { kcal: 165, protein: 31, carbs: 0, fat: 3.6, portion: 120, unitLabel: '120 g', tags: ['high_protein', 'facil_preparo', 'pos_treino'], source: 'TACO 191' },
+  'frango_desfiado': { kcal: 165, protein: 31, carbs: 0, fat: 3.6, portion: 120, unitLabel: '120 g', tags: ['high_protein', 'pos_treino'], source: 'TACO 191' },
   'peito_de_peru_assado': { kcal: 130, protein: 28, carbs: 0, fat: 1.5, portion: 100, unitLabel: '100 g' },
   'sobrecoxa_sem_pele_assada': { kcal: 175, protein: 24, carbs: 0, fat: 8, portion: 120, unitLabel: '120 g' },
   // Bovinos
@@ -135,7 +135,7 @@ var FOOD_OVERRIDES = {
   'pescada_cozida': { kcal: 115, protein: 23, carbs: 0, fat: 1.5, portion: 140, unitLabel: '140 g' },
   'linguado_grelhado': { kcal: 110, protein: 22, carbs: 0, fat: 1.4, portion: 140, unitLabel: '140 g' },
   // Peixes gordos — keys sem acento
-  'salmao_grelhado': { kcal: 206, protein: 22, carbs: 0, fat: 12, portion: 120, unitLabel: '120 g', tags: ['omega3'] },
+  'salmao_grelhado': { kcal: 206, protein: 22, carbs: 0, fat: 12, portion: 120, unitLabel: '120 g', tags: ['omega3'], source: 'TACO' },
   'sardinha_assada': { kcal: 185, protein: 25, carbs: 0, fat: 10, portion: 100, unitLabel: '100 g', tags: ['omega3'] },
   'atum_em_lata': { kcal: 132, protein: 28, carbs: 0, fat: 1.5, portion: 120, unitLabel: '1 lata' },
   'cavalinha_assada': { kcal: 175, protein: 22, carbs: 0, fat: 10, portion: 100, unitLabel: '100 g', tags: ['omega3'] },
@@ -144,12 +144,12 @@ var FOOD_OVERRIDES = {
   'lula_grelhada': { kcal: 92, protein: 16, carbs: 3, fat: 1.4, portion: 100, unitLabel: '100 g' },
   'mexilhao_cozido': { kcal: 86, protein: 12, carbs: 4, fat: 2, portion: 100, unitLabel: '100 g' },
   // Ovos — proteína ~13g/100g, carbo baixo
-  'ovos_mexidos': { kcal: 140, protein: 12, carbs: 1, fat: 10, portion: 150, unitLabel: '3 un', tags: ['high_protein', 'cafe_da_manha'] },
-  'ovo_cozido': { kcal: 155, protein: 13, carbs: 1.1, fat: 10.6, portion: 100, unitLabel: '2 unidades', tags: ['cafe_da_manha'] },
-  'claras_de_ovo': { kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, fiber: 0, portion: 100, unitLabel: '4 claras', tags: ['high_protein', 'pos_treino'] },
+  'ovos_mexidos': { kcal: 140, protein: 12, carbs: 1, fat: 10, portion: 150, unitLabel: '3 un', tags: ['high_protein', 'cafe_da_manha'], source: 'TACO 99 (adaptado)' },
+  'ovo_cozido': { kcal: 155, protein: 13, carbs: 1.1, fat: 10.6, portion: 100, unitLabel: '2 unidades', tags: ['cafe_da_manha'], source: 'TACO 99' },
+  'claras_de_ovo': { kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, fiber: 0, portion: 100, unitLabel: '4 claras', tags: ['high_protein', 'pos_treino'], source: 'TACO (adaptado)' },
   // Laticínios proteicos
-  'iogurte_grego_natural': { kcal: 76, protein: 10, carbs: 3.6, fat: 2.3, portion: 170, unitLabel: '170 g' },
-  'iogurte_natural': { kcal: 61, protein: 3.5, carbs: 4.7, fat: 3.3, portion: 170, unitLabel: '170 g' },
+  'iogurte_grego_natural': { kcal: 76, protein: 10, carbs: 3.6, fat: 2.3, portion: 170, unitLabel: '170 g', source: 'TACO/Rótulo médio' },
+  'iogurte_natural': { kcal: 61, protein: 3.5, carbs: 4.7, fat: 3.3, portion: 170, unitLabel: '170 g', source: 'TACO' },
   'cottage': { kcal: 98, protein: 11, carbs: 3.4, fat: 4.3, portion: 170, unitLabel: '170 g', tags: ['high_protein'] },
   'queijo_branco': { kcal: 96, protein: 9, carbs: 2, fat: 6, portion: 80, unitLabel: '80 g' },
   'skyr_natural': { kcal: 63, protein: 11, carbs: 4, fat: 0.2, portion: 170, unitLabel: '170 g', tags: ['high_protein'] },
@@ -166,8 +166,8 @@ var FOOD_OVERRIDES = {
   'caseina': { kcal: 370, protein: 80, carbs: 6, fat: 4, portion: 30, unitLabel: '30 g', tags: ['high_protein'] },
   'proteina_vegetal_em_po': { kcal: 380, protein: 75, carbs: 8, fat: 5, portion: 30, unitLabel: '30 g', tags: ['vegano', 'high_protein'] },
   // Carboidratos — arroz e grãos
-  'arroz_cozido': { kcal: 130, protein: 2.5, carbs: 28, fat: 0.3, fiber: 0.4, portion: 120, unitLabel: '120 g' },
-  'arroz_integral_cozido': { kcal: 123, protein: 2.6, carbs: 26, fat: 1, fiber: 1.8, portion: 120, unitLabel: '120 g' },
+  'arroz_cozido': { kcal: 130, protein: 2.5, carbs: 28, fat: 0.3, fiber: 0.4, portion: 120, unitLabel: '120 g', source: 'TACO 15' },
+  'arroz_integral_cozido': { kcal: 123, protein: 2.6, carbs: 26, fat: 1, fiber: 1.8, portion: 120, unitLabel: '120 g', source: 'TACO' },
   'quinoa_cozida': { kcal: 120, protein: 4.4, carbs: 22, fat: 1.9, fiber: 2.8, portion: 120, unitLabel: '120 g' },
   'cuscuz_de_milho': { kcal: 112, protein: 2.5, carbs: 23, fat: 0.5, fiber: 1, portion: 100, unitLabel: '100 g' },
   'milho_cozido': { kcal: 90, protein: 3, carbs: 19, fat: 1.3, fiber: 2, portion: 100, unitLabel: '100 g' },
@@ -182,11 +182,11 @@ var FOOD_OVERRIDES = {
   'macarrao_cozido': { kcal: 131, protein: 5, carbs: 25, fat: 1.1, fiber: 1.8, portion: 120, unitLabel: '120 g' },
   'macarrao_integral_cozido': { kcal: 124, protein: 5.3, carbs: 24, fat: 1, fiber: 3.2, portion: 120, unitLabel: '120 g' },
   'nhoque_de_batata': { kcal: 130, protein: 3, carbs: 28, fat: 0.8, fiber: 1.2, portion: 130, unitLabel: '130 g' },
-  // Pães — key sem acento
-  'pao_integral': { kcal: 250, protein: 12, carbs: 48, fat: 4, fiber: 8, portion: 50, unitLabel: '2 fatias' },
-  'pao_frances': { kcal: 300, protein: 9, carbs: 58, fat: 2, fiber: 2, portion: 50, unitLabel: '1 unidade' },
-  'pao_sirio_integral': { kcal: 240, protein: 9, carbs: 47, fat: 3, fiber: 6, portion: 60, unitLabel: '1 unidade' },
-  'tortilha_integral': { kcal: 230, protein: 8, carbs: 42, fat: 4, fiber: 5, portion: 60, unitLabel: '1 unidade' },
+  // Pães — key sem acento. portion = gramas da porção padrão; gramsPerUnit = gramas por fatia/unidade
+  'pao_integral': { kcal: 250, protein: 12, carbs: 48, fat: 4, fiber: 8, portion: 50, unitLabel: '2 fatias (50g)', gramsPerUnit: 25, source: 'TACO/Rótulo médio' },
+  'pao_frances': { kcal: 300, protein: 9, carbs: 58, fat: 2, fiber: 2, portion: 50, unitLabel: '1 unidade (50g)', gramsPerUnit: 50, source: 'TACO' },
+  'pao_sirio_integral': { kcal: 240, protein: 9, carbs: 47, fat: 3, fiber: 6, portion: 60, unitLabel: '1 unidade (60g)', gramsPerUnit: 60, source: 'Rótulo médio' },
+  'tortilha_integral': { kcal: 230, protein: 8, carbs: 42, fat: 4, fiber: 5, portion: 60, unitLabel: '1 unidade (60g)', gramsPerUnit: 60, source: 'Rótulo médio' },
   // Cereais
   'aveia': { kcal: 389, protein: 16.9, carbs: 66, fat: 6.9, fiber: 10.6, portion: 40, unitLabel: '40 g' },
   'granola_sem_acucar': { kcal: 430, protein: 11, carbs: 58, fat: 18, fiber: 6, portion: 30, unitLabel: '30 g' },
@@ -194,8 +194,8 @@ var FOOD_OVERRIDES = {
   'tapioca': { kcal: 240, protein: 0.5, carbs: 60, fat: 0, fiber: 0.3, portion: 60, unitLabel: '60 g' },
   'cereal_de_milho_sem_acucar': { kcal: 360, protein: 7, carbs: 80, fat: 1, fiber: 1.5, portion: 30, unitLabel: '30 g' },
   // Leguminosas (carbo)
-  'feijao_cozido': { kcal: 76, protein: 4.8, carbs: 13.6, fat: 0.5, fiber: 8.5, portion: 100, unitLabel: '100 g' },
-  'feijao_carioca_cozido': { kcal: 76, protein: 4.8, carbs: 13.6, fat: 0.5, fiber: 8.5, portion: 100, unitLabel: '100 g' },
+  'feijao_cozido': { kcal: 76, protein: 4.8, carbs: 13.6, fat: 0.5, fiber: 8.5, portion: 100, unitLabel: '100 g', source: 'TACO 38' },
+  'feijao_carioca_cozido': { kcal: 76, protein: 4.8, carbs: 13.6, fat: 0.5, fiber: 8.5, portion: 100, unitLabel: '100 g', source: 'TACO 38' },
   'ervilha_cozida': { kcal: 84, protein: 5.4, carbs: 15, fat: 0.4, fiber: 5.5, portion: 100, unitLabel: '100 g' },
   'lentilha_cozida_carbo': { kcal: 116, protein: 9, carbs: 20, fat: 0.4, fiber: 8, portion: 100, unitLabel: '100 g' },
   'grao_de_bico_cozido_carbo': { kcal: 164, protein: 9, carbs: 27, fat: 2.6, fiber: 7.6, portion: 100, unitLabel: '100 g' },
@@ -209,7 +209,7 @@ var FOOD_OVERRIDES = {
   'tamara_seca': { kcal: 282, protein: 2.5, carbs: 75, fat: 0.4, fiber: 8, portion: 30, unitLabel: '3 unidades' },
   'tamara_seca_fruta': { kcal: 282, protein: 2.5, carbs: 75, fat: 0.4, fiber: 8, portion: 30, unitLabel: '3 unidades' },
   // Frutas sem diacrítico
-  'maca': { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, portion: 130, unitLabel: '1 un média' },
+  'maca': { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, portion: 130, unitLabel: '1 un média', source: 'TACO' },
   'frutas_vermelhas': { kcal: 50, protein: 0.8, carbs: 12, fat: 0.4, fiber: 4.2, portion: 140, unitLabel: '140 g', tags: ['baixo_ig'] },
   'morango': { kcal: 32, protein: 0.7, carbs: 7.7, fat: 0.3, fiber: 2, portion: 140, unitLabel: '140 g', tags: ['baixo_ig'] },
   'kiwi': { kcal: 61, protein: 1.1, carbs: 15, fat: 0.5, fiber: 3, portion: 100, unitLabel: '1 unidade' },
@@ -294,11 +294,12 @@ function buildFood(groupKey, subgroupKey, name, index) {
     display_name_pt: name.replace(/\s+lac$/, '').replace(/\s+carbo$/, '').replace(/\s+fruta$/, ''),
     group_key: groupKey,
     subgroup_key: subgroupKey,
-    source: 'KRONIA premium seed; TACO/USDA adaptado',
+    source: override.source || 'KRONIA premium seed; TACO/USDA adaptado',
     source_code: 'kronia_' + normalized,
     brand_name: null,
     default_portion_g: override.portion || preset.portion,
     default_unit: override.unitLabel || ((override.portion || preset.portion) + ' ' + preset.unit),
+    grams_per_unit: override.gramsPerUnit || null,
     kcal_100g: round(kcal100, 1),
     protein_100g: round(protein100, 1),
     carbs_100g: round(override.carbs != null ? override.carbs : Math.max(0, preset.carbs + ((index % 6) - 2) * 1.4), 1),
