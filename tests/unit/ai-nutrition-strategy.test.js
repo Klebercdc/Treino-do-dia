@@ -379,7 +379,7 @@ test('visual prescription with AI strategy shows AI subtitle', () => {
   const visual = visualPrescription.buildVisualPrescription({ plan, calculation: {}, aiStrategy });
   assert.equal(
     visual.dashboard.subtitle,
-    'Estratégia gerada por IA e validada por cálculo nutricional.',
+    'Estratégia alimentar gerada por IA e validada por catálogo nutricional.',
     'Subtitle should reflect AI generation'
   );
   assert.ok(visual.aiGenerated === true, 'aiGenerated flag should be true');
