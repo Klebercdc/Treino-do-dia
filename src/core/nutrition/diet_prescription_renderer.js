@@ -6,6 +6,7 @@ var clinical = require('./diet_context_clinical');
 var strategyEngine = require('./diet_strategy_engine');
 var dietTemplates = require('../diet/dietTemplates');
 var validatedFoodSelector = require('./validatedFoodSelector');
+var nutritionRealityValidator = require('./nutritionRealityValidator');
 
 function round(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 0;
@@ -168,6 +169,26 @@ function cloneScaledMealItem(item, factor) {
   };
 }
 
+function cloneScaledMealItemFromOriginal(item, original, factor) {
+  var ratio = Math.max(0.45, Math.min(1.5, Number(factor || 1)));
+  return {
+    foodCode: item.foodCode,
+    nome: item.nome,
+    porcao: round(Number(original.gramas || 0) * ratio) + ' g',
+    gramas: round(Number(original.gramas || 0) * ratio),
+    calorias: round(Number(original.calorias || 0) * ratio),
+    proteinas: round(Number(original.proteinas || 0) * ratio, 1),
+    carboidratos: round(Number(original.carboidratos || 0) * ratio, 1),
+    gorduras: round(Number(original.gorduras || 0) * ratio, 1),
+    fibras: round(Number(item.fibras || 0) * ratio, 1),
+    source: item.source,
+    groupKey: item.groupKey || null,
+    subgroupKey: item.subgroupKey || null,
+    tags: item.tags || [],
+    substituicoes: item.substituicoes || []
+  };
+}
+
 function selectDistinctFood(listName, profile, index, excludedNames) {
   var excluded = (excludedNames || []).map(normalizeFreeText).filter(Boolean);
   var pool = (FOOD_LIBRARY[listName] || []).filter(function(food) {
@@ -203,7 +224,18 @@ function rebalanceMealItems(items, target, options) {
   var balanced = (items || []).slice();
   var settings = options || {};
 
-  for (var pass = 0; pass < 4; pass += 1) {
+  // Snapshot original values before scaling to prevent compounding across passes
+  var originals = balanced.map(function(item) {
+    return {
+      gramas: Number(item.gramas || 0),
+      proteinas: Number(item.proteinas || 0),
+      carboidratos: Number(item.carboidratos || 0),
+      gorduras: Number(item.gorduras || 0),
+      calorias: Number(item.calorias || 0)
+    };
+  });
+
+  for (var pass = 0; pass < 2; pass += 1) {
     var subtotal = sumMeal(balanced);
     var proteinGap = round(Number(target.protein || 0) - subtotal.protein, 1);
     var carbGap = round(Number(target.carbs || 0) - subtotal.carbs, 1);
@@ -216,27 +248,36 @@ function rebalanceMealItems(items, target, options) {
     if (Math.abs(proteinGap) > 2) {
       var proteinIndex = selectAdjustableItemIndex(balanced, 'proteinas', { excludeVeggies: true });
       if (proteinIndex >= 0) {
-        var proteinItem = balanced[proteinIndex];
-        var proteinFactor = (Number(proteinItem.proteinas || 0) + proteinGap) / Math.max(Number(proteinItem.proteinas || 1), 1);
-        balanced[proteinIndex] = cloneScaledMealItem(proteinItem, proteinFactor);
+        var orig = originals[proteinIndex];
+        if (orig.proteinas > 0) {
+          var desired = Number(balanced[proteinIndex].proteinas) + proteinGap;
+          var factor = Math.max(0.45, Math.min(1.5, desired / orig.proteinas));
+          balanced[proteinIndex] = cloneScaledMealItemFromOriginal(balanced[proteinIndex], orig, factor);
+        }
       }
     }
 
     if (Math.abs(carbGap) > 4) {
       var carbIndex = selectAdjustableItemIndex(balanced, 'carboidratos', { excludeVeggies: true });
       if (carbIndex >= 0) {
-        var carbItem = balanced[carbIndex];
-        var carbFactor = (Number(carbItem.carboidratos || 0) + carbGap) / Math.max(Number(carbItem.carboidratos || 1), 1);
-        balanced[carbIndex] = cloneScaledMealItem(carbItem, carbFactor);
+        var origC = originals[carbIndex];
+        if (origC.carboidratos > 0) {
+          var desiredC = Number(balanced[carbIndex].carboidratos) + carbGap;
+          var factorC = Math.max(0.45, Math.min(1.5, desiredC / origC.carboidratos));
+          balanced[carbIndex] = cloneScaledMealItemFromOriginal(balanced[carbIndex], origC, factorC);
+        }
       }
     }
 
     if (!settings.isWorkoutMeal && Math.abs(fatGap) > 1.5) {
       var fatIndex = selectAdjustableItemIndex(balanced, 'gorduras', { excludeVeggies: true, excludeWorkoutFat: false });
       if (fatIndex >= 0) {
-        var fatItem = balanced[fatIndex];
-        var fatFactor = (Number(fatItem.gorduras || 0) + fatGap) / Math.max(Number(fatItem.gorduras || 1), 1);
-        balanced[fatIndex] = cloneScaledMealItem(fatItem, fatFactor);
+        var origF = originals[fatIndex];
+        if (origF.gorduras > 0) {
+          var desiredF = Number(balanced[fatIndex].gorduras) + fatGap;
+          var factorF = Math.max(0.45, Math.min(1.5, desiredF / origF.gorduras));
+          balanced[fatIndex] = cloneScaledMealItemFromOriginal(balanced[fatIndex], origF, factorF);
+        }
       }
     }
   }
@@ -920,6 +961,16 @@ function buildNutritionPrescription(strategy) {
   // Condition-based clinical notes (user-selected healthConditions)
   var conditionResult = buildConditionClinicalNotes(calc.profile);
   clinicalNotes = clinicalNotes.concat(conditionResult.notes);
+  var realityCheck = nutritionRealityValidator.validatePlan(plan);
+  if (realityCheck.warnings && realityCheck.warnings.length && process.env.NODE_ENV === 'development') {
+    console.warn('[NUTRITION_REALITY_VALIDATOR] Plan warnings:', realityCheck.warnings.join(' | '));
+  }
+
+  var integrityIssues = nutritionRealityValidator.assertPlanIntegrity(plan);
+  if (integrityIssues && integrityIssues.length && process.env.NODE_ENV === 'development') {
+    console.warn('[NUTRITION_INTEGRITY] Issues:', integrityIssues.join(' | '));
+  }
+
   var visual = visualPrescription.buildVisualPrescription({
     plan: plan,
     calculation: {
@@ -934,7 +985,8 @@ function buildNutritionPrescription(strategy) {
       objective: calc.result.objective
     },
     clinicalNotes: clinicalNotes,
-    aiStrategy: aiStrategy
+    aiStrategy: aiStrategy,
+    aiBlueprint: aiBlueprint
   });
   plan.visualPrescription = visual;
   var templateClinicalAlerts = dietTemplates.clinicalFlags(calc.profile || {}).length
@@ -992,6 +1044,11 @@ function buildNutritionPrescription(strategy) {
       ? { aplicados: conditionAdjustments, alerta: 'A dieta não substitui acompanhamento com nutricionista ou médico.' }
       : null,
     clinicalPromptBlock: clinicalPromptBlock,
+    realityValidation: {
+      valid: realityCheck.valid,
+      warnings: realityCheck.warnings,
+      integrityIssues: integrityIssues
+    }
   };
 }
 

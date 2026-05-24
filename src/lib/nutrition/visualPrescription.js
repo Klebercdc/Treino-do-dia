@@ -170,6 +170,9 @@ function buildVisualPrescription(input) {
   var calculation = safe.calculation && typeof safe.calculation === 'object' ? safe.calculation : {};
   var meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
   var aiStrategy = safe.aiStrategy && safe.aiStrategy._aiGenerated ? safe.aiStrategy : null;
+  var aiBlueprint = safe.aiBlueprint && safe.aiBlueprint.aiGenerated ? safe.aiBlueprint : null;
+  var aiActive = !!(aiBlueprint || aiStrategy || plan.aiGenerated);
+  var isFallback = !aiActive || (plan.fallbackEngine === true);
 
   if (!meals.length) {
     return clone(DEFAULT_VISUAL_PRESCRIPTION);
@@ -188,13 +191,22 @@ function buildVisualPrescription(input) {
     };
   });
 
-  var subtitle = aiStrategy
-    ? 'Estratégia gerada por IA e validada por cálculo nutricional.'
+  var subtitle = aiActive
+    ? 'Estratégia alimentar gerada por IA e validada por catálogo nutricional.'
     : 'Resumo do dia com refeições práticas e aderentes à rotina.';
 
-  var observation = aiStrategy
-    ? ('Plano personalizado com estratégia de IA (' + aiStrategy.strategyType + '). Macros validados pela engine nutricional com fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.')
-    : 'Plano nutricional gerado pela engine Kronia. Fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.';
+  var strategyLabel = aiBlueprint
+    ? aiBlueprint.strategyName
+    : (aiStrategy && aiStrategy.strategyType ? aiStrategy.strategyType : null);
+
+  var observation;
+  if (isFallback) {
+    observation = 'Plano nutricional gerado pela engine Kronia (fallback). Fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.';
+  } else if (strategyLabel) {
+    observation = 'IA estratégica: ativa | Catálogo: validado | Cálculo: recalculado por item | Fallback: não. Estratégia: ' + strategyLabel + '. Fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.';
+  } else {
+    observation = 'IA estratégica: ativa | Catálogo: validado | Cálculo: recalculado por item | Fallback: não. Fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.';
+  }
 
   return {
     version: 'v1',
@@ -214,7 +226,9 @@ function buildVisualPrescription(input) {
     guidance: clone(DEFAULT_VISUAL_PRESCRIPTION.guidance),
     reasons: buildReasons(plan.objetivo || calculation.objective, safe.clinicalNotes),
     observation: observation,
-    aiGenerated: !!aiStrategy
+    aiGenerated: aiActive,
+    fallbackEngine: isFallback,
+    strategyName: strategyLabel || null
   };
 }
 
