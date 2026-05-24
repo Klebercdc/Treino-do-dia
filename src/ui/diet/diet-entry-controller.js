@@ -223,6 +223,26 @@
     }
   }
 
+  function purgeLegacyWizard() {
+    hideLegacyScreens();
+  }
+
+  async function openDietAnamneseFirstFlow(context) {
+    return openAnamneseFirst(context);
+  }
+
+  async function loadDietWizardAssets() {
+    return loadWizard();
+  }
+
+  async function generateDietAfterAnamnese(profileData, context) {
+    return callDietGenerator(profileData, context);
+  }
+
+  function openDietGenerationFlow(context) {
+    return openDietAnamneseFirstFlow(context);
+  }
+
   async function openDietEntry(context) {
     hideLegacyScreens();
 

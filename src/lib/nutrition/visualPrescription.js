@@ -169,6 +169,7 @@ function buildVisualPrescription(input) {
   var plan = safe.plan && typeof safe.plan === 'object' ? safe.plan : {};
   var calculation = safe.calculation && typeof safe.calculation === 'object' ? safe.calculation : {};
   var meals = Array.isArray(plan.refeicoes) ? plan.refeicoes : [];
+  var aiStrategy = safe.aiStrategy && safe.aiStrategy._aiGenerated ? safe.aiStrategy : null;
 
   if (!meals.length) {
     return clone(DEFAULT_VISUAL_PRESCRIPTION);
@@ -177,19 +178,29 @@ function buildVisualPrescription(input) {
   var resumo = plan.resumoDiario && typeof plan.resumoDiario === 'object' ? plan.resumoDiario : {};
   var visualMeals = meals.map(function(meal) {
     var subtotal = meal && meal.subtotal && typeof meal.subtotal === 'object' ? meal.subtotal : sumMacros(meal && meal.itens);
+    var kcal = round(subtotal.calorias || subtotal.kcal || 0);
     return {
       name: String(meal && meal.nome || 'Refeição').trim(),
       time: String(meal && meal.horario || '').trim(),
-      kcal_estimada: round(subtotal.calorias || subtotal.kcal || 0),
+      kcal_real: kcal,
+      kcal_estimada: kcal,
       items: (meal && meal.itens || []).map(itemToVisualLine).filter(Boolean)
     };
   });
+
+  var subtitle = aiStrategy
+    ? 'Estratégia gerada por IA e validada por cálculo nutricional.'
+    : 'Resumo do dia com refeições práticas e aderentes à rotina.';
+
+  var observation = aiStrategy
+    ? ('Plano personalizado com estratégia de IA (' + aiStrategy.strategyType + '). Macros validados pela engine nutricional com fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.')
+    : 'Plano nutricional gerado pela engine Kronia. Fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.';
 
   return {
     version: 'v1',
     dashboard: {
       title: 'Plano alimentar KRONIA',
-      subtitle: 'Resumo do dia com refeições práticas e aderentes à rotina.'
+      subtitle: subtitle
     },
     summary: {
       kcal_total: round(resumo.calorias || calculation.targetCalories || 0),
@@ -202,7 +213,8 @@ function buildVisualPrescription(input) {
     sequence: clone(DEFAULT_VISUAL_PRESCRIPTION.sequence),
     guidance: clone(DEFAULT_VISUAL_PRESCRIPTION.guidance),
     reasons: buildReasons(plan.objetivo || calculation.objective, safe.clinicalNotes),
-    observation: DEFAULT_VISUAL_PRESCRIPTION.observation
+    observation: observation,
+    aiGenerated: !!aiStrategy
   };
 }
 

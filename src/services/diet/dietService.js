@@ -389,8 +389,42 @@ async function generateDiet(payload) {
   }
 }
 
+async function _enrichWithAIStrategy(normalizedInput) {
+  try {
+    const aiLayer = require('../../core/nutrition/ai_nutrition_strategy_layer');
+    const adaptiveMemory = normalizedInput.adaptivePersonalization && normalizedInput.adaptivePersonalization.memory
+      ? normalizedInput.adaptivePersonalization.memory
+      : {};
+    const aiStrategy = await aiLayer.buildAIStrategy({
+      profile: normalizedInput,
+      clinicalContext: normalizedInput.clinicalData,
+      trainingContext: normalizedInput.contextoTreino,
+      adherenceContext: normalizedInput.aderencia,
+      adaptiveMemory,
+    });
+    if (aiStrategy) {
+      normalizedInput.aiNutritionStrategy = aiStrategy;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AI_NUTRITION_STRATEGY] Strategy applied to plan:', aiStrategy.strategyType);
+      }
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[DIET_FALLBACK_ENGINE] AI strategy not available — using engine defaults.');
+      }
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[DIET_FALLBACK_ENGINE] AI strategy enrichment error:', err && err.message);
+    }
+  }
+}
+
 async function execute(action, payload) {
   const normalizedInput = normalizeDietPayload(payload);
+
+  if (action === 'GENERATE_DIET' || action === 'ADJUST_DIET') {
+    await _enrichWithAIStrategy(normalizedInput);
+  }
 
   try {
     switch (action) {

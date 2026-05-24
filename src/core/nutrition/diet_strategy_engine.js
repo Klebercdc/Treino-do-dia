@@ -234,7 +234,8 @@ function buildNutritionProfile(input) {
     nutritionGoals: unifiedContext.goals || null,
     labContext: clinical.buildLabContext(unifiedContext.labs),
     clinicalData: clinicalDataRaw ? Object.assign({}, clinicalDataRaw, { flags: conditionFlags }) : { healthConditions: [], flags: conditionFlags },
-    contextoNutricional: unifiedContext
+    contextoNutricional: unifiedContext,
+    aiNutritionStrategy: safeInput.aiNutritionStrategy || null,
   };
 }
 
