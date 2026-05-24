@@ -1,0 +1,169 @@
+/* ============================================================
+   KRONIA MOTION SYSTEM v2.0
+   Regra absoluta: apenas transform e opacity.
+   ============================================================ */
+
+/* — Z-index Architecture —
+   100   base content
+   500   cards
+   1000  overlays
+   2000  modals
+   3000  toasts
+   4000  AI overlays (KRONOS)
+*/
+
+/* — Motion Tokens — */
+
+:root {
+  --k-motion-fast:   180ms;
+  --k-motion-base:   240ms;
+  --k-motion-slow:   320ms;
+
+  --k-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --k-ease-soft:     cubic-bezier(0.16, 1, 0.3,  1);
+}
+
+/* — Keyframes — */
+
+@keyframes k-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes k-fade-in-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes k-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes k-pulse-glow {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes k-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* — GPU Hints (aplicar em todas as classes animadas) — */
+
+.k-fade-in,
+.k-fade-in-scale,
+.k-slide-up,
+.k-screen-enter,
+.k-thinking,
+.k-alert-glow,
+.k-skeleton,
+.k-spinner {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* — Utilitários — */
+
+@media (prefers-reduced-motion: no-preference) {
+
+  .k-fade-in {
+    animation: k-fade-in var(--k-motion-base) var(--k-ease-standard) forwards;
+  }
+
+  .k-fade-in-scale {
+    animation: k-fade-in-scale var(--k-motion-base) var(--k-ease-standard) forwards;
+  }
+
+  .k-slide-up {
+    animation: k-slide-up var(--k-motion-slow) var(--k-ease-soft) forwards;
+  }
+
+  .k-screen-enter {
+    animation: k-fade-in var(--k-motion-base) var(--k-ease-standard) forwards;
+  }
+
+  .k-thinking {
+    animation: k-pulse-glow 1.2s var(--k-ease-soft) infinite;
+  }
+
+  .k-spinner {
+    animation: k-spin 700ms linear infinite;
+  }
+
+  .k-skeleton {
+    animation: k-pulse-glow 1.5s var(--k-ease-soft) infinite;
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    border-radius: 6px;
+  }
+
+  .k-alert-glow {
+    animation: k-pulse-glow 2s var(--k-ease-soft) infinite;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  }
+
+  /* Stagger — máximo 6 filhos diretos */
+  .k-stagger > * {
+    opacity: 0;
+    animation: k-fade-in var(--k-motion-base) var(--k-ease-standard) forwards;
+  }
+  .k-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .k-stagger > *:nth-child(2) { animation-delay: 50ms; }
+  .k-stagger > *:nth-child(3) { animation-delay: 100ms; }
+  .k-stagger > *:nth-child(4) { animation-delay: 150ms; }
+  .k-stagger > *:nth-child(5) { animation-delay: 200ms; }
+  .k-stagger > *:nth-child(6) { animation-delay: 250ms; }
+
+  /* Touch feedback premium */
+  .k-pressable {
+    transition:
+      transform var(--k-motion-fast) var(--k-ease-standard),
+      opacity   var(--k-motion-fast) var(--k-ease-standard);
+    will-change: transform, opacity;
+  }
+
+  .k-pressable:active {
+    transform: scale(0.98);
+    opacity: 0.85;
+  }
+
+  /* Motion Priority System */
+  .k-motion-background {
+    /* loops contínuos — desativados em low-end */
+  }
+
+  .k-app-paused .k-motion-background {
+    animation-play-state: paused;
+  }
+
+}
+
+/* — View Transition API — future-proof, inativo — */
+/* TODO: ativar quando suporte cross-browser for estável
+::view-transition-old(root) { … }
+::view-transition-new(root) { … }
+*/
+
+/* — Low-end Device Governor — */
+
+.k-motion-reduced .k-motion-background {
+  animation: none !important;
+}
+
+.k-motion-reduced .k-stagger > * {
+  animation-delay: 0ms !important;
+}
+
+/* — Acessibilidade — incondicional — */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1      !important;
+    transition-duration:       0.01ms !important;
+  }
+}
