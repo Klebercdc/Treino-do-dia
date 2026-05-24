@@ -1,4 +1,29 @@
 /* ═══════════════════════════════════════════════════
+   KRONIA MOTION GOVERNOR v2.0
+═══════════════════════════════════════════════════ */
+(function() {
+  var lowEnd = false;
+
+  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) {
+    lowEnd = true;
+  }
+
+  if (navigator.deviceMemory && navigator.deviceMemory <= 2) {
+    lowEnd = true;
+  }
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    lowEnd = true;
+  }
+
+  window.__KRONIA_MOTION_LEVEL__ = lowEnd ? 'reduced' : 'full';
+
+  if (lowEnd) {
+    document.documentElement.classList.add('k-motion-reduced');
+  }
+})();
+
+/* ═══════════════════════════════════════════════════
    MODAL CUSTOMIZADO
 ═══════════════════════════════════════════════════ */
 window.KroniaUI = window.KroniaUI || {};
@@ -79,9 +104,46 @@ function scheduleKroniaUIUnblock(reason) {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() { scheduleKroniaUIUnblock('domcontentloaded'); }, { once: true });
+  document.addEventListener('DOMContentLoaded', function() {
+    scheduleKroniaUIUnblock('domcontentloaded');
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        document.documentElement.classList.add('k-app-paused');
+      } else {
+        document.documentElement.classList.remove('k-app-paused');
+      }
+    });
+  }, { once: true });
 } else {
   scheduleKroniaUIUnblock('boot');
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      document.documentElement.classList.add('k-app-paused');
+    } else {
+      document.documentElement.classList.remove('k-app-paused');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   SKELETON LOADERS — Kronia Motion v2.0
+═══════════════════════════════════════════════════ */
+function showSkeletons(container, count, height) {
+  if (!container) return;
+  count = count || 3;
+  height = height || '72px';
+  container.innerHTML = '';
+  for (var i = 0; i < count; i++) {
+    var el = document.createElement('div');
+    el.className = 'k-skeleton k-motion-background';
+    el.style.cssText = 'height: ' + height + '; margin-bottom: 12px;';
+    container.appendChild(el);
+  }
+}
+
+function hideSkeletons(container) {
+  if (!container) return;
+  container.innerHTML = '';
 }
 
 function _showEl(id) {
@@ -3978,11 +4040,15 @@ function addAIMessage(role, text, isThinking = false) {
     if (isThinking) {
       div.id = "aiThinking";
       div.innerHTML = `${avatarSVG}<div class="ai-avatar-inner"><div class="ai-bubble thinking"><div class="ai-dots"><span></span><span></span><span></span></div></div></div>`;
+      const kronosAvatar = div.querySelector('.kronos-reactor-avatar');
+      if (kronosAvatar) kronosAvatar.classList.add('k-thinking', 'k-motion-background');
     } else {
       div.innerHTML = `${avatarSVG}<div class="ai-avatar-inner"><div class="ai-bubble">${renderMarkdown(text)}</div><div class="ai-msg-time">${now}</div></div>`;
+      requestAnimationFrame(function() { div.classList.add('k-fade-in'); });
     }
   } else {
     div.innerHTML = `<div class="ai-bubble">${renderMarkdown(text)}</div><div class="ai-msg-time">${now}</div>`;
+    requestAnimationFrame(function() { div.classList.add('k-fade-in'); });
   }
 
   container.appendChild(div);
@@ -5744,15 +5810,19 @@ async function loadKroniaInsights() {
   if (_insightsLoading || (now - _insightsLastLoaded < INSIGHTS_CACHE_TTL)) return;
   _insightsLoading = true;
 
+  showSkeletons(container, 3, '72px');
+
   try {
     var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
     var resp = await fetch('/api/system?__route=insights', { headers, cache: 'no-store' });
+    hideSkeletons(container);
     if (!resp.ok) { _renderInsightsEmpty(container); return; }
     var data = await resp.json();
     var insights = Array.isArray(data && data.insights) ? data.insights : [];
     _insightsLastLoaded = Date.now();
     _renderInsights(container, insights);
   } catch (e) {
+    hideSkeletons(container);
     _renderInsightsEmpty(container);
   } finally {
     _insightsLoading = false;
@@ -5785,6 +5855,8 @@ function _renderInsights(container, insights) {
   }).join('');
 
   container.innerHTML = html;
+  container.classList.remove('k-fade-in');
+  requestAnimationFrame(function() { container.classList.add('k-fade-in'); });
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
     try { lucide.createIcons({ nodes: container.querySelectorAll('[data-lucide]') }); } catch (e) {}
   }
@@ -8890,7 +8962,7 @@ function renderDietMealPreviewsSection(vm) {
     + '<button type="button" class="diet-ver-horarios-btn" onclick="openDietCorePanel(\'minha-dieta\')">'
     + '<i data-lucide="calendar" width="13" height="13"></i>Ver por horários</button>'
     + '</div>'
-    + mealCards
+    + '<div class="k-stagger">' + mealCards + '</div>'
     + '</section>';
 }
 
@@ -15686,8 +15758,9 @@ function runBreathPhase(phaseIdx, cycle) {
   document.getElementById('breathPhase').textContent  = phase.label;
   document.getElementById('breathCycles').textContent = `Ciclo ${cycle} de 5`;
   circle.classList.remove('expand','contract');
-  void circle.offsetWidth;
-  circle.classList.add(phase.expand ? 'expand' : 'contract');
+  requestAnimationFrame(() => {
+    circle.classList.add(phase.expand ? 'expand' : 'contract');
+  });
   let t = phase.dur;
   document.getElementById('breathCount').textContent = t;
   clearInterval(_breathTick);
