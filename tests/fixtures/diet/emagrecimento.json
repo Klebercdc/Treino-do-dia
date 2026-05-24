@@ -1,0 +1,22 @@
+{
+  "objetivo": "emagrecimento",
+  "sexo": "feminino",
+  "idade": 35,
+  "peso": 72,
+  "altura": 165,
+  "nivelAtividade": "moderado",
+  "refeicoesPorDia": 4,
+  "restricoes": [],
+  "preferencias": ["salada", "frango", "ovo"],
+  "alimentosEvitar": ["fritura"],
+  "contextoTreino": {
+    "hasTraining": true,
+    "modalidades": ["caminhada", "funcional"],
+    "fadiga": 4
+  },
+  "clinicalData": {
+    "flags": {},
+    "healthConditions": []
+  },
+  "_scenario": "Usuária com objetivo de emagrecimento, atividade moderada"
+}

@@ -1,0 +1,23 @@
+{
+  "objetivo": "hipertrofia",
+  "sexo": "masculino",
+  "idade": 28,
+  "peso": 80,
+  "altura": 178,
+  "nivelAtividade": "ativo",
+  "refeicoesPorDia": 5,
+  "restricoes": [],
+  "preferencias": ["frango", "arroz", "ovo"],
+  "alimentosEvitar": [],
+  "contextoTreino": {
+    "hasTraining": true,
+    "modalidades": ["musculação"],
+    "horarioTreino": "manha",
+    "fadiga": 3
+  },
+  "clinicalData": {
+    "flags": {},
+    "healthConditions": []
+  },
+  "_scenario": "Usuário com objetivo de hipertrofia, treino de manhã, sem restrições clínicas"
+}

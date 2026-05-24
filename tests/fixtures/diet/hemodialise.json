@@ -1,0 +1,24 @@
+{
+  "objetivo": "manutencao",
+  "sexo": "masculino",
+  "idade": 55,
+  "peso": 70,
+  "altura": 170,
+  "nivelAtividade": "sedentario",
+  "refeicoesPorDia": 4,
+  "restricoes": ["baixo potassio", "baixo fosforo", "baixo sodio"],
+  "preferencias": ["arroz", "frango"],
+  "alimentosEvitar": ["banana", "abacate", "batata-doce", "tomate", "laranja"],
+  "contextoTreino": {
+    "hasTraining": false,
+    "modalidades": [],
+    "fadiga": 7
+  },
+  "clinicalData": {
+    "flags": {
+      "hasDoencaRenal": true
+    },
+    "healthConditions": ["Doença Renal Crônica / Hemodiálise"]
+  },
+  "_scenario": "Paciente em hemodiálise — prioridade clínica máxima, controle de potássio e fósforo"
+}

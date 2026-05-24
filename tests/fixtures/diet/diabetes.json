@@ -1,0 +1,24 @@
+{
+  "objetivo": "manutencao",
+  "sexo": "feminino",
+  "idade": 48,
+  "peso": 75,
+  "altura": 162,
+  "nivelAtividade": "leve",
+  "refeicoesPorDia": 5,
+  "restricoes": ["baixo indice glicemico"],
+  "preferencias": ["peixe", "legumes", "arroz integral"],
+  "alimentosEvitar": ["açúcar", "farinha branca", "refrigerante"],
+  "contextoTreino": {
+    "hasTraining": false,
+    "modalidades": ["caminhada"],
+    "fadiga": 5
+  },
+  "clinicalData": {
+    "flags": {
+      "hasDiabetes": true
+    },
+    "healthConditions": ["Diabetes"]
+  },
+  "_scenario": "Paciente diabética — prioridade clínica, controle glicêmico obrigatório"
+}

@@ -110,6 +110,12 @@ function sumMacros(items) {
   }, { kcal: 0, proteina: 0, carbo: 0, gordura: 0 });
 }
 
+function safeNumStr(value, decimals) {
+  var n = Number(value);
+  if (!isFinite(n)) return '—';
+  return decimals != null ? n.toFixed(decimals) : String(Math.round(n));
+}
+
 function itemToVisualLine(item) {
   var safe = item && typeof item === 'object' ? item : {};
   var name = String(safe.nome || safe.name || 'Alimento').trim();
@@ -179,21 +185,42 @@ function buildVisualPrescription(input) {
   }
 
   var resumo = plan.resumoDiario && typeof plan.resumoDiario === 'object' ? plan.resumoDiario : {};
+  var productionReadiness = plan.productionReadiness || {};
+  var nutritionConfidence = plan.nutritionConfidence || {};
+  var premiumValidation = plan.premiumValidation || {};
+  // Only treat as "not ready" when productionReadiness is explicitly set with ready=false
+  var hasProductionGate = plan.productionReadiness != null;
+  var productionReady = !hasProductionGate || productionReadiness.ready === true;
+
   var visualMeals = meals.map(function(meal) {
     var subtotal = meal && meal.subtotal && typeof meal.subtotal === 'object' ? meal.subtotal : sumMacros(meal && meal.itens);
     var kcal = round(subtotal.calorias || subtotal.kcal || 0);
+    var safeItems = (meal && meal.itens || []).map(function(item) {
+      // Never render NaN or undefined in visible fields
+      if (!item) return null;
+      var name = String(item.nome || item.name || 'Alimento').trim();
+      var portion = String(item.porcao || item.quantity || item.qtde || '').trim();
+      // Replace any "estimativa proporcional" in visible portion label
+      portion = portion.replace(/estimativa\s+proporcional/gi, '').trim();
+      return portion ? (name + ' - ' + portion) : name;
+    }).filter(Boolean);
     return {
       name: String(meal && meal.nome || 'Refeição').trim(),
       time: String(meal && meal.horario || '').trim(),
       kcal_real: kcal,
       kcal_estimada: kcal,
-      items: (meal && meal.itens || []).map(itemToVisualLine).filter(Boolean)
+      items: safeItems
     };
   });
 
   var subtitle = aiActive
     ? 'Estratégia alimentar gerada por IA e validada por catálogo nutricional.'
     : 'Resumo do dia com refeições práticas e aderentes à rotina.';
+
+  // Override subtitle if plan is under review
+  if (!productionReady) {
+    subtitle = '[PLANO EM REVISÃO TÉCNICA] Macros são aproximados. Estratégia em processo de validação.';
+  }
 
   var strategyLabel = aiBlueprint
     ? aiBlueprint.strategyName
@@ -207,6 +234,38 @@ function buildVisualPrescription(input) {
   } else {
     observation = 'IA estratégica: ativa | Catálogo: validado | Cálculo: recalculado por item | Fallback: não. Fontes: TACO, USDA, TBCA, OpenFoodFacts e PremiumCatalog.';
   }
+
+  // Count repaired/substituted items for note
+  var repairedCount = 0;
+  meals.forEach(function(meal) {
+    (meal && meal.itens || []).forEach(function(item) {
+      if (item && (item.semanticStatus === 'repaired' || item.semanticStatus === 'substituted')) repairedCount++;
+    });
+  });
+
+  // Production footer (always present)
+  var productionFooter = 'Estratégia alimentar gerada pelo KroniA e validada por catálogo nutricional.';
+
+  // Technical block (shown in production mode)
+  var semanticValidation = premiumValidation.semanticValidation;
+  var confidenceScore = nutritionConfidence.score;
+  var confidenceLevel = nutritionConfidence.level;
+
+  var semanticLabel = semanticValidation === true
+    ? (repairedCount > 0 ? repairedCount + ' item(s) ajustado(s)' : 'aprovada')
+    : 'pendente';
+  var confidenceLabel = confidenceLevel === 'high' ? 'alta' : (confidenceLevel === 'medium' ? 'média' : 'baixa');
+  var modeLabel = productionReady ? 'aprovado' : 'em revisão';
+
+  var technicalBlock = [
+    'Validação semântica: ' + semanticLabel + '.',
+    'Confiança nutricional: ' + confidenceLabel + ' [score: ' + safeNumStr(confidenceScore) + '/100].',
+    'Modo produção: ' + modeLabel + '.'
+  ].join(' ');
+
+  var repairedNote = repairedCount > 0
+    ? ('Nota: ' + repairedCount + ' alimento(s) foram ajustados automaticamente para manter coerência nutricional.')
+    : null;
 
   return {
     version: 'v1',
@@ -228,7 +287,11 @@ function buildVisualPrescription(input) {
     observation: observation,
     aiGenerated: aiActive,
     fallbackEngine: isFallback,
-    strategyName: strategyLabel || null
+    strategyName: strategyLabel || null,
+    productionFooter: productionFooter,
+    technicalBlock: technicalBlock,
+    repairedNote: repairedNote,
+    productionReady: productionReady
   };
 }
 

@@ -1,0 +1,4 @@
+{
+  "objetivo": "emagrecimento",
+  "_scenario": "Dados mínimos — campos críticos ausentes, deve ativar fallback seguro"
+}
