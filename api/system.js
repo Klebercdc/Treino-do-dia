@@ -4,6 +4,80 @@ var rl   = require('../src/server/apihelpers/_ratelimit');
 var plans = require('../src/server/apihelpers/_plans');
 var kroniaLabsHandler = require('./kronia-labs');
 
+// ─── KRONOS INTELLIGENCE INSIGHTS ─────────────────────────────────────────────
+async function handleInsights(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ success: false, error: 'Method not allowed' });
+  auth.requireAuth(req, res, async function(user) {
+    try {
+      var uid = user.id;
+      var supabaseUrl = SUPABASE_URL;
+      var serviceKey = process.env.SUPABASE_SERVICE_KEY
+        || process.env.SUPABASE_SERVICE_ROLE_KEY
+        || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+        || '';
+      var sbHeaders = {
+        'apikey': serviceKey,
+        'Authorization': 'Bearer ' + serviceKey,
+        'Content-Type': 'application/json'
+      };
+
+      var [metricsResp, fadigaResp, goalsResp] = await Promise.all([
+        fetch(supabaseUrl + '/rest/v1/body_metrics?user_id=eq.' + uid + '&select=weight_kg,body_fat_percent,measured_at&order=measured_at.desc&limit=5', { headers: sbHeaders }),
+        fetch(supabaseUrl + '/rest/v1/fadiga_scores?user_id=eq.' + uid + '&select=score,notas,created_at&order=created_at.desc&limit=3', { headers: sbHeaders }),
+        fetch(supabaseUrl + '/rest/v1/nutrition_goals?user_id=eq.' + uid + '&select=calories_target,protein_g,carbs_g,fat_g&order=updated_at.desc&limit=1', { headers: sbHeaders })
+      ]);
+
+      var metrics = metricsResp.ok ? await metricsResp.json().catch(function() { return []; }) : [];
+      var fadiga  = fadigaResp.ok  ? await fadigaResp.json().catch(function() { return []; })  : [];
+      var goals   = goalsResp.ok   ? await goalsResp.json().catch(function() { return []; })   : [];
+
+      var apiKey = process.env.ANTHROPIC_API_KEY || '';
+      if (!apiKey) return res.status(200).json({ success: true, insights: [] });
+
+      var contextPrompt = 'Você é o KRONOS, AI coach clínico do Kronia.\n\nDados do usuário:\n' +
+        '- Métricas corporais: ' + JSON.stringify(metrics) + '\n' +
+        '- Fadiga recente: ' + JSON.stringify(fadiga) + '\n' +
+        '- Metas nutricionais: ' + JSON.stringify(goals[0] || null) + '\n\n' +
+        'Gere exatamente 3 insights clínicos personalizados. Responda APENAS com um JSON array:\n' +
+        '[{"type":"recommendation","title":"título (max 40 chars)","description":"descrição acionável (max 120 chars)","impact":"Alto","domain":"treino","suggested_action":"ação específica (max 80 chars)"}]\n\n' +
+        'type: "recommendation" | "warning" | "alert" | "achievement"\n' +
+        'impact: "Alto" | "Médio" | "Baixo"\n' +
+        'domain: "treino" | "nutrição" | "saúde" | "recuperação"\n\n' +
+        'Se não houver dados suficientes, gere insights gerais de fitness de alta qualidade. Responda APENAS com o JSON array.';
+
+      var claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 800,
+          messages: [{ role: 'user', content: contextPrompt }]
+        })
+      });
+
+      if (!claudeResp.ok) return res.status(200).json({ success: true, insights: [] });
+
+      var claudeData = await claudeResp.json();
+      var text = (claudeData.content && claudeData.content[0] && claudeData.content[0].text) || '[]';
+      var insights = [];
+      try {
+        var match = text.match(/\[[\s\S]*\]/);
+        insights = match ? JSON.parse(match[0]) : [];
+        if (!Array.isArray(insights)) insights = [];
+      } catch (e) { insights = []; }
+
+      return res.status(200).json({ success: true, insights: insights.slice(0, 5) });
+    } catch (err) {
+      console.error('[insights] erro:', err && err.message ? err.message : String(err));
+      return res.status(200).json({ success: true, insights: [] });
+    }
+  });
+}
+
 // ─── KRONOS AGENT ─────────────────────────────────────────────────────────────
 async function handleKronos(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -247,6 +321,8 @@ module.exports = function(req, res) {
       return kroniaLabsHandler.handleReportById(req, res);
     case 'kronos':
       return handleKronos(req, res);
+    case 'insights':
+      return handleInsights(req, res);
     default:
       return res.status(404).json({ error: 'rota não encontrada' });
   }
