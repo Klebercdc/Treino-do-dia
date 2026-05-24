@@ -5553,6 +5553,8 @@ function openHome() {
     try { updateHomeScreen(); } catch(e) { console.error('[openHome] updateHomeScreen falhou:', e); }
     schedulePendingConversationIntentConsumption('home_open');
   });
+  // Carrega insights em paralelo (não bloqueia render)
+  loadKroniaInsights();
 }
 function closeHome() {
   document.getElementById("homeScreen").classList.remove("show");
@@ -5726,6 +5728,71 @@ function updateHomeScreen() {
     const footerEl = document.querySelector('.footer-actions');
     if (footerEl) footerEl.style.display = '';
   }
+}
+
+// ─── KRONOS INTELLIGENCE INSIGHTS ────────────────────────────────────────────
+var _insightsLoading = false;
+var _insightsLastLoaded = 0;
+var INSIGHTS_CACHE_TTL = 10 * 60 * 1000; // 10 min
+
+async function loadKroniaInsights() {
+  const container = document.getElementById('kronosInsightsList');
+  if (!container) return;
+
+  // Throttle: não recarrega dentro do TTL
+  const now = Date.now();
+  if (_insightsLoading || (now - _insightsLastLoaded < INSIGHTS_CACHE_TTL)) return;
+  _insightsLoading = true;
+
+  try {
+    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
+    var resp = await fetch('/api/system?__route=insights', { headers, cache: 'no-store' });
+    if (!resp.ok) { _renderInsightsEmpty(container); return; }
+    var data = await resp.json();
+    var insights = Array.isArray(data && data.insights) ? data.insights : [];
+    _insightsLastLoaded = Date.now();
+    _renderInsights(container, insights);
+  } catch (e) {
+    _renderInsightsEmpty(container);
+  } finally {
+    _insightsLoading = false;
+  }
+}
+
+function _renderInsights(container, insights) {
+  if (!insights || !insights.length) { _renderInsightsEmpty(container); return; }
+
+  var domainClass = { 'treino':'insight-domain-treino','nutrição':'insight-domain-nutrição','saúde':'insight-domain-saúde','recuperação':'insight-domain-recuperação' };
+  var impactClass = { 'Alto':'insight-impact-Alto','Médio':'insight-impact-Médio','Baixo':'insight-impact-Baixo' };
+  var typeIcon = { 'recommendation':'lightbulb','warning':'alert-triangle','alert':'bell','achievement':'star' };
+
+  var html = insights.map(function(ins) {
+    var domain = String(ins.domain || 'saúde').toLowerCase();
+    var impact = ins.impact || 'Médio';
+    var iconName = typeIcon[ins.type] || 'lightbulb';
+    var dCls = domainClass[domain] || 'insight-domain-saúde';
+    var iCls = impactClass[impact] || 'insight-impact-Médio';
+    return '<div class="insight-card">' +
+      '<div class="insight-card-head">' +
+        '<span class="insight-domain-badge ' + escapeHTML(dCls) + '">' + escapeHTML(domain) + '</span>' +
+        '<span class="insight-impact-dot ' + escapeHTML(iCls) + '" title="Impacto ' + escapeHTML(impact) + '"></span>' +
+        '<span class="insight-title">' + escapeHTML(String(ins.title || '')) + '</span>' +
+        '<i data-lucide="' + escapeHTML(iconName) + '" class="lucide" width="14" height="14" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>' +
+      '</div>' +
+      '<p class="insight-desc">' + escapeHTML(String(ins.description || '')) + '</p>' +
+      (ins.suggested_action ? '<div class="insight-action"><i data-lucide="arrow-right" class="lucide" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.5"></i>' + escapeHTML(String(ins.suggested_action)) + '</div>' : '') +
+    '</div>';
+  }).join('');
+
+  container.innerHTML = html;
+  if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+    try { lucide.createIcons({ nodes: container.querySelectorAll('[data-lucide]') }); } catch (e) {}
+  }
+}
+
+function _renderInsightsEmpty(container) {
+  if (!container) return;
+  container.innerHTML = '<div class="insight-empty">Sem insights disponíveis no momento.</div>';
 }
 
 function _updateConfigTreinoCard() {
