@@ -13,8 +13,7 @@
   ];
 
   var PROTECTED_IDS = [
-    'kroniaDietPlanVisualScreen',
-    'dietProfileWizardScreen'
+    'kroniaDietPlanVisualScreen'
   ];
 
   function isProtected(el) {
@@ -38,8 +37,6 @@
     document.querySelectorAll([
       '#kroniaDietPlanVisualScreen',
       '#kroniaDietPlanVisualScreen *',
-      '#dietProfileWizardScreen',
-      '#dietProfileWizardScreen *',
       '[data-diet-action="labs"]'
     ].join(',')).forEach(function (el) {
       el.style.pointerEvents = 'auto';

@@ -1,5 +1,5 @@
-const CACHE = 'kronia-v1-20260523-rebuild';
-const BUILD_VERSION = '20260523-rebuild-v1';
+const CACHE = 'kronia-diet-anamnese-first-20260524';
+const BUILD_VERSION = '20260524-diet-anamnese-first';
 
 const STATIC_ASSET_RE = /\.(?:css|js|png|jpg|jpeg|webp|svg|ico|json|woff2?)$/i;
 const STATIC_ALLOWLIST = [
@@ -76,6 +76,7 @@ self.addEventListener('sync', event => {
 
 function shouldBypass(requestUrl) {
   if (requestUrl.origin !== self.location.origin) return true;
+  if (requestUrl.pathname === '/api/kronia/exercises/details') return true;
   if (requestUrl.pathname.startsWith('/api/')) return true;
   if (/supabase|googleapis|gstatic|jsdelivr|cdnjs|unpkg|openai|anthropic/i.test(requestUrl.hostname)) return true;
   return false;
