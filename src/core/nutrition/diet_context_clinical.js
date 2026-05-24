@@ -109,9 +109,17 @@ function hasCriticalLabFlag(profile) {
 function shouldAvoidFoodForClinical(food, profile) {
   var name = normalizeFreeText(food && food.name);
   if (!name) return false;
-  if (hasClinicalFlag(profile, 'high_potassium') && /banana|abacate|batata-doce/.test(name)) return true;
+
+  // Lab-based flags (from biomarker results)
+  if (hasClinicalFlag(profile, 'high_potassium') && /banana|abacate|batata.doce/.test(name)) return true;
   if (hasClinicalFlag(profile, 'high_ldl') && /patinho/.test(name)) return true;
-  if ((hasClinicalFlag(profile, 'pre_diabetes') || hasClinicalFlag(profile, 'glycemic_risk')) && /mel/.test(name)) return true;
+  if ((hasClinicalFlag(profile, 'pre_diabetes') || hasClinicalFlag(profile, 'glycemic_risk')) && /\bmel\b|tapioca/.test(name)) return true;
+
+  // Condition-based flags (from user-declared healthConditions)
+  var condFlags = profile.clinicalData && profile.clinicalData.flags ? profile.clinicalData.flags : {};
+  if (condFlags.hasDoencaRenal && /banana|abacate|batata.doce/.test(name)) return true;
+  if ((condFlags.hasDiabetes || condFlags.hasDoencaRenal) && /\bmel\b|tapioca/.test(name)) return true;
+
   return false;
 }
 
