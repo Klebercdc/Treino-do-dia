@@ -97,12 +97,20 @@ export interface DietMeal {
   observacoes?: string
 }
 
+export interface DietAIMetadata {
+  aiGenerated: boolean
+  fallbackEngine: boolean
+  strategyName?: string
+  validationSource?: string
+}
+
 export interface DietPayload {
   titulo?: string
   objetivo?: string
   calorias?: string
   observacoesGerais?: string
   refeicoes: DietMeal[]
+  aiMetadata?: DietAIMetadata
 }
 
 export interface SupplementItem {

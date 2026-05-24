@@ -9,6 +9,34 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#039;")
 }
 
+function buildAIFooterHtml(payload: DietPayload): string {
+  const meta = payload.aiMetadata
+  if (!meta) return ""
+
+  const aiStatus = meta.aiGenerated
+    ? "Estratégia alimentar gerada por IA e validada por catálogo nutricional."
+    : "Plano gerado pelo motor nutricional (modo fallback)."
+
+  const rows = [
+    `<tr><td style="padding:3px 8px;color:#555;">IA estratégica</td><td style="padding:3px 8px;font-weight:600;">${meta.aiGenerated ? "ativa" : "inativa"}</td></tr>`,
+    `<tr><td style="padding:3px 8px;color:#555;">Validação nutricional</td><td style="padding:3px 8px;">${meta.validationSource ?? "premiumCatalog / TACO / USDA / TBCA"}</td></tr>`,
+    `<tr><td style="padding:3px 8px;color:#555;">Fallback</td><td style="padding:3px 8px;">${meta.fallbackEngine ? "sim" : "não"}</td></tr>`,
+  ]
+  if (meta.strategyName) {
+    rows.push(`<tr><td style="padding:3px 8px;color:#555;">Estratégia</td><td style="padding:3px 8px;">${escapeHtml(meta.strategyName)}</td></tr>`)
+  }
+
+  return `
+    <hr style="margin:32px 0 16px 0;border:none;border-top:1px solid #ddd;" />
+    <section style="margin-bottom:8px;">
+      <p style="margin:0 0 8px 0;font-size:13px;color:#333;font-style:italic;">${escapeHtml(aiStatus)}</p>
+      <table style="font-size:12px;border-collapse:collapse;width:100%;max-width:480px;">
+        ${rows.join("")}
+      </table>
+    </section>
+  `
+}
+
 export function buildDietHtml(payload: DietPayload): string {
   const mealsHtml = payload.refeicoes
     .map((meal) => {
@@ -38,6 +66,7 @@ export function buildDietHtml(payload: DietPayload): string {
         ${payload.observacoesGerais ? `<p><strong>Observações gerais:</strong> ${escapeHtml(payload.observacoesGerais)}</p>` : ""}
         <hr style="margin:24px 0;" />
         ${mealsHtml}
+        ${buildAIFooterHtml(payload)}
       </body>
     </html>
   `

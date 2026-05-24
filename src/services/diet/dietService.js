@@ -390,33 +390,62 @@ async function generateDiet(payload) {
 }
 
 async function _enrichWithAIStrategy(normalizedInput) {
-  try {
-    const aiLayer = require('../../core/nutrition/ai_nutrition_strategy_layer');
-    const adaptiveMemory = normalizedInput.adaptivePersonalization && normalizedInput.adaptivePersonalization.memory
-      ? normalizedInput.adaptivePersonalization.memory
-      : {};
-    const aiStrategy = await aiLayer.buildAIStrategy({
-      profile: normalizedInput,
-      clinicalContext: normalizedInput.clinicalData,
-      trainingContext: normalizedInput.contextoTreino,
-      adherenceContext: normalizedInput.aderencia,
-      adaptiveMemory,
-    });
-    if (aiStrategy) {
-      normalizedInput.aiNutritionStrategy = aiStrategy;
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[AI_NUTRITION_STRATEGY] Strategy applied to plan:', aiStrategy.strategyType);
+  const adaptiveMemory = normalizedInput.adaptivePersonalization && normalizedInput.adaptivePersonalization.memory
+    ? normalizedInput.adaptivePersonalization.memory
+    : {};
+  const aiParams = {
+    profile: normalizedInput,
+    clinicalContext: normalizedInput.clinicalData,
+    trainingContext: normalizedInput.contextoTreino,
+    adherenceContext: normalizedInput.aderencia,
+    adaptiveMemory,
+    calculation: normalizedInput._calculationResult || {},
+  };
+
+  // Run both AI layers concurrently; failures in either are non-fatal
+  const [aiStrategy, aiBlueprint] = await Promise.all([
+    (async () => {
+      try {
+        const aiLayer = require('../../core/nutrition/ai_nutrition_strategy_layer');
+        const result = await aiLayer.buildAIStrategy(aiParams);
+        if (result) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[AI_NUTRITION_STRATEGY] Strategy applied:', result.strategyType);
+          }
+        } else if (process.env.NODE_ENV === 'development') {
+          console.log('[DIET_FALLBACK_ENGINE] AI strategy not available — engine defaults.');
+        }
+        return result;
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[DIET_FALLBACK_ENGINE] AI strategy error:', err && err.message);
+        }
+        return null;
       }
-    } else {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[DIET_FALLBACK_ENGINE] AI strategy not available — using engine defaults.');
+    })(),
+    (async () => {
+      try {
+        const orchestrator = require('../../core/nutrition/aiNutritionOrchestrator');
+        const result = await orchestrator.generateAINutritionBlueprint(aiParams);
+        if (result) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[AI_NUTRITION_ORCHESTRATOR] Blueprint applied:', result.strategyName);
+          }
+        } else if (process.env.NODE_ENV === 'development') {
+          console.log('[DIET_FALLBACK_ENGINE] AI blueprint not available — engine defaults.');
+        }
+        return result;
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[DIET_FALLBACK_ENGINE] AI blueprint error:', err && err.message);
+        }
+        return null;
       }
-    }
-  } catch (err) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[DIET_FALLBACK_ENGINE] AI strategy enrichment error:', err && err.message);
-    }
-  }
+    })(),
+  ]);
+
+  if (aiStrategy) normalizedInput.aiNutritionStrategy = aiStrategy;
+  if (aiBlueprint) normalizedInput.aiNutritionBlueprint = aiBlueprint;
 }
 
 async function execute(action, payload) {

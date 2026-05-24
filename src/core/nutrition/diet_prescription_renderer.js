@@ -5,6 +5,7 @@ var visualPrescription = require('../../lib/nutrition/visualPrescription');
 var clinical = require('./diet_context_clinical');
 var strategyEngine = require('./diet_strategy_engine');
 var dietTemplates = require('../diet/dietTemplates');
+var validatedFoodSelector = require('./validatedFoodSelector');
 
 function round(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 0;
@@ -358,7 +359,66 @@ function buildSubstitutions(item, profile) {
     });
 }
 
-function buildMealItems(template, profile, macros, index, aiStrategy) {
+function buildMealItemsFromBlueprint(mealBP, template, profile, macros, index) {
+  var items = [];
+  var foodRoles = mealBP.foodRoles || [];
+
+  foodRoles.forEach(function(foodRole) {
+    var food = validatedFoodSelector.selectValidatedFoodFromBlueprint(
+      foodRole, template, profile, FOOD_LIBRARY, index
+    );
+    if (!food) return;
+
+    var role = foodRole.role || 'optional';
+    var scaleFactor = 1.0;
+
+    if (role === 'protein' && food.protein > 0) {
+      scaleFactor = Math.max(0.55, Math.min(1.85, (macros.protein * 0.68) / food.protein));
+    } else if (role === 'carb' && food.carbs > 0) {
+      scaleFactor = Math.max(0.5, Math.min(1.75, (macros.carbs * 0.55) / food.carbs));
+    } else if (role === 'fat' && food.fat > 0) {
+      scaleFactor = Math.max(0.3, Math.min(1.2, (macros.fat * 0.5) / Math.max(food.fat, 1)));
+    } else if (role === 'fiber') {
+      scaleFactor = 1.2;
+    } else if (role === 'fluid') {
+      scaleFactor = Math.max(0.7, Math.min(1.0, (macros.protein * 0.2) / Math.max(food.protein || 1, 1)));
+    }
+
+    var item = Object.assign({}, cloneFoodItem(food, scaleFactor), {
+      substituicoes: buildSubstitutions(cloneFoodItem(food, 1), profile)
+    });
+    items.push(item);
+  });
+
+  return items;
+}
+
+function buildMealItems(template, profile, macros, index, aiStrategy, aiBlueprint) {
+  // AI blueprint path: use validated food selector with role-based aliases
+  if (aiBlueprint && Array.isArray(aiBlueprint.mealBlueprints)) {
+    var mealBP = null;
+    for (var bi = 0; bi < aiBlueprint.mealBlueprints.length; bi++) {
+      if (aiBlueprint.mealBlueprints[bi].tipo === template.tipo) {
+        mealBP = aiBlueprint.mealBlueprints[bi];
+        break;
+      }
+    }
+    if (mealBP && mealBP.foodRoles && mealBP.foodRoles.length) {
+      var blueprintItems = buildMealItemsFromBlueprint(mealBP, template, profile, macros, index);
+      if (blueprintItems && blueprintItems.length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[AI_BLUEPRINT_VALID] Built', blueprintItems.length, 'items from blueprint for', template.tipo);
+        }
+        return rebalanceMealItems(blueprintItems, macros, { isWorkoutMeal: false });
+      }
+    }
+  }
+
+  // Fallback to legacy engine
+  if (process.env.NODE_ENV === 'development' && aiBlueprint) {
+    console.log('[DIET_FALLBACK_ENGINE] Blueprint miss for', template.tipo, '— using legacy food selection');
+  }
+
   var mealIntent = aiStrategy && aiStrategy.mealIntentions && aiStrategy.mealIntentions[template.tipo];
 
   if (process.env.NODE_ENV === 'development' && mealIntent) {
@@ -529,13 +589,14 @@ function validateAIMacroDistribution(aiDist, templates) {
   return Math.abs(proteinSum - 1.0) <= tol && Math.abs(carbSum - 1.0) <= tol && Math.abs(fatSum - 1.0) <= tol;
 }
 
-function distributeMacrosAcrossMeals(profile, macros, selectedTemplate, aiStrategy) {
+function distributeMacrosAcrossMeals(profile, macros, selectedTemplate, aiStrategy, aiBlueprint) {
   var templates = getMealTemplates(profile, selectedTemplate);
-  var aiDist = aiStrategy && aiStrategy.macroDistribution;
+  // Blueprint macroDistribution takes precedence over strategy macroDistribution
+  var aiDist = (aiBlueprint && aiBlueprint.macroDistribution) || (aiStrategy && aiStrategy.macroDistribution);
   var useAI = aiDist && validateAIMacroDistribution(aiDist, templates);
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('[AI_MACRO_DISTRIBUTION] Using AI distribution:', useAI);
+    console.log('[AI_MACRO_DISTRIBUTION] Using AI distribution:', useAI, aiBlueprint ? '(blueprint)' : '(strategy)');
   }
 
   return templates.map(function(template, index) {
@@ -558,10 +619,11 @@ function distributeMacrosAcrossMeals(profile, macros, selectedTemplate, aiStrate
   });
 }
 
-function buildInitialNutritionPlan(profile, calc, selectedTemplate, aiStrategy) {
-  var mealTargets = distributeMacrosAcrossMeals(profile, calc.macros, selectedTemplate, aiStrategy);
+function buildInitialNutritionPlan(profile, calc, selectedTemplate, aiStrategy, aiBlueprint) {
+  var mealTargets = distributeMacrosAcrossMeals(profile, calc.macros, selectedTemplate, aiStrategy, aiBlueprint);
+  var usedBlueprint = !!(aiBlueprint && aiBlueprint.aiGenerated);
   var meals = mealTargets.map(function(target, index) {
-    var items = buildMealItems(target, profile, target.meta, index, aiStrategy);
+    var items = buildMealItems(target, profile, target.meta, index, aiStrategy, aiBlueprint);
     var subtotal = sumMeal(items);
     return {
       ordem: target.ordem,
@@ -587,6 +649,10 @@ function buildInitialNutritionPlan(profile, calc, selectedTemplate, aiStrategy) 
     return acc;
   }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[NUTRITION_REBALANCE] Plan built | aiBlueprint:', usedBlueprint, '| meals:', meals.length);
+  }
+
   return {
     objetivo: profile.objetivo,
     templateId: selectedTemplate ? selectedTemplate.id : null,
@@ -607,7 +673,9 @@ function buildInitialNutritionPlan(profile, calc, selectedTemplate, aiStrategy) 
       carboidratos: round(planTotals.carbs, 1),
       gorduras: round(planTotals.fat, 1)
     },
-    refeicoes: meals
+    refeicoes: meals,
+    aiGenerated: usedBlueprint,
+    fallbackEngine: !usedBlueprint,
   };
 }
 
@@ -665,7 +733,22 @@ function capPlanCalories(plan, maxCalories) {
       });
     })
   });
-  return recalculatePlanTotals(scaled);
+  var result = recalculatePlanTotals(scaled);
+  // Second pass: rounding of individual items can push total 1 kcal over the cap
+  if (result.resumoDiario && result.resumoDiario.calorias > targetCalories) {
+    var factor2 = Math.max(0.5, factor * (targetCalories / result.resumoDiario.calorias) * 0.999);
+    var scaled2 = Object.assign({}, plan, {
+      refeicoes: (plan.refeicoes || []).map(function(meal) {
+        return Object.assign({}, meal, {
+          itens: (meal.itens || []).map(function(item) {
+            return cloneScaledMealItem(item, factor2);
+          })
+        });
+      })
+    });
+    return recalculatePlanTotals(scaled2);
+  }
+  return result;
 }
 
 /**
@@ -780,13 +863,20 @@ function buildNutritionPrescription(strategy) {
   if (calc.failSafe) return calc;
 
   var aiStrategy = calc.profile && calc.profile.aiNutritionStrategy || null;
+  var aiBlueprint = calc.profile && calc.profile.aiNutritionBlueprint || null;
 
-  if (process.env.NODE_ENV === 'development' && aiStrategy) {
-    console.log('[AI_NUTRITION_STRATEGY] Applying strategy to prescription:', aiStrategy.strategyType);
+  if (process.env.NODE_ENV === 'development') {
+    if (aiBlueprint) {
+      console.log('[AI_NUTRITION_ORCHESTRATOR] Applying blueprint to prescription:', aiBlueprint.strategyName);
+    } else if (aiStrategy) {
+      console.log('[AI_NUTRITION_STRATEGY] Applying strategy to prescription:', aiStrategy.strategyType);
+    } else {
+      console.log('[DIET_FALLBACK_ENGINE] No AI context — using engine defaults');
+    }
   }
 
   var selectedTemplate = dietTemplates.selectDietTemplate(calc.profile, calc.result);
-  var plan = buildInitialNutritionPlan(calc.profile, calc.result, selectedTemplate, aiStrategy);
+  var plan = buildInitialNutritionPlan(calc.profile, calc.result, selectedTemplate, aiStrategy, aiBlueprint);
   if (clinical.hasCriticalLabFlag(calc.profile)) {
     plan = capPlanCalories(plan, calc.result.targetCalories);
   }
