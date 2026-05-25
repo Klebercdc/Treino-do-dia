@@ -1,8 +1,8 @@
 'use strict';
 
 var SEMANTIC_RULES = [
-  { pattern: /iogurte.*natural|iogurte\s+integr/i, protein_min: 3, protein_max: 5, carbs_min: 3, carbs_max: 8, fat_min: 0, fat_max: 6, repair_label: 'iogurte natural' },
   { pattern: /iogurte.*grego|iogurte.*proteic|skyr|high.?protein/i, protein_min: 7, protein_max: 20, carbs_min: 0, carbs_max: 14, fat_min: 0, fat_max: 10, repair_label: 'iogurte proteico' },
+  { pattern: /iogurte.*natural|iogurte\s+integr/i, protein_min: 3, protein_max: 5, carbs_min: 3, carbs_max: 8, fat_min: 0, fat_max: 6, repair_label: 'iogurte natural' },
   { pattern: /frango/i, protein_min: 25, protein_max: 38, carbs_min: 0, carbs_max: 2, fat_min: 1, fat_max: 12, repair_label: 'frango' },
   { pattern: /salmao|salmão/i, protein_min: 18, protein_max: 30, carbs_min: 0, carbs_max: 2, fat_min: 5, fat_max: 22, repair_label: 'salmão' },
   { pattern: /^(maca|maçã)\b/i, protein_min: 0, protein_max: 1, carbs_min: 8, carbs_max: 18, fat_min: 0, fat_max: 1, repair_label: 'maçã' },
@@ -63,7 +63,7 @@ function normalizeFoodSemantic(item) {
   var macros = getMacros100g(item);
 
   if (/iogurte.*natural/i.test(name) && !/grego|skyr|proteic|high.?protein|whey/i.test(name) && macros.protein > 7) {
-    return Object.assign({}, item, { nome: 'Iogurte proteico natural', name: 'Iogurte proteico natural' });
+    return Object.assign({}, item, { nome: 'Iogurte grego natural', name: 'Iogurte grego natural' });
   }
 
   if (/pao.*integral|pão.*integral/i.test(name)) {
@@ -90,8 +90,9 @@ function classifyFoodSemantic(item) {
 }
 
 function matchRule(name) {
+  var normalizedName = normalizeName(name);
   for (var i = 0; i < SEMANTIC_RULES.length; i++) {
-    if (SEMANTIC_RULES[i].pattern.test(name)) return SEMANTIC_RULES[i];
+    if (SEMANTIC_RULES[i].pattern.test(name) || SEMANTIC_RULES[i].pattern.test(normalizedName)) return SEMANTIC_RULES[i];
   }
   return null;
 }
