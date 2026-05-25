@@ -570,6 +570,29 @@ test('normalizeDietPayload preserves supabase calories_target in nutritionGoals'
   assert.equal(result.nutritionGoals.protein_g, 150);
 });
 
+test('nutritionService usa renderer enterprise sem quebrar contrato do plano', () => {
+  const result = nutritionService.generateNutritionPlan({
+    sexo: 'M',
+    idade: 30,
+    peso: 80,
+    altura: 178,
+    objetivo: 'hipertrofia',
+    nutritionMemory: {
+      preferred_diet_style: 'flexivel',
+      adherence_days: 3,
+    },
+  });
+
+  assert.equal(result.failSafe, false);
+  assert.equal(result.enterpriseAi.enabled, true);
+  assert.equal(result.enterpriseAi.renderer, 'enterprise_diet_prescription_renderer');
+  assert.equal(result.enterpriseAi.adaptive_ai, true);
+  assert.ok(Array.isArray(result.enterpriseAi.recommendations));
+  assert.equal(result.plan.enterpriseAi.renderer, 'enterprise_diet_prescription_renderer');
+  assert.ok(Array.isArray(result.plan.refeicoes));
+  assert.ok(result.plan.refeicoes.length > 0);
+});
+
 if (typeof globalThis.test === 'function' && globalThis.test !== test) {
   globalThis.test('diet-service node:test suite compatibility', () => {
     assert.equal(typeof nutritionService.generateNutritionPlan, 'function');
