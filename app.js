@@ -479,7 +479,7 @@ function getPrevMap() {
 /* ═══════════════════════════════════════════════════
    GERAR PROTOCOLO
 ═══════════════════════════════════════════════════ */
-async function gerarProtocolo() {
+async function gerarProtocolo(silent) {
   const input = collectWorkoutGenerationInput();
   const objective = input.objetivo;
   const guard = await validateScientificGenerationGuard(
@@ -503,7 +503,7 @@ async function gerarProtocolo() {
     // não é JSON válido (ex: HTML de erro do servidor). Nesse caso usa geração local.
     if (data && data.error === 'INVALID_JSON') {
       console.warn('[gerarProtocolo] resposta não-JSON da rota de treino, usando geração local como fallback');
-      gerarTreinoDoPrograma();
+      gerarTreinoDoPrograma(silent);
       return;
     }
 
@@ -511,21 +511,21 @@ async function gerarProtocolo() {
 
     if (!resp.ok) {
       // Erro HTTP real — exibe mensagem da API se disponível
-      dlgAlert(resolveWorkoutRouteFailureMessage(data, resp.status));
+      if (!silent) dlgAlert(resolveWorkoutRouteFailureMessage(data, resp.status));
       return;
     }
 
     if (!renderModel) {
       // Shape desconhecido — fallback local silencioso
       console.warn('[gerarProtocolo] renderModel nulo após parse, usando geração local');
-      gerarTreinoDoPrograma();
+      gerarTreinoDoPrograma(silent);
       return;
     }
 
     if (renderModel.failSafe) {
       // API em modo failsafe (dados insuficientes) — usa geração local
       console.info('[gerarProtocolo] API em modo failsafe, usando geração local como fallback');
-      gerarTreinoDoPrograma();
+      gerarTreinoDoPrograma(silent);
       return;
     }
 
@@ -559,7 +559,7 @@ async function gerarProtocolo() {
   } catch (error) {
     // Erro de rede / timeout — fallback local
     console.warn('[gerarProtocolo] erro na rota de treino, usando geração local como fallback', error);
-    gerarTreinoDoPrograma();
+    gerarTreinoDoPrograma(silent);
   }
 }
 
@@ -2115,7 +2115,7 @@ function gerarTreinoExpress(equip) {
   });
 }
 
-function gerarTreinoDoPrograma() {
+function gerarTreinoDoPrograma(silent) {
   const cfg = getProgramaConfig();
   closeConfig();
   navTo("treino");
@@ -2323,7 +2323,7 @@ function gerarTreinoDoPrograma() {
   else if (ehCasa)    msg = `✅ Treino sem equipamento!\nBodyweight inteligente baseado em ciência.`;
   else if (cfg.freq==="1") msg = `✅ Treino Full Body gerado!\nCompacto e eficiente para a sua semana.`;
   else                msg = `✅ Treino gerado!\nNível: ${nivelLabel} · ${faseNome}`;
-  dlgAlert(msg);
+  if (!silent) dlgAlert(msg);
 }
 
 function openConfig(context) {
@@ -5532,9 +5532,9 @@ window.onload = () => {
     const r = localStorage.getItem(STORAGE.draftKey);
     if (r) loaded = loadState(JSON.parse(r));
   } catch {}
-  if (!loaded) gerarProtocolo();
+  if (!loaded) gerarProtocolo(true);
   // Garante que o container nunca fique vazio
-  if (!document.getElementById("container").children.length) gerarProtocolo();
+  if (!document.getElementById("container").children.length) gerarProtocolo(true);
 
   // Abrir tela inicial
   try { navTo("inicio"); openHome(); } catch(e) { navTo("treino"); }
