@@ -11,13 +11,23 @@ var VALID_EVENT_TYPES = [
   'rebalance',
   'clinical_validation',
   'pdf_generated',
-  'warning'
+  'warning',
+  'adaptive_strategy',
+  'behavior_detected',
+  'meal_simplified',
+  'food_rejected',
+  'food_preferred',
+  'diversity_adjustment',
+  'adherence_adjustment',
+  'recommendation_generated',
+  'confidence_recalculated'
 ];
 
 function createNutritionAuditTrail() {
   return {
     events: [],
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
+    enterpriseAI: true
   };
 }
 
@@ -36,7 +46,8 @@ function addAuditEvent(trail, eventData) {
   var event = {
     type: type,
     detail: detail,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    metadata: eventData && eventData.metadata ? eventData.metadata : undefined
   };
 
   if (foodCode) event.foodCode = foodCode;
@@ -46,7 +57,15 @@ function addAuditEvent(trail, eventData) {
 }
 
 function summarizeAuditTrail(trail) {
-  if (!trail) return { total: 0, byType: {}, warnings: [], generatedAt: null };
+  if (!trail) {
+    return {
+      total: 0,
+      byType: {},
+      warnings: [],
+      generatedAt: null,
+      enterpriseAI: false
+    };
+  }
 
   var events = Array.isArray(trail.events) ? trail.events : [];
   var byType = {};
@@ -56,22 +75,23 @@ function summarizeAuditTrail(trail) {
     if (!event) return;
     var t = event.type || 'unknown';
     byType[t] = (byType[t] || 0) + 1;
-    if (t === 'warning' || t === 'fallback_used') {
-      warnings.push(event.detail || '');
-    }
-  });
 
-  var semanticRepairs = byType['semantic_repair'] || 0;
-  var aiActive = (byType['ai_active'] || 0) > 0;
-  var fallbackUsed = (byType['fallback_used'] || 0) > 0;
+    if (t === 'warning' || t === 'fallback_used') warnings.push(event.detail || '');
+  });
 
   return {
     total: events.length,
     byType: byType,
     warnings: warnings.filter(Boolean),
-    semanticRepairs: semanticRepairs,
-    aiActive: aiActive,
-    fallbackUsed: fallbackUsed,
+    semanticRepairs: byType.semantic_repair || 0,
+    aiActive: (byType.ai_active || 0) > 0,
+    fallbackUsed: (byType.fallback_used || 0) > 0,
+    adaptiveStrategyChanges: byType.adaptive_strategy || 0,
+    diversityAdjustments: byType.diversity_adjustment || 0,
+    adherenceAdjustments: byType.adherence_adjustment || 0,
+    recommendationsGenerated: byType.recommendation_generated || 0,
+    confidenceRecalculations: byType.confidence_recalculated || 0,
+    enterpriseAI: true,
     generatedAt: trail.generatedAt || null
   };
 }
