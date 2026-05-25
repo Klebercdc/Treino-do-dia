@@ -103,6 +103,18 @@ function scorePlanConfidence(plan) {
     behavioralConfidence * 0.10
   );
 
+  var hasNaNMacros = allItems.some(function(item) {
+    var p = item.proteinas != null ? item.proteinas : item.protein;
+    var c = item.carboidratos != null ? item.carboidratos : item.carbs;
+    var f = item.gorduras != null ? item.gorduras : item.fat;
+    var cal = item.calorias != null ? item.calorias : item.calories;
+    return isNaNOrUndefined(p) || isNaNOrUndefined(c) || isNaNOrUndefined(f) || isNaNOrUndefined(cal);
+  });
+  if (hasNaNMacros) {
+    score = Math.min(score, 65);
+    reasons.push('Macros NaN ou undefined detectados — plano não confiável');
+  }
+
   if (foodConfidence < 85) reasons.push('foodConfidence abaixo do ideal: ' + foodConfidence);
   if (semanticConfidence < 90) reasons.push('semanticConfidence abaixo do ideal: ' + semanticConfidence);
   if (adherenceConfidence < 75) reasons.push('adherenceConfidence baixa: ' + adherenceConfidence);
