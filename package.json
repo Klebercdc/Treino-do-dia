@@ -52,8 +52,8 @@
     "@supabase/supabase-js": "^2.103.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
-    "@types/node": "^20.19.39",
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^20.19.41",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",
     "serve": "^14.2.3",
