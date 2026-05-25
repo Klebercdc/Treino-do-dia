@@ -102,6 +102,37 @@ test('api/system carrega sem importar science no bootstrap e rota desconhecida r
   assert.deepEqual(res.body, { error: 'rota não encontrada' });
 });
 
+test('api/system expõe health enterprise pelo handler real de produção', async () => {
+  const handler = loadSystemHandler();
+
+  const res = await invoke(handler, {
+    method: 'GET',
+    query: { __route: 'enterprise-ai-health' },
+    headers: {}
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.adaptive_ai, true);
+  assert.equal(res.body.behavior_engine, true);
+  assert.equal(res.body.food_memory_engine, true);
+  assert.equal(res.body.renderer, 'enterprise_diet_prescription_renderer');
+});
+
+test('api/system health inclui estado enterprise sem depender de science', async () => {
+  const handler = loadSystemHandler();
+
+  const res = await invoke(handler, {
+    method: 'GET',
+    query: { __route: 'health' },
+    headers: {}
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.enterprise_ai.adaptive_ai, true);
+  assert.equal(res.body.enterprise_ai.renderer, 'enterprise_diet_prescription_renderer');
+});
+
 test('api/system isola falha de science e retorna erro controlado apenas na rota afetada', async () => {
   const handler = loadSystemHandler();
 

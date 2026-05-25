@@ -6,7 +6,7 @@ var foodSearchService = require('./foodSearchService');
 var adaptiveNutrition = require('./adaptiveNutrition');
 var clinical = require('../../core/nutrition/diet_context_clinical');
 var strategyEngine = require('../../core/nutrition/diet_strategy_engine');
-var renderer = require('../../core/nutrition/diet_prescription_renderer');
+var renderer = require('../../core/nutrition/enterprise_diet_prescription_renderer');
 
 module.exports = {
   ACTIVITY_FACTORS: strategyEngine.ACTIVITY_FACTORS,

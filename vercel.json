@@ -110,6 +110,10 @@
       "destination": "/api/system?__route=health"
     },
     {
+      "source": "/api/health/enterprise-ai",
+      "destination": "/api/system?__route=enterprise-ai-health"
+    },
+    {
       "source": "/api/kronia/labs/init-upload",
       "destination": "/api/system?__route=kronia-labs-init-upload"
     },

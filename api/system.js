@@ -45,6 +45,20 @@ function dispatchOptionalRoute(res, routeName, modulePath, req) {
   return loaded.mod(req, res);
 }
 
+function buildEnterpriseAiHealth() {
+  return {
+    adaptive_ai: true,
+    behavior_engine: true,
+    adherence_engine: true,
+    diversity_engine: true,
+    recommendation_engine: true,
+    food_memory_engine: true,
+    adaptive_strategy_engine: true,
+    renderer: 'enterprise_diet_prescription_renderer',
+    timestamp: new Date().toISOString()
+  };
+}
+
 async function handleScienceReview(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   var loaded = loadOptionalModule('../src/lib/science/scienceSyncService', 'science-review');
@@ -193,7 +207,10 @@ module.exports = function(req, res) {
   var route = (req.query && req.query.__route) || '';
   switch (route) {
     case 'health':
-      return res.status(200).json({ ok: true, ts: Date.now() });
+      return res.status(200).json({ ok: true, ts: Date.now(), enterprise_ai: buildEnterpriseAiHealth() });
+    case 'enterprise-ai-health':
+      if (req.method !== 'GET') return res.status(405).end();
+      return res.status(200).json(buildEnterpriseAiHealth());
     case 'science-articles':
       return handleScienceArticles(req, res);
     case 'science-review':
