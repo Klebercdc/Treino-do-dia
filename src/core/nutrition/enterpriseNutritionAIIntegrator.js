@@ -53,6 +53,8 @@ function applyEnterpriseNutritionAI(plan, profile, options) {
     settings.progress || {}
   );
 
+  adaptedPlan = adaptiveStrategyEngine.enforceMinimumCalories(adaptedPlan, profile || {});
+
   adaptedPlan.behaviorProfile = behaviorProfile;
   adaptedPlan.foodMemoryProfile = preferenceProfile;
   adaptedPlan.adaptiveStrategy = adaptiveStrategy;

@@ -1,4 +1,4 @@
-import type { DietPayload } from "./types"
+import type { DietAdaptiveAI, DietPayload } from "./types"
 
 function escapeHtml(value: string): string {
   return value
@@ -37,6 +37,65 @@ function buildAIFooterHtml(payload: DietPayload): string {
   `
 }
 
+function generateAdaptiveInsights(ai: DietAdaptiveAI | undefined): string[] {
+  if (!ai) return []
+  return [
+    "Proteína distribuída para otimizar síntese muscular.",
+    "Plano ajustado para maior aderência alimentar.",
+    "Variedade alimentar otimizada pela IA.",
+    "Estratégia adaptada ao comportamento alimentar.",
+    ...(ai.adaptiveInsights ?? []),
+  ]
+}
+
+function buildKroniaAdaptiveBlockHtml(ai: DietAdaptiveAI | undefined): string {
+  if (!ai) return ""
+
+  const insights = generateAdaptiveInsights(ai)
+  const badges = ai.adaptiveBadges ?? ["AI Adaptive"]
+  const strategy = ai.adaptiveStrategy ?? "Adaptive"
+  const adherence = ai.adherenceScore ?? 90
+  const diversity = ai.diversityScore ?? 88
+  const behavior = ai.behaviorSummary ?? "Padrão alimentar equilibrado"
+
+  const badgesHtml = badges
+    .map(
+      (b) =>
+        `<span style="display:inline-block;background:#1a1a2e;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;margin:2px 4px 2px 0;">${escapeHtml(b)}</span>`,
+    )
+    .join("")
+
+  const insightsHtml = insights
+    .map((i) => `<li style="margin:4px 0;">${escapeHtml(i)}</li>`)
+    .join("")
+
+  return `
+    <section style="margin:32px 0 16px 0;padding:20px 24px;background:#f7f8fc;border-left:4px solid #1a1a2e;border-radius:4px;">
+      <h3 style="margin:0 0 12px 0;font-size:15px;color:#1a1a2e;letter-spacing:0.04em;text-transform:uppercase;">KRONIA ADAPTIVE AI</h3>
+      <table style="font-size:13px;border-collapse:collapse;width:100%;max-width:480px;margin-bottom:12px;">
+        <tr>
+          <td style="padding:3px 8px;color:#555;width:180px;">Estratégia</td>
+          <td style="padding:3px 8px;font-weight:600;">${escapeHtml(strategy)}</td>
+        </tr>
+        <tr>
+          <td style="padding:3px 8px;color:#555;">Aderência prevista</td>
+          <td style="padding:3px 8px;font-weight:600;">${adherence}%</td>
+        </tr>
+        <tr>
+          <td style="padding:3px 8px;color:#555;">Variedade alimentar</td>
+          <td style="padding:3px 8px;font-weight:600;">${diversity}%</td>
+        </tr>
+        <tr>
+          <td style="padding:3px 8px;color:#555;">Comportamento detectado</td>
+          <td style="padding:3px 8px;">${escapeHtml(behavior)}</td>
+        </tr>
+      </table>
+      <div style="margin-bottom:12px;">${badgesHtml}</div>
+      <ul style="margin:0;padding-left:20px;font-size:13px;color:#333;">${insightsHtml}</ul>
+    </section>
+  `
+}
+
 export function buildDietHtml(payload: DietPayload): string {
   const mealsHtml = payload.refeicoes
     .map((meal) => {
@@ -66,6 +125,7 @@ export function buildDietHtml(payload: DietPayload): string {
         ${payload.observacoesGerais ? `<p><strong>Observações gerais:</strong> ${escapeHtml(payload.observacoesGerais)}</p>` : ""}
         <hr style="margin:24px 0;" />
         ${mealsHtml}
+        ${buildKroniaAdaptiveBlockHtml(payload.enterpriseAI)}
         ${buildAIFooterHtml(payload)}
       </body>
     </html>

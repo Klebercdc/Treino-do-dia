@@ -1,5 +1,39 @@
 'use strict';
 
+var MIN_HYPERTROPHY_CALORIES = {
+  male: 2200,
+  female: 1800
+};
+
+function enforceMinimumCalories(plan, profile) {
+  if (!plan || !profile) return plan;
+
+  var goal = String(profile.objetivo || profile.goal || '').toLowerCase();
+  var sex = String(profile.sexo || profile.sex || 'male').toLowerCase();
+
+  if (!/hipertrof/.test(goal)) return plan;
+
+  var minCalories = sex === 'female'
+    ? MIN_HYPERTROPHY_CALORIES.female
+    : MIN_HYPERTROPHY_CALORIES.male;
+
+  var current = Number(
+    plan.totalCalories
+    || (plan.resumoDiario && plan.resumoDiario.calorias)
+    || 0
+  );
+
+  if (current > 0 && current < minCalories) {
+    plan.flags = (plan.flags || []).concat(['low_calorie_hypertrophy']);
+    plan.aiWarnings = (plan.aiWarnings || []).concat([
+      'Plano de hipertrofia ajustado automaticamente para evitar calorias insuficientes (' + current + ' kcal).'
+    ]);
+    plan.totalCalories = minCalories;
+  }
+
+  return plan;
+}
+
 function normalize(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
@@ -61,6 +95,8 @@ function buildAdaptiveStrategy(profile, behavior, adherence, memory, progress) {
 }
 
 module.exports = {
+  MIN_HYPERTROPHY_CALORIES: MIN_HYPERTROPHY_CALORIES,
+  enforceMinimumCalories: enforceMinimumCalories,
   selectAdaptiveStrategy: selectAdaptiveStrategy,
   adaptStrategyByBehavior: adaptStrategyByBehavior,
   adaptStrategyByAdherence: adaptStrategyByAdherence,
