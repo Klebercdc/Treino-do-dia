@@ -1,0 +1,514 @@
+================================================================================
+AUDITORIA ARQUITETURAL — KRONIA (Treino-do-dia)
+Data: 2026-05-26
+Repositório: github.com/Klebercdc/Treino-do-dia
+================================================================================
+
+SUMÁRIO EXECUTIVO
+─────────────────
+O repositório Kronia é um sistema de produção real com 287 arquivos fonte,
+~42.500 linhas de código TypeScript/JavaScript, dois layers de API paralelos,
+múltiplos módulos de IA e infraestrutura Vercel + Supabase.
+
+Este relatório classifica os problemas em três categorias:
+  [REAL]       — existe no código, causa dor hoje
+  [EXAGERADO]  — direção correta, mas escala errada para o estágio atual
+  [ASPIRAÇÃO]  — bom destino de longo prazo, não urgente agora
+
+
+================================================================================
+PARTE 1 — PROBLEMAS QUE EXISTEM DE VERDADE
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+[P0] PROBLEMA 1 — DUAL API SURFACE (risco de bugs invisíveis em produção)
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  Existem DUAS camadas de API ativas e paralelas no mesmo repositório:
+
+  Camada A — Vercel Serverless Functions (CommonJS, .js):
+    api/chat.js            → handler de chat principal (49.7K)
+    api/science.js         → dieta, nutrição, cálculos (20.9K)
+    api/kronia-labs.js     → upload/OCR de exames (24.2K)
+    api/system.js          → roteador central via __route= (14.9K)
+    api/memory.js          → fila de memória (8.9K)
+    api/plan.js            → planos e quotas (6.8K)
+    api/payment-webhook.js → Hotmart/Kiwify (14.5K)
+    api/affiliate.js       → afiliados (2.5K)
+    ...total: 12 arquivos (no limite hard do Vercel Hobby)
+
+  Camada B — Next.js App Router (TypeScript, .ts):
+    src/app/api/kronia/chat/route.ts
+    src/app/api/kronia/diet/route.ts
+    src/app/api/kronia/workout/route.ts
+    src/app/api/kronia/labs/upload/route.ts
+    src/app/api/kronia/labs/reports/route.ts
+    src/app/api/kronia/intelligence/route.ts
+    src/app/api/kronia/intent/route.ts
+    src/app/api/chat/route.ts
+    src/app/api/labs/upload/route.ts
+    src/app/api/labs/process/route.ts
+    src/app/api/science/route.ts
+    ...e mais
+
+PROBLEMA:
+  Ambas as camadas expõem endpoints com nomes semanticamente equivalentes
+  (chat, labs, science, diet). O roteamento real depende de como o vercel.json
+  está configurado — se uma regra muda, um endpoint silenciosamente muda de
+  handler sem aviso.
+
+  Não está documentado qual camada é canônica para qual domínio.
+  Qualquer desenvolvedor novo (ou IA) pode escrever lógica no lugar errado.
+
+IMPACTO:
+  - Bugs difíceis de rastrear (request cai em handler diferente do esperado)
+  - Lógica duplicada evolui de forma divergente
+  - Testes testam uma camada, produção roda outra
+  - Onboarding de qualquer pessoa nova = confusão garantida
+
+AÇÃO NECESSÁRIA:
+  Definir explicitamente: qual camada é a fonte de verdade?
+  Recomendação: src/app/api/ (Next.js, TypeScript) é o futuro.
+  api/ (Vercel, CommonJS) deve ser tratada como legacy a ser drenada.
+  Documentar isso em CLAUDE.md e ARCHITECTURE.md.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P0] PROBLEMA 2 — VERCEL HOBBY NO LIMITE HARD (bloqueia features)
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  O plano Hobby do Vercel aceita no máximo 12 Serverless Functions.
+  O repositório está em 12/12:
+
+    api/admin-import-exercises-auto.js   [JS]
+    api/affiliate.js                     [JS]
+    api/agent.js                         [JS — MORTO, ver Problema 3]
+    api/chat.js                          [JS]
+    api/kronia-labs.js                   [JS]
+    api/memory.js                        [JS]
+    api/payment-webhook.js               [JS]
+    api/plan.js                          [JS]
+    api/science.js                       [JS]
+    api/system.js                        [JS]
+    api/exam_ocr.py                      [Python]
+    api/cron/auto-import-exercises.js    [JS — cron]
+
+PROBLEMA:
+  Qualquer nova feature que precise de endpoint próprio em api/ quebra o deploy.
+  Não há margem. Não há espaço. O crescimento está bloqueado.
+
+IMPACTO:
+  - Impossível adicionar novos endpoints sem remover/consolidar antes
+  - Pressão para "espremer" lógica em arquivos já grandes (chat.js tem 49.7K)
+  - Risco de acidente: alguém cria api/novo-endpoint.js e o deploy falha
+
+AÇÃO NECESSÁRIA:
+  Imediato: deletar api/agent.js (morto — ver Problema 3). Libera 1 slot.
+  Curto prazo: migrar lógica restante para src/app/api/ (Next.js).
+  Cada arquivo em api/ que for migrado libera 1 slot ou sai do contador.
+  Meta: reduzir api/ para apenas o essencial que não tem equivalente em Next.js.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P0] PROBLEMA 3 — api/agent.js É CÓDIGO MORTO (7 linhas)
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  Conteúdo completo de api/agent.js:
+
+    var chatHandler = require('./chat');
+    module.exports = function(req, res) {
+      req.body = Object.assign({}, req.body || {}, {
+        legacyAgentAdapter: true,
+        stream: false
+      });
+      return chatHandler(req, res);
+    };
+
+PROBLEMA:
+  - 7 linhas que apenas redirecionam para chat.js com uma flag
+  - Consome 1 dos 12 slots do Vercel (8.3% do limite total)
+  - "legacyAgentAdapter: true" indica que foi criado como shim temporário
+  - Não há referência a este endpoint na documentação como necessário
+
+AÇÃO NECESSÁRIA:
+  Verificar se algum cliente externo ainda chama /api/agent diretamente.
+  Se não: deletar. Se sim: redirecionar no vercel.json e deletar.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P1] PROBLEMA 4 — 4 CLASSIFICADORES DE INTENT PARALELOS
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  Quatro implementações de classificação de intent coexistem:
+
+    src/ai/intentClassifier.ts           [TypeScript]
+    src/ai/intentAgent.ts                [TypeScript]
+    src/core/intent/intentClassifier.js  [JavaScript]
+    src/lib/engine/intentClassifier.js   [JavaScript]
+    src/lib/ai/intent.ts                 [TypeScript — utilitário]
+
+PROBLEMA:
+  Classificação de intent é o ponto de entrada de toda a inteligência do sistema.
+  Com 4 implementações paralelas:
+  - Qual é chamada em qual contexto?
+  - Quando uma evolui, as outras ficam para trás?
+  - Bug em classificação pode estar em qualquer uma das 4
+
+IMPACTO:
+  Erros de roteamento de intent que aparecem em alguns flows e não em outros.
+  Difícil de debugar porque o problema pode estar em qualquer das implementações.
+
+AÇÃO NECESSÁRIA:
+  Mapear qual é realmente chamada em produção para cada entry point.
+  Consolidar em uma implementação canônica (TypeScript).
+  Marcar as demais como deprecated e remover em sprint dedicado.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P1] PROBLEMA 5 — 2 ORQUESTRADORES PARALELOS
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  Dois orquestradores de IA ativos:
+
+    src/ai/orchestrator.ts        — 107 linhas, TypeScript, entry point oficial
+    src/lib/engine/orchestrator.js — 90 linhas, JavaScript, engine alternativo
+
+  Mais dois arquivos que fazem orquestração parcial:
+    src/core/pipeline/runKroniaPipeline.js
+    src/server/apihelpers/_kronosContextHub.js
+
+PROBLEMA:
+  Orquestração centralizada é um dos pilares do sistema.
+  Com 2 orquestradores + 2 orquestradores parciais, não há fonte de verdade.
+  Mudanças em um não refletem no outro.
+
+AÇÃO NECESSÁRIA:
+  src/ai/orchestrator.ts é o canônico (TypeScript, melhor posicionado).
+  src/lib/engine/orchestrator.js deve ser migrado ou deletado.
+  Pipeline e ContextHub devem ser chamados pelo orquestrador central, não
+  operarem como orquestradores independentes.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P1] PROBLEMA 6 — kronosAgent.js SEM TYPESCRIPT (o componente mais crítico)
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  src/lib/agents/kronosAgent.js — 300 linhas em JavaScript puro.
+
+  Este arquivo:
+  - É o coração clínico do produto (raciocínio médico)
+  - Implementa o loop agêntico de 8 iterações
+  - Chama a Anthropic API com native fetch
+  - Executa tool use para buscar métricas, exames, fadiga, suplementos
+  - Gera alertas de overtraining, plateau e déficit proteico
+  - É usado exclusivamente por planos Ultra (feature mais cara)
+
+PROBLEMA:
+  O componente de maior risco clínico do sistema não tem tipagem.
+  Um parâmetro errado passado para uma tool call não é detectado em tempo
+  de desenvolvimento — só em produção, quando impacta usuário Ultra.
+
+  Agravante: src/ai/kronos/*.js (7 arquivos) também são .js dentro do
+  diretório TypeScript src/ai/, criando inconsistência estrutural.
+
+AÇÃO NECESSÁRIA:
+  Migrar kronosAgent.js → kronosAgent.ts como prioridade P1.
+  Migrar src/ai/kronos/*.js → .ts junto.
+  Não é refactor de arquitetura — é conversão de arquivo com adição de tipos.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P1] PROBLEMA 7 — MÓDULOS DUPLICADOS (tipos, context, embeddings, validators)
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  Pares de arquivos com responsabilidade equivalente:
+
+    src/ai/types.ts              vs  src/lib/ai/types.ts
+    src/ai/contextBuilder.ts     vs  src/lib/ai/context-builder.ts
+    src/ai/embeddings.ts         vs  src/lib/ai/embeddings.ts
+    src/ai/validator.ts          vs  src/lib/ai/response-validator.ts
+    src/ai/intentClassifier.ts   vs  src/lib/ai/intent.ts
+
+PROBLEMA:
+  Cada par representa uma duplicação. Quando um evolui, o outro fica defasado.
+  Import errado = comportamento silenciosamente diferente.
+
+AÇÃO NECESSÁRIA:
+  Para cada par, escolher um como canônico e fazer o outro importar dele
+  (ou deletar o menos completo). Não é refactor — é consolidação pontual.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P1] PROBLEMA 8 — NUTRIÇÃO FRAGMENTADA EM 45+ ARQUIVOS
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  Lógica de nutrição distribuída em:
+
+    src/core/nutrition/    — 25+ arquivos (engines, validators, strategies)
+    src/lib/nutrition/     — 20+ arquivos (utilities, calculators)
+    src/services/diet/     — handlers de dieta
+    src/ui/diet/           — 15+ arquivos de UI de dieta
+
+  Exemplos de arquivos em src/core/nutrition/:
+    aiNutritionOrchestrator.js
+    adaptiveStrategyEngine.js
+    adherenceEngine.js
+    behaviorEngine.js
+    diet_context_clinical.js
+    diet_context_master.js
+    diet_context_training.js
+    diet_strategy_engine.js
+    enterpriseNutritionAIIntegrator.js
+    enterprise_diet_prescription_renderer.js
+    mealDiversityEngine.js
+    metabolic_behavior_engine.js
+    nutritionAuditTrail.js
+    nutritionConfidenceScore.js
+    nutritionProductionGate.js
+    nutritionRealityValidator.js
+    pcm_engine.js
+    recommendationEngine.js
+    semanticNutritionValidator.js
+    training_energy_engine.js
+    ...
+
+PROBLEMA:
+  45+ arquivos de nutrição em 4 diretórios diferentes.
+  Não é modularidade — é fragmentação acumulada ao longo do tempo.
+  Difícil saber onde fazer uma mudança de regra de negócio.
+
+IMPACTO:
+  Bugs de nutrição aparecem porque a lógica está em lugares inesperados.
+  Qualquer mudança de cálculo de macro exige busca em múltiplos diretórios.
+
+AÇÃO NECESSÁRIA (P2 — não urgente, mas importante):
+  Definir src/core/nutrition/ como módulo canônico de domínio.
+  src/lib/nutrition/ deve ter apenas utilitários stateless.
+  Consolidar em sprint dedicado com mapa de dependências antes.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[P1] PROBLEMA 9 — LEGACY LAYER ATIVO
+────────────────────────────────────────────────────────────────────────────────
+
+SITUAÇÃO:
+  src/server/legacy/ contém 6 arquivos ativos:
+    admin-diagnostics.js
+    affiliate-sale.js
+    billing-sync.js
+    cron-scraper.js
+    machine.js
+    pastor-diagnostico.js
+
+PROBLEMA:
+  "Legacy" no nome mas ainda referenciado. Se não é mais usado, é dead code
+  que aumenta superfície de manutenção. Se ainda é usado, não deveria chamar
+  "legacy" — deveria ser migrado para a estrutura atual.
+
+AÇÃO NECESSÁRIA:
+  Verificar se há imports para esses arquivos.
+  Se não há: deletar.
+  Se há: migrar ou documentar explicitamente por que ainda vivem em legacy/.
+
+
+================================================================================
+PARTE 2 — O QUE É EXAGERADO OU IRRELEVANTE PARA O ESTÁGIO ATUAL
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+[EXAGERADO] A ESTRUTURA "OFICIAL" PRESCRITA NÃO EXISTE E CUSTARIA SEMANAS
+────────────────────────────────────────────────────────────────────────────────
+
+O documento KRONOS MASTER SYSTEM prescreve:
+
+  src/
+  ├── ai/
+  │   ├── orchestrator/    ← NÃO EXISTE (existe orchestrator.ts, não pasta)
+  │   ├── skills/          ← NÃO EXISTE
+  │   ├── planners/        ← NÃO EXISTE
+  │   ├── recovery/        ← NÃO EXISTE
+  │   ├── memory/          ← NÃO EXISTE (existe memory.ts, não pasta)
+  │   ├── analyzers/       ← NÃO EXISTE
+  │   └── context/         ← NÃO EXISTE
+  ├── modules/
+  │   ├── nutrition/       ← NÃO EXISTE (está em core/nutrition e lib/nutrition)
+  │   ├── workout/         ← NÃO EXISTE
+  │   ├── recovery/        ← NÃO EXISTE
+  │   ├── clinical/        ← NÃO EXISTE
+  │   ├── progress/        ← NÃO EXISTE
+  │   ├── motivation/      ← NÃO EXISTE
+  │   └── evidence/        ← NÃO EXISTE
+  ├── infrastructure/      ← NÃO EXISTE
+  ├── shared/              ← NÃO EXISTE
+  ├── state/               ← NÃO EXISTE
+  └── integrations/        ← NÃO EXISTE
+
+Mover ~200 arquivos para essa estrutura custaria semanas de refactor com
+risco alto de regressão e benefício zero para o usuário final.
+A estrutura real que existe (lib/, core/, server/, ai/, services/) funciona
+e não deve ser reescrita por princípio arquitetural.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[EXAGERADO] "AI SKILLS GOVERNANCE" — INTERFACES FORMAIS DE SKILL
+────────────────────────────────────────────────────────────────────────────────
+
+O documento prescreve que cada capacidade de IA deve:
+  - Expor interfaces explícitas
+  - Suportar observabilidade
+  - Integrar ao orquestrador KRONOS
+  - Suportar escalabilidade e evolução adaptativa
+
+Isso é design para equipe de 10+ engenheiros com SLAs formais.
+O sistema já tem skills implícitas (dietAgent, workoutAgent, supplementAgent,
+kronosAgent). Formalizar contratos de interface agora seria burocracia
+sem ganho prático no estágio atual.
+
+O que faz sentido AGORA: garantir que os agents existentes chamem o
+orquestrador central (Problema 5). A governança formal vem depois.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[EXAGERADO] "CENTRALIZED STATE ARCHITECTURE"
+────────────────────────────────────────────────────────────────────────────────
+
+O documento prescreve estado normalizado, stores centralizados, fluxos
+previsíveis, transições determinísticas.
+
+A realidade: o frontend do Kronia é primariamente um PWA com HTML/CSS/JS
+vanilla (conforme README). Implementar Redux ou Zustand centralizado agora
+seria reescrever o frontend por princípio, não por dor real.
+
+O que faz sentido AGORA: eliminar race conditions pontuais quando aparecerem,
+não arquitetar um sistema de estado global preventivamente.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[EXAGERADO] "MEMORY ENGINE" PARA RASTREAR DECISÕES ARQUITETURAIS
+────────────────────────────────────────────────────────────────────────────────
+
+O documento prescreve rastrear:
+  - Decisões arquiteturais anteriores
+  - Sistemas removidos
+  - Flows deprecated
+  - Estratégias que falharam
+  - Histórico de migração
+
+Isso é o que git log, ARCHITECTURE.md e AGENTS.md já fazem.
+Criar um sistema separado para isso seria duplicar ferramentas existentes.
+
+
+────────────────────────────────────────────────────────────────────────────────
+[EXAGERADO] OUTPUT FORMAT DE 7 SEÇÕES PARA QUALQUER TAREFA
+────────────────────────────────────────────────────────────────────────────────
+
+O documento prescreve que QUALQUER solução deve gerar:
+  1. ROOT CAUSE
+  2. ARCHITECTURE IMPACT
+  3. BEST LONG-TERM SOLUTION
+  4. IMPLEMENTATION PLAN
+  5. MIGRATION STRATEGY
+  6. RISK ANALYSIS
+  7. FINAL RECOMMENDATION
+
+Aplicar isso a "corrigir um bug no cálculo de proteína" ou "deletar agent.js"
+é burocracia que atrasa entregas sem agregar valor. O formato é útil para
+decisões arquiteturais grandes (P0/P1 que afetam múltiplos sistemas).
+Para tarefas normais, é overhead.
+
+
+================================================================================
+PARTE 3 — PRIORIDADE REAL vs. ASPIRAÇÃO FUTURA
+================================================================================
+
+PRIORIDADE REAL — coisas que causam dor ou bloqueiam crescimento hoje:
+
+  ┌─────────┬──────────────────────────────────────────────────────────────┐
+  │ P0      │ Definir qual API layer é canônica (api/ vs src/app/api/)     │
+  │         │ e documentar o roteamento explicitamente                      │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P0      │ Vercel 12/12 — criar estratégia de consolidação antes da     │
+  │         │ próxima feature que precise de endpoint                       │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P0      │ Deletar api/agent.js (morto, consome 1 slot precioso)        │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P1      │ Consolidar os 4 intent classifiers em 1 canônico             │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P1      │ Consolidar os 2 orquestradores em 1 canônico                 │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P1      │ Migrar kronosAgent.js → TypeScript                           │
+  │         │ (componente clínico mais crítico sem tipagem)                 │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P1      │ Migrar src/ai/kronos/*.js → .ts                              │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P1      │ Resolver módulos duplicados (types, context, embeddings,     │
+  │         │ validators) — escolher canônico para cada par                │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P1      │ Auditar src/server/legacy/ — deletar ou migrar               │
+  ├─────────┼──────────────────────────────────────────────────────────────┤
+  │ P2      │ Consolidar lógica de nutrição de 4 diretórios em 2           │
+  └─────────┴──────────────────────────────────────────────────────────────┘
+
+ASPIRAÇÃO FUTURA — bom destino, implementar progressivamente:
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ Estrutura src/ai/skills/, src/modules/, src/infrastructure/             │
+  │ AI Skills com contratos formais e observabilidade                       │
+  │ Estado centralizado (quando frontend Next.js estiver dominante)         │
+  │ Recovery Engine formal com retry strategies                             │
+  │ Tracing e observabilidade de pipeline de IA                             │
+  │ "Self-evolving platform" com memória adaptativa persistente             │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+MÉTRICAS DO REPOSITÓRIO (snapshot 2026-05-26)
+================================================================================
+
+  Total de arquivos fonte (/src):          287 arquivos
+  Total de linhas de código (/src):        ~42.500 linhas
+  Arquivos JavaScript (.js) em /src:       ~150
+  Arquivos TypeScript (.ts) em /src:       ~100
+  Arquivos Python:                         1 (api/exam_ocr.py — stub de 652B)
+  Funções Vercel em uso:                   12/12 (NO LIMITE)
+  Funções Supabase Edge:                   6
+  Maior diretório por tamanho:             src/lib/ (1.3MB)
+  API layers paralelas:                    2 (api/ e src/app/api/)
+  Orquestradores de IA:                    2 (+2 parciais)
+  Classificadores de intent:               4
+  Arquivos de lógica de nutrição:          45+ (em 4 diretórios)
+
+================================================================================
+CONCLUSÃO
+================================================================================
+
+O documento KRONOS MASTER SYSTEM captura a DIREÇÃO correta: evitar duplicação,
+centralizar orquestração, modularizar, pensar sistemicamente. Esses princípios
+são válidos e devem guiar decisões arquiteturais.
+
+O problema é que o documento aplica linguagem e escala de sistema enterprise
+(20+ engenheiros, SLAs formais, governança de skills) a uma codebase de
+produto early-stage operado por equipe pequena.
+
+OS PROBLEMAS REAIS são concretos, mensuráveis e corrigíveis:
+  → Dual API surface sem documentação de roteamento
+  → Vercel no limite hard sem estratégia de saída
+  → Código morto consumindo recursos
+  → 4 intent classifiers sem fonte de verdade
+  → 2 orquestradores divergindo
+  → Componente clínico mais crítico sem tipos
+
+O RESTANTE é roadmap arquitetural — valioso como norte, prejudicial se
+tratado como obrigação imediata que paralisa entregas de produto.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

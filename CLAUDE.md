@@ -1,240 +1,85 @@
-## name: kronia
-description: >
-Contexto completo do Kronia (titanpro.app.br): stack, schema Supabase,
-convenções de código, regras de negócio, modelos de IA e padrões de UI.
-Ative sempre que a tarefa envolver Kronia, KRONOS, dieta, treino ou métricas do usuário.
+# CLAUDE.md — KRONIA
 
-# Kronia — Contexto do Projeto
+*Lido pelo Claude Code no início de cada sessão. Manter atualizado.*
 
-## Identidade
+-----
 
-- **Produto**: Kronia (ex-TITAN PRO) — PWA de fitness tracking + AI coaching
-- **Tagline**: "O coach que nunca dorme."
-- **Domínio**: titanpro.app.br
-- **GitHub**: github.com/Klebercdc/Treino-do-dia
+## Identidade do Projeto
+
+KroniA — plataforma de saúde e performance com IA adaptativa.
+Desenvolvedor solo. Deploy via GitHub + Vercel. Sem terminal direto.
+
+-----
 
 ## Stack
 
-- **Frontend**: Next.js 14 App Router + TypeScript + Tailwind CSS
-- **SPA files**: `index.html`, `app.js`, `styles.css`
-- **Backend**: Next.js 14 App Router (rotas em `/app/api/`)
-- **Banco**: Supabase com RLS ativo em todas as tabelas
-- **IA (chat geral)**: Groq API
-  - Smart: `llama-3.3-70b-versatile`
-  - Fast: `llama-3.1-8b-instant`
-  - Vision: `meta-llama/llama-4-scout-17b-16e-instruct`
-- **IA (KRONOS agêntico)**: Anthropic API
-  - Modelo: `claude-sonnet-4-6`
-  - Helper simples: `src/lib/services/claude.js` (usa `claude-3-5-sonnet-20241022`)
-- **Deploy**: Vercel
-- **Icons**: Lucide React (sem emojis na UI)
-- **Auth**: email/password only (sem Google login)
-- **Logo**: `public/logo.png` (não usar ícone Zap)
+- Next.js 14 App Router + TypeScript + Tailwind
+- Supabase (RLS, sa-east-1)
+- Groq API: `llama3-70b-8192` (smart) / `mixtral-8x7b-32768` (long) / `llama3-8b-8192` (fast)
+- SPA vanilla: `index.html` + `app.js` + `styles.css`
+- Vercel Hobby — **12/12 functions. NO LIMITE. Não criar nada em `api/`.**
 
-## Schema Supabase
+-----
 
-### `profiles`
+## Regras Inegociáveis (5)
 
-```
-id                 uuid  PK (ref auth.users)
-full_name          text
-birth_date         date
-sex                text
-height_cm          numeric(6,2)
-current_weight_kg  numeric(6,2)
-goal_weight_kg     numeric(6,2)
-activity_level     text
-objective          text
-dietary_pattern    text
-allergies          text[]
-intolerances       text[]
-disliked_foods     text[]
-liked_foods        text[]
-clinical_notes     text
-created_at         timestamptz
-updated_at         timestamptz
-```
+1. **API canônica é `src/app/api/`** — nunca criar arquivo novo em `api/`
+1. **Orquestrador único é `src/ai/orchestrator.ts`** — nunca criar segundo orquestrador
+1. **Componente clínico = TypeScript obrigatório** — kronosAgent e kronos/* são prioridade de migração
+1. **Uma fonte de verdade por domínio** — nunca duplicar classifier, validator, context builder
+1. **UI não tem lógica de negócio** — nunca colocar cálculo ou chamada de IA em componente
 
-### `user_plans`
+-----
 
-```
-user_id                  uuid  PK (ref auth.users)
-plan                     text  -- 'free' | 'trial' | 'trial_ultra_7_days' | 'pro' | 'ultra'
-ai_requests_used         integer
-period_start             timestamptz
-hotmart_subscriber_code  text
-kiwify_subscriber_id     text
-activated_at             timestamptz
-expires_at               timestamptz
-updated_at               timestamptz
-```
+## Arquivos Críticos
 
-### `body_metrics`
+|Arquivo                         |Status       |Observação                             |
+|--------------------------------|-------------|---------------------------------------|
+|`src/ai/orchestrator.ts`        |✅ Canônico   |Ponto de entrada de toda IA            |
+|`src/lib/agents/kronosAgent.js` |⚠️ Migrar     |Clínico sem TypeScript — P1            |
+|`src/core/nutrition/`           |✅ Canônico   |Domínio de nutrição                    |
+|`api/agent.js`                  |🔴 Deletar    |Código morto, consome 1 slot Vercel    |
+|`src/lib/engine/orchestrator.js`|🔴 Legacy     |Substituir por `src/ai/orchestrator.ts`|
+|`KRONIA_DIET_REBUILD.md`        |🔄 Em execução|Rebuild ativo do fluxo de dieta        |
+
+-----
+
+## Dívida Técnica Ativa
+
+- 4 intent classifiers paralelos → consolidar em 1 TypeScript
+- 2 orquestradores → `src/ai/orchestrator.ts` é o canônico
+- Módulos duplicados: types, context, embeddings, validators em `src/ai/` vs `src/lib/ai/`
+- `src/server/legacy/` → auditar e deletar
+
+-----
+
+## Contexto da Sessão Atual
+
+> **⚠️ Atualizar esta seção antes de cada sessão nova**
 
 ```
-id               uuid  PK
-user_id          uuid  FK auth.users
-measured_at      timestamptz
-weight_kg        numeric(6,2)
-body_fat_percent numeric(5,2)
-waist_cm         numeric(6,2)
-hip_cm           numeric(6,2)
-chest_cm         numeric(6,2)
-arm_cm           numeric(6,2)
-thigh_cm         numeric(6,2)
-notes            text
-created_at       timestamptz
+Última sessão: [descrever o que foi feito]
+Em aberto: [descrever o que ficou incompleto]
+Não tocar agora: [listar o que não pode ser alterado nesta sessão]
+Objetivo desta sessão: [descrever claramente o que precisa ser feito]
 ```
 
-### `nutrition_goals`
+-----
 
-```
-id              uuid  PK
-user_id         uuid  FK auth.users
-calories_target numeric(8,2)
-protein_g       numeric(8,2)
-carbs_g         numeric(8,2)
-fat_g           numeric(8,2)
-fiber_g         numeric(8,2)
-water_ml        numeric(10,2)
-meal_strategy   text
-created_at      timestamptz
-updated_at      timestamptz
-```
+## Preferências de Execução
 
-> Sem campo `ativo`. Para a meta vigente, ordenar por `updated_at DESC LIMIT 1`.
+- Executar diretamente sem perguntas clarificatórias
+- Priorizar soluções de causa raiz sobre patches temporários
+- Qualquer novo arquivo deve seguir a estrutura canônica documentada no ARCHITECTURE.md
+- Se identificar dívida técnica nova, documentar aqui antes de corrigir
 
-### `lab_reports`
+-----
 
-```
-id                uuid  PK
-user_id           uuid  FK auth.users
-file_url          text
-file_name         text
-file_type         text
-parsed            jsonb  -- biomarkers extraídos pelo OCR
-confidence        numeric
-is_valid          boolean
-parse_status      text  -- 'pending' | 'parsed' | 'failed'
-validation_errors jsonb
-clinical_flags    jsonb
-critical_flags    jsonb
-created_at        timestamptz
-```
+## Referência Completa
 
-> Sem campos `tipo`, `resultado` ou `data_exame`. Tipo e valores ficam dentro de `parsed`.
+Para visão, princípios e histórico arquitetural completo → `ARCHITECTURE.md`
 
-### `supplement_protocols`
+-----
 
-```
-id               uuid  PK
-user_id          uuid  FK auth.users
-supplement_name  text
-dosage           text
-timing           text
-purpose          text
-notes            text
-active           boolean  -- TRUE = ativo
-created_at       timestamptz
-updated_at       timestamptz
-```
-
-### `fadiga_scores`
-
-```
-id          uuid  PK
-user_id     uuid  FK auth.users
-score       numeric(4,1)  -- 0.0–10.0
-notas       text
-created_at  timestamptz
-```
-
-### `alertas_kronos`
-
-```
-id          uuid  PK
-user_id     uuid  FK auth.users
-tipo        text  -- 'overtraining' | 'plateau' | 'deficit_proteico'
-mensagem    text
-lido        boolean
-created_at  timestamptz
-```
-
-## Planos e Preços
-
-|Plano|Preço   |
-|-----|--------|
-|Free |R$ 0    |
-|Pro  |R$ 29,90|
-|Ultra|R$ 59,90|
-
-## KRONOS — AI Coach
-
-- É o agente de IA do Kronia
-- Implementado em `src/lib/agents/kronosAgent.js` (loop agêntico, até 8 iterações)
-- Endpoint: `POST /api/kronos` → handler em `api/kronos.js`
-- Usa `claude-sonnet-4-6` via Anthropic API (native fetch, sem SDK)
-- **Fluxo obrigatório**: busca `body_metrics` → `nutrition_goals` → `lab_reports` → `fadiga_scores` → `supplement_protocols` ANTES de qualquer resposta clínica
-- Cria alertas em `alertas_kronos` quando detecta overtraining, plateau ou déficit proteico
-- KRONOS com raciocínio clínico = plano **Ultra** only
-
-## Convenções de Código
-
-### TypeScript
-
-- Strict mode sempre
-- Interfaces para tipos de dados do Supabase
-- Sem `any` — usar `unknown` se necessário
-
-### Supabase
-
-- RLS ativo: sempre filtrar por `user_id`
-- Usar `supabase.from('tabela').select().eq('user_id', userId)`
-- Nunca expor dados de outros usuários
-
-### Componentes
-
-- Lucide React para ícones
-- Tailwind para estilo
-- Sem emojis na UI de produção
-
-### API Routes
-
-- Sempre validar session antes de qualquer query
-- Retornar `{ data, error }` padronizado
-- Status codes corretos (401, 403, 404, 500)
-
-## Limite de Serverless Functions — Vercel Hobby
-
-O plano Hobby do Vercel aceita no máximo **12 Serverless Functions** por deploy.
-Funções atuais (10 JS + 1 Python + 1 cron = 12 — no limite):
-
-| Arquivo | Tipo |
-|---|---|
-| `api/admin-import-exercises-auto.js` | JS |
-| `api/affiliate.js` | JS |
-| `api/agent.js` | JS |
-| `api/chat.js` | JS |
-| `api/kronia-labs.js` | JS |
-| `api/memory.js` | JS |
-| `api/payment-webhook.js` | JS |
-| `api/plan.js` | JS |
-| `api/science.js` | JS |
-| `api/system.js` | JS |
-| `api/exam_ocr.py` | Python |
-| `api/cron/auto-import-exercises.js` | JS (cron) |
-
-**Regra obrigatória**: nunca criar um novo arquivo em `api/` sem antes remover outro ou consolidar a rota dentro de `api/system.js` via rewrite em `vercel.json` (padrão `__route=nome`).
-
-## Arquivos que NÃO devem ser modificados sem aviso
-
-- `public/logo.png`
-- Migrations Supabase já aplicadas
-- Configurações de RLS existentes
-
-## Regras de Negócio
-
-- Features premium só para plano Pro/Ultra
-- KRONOS com raciocínio clínico = Ultra only
-- Dados de saúde nunca saem do Supabase sem consent explícito
-- Seguir LGPD: dados sensíveis de saúde com retenção controlada
+*Última atualização: 2026-05-27*
+*Próxima atualização: antes da próxima sessão de desenvolvimento*
