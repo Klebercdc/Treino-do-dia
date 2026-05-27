@@ -1,85 +1,251 @@
 # CLAUDE.md — KRONIA
 
-*Lido pelo Claude Code no início de cada sessão. Manter atualizado.*
+Lido automaticamente pelo Claude Code no início de cada sessão.
 
------
+Objetivo:
+estabilizar, consolidar e evoluir o KroniA com segurança e velocidade.
 
-## Identidade do Projeto
+NÃO:
+- redesenhar arquitetura
+- refatorar por estética
+- criar sistemas paralelos
+- criar burocracia enterprise
 
-KroniA — plataforma de saúde e performance com IA adaptativa.
-Desenvolvedor solo. Deploy via GitHub + Vercel. Sem terminal direto.
+SIM:
+- consolidar
+- simplificar
+- remover duplicação
+- entregar sem regressão
 
------
+━━━━━━━━━━━━━━━━━━━━
+# CONTEXTO DO PROJETO
+━━━━━━━━━━━━━━━━━━━━
 
-## Stack
+KroniA é uma plataforma de saúde e performance com IA adaptativa.
 
-- Next.js 14 App Router + TypeScript + Tailwind
-- Supabase (RLS, sa-east-1)
-- Groq API: `llama3-70b-8192` (smart) / `mixtral-8x7b-32768` (long) / `llama3-8b-8192` (fast)
-- SPA vanilla: `index.html` + `app.js` + `styles.css`
-- Vercel Hobby — **12/12 functions. NO LIMITE. Não criar nada em `api/`.**
+Realidade atual:
+- produção ativa
+- desenvolvedor solo
+- deploy via GitHub + Vercel
+- sem terminal local
+- velocidade importa
+- regressão é inaceitável
 
------
+Stack:
+- Next.js 14 App Router
+- TypeScript
+- Tailwind
+- Supabase
+- Vercel Hobby
+- SPA vanilla (`index.html`, `app.js`, `styles.css`)
 
-## Regras Inegociáveis (5)
+Modelos IA:
+- llama3-70b-8192 → smart
+- mixtral-8x7b-32768 → long
+- llama3-8b-8192 → fast
 
-1. **API canônica é `src/app/api/`** — nunca criar arquivo novo em `api/`
-1. **Orquestrador único é `src/ai/orchestrator.ts`** — nunca criar segundo orquestrador
-1. **Componente clínico = TypeScript obrigatório** — kronosAgent e kronos/* são prioridade de migração
-1. **Uma fonte de verdade por domínio** — nunca duplicar classifier, validator, context builder
-1. **UI não tem lógica de negócio** — nunca colocar cálculo ou chamada de IA em componente
+━━━━━━━━━━━━━━━━━━━━
+# RESTRIÇÃO CRÍTICA
+━━━━━━━━━━━━━━━━━━━━
 
------
+Vercel Hobby está em:
+12/12 functions.
 
-## Arquivos Críticos
+NÃO criar novos arquivos em:
+`/api`
 
-|Arquivo                         |Status       |Observação                             |
-|--------------------------------|-------------|---------------------------------------|
-|`src/ai/orchestrator.ts`        |✅ Canônico   |Ponto de entrada de toda IA            |
-|`src/lib/agents/kronosAgent.js` |⚠️ Migrar     |Clínico sem TypeScript — P1            |
-|`src/core/nutrition/`           |✅ Canônico   |Domínio de nutrição                    |
-|`api/agent.js`                  |🔴 Deletar    |Código morto, consome 1 slot Vercel    |
-|`src/lib/engine/orchestrator.js`|🔴 Legacy     |Substituir por `src/ai/orchestrator.ts`|
-|`KRONIA_DIET_REBUILD.md`        |🔄 Em execução|Rebuild ativo do fluxo de dieta        |
+Todo endpoint novo:
+→ `src/app/api/`
 
------
+━━━━━━━━━━━━━━━━━━━━
+# FONTES DE VERDADE
+━━━━━━━━━━━━━━━━━━━━
 
-## Dívida Técnica Ativa
+| Domínio | Canônico | Legacy |
+|---|---|---|
+| API | `src/app/api/` | `api/` |
+| IA orchestration | `src/ai/orchestrator.ts` | `src/lib/engine/orchestrator.js` |
+| Nutrição | `src/core/nutrition/` | `src/lib/nutrition/` |
+| AI types | `src/ai/types.ts` | `src/lib/ai/types.ts` |
+| Context builder | `src/ai/contextBuilder.ts` | `src/lib/ai/context-builder.ts` |
+| Embeddings | `src/ai/embeddings.ts` | `src/lib/ai/embeddings.ts` |
+| Validators | `src/ai/validator.ts` | `src/lib/ai/response-validator.ts` |
+| Agente clínico | `kronosAgent.js` (atual) | Migrar → `.ts` — P1 pendente, `.ts` não existe ainda |
 
-- 4 intent classifiers paralelos → consolidar em 1 TypeScript
-- 2 orquestradores → `src/ai/orchestrator.ts` é o canônico
-- Módulos duplicados: types, context, embeddings, validators em `src/ai/` vs `src/lib/ai/`
-- `src/server/legacy/` → auditar e deletar
+Intent classifier:
+- ainda não consolidado
+- NÃO criar novo
+- consolidar os existentes
 
------
+━━━━━━━━━━━━━━━━━━━━
+# REGRAS ABSOLUTAS
+━━━━━━━━━━━━━━━━━━━━
 
-## Contexto da Sessão Atual
+NUNCA:
+- criar arquivos em `/api`
+- criar novo orchestrator
+- criar novo intent classifier
+- adicionar lógica em módulos legacy
+- escrever lógica clínica em JavaScript
+- criar "v2", "advanced", "experimental" ou sistemas paralelos
+- propor rewrite massivo sem dor real
+- criar abstrações para problemas hipotéticos
+- mover centenas de arquivos por organização estética
 
-> **⚠️ Atualizar esta seção antes de cada sessão nova**
+SEMPRE:
+- usar TypeScript para IA e clínica
+- usar módulos canônicos
+- consolidar ao invés de duplicar
+- corrigir causa raiz quando possível
+- preservar compatibilidade quando necessário
+- priorizar entrega segura
+- documentar dívida técnica nova
 
-```
-Última sessão: [descrever o que foi feito]
-Em aberto: [descrever o que ficou incompleto]
-Não tocar agora: [listar o que não pode ser alterado nesta sessão]
-Objetivo desta sessão: [descrever claramente o que precisa ser feito]
-```
+━━━━━━━━━━━━━━━━━━━━
+# ESTRATÉGIA DE MIGRAÇÃO
+━━━━━━━━━━━━━━━━━━━━
 
------
+Migrar gradualmente.
 
-## Preferências de Execução
+Preferir:
+- consolidar durante trabalho normal
+- substituir legacy ao tocar feature relacionada
+- remover adapters mortos progressivamente
 
-- Executar diretamente sem perguntas clarificatórias
-- Priorizar soluções de causa raiz sobre patches temporários
-- Qualquer novo arquivo deve seguir a estrutura canônica documentada no ARCHITECTURE.md
-- Se identificar dívida técnica nova, documentar aqui antes de corrigir
+Evitar:
+- big bang rewrite
+- freeze-and-rebuild
+- branches longos de migração
 
------
+━━━━━━━━━━━━━━━━━━━━
+# SEGURANÇA CLÍNICA
+━━━━━━━━━━━━━━━━━━━━
 
-## Referência Completa
+Tudo envolvendo:
+- exames
+- biomarcadores
+- suplementos
+- overtraining
+- fadiga
+- recomendações clínicas
 
-Para visão, princípios e histórico arquitetural completo → `ARCHITECTURE.md`
+Deve:
+- usar TypeScript
+- evitar fallback silencioso
+- evitar implicit any
+- validar explicitamente
+- preservar rastreabilidade
 
------
+━━━━━━━━━━━━━━━━━━━━
+# CHECKLIST OBRIGATÓRIO
+━━━━━━━━━━━━━━━━━━━━
 
-*Última atualização: 2026-05-27*
-*Próxima atualização: antes da próxima sessão de desenvolvimento*
+Antes de qualquer mudança:
+
+1. Cria arquivo em `/api`?
+→ parar
+
+2. Cria sistema paralelo?
+→ parar
+
+3. Duplica módulo canônico?
+→ consolidar
+
+4. Escreve em legacy?
+→ justificar
+
+5. Aumenta Vercel function count?
+→ compensar
+
+6. Corrige sintoma ou causa raiz?
+→ preferir causa raiz
+
+━━━━━━━━━━━━━━━━━━━━
+# PRIORIDADES
+━━━━━━━━━━━━━━━━━━━━
+
+P0
+- blockers produção
+- pressão Vercel
+- `api/agent.js`
+- ambiguidade de roteamento
+
+P1
+- `kronosAgent.js` → `.ts`
+- consolidar intent classifiers
+- remover orchestrator legacy
+- consolidar módulos duplicados
+- auditar `src/server/legacy/`
+
+P2
+- consolidar nutrição
+- melhorar observabilidade
+- modularização incremental
+
+━━━━━━━━━━━━━━━━━━━━
+# ARQUIVOS CRÍTICOS
+━━━━━━━━━━━━━━━━━━━━
+
+| Arquivo | Status | Ação |
+|---|---|---|
+| `src/ai/orchestrator.ts` | canônico | ponto de entrada de toda IA |
+| `src/lib/agents/kronosAgent.js` | migrar urgente | não tocar sem migrar para `.ts` |
+| `src/core/nutrition/` | domínio oficial | canônico de nutrição |
+| `api/agent.js` | deletar | código morto, consome 1 slot Vercel |
+| `src/lib/engine/orchestrator.js` | remover | substituir pelo canônico |
+| `KRONIA_DIET_REBUILD.md` | rebuild ativo | não alterar arquivos de dieta sem ler antes |
+
+━━━━━━━━━━━━━━━━━━━━
+# FORMATO DE RESPOSTA
+━━━━━━━━━━━━━━━━━━━━
+
+Tarefas simples:
+- direto
+- curto
+- sem relatório gigante
+
+P0/P1:
+- problema
+- solução
+- passos
+- riscos (se existirem)
+
+NÃO:
+- criar whitepaper para bug simples
+- discutir escala futura irrelevante
+- propor estrutura enterprise incompatível com solo dev
+
+━━━━━━━━━━━━━━━━━━━━
+# SESSÃO ATUAL
+━━━━━━━━━━━━━━━━━━━━
+
+Atualizar antes de começar:
+
+Última sessão:
+[preencher]
+
+Em aberto:
+[preencher]
+
+Não tocar:
+[preencher]
+
+Objetivo hoje:
+[preencher]
+
+━━━━━━━━━━━━━━━━━━━━
+# DIRETIVA FINAL
+━━━━━━━━━━━━━━━━━━━━
+
+KroniA não precisa de mais arquitetura.
+
+Precisa de:
+- menos duplicação
+- ownership claro
+- consolidação
+- estabilidade
+- velocidade
+- evolução controlada
+
+Agir como principal engineer pragmático.
+Não como arquiteto enterprise teórico.
