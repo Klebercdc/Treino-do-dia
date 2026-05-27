@@ -1,22 +1,111 @@
-// ============================================================
-// KRONOS AGENT — Agente especializado Kronia
-// Stack: Node.js + @supabase/supabase-js + Claude API (native fetch)
-// ============================================================
-
 import { createClient } from "@supabase/supabase-js";
+
+// ─────────────────────────────────────────
+// TIPOS
+// ─────────────────────────────────────────
+
+interface BodyMetric {
+  id: string;
+  measured_at: string;
+  weight_kg: number | null;
+  body_fat_percent: number | null;
+  waist_cm: number | null;
+  hip_cm: number | null;
+  chest_cm: number | null;
+  arm_cm: number | null;
+  thigh_cm: number | null;
+  notes: string | null;
+}
+
+interface NutritionGoal {
+  id: string;
+  calories_target: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  fiber_g: number | null;
+  water_ml: number | null;
+  meal_strategy: string | null;
+  updated_at: string;
+}
+
+interface LabReport {
+  id: string;
+  parsed: Record<string, unknown> | null;
+  clinical_flags: Record<string, unknown> | null;
+  critical_flags: Record<string, unknown> | null;
+  parse_status: string;
+  created_at: string;
+}
+
+interface FadigaScore {
+  id: string;
+  score: number;
+  notas: string | null;
+  created_at: string;
+}
+
+interface SupplementProtocol {
+  id: string;
+  supplement_name: string;
+  dosage: string | null;
+  timing: string | null;
+  purpose: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+type AlertaTipo = "overtraining" | "plateau" | "deficit_proteico";
+
+interface ToolInput {
+  user_id: string;
+  limite?: number;
+  dias?: number;
+  tipo?: AlertaTipo;
+  mensagem?: string;
+  [key: string]: unknown;
+}
+
+type ContentBlock =
+  | { type: "text"; text: string }
+  | { type: "tool_use"; id: string; name: string; input: ToolInput };
+
+interface ClaudeResponse {
+  content: ContentBlock[];
+  stop_reason: "end_turn" | "tool_use" | string;
+}
+
+interface ClaudeMessage {
+  role: "user" | "assistant";
+  content:
+    | string
+    | ContentBlock[]
+    | Array<{ type: "tool_result"; tool_use_id: string; content: string }>;
+}
+
+interface KronosResult {
+  resposta: string;
+  iteracoes: number;
+}
+
+// ─────────────────────────────────────────
+// SUPABASE ADMIN
+// ─────────────────────────────────────────
 
 function getSupabaseAdmin() {
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url || !key) throw new Error("Supabase credentials not configured");
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
 // ─────────────────────────────────────────
-// SYSTEM PROMPT DO AGENTE
+// SYSTEM PROMPT
 // ─────────────────────────────────────────
+
 const SYSTEM_PROMPT = `Você é o KRONOS, agente de coaching clínico do Kronia.
 
 REGRAS ABSOLUTAS:
@@ -38,8 +127,9 @@ FLUXO OBRIGATÓRIO para qualquer pergunta sobre saúde, dieta ou treino:
 Tom: clínico, direto, sem eufemismos. Você é um coach especializado, não um chatbot genérico.`;
 
 // ─────────────────────────────────────────
-// DEFINIÇÃO DAS TOOLS
+// TOOLS
 // ─────────────────────────────────────────
+
 const TOOLS = [
   {
     name: "buscar_metricas_corporais",
@@ -50,10 +140,7 @@ const TOOLS = [
       type: "object",
       properties: {
         user_id: { type: "string", description: "UUID do usuário" },
-        limite: {
-          type: "number",
-          description: "Quantos registros retornar (padrão 10)",
-        },
+        limite: { type: "number", description: "Quantos registros retornar (padrão 10)" },
       },
       required: ["user_id"],
     },
@@ -65,9 +152,7 @@ const TOOLS = [
       "Use antes de qualquer recomendação de dieta ou análise de ingestão.",
     input_schema: {
       type: "object",
-      properties: {
-        user_id: { type: "string" },
-      },
+      properties: { user_id: { type: "string" } },
       required: ["user_id"],
     },
   },
@@ -78,9 +163,7 @@ const TOOLS = [
       "Use para cruzar dados clínicos com sintomas, fadiga ou desempenho.",
     input_schema: {
       type: "object",
-      properties: {
-        user_id: { type: "string" },
-      },
+      properties: { user_id: { type: "string" } },
       required: ["user_id"],
     },
   },
@@ -93,10 +176,7 @@ const TOOLS = [
       type: "object",
       properties: {
         user_id: { type: "string" },
-        dias: {
-          type: "number",
-          description: "Quantos dias para trás buscar (padrão 14)",
-        },
+        dias: { type: "number", description: "Quantos dias para trás buscar (padrão 14)" },
       },
       required: ["user_id"],
     },
@@ -108,9 +188,7 @@ const TOOLS = [
       "Use para cruzar com sintomas ou recomendar ajustes.",
     input_schema: {
       type: "object",
-      properties: {
-        user_id: { type: "string" },
-      },
+      properties: { user_id: { type: "string" } },
       required: ["user_id"],
     },
   },
@@ -123,25 +201,26 @@ const TOOLS = [
       type: "object",
       properties: {
         user_id: { type: "string" },
-        tipo: {
-          type: "string",
-          enum: ["overtraining", "plateau", "deficit_proteico"],
-        },
-        mensagem: {
-          type: "string",
-          description: "Mensagem clara do alerta para o usuário",
-        },
+        tipo: { type: "string", enum: ["overtraining", "plateau", "deficit_proteico"] },
+        mensagem: { type: "string", description: "Mensagem clara do alerta para o usuário" },
       },
       required: ["user_id", "tipo", "mensagem"],
     },
   },
-];
+] as const;
 
 // ─────────────────────────────────────────
-// CHAMADA À API CLAUDE (native fetch)
+// CHAMADA CLAUDE API
 // ─────────────────────────────────────────
-async function callClaudeMessages(messages, system, tools) {
-  const apiKey = process.env.ANTHROPIC_API_KEY || "";
+
+async function callClaudeMessages(
+  messages: ClaudeMessage[],
+  system: string,
+  tools: typeof TOOLS
+): Promise<ClaudeResponse> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -159,31 +238,29 @@ async function callClaudeMessages(messages, system, tools) {
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(
-      err?.error?.message || `Claude API error: ${response.status}`
-    );
+    const err = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(err?.error?.message || `Claude API error: ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<ClaudeResponse>;
 }
 
 // ─────────────────────────────────────────
 // EXECUÇÃO DAS TOOLS
 // ─────────────────────────────────────────
-async function executeTool(name, input) {
+
+async function executeTool(name: string, input: ToolInput): Promise<string> {
   const supabase = getSupabaseAdmin();
   try {
     switch (name) {
       case "buscar_metricas_corporais": {
         const { data, error } = await supabase
           .from("body_metrics")
-          .select(
-            "id, measured_at, weight_kg, body_fat_percent, waist_cm, hip_cm, chest_cm, arm_cm, thigh_cm, notes"
-          )
+          .select("id, measured_at, weight_kg, body_fat_percent, waist_cm, hip_cm, chest_cm, arm_cm, thigh_cm, notes")
           .eq("user_id", input.user_id)
           .order("measured_at", { ascending: false })
-          .limit(input.limite || 10);
+          .limit(input.limite ?? 10)
+          .returns<BodyMetric[]>();
         if (error) throw error;
         return JSON.stringify(data);
       }
@@ -191,12 +268,11 @@ async function executeTool(name, input) {
       case "buscar_metas_nutricionais": {
         const { data, error } = await supabase
           .from("nutrition_goals")
-          .select(
-            "id, calories_target, protein_g, carbs_g, fat_g, fiber_g, water_ml, meal_strategy, updated_at"
-          )
+          .select("id, calories_target, protein_g, carbs_g, fat_g, fiber_g, water_ml, meal_strategy, updated_at")
           .eq("user_id", input.user_id)
           .order("updated_at", { ascending: false })
-          .limit(1);
+          .limit(1)
+          .returns<NutritionGoal[]>();
         if (error) throw error;
         return JSON.stringify(data?.[0] ?? null);
       }
@@ -204,19 +280,18 @@ async function executeTool(name, input) {
       case "buscar_exames": {
         const { data, error } = await supabase
           .from("lab_reports")
-          .select(
-            "id, parsed, clinical_flags, critical_flags, parse_status, created_at"
-          )
+          .select("id, parsed, clinical_flags, critical_flags, parse_status, created_at")
           .eq("user_id", input.user_id)
           .eq("parse_status", "parsed")
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(5)
+          .returns<LabReport[]>();
         if (error) throw error;
         return JSON.stringify(data);
       }
 
       case "buscar_fadiga": {
-        const diasAtras = input.dias || 14;
+        const diasAtras = input.dias ?? 14;
         const dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() - diasAtras);
         const { data, error } = await supabase
@@ -224,7 +299,8 @@ async function executeTool(name, input) {
           .select("id, score, notas, created_at")
           .eq("user_id", input.user_id)
           .gte("created_at", dataLimite.toISOString())
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .returns<FadigaScore[]>();
         if (error) throw error;
         return JSON.stringify(data);
       }
@@ -232,39 +308,46 @@ async function executeTool(name, input) {
       case "buscar_suplementos": {
         const { data, error } = await supabase
           .from("supplement_protocols")
-          .select(
-            "id, supplement_name, dosage, timing, purpose, notes, created_at"
-          )
+          .select("id, supplement_name, dosage, timing, purpose, notes, created_at")
           .eq("user_id", input.user_id)
-          .eq("active", true);
+          .eq("active", true)
+          .returns<SupplementProtocol[]>();
         if (error) throw error;
         return JSON.stringify(data);
       }
 
       case "criar_alerta": {
+        const tipo = input.tipo as AlertaTipo;
+        const mensagem = input.mensagem;
+        if (!tipo || !mensagem) throw new Error("criar_alerta requer tipo e mensagem");
         const { error } = await supabase.from("alertas_kronos").insert({
           user_id: input.user_id,
-          tipo: input.tipo,
-          mensagem: input.mensagem,
+          tipo,
+          mensagem,
           lido: false,
         });
         if (error) throw error;
-        return JSON.stringify({ sucesso: true, tipo: input.tipo });
+        return JSON.stringify({ sucesso: true, tipo });
       }
 
       default:
         return JSON.stringify({ erro: `Tool desconhecida: ${name}` });
     }
   } catch (err) {
-    return JSON.stringify({ erro: err.message, tool: name });
+    const message = err instanceof Error ? err.message : String(err);
+    return JSON.stringify({ erro: message, tool: name });
   }
 }
 
 // ─────────────────────────────────────────
 // LOOP AGÊNTICO
 // ─────────────────────────────────────────
-export async function runKronosAgent(userId, userMessage) {
-  const messages = [{ role: "user", content: userMessage }];
+
+export async function runKronosAgent(
+  userId: string,
+  userMessage: string
+): Promise<KronosResult> {
+  const messages: ClaudeMessage[] = [{ role: "user", content: userMessage }];
   const MAX_ITERATIONS = 8;
   let iterations = 0;
 
@@ -274,16 +357,20 @@ export async function runKronosAgent(userId, userMessage) {
     const response = await callClaudeMessages(messages, SYSTEM_PROMPT, TOOLS);
     messages.push({ role: "assistant", content: response.content });
 
-    const toolUses = response.content.filter((b) => b.type === "tool_use");
+    const toolUses = response.content.filter(
+      (b): b is Extract<ContentBlock, { type: "tool_use" }> => b.type === "tool_use"
+    );
 
     if (toolUses.length === 0 || response.stop_reason === "end_turn") {
-      const textBlock = response.content.find((b) => b.type === "text");
+      const textBlock = response.content.find(
+        (b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text"
+      );
       return { resposta: textBlock?.text ?? "", iteracoes: iterations };
     }
 
     const toolResults = await Promise.all(
       toolUses.map(async (t) => ({
-        type: "tool_result",
+        type: "tool_result" as const,
         tool_use_id: t.id,
         content: await executeTool(t.name, { user_id: userId, ...t.input }),
       }))
@@ -293,8 +380,7 @@ export async function runKronosAgent(userId, userMessage) {
   }
 
   return {
-    resposta:
-      "Limite de raciocínio atingido. Tente uma pergunta mais específica.",
+    resposta: "Limite de raciocínio atingido. Tente uma pergunta mais específica.",
     iteracoes: MAX_ITERATIONS,
   };
 }
