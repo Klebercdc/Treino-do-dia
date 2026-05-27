@@ -11,6 +11,7 @@ var semanticNutritionValidator = require('./semanticNutritionValidator');
 var nutritionConfidenceScore = require('./nutritionConfidenceScore');
 var nutritionAuditTrail = require('./nutritionAuditTrail');
 var nutritionProductionGate = require('./nutritionProductionGate');
+var macroConsistencyValidator = require('./macroConsistencyValidator');
 
 function round(value, decimals) {
   var d = typeof decimals === 'number' ? decimals : 0;
@@ -1045,6 +1046,20 @@ function buildNutritionPrescription(strategy) {
     aiBlueprint: aiBlueprint
   });
   plan.visualPrescription = visual;
+
+  plan.refeicoes.forEach(function(meal) {
+    meal.itens.forEach(function(item) {
+      macroConsistencyValidator.validateMacroConsistency(item);
+    });
+  });
+
+  var recalculatedCalories = plan.refeicoes.reduce(function(acc, meal) {
+    return acc + meal.itens.reduce(function(mAcc, item) {
+      return mAcc + Number(item.calorias || 0);
+    }, 0);
+  }, 0);
+  plan.totalCalories = recalculatedCalories;
+
   var templateClinicalAlerts = dietTemplates.clinicalFlags(calc.profile || {}).length
     ? [dietTemplates.CLINICAL_ALERT]
     : [];

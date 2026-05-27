@@ -104,6 +104,15 @@ export interface DietAIMetadata {
   validationSource?: string
 }
 
+export interface DietAdaptiveAI {
+  adaptiveStrategy?: string
+  adherenceScore?: number
+  diversityScore?: number
+  behaviorSummary?: string
+  adaptiveBadges?: string[]
+  adaptiveInsights?: string[]
+}
+
 export interface DietPayload {
   titulo?: string
   objetivo?: string
@@ -111,6 +120,7 @@ export interface DietPayload {
   observacoesGerais?: string
   refeicoes: DietMeal[]
   aiMetadata?: DietAIMetadata
+  enterpriseAI?: DietAdaptiveAI
 }
 
 export interface SupplementItem {

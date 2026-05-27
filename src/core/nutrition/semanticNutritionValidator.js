@@ -62,16 +62,29 @@ function normalizeFoodSemantic(item) {
   var name = String(item.nome || item.name || '');
   var macros = getMacros100g(item);
 
+  if (/iogurte/i.test(name) && !/natural|grego|skyr|proteic|high.?protein|whey/i.test(name) && macros.protein >= 8) {
+    return Object.assign({}, item, {
+      nome: 'Iogurte proteico natural',
+      name: 'Iogurte proteico natural',
+      semanticAdjusted: true
+    });
+  }
+
   if (/iogurte.*natural/i.test(name) && !/grego|skyr|proteic|high.?protein|whey/i.test(name) && macros.protein > 7) {
     return Object.assign({}, item, { nome: 'Iogurte grego natural', name: 'Iogurte grego natural' });
   }
 
   if (/pao.*integral|pão.*integral/i.test(name)) {
+    var portionProtein = Number(item.proteinas || item.protein || 0);
+    if (portionProtein > 0 && portionProtein < 4) {
+      item = Object.assign({}, item, { proteinas: 5, protein: 5 });
+    }
     var portion = String(item.porcao || item.portionLabel || '');
     var grams = Number(item.gramas || item.grams || 0);
     if (portion && !/\d+\s*g/i.test(portion) && grams > 0) {
       return Object.assign({}, item, { porcao: portion + ' (' + grams + ' g)' });
     }
+    return item;
   }
 
   return item;
