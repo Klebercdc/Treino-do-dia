@@ -286,6 +286,23 @@ function buildStandaloneWorkout(input, goal, level, days, environment) {
     };
   }).filter(function(t) { return t.exercicios.length > 0; });
 
+  if (!treinos.length) {
+    console.warn('[workout-builder] nenhum exercício restou após restrições, retornando failSafe');
+    return {
+      failSafe: true,
+      flow_state: 'catalog_all_restricted',
+      treinos: [],
+      references: [],
+      orientacoes: {
+        objetivo: goal,
+        nivel: level,
+        frequencia: days + 'x por semana',
+        sessoes: String(input.tempo || '60 min'),
+        observacao: 'Nenhum exercício disponível após aplicar as restrições informadas. Revise as limitações ou o ambiente.',
+      },
+    };
+  }
+
   return {
     failSafe: false,
     flow_state: 'catalog_generated',

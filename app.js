@@ -529,11 +529,23 @@ async function gerarProtocolo(silent) {
       return;
     }
 
+    if (!Array.isArray(renderModel.plan.treinos) || renderModel.plan.treinos.length === 0) {
+      console.warn('[gerarProtocolo] treinos vazio com failSafe:false, usando geração local como fallback');
+      gerarTreinoDoPrograma(silent);
+      return;
+    }
+
+    console.info('[workout-builder-result]', {
+      flowState: renderModel.plan.flow_state,
+      failSafe: renderModel.plan.failSafe,
+      treinos: renderModel.plan.treinos.length
+    });
+
     applyAIWorkout({
       treino: {
         grupos: renderModel.plan.treinos.map(function(treino) {
           return {
-            nome: treino.nome,
+            nome: String(treino.nome || ''),
             exercicios: Array.isArray(treino.exercicios) ? treino.exercicios : [],
           };
         }),
@@ -5188,33 +5200,46 @@ function applyAIWorkoutFromText() {
   applyAIWorkout({ treino: { grupos } });
 }
 
+function renderWorkoutError(message) {
+  var safeMsg = String(message || 'Erro ao gerar treino');
+  navTo('treino');
+  var errNav = document.getElementById('nav');
+  var errCont = document.getElementById('container');
+  if (errNav) errNav.innerHTML = '';
+  if (errCont) errCont.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--muted);font-size:0.9rem;line-height:1.5;">' + escapeHTML(safeMsg) + '<br><br><button onclick="navTo(\'programa\');openConfig()" style="margin-top:8px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;">Tentar novamente</button></div>';
+  showToast(safeMsg, 'error', 3500);
+}
+
 function applyAIWorkout(data) {
   try {
     const treino = data.treino;
-    if (!treino) { showToast("Formato inválido", "error"); return; }
+    if (!treino) { renderWorkoutError('Formato de treino inválido'); return; }
 
     let grupos = treino.grupos;
     if (!grupos && Array.isArray(treino.exercicios)) {
       grupos = [{ nome: treino.nome || "Treino A", exercicios: treino.exercicios }];
     }
-    if (!grupos || grupos.length === 0) { showToast("Nenhum exercício encontrado", "error"); return; }
+    if (!grupos || !Array.isArray(grupos) || grupos.length === 0) {
+      renderWorkoutError('Nenhum treino gerado');
+      return;
+    }
 
+    navTo('treino');
     const nav  = document.getElementById("nav");
     const cont = document.getElementById("container");
     nav.innerHTML  = "";
     cont.innerHTML = "";
 
     grupos.forEach((grupo, idx) => {
-      // Label curto: pegar só a letra/número do treino
-      const labelMatch = grupo.nome.match(/[A-Za-z]\s*[\-–]?\s*[A-Za-z]*/);
-      const label = grupo.nome.replace(/treino\s*/i, "").trim().substring(0, 12) || String.fromCharCode(65 + idx);
+      const safeName = String(grupo.nome || ('Treino ' + String.fromCharCode(65 + idx)));
+      const label = safeName.replace(/treino\s*/i, "").trim().substring(0, 12) || String.fromCharCode(65 + idx);
 
       nav.innerHTML += `<div class="pill ${idx===0?"active":""}" id="p${idx}" onclick="tab(${idx})">${escapeHTML(label)}</div>`;
 
       const sec = document.createElement("div");
       sec.id = "sec" + idx;
       sec.className = "section " + (idx === 0 ? "active" : "");
-      sec.setAttribute("data-treino-key", grupo.nome);
+      sec.setAttribute("data-treino-key", safeName);
       cont.appendChild(sec);
 
       grupo.exercicios.forEach((ex, exIdx) => {
@@ -5252,7 +5277,8 @@ function applyAIWorkout(data) {
     showToast("✅ " + grupos.length + " treino(s) aplicado(s) — " + total + " exercícios!", "success", 3000);
 
   } catch(e) {
-    showToast("Erro ao aplicar: " + e.message, "error");
+    console.error('[applyAIWorkout] exception', e && e.message ? e.message : e);
+    renderWorkoutError('Erro ao montar treino. Tente novamente.');
   }
 }
 
