@@ -630,43 +630,58 @@ module.exports = function(req, res) {
           fallbackUsed: true
         }); });
         var workoutStep = workoutflow.continueWorkoutFlow(convState.stepIndex, convState.collected, lastContent);
+        console.info('[workout-flow]', {
+          stepIndex: convState.stepIndex,
+          collected: convState.collected,
+          finished: workoutStep.finished
+        });
         if (!workoutStep.finished) {
           safeTrack(function() { tracker.addStep({ layer: 'flow', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.TRAINING_PIPELINE_SELECTED, status: 'success', success: true, inputSummary: lastContent, outputSummary: workoutStep.response }); });
           return sendTracked(200, { success: true, type: 'text', message: workoutStep.response, data: { conversationState: { mode: workoutStep.mode, stepIndex: workoutStep.stepIndex, collected: workoutStep.collected, memory: shortState } }, meta: { local: true, flow: 'workout' } });
         }
 
-        if (!process.env.GROQ_API_KEY) {
-          return buildReferencedWorkoutFallback(workoutStep.collected, function(_fallbackErr, localWorkout) {
-            safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via serviço oficial de fallback por ausencia de GROQ_API_KEY.' }); });
-            return sendTracked(200, buildWorkoutSuccessPayload(localWorkout, { local: true, fallback: true, source: 'workout_reference_service' }, shortState));
-          });
+        var finishedCollected = workoutStep.collected;
+        var localPlan = workoutBuilder.buildWorkoutPlan(finishedCollected);
+        console.info('[workout-builder-result]', {
+          flowState: localPlan && localPlan.flow_state,
+          failSafe: localPlan && localPlan.failSafe,
+          treinos: localPlan && Array.isArray(localPlan.treinos) ? localPlan.treinos.length : 0
+        });
+
+        if (!process.env.GROQ_API_KEY || (localPlan && localPlan.failSafe)) {
+          safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via builder interno (sem GROQ_API_KEY ou plano failsafe).' }); });
+          return sendTracked(200, buildWorkoutSuccessPayload(localPlan, { local: true, fallback: !process.env.GROQ_API_KEY, source: 'workout_builder_direct' }, shortState));
         }
 
         safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { layer: 'ai', nodeKey: 'Treino' }); });
         return runPaidAiCall(function(nextCall) {
-          var richMsg = { role: 'user', content: workoutflow.buildWorkoutMessage(workoutStep.collected) };
-          gerarTreino(richMsg, user.id, nextCall);
+          var richMsg = { role: 'user', content: workoutflow.buildWorkoutMessage(finishedCollected) };
+          gerarTreino(richMsg, user.id, function(err, aiPlan) {
+            if (err || !aiPlan || !Array.isArray(aiPlan.treinos) || !aiPlan.treinos.length) {
+              return nextCall(null, localPlan);
+            }
+            return nextCall(null, aiPlan);
+          });
         }, function(err, data) {
+          var finalPlan = (data && Array.isArray(data.treinos) && data.treinos.length) ? data : localPlan;
           if (err) {
-            return buildReferencedWorkoutFallback(workoutStep.collected, function(_fallbackErr, fallbackWorkout) {
-              safeTrack(function() {
-                tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err });
-                tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via serviço oficial de fallback apos falha do provider.' });
-              });
-              return sendTracked(200, buildWorkoutSuccessPayload(fallbackWorkout, { local: true, fallback: true, source: 'workout_reference_service', providerError: String(err || '') }, shortState));
+            safeTrack(function() {
+              tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err });
+              tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via builder interno apos falha do provider.' });
             });
+            return sendTracked(200, buildWorkoutSuccessPayload(localPlan, { local: true, fallback: true, source: 'workout_builder_fallback', providerError: String(err || '') }, shortState));
           }
-          safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado no modo workout_json.' }); });
+          safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado.' }); });
           fireAndForgetMemoryEvent({
             userId: user.id,
             eventType: 'workout_generated',
             eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':flow',
-            payload: { source: 'workout_flow', sections: Array.isArray(data && data.treinos) ? data.treinos.length : 0 },
+            payload: { source: 'workout_flow', sections: Array.isArray(finalPlan && finalPlan.treinos) ? finalPlan.treinos.length : 0 },
             requestId: b.requestId || b.correlationId || null,
             component: 'api/chat',
             source: 'workout_pipeline'
           });
-          return sendTracked(200, buildWorkoutSuccessPayload(data, {}, shortState));
+          return sendTracked(200, buildWorkoutSuccessPayload(finalPlan, {}, shortState));
         });
       }
 

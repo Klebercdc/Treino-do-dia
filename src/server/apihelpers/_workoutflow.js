@@ -3,6 +3,8 @@
  * 6 perguntas objetivas que montam o perfil completo para a IA.
  */
 
+var workoutBuilder = require('./_workoutBuilder');
+
 var STEPS = [
   {
     key:      'objetivo',
@@ -62,28 +64,19 @@ function continueWorkoutFlow(stepIndex, collected, message) {
 }
 
 /**
- * Monta a mensagem de usuário que vai para a IA com o perfil completo.
- * Substitui a mensagem vaga do usuário por um pedido estruturado e rico.
+ * Monta a mensagem de usuário que vai para a IA.
+ * Usa o builder interno para gerar um plano estável e pede à IA para retorná-lo exatamente.
+ * Elimina a dependência de a IA retornar JSON no formato correto.
  */
 function buildWorkoutMessage(collected) {
-  var objetivo    = collected.objetivo    || 'hipertrofia';
-  var nivel       = collected.nivel       || 'intermediário';
-  var dias        = collected.dias        || '4';
-  var tempo       = collected.tempo       || '60 min';
-  var equipamentos = collected.equipamentos || 'academia completa';
-  var limitacoes  = collected.limitacoes  || 'nenhuma';
-
-  return 'Crie um programa de treino completo com base neste perfil:\n'
-    + '- Objetivo: ' + objetivo + '\n'
-    + '- Nível: ' + nivel + '\n'
-    + '- Dias por semana: ' + dias + '\n'
-    + '- Tempo por sessão: ' + tempo + '\n'
-    + '- Local/equipamentos disponíveis: ' + equipamentos + '\n'
-    + '- Limitações físicas: ' + limitacoes + '\n\n'
-    + 'Monte a divisão de treinos, escolha exercícios adequados ao perfil e inclua as 3 fases MEV/MAV/MRV '
-    + 'com séries e repetições ajustadas ao nível ' + nivel + '. '
-    + 'Se houver limitações, substitua os exercícios de risco por alternativas seguras. '
-    + 'Responda SOMENTE com JSON válido no formato exigido.';
+  var safeCollected = collected || {};
+  var prebuiltPlan = workoutBuilder.buildWorkoutPlan(safeCollected);
+  return (
+    'RETORNE EXATAMENTE O JSON ABAIXO. ' +
+    'NÃO MODIFIQUE. ' +
+    'NÃO ADICIONE TEXTO ANTES OU DEPOIS.\n' +
+    JSON.stringify(prebuiltPlan)
+  );
 }
 
 module.exports = {
