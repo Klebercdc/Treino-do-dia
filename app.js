@@ -1166,10 +1166,88 @@ async function salvarTreino() {
     _aplicarAlertaCriticoAcwr(analiseAcwr);
     showSummary(st, prs, dur);
     if (prs.length > 0) setTimeout(() => showToast(`🏆 ${prs.length} PR${prs.length>1?"s":""} batido${prs.length>1?"s":""}!`, "success", 4000), 800);
+    // Dispara análise adaptativa em background — não bloqueia o fluxo
+    setTimeout(() => { try { _triggerAdaptationAnalysis(item); } catch(_) {} }, 2000);
   } catch { showToast("Erro ao salvar. Memória cheia?", "error"); }
 }
 
+// ID da adaptação pendente atual (para aceitar/rejeitar)
+var _currentAdaptationId = null;
 
+async function _triggerAdaptationAnalysis(session) {
+  const card = document.getElementById('kroniaAdaptationCard');
+  const body = document.getElementById('kroniaAdaptationBody');
+  if (!card || !body) return;
+
+  try {
+    const { data: { session: authSession } } = await _sb.auth.getSession();
+    if (!authSession?.user) return;
+
+    card.style.display = 'block';
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:0.8rem"><span>Analisando seu treino</span><span style="display:flex;gap:3px"><span class="dot-pulse" style="width:5px;height:5px;border-radius:50%;background:var(--muted);display:inline-block;animation:dotBounce 1.2s ease-in-out infinite"></span><span style="width:5px;height:5px;border-radius:50%;background:var(--muted);display:inline-block;animation:dotBounce 1.2s ease-in-out 0.4s infinite"></span><span style="width:5px;height:5px;border-radius:50%;background:var(--muted);display:inline-block;animation:dotBounce 1.2s ease-in-out 0.8s infinite"></span></span></div>';
+    document.getElementById('kroniaAdaptationActions').style.display = 'none';
+
+    const headers = await getAuthHeaders();
+    const resp = await fetch(resolveAppApiUrl('/api/kronia/adaptations'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'analyze', session }),
+    });
+
+    if (!resp.ok) { card.style.display = 'none'; return; }
+
+    const data = await resp.json();
+
+    if (!data.adaptation) {
+      card.style.display = 'none';
+      return;
+    }
+
+    _currentAdaptationId = data.adaptation.id;
+
+    const loadBadge = data.adaptation.loadState
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;background:${_loadStateColor(data.adaptation.loadState)};color:#fff">${_loadStateLabel(data.adaptation.loadState)}</span>`
+      : '';
+
+    body.innerHTML = loadBadge + escapeHTML(data.adaptation.reasoning);
+    document.getElementById('kroniaAdaptationActions').style.display = 'flex';
+  } catch (_) {
+    const card = document.getElementById('kroniaAdaptationCard');
+    if (card) card.style.display = 'none';
+  }
+}
+
+async function resolveAdaptation(action) {
+  if (!_currentAdaptationId) return;
+  const card = document.getElementById('kroniaAdaptationCard');
+  try {
+    const headers = await getAuthHeaders();
+    await fetch(resolveAppApiUrl('/api/kronia/adaptations'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action, id: _currentAdaptationId }),
+    });
+    _currentAdaptationId = null;
+    if (card) {
+      card.style.opacity = '0';
+      card.style.transition = 'opacity 0.3s';
+      setTimeout(() => { card.style.display = 'none'; card.style.opacity = '1'; }, 300);
+    }
+    if (action === 'accept') showToast('Adaptação aplicada. KRONOS AI atualizou seu protocolo.', 'success', 3500);
+  } catch (_) {
+    if (card) card.style.display = 'none';
+  }
+}
+
+function _loadStateLabel(state) {
+  const labels = { LOW: 'Volume Baixo', MODERATE: 'Volume Moderado', HIGH: 'Volume Alto', VERY_HIGH: 'Sobrecarga' };
+  return labels[state] || state;
+}
+
+function _loadStateColor(state) {
+  const colors = { LOW: '#6366f1', MODERATE: '#10b981', HIGH: '#f59e0b', VERY_HIGH: '#ef4444' };
+  return colors[state] || '#6366f1';
+}
 
 async function _avaliarFadigaAcwr() {
   try {
@@ -1758,6 +1836,10 @@ function showSummary(state, prs, durationMin) {
   } else if (prSection) { prSection.style.display="none"; }
   if (elSumModal) elSumModal.classList.add("show");
   if (navigator.vibrate) navigator.vibrate([50,30,80,30,120]);
+  // Resetar card de adaptação anterior
+  const adaptCard = document.getElementById('kroniaAdaptationCard');
+  if (adaptCard) { adaptCard.style.display = 'none'; adaptCard.style.opacity = '1'; }
+  _currentAdaptationId = null;
   // Limpar análise anterior e rodar nova
   const aiSection = document.getElementById("aiCoachSummary");
   if (aiSection) aiSection.style.display = "none";
