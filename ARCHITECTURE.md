@@ -59,6 +59,63 @@ em um sistema coeso, evidence-based e centrado no usuário.
 - `api/` é legacy — nenhum arquivo novo deve ser criado ali
 - Migração: cada feature nova vai para `src/app/api/`, o equivalente em `api/` é removido quando possível
 
+#### Como o roteamento funciona
+
+O Vercel processa `vercel.json` rewrites ANTES de entregar ao Next.js.
+Regra prática: se a rota está no `vercel.json`, vai para `api/`. Se não está, o Next.js serve via `src/app/api/`.
+
+**Rotas servidas por `api/` (via vercel.json rewrite):**
+
+| URL | Handler |
+|---|---|
+| `/api/kronos` | `api/system.js` |
+| `/api/kronia/labs/register` | `api/system.js` |
+| `/api/kronia/labs/reports` | `api/system.js` |
+| `/api/kronia/labs/reports/:id` | `api/system.js` |
+| `/api/kronia/labs/init-upload` | `api/system.js` |
+| `/api/kronia/diet/generate` | `api/science.js` |
+| `/api/kronia/diet/substitutions` | `api/science.js` |
+| `/api/kronia/diet/swap` | `api/science.js` |
+| `/api/kronia/diet/remove-block` | `api/science.js` |
+| `/api/kronia/diet/adjust-portion` | `api/science.js` |
+| `/api/kronia/diet/print` | `api/science.js` |
+| `/api/system/health` | `api/system.js` |
+| `/api/nutrition-calc` | `api/science.js` |
+| `/api/nutrition-plan` | `api/science.js` |
+| `/api/lgpd-export` | `api/system.js` |
+| `/api/lgpd-delete` | `api/system.js` |
+| `/api/plan-*` | `api/plan.js` |
+| `/api/affiliate-*` | `api/affiliate.js` |
+| `/api/science-*` | `api/science.js` |
+
+**Rotas servidas por `src/app/api/` (Next.js, sem rewrite):**
+
+| URL | Handler |
+|---|---|
+| `/api/kronia/chat` | `src/app/api/kronia/chat/route.ts` |
+| `/api/kronia/chat-file` | `src/app/api/kronia/chat-file/route.ts` |
+| `/api/kronia/workout` | `src/app/api/kronia/workout/route.ts` |
+| `/api/kronia/workout/templates` | `src/app/api/kronia/workout/templates/route.ts` |
+| `/api/kronia/exercises/*` | `src/app/api/kronia/exercises/*/route.ts` |
+| `/api/kronia/intelligence` | `src/app/api/kronia/intelligence/route.ts` |
+| `/api/kronia/intent` | `src/app/api/kronia/intent/route.ts` |
+| `/api/labs/upload` | `src/app/api/labs/upload/route.ts` |
+| `/api/labs/process` | `src/app/api/labs/process/route.ts` |
+| `/api/cron/daily-dispatch` | `src/app/api/cron/daily-dispatch/route.ts` |
+| `/api/cron/labs-watchdog` | `src/app/api/cron/labs-watchdog/route.ts` |
+| `/api/cron/sync-exercises` | `src/app/api/cron/sync-exercises/route.ts` |
+
+**Conflitos identificados (mesmo path, handlers diferentes — vercel.json vence):**
+
+| URL | Ganha | Ignorado |
+|---|---|---|
+| `/api/kronia/labs/register` | `api/system.js` | `src/app/api/kronia/labs/register/route.ts` |
+| `/api/kronia/labs/reports` | `api/system.js` | `src/app/api/kronia/labs/reports/route.ts` |
+| `/api/kronia/labs/reports/[id]` | `api/system.js` | `src/app/api/kronia/labs/reports/[id]/route.ts` |
+| `/api/system/health` | `api/system.js` | `src/app/api/system/health/route.ts` |
+
+Esses arquivos em `src/app/api/` estão mortos em produção enquanto o rewrite existir.
+
 ### Orquestração
 
 - `src/ai/orchestrator.ts` é o orquestrador canônico
@@ -109,9 +166,10 @@ em um sistema coeso, evidence-based e centrado no usuário.
 
 |Severidade|Problema                                                     |
 |----------|-------------------------------------------------------------|
-|P0        |Dual API surface sem roteamento documentado                  |
-|P0        |Vercel 12/12 functions — no limite hard                      |
-|P0        |`api/agent.js` — código morto (7 linhas, 1 slot desperdiçado)|
+|P0        |~~Dual API surface sem roteamento documentado~~ ✅ documentado|
+|P0        |~~Vercel 12/12~~ → 11/12 após deleção de `api/agent.js`      |
+|P0        |~~`api/agent.js`~~ ✅ deletado                               |
+|P0        |4 arquivos em `src/app/api/` mortos (conflito com vercel.json)|
 |P1        |4 intent classifiers paralelos                               |
 |P1        |2 orquestradores paralelos                                   |
 |P1        |`kronosAgent.js` sem TypeScript                              |
@@ -144,4 +202,4 @@ em um sistema coeso, evidence-based e centrado no usuário.
 
 -----
 
-*Última atualização: 2026-05-27*
+*Última atualização: 2026-05-27 — P0 concluído*
