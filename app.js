@@ -515,17 +515,15 @@ async function gerarProtocolo(silent) {
       return;
     }
 
-    if (!renderModel) {
-      // Shape desconhecido — fallback local silencioso
-      console.warn('[gerarProtocolo] renderModel nulo após parse, usando geração local');
-      gerarTreinoDoPrograma(silent);
+    if (!renderModel || !renderModel.plan || !Array.isArray(renderModel.plan.treinos)) {
+      console.warn('[gerarProtocolo] payload de treino inválido para renderização', renderModel);
+      if (!silent) renderWorkoutError('Erro ao montar treino');
       return;
     }
 
-    if (renderModel.failSafe) {
-      // API em modo failsafe (dados insuficientes) — usa geração local
-      console.info('[gerarProtocolo] API em modo failsafe, usando geração local como fallback');
-      gerarTreinoDoPrograma(silent);
+    if (renderModel.failSafe || renderModel.plan.treinos.length === 0) {
+      console.info('[gerarProtocolo] treino vazio ou failsafe recebido da API', renderModel);
+      if (!silent) renderWorkoutError(renderModel.plan.treinos.length === 0 ? 'Nenhum treino gerado' : 'Erro ao montar treino');
       return;
     }
 
@@ -5201,32 +5199,37 @@ function applyAIWorkoutFromText() {
 }
 
 function renderWorkoutError(message) {
-  var safeMsg = String(message || 'Erro ao gerar treino');
-  navTo('treino');
+  var safeMsg = String(message || 'Erro ao montar treino').trim() || 'Erro ao montar treino';
+  try { navTo('treino'); } catch (_) {}
   var errNav = document.getElementById('nav');
   var errCont = document.getElementById('container');
-  if (errNav) errNav.innerHTML = '';
-  if (errCont) errCont.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--muted);font-size:0.9rem;line-height:1.5;">' + escapeHTML(safeMsg) + '<br><br><button onclick="navTo(\'programa\');openConfig()" style="margin-top:8px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;">Tentar novamente</button></div>';
+  if (errNav) errNav.innerHTML = '<div class="pill active">Treino</div>';
+  if (errCont) {
+    errCont.innerHTML = '<div class="section active" id="sec-workout-error" data-treino-key="Erro"><div class="exercise-card" style="padding:18px;border:1px solid var(--border);background:var(--card);"><div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">Não foi possível renderizar o treino</div><div style="font-size:12px;line-height:1.45;color:var(--text-2)">' + escapeHTML(safeMsg) + '</div><button onclick="navTo(\'programa\');openConfig()" style="margin-top:14px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;">Tentar novamente</button></div></div>';
+  }
   showToast(safeMsg, 'error', 3500);
+  return false;
 }
 
 function applyAIWorkout(data) {
   try {
-    const treino = data.treino;
-    if (!treino) { renderWorkoutError('Formato de treino inválido'); return; }
+    const treino = data && data.treino;
+    if (!treino) return renderWorkoutError("Erro ao montar treino");
 
     let grupos = treino.grupos;
     if (!grupos && Array.isArray(treino.exercicios)) {
       grupos = [{ nome: treino.nome || "Treino A", exercicios: treino.exercicios }];
     }
-    if (!grupos || !Array.isArray(grupos) || grupos.length === 0) {
-      renderWorkoutError('Nenhum treino gerado');
-      return;
-    }
+    if (!Array.isArray(grupos)) return renderWorkoutError("Erro ao montar treino");
+    grupos = grupos.filter(function(grupo) {
+      return grupo && Array.isArray(grupo.exercicios) && grupo.exercicios.length > 0;
+    });
+    if (grupos.length === 0) return renderWorkoutError("Nenhum treino gerado");
 
     navTo('treino');
     const nav  = document.getElementById("nav");
     const cont = document.getElementById("container");
+    if (!nav || !cont) return renderWorkoutError("Erro ao montar treino");
     nav.innerHTML  = "";
     cont.innerHTML = "";
 

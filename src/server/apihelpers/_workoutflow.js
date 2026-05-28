@@ -49,6 +49,15 @@ function continueWorkoutFlow(stepIndex, collected, message) {
   newCollected[step.key] = String(message || '').trim();
 
   var nextIndex = stepIndex + 1;
+  console.info('[workout-flow]', {
+    stepIndex: stepIndex,
+    collected: newCollected,
+    payload: {
+      key: step.key,
+      value: newCollected[step.key],
+      finished: nextIndex >= STEPS.length
+    }
+  });
 
   if (nextIndex >= STEPS.length) {
     return { finished: true, collected: newCollected };

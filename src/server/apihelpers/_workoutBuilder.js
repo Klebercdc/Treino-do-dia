@@ -145,6 +145,55 @@ function normalizeEnvironment(raw) {
   return 'academia';
 }
 
+function pickValue() {
+  for (var index = 0; index < arguments.length; index += 1) {
+    var value = arguments[index];
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      var joined = value.map(function(item) { return String(item || '').trim(); }).filter(Boolean).join(', ');
+      if (joined) return joined;
+      continue;
+    }
+    if (typeof value === 'object') continue;
+    var text = String(value).trim();
+    if (text) return text;
+  }
+  return undefined;
+}
+
+function normalizeCollectedPayload(collected) {
+  var input = collected && typeof collected === 'object' ? collected : {};
+  var profile = input.profile && typeof input.profile === 'object' ? input.profile : {};
+  var context = input.context && typeof input.context === 'object' ? input.context : {};
+  var scientificConstraints = input.scientificConstraints && typeof input.scientificConstraints === 'object'
+    ? input.scientificConstraints
+    : (input.constraints && typeof input.constraints === 'object' ? input.constraints : {});
+  var dias = pickValue(
+    input.dias,
+    input.frequency,
+    input.days,
+    input.days_per_week,
+    profile.dias,
+    profile.frequency,
+    profile.days,
+    profile.days_per_week,
+    context.dias,
+    context.frequency,
+    context.days,
+    context.days_per_week
+  );
+
+  return {
+    objetivo: pickValue(input.objetivo, input.goal, input.objective, profile.objetivo, profile.goal, profile.objective, context.objetivo, context.goal, context.objective),
+    nivel: pickValue(input.nivel, input.level, input.experience, input.experienceLevel, profile.nivel, profile.level, profile.experience, profile.experienceLevel, context.nivel, context.level),
+    dias: dias !== undefined ? String(dias) : undefined,
+    tempo: pickValue(input.tempo, input.duration, input.sessionLength, profile.tempo, profile.duration, profile.sessionLength, context.tempo, context.duration),
+    equipamentos: pickValue(input.equipamentos, input.equipment, input.environment, profile.equipamentos, profile.equipment, profile.environment, context.equipamentos, context.equipment, context.environment),
+    limitacoes: pickValue(input.limitacoes, input.limitations, input.injuries, input.restrictions, profile.limitacoes, profile.limitations, profile.injuries, profile.restrictions, context.limitacoes, context.limitations) || 'nao',
+    scientificConstraints: scientificConstraints
+  };
+}
+
 function buildPrescription(goal, level) {
   if (goal === 'forca') {
     if (level === 'iniciante') return { series: 3, reps: '5-8', descanso: '120-180s', rir: '2-3 RIR' };
@@ -321,7 +370,7 @@ function buildStandaloneWorkout(input, goal, level, days, environment) {
 }
 
 function buildWorkoutPlan(collected) {
-  var input = collected || {};
+  var input = normalizeCollectedPayload(collected || {});
   var scientificConstraints = input.scientificConstraints && typeof input.scientificConstraints === 'object'
     ? input.scientificConstraints
     : {};
@@ -419,6 +468,7 @@ function buildWorkoutPlan(collected) {
 
 module.exports = {
   buildWorkoutPlan: buildWorkoutPlan,
+  normalizeCollectedPayload: normalizeCollectedPayload,
   normalizeGoal: normalizeGoal,
   normalizeLevel: normalizeLevel,
   normalizeDays: normalizeDays,

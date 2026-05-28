@@ -348,15 +348,30 @@ function buildWorkoutSuccessPayload(data, extraMeta, memoryState) {
   };
 }
 
+function logWorkoutBuilderResult(plan) {
+  console.info('[workout-builder-result]', {
+    flowState: plan && plan.flow_state,
+    failSafe: plan && plan.failSafe,
+    treinos: plan && Array.isArray(plan.treinos) ? plan.treinos.length : undefined
+  });
+}
+
 function buildReferencedWorkoutFallback(collected, done) {
   Promise.resolve(workoutService.execute('GENERATE_WORKOUT', collected || {}))
     .then(function(result) {
       var plan = result && result.payload && result.payload.plan ? result.payload.plan : null;
-      if (plan) return done(null, plan);
-      return done(null, workoutBuilder.buildWorkoutPlan(collected || {}));
+      if (plan) {
+        logWorkoutBuilderResult(plan);
+        return done(null, plan);
+      }
+      var fallbackPlan = workoutBuilder.buildWorkoutPlan(collected || {});
+      logWorkoutBuilderResult(fallbackPlan);
+      return done(null, fallbackPlan);
     })
     .catch(function() {
-      return done(null, workoutBuilder.buildWorkoutPlan(collected || {}));
+      var fallbackPlan = workoutBuilder.buildWorkoutPlan(collected || {});
+      logWorkoutBuilderResult(fallbackPlan);
+      return done(null, fallbackPlan);
     });
 }
 
@@ -640,49 +655,22 @@ module.exports = function(req, res) {
           return sendTracked(200, { success: true, type: 'text', message: workoutStep.response, data: { conversationState: { mode: workoutStep.mode, stepIndex: workoutStep.stepIndex, collected: workoutStep.collected, memory: shortState } }, meta: { local: true, flow: 'workout' } });
         }
 
-        var finishedCollected = workoutStep.collected;
-        var localPlan = workoutBuilder.buildWorkoutPlan(finishedCollected);
-        console.info('[workout-builder-result]', {
-          flowState: localPlan && localPlan.flow_state,
-          failSafe: localPlan && localPlan.failSafe,
-          treinos: localPlan && Array.isArray(localPlan.treinos) ? localPlan.treinos.length : 0
-        });
-
-        if (!process.env.GROQ_API_KEY || (localPlan && localPlan.failSafe)) {
-          safeTrack(function() { tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via builder interno (sem GROQ_API_KEY ou plano failsafe).' }); });
-          return sendTracked(200, buildWorkoutSuccessPayload(localPlan, { local: true, fallback: !process.env.GROQ_API_KEY, source: 'workout_builder_direct' }, shortState));
-        }
-
-        safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { layer: 'ai', nodeKey: 'Treino' }); });
-        return runPaidAiCall(function(nextCall) {
-          var richMsg = { role: 'user', content: workoutflow.buildWorkoutMessage(finishedCollected) };
-          gerarTreino(richMsg, user.id, function(err, aiPlan) {
-            if (err || !aiPlan || !Array.isArray(aiPlan.treinos) || !aiPlan.treinos.length) {
-              return nextCall(null, localPlan);
-            }
-            return nextCall(null, aiPlan);
-          });
-        }, function(err, data) {
-          var finalPlan = (data && Array.isArray(data.treinos) && data.treinos.length) ? data : localPlan;
-          if (err) {
-            safeTrack(function() {
-              tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: false, status: 'error', errorCode: 'PROVIDER_UNAVAILABLE', errorMessage: err });
-              tracker.addStep({ layer: 'fallback', nodeKey: 'Treino', stepName: diagnosticConstants.STEP_NAMES.LLM_FALLBACK_ACTIVATED, status: 'warning', success: true, outputSummary: 'Treino resolvido via builder interno apos falha do provider.' });
-            });
-            return sendTracked(200, buildWorkoutSuccessPayload(localPlan, { local: true, fallback: true, source: 'workout_builder_fallback', providerError: String(err || '') }, shortState));
-          }
-          safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: true, outputSummary: 'Treino gerado.' }); });
+        safeTrack(function() { tracker.startStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { layer: 'builder', nodeKey: 'Treino' }); });
+        var data = workoutBuilder.buildWorkoutPlan(workoutStep.collected || {});
+        logWorkoutBuilderResult(data);
+        safeTrack(function() { tracker.finishStep(diagnosticConstants.STEP_NAMES.WORKOUT_GENERATION_REQUESTED, { success: !data.failSafe, outputSummary: 'Treino gerado pelo builder interno determinístico.' }); });
+        {
           fireAndForgetMemoryEvent({
             userId: user.id,
             eventType: 'workout_generated',
             eventKey: user.id + ':workout_generated:' + (b.requestId || b.correlationId || Date.now()) + ':flow',
-            payload: { source: 'workout_flow', sections: Array.isArray(finalPlan && finalPlan.treinos) ? finalPlan.treinos.length : 0 },
+            payload: { source: 'workout_flow', sections: Array.isArray(data && data.treinos) ? data.treinos.length : 0 },
             requestId: b.requestId || b.correlationId || null,
             component: 'api/chat',
             source: 'workout_pipeline'
           });
-          return sendTracked(200, buildWorkoutSuccessPayload(finalPlan, {}, shortState));
-        });
+          return sendTracked(200, buildWorkoutSuccessPayload(data, { local: true, source: 'workout_internal_builder', deterministic: true }, shortState));
+        }
       }
 
       var normalized = classifier.normalizeConversationInput(lastContent);
