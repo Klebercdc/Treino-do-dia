@@ -129,6 +129,39 @@ Semana 52: esse nível de precisão não existe em nenhum outro lugar.
 
 ---
 
+**Inferência sobre coleta.**
+
+O sistema deriva dados de comportamento antes de pedir que o usuário os forneça.
+
+RPE alto e performance caindo inferem fadiga — sem perguntar sobre sono.  
+Tempo entre sessões e carga acumulada estimam recuperação — sem formulários.  
+Aceitação ou recusa de adaptações confirma se o protocolo funciona — sem surveys.
+
+Coleta explícita ocorre apenas quando a inferência é insuficiente para uma decisão de alto risco.
+
+*Regra de engenharia:* se um dado pode ser derivado do comportamento normal de uso, não criar campo de input para ele.
+
+---
+
+**Espaço de estados delimitado.**
+
+Alta personalização não significa complexidade crescente.
+
+As engines operam dentro de um espaço de estados fixo e explícito:
+
+- Training Load: 4 estados
+- Recovery: 3 estados
+- Progress: 4 estados
+- Adaptation: 5 estados
+
+A personalização ocorre na calibração dos thresholds individuais dentro desses estados — não na multiplicação dos estados.
+
+Novos estados só entram com decisão explícita de produto. Exceções e casos especiais não são adicionados silenciosamente.
+
+*Razão:* um sistema com estados fixos e thresholds individuais é testável, previsível e mantível. Um sistema cujos estados crescem conforme surgem exceções torna-se ingerenciável.
+
+---
+
 ## 6. DIFERENCIAL COMPETITIVO
 
 O diferencial não é o algoritmo.
@@ -209,6 +242,41 @@ O sistema utiliza dois tipos de input:
 
 **Semana 4+:** inputs comportamentais dominam. O sistema opera com dados reais daquele indivíduo.
 
+### Hierarquia de inputs
+
+Nem todos os inputs têm o mesmo custo de coleta. O sistema foi projetado para funcionar com o que o usuário já produz naturalmente.
+
+**Tier 1 — Produzidos no uso normal** (nenhuma ação adicional do usuário)
+
+- RPE por série (coletado durante registro de treino)
+- Carga e volume registrados
+- Tempo entre sessões
+- Aceitação ou recusa de adaptações
+
+O sistema funciona com Tier 1 apenas. Engines operam. Adaptações ocorrem.
+
+---
+
+**Tier 2 — Opcionais de baixa fricção** (1 toque, quando o usuário quiser)
+
+- Contexto declarado ("semana ruim", "viagem", "lesão leve")
+- Override ou prioridade declarada
+
+Aumentam precisão das engines. Nunca exigidos.
+
+---
+
+**Tier 3 — Enriquecimento avançado** (Fase 3, Ultra tier)
+
+- Biomarcadores via exame laboratorial
+- Entrada estruturada de marcadores específicos
+
+Ativam o Lab Modifier. Aumentam precisão clínica individual.
+
+---
+
+**Regra absoluta:** o sistema nunca bloqueia nem degrada experiência por ausência de Tier 2 ou Tier 3.
+
 ---
 
 ## 9. TRAINING LOAD ENGINE
@@ -245,17 +313,31 @@ O sistema utiliza dois tipos de input:
 - Recovery Global — capacidade sistêmica de recuperação
 - Recovery Local — por grupo muscular
 
-**Inputs:**
+**Modelo de inferência comportamental**
 
-- output do Training Load Engine
-- aderência alimentar (proteína e calorias vs meta)
-- tempo decorrido desde última sessão por músculo
-- contexto declarado pelo usuário
-- biomarcadores opcionais (ferritina, hemoglobina, cortisol)
+A Recovery Engine não depende de auto-relatos. Infere recuperação a partir de comportamento observável.
 
-**Cold start:** semanas 1–4, sistema estima recuperação com base em padrões de fadiga por nível e frequência. Calibra progressivamente com RPE real e aderência real.
+**Inputs Tier 1 — sempre disponíveis, sem ação do usuário:**
 
-**Limitação explícita:** sem dados de sono ou HRV (requer wearable), a recuperação é estimada, não medida. O sistema sinaliza incerteza internamente e é mais conservador em decisões de alto risco.
+- RPE médio das últimas sessões vs baseline pessoal do usuário
+- Variação de performance (carga e reps vs ciclos anteriores)
+- Tempo decorrido desde última sessão por grupo muscular
+- Output do Training Load Engine (carga acumulada)
+
+Esses quatro inputs são suficientes para a engine operar.
+
+**Inputs Tier 2 — opcionais, aumentam precisão:**
+
+- Contexto declarado pelo usuário (1 toque)
+- Aderência alimentar aproximada (inferida da dieta ativa quando não declarada)
+
+**Inputs Tier 3 — Fase 3, precisão clínica:**
+
+- Biomarcadores via Lab Modifier (ferritina, hemoglobina, cortisol)
+
+**Cold start:** semanas 1–4, sistema estima recuperação com base em padrões de fadiga por nível declarado e frequência. Substitui progressivamente por dados comportamentais reais.
+
+**Limitação explícita:** sem dados de sono ou HRV, recuperação é inferida de comportamento, não medida diretamente. O sistema opera de forma conservadora quando inferência é insuficiente — prefere subestimar capacidade a sobrecarregar.
 
 **Output:**
 
@@ -315,6 +397,25 @@ O sistema utiliza dois tipos de input:
 
 **Cold start:** semanas 1–6, outputs conservadores. O sistema prefere subestimar capacidade a sobrecarregar. Progride para outputs baseados em dados individuais conforme histórico acumula.
 
+**Limites de personalização**
+
+A Adaptation Engine personaliza dentro de um espaço delimitado.
+
+O protocolo individual nunca desvia além de:
+
+| Variável | Desvio máximo do baseline populacional |
+|---|---|
+| Volume semanal por grupo | ± 40% do volume de referência para o perfil |
+| Frequência semanal | ± 1 sessão da frequência declarada |
+| Taxa de progressão de carga | ± 15% da progressão esperada para nível e objetivo |
+
+Esses limites existem por duas razões:
+
+1. **Segurança:** protocolos fora desse espaço não têm validação suficiente para aplicação automática
+2. **Testabilidade:** o comportamento do sistema permanece previsível e verificável
+
+Quando um usuário genuinamente requer protocolo fora desses limites, o sistema entra em modo conservador e KRONOS sinaliza a situação.
+
 **Output e ação associada:**
 
 | Estado | Significado | Consequência no Decision Layer |
@@ -347,17 +448,56 @@ Aplicado sobre Recovery Engine
 Adaptation Engine recalcula com Recovery modificado
 ```
 
-**Exemplos:**
+### Escopo delimitado de biomarcadores
 
-| Biomarcador | Condição | Modificação |
-|---|---|---|
-| Ferritina | < 30 ng/mL | Recovery Local de membros inferiores reduzido |
-| Hemoglobina | < 12 g/dL | Recovery Global reduzido |
-| Cortisol | Cronicamente elevado | Recovery Global reduzido |
-| Testosterona livre | Baixa para perfil | Taxa de progressão esperada ajustada |
-| Hematócrito | > 52% (contexto hormonal) | Flag clínico — KRONOS notifica, sistema não bloqueia |
+O Lab Modifier opera sobre um conjunto fixo de **15 marcadores** de alta relevância para performance.
 
-**Transparência:** quando o Lab Modifier está ativo e produz uma mudança visível, KRONOS explica em linguagem do usuário. O usuário não precisa saber que existe um "modifier" — precisa entender por que seu protocolo mudou.
+Não tenta interpretar exames completos. Fora desse conjunto, marcadores são registrados mas não influenciam as engines nesta versão.
+
+| Marcador | Impacto nas engines |
+|---|---|
+| Ferritina | Recovery Local (membros inferiores) |
+| Hemoglobina | Recovery Global |
+| Hematócrito | Recovery Global + flag de segurança |
+| Testosterona total | Taxa de progressão esperada |
+| Testosterona livre | Taxa de progressão + Recovery Global |
+| SHBG | Modulação do modifier de testosterona |
+| Cortisol | Recovery Global (estresse sistêmico) |
+| TSH | Metabolismo basal — ajusta progressão esperada |
+| Vitamina D | Recovery Local (força muscular) |
+| Vitamina B12 | Recovery Global (energia neural) |
+| Glicemia em jejum | Disponibilidade energética |
+| Insulina em jejum | Sensibilidade — ajusta dieta adaptativa |
+| Creatinina | Flag de sobrecarga renal em volume alto |
+| TGO / TGP | Flag hepático em contexto hormonal |
+| PSA (masculino) | Flag de segurança em contexto androgênico |
+
+**Máximo de modificadores simultâneos:** 3. Se mais de 3 marcadores indicam modificação no mesmo ciclo, o sistema prioriza pelos de maior `safety_relevance`.
+
+### Dois modos de entrada
+
+**Modo 1 — Upload de exame (PDF/JPEG)**
+
+OCR automático extrai valores. Sistema apresenta os valores parseados para confirmação do usuário antes de aplicar qualquer modifier.
+
+Valor com baixa confiança de parsing → sistema pede confirmação explícita.  
+Valor ausente → marcador não influencia o modifier (nunca usa default perigoso).  
+Unidade não reconhecida → sistema solicita modo 2.
+
+**Modo 2 — Entrada estruturada manual**
+
+Usuário digita os valores específicos dos 15 marcadores diretamente.
+
+Elimina variabilidade de OCR quando o usuário tem os valores em mãos.  
+Indicado para laboratórios com formatos não reconhecidos automaticamente.
+
+### Gestão de incerteza
+
+O sistema não aplica modifier quando não tem confiança no valor.
+
+Incerteza é melhor do que precisão falsa.
+
+**Transparência:** quando o Lab Modifier produz mudança visível no protocolo, KRONOS explica em linguagem do usuário. O usuário não precisa saber que existe um "modifier" — precisa entender por que seu protocolo mudou.
 
 **Regra absoluta:** valores fora de faixa crítica de segurança nunca são normalizados, independente do contexto hormonal declarado. KRONOS redireciona para profissional. O sistema não diagnostica.
 
