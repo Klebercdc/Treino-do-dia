@@ -40,20 +40,20 @@ export interface AskKronosResult {
 }
 
 interface ContextoClinico {
-  patologias?: unknown[];
+  patologias?: string[];
 }
 
 interface ContextoUser {
-  patologia?: unknown;
-  patologias?: unknown[];
+  patologia?: string;
+  patologias?: string[];
 }
 
 function buildClinicalContextForExams(ctx: Record<string, unknown>): ContextoClinico {
   const clinical: ContextoClinico = Object.assign({}, (ctx.contextoClinico as ContextoClinico) ?? {});
   const user = ctx.user as ContextoUser | undefined;
 
-  const patologias = [
-    ...(Array.isArray(clinical.patologias) ? clinical.patologias : []),
+  const patologias: string[] = [
+    ...(Array.isArray(clinical.patologias) ? clinical.patologias as string[] : []),
     ...(user?.patologia ? [user.patologia] : []),
     ...(Array.isArray(user?.patologias) ? user!.patologias! : []),
   ];
@@ -133,7 +133,7 @@ export async function askKronos(input: AskKronosInput): Promise<AskKronosResult>
     topic: input.topic,
     maxTokens: input.maxTokens,
     clinicalDomain,
-    clinicalEvidenceContext,
+    clinicalEvidenceContext: clinicalEvidenceContext as Record<string, unknown>,
     clinicalGuardrails,
   });
 
