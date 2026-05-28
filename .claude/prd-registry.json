@@ -1,0 +1,10 @@
+{
+  "_instrucoes": "Chave = caminho do PRD (relativo à raiz). Valor = lista de prefixos de arquivos/diretórios monitorados. Diretórios terminam com /. Sem wildcards.",
+  "_exemplo": {
+    "docs/prd/exemplo-feature.md": [
+      "src/app/api/kronia/chat/route.ts",
+      "src/ai/orchestrator.ts",
+      "supabase/migrations/"
+    ]
+  }
+}

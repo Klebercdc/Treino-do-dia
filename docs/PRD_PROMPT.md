@@ -88,7 +88,9 @@ Ex: "Reduzir churn de usuários Pro em ~15% no primeiro mês após feature launc
 
 ## INSTRUÇÃO DE GERAÇÃO
 
-Com base em todo o contexto acima, crie um PRD completo seguindo EXATAMENTE esta estrutura:
+Com base em todo o contexto acima, crie um PRD completo seguindo EXATAMENTE esta estrutura.
+Ao final do PRD, gere também a entrada JSON pronta para o `.claude/prd-registry.json` (Seção 14.3),
+listando os arquivos reais do projeto KroniA que devem ser monitorados para esta feature específica.
 
 ---
 
@@ -275,6 +277,52 @@ Para cada uma: quem decide, e prazo para decisão.
 
 ---
 
+## 14. Automação de Sincronização
+
+Esta seção garante que o PRD nunca fique desatualizado após mudanças estruturais no código.
+
+### 14.1 Arquivos estruturais monitorados
+Liste os caminhos reais do projeto KroniA que, se alterados, podem tornar este PRD desatualizado.
+Um por linha. Diretórios terminam com `/`. Não use wildcards — use prefixos de diretório.
+
+[arquivo ou diretório 1]
+[arquivo ou diretório 2]
+[arquivo ou diretório 3]
+
+Exemplos comuns:
+- src/app/api/kronia/[domínio]/route.ts  → mudança de endpoint
+- src/ai/orchestrator.ts                → mudança no fluxo de IA
+- src/ai/types.ts                       → mudança de contrato
+- src/core/[domínio]/                   → mudança de domínio
+- supabase/migrations/                  → mudança de schema
+- vercel.json                           → mudança de roteamento
+
+### 14.2 Seções sensíveis por tipo de mudança
+
+| Tipo de mudança estrutural             | Seções do PRD a revisar   |
+|----------------------------------------|---------------------------|
+| Nova rota ou endpoint                  | 5.1, 8.1, 8.2             |
+| Schema de banco alterado               | 8.3, 6.2, 9.1             |
+| Tipo TypeScript de contrato modificado | 5.1, 8.1                  |
+| Modelo de IA ou parâmetros alterados   | 6.1, 6.4, 8.4             |
+| Lógica de quota ou plano alterada      | 3, 5.1, 6.4               |
+| Rota Vercel ou cron alterado           | 6.3, 6.4, 9.2             |
+| Migration executada em produção        | 9.1, 13 (histórico)       |
+
+### 14.3 Entrada de registry (copiar para .claude/prd-registry.json)
+
+Após salvar este PRD em docs/prd/[nome-da-feature].md, adicione a entrada abaixo ao registry:
+
+  "docs/prd/[nome-da-feature].md": [
+    "[arquivo ou diretório 1]",
+    "[arquivo ou diretório 2]",
+    "[arquivo ou diretório 3]"
+  ]
+
+Os valores devem ser idênticos aos listados na Seção 14.1.
+
+---
+
 ## REGRAS DE QUALIDADE PARA O PRD GERADO
 
 1. **Seja específico.** Métricas sem baseline são inúteis. Evite "melhorar experiência do usuário".
@@ -287,6 +335,7 @@ Para cada uma: quem decide, e prazo para decisão.
 8. **Evite scope creep.** Seção 5.3 (Won't Have) é tão importante quanto Must Have.
 9. **Fale com o usuário brasileiro.** Copy em PT-BR, valores em BRL, contexto cultural local.
 10. **Solo dev.** Não assuma equipes, squads ou processos enterprise. O PRD deve ser executável por uma pessoa.
+11. **Seção 14 não é opcional.** Todo PRD deve definir seus arquivos monitorados e gerar a entrada de registry pronta para uso.
 ```
 
 ---
@@ -326,5 +375,140 @@ contextBuilder.ts
 
 ---
 
-*Versão: 1.0 — 2026-05-28*
+## AUTOMAÇÃO: CONFIGURAÇÃO DO HOOK DE SINCRONIZAÇÃO
+
+Faça isso UMA VEZ no projeto. Depois, cada novo PRD se registra sozinho via Seção 14.3.
+
+---
+
+### Passo 1 — Criar o script do hook
+
+Crie o arquivo `.claude/hooks/prd-sync-check.js`:
+
+```javascript
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+let raw = '';
+process.stdin.on('data', chunk => (raw += chunk));
+process.stdin.on('end', () => {
+  try {
+    const payload = JSON.parse(raw);
+    const toolName = payload.tool_name;
+    const filePath = payload.tool_input?.file_path;
+
+    if (!filePath || !['Edit', 'Write'].includes(toolName)) return;
+
+    const registryPath = path.join(process.cwd(), '.claude', 'prd-registry.json');
+    if (!fs.existsSync(registryPath)) return;
+
+    const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+    const rel = path.relative(process.cwd(), filePath);
+
+    const matches = [];
+    for (const [prdFile, patterns] of Object.entries(registry)) {
+      if (prdFile.startsWith('_')) continue;
+      for (const pattern of patterns) {
+        if (rel === pattern || rel.startsWith(pattern)) {
+          matches.push(prdFile);
+          break;
+        }
+      }
+    }
+
+    if (matches.length > 0) {
+      console.log('\n[PRD SYNC] Arquivo estrutural alterado: "' + rel + '"');
+      console.log('[PRD SYNC] PRDs potencialmente desatualizados:');
+      matches.forEach(p => console.log('  → ' + p));
+      console.log('[PRD SYNC] Verifique a Seção 14.2 do PRD para saber quais seções revisar.\n');
+    }
+  } catch (_) {
+    // nunca bloquear desenvolvimento por falha no hook
+  }
+});
+```
+
+---
+
+### Passo 2 — Criar o registry
+
+Crie o arquivo `.claude/prd-registry.json`:
+
+```json
+{
+  "_instrucoes": "Chave = caminho do PRD. Valor = lista de arquivos/diretórios monitorados (prefixos, sem wildcards).",
+  "_exemplo": {
+    "docs/prd/exemplo-feature.md": [
+      "src/app/api/kronia/chat/route.ts",
+      "src/ai/orchestrator.ts",
+      "supabase/migrations/"
+    ]
+  }
+}
+```
+
+> Após criar cada novo PRD, copie a entrada gerada na Seção 14.3 e cole aqui.
+
+---
+
+### Passo 3 — Registrar o hook no Claude Code
+
+Abra (ou crie) `.claude/settings.json` e adicione dentro de `"hooks"`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/prd-sync-check.js"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Se já existir um bloco `PostToolUse`, adicione o novo item ao array existente.
+
+---
+
+### Como funciona
+
+```
+Você edita src/ai/orchestrator.ts via Claude Code
+         ↓
+PostToolUse hook dispara automaticamente
+         ↓
+prd-sync-check.js lê .claude/prd-registry.json
+         ↓
+Encontra qual PRD monitora esse arquivo
+         ↓
+Claude vê no contexto: "[PRD SYNC] PRDs potencialmente desatualizados: docs/prd/memoria-kronos.md"
+         ↓
+Claude avisa você e pode atualizar o PRD na mesma sessão
+```
+
+O hook nunca bloqueia o desenvolvimento — só notifica. A decisão de atualizar ou não é sempre sua.
+
+---
+
+### Adicionando novos PRDs ao registry
+
+Cada vez que criar um PRD com este prompt:
+
+1. O LLM gera a entrada de registry na Seção 14.3
+2. Você copia o JSON gerado
+3. Cola em `.claude/prd-registry.json`
+
+Pronto — da próxima vez que tocar nos arquivos daquela feature, o hook notifica automaticamente.
+
+---
+
+*Versão: 2.0 — 2026-05-28*
 *Projeto: KroniA — titanpro.app.br*
