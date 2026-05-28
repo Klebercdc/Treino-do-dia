@@ -489,7 +489,8 @@ async function gerarProtocolo(silent) {
     { respectedCardContext: true, respectedAnamnesisContext: false }
   );
   if (!guard.ok) {
-    dlgAlert('Não consegui gerar treino com segurança para este cenário. Revise os dados e tente novamente.');
+    if (!silent) dlgAlert('Não consegui gerar treino com segurança para este cenário. Revise os dados e tente novamente.');
+    gerarTreinoDoPrograma(silent);
     return;
   }
 
@@ -510,8 +511,10 @@ async function gerarProtocolo(silent) {
     const renderModel = extractWorkoutRenderModel(data);
 
     if (!resp.ok) {
-      // Erro HTTP real — exibe mensagem da API se disponível
+      // Erro HTTP real (401/402/429/5xx) — usa geração local como fallback
+      console.warn('[gerarProtocolo] HTTP', resp.status, '— usando geração local como fallback');
       if (!silent) dlgAlert(resolveWorkoutRouteFailureMessage(data, resp.status));
+      gerarTreinoDoPrograma(silent);
       return;
     }
 
@@ -5224,7 +5227,6 @@ function applyAIWorkout(data) {
       return;
     }
 
-    navTo('treino');
     const nav  = document.getElementById("nav");
     const cont = document.getElementById("container");
     nav.innerHTML  = "";
