@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "strict": false,
+    "outDir": ".",
+    "rootDir": "."
+  },
+  "include": [
+    "src/ai/kronos/**/*.ts",
+    "src/lib/agents/kronosAgent.ts"
+  ]
+}

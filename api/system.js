@@ -86,7 +86,7 @@ async function handleKronos(req, res) {
       try {
         var message = req.body && typeof req.body.message === 'string' ? req.body.message.trim() : '';
         if (!message) return res.status(400).json({ success: false, error: 'O campo "message" é obrigatório.' });
-        var agentModule = await import('../src/lib/agents/kronosAgent.ts');
+        var agentModule = await import('../src/lib/agents/kronosAgent.js');
         var result = await agentModule.runKronosAgent(user.id, message);
         return res.status(200).json({ success: true, resposta: result.resposta, iteracoes: result.iteracoes });
       } catch (err) {
