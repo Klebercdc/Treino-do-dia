@@ -1,0 +1,16 @@
+{
+  "_instrucoes": "Chave = caminho do PRD (relativo à raiz). Valor = lista de prefixos de arquivos/diretórios monitorados. Diretórios terminam com /. Sem wildcards.",
+  "docs/prd/kronia-platform-v1.md": [
+    "src/ai/orchestrator.ts",
+    "src/ai/intentClassifier.ts",
+    "src/ai/contextBuilder.ts",
+    "src/ai/systemPrompt.ts",
+    "src/ai/types.ts",
+    "src/app/api/kronia/",
+    "src/core/nutrition/",
+    "src/core/labs/",
+    "supabase/migrations/",
+    "vercel.json",
+    "package.json"
+  ]
+}
