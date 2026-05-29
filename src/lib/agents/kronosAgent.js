@@ -213,7 +213,7 @@ async function runKronosAgent(userId, userMessage) {
       toolUses.map(async (t) => ({
         type: "tool_result",
         tool_use_id: t.id,
-        content: await executeTool(t.name, { user_id: userId, ...t.input })
+        content: await executeTool(t.name, { ...t.input, user_id: userId })
       }))
     );
     messages.push({ role: "user", content: toolResults });

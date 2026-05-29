@@ -133,7 +133,7 @@ export async function askKronos(input: AskKronosInput): Promise<AskKronosResult>
     topic: input.topic,
     maxTokens: input.maxTokens,
     clinicalDomain,
-    clinicalEvidenceContext: clinicalEvidenceContext as unknown as Record<string, unknown>,
+    clinicalEvidenceContext,
     clinicalGuardrails,
   });
 
