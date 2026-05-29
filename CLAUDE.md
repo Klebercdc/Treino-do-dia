@@ -1,120 +1,181 @@
-# CLAUDE.md — Kronia (Treino-do-dia)
+# CLAUDE.md — KroniA
 
-Instruções permanentes para o Claude Code neste repositório.
 Leia este arquivo antes de qualquer tarefa.
 
 ---
 
-## 0. Validacao deste arquivo (faca primeiro)
+## 0. Valide antes de agir
 
-Este arquivo foi escrito com base em contexto externo, **nao** lendo o repositorio.
-Antes de tratar qualquer regra abaixo como verdade:
+Este arquivo pode estar desatualizado. Na primeira sessao, antes de aplicar qualquer regra:
 
-1. Leia a estrutura real do repositorio (package.json, pastas, arquivos principais).
-1. Compare com o que esta descrito aqui (stack, nomes de arquivo, engines, padroes).
-1. **Reporte as divergencias** numa lista curta antes de seguir: o que bate, o que nao existe, o que esta diferente, o que faltou.
-1. Nao corrija este arquivo sozinho. Aponte o erro e espere meu ok pra ajustar.
+1. Leia a estrutura real: `package.json`, pastas principais, `vercel.json`
+2. Compare com o que esta descrito aqui
+3. **Reporte divergencias** — o que bate, o que nao existe, o que mudou
+4. Nao corrija este arquivo sozinho. Aponte e espere ok
 
-Se algo aqui contradiz o codigo real, **o codigo real ganha** — me avise.
+Se o codigo contradiz uma regra daqui, **o codigo ganha** — me avise.
 
 ---
 
-## 1. Contexto do projeto
+## 1. O projeto
 
-Kronia e um PWA de fitness e nutricao com IA (KRONOS, o coach).
+KroniA e um PWA de fitness e nutricao com IA (KRONOS, o coach).
 Dominio: titanpro.app.br
-Dono: Kleber — desenvolvedor solo, com background clinico em enfermagem/nefrologia.
+Solo dev. Producao ativa. Dados de saude de usuarios reais.
 
-Produto lida com **dados de saude de usuarios reais**. Erro de seguranca ou de logica clinica tem consequencia real. Trate com esse nivel de cuidado.
+Erro de logica clinica tem consequencia real. Trate com esse nível de cuidado.
+
+**Arquitetura dual** (nao mudar sem entender):
+- SPA vanilla na raiz: `index.html`, `app.js`, `styles.css` — frontend principal
+- Next.js em `src/` — rotas, API App Router, orquestracao de IA
+- Serverless functions em `api/*.js` — backend Vercel real
 
 ---
 
-## 2. Stack (nao desviar sem avisar)
+## 2. Stack
 
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
 - Supabase (Postgres, RLS ativo, regiao sa-east-1)
-- Groq API: llama3-70b-8192 (principal), mixtral-8x7b-32768, llama3-8b-8192
-- Deploy: Vercel
+- Groq API: `llama3-70b-8192` (principal), `mixtral-8x7b-32768`, `llama3-8b-8192`
+- Deploy: Vercel Hobby
 - Distribuicao: PWA / TWA
 
-Nao introduza biblioteca, framework ou servico novo sem explicar o motivo e o custo de manutencao antes.
+Nao introduza lib, framework ou servico sem explicar motivo e custo de manutencao.
 
 ---
 
-## 2b. Restricao critica — Vercel
+## 3. RESTRICAO CRITICA — Vercel functions
 
-Vercel Hobby esta em **12/12 functions**.
+O `vercel.json` mapeia `"functions": {"api/*.js": ...}`.
+Cada arquivo `.js` em `api/` consome 1 slot. O plano Hobby tem limite fixo.
 
-- **NUNCA** criar arquivos em `/api`
-- Todo endpoint novo vai em `src/app/api/`
-- Qualquer mudanca que aumente o function count precisa compensar deletando outro
-
-`api/agent.js` e codigo morto que ainda consome 1 slot — precisa ser deletado.
-
----
-
-## 3. Regras de trabalho (workflow)
-
-1. **Antes de codar, faca um plano curto.** Liste os arquivos que vai tocar e o que muda em cada um. Espere meu "ok" em mudancas grandes (mais de 3 arquivos ou mudanca de schema).
-1. **Uma mudanca por vez.** Nao misture refactor com feature nova no mesmo commit.
-1. **Nao invente arquivos nem funcoes.** Leia o codigo real antes. Se nao encontrar algo, diga que nao encontrou — nao suponha.
-1. **Toda funcao nova precisa de tratamento de erro.** Nada de happy-path sozinho.
-1. **Pare e pergunte** quando a tarefa estiver ambigua. Nao chute requisito.
-1. **Nao delete codigo que voce nao entende.** Comente o porque antes de remover.
+**NUNCA criar arquivo novo em `api/`.**
+Todo endpoint novo vai em `src/app/api/`.
+Qualquer aumento de function count precisa compensar deletando outro.
 
 ---
 
-## 4. Seguranca (obrigatorio)
+## 4. Fontes de verdade
 
-- **Nunca** exponha chave de API, service_role key ou secret no client. So `NEXT_PUBLIC_*` vai pro browser, e nada sensivel nesse prefixo.
-- **RLS e a fonte da verdade.** Nunca confie em filtro feito so no client. Toda query sensivel precisa de policy no Supabase.
-- Valide e sanitize toda entrada de usuario antes de mandar pro banco ou pra IA (risco de injection/XSS).
+| Dominio | Canonico | Legado (nao escrever aqui) |
+|---|---|---|
+| Serverless API | `api/*.js` (imutavel, so deletar) | — |
+| App Router API | `src/app/api/` | — |
+| IA orchestration | `src/ai/orchestrator.ts` | `src/lib/engine/` (quase vazio) |
+| AI types | `src/ai/types.ts` | `src/lib/ai/types.ts` |
+| Context builder | `src/ai/contextBuilder.ts` | `src/lib/ai/context-builder.ts` |
+| Embeddings | `src/ai/embeddings.ts` | `src/lib/ai/embeddings.ts` |
+| Validators | `src/ai/validator.ts` | `src/lib/ai/response-validator.ts` |
+| Agente clinico | `src/lib/agents/kronosAgent.ts` | — (migrado) |
+| Nutricao | `src/core/nutrition/` | `src/lib/nutrition/` |
+
+**Intent classifier: NAO consolidado.**
+`src/ai/intentClassifier.ts` e `src/ai/intentAgent.ts` coexistem.
+NAO criar um terceiro. Consolidar ao tocar a feature.
+
+**Atencao:** `src/core/nutrition/` e `src/lib/nutrition/` sao quase todos `.js`.
+Logica clinica em JavaScript — nao adicionar mais. Migrar para `.ts` ao tocar.
+
+---
+
+## 5. Checklist pre-mudanca
+
+Antes de qualquer alteracao:
+
+1. Cria arquivo em `api/`? → parar
+2. Cria sistema paralelo ou "v2"? → parar
+3. Duplica modulo canonico? → consolidar
+4. Escreve em modulo legado? → justificar
+5. Escreve logica clinica em `.js`? → usar `.ts`
+6. Aumenta Vercel function count? → compensar com delecao
+7. Esta corrigindo sintoma ou causa raiz? → preferir causa raiz
+
+---
+
+## 6. Regras absolutas
+
+NUNCA:
+- criar arquivo em `api/`
+- criar novo orchestrator, novo intent classifier
+- adicionar logica clinica em JavaScript
+- criar "v2", "advanced", "experimental" ou sistemas paralelos
+- fazer big bang rewrite ou freeze-and-rebuild
+- criar abstracao para problema hipotetico
+
+SEMPRE:
+- TypeScript para logica de IA e clinica
+- usar modulo canonico (ver tabela acima)
+- consolidar ao inves de duplicar
+- corrigir causa raiz quando possivel
+- documentar divida tecnica nova
+
+---
+
+## 7. Seguranca
+
+- `NEXT_PUBLIC_*` e o unico prefixo que vai pro browser. Nada sensivel nesse prefixo.
+- `service_role` key nunca sai do servidor.
+- **RLS e a fonte da verdade.** Nunca confie em filtro so no client. Toda query sensivel precisa de policy no Supabase.
 - Dados de saude (exames, patologia, dieta) so acessiveis pelo proprio usuario. Confirme a policy antes de criar endpoint que toca essas tabelas.
-- Nunca logue dado pessoal de saude em console ou em log de producao.
-- Ao editar arquivo, sinalize se introduzir: `dangerouslySetInnerHTML`, `eval`, concatenacao de SQL, ou input direto em comando shell.
+- Valide e sanitize toda entrada de usuario antes de mandar pro banco ou pra IA.
+- Nunca logue dado pessoal de saude em console ou log de producao.
+- Ao editar, sinalize se introduzir: `dangerouslySetInnerHTML`, `eval`, concatenacao de SQL, input direto em shell.
 
 ---
 
-## 5. Padroes de codigo
+## 8. Engines clinicas
 
-- TypeScript estrito. Evite `any`; se usar, justifique.
-- Componentes pequenos e com responsabilidade unica.
-- Logica de negocio (engines metabolicas, calculo de dieta) **fora** dos componentes de UI.
-- Nomes descritivos em codigo. Comentarios em portugues, curtos, so onde a intencao nao e obvia.
-- Sem emoji em codigo, commit ou documentacao.
+Arquivos: `pcm_engine.js`, `training_energy_engine.js`, `metabolic_behavior_engine.js` e similares em `src/core/nutrition/`.
 
----
+- Nao altere formula sem confirmar a base de calculo comigo.
+- Toda mudanca precisa de exemplo entrada/saida antes e depois para eu validar.
+- Use bandas de tolerancia e limites de porcao — nao trate como "preencher macro" cego.
+- Logica clinica nova: sempre em `.ts`, sem fallback silencioso, sem `implicit any`.
 
-## 6. Engines clinicas / metabolicas
-
-Arquivos como `pcm_engine.js`, `training_energy_engine.js`, `metabolic_behavior_engine.js` contem logica que afeta recomendacao nutricional.
-
-- Nao altere formula sem confirmar comigo a base de calculo.
-- Toda mudanca em engine precisa de exemplo de entrada/saida antes e depois, pra eu validar.
-- Use bandas de tolerancia, limites de quantidade de itens e limites de porcao — nao trate como problema de "preencher macro" cego.
+Tudo envolvendo exames, biomarcadores, suplementos, overtraining ou fadiga:
+- validar explicitamente
+- preservar rastreabilidade
+- evitar inferencia silenciosa
 
 ---
 
-## 7. KRONOS (coach de IA)
+## 9. KRONOS
 
-- KRONOS deve cruzar dados reais do usuario (exames, dieta, treino, patologia) antes de responder. Se o contexto nao foi buscado, busque — nao responda no vacuo.
-- Diferencie no raciocinio: fato (dado do usuario), hipotese, e recomendacao.
-- Nao invente valor de exame nem diagnostico. Se faltar dado, diga que falta.
+KRONOS deve cruzar dados reais do usuario (exames, dieta, treino, patologia) antes de responder.
+Se o contexto nao foi buscado, busque — nao responda no vacuo.
 
----
+Diferencie no raciocinio:
+- **fato**: dado real do usuario
+- **hipotese**: inferencia baseada em padrao
+- **recomendacao**: sugestao clinica
 
-## 8. Commits e deploy
-
-- Mensagem de commit clara, em portugues, descrevendo o "o que" e o "porque".
-- Antes de sugerir merge/deploy: rode typecheck mentalmente e liste o que pode quebrar.
-- Nunca faca deploy direto sem eu revisar mudanca em schema ou em policy de RLS.
+Nao invente valor de exame nem diagnostico. Se faltar dado, diga que falta.
 
 ---
 
-## 9. Como falar comigo
+## 10. Workflow
 
-- Direto e breve. Comando executado, nao confirmacao repetida.
-- Se eu estiver otimista demais, vago ou pulando um risco, me avise.
+1. **Plano antes de codar.** Liste os arquivos que vai tocar e o que muda. Espere meu ok em mudancas grandes (mais de 3 arquivos ou mudanca de schema).
+2. **Uma mudanca por vez.** Nao misture refactor com feature no mesmo commit.
+3. **Nao invente arquivos nem funcoes.** Leia o codigo real antes. Se nao encontrar, diga — nao suponha.
+4. **Toda funcao nova tem tratamento de erro.** Nada de happy-path sozinho.
+5. **Pare e pergunte** quando a tarefa estiver ambigua. Nao chute requisito.
+6. **Nao delete codigo que nao entende.** Entenda primeiro.
+
+---
+
+## 11. Commits e deploy
+
+- Mensagem clara em portugues: o que e por que.
+- Antes de sugerir merge/deploy: liste o que pode quebrar.
+- Nunca deploy direto com mudanca de schema ou policy de RLS sem eu revisar.
+
+---
+
+## 12. Como falar comigo
+
+- Direto e breve.
+- Se eu estiver otimista demais, vago ou pulando risco, me avise.
 - Portugues informal esta ok.
