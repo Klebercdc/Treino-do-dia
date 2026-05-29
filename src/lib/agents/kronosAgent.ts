@@ -372,7 +372,7 @@ export async function runKronosAgent(
       toolUses.map(async (t) => ({
         type: "tool_result" as const,
         tool_use_id: t.id,
-        content: await executeTool(t.name, { user_id: userId, ...t.input }),
+        content: await executeTool(t.name, { ...t.input, user_id: userId }),
       }))
     );
 
