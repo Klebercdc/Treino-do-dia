@@ -43,6 +43,18 @@ Nao introduza biblioteca, framework ou servico novo sem explicar o motivo e o cu
 
 ---
 
+## 2b. Restricao critica — Vercel
+
+Vercel Hobby esta em **12/12 functions**.
+
+- **NUNCA** criar arquivos em `/api`
+- Todo endpoint novo vai em `src/app/api/`
+- Qualquer mudanca que aumente o function count precisa compensar deletando outro
+
+`api/agent.js` e codigo morto que ainda consome 1 slot — precisa ser deletado.
+
+---
+
 ## 3. Regras de trabalho (workflow)
 
 1. **Antes de codar, faca um plano curto.** Liste os arquivos que vai tocar e o que muda em cada um. Espere meu "ok" em mudancas grandes (mais de 3 arquivos ou mudanca de schema).
