@@ -1,251 +1,108 @@
-# CLAUDE.md — KRONIA
+# CLAUDE.md — Kronia (Treino-do-dia)
 
-Lido automaticamente pelo Claude Code no início de cada sessão.
+Instruções permanentes para o Claude Code neste repositório.
+Leia este arquivo antes de qualquer tarefa.
 
-Objetivo:
-estabilizar, consolidar e evoluir o KroniA com segurança e velocidade.
+---
 
-NÃO:
-- redesenhar arquitetura
-- refatorar por estética
-- criar sistemas paralelos
-- criar burocracia enterprise
+## 0. Validacao deste arquivo (faca primeiro)
 
-SIM:
-- consolidar
-- simplificar
-- remover duplicação
-- entregar sem regressão
+Este arquivo foi escrito com base em contexto externo, **nao** lendo o repositorio.
+Antes de tratar qualquer regra abaixo como verdade:
 
-━━━━━━━━━━━━━━━━━━━━
-# CONTEXTO DO PROJETO
-━━━━━━━━━━━━━━━━━━━━
+1. Leia a estrutura real do repositorio (package.json, pastas, arquivos principais).
+1. Compare com o que esta descrito aqui (stack, nomes de arquivo, engines, padroes).
+1. **Reporte as divergencias** numa lista curta antes de seguir: o que bate, o que nao existe, o que esta diferente, o que faltou.
+1. Nao corrija este arquivo sozinho. Aponte o erro e espere meu ok pra ajustar.
 
-KroniA é uma plataforma de saúde e performance com IA adaptativa.
+Se algo aqui contradiz o codigo real, **o codigo real ganha** — me avise.
 
-Realidade atual:
-- produção ativa
-- desenvolvedor solo
-- deploy via GitHub + Vercel
-- sem terminal local
-- velocidade importa
-- regressão é inaceitável
+---
 
-Stack:
-- Next.js 14 App Router
+## 1. Contexto do projeto
+
+Kronia e um PWA de fitness e nutricao com IA (KRONOS, o coach).
+Dominio: titanpro.app.br
+Dono: Kleber — desenvolvedor solo, com background clinico em enfermagem/nefrologia.
+
+Produto lida com **dados de saude de usuarios reais**. Erro de seguranca ou de logica clinica tem consequencia real. Trate com esse nivel de cuidado.
+
+---
+
+## 2. Stack (nao desviar sem avisar)
+
+- Next.js 14 (App Router)
 - TypeScript
-- Tailwind
-- Supabase
-- Vercel Hobby
-- SPA vanilla (`index.html`, `app.js`, `styles.css`)
+- Tailwind CSS
+- Supabase (Postgres, RLS ativo, regiao sa-east-1)
+- Groq API: llama3-70b-8192 (principal), mixtral-8x7b-32768, llama3-8b-8192
+- Deploy: Vercel
+- Distribuicao: PWA / TWA
 
-Modelos IA:
-- llama3-70b-8192 → smart
-- mixtral-8x7b-32768 → long
-- llama3-8b-8192 → fast
+Nao introduza biblioteca, framework ou servico novo sem explicar o motivo e o custo de manutencao antes.
 
-━━━━━━━━━━━━━━━━━━━━
-# RESTRIÇÃO CRÍTICA
-━━━━━━━━━━━━━━━━━━━━
+---
 
-Vercel Hobby está em:
-12/12 functions.
+## 3. Regras de trabalho (workflow)
 
-NÃO criar novos arquivos em:
-`/api`
+1. **Antes de codar, faca um plano curto.** Liste os arquivos que vai tocar e o que muda em cada um. Espere meu "ok" em mudancas grandes (mais de 3 arquivos ou mudanca de schema).
+1. **Uma mudanca por vez.** Nao misture refactor com feature nova no mesmo commit.
+1. **Nao invente arquivos nem funcoes.** Leia o codigo real antes. Se nao encontrar algo, diga que nao encontrou — nao suponha.
+1. **Toda funcao nova precisa de tratamento de erro.** Nada de happy-path sozinho.
+1. **Pare e pergunte** quando a tarefa estiver ambigua. Nao chute requisito.
+1. **Nao delete codigo que voce nao entende.** Comente o porque antes de remover.
 
-Todo endpoint novo:
-→ `src/app/api/`
+---
 
-━━━━━━━━━━━━━━━━━━━━
-# FONTES DE VERDADE
-━━━━━━━━━━━━━━━━━━━━
+## 4. Seguranca (obrigatorio)
 
-| Domínio | Canônico | Legacy |
-|---|---|---|
-| API | `src/app/api/` | `api/` |
-| IA orchestration | `src/ai/orchestrator.ts` | ~~`src/lib/engine/orchestrator.js`~~ ✅ removido |
-| Nutrição | `src/core/nutrition/` | `src/lib/nutrition/` |
-| AI types | `src/ai/types.ts` | `src/lib/ai/types.ts` |
-| Context builder | `src/ai/contextBuilder.ts` | `src/lib/ai/context-builder.ts` |
-| Embeddings | `src/ai/embeddings.ts` | `src/lib/ai/embeddings.ts` |
-| Validators | `src/ai/validator.ts` | `src/lib/ai/response-validator.ts` |
-| Agente clínico | `src/lib/agents/kronosAgent.ts` ✅ | ~~`kronosAgent.js`~~ removido |
+- **Nunca** exponha chave de API, service_role key ou secret no client. So `NEXT_PUBLIC_*` vai pro browser, e nada sensivel nesse prefixo.
+- **RLS e a fonte da verdade.** Nunca confie em filtro feito so no client. Toda query sensivel precisa de policy no Supabase.
+- Valide e sanitize toda entrada de usuario antes de mandar pro banco ou pra IA (risco de injection/XSS).
+- Dados de saude (exames, patologia, dieta) so acessiveis pelo proprio usuario. Confirme a policy antes de criar endpoint que toca essas tabelas.
+- Nunca logue dado pessoal de saude em console ou em log de producao.
+- Ao editar arquivo, sinalize se introduzir: `dangerouslySetInnerHTML`, `eval`, concatenacao de SQL, ou input direto em comando shell.
 
-Intent classifier:
-- ainda não consolidado
-- NÃO criar novo
-- consolidar os existentes
+---
 
-━━━━━━━━━━━━━━━━━━━━
-# REGRAS ABSOLUTAS
-━━━━━━━━━━━━━━━━━━━━
+## 5. Padroes de codigo
 
-NUNCA:
-- criar arquivos em `/api`
-- criar novo orchestrator
-- criar novo intent classifier
-- adicionar lógica em módulos legacy
-- escrever lógica clínica em JavaScript
-- criar "v2", "advanced", "experimental" ou sistemas paralelos
-- propor rewrite massivo sem dor real
-- criar abstrações para problemas hipotéticos
-- mover centenas de arquivos por organização estética
+- TypeScript estrito. Evite `any`; se usar, justifique.
+- Componentes pequenos e com responsabilidade unica.
+- Logica de negocio (engines metabolicas, calculo de dieta) **fora** dos componentes de UI.
+- Nomes descritivos em codigo. Comentarios em portugues, curtos, so onde a intencao nao e obvia.
+- Sem emoji em codigo, commit ou documentacao.
 
-SEMPRE:
-- usar TypeScript para IA e clínica
-- usar módulos canônicos
-- consolidar ao invés de duplicar
-- corrigir causa raiz quando possível
-- preservar compatibilidade quando necessário
-- priorizar entrega segura
-- documentar dívida técnica nova
+---
 
-━━━━━━━━━━━━━━━━━━━━
-# ESTRATÉGIA DE MIGRAÇÃO
-━━━━━━━━━━━━━━━━━━━━
+## 6. Engines clinicas / metabolicas
 
-Migrar gradualmente.
+Arquivos como `pcm_engine.js`, `training_energy_engine.js`, `metabolic_behavior_engine.js` contem logica que afeta recomendacao nutricional.
 
-Preferir:
-- consolidar durante trabalho normal
-- substituir legacy ao tocar feature relacionada
-- remover adapters mortos progressivamente
+- Nao altere formula sem confirmar comigo a base de calculo.
+- Toda mudanca em engine precisa de exemplo de entrada/saida antes e depois, pra eu validar.
+- Use bandas de tolerancia, limites de quantidade de itens e limites de porcao — nao trate como problema de "preencher macro" cego.
 
-Evitar:
-- big bang rewrite
-- freeze-and-rebuild
-- branches longos de migração
+---
 
-━━━━━━━━━━━━━━━━━━━━
-# SEGURANÇA CLÍNICA
-━━━━━━━━━━━━━━━━━━━━
+## 7. KRONOS (coach de IA)
 
-Tudo envolvendo:
-- exames
-- biomarcadores
-- suplementos
-- overtraining
-- fadiga
-- recomendações clínicas
+- KRONOS deve cruzar dados reais do usuario (exames, dieta, treino, patologia) antes de responder. Se o contexto nao foi buscado, busque — nao responda no vacuo.
+- Diferencie no raciocinio: fato (dado do usuario), hipotese, e recomendacao.
+- Nao invente valor de exame nem diagnostico. Se faltar dado, diga que falta.
 
-Deve:
-- usar TypeScript
-- evitar fallback silencioso
-- evitar implicit any
-- validar explicitamente
-- preservar rastreabilidade
+---
 
-━━━━━━━━━━━━━━━━━━━━
-# CHECKLIST OBRIGATÓRIO
-━━━━━━━━━━━━━━━━━━━━
+## 8. Commits e deploy
 
-Antes de qualquer mudança:
+- Mensagem de commit clara, em portugues, descrevendo o "o que" e o "porque".
+- Antes de sugerir merge/deploy: rode typecheck mentalmente e liste o que pode quebrar.
+- Nunca faca deploy direto sem eu revisar mudanca em schema ou em policy de RLS.
 
-1. Cria arquivo em `/api`?
-→ parar
+---
 
-2. Cria sistema paralelo?
-→ parar
+## 9. Como falar comigo
 
-3. Duplica módulo canônico?
-→ consolidar
-
-4. Escreve em legacy?
-→ justificar
-
-5. Aumenta Vercel function count?
-→ compensar
-
-6. Corrige sintoma ou causa raiz?
-→ preferir causa raiz
-
-━━━━━━━━━━━━━━━━━━━━
-# PRIORIDADES
-━━━━━━━━━━━━━━━━━━━━
-
-P0
-- blockers produção
-- pressão Vercel
-- `api/agent.js`
-- ambiguidade de roteamento
-
-P1
-- ~~`kronosAgent.js` → `.ts`~~ ✅ concluído
-- consolidar intent classifiers
-- remover orchestrator legacy
-- consolidar módulos duplicados
-- auditar `src/server/legacy/`
-
-P2
-- consolidar nutrição
-- melhorar observabilidade
-- modularização incremental
-
-━━━━━━━━━━━━━━━━━━━━
-# ARQUIVOS CRÍTICOS
-━━━━━━━━━━━━━━━━━━━━
-
-| Arquivo | Status | Ação |
-|---|---|---|
-| `src/ai/orchestrator.ts` | canônico | ponto de entrada de toda IA |
-| `src/lib/agents/kronosAgent.ts` | ✅ migrado | agente clínico com TypeScript |
-| `src/core/nutrition/` | domínio oficial | canônico de nutrição |
-| `api/agent.js` | deletar | código morto, consome 1 slot Vercel |
-| ~~`src/lib/engine/orchestrator.js`~~ | ✅ removido | substituído pelo canônico |
-| `KRONIA_DIET_REBUILD.md` | rebuild ativo | não alterar arquivos de dieta sem ler antes |
-
-━━━━━━━━━━━━━━━━━━━━
-# FORMATO DE RESPOSTA
-━━━━━━━━━━━━━━━━━━━━
-
-Tarefas simples:
-- direto
-- curto
-- sem relatório gigante
-
-P0/P1:
-- problema
-- solução
-- passos
-- riscos (se existirem)
-
-NÃO:
-- criar whitepaper para bug simples
-- discutir escala futura irrelevante
-- propor estrutura enterprise incompatível com solo dev
-
-━━━━━━━━━━━━━━━━━━━━
-# SESSÃO ATUAL
-━━━━━━━━━━━━━━━━━━━━
-
-Atualizar antes de começar:
-
-Última sessão:
-[preencher]
-
-Em aberto:
-[preencher]
-
-Não tocar:
-[preencher]
-
-Objetivo hoje:
-[preencher]
-
-━━━━━━━━━━━━━━━━━━━━
-# DIRETIVA FINAL
-━━━━━━━━━━━━━━━━━━━━
-
-KroniA não precisa de mais arquitetura.
-
-Precisa de:
-- menos duplicação
-- ownership claro
-- consolidação
-- estabilidade
-- velocidade
-- evolução controlada
-
-Agir como principal engineer pragmático.
-Não como arquiteto enterprise teórico.
+- Direto e breve. Comando executado, nao confirmacao repetida.
+- Se eu estiver otimista demais, vago ou pulando um risco, me avise.
+- Portugues informal esta ok.
