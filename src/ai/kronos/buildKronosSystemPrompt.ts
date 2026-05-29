@@ -1,12 +1,13 @@
 import type { ClinicalDomain } from './resolveKronosClinicalDomain';
 import type { ClinicalGuardrails } from './buildClinicalGuardrails';
+import type { ClinicalEvidenceContext } from './buildClinicalEvidenceContext';
 
 interface BuildOptions {
   mode?: string;
   topic?: string;
   maxTokens?: number;
   clinicalDomain?: ClinicalDomain;
-  clinicalEvidenceContext?: Record<string, unknown>;
+  clinicalEvidenceContext?: ClinicalEvidenceContext | Record<string, unknown>;
   clinicalGuardrails?: ClinicalGuardrails;
 }
 
