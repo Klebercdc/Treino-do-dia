@@ -1,5 +1,5 @@
 import { callClaude } from "../services/claude";
-import askKronosModule from "../../ai/kronos/askKronos.js";
+import askKronosModule from "../../ai/kronos/askKronos";
 
 const { askKronos } = askKronosModule;
 

@@ -64,13 +64,13 @@ Todo endpoint novo:
 | Domínio | Canônico | Legacy |
 |---|---|---|
 | API | `src/app/api/` | `api/` |
-| IA orchestration | `src/ai/orchestrator.ts` | `src/lib/engine/orchestrator.js` |
+| IA orchestration | `src/ai/orchestrator.ts` | ~~`src/lib/engine/orchestrator.js`~~ ✅ removido |
 | Nutrição | `src/core/nutrition/` | `src/lib/nutrition/` |
 | AI types | `src/ai/types.ts` | `src/lib/ai/types.ts` |
 | Context builder | `src/ai/contextBuilder.ts` | `src/lib/ai/context-builder.ts` |
 | Embeddings | `src/ai/embeddings.ts` | `src/lib/ai/embeddings.ts` |
 | Validators | `src/ai/validator.ts` | `src/lib/ai/response-validator.ts` |
-| Agente clínico | `kronosAgent.js` (atual) | Migrar → `.ts` — P1 pendente, `.ts` não existe ainda |
+| Agente clínico | `src/lib/agents/kronosAgent.ts` ✅ | ~~`kronosAgent.js`~~ removido |
 
 Intent classifier:
 - ainda não consolidado
@@ -171,7 +171,7 @@ P0
 - ambiguidade de roteamento
 
 P1
-- `kronosAgent.js` → `.ts`
+- ~~`kronosAgent.js` → `.ts`~~ ✅ concluído
 - consolidar intent classifiers
 - remover orchestrator legacy
 - consolidar módulos duplicados
@@ -189,10 +189,10 @@ P2
 | Arquivo | Status | Ação |
 |---|---|---|
 | `src/ai/orchestrator.ts` | canônico | ponto de entrada de toda IA |
-| `src/lib/agents/kronosAgent.js` | migrar urgente | não tocar sem migrar para `.ts` |
+| `src/lib/agents/kronosAgent.ts` | ✅ migrado | agente clínico com TypeScript |
 | `src/core/nutrition/` | domínio oficial | canônico de nutrição |
 | `api/agent.js` | deletar | código morto, consome 1 slot Vercel |
-| `src/lib/engine/orchestrator.js` | remover | substituir pelo canônico |
+| ~~`src/lib/engine/orchestrator.js`~~ | ✅ removido | substituído pelo canônico |
 | `KRONIA_DIET_REBUILD.md` | rebuild ativo | não alterar arquivos de dieta sem ler antes |
 
 ━━━━━━━━━━━━━━━━━━━━

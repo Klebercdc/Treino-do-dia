@@ -1,42 +1,63 @@
-'use strict';
+import type { ClinicalDomain } from './resolveKronosClinicalDomain';
+import type { ClinicalGuardrails } from './buildClinicalGuardrails';
 
-function compactJson(value) {
+interface BuildOptions {
+  mode?: string;
+  topic?: string;
+  maxTokens?: number;
+  clinicalDomain?: ClinicalDomain;
+  clinicalEvidenceContext?: Record<string, unknown>;
+  clinicalGuardrails?: ClinicalGuardrails;
+}
+
+function compactJson(value: unknown): string {
   try {
-    return JSON.stringify(value || {});
-  } catch (_) {
+    return JSON.stringify(value ?? {});
+  } catch {
     return '{}';
   }
 }
 
-function uniqueValues(values) {
-  var seen = Object.create(null);
-  return (values || []).filter(function (value) {
-    var clean = String(value || '').trim();
-    var key = clean.toLowerCase();
-    if (!clean || seen[key]) return false;
+function uniqueValues(values: unknown[]): string[] {
+  const seen: Record<string, boolean> = Object.create(null);
+  return (values ?? []).reduce<string[]>((acc, value) => {
+    const clean = String(value ?? '').trim();
+    const key = clean.toLowerCase();
+    if (!clean || seen[key]) return acc;
     seen[key] = true;
-    return true;
-  });
+    acc.push(clean);
+    return acc;
+  }, []);
 }
 
-function buildKronosSystemPrompt(kronosContext, intent, options) {
-  var ctx = kronosContext || {};
-  var mode = options && options.mode ? options.mode : 'normal';
-  var topic = options && options.topic ? options.topic : (intent || 'general');
-  var maxTokens = options && options.maxTokens ? options.maxTokens : 600;
-  var clinicalDomain = (options && options.clinicalDomain) || ctx.clinicalDomain || {};
-  var clinicalEvidenceContext = (options && options.clinicalEvidenceContext) || ctx.clinicalEvidenceContext || {};
-  var clinicalGuardrails = (options && options.clinicalGuardrails) || ctx.clinicalGuardrails || {};
-  var patologias = uniqueValues((ctx.contextoClinico && Array.isArray(ctx.contextoClinico.patologias) ? ctx.contextoClinico.patologias : [])
-    .concat(ctx.user && ctx.user.patologia ? [ctx.user.patologia] : [])
-    .concat(ctx.user && Array.isArray(ctx.user.patologias) ? ctx.user.patologias : []));
-  var patologiaObrigatoria = patologias.length ? patologias.join(', ') : 'não informada no perfil';
+export function buildKronosSystemPrompt(
+  kronosContext: Record<string, unknown>,
+  intent: string | undefined,
+  options?: BuildOptions
+): string {
+  const ctx = kronosContext ?? {};
+  const mode = options?.mode ?? 'normal';
+  const topic = options?.topic ?? intent ?? 'general';
+  const maxTokens = options?.maxTokens ?? 600;
+  const clinicalDomain = options?.clinicalDomain ?? (ctx.clinicalDomain as ClinicalDomain | undefined) ?? {};
+  const clinicalEvidenceContext = options?.clinicalEvidenceContext ?? (ctx.clinicalEvidenceContext as Record<string, unknown> | undefined) ?? {};
+  const clinicalGuardrails = options?.clinicalGuardrails ?? (ctx.clinicalGuardrails as ClinicalGuardrails | undefined) ?? {};
+
+  const ctxClinico = ctx.contextoClinico as { patologias?: unknown[] } | undefined;
+  const ctxUser = ctx.user as { patologia?: unknown; patologias?: unknown[] } | undefined;
+
+  const patologias = uniqueValues([
+    ...(Array.isArray(ctxClinico?.patologias) ? ctxClinico.patologias : []),
+    ...(ctxUser?.patologia ? [ctxUser.patologia] : []),
+    ...(Array.isArray(ctxUser?.patologias) ? ctxUser.patologias : []),
+  ]);
+  const patologiaObrigatoria = patologias.length ? patologias.join(', ') : 'não informada no perfil';
 
   return [
     'Você é KRONOS, sistema clínico-esportivo do KRONIA com acesso ao contexto real consolidado do aplicativo.',
     'Responda em português do Brasil, de forma objetiva, útil, específica, segura e baseada nos dados reais disponíveis.',
-    'PAPEL CLÍNICO DO DOMÍNIO: ' + (clinicalGuardrails.physicianRole || clinicalDomain.physicianRole || 'abordagem clínica integrada'),
-    'PATOLOGIA OBRIGATÓRIA DO USUÁRIO: ' + patologiaObrigatoria,
+    `PAPEL CLÍNICO DO DOMÍNIO: ${(clinicalGuardrails as ClinicalGuardrails).physicianRole ?? (clinicalDomain as ClinicalDomain).physicianRole ?? 'abordagem clínica integrada'}`,
+    `PATOLOGIA OBRIGATÓRIA DO USUÁRIO: ${patologiaObrigatoria}`,
     '',
     'REGRAS OBRIGATÓRIAS DE CONTEXTO:',
     '1. Use APENAS os dados reais fornecidos em KRONOS_APP_CONTEXT. Não invente valores.',
@@ -81,15 +102,11 @@ function buildKronosSystemPrompt(kronosContext, intent, options) {
     'CONTEXTO DE EVIDÊNCIA CLÍNICA:',
     compactJson(clinicalEvidenceContext),
     '',
-    'MODO: ' + mode,
-    'TÓPICO/INTENÇÃO: ' + topic,
-    'TETO DE TOKENS: ' + maxTokens,
+    `MODO: ${mode}`,
+    `TÓPICO/INTENÇÃO: ${topic}`,
+    `TETO DE TOKENS: ${maxTokens}`,
     '',
     'KRONOS_APP_CONTEXT:',
-    compactJson(ctx)
+    compactJson(ctx),
   ].join('\n');
 }
-
-module.exports = {
-  buildKronosSystemPrompt: buildKronosSystemPrompt
-};

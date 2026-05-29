@@ -52,8 +52,8 @@ function buildClinicalContextForExams(ctx: Record<string, unknown>): ContextoCli
   const clinical: ContextoClinico = Object.assign({}, (ctx.contextoClinico as ContextoClinico) ?? {});
   const user = ctx.user as ContextoUser | undefined;
 
-  const patologias = [
-    ...(Array.isArray(clinical.patologias) ? clinical.patologias : []),
+  const patologias: string[] = [
+    ...(Array.isArray(clinical.patologias) ? clinical.patologias as string[] : []),
     ...(user?.patologia ? [user.patologia] : []),
     ...(Array.isArray(user?.patologias) ? user!.patologias! : []),
   ];
