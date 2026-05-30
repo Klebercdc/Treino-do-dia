@@ -1,0 +1,87 @@
+RELATORIO_HANDOFF — Verificação de uso de tabelas não aplicadas
+===============================================================
+Data: 2026-05-30
+Branch: claude/kronia-migrations-baseline-p1-fpeet
+Tarefa: Só leitura. Nenhum arquivo foi alterado. Banco não foi tocado.
+
+-----------------------------------------------
+OBJETOS CRIADOS PELAS 3 MIGRATIONS PENDENTES
+-----------------------------------------------
+
+054_adaptation_events.sql:
+  - TABLE public.adaptation_events
+  - INDEX idx_adaptation_events_user_status
+  - 4 RLS policies
+
+20260524_enterprise_ai_memory.sql:
+  - TABLE public.user_food_memory   (schema simples: liked/rejected/repeated foods em JSONB, sem FK)
+  - TABLE public.user_meal_feedback (schema simples: meal_name text, feedback_type text)
+  - TABLE public.user_behavior_profiles (schema simples: behavior_profile JSONB)
+  - TABLE public.user_adherence_metrics (schema simples: adherence_score, diversity_score, confidence_score)
+  - 4 RLS policies (sintaxe CREATE POLICY IF NOT EXISTS — non-standard Supabase)
+  - Sem índices, sem FK para auth.users
+
+20260525_enterprise_ai_hardening.sql:
+  - TABLE public.user_food_memory   (reescrita com mais colunas: affinity_score, accepted_count,
+                                     rejected_count, swapped_count, UNIQUE(user_id, food_key), FK auth.users)
+  - TABLE public.user_meal_feedback (reescrita com FK para meal_plans, rating, details JSONB)
+  - TABLE public.user_behavior_profiles (reescrita com preferred_meal_count, budget_level, disliked_foods[],
+                                          liked_foods[], avoided_foods[], behavior_state JSONB, FK auth.users)
+  - TABLE public.user_adherence_metrics (reescrita com adherence_days, skipped_meals_count,
+                                          swapped_foods_count, hunger_reports_count, UNIQUE(user_id, period_start))
+  - 6 índices (user_id e period/created_at por tabela)
+  - 8 RLS policies (4 authenticated + 4 service_role, idempotentes com DROP IF EXISTS)
+  NOTA: a 20260525 recria as mesmas 4 tabelas da 20260524 com schema incompatível (mais colunas,
+  FKs, constraints). Se as duas fossem aplicadas em sequência, a 20260525 seria no-op por IF NOT EXISTS
+  — mas o schema efetivo seria o mais simples da 20260524. Para ter o schema correto (hardened),
+  a 20260524 precisaria ser dropada ou nunca ter sido aplicada.
+
+-----------------------------------------------
+CONCLUSÃO POR MIGRATION
+-----------------------------------------------
+
+[USADA EM PRODUÇÃO] — 054_adaptation_events.sql
+  Tabela: public.adaptation_events
+  6 referências reais no código:
+
+  src/app/api/kronia/adaptations/route.ts:146   .from('adaptation_events')
+  src/app/api/kronia/adaptations/route.ts:174   .from('adaptation_events')
+  src/core/training/decisionLayerV1.ts:7        .from('adaptation_events')
+  src/core/training/decisionLayerV1.ts:18       .from('adaptation_events')
+  src/core/training/decisionLayerV1.ts:102      .from('adaptation_events')
+  src/core/training/decisionLayerV1.ts:143      .from('adaptation_events')
+
+  Impacto: a rota /api/kronia/adaptations e o Decision Layer V1 de treinamento
+  estão quebrando em runtime (tabela não existe no banco). Migration precisa ser
+  aplicada para que a feature funcione.
+
+[CÓDIGO MORTO / NÃO USADA] — 20260524_enterprise_ai_memory.sql
+  Tabelas: user_food_memory, user_meal_feedback, user_behavior_profiles, user_adherence_metrics
+  Nenhuma referência encontrada em nenhum arquivo de código (.ts/.tsx/.js/.jsx/.json).
+  Migration órfã. As tabelas não fazem falta. Pode ficar pendente indefinidamente
+  sem afetar nada em produção.
+
+[CÓDIGO MORTO / NÃO USADA] — 20260525_enterprise_ai_hardening.sql
+  Tabelas: user_food_memory, user_meal_feedback, user_behavior_profiles, user_adherence_metrics
+  Nenhuma referência encontrada em nenhum arquivo de código (.ts/.tsx/.js/.jsx/.json).
+  Migration órfã. É um hardening das mesmas tabelas da 20260524 com schema
+  incompatível (reescreve colunas com IF NOT EXISTS — ou seja, se 20260524 já
+  tivesse sido aplicada, a 20260525 seria no-op e o schema hardened nunca entraria).
+  Recomendação futura ao ativar a feature: aplicar APENAS a 20260525 (pular a 20260524).
+
+-----------------------------------------------
+PENDÊNCIAS
+-----------------------------------------------
+
+Ação necessária (prioritária):
+  - Aplicar 054_adaptation_events.sql no banco.
+    Feature quebrada em produção hoje. Confirmar com o dono antes de aplicar.
+
+Sem urgência:
+  - 20260524 e 20260525 podem ficar pendentes até que a feature de memória
+    nutricional seja retomada. Quando retomar: aplicar só a 20260525 (schema
+    correto, idempotente, RLS completo).
+
+-----------------------------------------------
+FIM DO RELATORIO
+-----------------------------------------------
