@@ -1,0 +1,538 @@
+================================================================================
+RELATORIO: DIAGNOSTICO DA MIGRATION 53 — KRONIA
+================================================================================
+Data da auditoria : 2026-05-30
+Projeto Supabase  : twxoddzogbmaysebhour
+Branch de trabalho: claude/kronia-migration-53-fix-2y2uI
+Banco             : Postgres 17 / Supabase / regiao sa-east-1
+================================================================================
+
+
+────────────────────────────────────────────────────────────────────────────────
+1. CONTEXTO: ESTADO REAL DO BANCO
+────────────────────────────────────────────────────────────────────────────────
+
+O historico nativo de migrations (supabase_migrations.schema_migrations) contem
+SOMENTE 3 entradas registradas:
+
+  VERSION           | NAME
+  ──────────────────|────────────────────────────────────────────
+  20260530163808    | enable_rls_diagnostic_admin_whitelist
+  20260530164140    | harden_function_execute_grants
+  20260530164432    | set_function_search_path
+
+CRITICO: Nenhuma dessas 3 versoes tem arquivo .sql correspondente no repositorio
+(supabase/migrations/). Elas foram aplicadas via MCP apply_migration, que
+registra no banco mas NAO cria arquivo local.
+
+As migrations 000 ate 054 (e as duas 20260524/20260525) existem como ARQUIVOS
+no repositorio mas NAO estao registradas na tabela de controle. Foram aplicadas
+diretamente via SQL Editor do Supabase ou psql, fora do mecanismo de rastreamento.
+
+Resultado: 57 arquivos de migration no repositorio, 3 registros no banco,
+0 correspondencias entre eles.
+
+
+────────────────────────────────────────────────────────────────────────────────
+2. ARQUIVO DA MIGRATION 53
+────────────────────────────────────────────────────────────────────────────────
+
+Arquivo: supabase/migrations/053_kronos_agent_tables.sql
+Commit de criacao: f13c8f9 (fix: carregar exames com autenticacao no CTA labs)
+
+Conteudo integral:
+
+  -- Tabelas necessarias para o agente KRONOS
+  -- fadiga_scores: score de fadiga registrado manualmente ou pelo app apos sessao
+  -- alertas_kronos: alertas clinicos gerados pelo agente (overtraining, plateau, etc.)
+
+  create table if not exists public.fadiga_scores (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    score numeric(4,1) not null check (score >= 0 and score <= 10),
+    notas text,
+    created_at timestamptz not null default now()
+  );
+
+  create index if not exists idx_fadiga_scores_user_created
+    on public.fadiga_scores(user_id, created_at desc);
+
+  alter table public.fadiga_scores enable row level security;
+
+  drop policy if exists "fadiga_scores_select_own" on public.fadiga_scores;
+  create policy "fadiga_scores_select_own" on public.fadiga_scores
+    for select to authenticated using (auth.uid() = user_id);
+
+  drop policy if exists "fadiga_scores_insert_own" on public.fadiga_scores;
+  create policy "fadiga_scores_insert_own" on public.fadiga_scores
+    for insert to authenticated with check (auth.uid() = user_id);
+
+  drop policy if exists "fadiga_scores_delete_own" on public.fadiga_scores;
+  create policy "fadiga_scores_delete_own" on public.fadiga_scores
+    for delete to authenticated using (auth.uid() = user_id);
+
+  create table if not exists public.alertas_kronos (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    tipo text not null check (tipo in ('overtraining', 'plateau', 'deficit_proteico')),
+    mensagem text not null,
+    lido boolean not null default false,
+    created_at timestamptz not null default now()
+  );
+
+  create index if not exists idx_alertas_kronos_user
+    on public.alertas_kronos(user_id, created_at desc);
+
+  alter table public.alertas_kronos enable row level security;
+
+  drop policy if exists "alertas_kronos_select_own" on public.alertas_kronos;
+  create policy "alertas_kronos_select_own" on public.alertas_kronos
+    for select to authenticated using (auth.uid() = user_id);
+
+  drop policy if exists "alertas_kronos_update_own" on public.alertas_kronos;
+  create policy "alertas_kronos_update_own" on public.alertas_kronos
+    for update to authenticated using (auth.uid() = user_id);
+
+  -- Service role pode inserir alertas gerados pelo agente
+  drop policy if exists "alertas_kronos_insert_service" on public.alertas_kronos;
+  create policy "alertas_kronos_insert_service" on public.alertas_kronos
+    for insert to service_role with check (true);
+
+
+────────────────────────────────────────────────────────────────────────────────
+3. MIGRATION 52 (antecessora imediata)
+────────────────────────────────────────────────────────────────────────────────
+
+Arquivo: supabase/migrations/052_exercise_discovery_module.sql
+Commit de criacao: integrado no commit 8949cf0
+
+O que faz:
+  - Cria tabelas: exercise_aliases, exercise_media_cache, exercise_search_logs
+  - Altera tabela exercises: adiciona colunas slug, name_pt, name_en,
+    body_part, target_muscle, secondary_muscles, category, instructions,
+    gif_url, search_terms, difficulty, is_active, updated_at
+  - Cria funcao search_exercises(query text)
+  - Cria triggers de updated_at para as tres novas tabelas
+  - Habilita RLS com policies para authenticated e service_role
+  - Roda dentro de bloco BEGIN / COMMIT (transacional)
+
+Dependencias que a 053 teria da 052: NENHUMA.
+A 053 so depende de auth.users (sempre existe). As tabelas fadiga_scores e
+alertas_kronos sao independentes das tabelas criadas pela 052.
+
+
+────────────────────────────────────────────────────────────────────────────────
+4. REPRODUCAO DO ERRO
+────────────────────────────────────────────────────────────────────────────────
+
+O Supabase CLI NAO esta instalado neste ambiente (confirmado via `which supabase`).
+Nao foi possivel rodar `supabase db push` e capturar a saida literal.
+
+O que ACONTECERIA ao rodar `supabase db push`:
+
+  O CLI compara os arquivos em supabase/migrations/ com schema_migrations.
+  Ao detectar versoes registradas no banco SEM arquivo local correspondente,
+  ele interrompe ANTES de tentar qualquer migration local.
+
+  Erro esperado (Supabase CLI v2.x):
+
+    Error: aborting: remote database has migrations that do not exist locally.
+
+    Found 3 remote migrations without a corresponding local file:
+      20260530163808  enable_rls_diagnostic_admin_whitelist
+      20260530164140  harden_function_execute_grants
+      20260530164432  set_function_search_path
+
+    Run `supabase migration repair` to resolve this conflict.
+
+  A migration 053 NUNCA CHEGA A SER TENTADA.
+  O CLI aborta antes de processar qualquer arquivo da sequencia 000-054.
+
+
+────────────────────────────────────────────────────────────────────────────────
+5. DIAGNOSTICO DA CAUSA
+────────────────────────────────────────────────────────────────────────────────
+
+5.1 ESTADO DAS TABELAS DA 053 NO BANCO (confirmado via query)
+──────────────────────────────────────────────────────────────
+
+  Tabela fadiga_scores:
+    Existe?         SIM (BASE TABLE)
+    Colunas:        id, user_id, score (numeric 4,1), notas, created_at
+    Constraints:    PK(id), FK(user_id -> auth.users CASCADE),
+                    CHECK(score >= 0 AND score <= 10)
+    Indice:         idx_fadiga_scores_user_created  (user_id, created_at DESC)
+    RLS:            habilitado
+    Policies:       fadiga_scores_select_own (SELECT authenticated)
+                    fadiga_scores_insert_own (INSERT authenticated)
+                    fadiga_scores_delete_own (DELETE authenticated)
+    Linhas:         0 (sem dados de usuario)
+
+  Tabela alertas_kronos:
+    Existe?         SIM (BASE TABLE)
+    Colunas:        id, user_id, tipo, mensagem, lido, created_at
+    Constraints:    PK(id), FK(user_id -> auth.users CASCADE),
+                    CHECK(tipo IN ('overtraining','plateau','deficit_proteico'))
+    Indice:         idx_alertas_kronos_user  (user_id, created_at DESC)
+    RLS:            habilitado
+    Policies:       alertas_kronos_select_own (SELECT authenticated)
+                    alertas_kronos_update_own (UPDATE authenticated)
+                    alertas_kronos_insert_service (INSERT service_role)
+    Linhas:         0 (sem dados de usuario)
+
+5.2 ANALISE DE IDEMPOTENCIA DA 053
+───────────────────────────────────
+
+  Operacao                                   | Guard              | Seguro?
+  ───────────────────────────────────────────|────────────────────|────────
+  CREATE TABLE fadiga_scores                 | IF NOT EXISTS      | SIM
+  CREATE INDEX idx_fadiga_scores_user_created| IF NOT EXISTS      | SIM
+  ALTER TABLE fadiga_scores ENABLE RLS       | idempotente no PG  | SIM
+  DROP POLICY fadiga_scores_select_own       | IF EXISTS          | SIM
+  CREATE POLICY fadiga_scores_select_own     | apos DROP          | SIM
+  DROP POLICY fadiga_scores_insert_own       | IF EXISTS          | SIM
+  CREATE POLICY fadiga_scores_insert_own     | apos DROP          | SIM
+  DROP POLICY fadiga_scores_delete_own       | IF EXISTS          | SIM
+  CREATE POLICY fadiga_scores_delete_own     | apos DROP          | SIM
+  CREATE TABLE alertas_kronos                | IF NOT EXISTS      | SIM
+  CREATE INDEX idx_alertas_kronos_user       | IF NOT EXISTS      | SIM
+  ALTER TABLE alertas_kronos ENABLE RLS      | idempotente no PG  | SIM
+  DROP POLICY alertas_kronos_select_own      | IF EXISTS          | SIM
+  CREATE POLICY alertas_kronos_select_own    | apos DROP          | SIM
+  DROP POLICY alertas_kronos_update_own      | IF EXISTS          | SIM
+  CREATE POLICY alertas_kronos_update_own    | apos DROP          | SIM
+  DROP POLICY alertas_kronos_insert_service  | IF EXISTS          | SIM
+  CREATE POLICY alertas_kronos_insert_service| apos DROP          | SIM
+
+  CONCLUSAO: a migration 053 e COMPLETAMENTE IDEMPOTENTE.
+  Rodada de novo (via psql ou apply_migration), ela NAO geraria erro algum.
+  O schema do banco bate 100% com o que a 053 define.
+
+5.3 CAUSA-RAIZ DO BLOQUEIO
+───────────────────────────
+
+  Dois mecanismos de migration foram usados em paralelo e nunca sincronizados:
+
+  [A] Arquivos 000-054 em supabase/migrations/
+      -> Aplicados via SQL Editor / psql scripts
+      -> NAO registrados em schema_migrations
+      -> Banco esta correto, rastreamento nao sabe
+
+  [B] Migrations aplicadas via MCP apply_migration
+      -> Registradas em schema_migrations com versoes 20260530*
+      -> Sem arquivo .sql local no repositorio
+      -> Rastreamento sabe, repositorio nao tem o arquivo
+
+  Quando o CLI tenta `supabase db push`, ele detecta o caso [B] como
+  "database ahead of local" e aborta imediatamente. A migration 053
+  nunca e tentada.
+
+5.4 BUG ADICIONAL — MIGRATION 054 (NAO IDEMPOTENTE)
+──────────────────────────────────────────────────────
+
+  Arquivo: supabase/migrations/054_adaptation_events.sql
+  Commit de criacao: 8675f1f
+
+  A tabela adaptation_events NAO EXISTE no banco (confirmado via query).
+  A migration 054 ainda nao foi aplicada nenhuma vez.
+
+  PROBLEMA: a 054 usa CREATE POLICY direto, sem DROP IF EXISTS nem bloco
+  DO...EXCEPTION WHEN duplicate_object:
+
+    -- COMO ESTA (nao idempotente):
+    CREATE POLICY "adaptation_events_select_own"
+      ON public.adaptation_events FOR SELECT ...;        <- vai falhar na 2a execucao
+
+    CREATE POLICY "adaptation_events_update_own"
+      ON public.adaptation_events FOR UPDATE ...;        <- idem
+
+    CREATE POLICY "adaptation_events_insert_service"
+      ON public.adaptation_events FOR INSERT ...;        <- idem
+
+    CREATE POLICY "adaptation_events_update_service"
+      ON public.adaptation_events FOR UPDATE ...;        <- idem
+
+  Se a 054 for aplicada uma vez e por qualquer razao precisar ser re-aplicada
+  (ex: migration repair + re-push), ela falhara com:
+
+    ERROR: policy "adaptation_events_select_own"
+           for table "adaptation_events" already exists
+
+  Isso nao e urgente agora (a tabela nao existe), mas e uma bomba-relogio dado
+  o historico de re-aplicacoes do projeto.
+
+5.5 OUTROS PROBLEMAS ESTRUTURAIS ENCONTRADOS
+─────────────────────────────────────────────
+
+  a) Prefixos duplicados de numero de migration:
+     Os seguintes numeros tem DOIS arquivos cada:
+       001: 001_extensions.sql  e  001_initial_schema.sql
+       002: 002_plans_logs.sql  e  002_profiles.sql
+       003: 003_diagnosticos.sql  e  003_nutrition_core.sql
+       004: 004_ai_tables.sql  e  004_kronia_transforms.sql
+       005: 005_exercises_rich_fields.sql  e  005_knowledge_base.sql
+       006: 006_fix_plans_and_views.sql, 006_fix_workout_history_id.sql,
+            006_indexes.sql
+       007: 007_product_modularization.sql  e  007_rls.sql
+       008: 008_plan_access_and_usage.sql  e  008_policies.sql
+       009: 009_affiliate_sales_and_commission_flow.sql  e  009_functions.sql
+       010: 010_fix_resolve_effective_plan_stability.sql  e  010_seeds.sql
+       039: 039_lab_reports_supabase_orchestration.sql  e  039_labs_watchdog_cron.sql
+
+     Em versoes do CLI que extraem o prefixo numerico como version, isso
+     causaria conflito de versao duplicada. Em versoes que usam o nome
+     completo do arquivo como version, sao versoes distintas mas podem
+     causar confusao de ordenacao.
+
+  b) Arquivos 20260524 e 20260525 nao aplicados e nao registrados:
+     - 20260524_enterprise_ai_memory.sql: cria tabelas user_food_memory,
+       user_meal_feedback, user_behavior_profiles, user_adherence_metrics
+       (nenhuma dessas tabelas existe no banco)
+     - 20260525_enterprise_ai_hardening.sql: conteudo nao verificado
+     Essas migrations sao pendentes legitimas que precisam ser aplicadas.
+
+  c) Formato de naming misto:
+     - 000-054: formato NNN_nome.sql (3 digitos)
+     - 20260524, 20260525: formato YYYYMMDD_nome.sql (8 digitos)
+     - 20260530163808*: formato YYYYMMDDHHMMSS_nome.sql (14 digitos, padrao Supabase)
+     O padrao oficial do Supabase CLI v2 requer 14 digitos. Arquivos com menos
+     digitos podem ser ignorados ou causar erros dependendo da versao do CLI.
+
+
+────────────────────────────────────────────────────────────────────────────────
+6. CORRECOES PROPOSTAS (NAO APLICAR SEM CONFIRMACAO)
+────────────────────────────────────────────────────────────────────────────────
+
+6.1 MIGRATION 053 — NAO PRECISA DE ALTERACAO
+─────────────────────────────────────────────
+
+  O SQL da 053 esta correto e completamente idempotente. Nenhuma mudanca
+  necessaria no arquivo.
+
+6.2 CRIAR OS 3 ARQUIVOS LOCAIS AUSENTES (desbloqueador critico)
+────────────────────────────────────────────────────────────────
+
+  Esses arquivos precisam existir no repositorio para que o CLI reconheca
+  as 3 migrations registradas e pare de bloquear o push.
+
+  CONTEUDO RECUPERADO DIRETAMENTE DO BANCO (statements armazenados em
+  supabase_migrations.schema_migrations):
+
+  ── supabase/migrations/20260530163808_enable_rls_diagnostic_admin_whitelist.sql ──
+
+    ALTER TABLE public.diagnostic_admin_whitelist ENABLE ROW LEVEL SECURITY;
+
+  ── supabase/migrations/20260530164140_harden_function_execute_grants.sql ──
+
+    -- 1) Trigger functions
+    REVOKE EXECUTE ON FUNCTION public.handle_new_user_plan() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.handle_lab_report_dispatch_trigger() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.touch_updated_at_lab_reports() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.set_diagnostic_updated_at() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.set_exercise_slug() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.set_timestamp_updated_at() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.set_updated_at_admin_import_jobs() FROM PUBLIC, anon, authenticated;
+
+    -- 2) Backend/cron privilegiado
+    REVOKE EXECUTE ON FUNCTION public.reset_monthly_quotas() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.limpar_diagnosticos_antigos() FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.import_exercises_json(jsonb) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.admin_acquire_import_lock(bigint) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.admin_release_import_lock(bigint) FROM PUBLIC, anon, authenticated;
+
+    -- 3) Pipeline/status: so anon
+    REVOKE EXECUTE ON FUNCTION public.admin_has_running_import(text) FROM anon;
+    REVOKE EXECUTE ON FUNCTION public.acquire_lab_report_edge_lock(uuid, timestamptz, text) FROM anon;
+    REVOKE EXECUTE ON FUNCTION public.dispatch_lab_report_to_edge(uuid, text, timestamptz) FROM anon;
+    REVOKE EXECUTE ON FUNCTION public.log_lab_report_pipeline_event(uuid, text, text, jsonb) FROM anon;
+
+  ── supabase/migrations/20260530164432_set_function_search_path.sql ──
+
+    ALTER FUNCTION public.admin_acquire_import_lock(bigint) SET search_path = '';
+    ALTER FUNCTION public.admin_has_running_import(text) SET search_path = '';
+    ALTER FUNCTION public.admin_release_import_lock(bigint) SET search_path = '';
+    ALTER FUNCTION public.handle_new_user_plan() SET search_path = '';
+    ALTER FUNCTION public.import_exercises_json(jsonb) SET search_path = '';
+    ALTER FUNCTION public.jsonb_text_array(jsonb) SET search_path = '';
+    ALTER FUNCTION public.limpar_diagnosticos_antigos() SET search_path = '';
+    ALTER FUNCTION public.reset_monthly_quotas() SET search_path = '';
+    ALTER FUNCTION public.search_exercises(text) SET search_path = '';
+    ALTER FUNCTION public.set_diagnostic_updated_at() SET search_path = '';
+    ALTER FUNCTION public.set_exercise_slug() SET search_path = '';
+    ALTER FUNCTION public.set_timestamp_updated_at() SET search_path = '';
+    ALTER FUNCTION public.set_updated_at_admin_import_jobs() SET search_path = '';
+    ALTER FUNCTION public.slugify_text(text) SET search_path = '';
+    ALTER FUNCTION public.touch_updated_at_lab_reports() SET search_path = '';
+
+6.3 CORRIGIR MIGRATION 054 (tornar idempotente)
+────────────────────────────────────────────────
+
+  Arquivo: supabase/migrations/054_adaptation_events.sql
+
+  ANTES (nao idempotente — 4 CREATE POLICY diretos):
+
+    CREATE POLICY "adaptation_events_select_own"
+      ON public.adaptation_events FOR SELECT
+      TO authenticated USING (auth.uid() = user_id);
+
+    CREATE POLICY "adaptation_events_update_own"
+      ON public.adaptation_events FOR UPDATE
+      TO authenticated USING (auth.uid() = user_id);
+
+    CREATE POLICY "adaptation_events_insert_service"
+      ON public.adaptation_events FOR INSERT
+      TO service_role WITH CHECK (true);
+
+    CREATE POLICY "adaptation_events_update_service"
+      ON public.adaptation_events FOR UPDATE
+      TO service_role USING (true);
+
+  DEPOIS (corrigido — DROP IF EXISTS antes de cada CREATE):
+
+    DROP POLICY IF EXISTS "adaptation_events_select_own" ON public.adaptation_events;
+    CREATE POLICY "adaptation_events_select_own"
+      ON public.adaptation_events FOR SELECT
+      TO authenticated USING (auth.uid() = user_id);
+
+    DROP POLICY IF EXISTS "adaptation_events_update_own" ON public.adaptation_events;
+    CREATE POLICY "adaptation_events_update_own"
+      ON public.adaptation_events FOR UPDATE
+      TO authenticated USING (auth.uid() = user_id);
+
+    DROP POLICY IF EXISTS "adaptation_events_insert_service" ON public.adaptation_events;
+    CREATE POLICY "adaptation_events_insert_service"
+      ON public.adaptation_events FOR INSERT
+      TO service_role WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "adaptation_events_update_service" ON public.adaptation_events;
+    CREATE POLICY "adaptation_events_update_service"
+      ON public.adaptation_events FOR UPDATE
+      TO service_role USING (true);
+
+  O bloco CREATE TABLE IF NOT EXISTS e CREATE INDEX IF NOT EXISTS ja estao
+  corretos na 054. Apenas as policies precisam do guard.
+
+6.4 AVALIACAO DE RISCO LGPD
+────────────────────────────
+
+  fadiga_scores   : 0 linhas no banco — sem dado de saude real. Risco: ZERO.
+  alertas_kronos  : 0 linhas no banco — sem dado real. Risco: ZERO.
+  adaptation_events: tabela nao existe — criacao nova. Risco: ZERO.
+  3 arquivos novos: so REVOKE e ALTER FUNCTION — sem toque em dados de usuario.
+
+  RISCO GERAL DAS CORRECOES PROPOSTAS: BAIXO.
+  Nenhuma operacao remove, altera ou migra dado existente de usuario.
+
+
+────────────────────────────────────────────────────────────────────────────────
+7. RECOMENDACAO ESTRUTURAL: BASELINE DO HISTORICO
+────────────────────────────────────────────────────────────────────────────────
+
+7.1 VALE A PENA BASEAR O HISTORICO?
+─────────────────────────────────────
+
+  SIM. Sem o baseline, supabase db push nunca funcionara corretamente, e toda
+  nova migration aplicada via MCP ficara sem arquivo local (repetindo o ciclo).
+  O baseline e pre-requisito para qualquer governanca futura de schema.
+
+7.2 PLANO (SEM EXECUTAR)
+─────────────────────────
+
+  FASE 1 — Desbloqueio imediato (sem CLI necessario):
+    Criar os 3 arquivos .sql locais (secao 6.2).
+    Commitar na branch claude/kronia-migration-53-fix-2y2uI.
+    Isso elimina o erro "database ahead of local" e permite que o CLI
+    pelo menos inicie o processamento.
+
+  FASE 2 — Registrar 000-054 como ja aplicadas (requer CLI local):
+    Para cada arquivo de migration 000-054 que ja esta aplicado no banco,
+    registra-lo em schema_migrations SEM re-executar o SQL:
+
+      supabase migration repair --status applied <version>
+
+    onde <version> e o nome do arquivo sem .sql. Exemplo:
+      supabase migration repair --status applied 053_kronos_agent_tables
+      supabase migration repair --status applied 052_exercise_discovery_module
+      ... (repetir para todos os 57 arquivos 000-054)
+
+    Apos isso, schema_migrations tera:
+      - As 3 versoes 20260530* (ja estavam)
+      - As 57 versoes 000-054 (agora marcadas como applied)
+
+    supabase db push passara a ver apenas migrations genuinamente novas.
+
+  FASE 3 — Resolver as 2 migrations nao-aplicadas pendentes:
+    20260524_enterprise_ai_memory.sql e 20260525_enterprise_ai_hardening.sql
+    criam tabelas que NAO existem no banco. Precisam ser aplicadas.
+    Antes de aplicar, revisar se o projeto ainda precisa dessas tabelas
+    (user_food_memory, user_meal_feedback, user_behavior_profiles, etc.)
+    — podem ser tabelas de experimento descontinuado.
+
+  FASE 4 — Padronizar naming de novas migrations:
+    A partir do baseline, toda migration nova deve usar formato:
+      YYYYMMDDHHMMSS_descricao_curta.sql
+    Exemplo: 20260601120000_adiciona_campo_objetivo_fadiga.sql
+
+    Nunca mais usar prefixos numericos de 3 digitos. Nunca mais dois
+    arquivos com o mesmo numero de prefixo.
+
+  FASE 5 — Estabelecer regra no CLAUDE.md:
+    "Toda nova migration deve:
+     1. Usar nome YYYYMMDDHHMMSS_descricao.sql
+     2. Ser idempotente (CREATE TABLE IF NOT EXISTS, DROP POLICY IF EXISTS
+        antes de CREATE POLICY, CREATE INDEX IF NOT EXISTS)
+     3. Ser aplicada via apply_migration (MCP) OU via psql com posterior
+        supabase migration repair --status applied
+     Nunca aplicar schema via SQL Editor sem registrar no controle de versao."
+
+7.3 ORDEM SEGURA DE EXECUCAO
+──────────────────────────────
+
+  1. Criar 3 arquivos locais ausentes (secao 6.2) — sem tocar o banco
+  2. Corrigir 054 (secao 6.3) — sem tocar o banco
+  3. Commitar e fazer push da branch
+  4. Aguardar ok do owner para o baseline de migration repair
+  5. Com CLI local: rodar migration repair para os 57 arquivos 000-054
+  6. Verificar: supabase db push deve reportar "No pending migrations"
+     (exceto pelas 2 migrations 20260524/20260525 genuinamente pendentes)
+  7. Decidir sobre as 2 pendentes (aplicar ou descartar)
+
+
+────────────────────────────────────────────────────────────────────────────────
+8. SUMARIO EXECUTIVO
+────────────────────────────────────────────────────────────────────────────────
+
+  PERGUNTA: Qual e o erro da migration 53?
+  RESPOSTA: A migration 053 nao tem erro de SQL. O erro e estrutural.
+
+  CAUSA RAIZ:
+    Tres migrations foram aplicadas via MCP (registradas no banco) sem criar
+    arquivo local. O Supabase CLI detecta isso como "database ahead of local"
+    e aborta ANTES de tentar qualquer migration local, incluindo a 053.
+
+  ESTADO DA 053:
+    - SQL: correto, completamente idempotente
+    - No banco: ja aplicada (tabelas existem, 0 linhas)
+    - No controle: nao registrada em schema_migrations
+    - Acao necessaria no SQL do arquivo: nenhuma
+
+  BUGS ENCONTRADOS:
+    - 054_adaptation_events.sql: 4 CREATE POLICY sem guarda de idempotencia
+    - 3 arquivos .sql ausentes no repo para migrations registradas no banco
+    - 57 migrations aplicadas no banco nao registradas no controle
+    - Prefixos numericos duplicados (001, 002... 039)
+    - Formato de naming misto (3 digitos / 8 digitos / 14 digitos)
+
+  ACOES IMEDIATAS (antes de qualquer push):
+    1. Criar 3 arquivos locais (conteudo completo na secao 6.2)
+    2. Corrigir migration 054 (diff na secao 6.3)
+    3. Commitar na branch atual
+
+  ACAO POSTERIOR (requer CLI local, confirmar com owner):
+    4. supabase migration repair --status applied <version> para 000-054
+    5. Verificar push limpo
+    6. Decidir sobre as 2 migrations pendentes (20260524/20260525)
+
+================================================================================
+FIM DO RELATORIO
+================================================================================
