@@ -1,98 +1,84 @@
 ================================================================================
-RELATORIO_HANDOFF — Mapeamento do estado atual do repositório
+RELATORIO_HANDOFF — Fix versão do runtime @vercel/python no vercel.json
 Data: 2026-05-30
-Tarefa: Só leitura. Nenhum arquivo de código foi alterado.
+Branch onde ficou o commit: main (commit direto)
+Commit: 1f9dd17
 ================================================================================
 
-RESPOSTA DIRETA: O FIX JÁ ESTÁ NA MAIN DO GITHUB.
-O vercel.json na origin/main já contém a entrada do exam_ocr.py com runtime Python.
+RESUMO
+------
+Adicionada versão explícita ao runtime Python no vercel.json.
+O Vercel exige formato "pacote@versao" — sem versão o build abortava com:
+  "Function Runtimes must have a valid version, for example `now-php@1.0.0`."
 
 ================================================================================
-1. BRANCHES
+1. VERSÃO USADA E COMO FOI CONFIRMADA
 ================================================================================
 
-Branches locais (nesta máquina):
-  * claude/vercel-fastapi-config-1MhDp  ← current, tracking origin, em sync
-    main-local                           ← tracking origin/main, em sync
-    main                                 ← tracking origin/main, em sync
+Versão: @vercel/python@6.44.0
 
-Branches remotas criadas nesta sequência de trabalho:
-  origin/claude/vercel-fastapi-config-1MhDp        ← EXISTS no remoto ✓ (esta branch)
-  origin/claude/kronia-migrations-baseline-p1-fpeet ← EXISTS no remoto ✓ (migrations)
-  origin/claude/kronia-audit-alignment-65ICR        ← EXISTS no remoto ✓ (auditoria)
-  origin/claude/kronia-migration-53-fix-2y2uI       ← EXISTS no remoto ✓ (migration 53)
+Método de confirmação:
+  Consultado o npm registry diretamente:
+    GET https://registry.npmjs.org/@vercel/python/latest
+    → retornou versão: 6.44.0
 
-Todas pushadas para o GitHub. Nenhum commit fica só local.
+  Confirmado que é dist-tag "latest" (versão estável oficial):
+    GET https://registry.npmjs.org/@vercel/python
+    → dist-tags.latest = 6.44.0
 
-================================================================================
-2. ONDE ESTÁ O FIX DO vercel.json
-================================================================================
-
-O commit que adiciona api/exam_ocr.py com @vercel/python está em:
-
-  Esta branch (origin/claude/vercel-fastapi-config-1MhDp):
-    8507cd3 fix: declarar runtime Python para api/exam_ocr.py no vercel.json ✓
-
-  MAIN (origin/main) — chegou via merge direto (não via PR):
-    1312c1f fix: merge vercel fix — declara runtime Python para api/exam_ocr.py ✓
-
-git log --oneline -5 origin/main:
-  ecabd1a chore: remove RELATORIO_HANDOFF.txt da main
-  1312c1f fix: merge vercel fix — declara runtime Python para api/exam_ocr.py
-  389935f Merge pull request #536 from Klebercdc/claude/kronia-migrations-baseline-p1-fpeet
-  8507cd3 fix: declarar runtime Python para api/exam_ocr.py no vercel.json
-  658ef4d docs: rastreamento do pipeline OCR — conclusão Cenário B
-
-NOTA: o merge foi feito direto na main, sem PR. Por isso não aparece na aba
-"Pull Requests" do GitHub. Para ver: aba Code → main → vercel.json → chave "functions".
+  Verificado que é um release de produção:
+    - Licença: Apache-2.0
+    - Dependências: @vercel/python-analysis@0.11.1, @vercel/build-utils@13.26.4
+    - Descrição: Python runtime builder para a plataforma Vercel
 
 ================================================================================
-3. ESTADO DA MAIN
+2. DIFF LITERAL DO vercel.json
 ================================================================================
 
-origin/main sincronizado. 0 commits unpushed em qualquer branch local.
+--- a/vercel.json
++++ b/vercel.json
+@@ -167,7 +167,7 @@
+       "maxDuration": 60
+     },
+     "api/exam_ocr.py": {
+-      "runtime": "@vercel/python",
++      "runtime": "@vercel/python@6.44.0",
+       "maxDuration": 60
+     }
+   },
 
-Chave "functions" do vercel.json na origin/main hoje (literal):
+Apenas 1 linha alterada. Nada mais tocado.
 
-  {
+================================================================================
+3. CHAVE "functions" FINAL NO vercel.json (literal)
+================================================================================
+
+  "functions": {
     "api/*.js": {
       "maxDuration": 60
     },
     "api/exam_ocr.py": {
-      "runtime": "@vercel/python",
+      "runtime": "@vercel/python@6.44.0",
       "maxDuration": 60
     }
-  }
+  },
 
-O fix está na main. ✓
-
-================================================================================
-4. CORREÇÕES ANTERIORES
-================================================================================
-
-Todos os arquivos de migration já estão na origin/main.
-Chegaram via PR #536 (branch kronia-migrations-baseline-p1-fpeet).
-
-Arquivos SQL na main (commit fe2969d):
-  supabase/migrations/054_adaptation_events.sql                                      ✓
-  supabase/migrations/20260530163808_enable_rls_diagnostic_admin_whitelist.sql       ✓
-  supabase/migrations/20260530164140_harden_function_execute_grants.sql              ✓
-  supabase/migrations/20260530164432_set_function_search_path.sql                    ✓
-  supabase/migrations/20260530164600_revoke_authenticated_lab_pipeline_functions.sql ✓
-  supabase/migrations/20260530164700_critical_view_and_diagnostic_insert_policies.sql ✓
-
-054 idempotente: na main ✓
-5 arquivos 20260530*.sql: na main ✓
+JSON válido: confirmado via python3 json.load.
 
 ================================================================================
-5. ÚNICO PASSO PENDENTE
+4. ONDE FICOU
 ================================================================================
 
-O repositório está correto. O Vercel ainda falha porque o preset no painel
-continua como "FastAPI". O que falta:
+Branch: main (commit direto, sem PR)
+Commit: 1f9dd17
+Mensagem: fix(vercel): adiciona versão ao runtime Python do exam_ocr
 
-  1. Painel Vercel → Settings → General → Framework Preset → "Other" → Save
-  2. Deployments → Redeploy
+git log --oneline -3 origin/main:
+  1f9dd17 fix(vercel): adiciona versão ao runtime Python do exam_ocr
+  ecabd1a chore: remove RELATORIO_HANDOFF.txt da main
+  1312c1f fix: merge vercel fix — declara runtime Python para api/exam_ocr.py
+
+O push para origin/main disparou deploy automático no Vercel (treino-do-dia).
 
 ================================================================================
 FIM DO RELATÓRIO
