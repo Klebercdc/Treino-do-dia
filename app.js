@@ -5734,6 +5734,21 @@ function openHome() {
   });
   // Carrega insights em paralelo (não bloqueia render)
   loadKroniaInsights();
+  // Cold start: gera protocolo inicial na primeira vez que o usuário chega na home
+  if (localStorage.getItem('kronia_initial_protocol_pending') === '1') {
+    localStorage.removeItem('kronia_initial_protocol_pending');
+    localStorage.removeItem(STORAGE.draftKey);
+    const coldCfg = safeJSON('kronia_config', {});
+    if (coldCfg.nivel) {
+      const nivelChip = document.querySelector(`#nivelChips [data-val="${coldCfg.nivel}"]`);
+      if (nivelChip && typeof selectNivel === 'function') selectNivel(nivelChip);
+    }
+    if (coldCfg.dias) {
+      const freqChip = document.querySelector(`#freqChips [data-val="${String(coldCfg.dias)}"]`);
+      if (freqChip && typeof selectFreq === 'function') selectFreq(freqChip);
+    }
+    setTimeout(() => { if (typeof gerarProtocolo === 'function') gerarProtocolo(true); }, 400);
+  }
 }
 function closeHome() {
   document.getElementById("homeScreen").classList.remove("show");

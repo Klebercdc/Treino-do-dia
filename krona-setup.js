@@ -6,8 +6,10 @@
   'use strict';
 
   var _ksStep = 0;
-  var _ksTotal = 3;
+  var _ksTotal = 4;
   var _ksGoal = null;
+  var _ksNivel = null;
+  var _ksFreq = 4;
   var _ksCtaBound = false;
   var _ksLastTriggerAt = 0;
 
@@ -20,8 +22,15 @@
     var footer = document.querySelector('.footer-actions');
     if (footer) footer.style.display = 'none';
     _ksGoal = null;
+    _ksNivel = null;
+    _ksFreq = 4;
     _ksStep = 0;
     ksGoTo(0);
+    // Pré-seleciona frequência padrão (4x)
+    setTimeout(function () {
+      var defFreq = document.getElementById('ksFreqDefault');
+      if (defFreq) defFreq.classList.add('selected');
+    }, 0);
     // Pré-preenche nome se já existe
     var cfg = {};
     try { cfg = JSON.parse(localStorage.getItem('kronia_config') || '{}'); } catch (e) {}
@@ -77,7 +86,7 @@
 
     // Texto do botão — orientado a captação
     var ctaLbl = document.getElementById('ksCtaLabel');
-    var labels = ['Continuar', 'Quase lá', 'Conhecer o KRONOS'];
+    var labels = ['Continuar', 'Quase lá', 'Continuar', 'Conhecer o KRONOS'];
     if (ctaLbl) ctaLbl.textContent = labels[idx] || 'Continuar';
 
     ksValidate();
@@ -104,6 +113,8 @@
       valid = true; // dados físicos são opcionais
     } else if (_ksStep === 2) {
       valid = _ksGoal !== null;
+    } else if (_ksStep === 3) {
+      valid = _ksNivel !== null;
     }
     var cta = document.getElementById('ksCta');
     if (cta) {
@@ -113,12 +124,29 @@
   };
 
   window.ksSelectGoal = function (el) {
-    document.querySelectorAll('.ks-goal-chip').forEach(function (c) {
+    document.querySelectorAll('[data-goal]').forEach(function (c) {
       c.classList.remove('selected');
     });
     el.classList.add('selected');
     _ksGoal = el.dataset.goal;
     ksValidate();
+  };
+
+  window.ksSelectNivel = function (el) {
+    document.querySelectorAll('[data-nivel]').forEach(function (c) {
+      c.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    _ksNivel = el.dataset.nivel;
+    ksValidate();
+  };
+
+  window.ksSelectFreq = function (el) {
+    document.querySelectorAll('.ks-freq-chip').forEach(function (c) {
+      c.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    _ksFreq = parseInt(el.dataset.freq, 10) || 4;
   };
 
   /* ── Finalizar e salvar ── */
@@ -155,8 +183,11 @@
       if (altura) cfg.altura = altura;
       if (idade) cfg.idade = idade;
       if (_ksGoal) cfg.objetivo = _ksGoal;
+      if (_ksNivel) cfg.nivel = _ksNivel;
+      cfg.dias = _ksFreq;
       localStorage.setItem('kronia_config', JSON.stringify(cfg));
       localStorage.setItem('kronia_profile_setup_done', '1');
+      localStorage.setItem('kronia_initial_protocol_pending', '1');
       saveResult = { status: 'success', nextAction: { route: 'onboarding' } };
     }
 

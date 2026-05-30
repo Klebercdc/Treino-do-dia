@@ -3138,6 +3138,8 @@ body.light-mode #transformsScreen {
 .ks-goal-chip { display:flex;align-items:center;gap:14px;width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:13px;padding:14px 18px;color:rgba(255,255,255,0.55);font-family:var(--font);font-size:0.88rem;font-weight:600;cursor:pointer;transition:background .18s, border-color .18s, color .18s, transform .18s;text-align:left; }
 .ks-goal-chip.selected { background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.4);color:#fff; }
 .ks-goal-chip.selected svg { stroke:#FF6B00; }
+.ks-freq-chip { flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 6px;color:rgba(255,255,255,0.45);font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;transition:background .18s,border-color .18s,color .18s;text-align:center; }
+.ks-freq-chip.selected { background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.4);color:#fff; }
 #ksFooter { position:relative;z-index:4; }
 .ks-footer { padding:12px 20px max(24px, calc(12px + env(safe-area-inset-bottom)));background:linear-gradient(180deg, rgba(10,10,10,0) 0%, rgba(10,10,10,0.82) 18%, #0A0A0A 100%);backdrop-filter:blur(6px); }
 .ks-footer-hint { font-size:.66rem;letter-spacing:.04em;color:rgba(255,255,255,0.34);text-align:center;margin-bottom:10px; }
