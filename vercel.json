@@ -167,7 +167,7 @@
       "maxDuration": 60
     },
     "api/exam_ocr.py": {
-      "runtime": "@vercel/python",
+      "runtime": "@vercel/python@6.44.0",
       "maxDuration": 60
     }
   },
