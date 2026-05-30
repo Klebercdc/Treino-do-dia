@@ -1,87 +1,148 @@
-RELATORIO_HANDOFF — Verificação de uso de tabelas não aplicadas
-===============================================================
+================================================================================
+RELATORIO_HANDOFF — Merge do fix Vercel FastAPI → main
 Data: 2026-05-30
-Branch: claude/kronia-migrations-baseline-p1-fpeet
-Tarefa: Só leitura. Nenhum arquivo foi alterado. Banco não foi tocado.
+Branch mergeada: claude/vercel-fastapi-config-1MhDp → main
+================================================================================
 
------------------------------------------------
-OBJETOS CRIADOS PELAS 3 MIGRATIONS PENDENTES
------------------------------------------------
+RESUMO
+------
+Merge concluído. O fix do runtime Python para api/exam_ocr.py chegou à main.
+Um único conflito existia, apenas em arquivo de documentação. Resolvido abaixo.
 
-054_adaptation_events.sql:
-  - TABLE public.adaptation_events
-  - INDEX idx_adaptation_events_user_status
-  - 4 RLS policies
+================================================================================
+1. CONFLITOS ENCONTRADOS
+================================================================================
 
-20260524_enterprise_ai_memory.sql:
-  - TABLE public.user_food_memory   (schema simples: liked/rejected/repeated foods em JSONB, sem FK)
-  - TABLE public.user_meal_feedback (schema simples: meal_name text, feedback_type text)
-  - TABLE public.user_behavior_profiles (schema simples: behavior_profile JSONB)
-  - TABLE public.user_adherence_metrics (schema simples: adherence_score, diversity_score, confidence_score)
-  - 4 RLS policies (sintaxe CREATE POLICY IF NOT EXISTS — non-standard Supabase)
-  - Sem índices, sem FK para auth.users
+Arquivo em conflito: RELATORIO_HANDOFF.txt (único conflito)
 
-20260525_enterprise_ai_hardening.sql:
-  - TABLE public.user_food_memory   (reescrita com mais colunas: affinity_score, accepted_count,
-                                     rejected_count, swapped_count, UNIQUE(user_id, food_key), FK auth.users)
-  - TABLE public.user_meal_feedback (reescrita com FK para meal_plans, rating, details JSONB)
-  - TABLE public.user_behavior_profiles (reescrita com preferred_meal_count, budget_level, disliked_foods[],
-                                          liked_foods[], avoided_foods[], behavior_state JSONB, FK auth.users)
-  - TABLE public.user_adherence_metrics (reescrita com adherence_days, skipped_meals_count,
-                                          swapped_foods_count, hunger_reports_count, UNIQUE(user_id, period_start))
-  - 6 índices (user_id e period/created_at por tabela)
-  - 8 RLS policies (4 authenticated + 4 service_role, idempotentes com DROP IF EXISTS)
-  NOTA: a 20260525 recria as mesmas 4 tabelas da 20260524 com schema incompatível (mais colunas,
-  FKs, constraints). Se as duas fossem aplicadas em sequência, a 20260525 seria no-op por IF NOT EXISTS
-  — mas o schema efetivo seria o mais simples da 20260524. Para ter o schema correto (hardened),
-  a 20260524 precisaria ser dropada ou nunca ter sido aplicada.
+  Motivo: ambas as branches (kronia-migrations-baseline-p1-fpeet e
+  vercel-fastapi-config-1MhDp) criaram o RELATORIO_HANDOFF.txt com conteúdos
+  diferentes — um sobre verificação das migrations pendentes, outro sobre o
+  diagnóstico do OCR/Vercel. Git não pôde mesclar automaticamente.
 
------------------------------------------------
-CONCLUSÃO POR MIGRATION
------------------------------------------------
+  Resolução: substituído por este arquivo unificado que registra o merge.
+  O conteúdo substantivo de ambos os relatórios anteriores está preservado
+  no histórico de commits de cada branch.
 
-[USADA EM PRODUÇÃO] — 054_adaptation_events.sql
-  Tabela: public.adaptation_events
-  6 referências reais no código:
+Arquivo NÃO conflitante (mergeu limpo): vercel.json ✓
 
-  src/app/api/kronia/adaptations/route.ts:146   .from('adaptation_events')
-  src/app/api/kronia/adaptations/route.ts:174   .from('adaptation_events')
-  src/core/training/decisionLayerV1.ts:7        .from('adaptation_events')
-  src/core/training/decisionLayerV1.ts:18       .from('adaptation_events')
-  src/core/training/decisionLayerV1.ts:102      .from('adaptation_events')
-  src/core/training/decisionLayerV1.ts:143      .from('adaptation_events')
+================================================================================
+2. O QUE MUDOU NA MAIN COM ESTE MERGE
+================================================================================
 
-  Impacto: a rota /api/kronia/adaptations e o Decision Layer V1 de treinamento
-  estão quebrando em runtime (tabela não existe no banco). Migration precisa ser
-  aplicada para que a feature funcione.
+Arquivo: vercel.json
+Diff literal aplicado:
 
-[CÓDIGO MORTO / NÃO USADA] — 20260524_enterprise_ai_memory.sql
-  Tabelas: user_food_memory, user_meal_feedback, user_behavior_profiles, user_adherence_metrics
-  Nenhuma referência encontrada em nenhum arquivo de código (.ts/.tsx/.js/.jsx/.json).
-  Migration órfã. As tabelas não fazem falta. Pode ficar pendente indefinidamente
-  sem afetar nada em produção.
+  --- a/vercel.json
+  +++ b/vercel.json
+  @@ -165,6 +165,10 @@
+     "functions": {
+       "api/*.js": {
+         "maxDuration": 60
+  +    },
+  +    "api/exam_ocr.py": {
+  +      "runtime": "@vercel/python",
+  +      "maxDuration": 60
+       }
+     },
 
-[CÓDIGO MORTO / NÃO USADA] — 20260525_enterprise_ai_hardening.sql
-  Tabelas: user_food_memory, user_meal_feedback, user_behavior_profiles, user_adherence_metrics
-  Nenhuma referência encontrada em nenhum arquivo de código (.ts/.tsx/.js/.jsx/.json).
-  Migration órfã. É um hardening das mesmas tabelas da 20260524 com schema
-  incompatível (reescreve colunas com IF NOT EXISTS — ou seja, se 20260524 já
-  tivesse sido aplicada, a 20260525 seria no-op e o schema hardened nunca entraria).
-  Recomendação futura ao ativar a feature: aplicar APENAS a 20260525 (pular a 20260524).
+================================================================================
+3. CONTEÚDO FINAL COMPLETO DO vercel.json
+================================================================================
 
------------------------------------------------
-PENDÊNCIAS
------------------------------------------------
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/plan-current",                    "destination": "/api/plan?__route=plan-current" },
+    { "source": "/api/plan-features",                   "destination": "/api/plan?__route=plan-features" },
+    { "source": "/api/config",                          "destination": "/api/plan?__route=config" },
+    { "source": "/api/affiliate-referral",              "destination": "/api/affiliate?__route=affiliate-referral" },
+    { "source": "/api/affiliate-commissions",           "destination": "/api/affiliate?__route=affiliate-commissions" },
+    { "source": "/api/science-articles",                "destination": "/api/system?__route=science-articles" },
+    { "source": "/api/science-search",                  "destination": "/api/science?__route=science-search" },
+    { "source": "/api/science-review",                  "destination": "/api/science?__route=science-review" },
+    { "source": "/api/science-sync",                    "destination": "/api/science?__route=science-sync" },
+    { "source": "/api/science-insight",                 "destination": "/api/science?__route=science-insight" },
+    { "source": "/api/science-classify",                "destination": "/api/science?__route=science-classify" },
+    { "source": "/api/nutrition-calc",                  "destination": "/api/science?__route=nutrition-calc" },
+    { "source": "/api/nutrition-plan",                  "destination": "/api/science?__route=nutrition-plan" },
+    { "source": "/api/nutrition-selftest",              "destination": "/api/science?__route=nutrition-selftest" },
+    { "source": "/api/kronos",                          "destination": "/api/system?__route=kronos" },
+    { "source": "/api/lgpd-export",                     "destination": "/api/system?__route=lgpd-export" },
+    { "source": "/api/lgpd-delete",                     "destination": "/api/system?__route=lgpd-delete" },
+    { "source": "/api/machine",                         "destination": "/api/system?__route=machine" },
+    { "source": "/api/cron-scraper",                    "destination": "/api/system?__route=cron-scraper" },
+    { "source": "/api/pastor-diagnostico",              "destination": "/api/system?__route=pastor-diagnostico" },
+    { "source": "/api/affiliate-sale",                  "destination": "/api/affiliate?__route=affiliate-sale" },
+    { "source": "/api/billing-sync",                    "destination": "/api/affiliate?__route=billing-sync" },
+    { "source": "/api/admin-diagnostics",               "destination": "/api/system?__route=admin-diagnostics" },
+    { "source": "/api/admin-import-exercises",          "destination": "/api/system?__route=admin-import-exercises" },
+    { "source": "/api/admin-import-exercises-status",   "destination": "/api/system?__route=admin-import-exercises-status" },
+    { "source": "/api/admin-import-exercises-auto",     "destination": "/api/system?__route=admin-import-exercises-auto" },
+    { "source": "/api/internal/process-memory-queue",   "destination": "/api/memory?action=process_queue" },
+    { "source": "/api/system/health",                   "destination": "/api/system?__route=health" },
+    { "source": "/api/health/enterprise-ai",            "destination": "/api/system?__route=enterprise-ai-health" },
+    { "source": "/api/kronia/labs/init-upload",         "destination": "/api/system?__route=kronia-labs-init-upload" },
+    { "source": "/api/kronia/labs/register",            "destination": "/api/system?__route=kronia-labs-register" },
+    { "source": "/api/kronia/labs/reports",             "destination": "/api/system?__route=kronia-labs-reports" },
+    { "source": "/api/kronia/labs/reports/:id",         "destination": "/api/system?__route=kronia-labs-report-by-id&id=:id" },
+    { "source": "/api/kronia/diet/generate",            "destination": "/api/science?__route=krona-diet-generate" },
+    { "source": "/api/kronia/diet/substitutions",       "destination": "/api/science?__route=krona-diet-substitutions" },
+    { "source": "/api/kronia/diet/swap",                "destination": "/api/science?__route=krona-diet-swap" },
+    { "source": "/api/kronia/diet/remove-block",        "destination": "/api/science?__route=krona-diet-remove-block" },
+    { "source": "/api/kronia/diet/adjust-portion",      "destination": "/api/science?__route=krona-diet-adjust-portion" },
+    { "source": "/api/kronia/diet/print",               "destination": "/api/science?__route=krona-diet-print" },
+    { "source": "/api/(.*)",                             "destination": "/api/$1" }
+  ],
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 60
+    },
+    "api/exam_ocr.py": {
+      "runtime": "@vercel/python",
+      "maxDuration": 60
+    }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "crons": [
+    { "path": "/api/cron/daily-dispatch", "schedule": "0 4 * * *" }
+  ],
+  "installCommand": "npm ci --include=dev"
+}
 
-Ação necessária (prioritária):
-  - Aplicar 054_adaptation_events.sql no banco.
-    Feature quebrada em produção hoje. Confirmar com o dono antes de aplicar.
+================================================================================
+4. VALIDAÇÃO DO vercel.json
+================================================================================
 
-Sem urgência:
-  - 20260524 e 20260525 podem ficar pendentes até que a feature de memória
-    nutricional seja retomada. Quando retomar: aplicar só a 20260525 (schema
-    correto, idempotente, RLS completo).
+- JSON válido: sim (verificado antes do commit)
+- rewrites: todos preservados (36 entradas)
+- functions: api/*.js ✓ + api/exam_ocr.py ✓ (2 entradas)
+- buildCommand: "npm run build" ✓
+- outputDirectory: "public" ✓
+- crons: /api/cron/daily-dispatch ✓
+- installCommand: "npm ci --include=dev" ✓
 
------------------------------------------------
-FIM DO RELATORIO
------------------------------------------------
+================================================================================
+5. CORREÇÕES ANTERIORES NÃO REVERTIDAS
+================================================================================
+
+Confirmado na main antes do merge (commit 389935f):
+  ✓ 5 migrations de baseline (fase 1) já presentes
+  ✓ 054_adaptation_events.sql idempotente (DROP POLICY IF EXISTS) já presente
+  ✓ alinhamento de código/auditoria já presente
+
+Nada foi revertido.
+
+================================================================================
+6. PRÓXIMOS PASSOS NO PAINEL VERCEL
+================================================================================
+
+1. Settings → General → Framework Preset → trocar "FastAPI" → "Other" → Save
+2. Deployments → Redeploy (agora com o vercel.json correto na main)
+
+ORDEM IMPORTA: trocar o preset ANTES do redeploy.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================
