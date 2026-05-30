@@ -1,84 +1,68 @@
 ================================================================================
-RELATORIO_HANDOFF — Fix versão do runtime @vercel/python no vercel.json
+RELATORIO_HANDOFF — Diagnóstico: deploy pegando branch errada
 Data: 2026-05-30
-Branch onde ficou o commit: main (commit direto)
-Commit: 1f9dd17
 ================================================================================
 
-RESUMO
-------
-Adicionada versão explícita ao runtime Python no vercel.json.
-O Vercel exige formato "pacote@versao" — sem versão o build abortava com:
-  "Function Runtimes must have a valid version, for example `now-php@1.0.0`."
+CAUSA: A (única causa)
+O Vercel está configurado para deployar a branch claude/vercel-fastapi-config-1MhDp,
+não a main. Essa branch NÃO tem o fix de versão do runtime. O vercel.json dela
+ainda tem "@vercel/python" sem versão.
 
 ================================================================================
-1. VERSÃO USADA E COMO FOI CONFIRMADA
+1. ESTADO DOS DOIS vercel.json
 ================================================================================
 
-Versão: @vercel/python@6.44.0
+origin/main (commit 1f9dd17) — CORRETO:
+  "api/exam_ocr.py": {
+    "runtime": "@vercel/python@6.44.0",
+    "maxDuration": 60
+  }
 
-Método de confirmação:
-  Consultado o npm registry diretamente:
-    GET https://registry.npmjs.org/@vercel/python/latest
-    → retornou versão: 6.44.0
+origin/claude/vercel-fastapi-config-1MhDp (commit 327659b) — COM BUG:
+  "api/exam_ocr.py": {
+    "runtime": "@vercel/python",     ← sem versão → causa o erro
+    "maxDuration": 60
+  }
 
-  Confirmado que é dist-tag "latest" (versão estável oficial):
-    GET https://registry.npmjs.org/@vercel/python
-    → dist-tags.latest = 6.44.0
-
-  Verificado que é um release de produção:
-    - Licença: Apache-2.0
-    - Dependências: @vercel/python-analysis@0.11.1, @vercel/build-utils@13.26.4
-    - Descrição: Python runtime builder para a plataforma Vercel
+Único vercel.json no repo: raiz. Sem outros em subpastas.
 
 ================================================================================
-2. DIFF LITERAL DO vercel.json
+2. COMMIT 327659b
 ================================================================================
 
---- a/vercel.json
-+++ b/vercel.json
-@@ -167,7 +167,7 @@
-       "maxDuration": 60
-     },
-     "api/exam_ocr.py": {
--      "runtime": "@vercel/python",
-+      "runtime": "@vercel/python@6.44.0",
-       "maxDuration": 60
-     }
-   },
-
-Apenas 1 linha alterada. Nada mais tocado.
+Commit: 327659b — "docs: relatório do fix de versão do runtime @vercel/python"
+Branch: claude/vercel-fastapi-config-1MhDp (APENAS — não está na main)
+Conteúdo: só altera RELATORIO_HANDOFF.txt. Não toca vercel.json.
+Portanto: o vercel.json nessa branch nunca recebeu o fix de versão.
 
 ================================================================================
-3. CHAVE "functions" FINAL NO vercel.json (literal)
+3. DIVERGÊNCIA ENTRE BRANCHES
 ================================================================================
 
-  "functions": {
-    "api/*.js": {
-      "maxDuration": 60
-    },
-    "api/exam_ocr.py": {
-      "runtime": "@vercel/python@6.44.0",
-      "maxDuration": 60
-    }
-  },
+Commits na feature branch que NÃO estão na main:
+  327659b docs: relatório do fix de versão do runtime @vercel/python
+  c5aaa49 docs: mapeamento do estado atual do repositório
 
-JSON válido: confirmado via python3 json.load.
-
-================================================================================
-4. ONDE FICOU
-================================================================================
-
-Branch: main (commit direto, sem PR)
-Commit: 1f9dd17
-Mensagem: fix(vercel): adiciona versão ao runtime Python do exam_ocr
-
-git log --oneline -3 origin/main:
-  1f9dd17 fix(vercel): adiciona versão ao runtime Python do exam_ocr
+Commits na main que NÃO estão na feature branch:
+  1f9dd17 fix(vercel): adiciona versão ao runtime Python do exam_ocr  ← O FIX
   ecabd1a chore: remove RELATORIO_HANDOFF.txt da main
   1312c1f fix: merge vercel fix — declara runtime Python para api/exam_ocr.py
+  389935f Merge pull request #536 (migrations baseline)
+  caa597b docs: atualiza relatorio handoff
+  fe2969d chore: baseline migrations fase 1
 
-O push para origin/main disparou deploy automático no Vercel (treino-do-dia).
+A main está à FRENTE da feature branch em 6 commits.
+A feature branch tem 2 commits extras de documentação que não foram para a main.
+
+================================================================================
+4. CAUSA RAIZ
+================================================================================
+
+O projeto treino-do-dia no Vercel está com a branch de produção apontando para
+claude/vercel-fastapi-config-1MhDp. Essa branch não tem o fix 1f9dd17.
+
+Solução: aplicar o fix de versão diretamente na feature branch (git cherry-pick
+ou edição direta) — assim o próximo deploy automático pega o vercel.json correto.
 
 ================================================================================
 FIM DO RELATÓRIO
