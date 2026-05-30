@@ -1,0 +1,351 @@
+================================================================================
+RELATÓRIO DE INVESTIGAÇÃO — ALINHAMENTO DO CÓDIGO COM AUDITORIA DE BANCO
+KroniA / Treino-do-dia
+Branch: claude/kronia-audit-alignment-65ICR
+Data: 2026-05-30
+Projeto Supabase: twxoddzogbmaysebhour (Postgres 17)
+================================================================================
+
+NATUREZA DESTE DOCUMENTO
+------------------------
+Esta é uma investigação SOMENTE LEITURA. Nenhuma alteração foi aplicada no
+código ou no banco. Todas as "ações propostas" abaixo aguardam confirmação
+explícita do dono do projeto antes de qualquer execução.
+
+Contexto: o banco passou por auditoria de segurança e várias correções já
+foram aplicadas via migration (revogação de acessos anon/authenticated,
+fixação de search_path, etc.). A tarefa foi alinhar o código do repositório
+ao novo estado do banco e investigar os pontos dependentes de código.
+
+Método: grep recursivo do código (excluindo node_modules/.git), inspeção de
+cada arquivo que chama as funções alvo, e verificação de qual cliente
+Supabase (anon/authenticated vs service_role) cada chamada utiliza.
+
+
+================================================================================
+PARTE 1 — AS 4 FUNÇÕES RPC (revogação de anon já feita; decidir authenticated)
+================================================================================
+
+Pergunta: cada função é chamada pelo FRONT-END (chave anon/authenticated) ou
+só pelo BACKEND (edge function / service_role)?
+
+TABELA RESUMO
+-------------
+Função                          | Chamada por | Arquivo:linha                                    | Recomendação
+--------------------------------|-------------|--------------------------------------------------|---------------------------
+dispatch_lab_report_to_edge     | Backend     | api/kronia-labs.js:427                            | PODE REVOGAR authenticated
+                                |             | src/server/internal/labReports/service.ts:244    |
+acquire_lab_report_edge_lock    | Backend     | supabase/functions/lab-report-orchestrator/      | PODE REVOGAR authenticated
+                                |             |   index.ts:238                                   |
+                                |             | scripts/labs-pipeline-check.ts:112 (health check)|
+log_lab_report_pipeline_event   | Interna BD  | (nenhuma chamada JS/TS — só triggers SQL)        | PODE REVOGAR authenticated
+admin_has_running_import        | Backend     | api/admin-import-exercises-auto.js:56             | PODE REVOGAR authenticated
+                                |             | src/server/internal/http/                        |
+                                |             |   admin-import-exercises.js:83                    |
+
+EVIDÊNCIAS DETALHADAS
+---------------------
+
+1) dispatch_lab_report_to_edge
+   - api/kronia-labs.js:427 — usa createAdminSupabaseClient(), que exige
+     SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (linhas 19-30). É service_role.
+   - src/server/internal/labReports/service.ts:244 — chama admin.rpc(...).
+     O cliente "admin" é recebido como parâmetro (SupabaseClient) injetado
+     pelas rotas do App Router:
+       * src/app/api/labs/upload/route.ts:7
+       * src/app/api/kronia/labs/register/route.ts:11
+     Essas rotas rodam server-side e passam o cliente service_role.
+   - NÃO há chamada com chave anon/authenticated em nenhum lugar.
+
+2) acquire_lab_report_edge_lock
+   - supabase/functions/lab-report-orchestrator/index.ts:238 — o cliente
+     supabase é criado na linha 27 com SUPABASE_SERVICE_ROLE_KEY. É edge
+     function backend.
+   - scripts/labs-pipeline-check.ts:112 — script de health check (não é
+     fluxo de produção do usuário).
+   - NÃO há chamada de front-end.
+
+3) log_lab_report_pipeline_event
+   - ZERO chamadas em código JS/TS.
+   - Aparece somente dentro de migrations como "perform
+     public.log_lab_report_pipeline_event(...)" em triggers:
+       * supabase/migrations/039_lab_reports_supabase_orchestration.sql:151,185,195
+       * supabase/migrations/044_lab_reports_dispatch_expected_updated_at_fix.sql:48,75,85
+   - A migration 039 já contém:
+       revoke all on function ... from public;
+       grant execute on function ... to service_role;
+   - É puramente interna ao banco.
+
+4) admin_has_running_import
+   - api/admin-import-exercises-auto.js:56 — cliente criado na linha 44 com
+     env.serviceRoleKey. Protegido por header x-admin-key / CRON_SECRET.
+   - src/server/internal/http/admin-import-exercises.js:83 — cliente criado
+     na linha 42 com env.serviceRoleKey. Protegido por x-admin-key.
+   - NÃO há chamada de front-end.
+
+CONCLUSÃO PARTE 1
+-----------------
+Nenhuma das 4 funções é chamada pelo cliente com chave anon ou authenticated.
+Todas estão exclusivamente no backend usando service_role. É SEGURO revogar
+o acesso "authenticated" das 4 no banco.
+
+OBS sobre a tela "Exames & Indicadores": os botões "Enviar PDF/JPEG/PNG" e
+"Recarregar indicadores" do front NÃO chamam essas RPCs diretamente. Eles
+batem nas rotas server-side (/api/kronia/labs/...), e é o servidor (com
+service_role) que chama as RPCs. Por isso revogar authenticated não quebra a UI.
+
+
+================================================================================
+PARTE 2 — ALINHAR CÓDIGO COM FUNÇÕES JÁ REVOGADAS (anon + authenticated)
+================================================================================
+
+Funções afetadas (agora só service_role no banco):
+reset_monthly_quotas, limpar_diagnosticos_antigos, import_exercises_json,
+admin_acquire_import_lock, admin_release_import_lock.
+
+2a) CHAMADAS NO CÓDIGO — TODAS USAM service_role
+-------------------------------------------------
+Função                     | Arquivo:linha                                  | Cliente        | Risco
+---------------------------|------------------------------------------------|----------------|------------------
+reset_monthly_quotas       | src/server/legacy/pastor-diagnostico.js:144    | ver nota ABAIXO | ATENÇÃO (fallback)
+limpar_diagnosticos_antigos| (nenhuma chamada em JS/TS; só migration 003)   | -              | Sem risco
+import_exercises_json      | src/server/internal/exerciseImport.js:253      | service_role   | Sem risco
+admin_acquire_import_lock  | src/server/internal/exerciseImport.js:124      | service_role   | Sem risco
+                           | src/server/internal/http/                      | service_role   |
+                           |   admin-import-exercises.js:63                  |                |
+                           | api/admin-import-exercises-auto.js:79           | service_role   |
+admin_release_import_lock  | src/server/internal/exerciseImport.js:133      | service_role   | Sem risco
+                           | src/server/internal/http/                      | service_role   |
+                           |   admin-import-exercises.js:72                  |                |
+                           | api/admin-import-exercises-auto.js:88           | service_role   |
+
+NOTA / RISCO IDENTIFICADO — pastor-diagnostico.js
+-------------------------------------------------
+O arquivo src/server/legacy/pastor-diagnostico.js é um cron Vercel (roteado
+via api/system.js:322 -> '__route=pastor-diagnostico'), roda 03:00 UTC.
+
+A função readSupabaseKey() (linhas 39-48) faz FALLBACK para chave anon:
+
+    function readSupabaseKey() {
+      return process.env.SUPABASE_SERVICE_KEY
+        || process.env.SUPABASE_SERVICE_ROLE_KEY
+        || process.env.SUPABASE_ANON_KEY            <-- fallback perigoso
+        || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY <-- fallback perigoso
+        || process.env.VITE_SUPABASE_SERVICE_KEY
+        || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+        || process.env.VITE_SUPABASE_ANON_KEY        <-- fallback perigoso
+        || '';
+    }
+
+Se num ambiente as service keys não estiverem setadas mas a anon estiver,
+o cron vai chamar reset_monthly_quotas com chave anon e agora receberá
+403 / permission denied (silenciosamente, dependendo do tratamento).
+
+Comparação: src/server/apihelpers/_plans.js (usado pelos demais helpers,
+inclusive _diagnosticTracker.js) JÁ tem a versão correta — só lê
+SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY, sem fallback anon.
+
+AÇÃO PROPOSTA (aguardando ok):
+  Remover os 3 fallbacks de anon key em pastor-diagnostico.js (linhas 41,42,47),
+  deixando só as chaves de serviço. Isso evita chamada acidental com anon e
+  alinha com _plans.js. Não muda comportamento em produção (lá a service key
+  existe).
+
+2b) search_path NAS MIGRATIONS DO REPO
+--------------------------------------
+A auditoria fixou search_path em TODAS as funções public no banco. Risco:
+se uma migration do repo que recria a função NÃO tiver "SET search_path",
+re-rodar a migration reverte a correção.
+
+Migrations SEM SET search_path nas funções relevantes:
+  * supabase/migrations/002_plans_logs.sql:110
+      CREATE OR REPLACE FUNCTION public.reset_monthly_quotas()
+      RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$ ... $$;
+      --> falta SET search_path
+  * supabase/migrations/003_diagnosticos.sql:34
+      CREATE OR REPLACE FUNCTION public.limpar_diagnosticos_antigos()
+      RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$ ... $$;
+      --> falta SET search_path
+  * supabase/migrations/000_bootstrap_completo.sql — também define
+      reset_monthly_quotas (e várias outras SECURITY DEFINER) sem search_path.
+
+Funções que NÃO estão em nenhuma migration do repo (criadas direto no banco;
+sem risco de reversão por migration):
+  admin_acquire_import_lock, admin_release_import_lock, import_exercises_json.
+
+Funções que JÁ têm search_path nas migrations (OK):
+  dispatch_lab_report_to_edge, acquire_lab_report_edge_lock,
+  log_lab_report_pipeline_event (migrations 039/043/044 — usam
+  "set search_path = public" ou "public, vault, extensions").
+
+AÇÃO PROPOSTA (aguardando ok):
+  Adicionar "SET search_path = ''" (ou "= public" conforme o que a auditoria
+  usou) nas definições de reset_monthly_quotas (002 e 000) e
+  limpar_diagnosticos_antigos (003), para a migration não reverter a correção.
+  Importante: confirmar qual valor a auditoria usou no banco para manter
+  consistência (string vazia exige schema-qualificar tudo internamente;
+  "public" é menos invasivo).
+
+LEMBRETE: service_role key NUNCA deve ir para o cliente. Nenhuma das ações
+acima expõe a chave — todas as chamadas já são server-side.
+
+
+================================================================================
+PARTE 3 — DUPLO SCHEMA DE DIETA (investigação; NÃO migrar dados)
+================================================================================
+
+Estado dos dois sistemas:
+  ANTIGO (em uso):  meal_plans (111 linhas) + meal_plan_items (1702 linhas).
+                    Item guarda food_name como TEXTO LIVRE + macros soltos.
+  NOVO (vazio):     nutrition_plans -> nutrition_plan_meals ->
+                    nutrition_meal_items -> food_catalog (catálogo: 14 itens).
+                    Estrutura normalizada de 4 níveis.
+
+SCHEMA CANÔNICO EM USO = meal_plans / meal_plan_items
+-----------------------------------------------------
+Consumidores ativos no código:
+  * src/server/apihelpers/_kronosContextHub.js:175,183,557,1129,1132,1147
+      — carrega plano + itens para o contexto do KRONOS (mapDetailedDiet).
+  * src/ai/chatService.ts:28,39 — .from('meal_plans') / .from('meal_plan_items')
+  * src/lib/nutrition/queries.ts:35,47 — getPlanItems(db, mealPlanId)
+  * src/lib/ai/context-builder.ts:18 — intent 'current_diet' seleciona
+      ['profile','nutrition_goals','meal_plans','meal_plan_items']
+  * src/lib/ai/types.ts:31 — interface MealPlanItem
+  * src/lib/checks/schema-check.ts:13-14 e db-check.ts:8-9 — health checks
+  * app.js — leitura/escrita com source: 'supabase_meal_plans'
+
+SCHEMA NOVO = ÓRFÃO / CÓDIGO MORTO (da perspectiva da aplicação)
+----------------------------------------------------------------
+  * ZERO queries JS/TS para nutrition_plans, nutrition_plan_meals,
+    nutrition_meal_items ou food_catalog (grep não retornou nenhuma chamada
+    .from(...) nem rpc para essas tabelas).
+  * A única ocorrência da string aparece em _kronosContextHub.js:1225 como
+    constante de intent: NUTRITION_PLANNING: 'nutrition_planning' — NÃO é
+    uma query ao banco.
+  * As tabelas existem (migrations 047_nutrition_premium_catalog_and_plans,
+    018_nutrition_ai_platform) mas nunca são lidas/escritas pela aplicação.
+
+PROBLEMA CENTRAL PARA MIGRAÇÃO
+------------------------------
+Os ~1702 itens em meal_plan_items têm food_name como texto livre. O
+food_catalog tem só 14 alimentos. Não há correspondência direta possível
+sem matching fuzzy + revisão manual. Migrar agora geraria perda/ambiguidade.
+
+PLANO DE MIGRAÇÃO PROPOSTO (não executar — decisão de produto é do dono)
+------------------------------------------------------------------------
+OPÇÃO A — Consolidar em meal_plans (menor risco) [RECOMENDADA no curto prazo]:
+  1. Marcar nutrition_plans + 3 tabelas relacionadas como DEPRECATED.
+  2. Apagar as 4 tabelas vazias (ou manter vazias documentando a dívida).
+  3. Enriquecer meal_plan_items incrementalmente em novos planos.
+  Custo: baixo. Risco: baixo. Não toca os 1702 itens.
+
+OPÇÃO B — Migrar para o schema normalizado (maior esforço):
+  1. Expandir food_catalog via ETL (já existe src/lib/nutrition/tacoService.js
+     com a base TACO — reaproveitar).
+  2. Migration de mapeamento fuzzy: para cada food_name único, tentar match
+     contra food_catalog (threshold ~80% de similaridade).
+  3. Itens sem match -> tabela de revisão manual (não descartar).
+  4. Migrar os 111 meal_plans -> nutrition_plans preservando ativos.
+  5. Trocar consumidores do código um a um (context hub, chatService,
+     queries, context-builder) só DEPOIS dos dados migrados.
+  Custo: alto. Risco: médio/alto (dado clínico, LGPD).
+
+RECOMENDAÇÃO: Opção A no curto prazo. O food_catalog de 14 itens não sustenta
+uma migração limpa de 1702 itens. Decisão de fusão de schemas fica com o dono.
+
+
+================================================================================
+PARTE 4 — ITENS MENORES (explicar impacto antes de mexer)
+================================================================================
+
+4a) VIEW diagnostic_execution_health — SECURITY DEFINER
+-------------------------------------------------------
+Definição no repo (2 lugares, ambos como CREATE OR REPLACE VIEW SEM anotação
+de security):
+  * sql/021_admin_diagnostics_observability.sql:156
+  * sql/022_admin_diagnostics_refinements.sql:3
+Por padrão, view do Postgres é SECURITY INVOKER. O alerta do linter indica
+que no banco REAL a view está como SECURITY DEFINER (provavelmente herdado
+do owner na criação).
+
+Efeito do SECURITY DEFINER: a view lê diagnostic_executions com privilégios
+do criador (não do chamador). Um authenticated sem policy de SELECT na tabela
+base conseguiria ler dados via a view — vazamento potencial.
+
+Efeito de mudar para security_invoker = on: a view passa a respeitar as
+policies RLS do chamador nas tabelas base. Já existe a policy
+diagnostic_executions_admin_read (to authenticated using
+kronia_is_diagnostic_admin()), então admin continua lendo. O único consumidor
+de código é src/server/legacy/admin-diagnostics.js:293,544,635 que usa
+service_role (bypassa RLS) — NÃO quebra.
+
+Compatibilidade: security_invoker exige Postgres 15+. Projeto roda PG 17. OK.
+
+AÇÃO PROPOSTA (aguardando ok):
+  Adicionar "WITH (security_invoker = on)" na definição da view nos arquivos
+  sql/021 e sql/022 do repo, para a definição do repo bater com a correção
+  desejada no banco.
+
+4b) POLICIES RLS WITH CHECK (true) em diagnostic_executions / diagnostic_steps
+------------------------------------------------------------------------------
+O REPO JÁ TEM A VERSÃO CORRETA (não é WITH CHECK true):
+  sql/021_admin_diagnostics_observability.sql:128-145
+    create policy diagnostic_executions_admin_insert
+      on public.diagnostic_executions for insert to authenticated
+      with check (public.kronia_is_diagnostic_admin());
+    create policy diagnostic_steps_admin_insert
+      on public.diagnostic_steps for insert to authenticated
+      with check (public.kronia_is_diagnostic_admin());
+
+Ou seja, o WITH CHECK (true) é problema só no BANCO real (versão antiga da
+policy). O código do repo não contém WITH CHECK (true) para essas tabelas.
+(As ocorrências de WITH CHECK (true) em sql/020_exercise_discovery_module.sql
+e migration 018 são de OUTRAS tabelas — fora do escopo deste item.)
+
+Quem insere legitimamente nessas tabelas:
+  * src/server/apihelpers/_diagnosticTracker.js:364 (diagnostic_executions),
+    385 (diagnostic_steps) — via plans.supabaseRequest() que usa service_role
+    (ver src/server/apihelpers/_plans.js:46-47: apikey + Bearer com
+    SUPABASE_SERVICE_KEY). Bypassa RLS — policy é irrelevante para ele.
+  * src/server/legacy/admin-diagnostics.js — só LEITURA, não insere.
+
+AÇÃO PROPOSTA (aguardando ok):
+  Re-executar sql/021_admin_diagnostics_observability.sql no banco. É
+  idempotente (drop policy if exists antes de create). Substitui a policy
+  permissiva WITH CHECK (true) pela restrita kronia_is_diagnostic_admin().
+  Não quebra o tracker (service_role bypassa RLS).
+
+
+================================================================================
+RESUMO DAS AÇÕES PROPOSTAS (TODAS AGUARDANDO CONFIRMAÇÃO)
+================================================================================
+[ ] P1   Banco: revogar EXECUTE de authenticated nas 4 funções de lab/import
+         (dispatch_lab_report_to_edge, acquire_lab_report_edge_lock,
+          log_lab_report_pipeline_event, admin_has_running_import).
+         Código já está 100% backend — não quebra a UI.
+
+[ ] P2a  Código: remover fallback de anon key em
+         src/server/legacy/pastor-diagnostico.js (linhas 41,42,47).
+
+[ ] P2b  Migrations: adicionar SET search_path em reset_monthly_quotas
+         (002_plans_logs.sql, 000_bootstrap_completo.sql) e
+         limpar_diagnosticos_antigos (003_diagnosticos.sql).
+         Confirmar valor usado pela auditoria ('' vs 'public').
+
+[ ] P3   Produto: decidir Opção A (consolidar em meal_plans, recomendada) ou
+         Opção B (migrar p/ nutrition_plans). Sem execução agora.
+
+[ ] P4a  Código: adicionar WITH (security_invoker = on) na view
+         diagnostic_execution_health (sql/021 e sql/022).
+
+[ ] P4b  Banco: re-executar sql/021 (idempotente) para trocar policy
+         WITH CHECK (true) pela restrita admin nas tabelas diagnostic_*.
+
+RISCO GERAL: baixo. Nenhuma ação proposta expõe service_role no cliente,
+nenhuma quebra fluxo de usuário real (todos os consumidores afetados são
+backend/service_role). Mudanças de schema/policy de RLS devem ser revisadas
+por você antes de qualquer deploy (regra 11 do CLAUDE.md).
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================
