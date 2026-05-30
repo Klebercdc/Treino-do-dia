@@ -26,18 +26,22 @@ CREATE INDEX IF NOT EXISTS idx_adaptation_events_user_status
 
 ALTER TABLE public.adaptation_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "adaptation_events_select_own" ON public.adaptation_events;
 CREATE POLICY "adaptation_events_select_own"
   ON public.adaptation_events FOR SELECT
   TO authenticated USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "adaptation_events_update_own" ON public.adaptation_events;
 CREATE POLICY "adaptation_events_update_own"
   ON public.adaptation_events FOR UPDATE
   TO authenticated USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "adaptation_events_insert_service" ON public.adaptation_events;
 CREATE POLICY "adaptation_events_insert_service"
   ON public.adaptation_events FOR INSERT
   TO service_role WITH CHECK (true);
 
+DROP POLICY IF EXISTS "adaptation_events_update_service" ON public.adaptation_events;
 CREATE POLICY "adaptation_events_update_service"
   ON public.adaptation_events FOR UPDATE
   TO service_role USING (true);

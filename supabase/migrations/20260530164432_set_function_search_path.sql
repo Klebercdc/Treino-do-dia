@@ -1,0 +1,15 @@
+ALTER FUNCTION public.admin_acquire_import_lock(bigint) SET search_path = '';
+ALTER FUNCTION public.admin_has_running_import(text) SET search_path = '';
+ALTER FUNCTION public.admin_release_import_lock(bigint) SET search_path = '';
+ALTER FUNCTION public.handle_new_user_plan() SET search_path = '';
+ALTER FUNCTION public.import_exercises_json(jsonb) SET search_path = '';
+ALTER FUNCTION public.jsonb_text_array(jsonb) SET search_path = '';
+ALTER FUNCTION public.limpar_diagnosticos_antigos() SET search_path = '';
+ALTER FUNCTION public.reset_monthly_quotas() SET search_path = '';
+ALTER FUNCTION public.search_exercises(text) SET search_path = '';
+ALTER FUNCTION public.set_diagnostic_updated_at() SET search_path = '';
+ALTER FUNCTION public.set_exercise_slug() SET search_path = '';
+ALTER FUNCTION public.set_timestamp_updated_at() SET search_path = '';
+ALTER FUNCTION public.set_updated_at_admin_import_jobs() SET search_path = '';
+ALTER FUNCTION public.slugify_text(text) SET search_path = '';
+ALTER FUNCTION public.touch_updated_at_lab_reports() SET search_path = '';

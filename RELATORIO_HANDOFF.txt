@@ -1,0 +1,112 @@
+RELATORIO_HANDOFF — Baseline Migrations FASE 1
+===============================================
+Data: 2026-05-30
+Branch: claude/kronia-migrations-baseline-p1-fpeet
+Responsavel: Claude Code (claude-sonnet-4-6)
+
+-----------------------------------------------
+OBJETIVO
+-----------------------------------------------
+Criar os 5 arquivos de migration ausentes no repo (registrados no banco mas sem
+arquivo local) e tornar a migration 054 idempotente. NENHUMA alteracao foi
+aplicada no banco.
+
+-----------------------------------------------
+ARQUIVOS TOCADOS (6 total)
+-----------------------------------------------
+
+CRIADOS (5):
+1. supabase/migrations/20260530163808_enable_rls_diagnostic_admin_whitelist.sql
+2. supabase/migrations/20260530164140_harden_function_execute_grants.sql
+3. supabase/migrations/20260530164432_set_function_search_path.sql
+4. supabase/migrations/20260530175058_revoke_authenticated_lab_pipeline_functions.sql
+5. supabase/migrations/20260530175621_fix_critical_view_and_diagnostic_insert_policies.sql
+
+EDITADO (1):
+6. supabase/migrations/054_adaptation_events.sql
+
+-----------------------------------------------
+DIFF LITERAL — 054_adaptation_events.sql
+-----------------------------------------------
+
+ANTES (linhas 29–47):
+----
+CREATE POLICY "adaptation_events_select_own"
+  ON public.adaptation_events FOR SELECT
+  TO authenticated USING (auth.uid() = user_id);
+
+CREATE POLICY "adaptation_events_update_own"
+  ON public.adaptation_events FOR UPDATE
+  TO authenticated USING (auth.uid() = user_id);
+
+CREATE POLICY "adaptation_events_insert_service"
+  ON public.adaptation_events FOR INSERT
+  TO service_role WITH CHECK (true);
+
+CREATE POLICY "adaptation_events_update_service"
+  ON public.adaptation_events FOR UPDATE
+  TO service_role USING (true);
+----
+
+DEPOIS (linhas 29–47):
+----
+DROP POLICY IF EXISTS "adaptation_events_select_own" ON public.adaptation_events;
+CREATE POLICY "adaptation_events_select_own"
+  ON public.adaptation_events FOR SELECT
+  TO authenticated USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "adaptation_events_update_own" ON public.adaptation_events;
+CREATE POLICY "adaptation_events_update_own"
+  ON public.adaptation_events FOR UPDATE
+  TO authenticated USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "adaptation_events_insert_service" ON public.adaptation_events;
+CREATE POLICY "adaptation_events_insert_service"
+  ON public.adaptation_events FOR INSERT
+  TO service_role WITH CHECK (true);
+
+DROP POLICY IF EXISTS "adaptation_events_update_service" ON public.adaptation_events;
+CREATE POLICY "adaptation_events_update_service"
+  ON public.adaptation_events FOR UPDATE
+  TO service_role USING (true);
+----
+
+Mudanca: apenas adicao de DROP POLICY IF EXISTS antes de cada CREATE POLICY.
+CREATE TABLE IF NOT EXISTS, CREATE INDEX IF NOT EXISTS e ALTER TABLE nao foram
+alterados.
+
+-----------------------------------------------
+CONFIRMACAO: NADA FOI APLICADO NO BANCO
+-----------------------------------------------
+- Nenhum comando apply_migration foi executado.
+- Nenhuma ferramenta MCP do Supabase foi usada para tocar o banco.
+- Nenhum deploy foi feito.
+- Nenhum merge para main foi realizado.
+- O banco permanece exatamente como estava antes desta tarefa.
+- Os 5 novos arquivos existem apenas no repositorio. O banco ja os tinha
+  registrados em supabase_migrations.schema_migrations previamente (via MCP).
+- search_path = '' (string vazia) preservado conforme confirmado.
+
+-----------------------------------------------
+PENDENCIAS — FASE 2
+-----------------------------------------------
+A FASE 2 esta PENDENTE e NAO foi realizada aqui.
+
+Contexto: o banco tem apenas 5 migrations registradas em
+supabase_migrations.schema_migrations, mas o repo tem ~57 arquivos (000–054).
+Isso faz o CLI abortar com "database ahead of local" ao tentar rodar qualquer
+migration nova.
+
+O que a FASE 2 precisa fazer:
+  - Registrar as migrations 000–054 na tabela schema_migrations do banco,
+    marcando-as como ja aplicadas (inserted_at = now(), sem executar o SQL
+    delas), para que o CLI reconheca o baseline como sincronizado.
+  - Isso sera feito via SQL direto com confirmacao do dono, fora desta tarefa.
+
+Ate que a FASE 2 seja concluida, o CLI do Supabase continuara abortando ao
+tentar aplicar qualquer nova migration. As 5 migrations criadas nesta fase
+precisarao ser registradas junto com as demais no baseline.
+
+-----------------------------------------------
+FIM DO RELATORIO
+-----------------------------------------------
