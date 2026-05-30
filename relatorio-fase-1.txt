@@ -1,0 +1,74 @@
+RELATÓRIO — FASE 1: ONBOARDING + COLD START
+Branch: fase-1-onboarding-cold-start
+Commit principal: 8f579cb
+Data: 2026-05-30
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O QUE FOI VERIFICADO E RESULTADO
+
+- Vercel function count: 10/12 (limite 12). Nenhuma função nova criada. OK.
+- Fluxo kronaSetup: 3 steps → expandido para 4. Testado via leitura do código. OK.
+- flag kronia_initial_protocol_pending: setada em ksFinish(), consumida em openHome(). OK.
+- Sincronização de chips (nivel/freq) em openHome(): usa selectNivel()/selectFreq() existentes. OK.
+- gerarProtocolo(true): chamado silenciosamente 400ms após home abrir. OK.
+- ksSelectGoal: seletor corrigido de .ks-goal-chip → [data-goal] para evitar
+  conflito com chips de nível que também usam a mesma classe CSS. OK.
+- CLAUDE.md: substituído pelo template de regras de workflow solicitado. OK.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ARQUIVOS ALTERADOS
+
+index.html         — adicionado #ks-step-3 com chips de nível e frequência
+styles.css         — adicionado .ks-freq-chip e .ks-freq-chip.selected
+krona-setup.js     — _ksTotal 3→4, vars _ksNivel/_ksFreq, ksSelectNivel/ksSelectFreq,
+                     validação step 3, salva nivel+dias em kronia_config,
+                     seta flag kronia_initial_protocol_pending
+app.js             — openHome(): cold start block (detecta flag, limpa draft,
+                     sincroniza chips, dispara gerarProtocolo(true) com delay 400ms)
+src/ai/systemPrompt.ts — Regra 12: comportamento KRONOS com usuário novo
+CLAUDE.md          — substituído pelo template de regras de workflow
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CORREÇÕES APLICADAS
+
+- ksSelectGoal usava querySelectorAll('.ks-goal-chip') — conflitaria com os
+  novos chips de nível que também têm essa classe. Corrigido para [data-goal].
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STATUS DOS PRÉ-REQUISITOS (PRD v5 §23)
+
+[ ] api/agent.js removido (Vercel count 10→9)     — NÃO feito (fora da Fase 1)
+[ ] Intent classifier unificado                    — NÃO feito (fora da Fase 1)
+[ ] kronosAgent.js migrado para TypeScript         — NÃO feito (fora da Fase 1)
+[ ] Orchestrator canônico consolidado              — NÃO feito (fora da Fase 1)
+[x] Onboarding com protocolo imediato (< 3 min)   — FEITO (critério da Fase 1)
+[x] Cold start model semanas 1–4                  — FEITO (base via nivel/freq)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMO TESTAR NO PREVIEW VERCEL
+
+1. Abra o preview da branch fase-1-onboarding-cold-start
+2. Faça login com conta nova (ou limpe localStorage)
+3. Passe pelos 4 steps do setup: nome → dados físicos → objetivo → nível+frequência
+4. Conclua o onboarding (carrossel)
+5. Ao chegar na home, aguarde ~400ms
+6. Verifique: protocolo de treino gerado automaticamente na tela de treino
+7. Verifique: kronia_initial_protocol_pending removido do localStorage
+8. Verifique: kronia_config contém nivel e dias salvos
+
+Caso gerarProtocolo falhe (rede/API), o fallback gerarTreinoDoPrograma
+é acionado automaticamente (comportamento existente, não alterado).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PENDENTE / PRÓXIMAS FASES
+
+- Fase 1 restante (PRD §23): Training Load Engine V1, Decision Layer pequenas
+  mudanças, PR Detection + celebração, KRONOS explica adaptações
+- Pré-requisitos técnicos do PRD ainda abertos (ver acima)
+- Teste real no preview Vercel com usuário novo não foi executado nesta sessão
