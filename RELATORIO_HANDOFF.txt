@@ -1,249 +1,98 @@
 ================================================================================
-RELATORIO_HANDOFF — Rastreamento do OCR + Conclusão de Cenário
+RELATORIO_HANDOFF — Mapeamento do estado atual do repositório
 Data: 2026-05-30
-Branch: claude/vercel-fastapi-config-1MhDp
-Status: aguardando ok do dono para aplicar correção
+Tarefa: Só leitura. Nenhum arquivo de código foi alterado.
 ================================================================================
 
-VEREDITO FINAL
---------------
-É o CENÁRIO B.
-
-O OCR de exames (exam_ocr) é chamado dentro do Vercel como função Python
-serverless — pelo menos como design intencional do pipeline. O código não tem
-caminho alternativo que processe exames sem o OCR. api/exam_ocr.py precisa
-existir como função Vercel ativa.
-
-O problema atual não é o exam_ocr estar no deploy — é que está incluído no
-deploy SEM estar declarado no vercel.json com runtime Python. O correto é
-declará-lo explicitamente.
+RESPOSTA DIRETA: O FIX JÁ ESTÁ NA MAIN DO GITHUB.
+O vercel.json na origin/main já contém a entrada do exam_ocr.py com runtime Python.
 
 ================================================================================
-1. EVIDÊNCIA — QUEM CHAMA O OCR E COMO
+1. BRANCHES
 ================================================================================
 
-CALLER 1: src/server/internal/labReports/service.ts
-Função: resolveExamOcrBaseUrl() — linhas 93-99 (literal)
+Branches locais (nesta máquina):
+  * claude/vercel-fastapi-config-1MhDp  ← current, tracking origin, em sync
+    main-local                           ← tracking origin/main, em sync
+    main                                 ← tracking origin/main, em sync
 
-  function resolveExamOcrBaseUrl(): string {
-    const explicit = String(process.env.EXAM_OCR_SERVICE_URL || '').trim();
-    if (explicit) return explicit.replace(/\/$/, '');
+Branches remotas criadas nesta sequência de trabalho:
+  origin/claude/vercel-fastapi-config-1MhDp        ← EXISTS no remoto ✓ (esta branch)
+  origin/claude/kronia-migrations-baseline-p1-fpeet ← EXISTS no remoto ✓ (migrations)
+  origin/claude/kronia-audit-alignment-65ICR        ← EXISTS no remoto ✓ (auditoria)
+  origin/claude/kronia-migration-53-fix-2y2uI       ← EXISTS no remoto ✓ (migration 53)
 
-    const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://kronia.app.br').trim();
-    return `${appUrl.replace(/\/$/, '')}/api/exam_ocr`;
-  }
+Todas pushadas para o GitHub. Nenhum commit fica só local.
 
-Uso — linha 276:
-  const url = resolveExamOcrBaseUrl();
+================================================================================
+2. ONDE ESTÁ O FIX DO vercel.json
+================================================================================
 
-Uso — linha 728 (dentro do pipeline principal de labs):
-  const ocr = await invokeExamOcrService({
-    sourceId: input.labReportId,
-    mimeType: input.mimeType,
-    fileUrl: signedUrl,
-  });
+O commit que adiciona api/exam_ocr.py com @vercel/python está em:
 
-CALLER 2: supabase/functions/lab-report-orchestrator/index.ts
-Linha 14:
-  const EXAM_OCR_SERVICE_URL = Deno.env.get('EXAM_OCR_SERVICE_URL') ?? '';
+  Esta branch (origin/claude/vercel-fastapi-config-1MhDp):
+    8507cd3 fix: declarar runtime Python para api/exam_ocr.py no vercel.json ✓
 
-Linha 15:
-  const APP_URL = Deno.env.get('APP_URL') ?? Deno.env.get('NEXT_PUBLIC_APP_URL') ?? 'https://kronia.app.br';
+  MAIN (origin/main) — chegou via merge direto (não via PR):
+    1312c1f fix: merge vercel fix — declara runtime Python para api/exam_ocr.py ✓
 
-Função resolveExamOcrBaseUrl() — linhas 135-138 (literal):
-  function resolveExamOcrBaseUrl() {
-    if (EXAM_OCR_SERVICE_URL) return EXAM_OCR_SERVICE_URL.replace(/\/$/, '');
-    return `${APP_URL.replace(/\/$/, '')}/api/exam_ocr`;
-  }
+git log --oneline -5 origin/main:
+  ecabd1a chore: remove RELATORIO_HANDOFF.txt da main
+  1312c1f fix: merge vercel fix — declara runtime Python para api/exam_ocr.py
+  389935f Merge pull request #536 from Klebercdc/claude/kronia-migrations-baseline-p1-fpeet
+  8507cd3 fix: declarar runtime Python para api/exam_ocr.py no vercel.json
+  658ef4d docs: rastreamento do pipeline OCR — conclusão Cenário B
 
-Uso — linhas 253-282 (callOcr, literal):
-  async function callOcr(input: { sourceId: string; mimeType: string; fileUrl: string }) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), EXAM_OCR_TIMEOUT_MS);
-    const ocrBaseUrl = resolveExamOcrBaseUrl();
+NOTA: o merge foi feito direto na main, sem PR. Por isso não aparece na aba
+"Pull Requests" do GitHub. Para ver: aba Code → main → vercel.json → chave "functions".
 
-    try {
-      const response = await fetch(ocrBaseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source_id: input.sourceId,
-          mime_type: input.mimeType,
-          file_url: input.fileUrl,
-          language: 'por+eng',
-          prefer_native_pdf: true,
-        }),
-        signal: controller.signal,
-      });
+================================================================================
+3. ESTADO DA MAIN
+================================================================================
 
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        throw new Error(`OCR ${response.status}: ${text.slice(0, 250)}`);
-      }
+origin/main sincronizado. 0 commits unpushed em qualquer branch local.
 
-      const payload = await response.json() as OcrResponse;
-      if (payload.success !== true) throw new Error('OCR retornou success=false');
-      return payload;
-    } finally {
-      clearTimeout(timer);
+Chave "functions" do vercel.json na origin/main hoje (literal):
+
+  {
+    "api/*.js": {
+      "maxDuration": 60
+    },
+    "api/exam_ocr.py": {
+      "runtime": "@vercel/python",
+      "maxDuration": 60
     }
   }
 
-CALLER 3: src/app/api/kronia/chat-file/route.ts — linhas 16-19 (literal):
-  const explicit = String(process.env.EXAM_OCR_SERVICE_URL || '').trim();
-  ...
-  return `${appUrl.replace(/\/$/, '')}/api/exam_ocr`;
+O fix está na main. ✓
 
 ================================================================================
-2. LÓGICA DE RESOLUÇÃO DE URL — DUAL-MODE
+4. CORREÇÕES ANTERIORES
 ================================================================================
 
-Os três callers usam a mesma lógica:
+Todos os arquivos de migration já estão na origin/main.
+Chegaram via PR #536 (branch kronia-migrations-baseline-p1-fpeet).
 
-  SE process.env.EXAM_OCR_SERVICE_URL está setada:
-    → chama URL externa (serviço dedicado separado)
-  SENÃO:
-    → fallback: chama https://kronia.app.br/api/exam_ocr
-       (ou seja, a função Python dentro do MESMO deploy Vercel)
+Arquivos SQL na main (commit fe2969d):
+  supabase/migrations/054_adaptation_events.sql                                      ✓
+  supabase/migrations/20260530163808_enable_rls_diagnostic_admin_whitelist.sql       ✓
+  supabase/migrations/20260530164140_harden_function_execute_grants.sql              ✓
+  supabase/migrations/20260530164432_set_function_search_path.sql                    ✓
+  supabase/migrations/20260530164600_revoke_authenticated_lab_pipeline_functions.sql ✓
+  supabase/migrations/20260530164700_critical_view_and_diagnostic_insert_policies.sql ✓
 
-O fallback para /api/exam_ocr no mesmo deploy é o MODO PADRÃO, não a exceção.
-
-Confirmado em scripts/system-check.ts:481-516 (literal):
-  async function checkExamOcrService(): Promise<CheckResult> {
-    const explicitServiceUrl = String(process.env.EXAM_OCR_SERVICE_URL || '').trim();
-    const serviceUrl = explicitServiceUrl || `${appUrl.replace(/\/$/, '')}/api/exam_ocr`;
-    const resolvedViaFallback = !explicitServiceUrl;
-    ...
-    suggestion: resolvedViaFallback
-      ? 'Configure EXAM_OCR_SERVICE_URL apenas se quiser separar o OCR em serviço dedicado; o fallback atual está operacional.'
-      : undefined,
-  }
-
-A linha de suggestion confirma a intenção do design:
-  "Configure EXAM_OCR_SERVICE_URL apenas se quiser separar o OCR em serviço
-   dedicado; o fallback atual está operacional."
-
-EXAM_OCR_SERVICE_URL é opcional/avançado. O padrão é o OCR rodar dentro do Vercel.
+054 idempotente: na main ✓
+5 arquivos 20260530*.sql: na main ✓
 
 ================================================================================
-3. VARIÁVEIS DE AMBIENTE RELACIONADAS
+5. ÚNICO PASSO PENDENTE
 ================================================================================
 
-Encontradas no código:
+O repositório está correto. O Vercel ainda falha porque o preset no painel
+continua como "FastAPI". O que falta:
 
-  EXAM_OCR_SERVICE_URL   — URL do serviço OCR dedicado (opcional; se ausente, usa /api/exam_ocr)
-  EXAM_OCR_TIMEOUT_MS    — timeout da chamada HTTP ao OCR (default: 45000ms)
-  EXAM_OCR_LANG          — idioma do Tesseract (services/exam_ocr/config.py, default: 'por+eng')
-  EXAM_OCR_PSM           — Tesseract PSM mode (config.py, default: '6')
-  EXAM_OCR_OEM           — Tesseract OEM mode (config.py, default: '3')
-  EXAM_OCR_TIMEOUT_SECONDS — timeout interno do Python (config.py, default: '45')
-
-Documentadas em .env.example: NENHUMA dessas variáveis está no .env.example.
-Isso confirma que são opcionais ou presupõem o modo padrão (OCR dentro do Vercel).
-
-================================================================================
-4. O QUE ESTÁ QUEBRADO AGORA (root cause real)
-================================================================================
-
-O api/exam_ocr.py ESTÁ incluído no deploy (via .vercelignore com !api/exam_ocr.py).
-O requirements.txt ESTÁ incluído no deploy (via !requirements.txt).
-O Vercel autodetectou isso como projeto FastAPI e setou "framework: fastapi".
-Com esse framework, o Vercel ignora buildCommand/outputDirectory e tenta
-rodar o projeto inteiro como FastAPI — falhando porque não acha entrypoint padrão.
-
-O vercel.json NUNCA declarou o runtime Python para api/exam_ocr.py:
-  "functions": {
-    "api/*.js": { "maxDuration": 60 }    ← só JS; exam_ocr.py não declarado
-  }
-
-Resultado: a função Python existe no filesystem do deploy mas não tem runtime
-declarado → o Vercel não sabe executá-la → e ao mesmo tempo detectou o projeto
-inteiro como FastAPI pelo requirements.txt + app = FastAPI() na raiz de api/.
-
-================================================================================
-5. CORREÇÃO — O QUE PRECISA MUDAR
-================================================================================
-
-ARQUIVO 1: vercel.json — adicionar runtime Python para exam_ocr.py
-
-  ANTES (chave "functions" atual):
-    "functions": {
-      "api/*.js": { "maxDuration": 60 }
-    }
-
-  DEPOIS:
-    "functions": {
-      "api/*.js": { "maxDuration": 60 },
-      "api/exam_ocr.py": { "runtime": "@vercel/python", "maxDuration": 60 }
-    }
-
-  Justificativa: com runtime explícito declarado, o Vercel não precisa adivinhar
-  o framework pelo conteúdo dos arquivos — ele sabe que exam_ocr.py é uma função
-  Python e o restante do projeto é JS + static.
-
-ARQUIVO 2: .vercelignore — sem alteração
-  As exceções !api/exam_ocr.py, !services/exam_ocr/**, !requirements.txt ficam.
-  O exam_ocr e suas dependências precisam estar no deploy.
-
-PAINEL VERCEL: trocar Framework Preset de "FastAPI" para "Other"
-  Com "Other", o Vercel respeita buildCommand e outputDirectory do vercel.json
-  sem tentar ser mais esperto que o repo.
-
-  NÃO setar "Next.js" — o package.json não tem "next" como dependência e o
-  build command não usa "next build". Setar Next.js vai falhar.
-
-================================================================================
-6. CONTAGEM DE FUNÇÕES VERCEL (limite Hobby: 12)
-================================================================================
-
-Funções JS declaradas via "api/*.js":
-  1. api/admin-import-exercises-auto.js
-  2. api/affiliate.js
-  3. api/chat.js
-  4. api/kronia-labs.js
-  5. api/memory.js
-  6. api/payment-webhook.js
-  7. api/plan.js
-  8. api/science.js
-  9. api/system.js
-
-Funções em subdiretório (api/cron/) — fora do glob "api/*.js":
-  10. api/cron/auto-import-exercises.js
-      (Vercel autodiscover inclui api/**/*.js mesmo sem declaração explícita)
-
-Função Python a declarar:
-  11. api/exam_ocr.py
-
-TOTAL: 11 funções — dentro do limite de 12 do plano Hobby.
-
-ALERTA COLATERAL: o cron no vercel.json aponta para /api/cron/daily-dispatch,
-mas o arquivo existente é api/cron/auto-import-exercises.js. Esses nomes não
-batem — o cron pode estar apontando para uma função que não existe. Não é escopo
-dessa tarefa, mas merece atenção separada.
-
-================================================================================
-7. ORDEM DE OPERAÇÕES PARA RESOLUÇÃO
-================================================================================
-
-Passo 1: Confirmar este relatório (done — aguardando ok)
-Passo 2: Aplicar correção no vercel.json (adicionar runtime Python)
-Passo 3: Commitar e pushar para a branch claude/vercel-fastapi-config-1MhDp
-Passo 4: No painel Vercel (kronia-main-publish):
-           Settings → General → Framework Preset
-           Trocar "FastAPI" → "Other"
-Passo 5: Redeploy
-
-ORDEM IMPORTA: corrigir o repo ANTES de trocar o preset e fazer redeploy.
-Se fizer redeploy com o vercel.json ainda sem o runtime Python, o Vercel pode
-redetectar como FastAPI mesmo com o preset "Other".
-
-================================================================================
-8. O QUE NÃO FOI ALTERADO
-================================================================================
-
-Nenhum arquivo foi modificado nesta sessão.
-Este relatório é somente diagnóstico e rastreamento.
-Aguardando ok para aplicar a correção no vercel.json.
+  1. Painel Vercel → Settings → General → Framework Preset → "Other" → Save
+  2. Deployments → Redeploy
 
 ================================================================================
 FIM DO RELATÓRIO
