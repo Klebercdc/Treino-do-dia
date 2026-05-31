@@ -2969,7 +2969,7 @@ function navTo(tab) {
   if (_nav) _nav.style.display = tab === "treino" ? "" : "none";
   const _addEx = document.querySelector('.btn-add-ex');
   if (_addEx) _addEx.style.display = tab === "treino" ? "" : "none";
-  if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
+  if (tab !== "inicio" && tab !== "programa") document.getElementById("homeScreen")?.classList.remove("show");
   if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
   if (tab !== "treino") { try { closeExerciseDiscSheet?.(); } catch(_) {} }
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
