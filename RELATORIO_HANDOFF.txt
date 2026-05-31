@@ -1,82 +1,36 @@
 ================================================================================
-RELATORIO_HANDOFF — Bug tela preta ao fechar wizard de treino
+RELATORIO_HANDOFF — Fix: tela preta ao fechar wizard de treino
 Data: 2026-05-30
-Status: causa confirmada, fix proposto, aguardando ok para aplicar
+Commit na main: 9c79c30
 ================================================================================
 
-CAUSA RAIZ (1 linha de código)
--------------------------------
-app.js:2972 — navTo('programa') remove o .show do homeScreen,
-mas closeConfig() não o restaura.
+CAUSA RAIZ
+----------
+app.js:2972 — navTo('programa') removia o .show do homeScreen antes de
+abrir o wizard. closeConfig() (botão Voltar) não o restaurava.
+
+Fluxo do bug:
+  1. onclick="navTo('programa');openConfig()"  [index.html:1049 / 1337]
+  2. navTo('programa') executa a linha 2972:
+       if (tab !== "inicio") homeScreen.classList.remove("show")
+     → 'programa' !== 'inicio' → homeScreen perde .show → HOME SOME
+  3. Wizard abre como overlay sobre a tela já vazia
+  4. Usuário toca Voltar → closeConfig() [app.js:2464]:
+       document.getElementById("configSheet").classList.remove("show");
+     → só fecha o wizard, não restaura homeScreen
+  5. Ambos ocultos → tela preta
+
+Por que não foi corrigido em closeConfig():
+  gerarTreinoDoPrograma() chama closeConfig() seguido de navTo("treino")
+  [app.js:2215-2216]. Adicionar openHome() ao closeConfig() causaria
+  flash visual da home antes do treino aparecer.
 
 ================================================================================
-1. FLUXO DO BUG (passo a passo com arquivo:linha)
-================================================================================
-
-PASSO 1 — Usuário toca em "Configurar" no card da Home.
-  index.html:1049 (home hero card):
-    onclick="navTo('programa');openConfig()"
-
-  index.html:1337 (home quick card — mesmo fluxo):
-    onclick="navTo('programa');openConfig()"
-
-PASSO 2 — navTo('programa') executa e oculta o homeScreen.
-  app.js:2972 (dentro de navTo):
-    if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
-
-  tab = "programa" ≠ "inicio" → condição verdadeira → homeScreen perde .show → HOME SOME.
-
-  O navTo também faz:
-    app.js:2967: container.style.display = tab === "treino" ? "" : "none" → container vira "none"
-    app.js:2996-2999: tenta adicionar active ao nav-programa (não existe, não-op)
-  Nenhuma outra tela é mostrada — a página fica conceitualmente vazia.
-
-PASSO 3 — openConfig() abre o configSheet como overlay.
-  app.js:2461: configSheet.classList.add("show")
-  O wizard aparece como camada por cima — a tela vazia de baixo é invisível.
-
-PASSO 4 — Usuário toca "Voltar".
-  index.html:2166-2169:
-    <button class="btn-voltar" onclick="closeConfig()">Voltar</button>
-
-PASSO 5 — closeConfig() só remove o wizard. Não restaura homeScreen.
-  app.js:2464 (literal completo):
-    function closeConfig() {
-      document.getElementById("configSheet").classList.remove("show");
-      scheduleKroniaUIUnblock('config-close');
-    }
-
-  configSheet perde .show → wizard some.
-  homeScreen ainda NÃO tem .show (foi removido no passo 2).
-  Resultado: tela preta. Só header, bottom nav e FAB permanecem (elementos fixos de CSS).
-
-================================================================================
-2. POR QUE NÃO BASTA CORRIGIR closeConfig()
-================================================================================
-
-closeConfig() também é chamado dentro de gerarTreinoDoPrograma():
-
-  app.js:2213-2216:
-    function gerarTreinoDoPrograma(silent) {
-      const cfg = getProgramaConfig();
-      closeConfig();     ← fecha o wizard
-      navTo("treino");   ← vai para treino imediatamente
-      ...
-    }
-
-Se eu adicionar openHome() ao closeConfig(), a sequência seria:
-  closeConfig() → openHome() → [flash da home] → navTo("treino") → home some
-
-Isso causaria um flash indesejado ao gerar o treino. O fix correto não pode
-estar em closeConfig().
-
-================================================================================
-3. FIX PROPOSTO
+FIX APLICADO
 ================================================================================
 
 Arquivo: app.js
 Linha: 2972
-Mudança: 1 linha — adicionar "&& tab !== 'programa'" à condição
 
 ANTES:
   if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
@@ -84,64 +38,25 @@ ANTES:
 DEPOIS:
   if (tab !== "inicio" && tab !== "programa") document.getElementById("homeScreen")?.classList.remove("show");
 
+1 linha alterada.
+
 Por que funciona:
   - navTo('programa') não mais oculta o homeScreen
-  - O wizard (configSheet) abre como overlay sobre o homeScreen visível
-  - Ao fechar via Voltar: wizard some, homeScreen continua visível → sem tela preta ✓
-  - Ao fechar via "Gerar com IA": closeConfig() → homeScreen ainda visível →
-    navTo("treino") logo em seguida remove homeScreen.show e mostra treino → sem flash ✓
-  - Se chamado estando no treino: homeScreen não tinha .show → exceção não muda nada ✓
-  - navTo("inicio") inalterado: tab="inicio" ainda satisfaz a condição invertida ✓
-
-Impacto: zero em outros fluxos. navTo('programa') não mostra tela própria,
-é apenas um helper para abrir o wizard — não precisa esconder a home.
+  - Wizard abre como overlay sobre home visível
+  - Voltar: wizard some, homeScreen continua com .show → sem tela preta ✓
+  - Gerar treino: closeConfig() → navTo("treino") remove homeScreen → sem flash ✓
+  - Outros tabs inalterados ✓
 
 ================================================================================
-4. TODOS OS CALL SITES DE navTo('programa') + openConfig()
+COMMITS
 ================================================================================
 
-Todos se beneficiam do fix sem mudança:
+Feature branch (claude/vercel-fastapi-config-1MhDp):
+  804d962 fix: corrige tela preta ao fechar wizard de treino via Voltar
 
-  index.html:1049  — home hero card:         navTo('programa');openConfig()
-  index.html:1337  — home quick card:        navTo('programa');openConfig()
-  index.html:1592  — workout hero btn:       navTo('programa');openConfig();closeStartWorkoutScreen()
-  index.html:1970  — settings row:           closeSettingsScreen();navTo('programa');openConfig()
-  app.js:4011      — setTimeout:             navTo("programa"); openConfig()
-  app.js:4570/4572 — chat intent:            navTo?.('programa'); openConfig?.(...)
-  app.js:5293      — error container:        navTo('programa');openConfig()
-  app.js:6355      — setTimeout:             navTo("programa"); openConfig()
-  app.js:10457/10458 — CTA handler:          navTo?.('programa'); openConfig?.(safeContext)
-  app.js:10500/10501 — CTA handler:          navTo?.('programa'); openConfig?.(...)
-
-Nenhum desses call sites precisa mudar.
+Main:
+  9c79c30 fix: corrige tela preta ao fechar wizard de treino via Voltar
 
 ================================================================================
-5. DIFF PROPOSTO
-================================================================================
-
---- a/app.js
-+++ b/app.js
-@@ -2969,7 +2969,7 @@
-   const _addEx = document.querySelector('.btn-add-ex');
-   if (_addEx) _addEx.style.display = tab === "treino" ? "" : "none";
--  if (tab !== "inicio") document.getElementById("homeScreen")?.classList.remove("show");
-+  if (tab !== "inicio" && tab !== "programa") document.getElementById("homeScreen")?.classList.remove("show");
-   if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
-
-1 linha alterada. Nada mais.
-
-================================================================================
-6. O QUE NÃO É A CAUSA
-================================================================================
-
-- CSS: não é problema de z-index, background-color ou height colapsado.
-  homeScreen some porque perde a classe .show — o CSS é consequência.
-
-- openConfig: não é problema no abrir. O wizard abre corretamente.
-
-- closeConfig: o fechamento do configSheet está correto.
-  O problema é o que ficou oculto antes — a home que foi escondida pelo navTo.
-
-================================================================================
-FIM DO RELATÓRIO — aguardando ok para aplicar o fix
+FIM DO RELATÓRIO
 ================================================================================
