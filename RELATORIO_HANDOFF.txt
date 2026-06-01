@@ -226,10 +226,34 @@ executar em produção antes de ativar a feature:
 - ✓ Sem criar orchestrator paralelo ou intent classifier novo
 
 
-## 8. PRÓXIMOS PASSOS (antes de produção)
+## 8. CONFIRMAÇÃO: contextoClinico CHEGA ao modelo
 
-1. Confirmar/aplicar migration dos campos novos no Supabase (SQL acima)
+O contexto da anamnese CHEGA ao modelo. Pipeline confirmado:
+
+  api/chat.js → open_diet_flow → kronosHub.buildKronosContext(userId)
+    → buildKronosContextHub() → loadNutritionProfile() [NOVO: slot 8]
+    → buildClinicalContext(profile, labs, diet, nutritionProfileRow) [ATUALIZADO]
+    → ctx.contextoClinico.anamnese = { fazJejum, comeFora, naoAbreMao, ... }
+    → gerarDietaKronos(kronosContext, ...) → JSON.stringify(ctx) → modelo
+
+Arquivos alterados nesta etapa:
+  src/server/apihelpers/_kronosContextHub.js
+    - loadNutritionProfile(userId): nova função (query em nutrition_profiles)
+    - buildClinicalContext(): aceita 4º parâmetro nutritionProfile
+      → popula bloco 'anamnese' se anamnese_completa = true
+    - Promise.allSettled: slot 8 = loadNutritionProfile
+  src/server/apihelpers/_dietRouteHandler.js
+    - 'kronosNutricaoContext' adicionado ao directKeys (future-proof)
+
+Nota: o bloco adicionado em buildTrainingContext() (app.js linha ~2944)
+é o system prompt do CHAT geral do KRONOS, não do gerador de dieta.
+O gerador de dieta usa DIETA_KRONOS_SYSTEM (api/chat.js linha 275) +
+JSON.stringify(ctx) com contextoClinico. Ambos os caminhos agora têm
+dados da anamnese.
+
+
+## 9. PRÓXIMOS PASSOS (antes de produção)
+
+1. Confirmar/aplicar migration dos campos novos no Supabase (SQL na seção 6)
 2. Testar wizard com usuário real (abrir Dieta → DIETA IA)
-3. Confirmar que enrichedBody.kronosNutricaoContext chega ao _dietRouteHandler
-   (checar se ele usa esse campo ou precisa adaptação)
-4. PARAR antes de deploy — revisar migration e RLS dos novos campos
+3. PARAR antes de deploy — revisar migration e RLS dos novos campos
