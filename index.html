@@ -1714,60 +1714,126 @@
 ══════════════════════════════════════════ -->
 
 <div id="perfilScreen">
-  <div style="display:flex;align-items:center;padding:16px 20px 0;gap:8px">
-    <button class="btn-voltar" style="padding:0;margin:0" onclick="try{closePerfil();}catch(e){}try{navTo('inicio');}catch(e){}try{openHome();}catch(e){document.getElementById('homeScreen').classList.add('show');}">
-      <i data-lucide="chevron-left" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-      Início
-    </button>
-    <div style="flex:1"></div>
-    <button onclick="openSettingsScreen()" style="background:var(--card);border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent">
-      <i data-lucide="settings" class="lucide" width="18" height="18" stroke="var(--text-2)" fill="none" stroke-width="1.75"></i>
-    </button>
-  </div>
+  <!-- IDs funcionais preservados (usados pelo JS existente) -->
   <span id="perfilNome" style="display:none">ATLETA</span>
+  <span id="perfilContaLogado" style="display:none"></span>
+  <span id="perfilContaDeslogado" style="display:none"></span>
+  <span id="perfilAvatar" style="display:none">A</span>
+  <span id="perfilContaNome" style="display:none"></span>
+  <span id="perfilContaEmail" style="display:none"></span>
 
-  <div class="perfil-section">
-    <div class="perfil-section-title">Conta</div>
-    <div id="perfilContaLogado" style="display:none;">
-      <div style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg2);border-radius:12px;margin-bottom:10px;cursor:pointer" onclick="openEditarPerfil()">
-        <div class="perfil-avatar-wrap" style="position:relative;flex-shrink:0">
-          <div style="width:54px;height:54px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.3rem;color:#fff;background-size:cover;background-position:center" id="perfilAvatar">A</div>
-          <div class="perfil-avatar-camera">
-            <i data-lucide="camera" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"></i>
+  <!-- NOVO HERO -->
+  <div class="perfil-hero">
+    <div class="perfil-hero-topbar">
+      <button class="perfil-hero-back" onclick="try{closePerfil();}catch(e){}try{navTo('inicio');openHome();}catch(e){}">
+        <i data-lucide="chevron-left" class="lucide" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+        Início
+      </button>
+      <button class="perfil-hero-settings" onclick="openSettingsScreen()">
+        <i data-lucide="settings" class="lucide" width="16" height="16" stroke="var(--text-2)" fill="none" stroke-width="1.75"></i>
+      </button>
+    </div>
+
+    <div class="perfil-hero-center">
+      <div class="perfil-hero-avatar" id="perfilHeroAvatar">A</div>
+      <div class="perfil-hero-name" id="perfilHeroNome">ATLETA</div>
+      <div class="perfil-hero-plan-badge" id="perfilHeroPlanBadge" onclick="openPlanModal()">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="#60A5FA"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Membro FREE
+      </div>
+      <div class="perfil-hero-since" id="perfilHeroSince">Desde 2025</div>
+    </div>
+
+    <div class="perfil-hero-stats">
+      <div class="perfil-hero-stat">
+        <div class="perfil-hero-stat-val" id="perfilTotalTreinos">0</div>
+        <div class="perfil-hero-stat-lbl">Treinos</div>
+      </div>
+      <div class="perfil-hero-stat">
+        <div class="perfil-hero-stat-val" id="perfilStreak">0</div>
+        <div class="perfil-hero-stat-lbl">Dias Consecutivos</div>
+      </div>
+      <div class="perfil-hero-stat">
+        <div class="perfil-hero-stat-val" id="perfilHeroScore">—</div>
+        <div class="perfil-hero-stat-lbl">Performance Score</div>
+      </div>
+    </div>
+
+    <!-- Menu Geral -->
+    <div class="perfil-menu-section">
+      <div class="perfil-menu-label">Geral</div>
+      <div class="perfil-menu-group">
+        <div class="perfil-menu-row" onclick="openEditarPerfil()">
+          <div class="perfil-menu-icon">
+            <i data-lucide="user" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
           </div>
+          <span class="perfil-menu-name">Dados Pessoais</span>
+          <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
         </div>
-        <div style="flex:1;min-width:0">
-          <div id="perfilContaNome" style="font-weight:700;font-size:0.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-          <div id="perfilContaEmail" style="font-size:0.75rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div class="perfil-menu-row" onclick="openBiomarcadores()">
+          <div class="perfil-menu-icon">
+            <i data-lucide="activity" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name">Biomarcadores</span>
+          <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
+        </div>
+        <div class="perfil-menu-row" onclick="openSettingsScreen()">
+          <div class="perfil-menu-icon">
+            <i data-lucide="settings-2" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name">Preferências da IA</span>
+          <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
+        </div>
+        <div class="perfil-menu-row" onclick="openPlanModal()">
+          <div class="perfil-menu-icon">
+            <i data-lucide="target" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name">Metas e Objetivos</span>
+          <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
         </div>
       </div>
-      <button onclick="authSignOut()" style="width:100%;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px;color:#ef4444;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer">Sair da conta</button>
     </div>
-    <div id="perfilContaDeslogado" style="display:block">
-      <button onclick="closePerfil();showEmailLogin(false)" style="width:100%;background:var(--accent);border:none;border-radius:10px;padding:12px;color:#fff;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer">Entrar / Criar conta</button>
+
+    <!-- Menu Conta -->
+    <div class="perfil-menu-section">
+      <div class="perfil-menu-label">Conta</div>
+      <div class="perfil-menu-group">
+        <div class="perfil-menu-row" onclick="openPlanModal()">
+          <div class="perfil-menu-icon">
+            <i data-lucide="package" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name">Meu Plano</span>
+          <span class="perfil-menu-value" id="perfilHeroPlanVal">FREE</span>
+          <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
+        </div>
+        <div class="perfil-menu-row" onclick="openLegalModal('privacy')">
+          <div class="perfil-menu-icon">
+            <i data-lucide="shield" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name">Privacidade e Segurança</span>
+          <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
+        </div>
+        <div class="perfil-menu-row" id="perfilSignOutRow" onclick="authSignOut()" style="display:none">
+          <div class="perfil-menu-icon" style="background:rgba(239,68,68,0.12)">
+            <i data-lucide="log-out" width="15" height="15" stroke="#ef4444" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name" style="color:#ef4444">Sair da conta</span>
+        </div>
+        <div class="perfil-menu-row" id="perfilSignInRow" onclick="closePerfil();showEmailLogin(false)">
+          <div class="perfil-menu-icon" style="background:rgba(37,99,235,0.12)">
+            <i data-lucide="log-in" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span class="perfil-menu-name">Entrar / Criar conta</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="perfil-section">
-    <div class="perfil-section-title">Resumo geral</div>
-    <div class="perfil-grid">
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="perfilTotalTreinos">0</div>
-        <div class="perfil-stat-lbl">Treinos</div>
-      </div>
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="perfilStreak">0</div>
-        <div class="perfil-stat-lbl">Sequência</div>
-      </div>
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="perfilVolTotal">0t</div>
-        <div class="perfil-stat-lbl">Volume</div>
-      </div>
-      <div class="perfil-stat">
-        <div class="perfil-stat-val" id="perfilSonoStat">—</div>
-        <div class="perfil-stat-lbl">Sono</div>
-      </div>
-    </div>
+  <!-- Seções funcionais existentes (mantidas) -->
+  <div style="display:none">
+    <!-- Estes IDs são usados pelo JS existente para medir/PR/conquistas -->
+    <div id="perfilVolTotal">0t</div>
+    <div id="perfilSonoStat">—</div>
   </div>
 
   <div class="perfil-section">
@@ -3052,6 +3118,159 @@
       <div style="font-size:0.82rem;color:rgba(255,255,255,0.25)">Nenhum protocolo anterior</div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     BIOMARCADORES
+══════════════════════════════════════════ -->
+<div id="biomarcadoresScreen">
+  <div class="bio-header">
+    <div class="bio-title-row">
+      <button class="bio-back-btn" onclick="closeBiomarcadores()">
+        <i data-lucide="chevron-left" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+      </button>
+      <div class="bio-screen-title">Biomarcadores</div>
+      <div style="width:34px"></div>
+    </div>
+    <div class="bio-tabs">
+      <button class="bio-tab active" onclick="bioSetTab('geral',this)">Visão Geral</button>
+      <button class="bio-tab" onclick="bioSetTab('exames',this)">Exames</button>
+      <button class="bio-tab" onclick="bioSetTab('historico',this)">Histórico</button>
+    </div>
+  </div>
+
+  <div class="bio-scroll app-scroll" id="bioScroll">
+    <div id="bioGeralContent">
+
+      <!-- Testosterona -->
+      <div class="bio-marker-card">
+        <div class="bio-marker-left">
+          <div class="bio-marker-name">Testosterona Total</div>
+          <div>
+            <span class="bio-marker-val" id="bioTestoVal">620</span>
+            <span class="bio-marker-unit"> ng/dL</span>
+          </div>
+          <div class="bio-trend-up" id="bioTestoTrend">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+            12%
+          </div>
+        </div>
+        <div class="bio-marker-right">
+          <svg class="bio-sparkline" viewBox="0 0 64 28">
+            <polyline points="0,20 10,18 20,22 30,14 40,12 54,8 64,6" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,20 10,18 20,22 30,14 40,12 54,8 64,6 64,28 0,28" fill="rgba(16,185,129,0.12)"/>
+          </svg>
+          <span class="bio-status-badge otimo">Ótimo</span>
+        </div>
+      </div>
+
+      <!-- Vitamina D -->
+      <div class="bio-marker-card">
+        <div class="bio-marker-left">
+          <div class="bio-marker-name">Vitamina D</div>
+          <div>
+            <span class="bio-marker-val" id="bioVitDVal">42</span>
+            <span class="bio-marker-unit"> ng/mL</span>
+          </div>
+          <div class="bio-trend-up" id="bioVitDTrend">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+            15%
+          </div>
+        </div>
+        <div class="bio-marker-right">
+          <svg class="bio-sparkline" viewBox="0 0 64 28">
+            <polyline points="0,22 12,20 24,18 36,15 48,12 56,9 64,7" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,22 12,20 24,18 36,15 48,12 56,9 64,7 64,28 0,28" fill="rgba(16,185,129,0.12)"/>
+          </svg>
+          <span class="bio-status-badge otimo">Ótimo</span>
+        </div>
+      </div>
+
+      <!-- Ferritina -->
+      <div class="bio-marker-card">
+        <div class="bio-marker-left">
+          <div class="bio-marker-name">Ferritina</div>
+          <div>
+            <span class="bio-marker-val" id="bioFerritinaVal">106</span>
+            <span class="bio-marker-unit"> ng/mg</span>
+          </div>
+          <div class="bio-trend-up" id="bioFerritinaTrend">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+            8%
+          </div>
+        </div>
+        <div class="bio-marker-right">
+          <svg class="bio-sparkline" viewBox="0 0 64 28">
+            <polyline points="0,24 10,22 22,20 32,18 44,16 54,13 64,11" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,24 10,22 22,20 32,18 44,16 54,13 64,11 64,28 0,28" fill="rgba(37,99,235,0.12)"/>
+          </svg>
+          <span class="bio-status-badge bom">Bom</span>
+        </div>
+      </div>
+
+      <!-- Cortisol -->
+      <div class="bio-marker-card">
+        <div class="bio-marker-left">
+          <div class="bio-marker-name">Cortisol (Manhã)</div>
+          <div>
+            <span class="bio-marker-val" id="bioCortisolVal">9.1</span>
+            <span class="bio-marker-unit"> μg/dL</span>
+          </div>
+          <div class="bio-trend-up" id="bioCortisolTrend">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+            5%
+          </div>
+        </div>
+        <div class="bio-marker-right">
+          <svg class="bio-sparkline" viewBox="0 0 64 28">
+            <polyline points="0,18 12,16 24,20 36,14 46,16 56,13 64,11" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,18 12,16 24,20 36,14 46,16 56,13 64,11 64,28 0,28" fill="rgba(37,99,235,0.12)"/>
+          </svg>
+          <span class="bio-status-badge bom">Bom</span>
+        </div>
+      </div>
+
+      <!-- PCR -->
+      <div class="bio-marker-card">
+        <div class="bio-marker-left">
+          <div class="bio-marker-name">PCR Ultrassensível</div>
+          <div>
+            <span class="bio-marker-val" id="bioPCRVal">0.8</span>
+            <span class="bio-marker-unit"> mg/L</span>
+          </div>
+          <div class="bio-trend-up" id="bioPCRTrend">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+            20%
+          </div>
+        </div>
+        <div class="bio-marker-right">
+          <svg class="bio-sparkline" viewBox="0 0 64 28">
+            <polyline points="0,10 10,12 22,14 32,16 42,12 54,9 64,7" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,10 10,12 22,14 32,16 42,12 54,9 64,7 64,28 0,28" fill="rgba(16,185,129,0.12)"/>
+          </svg>
+          <span class="bio-status-badge otimo">Ótimo</span>
+        </div>
+      </div>
+
+      <button class="bio-ver-btn" onclick="closeBiomarcadores();openLabsUploadScreen('bio_screen')">
+        VER TODOS OS EXAMES
+        <i data-lucide="arrow-up-right" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+      </button>
+      <div style="height:20px"></div>
+    </div>
+
+    <!-- Exames placeholder -->
+    <div id="bioExamesContent" style="display:none;padding:40px 0;text-align:center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 12px"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.25);margin-bottom:14px">Nenhum exame enviado</div>
+      <button onclick="closeBiomarcadores();openLabsUploadScreen('bio_exames')" style="background:var(--accent);border:none;border-radius:12px;padding:10px 20px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer">Enviar exame</button>
+    </div>
+
+    <!-- Histórico placeholder -->
+    <div id="bioHistoricoContent" style="display:none;padding:40px 0;text-align:center">
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.25)">Histórico disponível após enviar exames</div>
+    </div>
   </div>
 </div>
 

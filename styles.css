@@ -8295,3 +8295,383 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 .btn-nav.active,
 .btn-nav:focus { color: var(--accent) !important; }
 
+
+/* ══════════════════════════════════════════
+   BIOMARCADORES — SCREEN
+══════════════════════════════════════════ */
+#biomarcadoresScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  background: var(--bg);
+  flex-direction: column;
+  overflow: hidden;
+}
+#biomarcadoresScreen.show { display: flex; }
+
+.bio-header {
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 0;
+  flex-shrink: 0;
+}
+.bio-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.bio-back-btn {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.bio-screen-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  flex: 1;
+  text-align: center;
+}
+.bio-tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 4px;
+}
+.bio-tab {
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.bio-tab.active {
+  background: #2563EB;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+}
+.bio-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+.bio-marker-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bio-marker-left { flex: 1; min-width: 0; }
+.bio-marker-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 3px;
+}
+.bio-marker-val {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+.bio-marker-unit {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.35);
+}
+.bio-marker-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.bio-sparkline {
+  width: 64px;
+  height: 28px;
+}
+.bio-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: .04em;
+}
+.bio-status-badge.otimo {
+  background: rgba(16,185,129,0.15);
+  color: #10b981;
+  border: 1px solid rgba(16,185,129,0.25);
+}
+.bio-status-badge.bom {
+  background: rgba(37,99,235,0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(37,99,235,0.25);
+}
+.bio-status-badge.atencao {
+  background: rgba(245,158,11,0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.25);
+}
+.bio-trend-up {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.bio-trend-down {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.bio-ver-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  background: rgba(37,99,235,0.1);
+  border: 1px solid rgba(37,99,235,0.3);
+  border-radius: 14px;
+  color: #60A5FA;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: .03em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.bio-ver-btn:active { background: rgba(37,99,235,0.18); }
+
+/* ══════════════════════════════════════════
+   PERFIL — HERO REDESIGN
+══════════════════════════════════════════ */
+.perfil-hero {
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 0;
+  flex-shrink: 0;
+}
+.perfil-hero-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.perfil-hero-back {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.perfil-hero-settings {
+  width: 36px;
+  height: 36px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.perfil-hero-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.perfil-hero-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #2563EB, #1d4ed8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.4);
+}
+.perfil-hero-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.perfil-hero-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(37,99,235,0.15);
+  border: 1px solid rgba(37,99,235,0.3);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #60A5FA;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.perfil-hero-since {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+}
+.perfil-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.perfil-hero-stat {
+  background: var(--card);
+  padding: 14px 10px;
+  text-align: center;
+}
+.perfil-hero-stat-val {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 3px;
+}
+.perfil-hero-stat-lbl {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+}
+.perfil-menu-section {
+  margin-bottom: 16px;
+}
+.perfil-menu-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  color: rgba(255,255,255,0.25);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.perfil-menu-group {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.perfil-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .12s;
+}
+.perfil-menu-row:last-child { border-bottom: none; }
+.perfil-menu-row:active { background: rgba(255,255,255,0.03); }
+.perfil-menu-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(37,99,235,0.12);
+}
+.perfil-menu-name {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.perfil-menu-value {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.3);
+  margin-right: 4px;
+}
+.perfil-menu-arrow {
+  color: rgba(255,255,255,0.2);
+}
+
+/* ══════════════════════════════════════════
+   DIETA — visual refresh
+══════════════════════════════════════════ */
+.diet-choice-card {
+  border: 1px solid rgba(37,99,235,0.15) !important;
+  background: var(--card) !important;
+}
+.diet-choice-card--green {
+  border-color: rgba(16,185,129,0.2) !important;
+}
+.diet-choice-card--orange {
+  border-color: rgba(37,99,235,0.2) !important;
+}
+.diet-choice-header {
+  background: var(--bg) !important;
+  border-bottom: 1px solid var(--border);
+}
+.diet-choice-title {
+  font-family: var(--display) !important;
+  letter-spacing: .04em !important;
+}
+.diet-choice-hint-card {
+  background: rgba(37,99,235,0.06) !important;
+  border: 1px solid rgba(37,99,235,0.15) !important;
+  border-radius: 14px !important;
+}
+

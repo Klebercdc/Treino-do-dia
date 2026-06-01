@@ -16387,3 +16387,104 @@ if (typeof window !== 'undefined') {
     _origNavTo(tab);
   };
 })();
+
+/* ════════════════════════════════════════════════════
+   BIOMARCADORES
+════════════════════════════════════════════════════ */
+function openBiomarcadores() {
+  document.getElementById('biomarcadoresScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeBiomarcadores() {
+  document.getElementById('biomarcadoresScreen').classList.remove('show');
+}
+function bioSetTab(tab, btn) {
+  document.querySelectorAll('.bio-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const tabs = { geral: 'bioGeralContent', exames: 'bioExamesContent', historico: 'bioHistoricoContent' };
+  Object.entries(tabs).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = k === tab ? '' : 'none';
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   PERFIL HERO — populate dinâmico
+════════════════════════════════════════════════════ */
+function _updatePerfilHero() {
+  try {
+    const nome = localStorage.getItem('kronia_nome') || localStorage.getItem('userName') || 'ATLETA';
+    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
+    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const plan = localStorage.getItem('kronia_plan') || 'free';
+    const planLabel = plan === 'ultra' ? 'Membro ULTRA' : plan === 'pro' ? 'Membro PRO' : 'Membro FREE';
+
+    const heroNome = document.getElementById('perfilHeroNome');
+    const heroAvatar = document.getElementById('perfilHeroAvatar');
+    const heroBadge = document.getElementById('perfilHeroPlanBadge');
+    const heroScore = document.getElementById('perfilHeroScore');
+    const heroPlanVal = document.getElementById('perfilHeroPlanVal');
+    const heroSince = document.getElementById('perfilHeroSince');
+    const signInRow = document.getElementById('perfilSignInRow');
+    const signOutRow = document.getElementById('perfilSignOutRow');
+
+    if (heroNome) heroNome.textContent = nome.toUpperCase();
+    if (heroAvatar) {
+      const img = localStorage.getItem('kronia_avatar');
+      if (img) {
+        heroAvatar.style.backgroundImage = 'url(' + img + ')';
+        heroAvatar.textContent = '';
+      } else {
+        heroAvatar.textContent = nome.charAt(0).toUpperCase();
+      }
+    }
+    if (heroBadge) heroBadge.lastChild.textContent = ' ' + planLabel;
+    if (heroPlanVal) heroPlanVal.textContent = plan.toUpperCase();
+
+    // performance score: re-use same formula as home
+    const thisWeek = hist.filter(s => (Date.now() - new Date(s.date || s.timestamp || 0)) / 86400000 < 7);
+    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e => (e.series || []).map(r => r.rpe).filter(v => v > 0)));
+    const avgRpe = rpeVals.length ? rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length : 5;
+    const score = Math.min(100, Math.max(20, 50 + (streak * 3) + (thisWeek.length * 5) - ((avgRpe - 5) * 3)));
+    if (heroScore) heroScore.textContent = Math.round(score);
+
+    // data de cadastro
+    const since = localStorage.getItem('kronia_since');
+    if (heroSince && since) {
+      const d = new Date(since);
+      heroSince.textContent = 'Desde ' + d.toLocaleDateString('pt-BR', { month:'short', year:'numeric' });
+    }
+
+    // auth state
+    const isLogged = !!localStorage.getItem('sb-user') || !!localStorage.getItem('kronia_uid');
+    if (signInRow) signInRow.style.display = isLogged ? 'none' : '';
+    if (signOutRow) signOutRow.style.display = isLogged ? '' : 'none';
+
+    // também preenche IDs que o JS existente espera
+    const legacyNome = document.getElementById('perfilContaNome');
+    const legacyEmail = document.getElementById('perfilContaEmail');
+    if (legacyNome) legacyNome.textContent = nome;
+  } catch(e) { /* falha silenciosa */ }
+}
+
+// Aplica no openPerfil existente via observer
+(function() {
+  const _origOpen = typeof openPerfil === 'function' ? openPerfil : null;
+  if (_origOpen) {
+    window.openPerfil = function() {
+      _origOpen();
+      setTimeout(_updatePerfilHero, 120);
+    };
+  }
+  // também na carga inicial
+  setTimeout(_updatePerfilHero, 800);
+})();
+
+// fecha biomarcadores ao navegar
+(function() {
+  const _patchedNavTo = window.navTo;
+  window.navTo = function(tab) {
+    document.getElementById('biomarcadoresScreen')?.classList.remove('show');
+    _patchedNavTo(tab);
+  };
+})();
