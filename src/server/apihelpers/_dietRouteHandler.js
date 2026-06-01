@@ -34,7 +34,8 @@ function buildPayload(body) {
     'trainingSnapshot',
     'nutritionGoals', 'goals',
     'supabaseSnapshot',
-    'profile', 'context'
+    'profile', 'context',
+    'kronosNutricaoContext'
   ];
 
   directKeys.forEach(function(key) {
