@@ -159,6 +159,18 @@ async function loadProfile(userId) {
   return Object.assign({}, legacy || {}, canonical || {}, hormone || {}, pathology || {});
 }
 
+async function loadNutritionProfile(userId) {
+  var rows = await supabase(
+    'GET',
+    'nutrition_profiles?user_id=eq.' + userId +
+    '&select=faz_jejum,tipo_jejum,come_fora_frequencia,quem_cozinha,condicoes_saude,medicamentos_continuos,' +
+    'alimentos_nao_abre_mao,alimentos_nao_come,orcamento_alimentar,agua_litros_dia,consumo_alcool,' +
+    'consumo_cafeina,historico_dieta,tem_compulsao,anamnese_completa&limit=1',
+    null
+  ).catch(function () { return []; });
+  return (rows && rows[0]) ? rows[0] : null;
+}
+
 async function loadNutritionGoal(userId) {
   var rows = await supabase(
     'GET',
@@ -974,8 +986,31 @@ function extractDietClinicalContext(diet) {
   }, { pathologies: [], medications: [], preferences: [], observations: [] });
 }
 
-function buildClinicalContext(profile, labs, diet) {
+function buildClinicalContext(profile, labs, diet, nutritionProfile) {
   var dietClinical = extractDietClinicalContext(diet);
+  var np = nutritionProfile && typeof nutritionProfile === 'object' ? nutritionProfile : null;
+
+  var anamnese = null;
+  if (np && np.anamnese_completa) {
+    anamnese = {
+      refeicoesPorDia: np.refeicoes_por_dia || null,
+      fazJejum: np.faz_jejum || false,
+      tipoJejum: np.tipo_jejum || null,
+      comeFora: np.come_fora_frequencia || null,
+      quemCozinha: np.quem_cozinha || null,
+      condicoesSaude: Array.isArray(np.condicoes_saude) ? np.condicoes_saude : [],
+      medicamentosContinuos: np.medicamentos_continuos || null,
+      naoAbreMao: np.alimentos_nao_abre_mao || null,
+      naoCome: np.alimentos_nao_come || null,
+      orcamento: np.orcamento_alimentar || null,
+      aguaLitros: np.agua_litros_dia || null,
+      alcool: np.consumo_alcool || null,
+      cafeina: np.consumo_cafeina || null,
+      historicoDieta: np.historico_dieta || null,
+      temCompulsao: np.tem_compulsao || null
+    };
+  }
+
   return {
     patologias: uniqueArr([]
       .concat(profile && profile.pathologies ? profile.pathologies : [])
@@ -996,7 +1031,8 @@ function buildClinicalContext(profile, labs, diet) {
     observacoes: []
       .concat(profile && profile.activityLevel ? [profile.activityLevel] : [])
       .concat(profile && profile.observations ? profile.observations : [])
-      .concat(dietClinical.observations)
+      .concat(dietClinical.observations),
+    anamnese: anamnese
   };
 }
 
@@ -1113,7 +1149,8 @@ async function buildKronosContextHub(userId, queryText) {
     loadRecentWorkouts(userId),                 // 4
     userMemory.getCoachingSummary(userId),       // 5
     loadLatestMealPlan(userId),                 // 6
-    loadTodayFoodLogs(userId)                   // 7
+    loadTodayFoodLogs(userId),                  // 7
+    loadNutritionProfile(userId)                // 8
   ]);
 
   function get(idx) {
@@ -1128,6 +1165,7 @@ async function buildKronosContextHub(userId, queryText) {
   var memorySummary = get(5);
   var mealPlanRow = get(6);
   var todayFoodLogRows = get(7) || [];
+  var nutritionProfileRow = get(8);
 
   var mealItemRows = await loadMealPlanItems(mealPlanRow && mealPlanRow.id);
   var workoutIds = (recentWorkoutRows || []).map(function (w) { return w && w.id; }).filter(Boolean);
@@ -1199,7 +1237,7 @@ async function buildKronosContextHub(userId, queryText) {
     },
     dieta: detailedDietSlice,
     exames: buildLabsContext(labsSlice),
-    contextoClinico: buildClinicalContext(profileSlice, labsSlice, detailedDietSlice)
+    contextoClinico: buildClinicalContext(profileSlice, labsSlice, detailedDietSlice, nutritionProfileRow)
   };
 
   // RISCO 1 — only cache successful, non-empty hubs

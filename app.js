@@ -2938,7 +2938,47 @@ ENCAMINHAMENTO PROFISSIONAL:
 - Médico: dores persistentes, sintomas cardíacos, hormonais
 - Nutricionista: patologias, transtornos alimentares, complexidade clínica
 - Fisioterapeuta: lesões, reabilitação, postura
-- Endocrinologista: dúvidas hormonais, uso de EAAs`;
+- Endocrinologista: dúvidas hormonais, uso de EAAs
+
+═══════════════════════════════════════
+RACIOCÍNIO CLÍNICO — DIETA PERSONALIZADA
+═══════════════════════════════════════
+Quando gerar ou recomendar dieta, siga SEMPRE esta ordem de raciocínio:
+
+1. CARGA DE TREINO: Se o usuário treinou pesado recentemente (volume alto,
+   frequência 4+/semana), aumentar carboidratos intra e pós-treino. Dia de
+   descanso = reduzir carbo, manter proteína.
+
+2. FADIGA: Se fadiga_media >= 7/10 → priorizar alimentos anti-inflamatórios
+   (ômega-3, cúrcuma, frutas vermelhas), reduzir volume calórico, aumentar
+   magnésio e potássio. Se fadiga < 4 → plano normal ou hipercalórico.
+
+3. BIOMARCADORES (se disponíveis):
+   - Testosterona baixa: priorizar zinc (carnes, sementes), vitamina D, gordura
+     saudável (abacate, azeite), reduzir açúcar refinado
+   - Vitamina D baixa: sugerir exposição solar + alimentos fonte + suplementação
+   - Ferritina baixa: priorizar ferro heme (carnes vermelhas), vitamina C junto,
+     evitar café/chá nas refeições
+   - Cortisol alto: reduzir cafeína, priorizar carboidrato complexo, magnésio,
+     ashwagandha se disponível
+   - PCR elevado (inflamação): dieta anti-inflamatória, evitar processados e
+     gordura saturada em excesso
+   - TSH alterado: não prescrever iodo sem orientação médica; alertar para consulta
+
+4. ANAMNESE: Respeitar SEMPRE restrições, alergias, condições de saúde, orçamento
+   e preferências. Se diabetes → controle de índice glicêmico. Se renal → proteína
+   moderada (0.8g/kg). Se gastrite → sem pimenta, ácidos, jejum longo.
+
+5. ADESÃO: Se historico_dieta = "nao_manteve" ou tem_compulsao = "frequente" →
+   priorizar plano com maior volume alimentar, mais refeições menores, menos
+   restrição. Não sugerir déficit agressivo.
+
+6. QUANDO FALTAR DADO: Se algum biomarcador não está disponível, gere com base
+   nos outros dados e anamnese. NUNCA diga "não tenho dados suficientes" — use
+   o que tem e indique o que poderia melhorar com mais informação.
+   Exemplo: "Gerei sua dieta com base nos seus dados de treino e anamnese.
+   Quando você enviar seus exames, o KRONOS vai refinar as recomendações."
+`;
 }
 
 function syncMainScrollArea() {
@@ -4064,33 +4104,10 @@ function openAI() {
   document.getElementById("aiModal").classList.add("show");
   document.getElementById("aiModal").style.display = "flex";
   if (_aiHistory.length === 0) {
-    const fromDiet = window._kronosEntryContext && window._kronosEntryContext.origin === "dieta_ia";
-    addAIMessage("assistant", fromDiet
-      ? `Olá! Sou o **KRONOS IA**. Entrei pelo seu contexto de Dieta IA e vou considerar seu plano alimentar, treino, exames e aderência antes de sugerir ajustes.\n\nO que vamos ajustar agora?`
-      : `Olá! Sou o **KRONOS IA**, seu coach central de treino, dieta, exames e progresso.\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
-    const container = document.getElementById("aiMessages");
-    const sug = document.createElement("div");
-    sug.id = "aiSuggestions";
-    sug.style.cssText = "display:flex;flex-direction:column;gap:8px;padding-left:38px;";
-    const suggestions = fromDiet
-      ? [
-          { icon: "utensils", label: "Montar meu plano alimentar", msg: "Monte meu plano alimentar considerando meu treino, rotina, exames e aderência." },
-          { icon: "dumbbell", label: "Ajustar dieta para meu treino", msg: "Ajuste minha dieta para o treino de hoje e explique a distribuição de carboidratos." },
-          { icon: "replace", label: "Trocar uma refeição", msg: "Troque uma refeição mantendo meus macros, restrições e praticidade." },
-          { icon: "flask-conical", label: "Ver impacto dos exames na dieta", msg: "Explique o que meus exames mudam na minha dieta sem inventar diagnóstico." },
-          { icon: "shopping-cart", label: "Montar lista de compras", msg: "Monte uma lista de compras prática para seguir meu plano alimentar." },
-        ]
-      : [
-          { icon: "utensils", label: "Montar minha dieta", msg: "Montar minha dieta com base no meu treino, objetivo e rotina." },
-          { icon: "sliders-horizontal", label: "Ajustar meus macros", msg: "Ajustar meus macros e explicar o motivo." },
-          { icon: "dumbbell", label: "Explicar meu treino de hoje", msg: "Explique meu treino de hoje e os pontos de atenção." },
-          { icon: "flask-conical", label: "Ver o que meus exames mudam", msg: "Ver o que meus exames mudam na dieta e no treino." },
-          { icon: "trending-up", label: "Revisar meu progresso", msg: "Revisar meu progresso e sugerir o que mudar esta semana." },
-        ];
-    sug.innerHTML = suggestions.map(function(item) {
-      return `<button class="ai-suggest-btn" onclick="aiQuick(${JSON.stringify(item.msg).replace(/"/g, '&quot;')});document.getElementById('aiSuggestions')?.remove()">${_ico(item.icon, 16)} ${item.label}</button>`;
-    }).join("");
-    container.appendChild(sug);
+    const es = document.getElementById("kronosEmptyState");
+    if (es) es.style.display = "flex";
+    setTimeout(() => document.getElementById("aiInput")?.focus(), 300);
+    return;
   }
   setTimeout(() => document.getElementById("aiInput")?.focus(), 300);
 }
@@ -4102,8 +4119,22 @@ function closeAI() {
 
 function clearAIChat() {
   _aiHistory = [];
-  document.getElementById("aiMessages").innerHTML = "";
-  addAIMessage("assistant", `Chat limpo. Como posso te ajudar? ${_ico('dumbbell', 16)}`);
+  const container = document.getElementById("aiMessages");
+  const es = container.querySelector("#kronosEmptyState");
+  container.innerHTML = "";
+  if (es) { container.appendChild(es); es.style.display = "flex"; }
+  else {
+    container.insertAdjacentHTML("afterbegin", `<div id="kronosEmptyState" class="kronos-empty-state" style="display:flex;">
+      <div class="kronos-pulse-ring"><div class="kronos-pulse-core">KRONOS</div></div>
+      <div class="kronos-empty-title">Seu assistente de performance</div>
+      <div class="kronos-empty-sub">Cruzo seus treinos, exames e dieta para dar respostas precisas.</div>
+      <div class="kronos-empty-pills">
+        <button class="kronos-empty-pill" onclick="aiQuick('Revisar meu progresso e sugerir o que mudar esta semana.')">Como está meu progresso?</button>
+        <button class="kronos-empty-pill" onclick="aiQuick('Explique meu treino de hoje e os pontos de atenção.')">Sugestão de treino hoje</button>
+        <button class="kronos-empty-pill" onclick="aiQuick('Montar minha dieta com base no meu treino, objetivo e rotina.')">Analisar minha dieta</button>
+        <button class="kronos-empty-pill" onclick="aiQuick('Ver o que meus exames mudam na dieta e no treino.')">Revisar meus exames</button>
+      </div></div>`);
+  }
 }
 
 function renderMarkdown(text) {
@@ -4125,6 +4156,8 @@ function getKronosAvatarMarkup(wrapperClass = "kronos-reactor-avatar") {
 function addAIMessage(role, text, isThinking = false) {
   const container = document.getElementById("aiMessages");
   if (!container) return;
+  const es = document.getElementById("kronosEmptyState");
+  if (es) es.style.display = "none";
 
   const div = document.createElement("div");
   div.className = `ai-msg ${role}`;
@@ -6896,10 +6929,23 @@ function openDietChoiceScreen() {
 function startAIDiet() {
   scheduleKroniaUIUnblock('before-start-ai-diet');
   try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
-  if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
-    return window.KroniaDiet.generate({ source: 'start_ai_diet' });
-  }
-  return openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
+
+  // Checa anamnese: se incompleta, abre o wizard antes de gerar dieta
+  _anIsCompleted().then(function(done) {
+    if (!done) { openAnamnese(true); return; }
+    if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+      window.KroniaDiet.generate({ source: 'start_ai_diet' });
+    } else {
+      openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
+    }
+  }).catch(function() {
+    // Fallback resiliente: gera mesmo sem anamnese
+    if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+      window.KroniaDiet.generate({ source: 'start_ai_diet' });
+    } else {
+      openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
+    }
+  });
 }
 
 function loadDietScriptOnceFromApp(src, marker, testFn) {
@@ -16065,3 +16111,891 @@ function updateHomeBanner() {
   if (t) t.textContent = m.t;
   if (s) s.textContent = m.s;
 }
+
+/* ════════════════════════════════════════════════════
+   NOVAS TELAS — GERAR TREINO, TREINO GERADO, EXECUÇÃO, PROTOCOLOS
+════════════════════════════════════════════════════ */
+
+// ── Gerar Treino Wizard ─────────────────────────────
+let _gtState = { tipo: null, obj: null, days: null, step: 0 };
+
+function openGerarTreino() {
+  _gtState = { tipo: null, obj: null, days: null, step: 0 };
+  _gtGoToStep(0);
+  document.getElementById('gerarTreinoScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeGerarTreino() {
+  document.getElementById('gerarTreinoScreen').classList.remove('show');
+}
+
+function gtSelectTipo(el) {
+  document.querySelectorAll('.gt-tipo-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.tipo = el.dataset.tipo;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtSelectObj(el) {
+  document.querySelectorAll('.gt-obj-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.obj = el.dataset.obj;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtSelectDays(el) {
+  document.querySelectorAll('.gt-day-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.days = parseInt(el.dataset.days);
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtNext() {
+  if (_gtState.step < 3) {
+    _gtGoToStep(_gtState.step + 1);
+  } else {
+    _gtConfirmar();
+  }
+}
+
+function _gtGoToStep(step) {
+  _gtState.step = step;
+  document.querySelectorAll('.gt-step').forEach((s, i) => {
+    s.classList.toggle('active', i === step);
+  });
+  const dots = document.querySelectorAll('.gt-step-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === step);
+    d.classList.toggle('done', i < step);
+  });
+  const pct = ((step + 1) / 4) * 100;
+  const bar = document.getElementById('gtProgressBar');
+  if (bar) bar.style.width = pct + '%';
+  const btn = document.getElementById('gtContinuarBtn');
+  if (btn) {
+    btn.disabled = (step === 0 && !_gtState.tipo) ||
+                   (step === 1 && !_gtState.obj) ||
+                   (step === 2 && !_gtState.days);
+    btn.innerHTML = step === 3
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Gerar Treino'
+      : 'Continuar <i data-lucide="chevron-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>';
+    if (step === 3) btn.disabled = false;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+function _gtConfirmar() {
+  const equip = document.getElementById('gtEquipSelect');
+  _gtState.equip = equip ? equip.value : 'academia_completa';
+  closeGerarTreino();
+  openTreinoGerado(_gtState);
+}
+
+// ── Treino Gerado ──────────────────────────────────
+function openTreinoGerado(state) {
+  const objMap = { hipertrofia:'Hipertrofia', forca:'Força', performance:'Performance' };
+  const titulosMap = {
+    hipertrofia: 'Força Superior',
+    forca: 'Força e Potência',
+    performance: 'Performance Total',
+  };
+  const titulo = titulosMap[state?.obj] || 'Treino Completo';
+  const obj = objMap[state?.obj] || 'Hipertrofia';
+  const days = state?.days || 4;
+  const dur = days <= 3 ? '45 min' : days <= 4 ? '60 min' : '75 min';
+
+  const el = id => document.getElementById(id);
+  if (el('tgTreinoTitle')) el('tgTreinoTitle').textContent = titulo;
+  if (el('tgTreinoObj')) el('tgTreinoObj').textContent = obj;
+  if (el('tgTreinoDuration')) el('tgTreinoDuration').textContent = dur;
+
+  document.getElementById('treinoGeradoScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTreinoGerado() {
+  document.getElementById('treinoGeradoScreen').classList.remove('show');
+}
+
+function iniciarTreinoGerado() {
+  closeTreinoGerado();
+  if (typeof iniciarTreino === 'function') {
+    iniciarTreino();
+  } else {
+    openStartWorkoutScreen();
+  }
+}
+
+// ── Execução Focada ────────────────────────────────
+let _execState = { carga: 80, reps: 8, rpe: 8 };
+
+function openExecucao(opts) {
+  if (opts) {
+    _execState.carga = opts.carga || 80;
+    _execState.reps = opts.reps || 8;
+    _execState.rpe = opts.rpe || 8;
+    const nm = document.getElementById('execExerciseName');
+    const mn = document.getElementById('execMuscleName');
+    if (nm && opts.nome) nm.textContent = opts.nome;
+    if (mn && opts.musculo) mn.textContent = opts.musculo;
+  }
+  _execRender();
+  document.getElementById('execucaoScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeExecucao() {
+  document.getElementById('execucaoScreen').classList.remove('show');
+}
+
+function execAdjust(field, delta) {
+  if (field === 'carga') {
+    _execState.carga = Math.max(0, +(_execState.carga + delta).toFixed(1));
+  } else if (field === 'reps') {
+    _execState.reps = Math.max(1, _execState.reps + delta);
+  } else if (field === 'rpe') {
+    _execState.rpe = Math.min(10, Math.max(1, _execState.rpe + delta));
+  }
+  _execRender();
+}
+
+function _execRender() {
+  const c = document.getElementById('execCargaVal');
+  const r = document.getElementById('execRepsVal');
+  const p = document.getElementById('execRpeVal');
+  if (c) c.textContent = _execState.carga % 1 === 0 ? _execState.carga : _execState.carga.toFixed(1);
+  if (r) r.textContent = _execState.reps;
+  if (p) p.textContent = _execState.rpe;
+}
+
+function execConcluirSerie() {
+  const atualEl = document.getElementById('execSerieAtual');
+  const totalEl = document.getElementById('execSerieTotal');
+  const atual = atualEl ? parseInt(atualEl.textContent) : 1;
+  const total = totalEl ? parseInt(totalEl.textContent) : 4;
+  if (atual < total) {
+    if (atualEl) atualEl.textContent = atual + 1;
+    const dots = document.querySelectorAll('#execucaoScreen .exec-series-dot');
+    dots.forEach((d, i) => {
+      d.classList.toggle('done', i < atual);
+      d.classList.toggle('current', i === atual);
+    });
+  } else {
+    closeExecucao();
+  }
+}
+
+function execPularDescanso() {
+  const d = document.getElementById('execDescansoVal');
+  if (d) d.textContent = '00:00';
+}
+
+// ── Protocolos ──────────────────────────────────────
+function openProtocolos() {
+  document.getElementById('protocolosScreen').classList.add('show');
+  _protoLoadData();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeProtocolos() {
+  document.getElementById('protocolosScreen').classList.remove('show');
+}
+
+function protoSetTab(tab, btn) {
+  document.querySelectorAll('.proto-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const ativo = document.getElementById('protoAtivoContent');
+  const hist = document.getElementById('protoHistoricoContent');
+  if (ativo) ativo.style.display = tab === 'ativo' ? '' : 'none';
+  if (hist) hist.style.display = tab === 'historico' ? '' : 'none';
+}
+
+function _protoLoadData() {
+  try {
+    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const total = hist.length;
+    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
+    const concl = document.getElementById('protoStatConcluido');
+    const ser = document.getElementById('protoStatSeries');
+    const rpeEl = document.getElementById('protoStatRPE');
+    const vol = document.getElementById('protoVolBar');
+
+    const thisWeek = hist.filter(s => {
+      const d = new Date(s.date || s.timestamp || 0);
+      const now = new Date();
+      const diff = (now - d) / 86400000;
+      return diff < 7;
+    });
+    const weekSeries = thisWeek.reduce((a, s) => a + (s.totalSeries || 0), 0);
+    const target = 24;
+    const pct = Math.min(100, Math.round((weekSeries / target) * 100));
+
+    if (concl) concl.textContent = pct + '%';
+    if (ser) ser.textContent = weekSeries + '/' + target;
+    if (vol) vol.style.width = pct + '%';
+
+    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e =>
+      (e.series || []).map(r => r.rpe).filter(v => v > 0)
+    ));
+    const avgRpe = rpeVals.length ? (rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length).toFixed(1) : '—';
+    if (rpeEl) rpeEl.textContent = avgRpe;
+  } catch(e) { /* falha silenciosa */ }
+}
+
+// ── Score Adaptativo ─────────────────────────────────
+function updateScoreAdaptativo() {
+  try {
+    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
+
+    const thisWeek = hist.filter(s => {
+      const d = new Date(s.date || s.timestamp || 0);
+      return (Date.now() - d) / 86400000 < 7;
+    });
+
+    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e =>
+      (e.series || []).map(r => r.rpe).filter(v => v > 0)
+    ));
+    const avgRpe = rpeVals.length ? rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length : 5;
+
+    const score = Math.min(100, Math.max(20,
+      50 + (streak * 3) + (thisWeek.length * 5) - ((avgRpe - 5) * 3)
+    ));
+    const scoreInt = Math.round(score);
+
+    const numEl = document.getElementById('homeScoreNum');
+    const lblEl = document.getElementById('homeScoreLabel');
+    const ringEl = document.getElementById('homeScoreRing');
+
+    if (numEl) numEl.textContent = scoreInt;
+    const lbl = scoreInt >= 85 ? 'ÓTIMO' : scoreInt >= 70 ? 'BOM' : scoreInt >= 50 ? 'OK' : 'BAIXO';
+    if (lblEl) lblEl.textContent = lbl;
+
+    // animate ring: circumference 263.9, offset = 263.9 * (1 - score/100)
+    if (ringEl) ringEl.style.strokeDashoffset = (263.9 * (1 - scoreInt / 100)).toFixed(1);
+
+    // stats
+    const cargaEl = document.getElementById('scoreStatCarga');
+    const prontEl = document.getElementById('scoreStatProntidao');
+    const fadEl   = document.getElementById('scoreStatFadiga');
+    const tendEl  = document.getElementById('scoreStatTendencia');
+
+    const cargaRec = Math.min(100, Math.round(80 + streak * 2));
+    if (cargaEl) cargaEl.textContent = cargaRec + '%';
+    if (prontEl) prontEl.textContent = avgRpe < 7 ? 'Alta' : avgRpe < 8.5 ? 'Média' : 'Baixa';
+    if (fadEl)   fadEl.textContent   = avgRpe > 8.5 ? 'Alta' : avgRpe > 7 ? 'Média' : 'Baixa';
+    if (tendEl)  tendEl.textContent  = streak >= 3 ? 'Positiva' : streak === 0 ? 'Neutra' : 'Estável';
+
+    // KRONOS rec
+    const rcTitle = document.getElementById('kronosRecTitle');
+    const rcType  = document.getElementById('kronosRecType');
+    if (rcTitle) {
+      const workouts = ['Força Superior', 'Costas e Bíceps', 'Pernas e Glúteos', 'Ombros e Tríceps'];
+      rcTitle.textContent = workouts[thisWeek.length % workouts.length];
+    }
+    if (rcType) rcType.textContent = 'Hipertrofia';
+  } catch(e) { /* falha silenciosa */ }
+}
+
+// Chama ao abrir home
+const _origOpenHome = typeof openHome === 'function' ? openHome : null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('kronia:home-opened', updateScoreAdaptativo);
+  // também atualiza na carga inicial
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateScoreAdaptativo);
+  } else {
+    setTimeout(updateScoreAdaptativo, 500);
+  }
+}
+
+// ── Garante que as novas telas fecham quando navTo é chamado ──
+(function() {
+  const _origNavTo = navTo;
+  window.navTo = function(tab) {
+    // fecha telas novas ao navegar
+    document.getElementById('gerarTreinoScreen')?.classList.remove('show');
+    document.getElementById('treinoGeradoScreen')?.classList.remove('show');
+    document.getElementById('execucaoScreen')?.classList.remove('show');
+    if (tab !== 'protocolos') {
+      document.getElementById('protocolosScreen')?.classList.remove('show');
+    } else {
+      // marca item ativo
+      document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
+      document.getElementById('nav-protocolos')?.classList.add('active');
+    }
+    if (tab === 'kronos') {
+      document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
+      document.getElementById('nav-kronos')?.classList.add('active');
+      return; // openAI é chamado no onclick do botão
+    }
+    _origNavTo(tab);
+  };
+})();
+
+/* ════════════════════════════════════════════════════
+   BIOMARCADORES
+════════════════════════════════════════════════════ */
+function openBiomarcadores() {
+  document.getElementById('biomarcadoresScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closeBiomarcadores() {
+  document.getElementById('biomarcadoresScreen').classList.remove('show');
+}
+function bioSetTab(tab, btn) {
+  document.querySelectorAll('.bio-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const tabs = { geral: 'bioGeralContent', exames: 'bioExamesContent', historico: 'bioHistoricoContent' };
+  Object.entries(tabs).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = k === tab ? '' : 'none';
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   PERFIL HERO — populate dinâmico
+════════════════════════════════════════════════════ */
+function _updatePerfilHero() {
+  try {
+    const nome = localStorage.getItem('kronia_nome') || localStorage.getItem('userName') || 'ATLETA';
+    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
+    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const plan = localStorage.getItem('kronia_plan') || 'free';
+    const planLabel = plan === 'ultra' ? 'Membro ULTRA' : plan === 'pro' ? 'Membro PRO' : 'Membro FREE';
+
+    const heroNome = document.getElementById('perfilHeroNome');
+    const heroAvatar = document.getElementById('perfilHeroAvatar');
+    const heroBadge = document.getElementById('perfilHeroPlanBadge');
+    const heroScore = document.getElementById('perfilHeroScore');
+    const heroPlanVal = document.getElementById('perfilHeroPlanVal');
+    const heroSince = document.getElementById('perfilHeroSince');
+    const signInRow = document.getElementById('perfilSignInRow');
+    const signOutRow = document.getElementById('perfilSignOutRow');
+
+    if (heroNome) heroNome.textContent = nome.toUpperCase();
+    if (heroAvatar) {
+      const img = localStorage.getItem('kronia_avatar');
+      if (img) {
+        heroAvatar.style.backgroundImage = 'url(' + img + ')';
+        heroAvatar.textContent = '';
+      } else {
+        heroAvatar.textContent = nome.charAt(0).toUpperCase();
+      }
+    }
+    if (heroBadge) heroBadge.lastChild.textContent = ' ' + planLabel;
+    if (heroPlanVal) heroPlanVal.textContent = plan.toUpperCase();
+
+    // performance score: re-use same formula as home
+    const thisWeek = hist.filter(s => (Date.now() - new Date(s.date || s.timestamp || 0)) / 86400000 < 7);
+    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e => (e.series || []).map(r => r.rpe).filter(v => v > 0)));
+    const avgRpe = rpeVals.length ? rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length : 5;
+    const score = Math.min(100, Math.max(20, 50 + (streak * 3) + (thisWeek.length * 5) - ((avgRpe - 5) * 3)));
+    if (heroScore) heroScore.textContent = Math.round(score);
+
+    // data de cadastro
+    const since = localStorage.getItem('kronia_since');
+    if (heroSince && since) {
+      const d = new Date(since);
+      heroSince.textContent = 'Desde ' + d.toLocaleDateString('pt-BR', { month:'short', year:'numeric' });
+    }
+
+    // auth state
+    const isLogged = !!localStorage.getItem('sb-user') || !!localStorage.getItem('kronia_uid');
+    if (signInRow) signInRow.style.display = isLogged ? 'none' : '';
+    if (signOutRow) signOutRow.style.display = isLogged ? '' : 'none';
+
+    // também preenche IDs que o JS existente espera
+    const legacyNome = document.getElementById('perfilContaNome');
+    const legacyEmail = document.getElementById('perfilContaEmail');
+    if (legacyNome) legacyNome.textContent = nome;
+  } catch(e) { /* falha silenciosa */ }
+}
+
+// Aplica no openPerfil existente via observer
+(function() {
+  const _origOpen = typeof openPerfil === 'function' ? openPerfil : null;
+  if (_origOpen) {
+    window.openPerfil = function() {
+      _origOpen();
+      setTimeout(_updatePerfilHero, 120);
+    };
+  }
+  // também na carga inicial
+  setTimeout(_updatePerfilHero, 800);
+})();
+
+// fecha biomarcadores ao navegar
+(function() {
+  const _patchedNavTo = window.navTo;
+  window.navTo = function(tab) {
+    document.getElementById('biomarcadoresScreen')?.classList.remove('show');
+    _patchedNavTo(tab);
+  };
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   ANAMNESE — Wizard de perfil nutricional (Kleber, 2026-06)
+   Princípio: geração resiliente — nunca bloqueia por falta de dado.
+   Salva em nutrition_profiles via window._sb (Supabase JS client).
+══════════════════════════════════════════════════════════════ */
+
+var _anamneseState = null;
+var _anamneseTotalSteps = 7; // steps 0-6
+
+var _AN_STEP_LABELS = [
+  'Confirmar dados',
+  '1 de 6 — Rotina',
+  '2 de 6 — Restrições',
+  '3 de 6 — Preferências',
+  '4 de 6 — Hábitos',
+  '5 de 6 — Histórico',
+  '6 de 6 — Observações'
+];
+
+function _anDefaultState() {
+  return {
+    // Bloco 0
+    sexo: null, idade: null, peso_kg: null, altura_cm: null,
+    objetivo: null, nivel_atividade: null,
+    // Bloco 1
+    refeicoes_por_dia: null, faz_jejum: null, tipo_jejum: null,
+    come_fora_frequencia: null, quem_cozinha: null,
+    // Bloco 2
+    restricoes_alimentares: [], condicoes_saude: [],
+    medicamentos_continuos: null,
+    // Bloco 3
+    alimentos_nao_abre_mao: null, alimentos_nao_come: null,
+    orcamento_alimentar: null,
+    // Bloco 4
+    agua_litros_dia: null, consumo_alcool: null, consumo_cafeina: null,
+    // Bloco 5
+    historico_dieta: null, tem_compulsao: null,
+    // Bloco 6
+    observacoes: null,
+    // Meta
+    anamnese_completa: false, anamnese_versao: 1,
+    // UI
+    _step: 0, _fromDiet: false
+  };
+}
+
+async function openAnamnese(fromDiet) {
+  _anamneseState = _anDefaultState();
+  _anamneseState._fromDiet = !!fromDiet;
+
+  var screen = document.getElementById('anamneseScreen');
+  if (!screen) return;
+  screen.classList.add('open');
+  if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+
+  // Carrega dados existentes do Supabase
+  await _anLoadExistingProfile();
+  _anGoToStep(0);
+}
+
+function closeAnamnese() {
+  var screen = document.getElementById('anamneseScreen');
+  if (screen) screen.classList.remove('open');
+  _anamneseState = null;
+}
+
+async function _anLoadExistingProfile() {
+  var card = document.getElementById('anConfirmCard');
+  if (!card) return;
+  try {
+    var uid = (window._sb && window._sb.auth && (await window._sb.auth.getUser()).data.user?.id)
+            || localStorage.getItem('kronia_uid');
+    if (!uid) { _anShowConfirmCard(null); return; }
+
+    var { data, error } = await window._sb.from('nutrition_profiles').select('*').eq('user_id', uid).maybeSingle();
+    if (error || !data) { _anShowConfirmCard(null); return; }
+
+    // Preenche o estado com dados existentes
+    var fields = ['sexo','idade','peso_kg','altura_cm','objetivo','nivel_atividade',
+      'refeicoes_por_dia','faz_jejum','tipo_jejum','come_fora_frequencia','quem_cozinha',
+      'restricoes_alimentares','condicoes_saude','medicamentos_continuos',
+      'alimentos_nao_abre_mao','alimentos_nao_come','orcamento_alimentar',
+      'agua_litros_dia','consumo_alcool','consumo_cafeina',
+      'historico_dieta','tem_compulsao','observacoes','anamnese_completa','anamnese_versao'];
+    fields.forEach(function(f) {
+      if (data[f] !== undefined && data[f] !== null) _anamneseState[f] = data[f];
+    });
+    _anShowConfirmCard(data);
+
+    // Verifica se já tem exames
+    var { data: exames } = await window._sb.from('lab_report_biomarkers').select('id').eq('user_id', uid).limit(1);
+    var aviso = document.getElementById('anExamesAviso');
+    if (aviso) aviso.style.display = (exames && exames.length > 0) ? 'flex' : 'none';
+  } catch (e) {
+    console.error('[anamnese] load error', e);
+    _anShowConfirmCard(null);
+  }
+}
+
+function _anShowConfirmCard(profile) {
+  var card = document.getElementById('anConfirmCard');
+  if (!card) return;
+  var LABELS = {
+    sexo: 'Sexo', idade: 'Idade', peso_kg: 'Peso', altura_cm: 'Altura',
+    objetivo: 'Objetivo', nivel_atividade: 'Atividade'
+  };
+  var DISPLAY = {
+    masculino: 'Masculino', feminino: 'Feminino',
+    hipertrofia: 'Hipertrofia', emagrecimento: 'Emagrecimento',
+    manutencao: 'Manutenção', recomposicao: 'Recomposição',
+    sedentario: 'Sedentário', leve: 'Leve', moderado: 'Moderado',
+    ativo: 'Ativo', muito_ativo: 'Muito ativo'
+  };
+  var keys = ['sexo', 'idade', 'peso_kg', 'altura_cm', 'objetivo', 'nivel_atividade'];
+  var hasMissing = false;
+  var html = keys.map(function(k) {
+    var raw = profile && profile[k] != null ? profile[k] : null;
+    var val = raw != null
+      ? (DISPLAY[raw] || (k === 'idade' ? raw + ' anos' : k === 'peso_kg' ? raw + ' kg' : k === 'altura_cm' ? raw + ' cm' : raw))
+      : null;
+    if (!val) hasMissing = true;
+    return '<div class="an-confirm-row">'
+      + '<span class="an-confirm-key">' + LABELS[k] + '</span>'
+      + '<span class="an-confirm-val' + (!val ? ' missing' : '') + '">'
+      + (val || 'não informado') + '</span>'
+      + '</div>';
+  }).join('');
+
+  if (profile) {
+    html = '<div style="font-size:0.78rem;color:var(--text-2);margin-bottom:12px">'
+      + '<strong style="color:var(--text)">' + (profile.nome || '') + '</strong> — revise e confirme'
+      + '</div>' + html;
+  }
+
+  if (hasMissing) {
+    html += '<button class="an-confirm-edit-btn" style="margin-top:10px;width:100%;padding:8px;border-radius:10px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25)" onclick="anToggle(\'anEditBasic\',true)">Preencher campos em branco</button>';
+  }
+
+  card.innerHTML = html;
+
+  // Se tem dados completos, não mostra o form de edição; caso contrário mostra
+  var editDiv = document.getElementById('anEditBasic');
+  if (editDiv) editDiv.style.display = hasMissing ? 'block' : 'none';
+  // Sincroniza chips de edição com o estado atual
+  if (hasMissing) _anSyncEditChips();
+}
+
+function _anSyncEditChips() {
+  if (!_anamneseState) return;
+  ['sexo','objetivo','nivel_atividade'].forEach(function(group) {
+    var val = _anamneseState[group];
+    if (!val) return;
+    var wrap = document.querySelector('#anEditBasic .an-chips[data-group="' + group + '"]');
+    if (!wrap) return;
+    wrap.querySelectorAll('.an-chip').forEach(function(chip) {
+      chip.classList.toggle('selected', chip.dataset.val === val);
+    });
+  });
+  ['idade','peso_kg','altura_cm'].forEach(function(f) {
+    var el = document.getElementById('an' + f.charAt(0).toUpperCase() + f.slice(1).replace('_',''));
+    if (el && _anamneseState[f]) el.value = _anamneseState[f];
+  });
+}
+
+function _anGoToStep(step) {
+  if (!_anamneseState) return;
+  _anamneseState._step = step;
+
+  // Atualiza steps visíveis
+  for (var i = 0; i < _anamneseTotalSteps; i++) {
+    var el = document.getElementById('an-step-' + i);
+    if (el) el.classList.toggle('active', i === step);
+  }
+
+  // Progresso
+  var pct = step === 0 ? 0 : Math.round((step / (_anamneseTotalSteps - 1)) * 100);
+  var bar = document.getElementById('anProgressBar');
+  if (bar) bar.style.width = pct + '%';
+  var lbl = document.getElementById('anProgressLabel');
+  if (lbl) lbl.textContent = _AN_STEP_LABELS[step] || '';
+
+  // Botão prev
+  var prev = document.getElementById('anamnesePrevBtn');
+  if (prev) prev.style.visibility = step === 0 ? 'hidden' : 'visible';
+
+  // Botão next
+  var next = document.getElementById('anNextBtn');
+  if (next) {
+    var isLast = step === _anamneseTotalSteps - 1;
+    next.innerHTML = isLast
+      ? 'Salvar e ' + (_anamneseState._fromDiet ? 'gerar dieta' : 'concluir')
+        + ' <i data-lucide="check" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>'
+      : 'Avançar <i data-lucide="arrow-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>';
+    next.classList.toggle('finish', isLast);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons({ nodes: [next] });
+  }
+
+  // Preenche resumo no último passo
+  if (step === _anamneseTotalSteps - 1) _anBuildSummary();
+
+  // Sincroniza chips visuais com estado
+  _anSyncAllChips(step);
+
+  // Scroll ao topo do body
+  var body = document.getElementById('anBody');
+  if (body) body.scrollTop = 0;
+}
+
+function _anSyncAllChips(step) {
+  if (!_anamneseState) return;
+  var stepEl = document.getElementById('an-step-' + step);
+  if (!stepEl) return;
+  stepEl.querySelectorAll('.an-chips').forEach(function(wrap) {
+    var group = wrap.dataset.group;
+    if (!group || group.startsWith('_')) return;
+    var multi = wrap.dataset.multi === 'true';
+    var val = _anamneseState[group];
+    wrap.querySelectorAll('.an-chip').forEach(function(chip) {
+      if (multi) {
+        chip.classList.toggle('selected', Array.isArray(val) && val.includes(chip.dataset.val));
+      } else {
+        chip.classList.toggle('selected', chip.dataset.val === String(val ?? ''));
+      }
+    });
+  });
+
+  // Inputs de texto
+  var map = {
+    alimentos_nao_abre_mao: 'anAliNaoAbre',
+    alimentos_nao_come: 'anAliNaoCome',
+    observacoes: 'anObservacoes',
+    tipo_jejum: 'anTipoJejum',
+    medicamentos_continuos: 'anMedicamentos'
+  };
+  Object.keys(map).forEach(function(f) {
+    var el = document.getElementById(map[f]);
+    if (el && _anamneseState[f]) {
+      el.value = _anamneseState[f];
+      if (f === 'observacoes') {
+        var counter = document.getElementById('anObsCount');
+        if (counter) counter.textContent = el.value.length;
+      }
+    }
+  });
+}
+
+function anamneseNext() {
+  if (!_anamneseState) return;
+  var step = _anamneseState._step;
+  if (step === _anamneseTotalSteps - 1) {
+    _anSave();
+    return;
+  }
+  _anGoToStep(step + 1);
+}
+
+function anamnesePrev() {
+  if (!_anamneseState) return;
+  var step = _anamneseState._step;
+  if (step > 0) _anGoToStep(step - 1);
+}
+
+function anChip(el) {
+  if (!_anamneseState || !el) return;
+  var wrap = el.closest('.an-chips');
+  if (!wrap) return;
+  var group = wrap.dataset.group;
+  var multi = wrap.dataset.multi === 'true';
+  var val = el.dataset.val;
+  if (!group || !val) return;
+
+  // _flag groups: só atualiza UI, não salva no estado principal
+  if (group.startsWith('_')) {
+    wrap.querySelectorAll('.an-chip').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    return;
+  }
+
+  if (multi) {
+    var arr = Array.isArray(_anamneseState[group]) ? _anamneseState[group].slice() : [];
+    var idx = arr.indexOf(val);
+    if (idx >= 0) { arr.splice(idx, 1); el.classList.remove('selected'); }
+    else { arr.push(val); el.classList.add('selected'); }
+    _anamneseState[group] = arr;
+  } else {
+    wrap.querySelectorAll('.an-chip').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    _anamneseState[group] = val;
+  }
+
+  // Reação especial: compulsão frequente → mostra nota
+  if (group === 'tem_compulsao') {
+    var note = document.getElementById('anCompulsaoNote');
+    if (note) note.style.display = (val === 'frequente') ? 'flex' : 'none';
+  }
+  // Faz jejum
+  if (group === 'faz_jejum') {
+    anToggle('anJejumOpts', val !== 'nao');
+  }
+}
+
+// Chip exclusivo: ao selecionar "Nenhuma", limpa os outros do mesmo grupo
+function anChipExclusive(el, group) {
+  if (!_anamneseState) return;
+  var wrap = el.closest('.an-chips');
+  if (!wrap) return;
+  wrap.querySelectorAll('.an-chip').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  _anamneseState[group] = [];
+}
+
+function anField(field, value) {
+  if (!_anamneseState) return;
+  _anamneseState[field] = value;
+}
+
+function anToggle(id, show) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+function _anBuildSummary() {
+  var card = document.getElementById('anSummaryCard');
+  if (!card || !_anamneseState) return;
+  var s = _anamneseState;
+  var lines = [
+    s.refeicoes_por_dia ? '<strong>' + s.refeicoes_por_dia + '</strong> refeições/dia' : null,
+    s.faz_jejum && s.faz_jejum !== 'nao' ? 'Jejum: <strong>' + s.faz_jejum + (s.tipo_jejum ? ' (' + s.tipo_jejum + ')' : '') + '</strong>' : null,
+    s.restricoes_alimentares && s.restricoes_alimentares.length ? 'Restrições: <strong>' + s.restricoes_alimentares.join(', ') + '</strong>' : null,
+    s.condicoes_saude && s.condicoes_saude.length && !s.condicoes_saude.includes('nenhuma') ? 'Saúde: <strong>' + s.condicoes_saude.join(', ') + '</strong>' : null,
+    s.historico_dieta ? 'Histórico: <strong>' + s.historico_dieta + '</strong>' : null,
+    s.tem_compulsao === 'frequente' ? '<strong>⚠ Plano vai priorizar saciedade e volume</strong>' : null,
+    s.orcamento_alimentar ? 'Orçamento: <strong>' + s.orcamento_alimentar + '</strong>' : null,
+  ].filter(Boolean);
+  card.innerHTML = lines.length
+    ? '<div style="margin-bottom:6px;font-size:0.75rem;color:var(--text-2);font-weight:600">RESUMO DO SEU PERFIL</div>'
+      + lines.map(function(l) { return '<div>• ' + l + '</div>'; }).join('')
+    : '<div style="color:var(--text-2);font-size:0.75rem">Complete as etapas anteriores para ver o resumo.</div>';
+}
+
+async function _anSave() {
+  if (!_anamneseState) return;
+  var nextBtn = document.getElementById('anNextBtn');
+  if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = 'Salvando…'; }
+
+  try {
+    var uid = (window._sb && window._sb.auth && (await window._sb.auth.getUser()).data.user?.id)
+            || localStorage.getItem('kronia_uid');
+    if (!uid) throw new Error('Usuário não autenticado');
+
+    var payload = {
+      user_id: uid,
+      anamnese_completa: true,
+      anamnese_versao: (_anamneseState.anamnese_versao || 0) + 1,
+      updated_at: new Date().toISOString()
+    };
+
+    // Campos básicos (sempre salvar se preenchido)
+    var basicFields = ['sexo','idade','peso_kg','altura_cm','objetivo','nivel_atividade'];
+    basicFields.forEach(function(f) {
+      if (_anamneseState[f] != null) payload[f] = _anamneseState[f];
+    });
+
+    // Campos do wizard (salvar se preenchido)
+    var wizardFields = [
+      'refeicoes_por_dia','faz_jejum','tipo_jejum','come_fora_frequencia','quem_cozinha',
+      'restricoes_alimentares','condicoes_saude','medicamentos_continuos',
+      'alimentos_nao_abre_mao','alimentos_nao_come','orcamento_alimentar',
+      'agua_litros_dia','consumo_alcool','consumo_cafeina',
+      'historico_dieta','tem_compulsao'
+    ];
+    wizardFields.forEach(function(f) {
+      if (_anamneseState[f] != null) payload[f] = _anamneseState[f];
+    });
+
+    // Observações: appenda ao existente em vez de substituir
+    if (_anamneseState.observacoes) {
+      var { data: existing } = await window._sb.from('nutrition_profiles')
+        .select('observacoes').eq('user_id', uid).maybeSingle();
+      var prev = existing && existing.observacoes ? existing.observacoes + '\n' : '';
+      payload.observacoes = (prev + _anamneseState.observacoes).trim().slice(0, 1000);
+    }
+
+    // Faz jejum: converte string "16h"/"18h"/"outro" → boolean true; "nao" → false
+    if (payload.faz_jejum !== undefined) {
+      payload.faz_jejum = payload.faz_jejum !== 'nao';
+    }
+
+    // refeicoes_por_dia: garante número
+    if (payload.refeicoes_por_dia) {
+      payload.refeicoes_por_dia = parseInt(payload.refeicoes_por_dia, 10) || 4;
+    }
+
+    var { error } = await window._sb.from('nutrition_profiles').upsert(payload, { onConflict: 'user_id' });
+    if (error) console.error('[anamnese] save error', error.message, '— continuando com dados locais');
+
+    // Salva estado local também
+    try { localStorage.setItem('kronia_anamnese_v1', JSON.stringify(payload)); } catch (_) {}
+
+    if (typeof showToast === 'function') showToast('Perfil nutricional salvo!', 'success', 2500);
+    closeAnamnese();
+
+    // Se veio do diet flow, inicia geração da dieta
+    if (_anamneseState && _anamneseState._fromDiet) {
+      setTimeout(function() {
+        if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+          window.KroniaDiet.generate({ source: 'post_anamnese' });
+        } else {
+          openOfficialDietEntry({ source: 'post_anamnese', forceNew: true });
+        }
+      }, 400);
+    }
+  } catch (e) {
+    console.error('[anamnese] save exception', e);
+    if (typeof showToast === 'function') showToast('Erro ao salvar. Tente novamente.', 'error', 3000);
+  } finally {
+    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Salvar'; }
+  }
+}
+
+// Verifica se anamnese está completa (para gate no startAIDiet)
+async function _anIsCompleted() {
+  try {
+    // Checa localStorage primeiro (rápido)
+    var cached = localStorage.getItem('kronia_anamnese_v1');
+    if (cached) {
+      var obj = JSON.parse(cached);
+      if (obj && obj.anamnese_completa) return true;
+    }
+    // Checa Supabase
+    var uid = (window._sb && window._sb.auth && (await window._sb.auth.getUser()).data.user?.id)
+            || localStorage.getItem('kronia_uid');
+    if (!uid) return false;
+    var { data } = await window._sb.from('nutrition_profiles').select('anamnese_completa').eq('user_id', uid).maybeSingle();
+    return !!(data && data.anamnese_completa);
+  } catch (_) { return false; }
+}
+
+/* ──────────────────────────────────────────────────
+   ANAMNESE — Banner + badge UI helpers
+────────────────────────────────────────────────── */
+
+// Mostra/esconde banner na tela de dieta e atualiza badge de configurações
+async function _anUpdateUIHints() {
+  try {
+    var done = await _anIsCompleted();
+    var banner = document.getElementById('anProfileBanner');
+    if (banner) banner.style.display = done ? 'none' : 'flex';
+    var badge = document.getElementById('settingsAnamneseBadge');
+    if (badge) badge.textContent = done ? 'Completo ✓' : 'Pendente';
+  } catch (_) {}
+}
+
+// Chama ao abrir a tela de dieta (navTo 'dieta') e ao abrir configurações
+(function() {
+  var _origNavTo = typeof navTo === 'function' ? navTo : null;
+  if (!_origNavTo) return;
+  window.navTo = function(tab) {
+    _origNavTo.apply(this, arguments);
+    if (tab === 'dieta' || tab === 'perfil') {
+      setTimeout(_anUpdateUIHints, 300);
+    }
+  };
+})();

@@ -1,0 +1,259 @@
+RELATORIO_HANDOFF — Anamnese inteligente + KRONOS clínico
+Branch: claude/anamnese-kronos-clinico
+Data: 2026-06-01
+========================================================
+
+## 1. ONDE FICOU CADA BLOCO DO WIZARD
+
+Arquivo HTML: index.html
+  - <div id="anamneseScreen"> — inserido após linha ~3347 (após #biomarcadoresScreen)
+  - Step 0 (confirmação de dados): id="an-step-0"
+  - Step 1 (rotina alimentar): id="an-step-1"
+  - Step 2 (restrições e saúde): id="an-step-2"
+  - Step 3 (preferências reais): id="an-step-3"
+  - Step 4 (hidratação e hábitos): id="an-step-4"
+  - Step 5 (histórico e comportamento): id="an-step-5"
+  - Step 6 (campo livre): id="an-step-6"
+  - Banner "Completar perfil nutricional": id="anProfileBanner" — dentro do dietChoiceScreen
+  - Botão "Perfil Nutricional" em Configurações: settings-group "Nutrição"
+
+Arquivo JS: app.js
+  - Início das funções: linha ~16484
+  - _anDefaultState() — estado inicial da anamnese
+  - openAnamnese(fromDiet): linha 16584 — abre o wizard, carrega dados do Supabase
+  - closeAnamnese(): fecha e limpa estado
+  - _anLoadExistingProfile(): busca nutrition_profiles via window._sb
+  - _anShowConfirmCard(profile): renderiza card de confirmação (step 0)
+  - _anGoToStep(step): navega entre steps, atualiza progresso, sincroniza chips
+  - anamneseNext() / anamnesePrev(): navegação forward/back
+  - anChip(el): seleção de chip (single e multi)
+  - anChipExclusive(el, group): chip exclusivo (ex: "Nenhuma" limpa os outros)
+  - anField(field, value): atualiza campo de texto no estado
+  - anToggle(id, show): mostra/esconde elementos condicionais
+  - _anBuildSummary(): constrói card de resumo no último step
+  - _anSave(): linha 16878 — upsert no Supabase + salva localStorage + dispara dieta se fromDiet=true
+  - _anIsCompleted(): linha 16959 — verifica anamnese_completa em localStorage e Supabase
+  - _anUpdateUIHints(): linha 16983 — atualiza banner e badge de configurações
+  - navTo patch (final do arquivo): exibe hints ao navegar para 'dieta' ou 'perfil'
+
+CSS: styles.css
+  - Bloco "ANAMNESE — Wizard de perfil nutricional" — final do arquivo (~linha 8856+)
+  - Classes: .an-header, .an-step, .an-chip (e .an-chip.selected), .an-input,
+    .an-confirm-card, .an-info-card, .an-summary-card, .an-footer, .an-btn-next,
+    .an-btn-next.finish, .an-profile-banner
+
+
+## 2. ONDE FICOU buildKronosNutricaoContext()
+
+Arquivo: src/ai/contextBuilder.ts (módulo canônico per CLAUDE.md)
+  - Exportada na linha 391
+  - Signature: async function buildKronosNutricaoContext(supabase: SupabaseClient, userId: string): Promise<KronosNutricaoContext>
+  - serializeKronosNutricaoContext() exportada na linha 560
+
+Interfaces exportadas:
+  - KronosNutricaoProfile — todos os campos novos da anamnese
+  - KronosWorkoutSummary — resumo de treino dos últimos 7 dias
+  - KronosFadigaSummary — média e tendência de fadiga
+  - KronosBiomarkerEntry — valor + status + unidade por biomarcador
+  - KronosNutricaoContext — container raiz com flag .available por fonte de dados
+
+
+## 3. ONDE FOI INSERIDO O BLOCO CLÍNICO NO SYSTEM PROMPT
+
+Arquivo: app.js
+  - Função: buildTrainingContext() (linha ~2636)
+  - Bloco inserido: após "ENCAMINHAMENTO PROFISSIONAL" — linha ~2941
+  - Título: "RACIOCÍNIO CLÍNICO — DIETA PERSONALIZADA" (linha 2944)
+  - Conteúdo: 6 regras de raciocínio (carga de treino, fadiga, biomarcadores,
+    anamnese, adesão, fallback resiliente)
+
+Integração no diet route:
+  - Arquivo: src/app/api/kronia/diet/route.ts
+  - Linha 6: import buildKronosNutricaoContext, serializeKronosNutricaoContext
+  - Linha 87: buildKronosNutricaoContext chamado em Promise.all com dietSupabaseContext
+  - O contexto serializado é adicionado ao enrichedBody como `kronosNutricaoContext`
+
+
+## 4. EXEMPLO LITERAL DE CONTEXTO GERADO (mock)
+
+buildKronosNutricaoContext(admin, "user-uuid-123") → retornaria:
+
+{
+  available: {
+    nutritionProfile: true,
+    workoutHistory: true,
+    fadiga: true,
+    biomarkers: true
+  },
+  nutritionProfile: {
+    sexo: "masculino",
+    idade: 35,
+    peso_kg: 80.0,
+    altura_cm: 175.0,
+    objetivo: "hipertrofia",
+    nivel_atividade: "ativo",
+    refeicoes_por_dia: 4,
+    faz_jejum: false,
+    tipo_jejum: null,
+    come_fora_frequencia: "as_vezes",
+    quem_cozinha: "basico",
+    restricoes_alimentares: [],
+    condicoes_saude: ["nenhuma"],
+    medicamentos_continuos: null,
+    alimentos_nao_abre_mao: "frango, arroz, café",
+    alimentos_nao_come: "fígado",
+    orcamento_alimentar: "medio",
+    agua_litros_dia: "2",
+    consumo_alcool: "ocasional",
+    consumo_cafeina: "moderado",
+    historico_dieta: "funcionou",
+    tem_compulsao: "nao",
+    observacoes: null,
+    anamnese_completa: true
+  },
+  workoutSummary: {
+    diasTreinados: 4,
+    frequenciaSemanal: 4,
+    ultimoTreinoData: "2026-05-31",
+    gruposMusculares: ["peito", "costas", "ombro"],
+    volumeEstimado: 480
+  },
+  fadigaSummary: {
+    media: 5.4,
+    tendencia: "estavel",
+    ultimaScore: 5
+  },
+  biomarkers: {
+    "Testosterona Total": { valor: 520, status: "normal", unidade: "ng/dL" },
+    "Vitamina D": { valor: 28, status: "baixo", unidade: "ng/mL" },
+    "Ferritina": { valor: 85, status: "normal", unidade: "ng/mL" }
+  }
+}
+
+serializeKronosNutricaoContext(ctx) → string:
+═══════════════════════════════════════
+PERFIL NUTRICIONAL (anamnese)
+═══════════════════════════════════════
+refeicoes_por_dia: 4
+come_fora: as_vezes
+cozinha: basico
+nao_abre_mao: frango, arroz, café
+nao_come: fígado
+orcamento: medio
+agua: 2
+alcool: ocasional
+cafeina: moderado
+historico_dieta: funcionou
+
+CARGA DE TREINO (últimos 7 dias)
+dias_treinados: 4 | frequencia_semanal: 4
+ultimo_treino: 2026-05-31
+grupos_musculares: peito, costas, ombro
+volume_estimado_reps: 480
+
+FADIGA
+media: 5.4/10 | tendencia: estavel | ultima: 5/10
+
+BIOMARCADORES
+Testosterona Total: 520 ng/dL [normal]
+Vitamina D: 28 ng/mL [baixo]
+Ferritina: 85 ng/mL [normal]
+
+
+## 5. CONFIRMAÇÃO: gerarProtocolo() NÃO FOI TOCADA
+
+gerarProtocolo() está em app.js linha 482.
+Nenhuma alteração foi feita nessa função nem em suas chamadas.
+Verificação:
+  git diff HEAD -- app.js | grep -A2 -B2 "gerarProtocolo" → sem mudanças
+
+
+## 6. CAMPOS NOVOS DE nutrition_profiles (ATENÇÃO)
+
+Os seguintes campos foram referenciados no wizard mas podem NÃO existir ainda
+na tabela nutrition_profiles em produção:
+
+  faz_jejum BOOLEAN
+  tipo_jejum TEXT
+  come_fora_frequencia TEXT
+  quem_cozinha TEXT
+  condicoes_saude TEXT[]
+  medicamentos_continuos TEXT
+  alimentos_nao_abre_mao TEXT
+  alimentos_nao_come TEXT
+  orcamento_alimentar TEXT
+  agua_litros_dia TEXT
+  consumo_alcool TEXT
+  consumo_cafeina TEXT
+  historico_dieta TEXT
+  tem_compulsao TEXT
+  anamnese_completa BOOLEAN DEFAULT FALSE
+  anamnese_versao INTEGER DEFAULT 0
+
+O código usa upsert com onConflict:'user_id' e trata erros silenciosamente —
+se o campo não existir, o upsert falhará mas o app continua funcionando
+(geração resiliente). Se confirmado que a migration NÃO foi aplicada,
+executar em produção antes de ativar a feature:
+
+  ALTER TABLE public.nutrition_profiles
+    ADD COLUMN IF NOT EXISTS faz_jejum BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS tipo_jejum TEXT,
+    ADD COLUMN IF NOT EXISTS come_fora_frequencia TEXT,
+    ADD COLUMN IF NOT EXISTS quem_cozinha TEXT,
+    ADD COLUMN IF NOT EXISTS condicoes_saude TEXT[] NOT NULL DEFAULT '{}',
+    ADD COLUMN IF NOT EXISTS medicamentos_continuos TEXT,
+    ADD COLUMN IF NOT EXISTS alimentos_nao_abre_mao TEXT,
+    ADD COLUMN IF NOT EXISTS alimentos_nao_come TEXT,
+    ADD COLUMN IF NOT EXISTS orcamento_alimentar TEXT,
+    ADD COLUMN IF NOT EXISTS agua_litros_dia TEXT,
+    ADD COLUMN IF NOT EXISTS consumo_alcool TEXT,
+    ADD COLUMN IF NOT EXISTS consumo_cafeina TEXT,
+    ADD COLUMN IF NOT EXISTS historico_dieta TEXT,
+    ADD COLUMN IF NOT EXISTS tem_compulsao TEXT,
+    ADD COLUMN IF NOT EXISTS anamnese_completa BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS anamnese_versao INTEGER NOT NULL DEFAULT 0;
+
+
+## 7. REGRAS NÃO VIOLADAS
+
+- ✓ Nenhum arquivo criado em api/
+- ✓ gerarProtocolo() não tocada
+- ✓ Novo endpoint usa src/app/api/ (diet/route.ts modificado, não criado)
+- ✓ buildKronosNutricaoContext em src/ai/contextBuilder.ts (módulo canônico)
+- ✓ Lógica clínica em TypeScript (não JS)
+- ✓ Sem migration nova — SQL documentado neste arquivo para aplicação manual
+- ✓ NUNCA bloquear geração: todos os paths têm fallback resiliente
+- ✓ Sem criar orchestrator paralelo ou intent classifier novo
+
+
+## 8. CONFIRMAÇÃO: contextoClinico CHEGA ao modelo
+
+O contexto da anamnese CHEGA ao modelo. Pipeline confirmado:
+
+  api/chat.js → open_diet_flow → kronosHub.buildKronosContext(userId)
+    → buildKronosContextHub() → loadNutritionProfile() [NOVO: slot 8]
+    → buildClinicalContext(profile, labs, diet, nutritionProfileRow) [ATUALIZADO]
+    → ctx.contextoClinico.anamnese = { fazJejum, comeFora, naoAbreMao, ... }
+    → gerarDietaKronos(kronosContext, ...) → JSON.stringify(ctx) → modelo
+
+Arquivos alterados nesta etapa:
+  src/server/apihelpers/_kronosContextHub.js
+    - loadNutritionProfile(userId): nova função (query em nutrition_profiles)
+    - buildClinicalContext(): aceita 4º parâmetro nutritionProfile
+      → popula bloco 'anamnese' se anamnese_completa = true
+    - Promise.allSettled: slot 8 = loadNutritionProfile
+  src/server/apihelpers/_dietRouteHandler.js
+    - 'kronosNutricaoContext' adicionado ao directKeys (future-proof)
+
+Nota: o bloco adicionado em buildTrainingContext() (app.js linha ~2944)
+é o system prompt do CHAT geral do KRONOS, não do gerador de dieta.
+O gerador de dieta usa DIETA_KRONOS_SYSTEM (api/chat.js linha 275) +
+JSON.stringify(ctx) com contextoClinico. Ambos os caminhos agora têm
+dados da anamnese.
+
+
+## 9. PRÓXIMOS PASSOS (antes de produção)
+
+1. Confirmar/aplicar migration dos campos novos no Supabase (SQL na seção 6)
+2. Testar wizard com usuário real (abrir Dieta → DIETA IA)
+3. PARAR antes de deploy — revisar migration e RLS dos novos campos
