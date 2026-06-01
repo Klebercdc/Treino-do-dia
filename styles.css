@@ -8854,3 +8854,333 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   border-color: rgba(37,99,235,0.4);
   color: var(--text);
 }
+
+/* ══════════════════════════════════════════
+   ANAMNESE — Wizard de perfil nutricional
+══════════════════════════════════════════ */
+
+#anamneseScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2300;
+  background: var(--bg);
+  flex-direction: column;
+  overflow: hidden;
+}
+#anamneseScreen.open {
+  display: flex;
+}
+
+/* Header */
+.an-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.an-back-btn,
+.an-close-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.an-back-btn:active,
+.an-close-btn:active { background: rgba(255,255,255,0.12); }
+.an-header-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.an-header-title {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  letter-spacing: .06em;
+  color: var(--text);
+}
+.an-progress-label {
+  font-size: 0.68rem;
+  color: var(--text-2);
+}
+
+/* Progress bar */
+.an-progress-bar-wrap {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.an-progress-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width .35s cubic-bezier(.4,0,.2,1);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Body */
+.an-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Steps */
+.an-step { display: none; }
+.an-step.active { display: block; }
+
+.an-step-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  color: var(--accent2);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.an-step-title {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  letter-spacing: .04em;
+  color: var(--text);
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+.an-step-sub {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* Field groups */
+.an-field-group {
+  margin-bottom: 22px;
+}
+.an-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 10px;
+}
+.an-multi-hint {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-2);
+  margin-left: 4px;
+}
+
+/* Chips */
+.an-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.an-chip {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  font-size: 0.78rem;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+  transition: all .15s;
+  line-height: 1.4;
+  text-align: center;
+}
+.an-chip small {
+  display: block;
+  font-size: 0.62rem;
+  opacity: .75;
+}
+.an-chip:active { opacity: .7; }
+.an-chip.selected {
+  background: rgba(37,99,235,0.18);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Field row */
+.an-field-row {
+  display: flex;
+  gap: 10px;
+}
+.an-field-row .an-field-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Input */
+.an-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color .18s;
+  box-sizing: border-box;
+}
+.an-input:focus {
+  border-color: var(--accent);
+}
+.an-input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+.an-textarea {
+  min-height: 100px;
+  resize: none;
+  line-height: 1.5;
+}
+.an-input-hint {
+  font-size: 0.65rem;
+  color: var(--text-2);
+  margin-top: 5px;
+}
+
+/* Confirm card (step 0) */
+.an-confirm-card {
+  background: rgba(37,99,235,0.07);
+  border: 1.5px solid rgba(37,99,235,0.2);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.an-confirm-placeholder {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  text-align: center;
+  padding: 10px 0;
+}
+.an-confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.82rem;
+  gap: 8px;
+}
+.an-confirm-row:last-child { border-bottom: none; }
+.an-confirm-key { color: var(--text-2); flex-shrink: 0; }
+.an-confirm-val { color: var(--text); font-weight: 600; text-align: right; }
+.an-confirm-val.missing { color: rgba(251,191,36,0.9); font-style: italic; font-weight: 400; }
+.an-confirm-edit-btn {
+  border: none;
+  background: none;
+  color: var(--accent2);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Info card */
+.an-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(37,99,235,0.08);
+  border: 1px solid rgba(37,99,235,0.2);
+  border-radius: 10px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.an-info-card i { flex-shrink: 0; margin-top: 1px; }
+
+/* Summary card (step 6) */
+.an-summary-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  line-height: 1.8;
+}
+.an-summary-card strong { color: var(--text); }
+
+/* Footer */
+.an-footer {
+  padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+.an-btn-next {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .15s;
+  letter-spacing: .02em;
+}
+.an-btn-next:active { opacity: .85; }
+.an-btn-next.finish {
+  background: linear-gradient(135deg, var(--accent), #10b981);
+}
+
+/* Diet screen banner trigger */
+.an-profile-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 12px 0 4px;
+  background: rgba(37,99,235,0.08);
+  border: 1.5px solid rgba(37,99,235,0.22);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.an-profile-banner:active { background: rgba(37,99,235,0.15); }
+.an-profile-banner-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(37,99,235,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.an-profile-banner-body { flex: 1 }
+.an-profile-banner-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.an-profile-banner-sub {
+  font-size: 0.7rem;
+  color: var(--text-2);
+}

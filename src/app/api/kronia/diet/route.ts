@@ -3,6 +3,7 @@ import { requireBearerAuth } from "../../_shared/requireBearerAuth"
 import { checkRateLimit } from "../../../../lib/utils/serverRateLimit"
 import { createAdminSupabaseClient } from "../../../../lib/supabase/admin"
 import { getRequestId } from "../../_shared/requestId"
+import { buildKronosNutricaoContext, serializeKronosNutricaoContext } from "../../../../ai/contextBuilder"
 
 const dietRouteContract = require("../../../../server/apihelpers/_dietRouteContract")
 const dietRouteHandler = require("../../../../server/apihelpers/_dietRouteHandler")
@@ -81,8 +82,15 @@ export async function POST(req: NextRequest) {
     let enrichedBody = body
     try {
       const admin = createAdminSupabaseClient()
-      const supabaseContext = await dietSupabaseContext.loadDietSupabaseContext(admin, userId)
+      const [supabaseContext, kronosNutricaoCtx] = await Promise.all([
+        dietSupabaseContext.loadDietSupabaseContext(admin, userId),
+        buildKronosNutricaoContext(admin, userId),
+      ])
       enrichedBody = dietSupabaseContext.enrichDietRequestBody(body, supabaseContext)
+      const nutricaoBlock = serializeKronosNutricaoContext(kronosNutricaoCtx)
+      if (nutricaoBlock) {
+        enrichedBody = { ...enrichedBody, kronosNutricaoContext: nutricaoBlock }
+      }
     } catch (error) {
       console.error("[diet-route] failed to enrich payload from supabase", error)
     }

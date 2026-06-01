@@ -2938,7 +2938,47 @@ ENCAMINHAMENTO PROFISSIONAL:
 - Médico: dores persistentes, sintomas cardíacos, hormonais
 - Nutricionista: patologias, transtornos alimentares, complexidade clínica
 - Fisioterapeuta: lesões, reabilitação, postura
-- Endocrinologista: dúvidas hormonais, uso de EAAs`;
+- Endocrinologista: dúvidas hormonais, uso de EAAs
+
+═══════════════════════════════════════
+RACIOCÍNIO CLÍNICO — DIETA PERSONALIZADA
+═══════════════════════════════════════
+Quando gerar ou recomendar dieta, siga SEMPRE esta ordem de raciocínio:
+
+1. CARGA DE TREINO: Se o usuário treinou pesado recentemente (volume alto,
+   frequência 4+/semana), aumentar carboidratos intra e pós-treino. Dia de
+   descanso = reduzir carbo, manter proteína.
+
+2. FADIGA: Se fadiga_media >= 7/10 → priorizar alimentos anti-inflamatórios
+   (ômega-3, cúrcuma, frutas vermelhas), reduzir volume calórico, aumentar
+   magnésio e potássio. Se fadiga < 4 → plano normal ou hipercalórico.
+
+3. BIOMARCADORES (se disponíveis):
+   - Testosterona baixa: priorizar zinc (carnes, sementes), vitamina D, gordura
+     saudável (abacate, azeite), reduzir açúcar refinado
+   - Vitamina D baixa: sugerir exposição solar + alimentos fonte + suplementação
+   - Ferritina baixa: priorizar ferro heme (carnes vermelhas), vitamina C junto,
+     evitar café/chá nas refeições
+   - Cortisol alto: reduzir cafeína, priorizar carboidrato complexo, magnésio,
+     ashwagandha se disponível
+   - PCR elevado (inflamação): dieta anti-inflamatória, evitar processados e
+     gordura saturada em excesso
+   - TSH alterado: não prescrever iodo sem orientação médica; alertar para consulta
+
+4. ANAMNESE: Respeitar SEMPRE restrições, alergias, condições de saúde, orçamento
+   e preferências. Se diabetes → controle de índice glicêmico. Se renal → proteína
+   moderada (0.8g/kg). Se gastrite → sem pimenta, ácidos, jejum longo.
+
+5. ADESÃO: Se historico_dieta = "nao_manteve" ou tem_compulsao = "frequente" →
+   priorizar plano com maior volume alimentar, mais refeições menores, menos
+   restrição. Não sugerir déficit agressivo.
+
+6. QUANDO FALTAR DADO: Se algum biomarcador não está disponível, gere com base
+   nos outros dados e anamnese. NUNCA diga "não tenho dados suficientes" — use
+   o que tem e indique o que poderia melhorar com mais informação.
+   Exemplo: "Gerei sua dieta com base nos seus dados de treino e anamnese.
+   Quando você enviar seus exames, o KRONOS vai refinar as recomendações."
+`;
 }
 
 function syncMainScrollArea() {
@@ -6889,10 +6929,23 @@ function openDietChoiceScreen() {
 function startAIDiet() {
   scheduleKroniaUIUnblock('before-start-ai-diet');
   try { window.KroniaDiet?.hideLegacyScreens?.(); } catch (_) {}
-  if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
-    return window.KroniaDiet.generate({ source: 'start_ai_diet' });
-  }
-  return openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
+
+  // Checa anamnese: se incompleta, abre o wizard antes de gerar dieta
+  _anIsCompleted().then(function(done) {
+    if (!done) { openAnamnese(true); return; }
+    if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+      window.KroniaDiet.generate({ source: 'start_ai_diet' });
+    } else {
+      openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
+    }
+  }).catch(function() {
+    // Fallback resiliente: gera mesmo sem anamnese
+    if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+      window.KroniaDiet.generate({ source: 'start_ai_diet' });
+    } else {
+      openOfficialDietEntry({ source: 'start_ai_diet_fallback', forceNew: true });
+    }
+  });
 }
 
 function loadDietScriptOnceFromApp(src, marker, testFn) {
@@ -16479,5 +16532,470 @@ function _updatePerfilHero() {
   window.navTo = function(tab) {
     document.getElementById('biomarcadoresScreen')?.classList.remove('show');
     _patchedNavTo(tab);
+  };
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   ANAMNESE — Wizard de perfil nutricional (Kleber, 2026-06)
+   Princípio: geração resiliente — nunca bloqueia por falta de dado.
+   Salva em nutrition_profiles via window._sb (Supabase JS client).
+══════════════════════════════════════════════════════════════ */
+
+var _anamneseState = null;
+var _anamneseTotalSteps = 7; // steps 0-6
+
+var _AN_STEP_LABELS = [
+  'Confirmar dados',
+  '1 de 6 — Rotina',
+  '2 de 6 — Restrições',
+  '3 de 6 — Preferências',
+  '4 de 6 — Hábitos',
+  '5 de 6 — Histórico',
+  '6 de 6 — Observações'
+];
+
+function _anDefaultState() {
+  return {
+    // Bloco 0
+    sexo: null, idade: null, peso_kg: null, altura_cm: null,
+    objetivo: null, nivel_atividade: null,
+    // Bloco 1
+    refeicoes_por_dia: null, faz_jejum: null, tipo_jejum: null,
+    come_fora_frequencia: null, quem_cozinha: null,
+    // Bloco 2
+    restricoes_alimentares: [], condicoes_saude: [],
+    medicamentos_continuos: null,
+    // Bloco 3
+    alimentos_nao_abre_mao: null, alimentos_nao_come: null,
+    orcamento_alimentar: null,
+    // Bloco 4
+    agua_litros_dia: null, consumo_alcool: null, consumo_cafeina: null,
+    // Bloco 5
+    historico_dieta: null, tem_compulsao: null,
+    // Bloco 6
+    observacoes: null,
+    // Meta
+    anamnese_completa: false, anamnese_versao: 1,
+    // UI
+    _step: 0, _fromDiet: false
+  };
+}
+
+async function openAnamnese(fromDiet) {
+  _anamneseState = _anDefaultState();
+  _anamneseState._fromDiet = !!fromDiet;
+
+  var screen = document.getElementById('anamneseScreen');
+  if (!screen) return;
+  screen.classList.add('open');
+  if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+
+  // Carrega dados existentes do Supabase
+  await _anLoadExistingProfile();
+  _anGoToStep(0);
+}
+
+function closeAnamnese() {
+  var screen = document.getElementById('anamneseScreen');
+  if (screen) screen.classList.remove('open');
+  _anamneseState = null;
+}
+
+async function _anLoadExistingProfile() {
+  var card = document.getElementById('anConfirmCard');
+  if (!card) return;
+  try {
+    var uid = (window._sb && window._sb.auth && (await window._sb.auth.getUser()).data.user?.id)
+            || localStorage.getItem('kronia_uid');
+    if (!uid) { _anShowConfirmCard(null); return; }
+
+    var { data, error } = await window._sb.from('nutrition_profiles').select('*').eq('user_id', uid).maybeSingle();
+    if (error || !data) { _anShowConfirmCard(null); return; }
+
+    // Preenche o estado com dados existentes
+    var fields = ['sexo','idade','peso_kg','altura_cm','objetivo','nivel_atividade',
+      'refeicoes_por_dia','faz_jejum','tipo_jejum','come_fora_frequencia','quem_cozinha',
+      'restricoes_alimentares','condicoes_saude','medicamentos_continuos',
+      'alimentos_nao_abre_mao','alimentos_nao_come','orcamento_alimentar',
+      'agua_litros_dia','consumo_alcool','consumo_cafeina',
+      'historico_dieta','tem_compulsao','observacoes','anamnese_completa','anamnese_versao'];
+    fields.forEach(function(f) {
+      if (data[f] !== undefined && data[f] !== null) _anamneseState[f] = data[f];
+    });
+    _anShowConfirmCard(data);
+
+    // Verifica se já tem exames
+    var { data: exames } = await window._sb.from('lab_report_biomarkers').select('id').eq('user_id', uid).limit(1);
+    var aviso = document.getElementById('anExamesAviso');
+    if (aviso) aviso.style.display = (exames && exames.length > 0) ? 'flex' : 'none';
+  } catch (e) {
+    console.error('[anamnese] load error', e);
+    _anShowConfirmCard(null);
+  }
+}
+
+function _anShowConfirmCard(profile) {
+  var card = document.getElementById('anConfirmCard');
+  if (!card) return;
+  var LABELS = {
+    sexo: 'Sexo', idade: 'Idade', peso_kg: 'Peso', altura_cm: 'Altura',
+    objetivo: 'Objetivo', nivel_atividade: 'Atividade'
+  };
+  var DISPLAY = {
+    masculino: 'Masculino', feminino: 'Feminino',
+    hipertrofia: 'Hipertrofia', emagrecimento: 'Emagrecimento',
+    manutencao: 'Manutenção', recomposicao: 'Recomposição',
+    sedentario: 'Sedentário', leve: 'Leve', moderado: 'Moderado',
+    ativo: 'Ativo', muito_ativo: 'Muito ativo'
+  };
+  var keys = ['sexo', 'idade', 'peso_kg', 'altura_cm', 'objetivo', 'nivel_atividade'];
+  var hasMissing = false;
+  var html = keys.map(function(k) {
+    var raw = profile && profile[k] != null ? profile[k] : null;
+    var val = raw != null
+      ? (DISPLAY[raw] || (k === 'idade' ? raw + ' anos' : k === 'peso_kg' ? raw + ' kg' : k === 'altura_cm' ? raw + ' cm' : raw))
+      : null;
+    if (!val) hasMissing = true;
+    return '<div class="an-confirm-row">'
+      + '<span class="an-confirm-key">' + LABELS[k] + '</span>'
+      + '<span class="an-confirm-val' + (!val ? ' missing' : '') + '">'
+      + (val || 'não informado') + '</span>'
+      + '</div>';
+  }).join('');
+
+  if (profile) {
+    html = '<div style="font-size:0.78rem;color:var(--text-2);margin-bottom:12px">'
+      + '<strong style="color:var(--text)">' + (profile.nome || '') + '</strong> — revise e confirme'
+      + '</div>' + html;
+  }
+
+  if (hasMissing) {
+    html += '<button class="an-confirm-edit-btn" style="margin-top:10px;width:100%;padding:8px;border-radius:10px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25)" onclick="anToggle(\'anEditBasic\',true)">Preencher campos em branco</button>';
+  }
+
+  card.innerHTML = html;
+
+  // Se tem dados completos, não mostra o form de edição; caso contrário mostra
+  var editDiv = document.getElementById('anEditBasic');
+  if (editDiv) editDiv.style.display = hasMissing ? 'block' : 'none';
+  // Sincroniza chips de edição com o estado atual
+  if (hasMissing) _anSyncEditChips();
+}
+
+function _anSyncEditChips() {
+  if (!_anamneseState) return;
+  ['sexo','objetivo','nivel_atividade'].forEach(function(group) {
+    var val = _anamneseState[group];
+    if (!val) return;
+    var wrap = document.querySelector('#anEditBasic .an-chips[data-group="' + group + '"]');
+    if (!wrap) return;
+    wrap.querySelectorAll('.an-chip').forEach(function(chip) {
+      chip.classList.toggle('selected', chip.dataset.val === val);
+    });
+  });
+  ['idade','peso_kg','altura_cm'].forEach(function(f) {
+    var el = document.getElementById('an' + f.charAt(0).toUpperCase() + f.slice(1).replace('_',''));
+    if (el && _anamneseState[f]) el.value = _anamneseState[f];
+  });
+}
+
+function _anGoToStep(step) {
+  if (!_anamneseState) return;
+  _anamneseState._step = step;
+
+  // Atualiza steps visíveis
+  for (var i = 0; i < _anamneseTotalSteps; i++) {
+    var el = document.getElementById('an-step-' + i);
+    if (el) el.classList.toggle('active', i === step);
+  }
+
+  // Progresso
+  var pct = step === 0 ? 0 : Math.round((step / (_anamneseTotalSteps - 1)) * 100);
+  var bar = document.getElementById('anProgressBar');
+  if (bar) bar.style.width = pct + '%';
+  var lbl = document.getElementById('anProgressLabel');
+  if (lbl) lbl.textContent = _AN_STEP_LABELS[step] || '';
+
+  // Botão prev
+  var prev = document.getElementById('anamnesePrevBtn');
+  if (prev) prev.style.visibility = step === 0 ? 'hidden' : 'visible';
+
+  // Botão next
+  var next = document.getElementById('anNextBtn');
+  if (next) {
+    var isLast = step === _anamneseTotalSteps - 1;
+    next.innerHTML = isLast
+      ? 'Salvar e ' + (_anamneseState._fromDiet ? 'gerar dieta' : 'concluir')
+        + ' <i data-lucide="check" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>'
+      : 'Avançar <i data-lucide="arrow-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>';
+    next.classList.toggle('finish', isLast);
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons({ nodes: [next] });
+  }
+
+  // Preenche resumo no último passo
+  if (step === _anamneseTotalSteps - 1) _anBuildSummary();
+
+  // Sincroniza chips visuais com estado
+  _anSyncAllChips(step);
+
+  // Scroll ao topo do body
+  var body = document.getElementById('anBody');
+  if (body) body.scrollTop = 0;
+}
+
+function _anSyncAllChips(step) {
+  if (!_anamneseState) return;
+  var stepEl = document.getElementById('an-step-' + step);
+  if (!stepEl) return;
+  stepEl.querySelectorAll('.an-chips').forEach(function(wrap) {
+    var group = wrap.dataset.group;
+    if (!group || group.startsWith('_')) return;
+    var multi = wrap.dataset.multi === 'true';
+    var val = _anamneseState[group];
+    wrap.querySelectorAll('.an-chip').forEach(function(chip) {
+      if (multi) {
+        chip.classList.toggle('selected', Array.isArray(val) && val.includes(chip.dataset.val));
+      } else {
+        chip.classList.toggle('selected', chip.dataset.val === String(val ?? ''));
+      }
+    });
+  });
+
+  // Inputs de texto
+  var map = {
+    alimentos_nao_abre_mao: 'anAliNaoAbre',
+    alimentos_nao_come: 'anAliNaoCome',
+    observacoes: 'anObservacoes',
+    tipo_jejum: 'anTipoJejum',
+    medicamentos_continuos: 'anMedicamentos'
+  };
+  Object.keys(map).forEach(function(f) {
+    var el = document.getElementById(map[f]);
+    if (el && _anamneseState[f]) {
+      el.value = _anamneseState[f];
+      if (f === 'observacoes') {
+        var counter = document.getElementById('anObsCount');
+        if (counter) counter.textContent = el.value.length;
+      }
+    }
+  });
+}
+
+function anamneseNext() {
+  if (!_anamneseState) return;
+  var step = _anamneseState._step;
+  if (step === _anamneseTotalSteps - 1) {
+    _anSave();
+    return;
+  }
+  _anGoToStep(step + 1);
+}
+
+function anamnesePrev() {
+  if (!_anamneseState) return;
+  var step = _anamneseState._step;
+  if (step > 0) _anGoToStep(step - 1);
+}
+
+function anChip(el) {
+  if (!_anamneseState || !el) return;
+  var wrap = el.closest('.an-chips');
+  if (!wrap) return;
+  var group = wrap.dataset.group;
+  var multi = wrap.dataset.multi === 'true';
+  var val = el.dataset.val;
+  if (!group || !val) return;
+
+  // _flag groups: só atualiza UI, não salva no estado principal
+  if (group.startsWith('_')) {
+    wrap.querySelectorAll('.an-chip').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    return;
+  }
+
+  if (multi) {
+    var arr = Array.isArray(_anamneseState[group]) ? _anamneseState[group].slice() : [];
+    var idx = arr.indexOf(val);
+    if (idx >= 0) { arr.splice(idx, 1); el.classList.remove('selected'); }
+    else { arr.push(val); el.classList.add('selected'); }
+    _anamneseState[group] = arr;
+  } else {
+    wrap.querySelectorAll('.an-chip').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    _anamneseState[group] = val;
+  }
+
+  // Reação especial: compulsão frequente → mostra nota
+  if (group === 'tem_compulsao') {
+    var note = document.getElementById('anCompulsaoNote');
+    if (note) note.style.display = (val === 'frequente') ? 'flex' : 'none';
+  }
+  // Faz jejum
+  if (group === 'faz_jejum') {
+    anToggle('anJejumOpts', val !== 'nao');
+  }
+}
+
+// Chip exclusivo: ao selecionar "Nenhuma", limpa os outros do mesmo grupo
+function anChipExclusive(el, group) {
+  if (!_anamneseState) return;
+  var wrap = el.closest('.an-chips');
+  if (!wrap) return;
+  wrap.querySelectorAll('.an-chip').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  _anamneseState[group] = [];
+}
+
+function anField(field, value) {
+  if (!_anamneseState) return;
+  _anamneseState[field] = value;
+}
+
+function anToggle(id, show) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+function _anBuildSummary() {
+  var card = document.getElementById('anSummaryCard');
+  if (!card || !_anamneseState) return;
+  var s = _anamneseState;
+  var lines = [
+    s.refeicoes_por_dia ? '<strong>' + s.refeicoes_por_dia + '</strong> refeições/dia' : null,
+    s.faz_jejum && s.faz_jejum !== 'nao' ? 'Jejum: <strong>' + s.faz_jejum + (s.tipo_jejum ? ' (' + s.tipo_jejum + ')' : '') + '</strong>' : null,
+    s.restricoes_alimentares && s.restricoes_alimentares.length ? 'Restrições: <strong>' + s.restricoes_alimentares.join(', ') + '</strong>' : null,
+    s.condicoes_saude && s.condicoes_saude.length && !s.condicoes_saude.includes('nenhuma') ? 'Saúde: <strong>' + s.condicoes_saude.join(', ') + '</strong>' : null,
+    s.historico_dieta ? 'Histórico: <strong>' + s.historico_dieta + '</strong>' : null,
+    s.tem_compulsao === 'frequente' ? '<strong>⚠ Plano vai priorizar saciedade e volume</strong>' : null,
+    s.orcamento_alimentar ? 'Orçamento: <strong>' + s.orcamento_alimentar + '</strong>' : null,
+  ].filter(Boolean);
+  card.innerHTML = lines.length
+    ? '<div style="margin-bottom:6px;font-size:0.75rem;color:var(--text-2);font-weight:600">RESUMO DO SEU PERFIL</div>'
+      + lines.map(function(l) { return '<div>• ' + l + '</div>'; }).join('')
+    : '<div style="color:var(--text-2);font-size:0.75rem">Complete as etapas anteriores para ver o resumo.</div>';
+}
+
+async function _anSave() {
+  if (!_anamneseState) return;
+  var nextBtn = document.getElementById('anNextBtn');
+  if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = 'Salvando…'; }
+
+  try {
+    var uid = (window._sb && window._sb.auth && (await window._sb.auth.getUser()).data.user?.id)
+            || localStorage.getItem('kronia_uid');
+    if (!uid) throw new Error('Usuário não autenticado');
+
+    var payload = {
+      user_id: uid,
+      anamnese_completa: true,
+      anamnese_versao: (_anamneseState.anamnese_versao || 0) + 1,
+      updated_at: new Date().toISOString()
+    };
+
+    // Campos básicos (sempre salvar se preenchido)
+    var basicFields = ['sexo','idade','peso_kg','altura_cm','objetivo','nivel_atividade'];
+    basicFields.forEach(function(f) {
+      if (_anamneseState[f] != null) payload[f] = _anamneseState[f];
+    });
+
+    // Campos do wizard (salvar se preenchido)
+    var wizardFields = [
+      'refeicoes_por_dia','faz_jejum','tipo_jejum','come_fora_frequencia','quem_cozinha',
+      'restricoes_alimentares','condicoes_saude','medicamentos_continuos',
+      'alimentos_nao_abre_mao','alimentos_nao_come','orcamento_alimentar',
+      'agua_litros_dia','consumo_alcool','consumo_cafeina',
+      'historico_dieta','tem_compulsao'
+    ];
+    wizardFields.forEach(function(f) {
+      if (_anamneseState[f] != null) payload[f] = _anamneseState[f];
+    });
+
+    // Observações: appenda ao existente em vez de substituir
+    if (_anamneseState.observacoes) {
+      var { data: existing } = await window._sb.from('nutrition_profiles')
+        .select('observacoes').eq('user_id', uid).maybeSingle();
+      var prev = existing && existing.observacoes ? existing.observacoes + '\n' : '';
+      payload.observacoes = (prev + _anamneseState.observacoes).trim().slice(0, 1000);
+    }
+
+    // Faz jejum: converte string "16h"/"18h"/"outro" → boolean true; "nao" → false
+    if (payload.faz_jejum !== undefined) {
+      payload.faz_jejum = payload.faz_jejum !== 'nao';
+    }
+
+    // refeicoes_por_dia: garante número
+    if (payload.refeicoes_por_dia) {
+      payload.refeicoes_por_dia = parseInt(payload.refeicoes_por_dia, 10) || 4;
+    }
+
+    var { error } = await window._sb.from('nutrition_profiles').upsert(payload, { onConflict: 'user_id' });
+    if (error) console.error('[anamnese] save error', error.message, '— continuando com dados locais');
+
+    // Salva estado local também
+    try { localStorage.setItem('kronia_anamnese_v1', JSON.stringify(payload)); } catch (_) {}
+
+    if (typeof showToast === 'function') showToast('Perfil nutricional salvo!', 'success', 2500);
+    closeAnamnese();
+
+    // Se veio do diet flow, inicia geração da dieta
+    if (_anamneseState && _anamneseState._fromDiet) {
+      setTimeout(function() {
+        if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
+          window.KroniaDiet.generate({ source: 'post_anamnese' });
+        } else {
+          openOfficialDietEntry({ source: 'post_anamnese', forceNew: true });
+        }
+      }, 400);
+    }
+  } catch (e) {
+    console.error('[anamnese] save exception', e);
+    if (typeof showToast === 'function') showToast('Erro ao salvar. Tente novamente.', 'error', 3000);
+  } finally {
+    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Salvar'; }
+  }
+}
+
+// Verifica se anamnese está completa (para gate no startAIDiet)
+async function _anIsCompleted() {
+  try {
+    // Checa localStorage primeiro (rápido)
+    var cached = localStorage.getItem('kronia_anamnese_v1');
+    if (cached) {
+      var obj = JSON.parse(cached);
+      if (obj && obj.anamnese_completa) return true;
+    }
+    // Checa Supabase
+    var uid = (window._sb && window._sb.auth && (await window._sb.auth.getUser()).data.user?.id)
+            || localStorage.getItem('kronia_uid');
+    if (!uid) return false;
+    var { data } = await window._sb.from('nutrition_profiles').select('anamnese_completa').eq('user_id', uid).maybeSingle();
+    return !!(data && data.anamnese_completa);
+  } catch (_) { return false; }
+}
+
+/* ──────────────────────────────────────────────────
+   ANAMNESE — Banner + badge UI helpers
+────────────────────────────────────────────────── */
+
+// Mostra/esconde banner na tela de dieta e atualiza badge de configurações
+async function _anUpdateUIHints() {
+  try {
+    var done = await _anIsCompleted();
+    var banner = document.getElementById('anProfileBanner');
+    if (banner) banner.style.display = done ? 'none' : 'flex';
+    var badge = document.getElementById('settingsAnamneseBadge');
+    if (badge) badge.textContent = done ? 'Completo ✓' : 'Pendente';
+  } catch (_) {}
+}
+
+// Chama ao abrir a tela de dieta (navTo 'dieta') e ao abrir configurações
+(function() {
+  var _origNavTo = typeof navTo === 'function' ? navTo : null;
+  if (!_origNavTo) return;
+  window.navTo = function(tab) {
+    _origNavTo.apply(this, arguments);
+    if (tab === 'dieta' || tab === 'perfil') {
+      setTimeout(_anUpdateUIHints, 300);
+    }
   };
 })();
