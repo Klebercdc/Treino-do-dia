@@ -167,11 +167,11 @@
 <div id="loginScreen" style="display:none;position:fixed;inset:0;z-index:9000;background:#121212;flex-direction:column;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)">
 
   <!-- Background glow -->
-  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 20%,rgba(255,107,0,0.14) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(93,63,211,0.1) 0%,transparent 50%);z-index:0"></div>
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 20%,rgba(37,99,235,0.14) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(93,63,211,0.1) 0%,transparent 50%);z-index:0"></div>
 
   <!-- Top area — logo + tagline -->
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;padding-top:72px;text-align:center">
-    <div style="width:132px;height:132px;border-radius:30px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(255,107,0,0.28);margin-bottom:12px;overflow:hidden;padding:10px">
+    <div style="width:132px;height:132px;border-radius:30px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(37,99,235,0.28);margin-bottom:12px;overflow:hidden;padding:10px">
       <img src="splash.png" alt="Logo KRONIA" style="width:100%;height:100%;object-fit:contain"/>
     </div>
     <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:6px;letter-spacing:.04em">Seu coach inteligente de treino</div>
@@ -179,8 +179,8 @@
     <!-- Feature highlights -->
     <div style="margin-top:48px;display:flex;flex-direction:column;gap:14px;width:100%;padding:0 32px;text-align:left">
       <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8C00" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </div>
         <div>
           <div style="font-size:0.85rem;font-weight:700;color:#fff">Coach KRONOS com IA</div>
@@ -210,7 +210,7 @@
 
   <!-- Bottom CTA buttons -->
   <div style="position:relative;z-index:1;width:100%;padding:24px 24px 32px;display:flex;flex-direction:column;gap:12px">
-    <button onclick="showEmailLogin(false)" style="width:100%;background:linear-gradient(135deg,#FF8C00,#FF6B00);border:none;border-radius:100px;padding:16px;color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.04em;box-shadow:0 6px 24px rgba(255,107,0,0.45);-webkit-tap-highlight-color:transparent">
+    <button onclick="showEmailLogin(false)" style="width:100%;background:linear-gradient(135deg,#3B82F6,#2563EB);border:none;border-radius:100px;padding:16px;color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.04em;box-shadow:0 6px 24px rgba(37,99,235,0.45);-webkit-tap-highlight-color:transparent">
       Entrar na conta
     </button>
     <button onclick="showEmailLogin(true)" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:100px;padding:16px;color:#fff;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
@@ -229,7 +229,7 @@
 <!-- ═══ EMAIL LOGIN SCREEN (TELA 2) ═══ -->
 
 <div id="emailLoginScreen">
-  <div id="loginBgGrid" style="position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(ellipse at 50% 0%,rgba(255,107,0,0.12) 0%,transparent 55%),linear-gradient(rgba(255,107,0,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.02) 1px,transparent 1px);background-size:100% 100%,32px 32px,32px 32px;z-index:0"></div>
+  <div id="loginBgGrid" style="position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(ellipse at 50% 0%,rgba(37,99,235,0.12) 0%,transparent 55%),linear-gradient(rgba(37,99,235,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,0.02) 1px,transparent 1px);background-size:100% 100%,32px 32px,32px 32px;z-index:0"></div>
   <div id="emailLoginHeader">
     <button id="emailLoginBack" onclick="hideEmailLogin()" aria-label="Voltar">
       <i data-lucide="chevron-left" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75" aria-hidden="true"></i>
@@ -245,7 +245,7 @@
     <input id="loginEmail" class="login-input ff-input" type="email" placeholder="seu@email.com" autocomplete="email" aria-label="E-mail" aria-required="true" />
     <label for="loginPassword" class="sr-only">Senha</label>
     <input id="loginPassword" class="login-input ff-input" type="password" placeholder="Senha" autocomplete="current-password" aria-label="Senha" aria-required="true" />
-    <button id="forgotPassLink" onclick="authForgotPassword()" style="background:none;border:none;cursor:pointer;padding:0;color:rgba(255,107,0,0.7);font:inherit;text-align:right;font-size:12px;width:100%;margin-bottom:4px">Esqueci minha senha</button>
+    <button id="forgotPassLink" onclick="authForgotPassword()" style="background:none;border:none;cursor:pointer;padding:0;color:rgba(37,99,235,0.7);font:inherit;text-align:right;font-size:12px;width:100%;margin-bottom:4px">Esqueci minha senha</button>
     <button id="btnEmail" onclick="authSignInEmail()">Entrar</button>
     <div id="loginToggle" onclick="toggleLoginMode()" role="button" tabindex="0" aria-label="Alternar entre login e cadastro">Não tem conta? <span id="loginToggleLabel">Criar gratuitamente</span></div>
     <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.2);line-height:1.6">
@@ -263,11 +263,11 @@
   <!-- Header: logo + progress -->
   <div style="padding:env(safe-area-inset-top,20px) 20px 0;flex-shrink:0">
     <div style="display:flex;align-items:center;justify-content:space-between;padding-top:18px">
-      <div style="font-family:var(--display);font-size:1.1rem;color:#fff;letter-spacing:.05em">KRON<span style="color:#FF6B00">IA</span></div>
+      <div style="font-family:var(--display);font-size:1.1rem;color:#fff;letter-spacing:.05em">KRON<span style="color:#2563EB">IA</span></div>
       <div id="ksStepLabel" style="font-size:0.6rem;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,0.28)">PASSO 1 DE 3</div>
     </div>
     <div style="margin-top:14px;height:2px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden">
-      <div id="ksProgressBar" style="height:100%;background:#FF6B00;border-radius:2px;transition:width .45s cubic-bezier(.4,0,.2,1);width:33%"></div>
+      <div id="ksProgressBar" style="height:100%;background:#2563EB;border-radius:2px;transition:width .45s cubic-bezier(.4,0,.2,1);width:33%"></div>
     </div>
   </div>
 
@@ -277,8 +277,8 @@
     <!-- Step 1: Nome -->
     <div class="ks-step ks-step-active" id="ks-step-0">
       <div class="ks-step-inner">
-        <div class="ks-icon-wrap" style="background:rgba(255,107,0,0.1);border-color:rgba(255,107,0,0.25)">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="ks-icon-wrap" style="background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.25)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <h2 class="ks-title">Como quer<br>ser chamado?</h2>
         <p class="ks-sub">Seu coach usará isso para personalizar cada treino e recomendação.</p>
@@ -372,20 +372,20 @@
 
     <!-- SLIDE 0 — KRONOS: O Coach que tudo vê -->
     <div class="ff-slide ff-slide-active" id="ff-slide-0">
-      <div class="ff-slide-tag" style="background:rgba(255,107,0,0.18);border-color:rgba(255,107,0,0.5);color:#FF6B00;font-weight:900;letter-spacing:.12em">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="ff-slide-tag" style="background:rgba(37,99,235,0.18);border-color:rgba(37,99,235,0.5);color:#2563EB;font-weight:900;letter-spacing:.12em">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         SEU COACH DE IA
       </div>
-      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.4);box-shadow:0 16px 48px rgba(255,107,0,0.3)">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div class="ff-slide-icon" style="background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.4);box-shadow:0 16px 48px rgba(37,99,235,0.3)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
-      <h1 class="ff-slide-title">Olá. Eu sou<br><span style="color:#FF6B00">o KRONOS.</span></h1>
+      <h1 class="ff-slide-title">Olá. Eu sou<br><span style="color:#2563EB">o KRONOS.</span></h1>
       <p class="ff-slide-sub">Analiso seu RPE, sua fadiga acumulada, seu histórico de cargas e seus PRs — e decido o que você precisa fazer <strong style="color:rgba(255,255,255,0.8)">hoje</strong>. Sem achismo.</p>
       <div class="ff-visual-chat">
         <div class="ff-chat-msg ff-chat-user">Tô sentindo que tô empacado no supino</div>
         <div class="ff-chat-msg ff-chat-ai">
           <div class="ff-chat-ai-label">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             KRONOS
           </div>
           Confirmado: 3 semanas sem PR. Seu volume está acima do MRV. Precisa de deload — depois voltamos com variação de pegada e +5% de carga. Confie no processo.
@@ -395,12 +395,12 @@
 
     <!-- SLIDE 1 — O que o KRONOS vê que você não vê -->
     <div class="ff-slide" id="ff-slide-1">
-      <div class="ff-slide-tag" style="background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.4);color:#FF6B00;font-weight:900">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="ff-slide-tag" style="background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.4);color:#2563EB;font-weight:900">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         INTELIGÊNCIA REAL
       </div>
-      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.35);box-shadow:0 12px 40px rgba(255,107,0,0.2)">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      <div class="ff-slide-icon" style="background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.35);box-shadow:0 12px 40px rgba(37,99,235,0.2)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
       </div>
       <h1 class="ff-slide-title">Fadiga, carga<br>e risco — em<br>tempo real.</h1>
       <p class="ff-slide-sub">O KRONOS monitora sua <strong style="color:rgba(255,255,255,0.8)">Carga Aguda e Crônica</strong> (ACWR), calcula o risco de lesão e te avisa antes de você se machucar — baseado em ciência esportiva real.</p>
@@ -409,9 +409,9 @@
           <div style="font-size:0.55rem;font-weight:700;letter-spacing:.1em;color:rgba(16,185,129,0.7);margin-bottom:4px">ZONA ATUAL</div>
           <div style="font-size:0.8rem;font-weight:800;color:#10B981">Ótima</div>
         </div>
-        <div style="flex:1;background:rgba(255,107,0,0.1);border:1px solid rgba(255,107,0,0.25);border-radius:12px;padding:11px 10px;text-align:center">
-          <div style="font-size:0.55rem;font-weight:700;letter-spacing:.1em;color:rgba(255,107,0,0.7);margin-bottom:4px">FADIGA</div>
-          <div style="font-size:0.8rem;font-weight:800;color:#FF6B00">6.2/10</div>
+        <div style="flex:1;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.25);border-radius:12px;padding:11px 10px;text-align:center">
+          <div style="font-size:0.55rem;font-weight:700;letter-spacing:.1em;color:rgba(37,99,235,0.7);margin-bottom:4px">FADIGA</div>
+          <div style="font-size:0.8rem;font-weight:800;color:#2563EB">6.2/10</div>
         </div>
         <div style="flex:1;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:11px 10px;text-align:center">
           <div style="font-size:0.55rem;font-weight:700;letter-spacing:.1em;color:rgba(139,92,246,0.7);margin-bottom:4px">SEQUÊNCIA</div>
@@ -419,37 +419,37 @@
         </div>
       </div>
       <div class="ff-visual-chart" style="margin-top:14px">
-        <div class="ff-bar" style="height:38%;background:rgba(255,107,0,0.15)"></div>
-        <div class="ff-bar" style="height:55%;background:rgba(255,107,0,0.25)"></div>
-        <div class="ff-bar" style="height:48%;background:rgba(255,107,0,0.32)"></div>
-        <div class="ff-bar" style="height:72%;background:rgba(255,107,0,0.4)"></div>
-        <div class="ff-bar" style="height:65%;background:rgba(255,107,0,0.48)"></div>
-        <div class="ff-bar" style="height:85%;background:rgba(255,107,0,0.56)"></div>
-        <div class="ff-bar" style="height:90%;background:rgba(255,107,0,0.65)"></div>
-        <div class="ff-bar" style="height:100%;background:linear-gradient(180deg,#FF6B00,#FF9A3C)"></div>
+        <div class="ff-bar" style="height:38%;background:rgba(37,99,235,0.15)"></div>
+        <div class="ff-bar" style="height:55%;background:rgba(37,99,235,0.25)"></div>
+        <div class="ff-bar" style="height:48%;background:rgba(37,99,235,0.32)"></div>
+        <div class="ff-bar" style="height:72%;background:rgba(37,99,235,0.4)"></div>
+        <div class="ff-bar" style="height:65%;background:rgba(37,99,235,0.48)"></div>
+        <div class="ff-bar" style="height:85%;background:rgba(37,99,235,0.56)"></div>
+        <div class="ff-bar" style="height:90%;background:rgba(37,99,235,0.65)"></div>
+        <div class="ff-bar" style="height:100%;background:linear-gradient(180deg,#2563EB,#FF9A3C)"></div>
         <div class="ff-chart-badge">+34% vol.</div>
       </div>
     </div>
 
     <!-- SLIDE 2 — Dupla Progressão + Timer inteligente -->
     <div class="ff-slide" id="ff-slide-2">
-      <div class="ff-slide-tag" style="background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.35);color:#FF6B00;font-weight:900">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="ff-slide-tag" style="background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.35);color:#2563EB;font-weight:900">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         DENTRO DO TREINO
       </div>
-      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.35);box-shadow:0 12px 40px rgba(255,107,0,0.2)">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
+      <div class="ff-slide-icon" style="background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.35);box-shadow:0 12px 40px rgba(37,99,235,0.2)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
       </div>
       <h1 class="ff-slide-title">O KRONOS<br>decide o peso.<br>Você só levanta.</h1>
       <p class="ff-slide-sub">Dupla Progressão automática: o KRONOS calcula a carga ideal para cada série com base no seu RPE da última sessão. Timer inteligente ajusta o descanso pela intensidade do esforço.</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:11px 14px">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
           <span style="font-size:0.78rem;color:rgba(255,255,255,0.65)">RPE 9 detectado → <strong style="color:#10B981">descanse 3min</strong>, reduza 2,5% na próxima</span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:11px 14px">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5" stroke-linecap="round"><polyline points="23 6 13 16 8 11 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-          <span style="font-size:0.78rem;color:rgba(255,255,255,0.65)">RPE 7 com 12 reps → <strong style="color:#FF6B00">suba o peso</strong>, PR sendo construído</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"><polyline points="23 6 13 16 8 11 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span style="font-size:0.78rem;color:rgba(255,255,255,0.65)">RPE 7 com 12 reps → <strong style="color:#2563EB">suba o peso</strong>, PR sendo construído</span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:11px 14px">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -460,12 +460,12 @@
 
     <!-- SLIDE 3 — Ecossistema completo -->
     <div class="ff-slide" id="ff-slide-3">
-      <div class="ff-slide-tag" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.45);color:#FF6B00;font-weight:900">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="ff-slide-tag" style="background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.45);color:#2563EB;font-weight:900">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         ALÉM DO TREINO
       </div>
-      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.4);box-shadow:0 16px 48px rgba(255,107,0,0.28)">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <div class="ff-slide-icon" style="background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.4);box-shadow:0 16px 48px rgba(37,99,235,0.28)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
       </div>
       <h1 class="ff-slide-title">Dieta, Mesociclo<br>e Metabolismo<br>— num só app.</h1>
       <p class="ff-slide-sub">O KRONOS vai além do treino. Ele <strong style="color:rgba(255,255,255,0.8)">gera sua dieta</strong> com macros personalizados, cria seu <strong style="color:rgba(255,255,255,0.8)">mesociclo de 12 semanas</strong> e calcula seu metabolismo basal — tudo baseado nos seus dados reais.</p>
@@ -474,8 +474,8 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M12 2a9 9 0 0 1 9 9c0 4-2.5 7.5-6.5 8.5"/><path d="M7 10c-.5-3 1-5.5 5-7"/></svg>
           <span>Dieta IA</span>
         </div>
-        <div class="ff-eco-icon" style="background:rgba(255,107,0,0.12);border-color:rgba(255,107,0,0.3)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2"><rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="8" width="6" height="13" rx="1"/><rect x="16" y="13" width="6" height="8" rx="1"/></svg>
+        <div class="ff-eco-icon" style="background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.3)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="8" width="6" height="13" rx="1"/><rect x="16" y="13" width="6" height="8" rx="1"/></svg>
           <span>Mesociclo</span>
         </div>
         <div class="ff-eco-icon" style="background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3)">
@@ -491,12 +491,12 @@
 
     <!-- SLIDE 4 — CTA / FREE vs PRO vs ULTRA -->
     <div class="ff-slide" id="ff-slide-4">
-      <div class="ff-slide-tag" style="background:rgba(255,107,0,0.18);border-color:rgba(255,107,0,0.5);color:#FF6B00;font-weight:900;letter-spacing:.1em">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="#FF6B00"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="ff-slide-tag" style="background:rgba(37,99,235,0.18);border-color:rgba(37,99,235,0.5);color:#2563EB;font-weight:900;letter-spacing:.1em">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         DESBLOQUEIE O CRONOS
       </div>
-      <div class="ff-slide-icon" style="background:rgba(255,107,0,0.15);border-color:rgba(255,107,0,0.4);box-shadow:0 16px 48px rgba(255,107,0,0.32)">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div class="ff-slide-icon" style="background:rgba(37,99,235,0.15);border-color:rgba(37,99,235,0.4);box-shadow:0 16px 48px rgba(37,99,235,0.32)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </div>
       <h1 class="ff-slide-title">Do básico ao IA<br>intermediário e<br>premium completo.</h1>
       <p class="ff-slide-sub">No FREE você mantém o registro manual e ferramentas básicas. O PRO libera treino, dieta e chat com IA + análise intermediária. O ULTRA adiciona transforms, PDF premium e análise avançada.</p>
@@ -526,27 +526,27 @@
         </div>
 
         <!-- PRO -->
-        <div style="background:rgba(255,107,0,0.09);border:1px solid rgba(255,107,0,0.35);border-radius:12px;padding:11px 14px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:0;right:0;background:#FF6B00;color:#000;font-size:0.5rem;font-weight:900;padding:3px 8px;border-bottom-left-radius:8px;letter-spacing:.08em">INTERMEDIÁRIO</div>
+        <div style="background:rgba(37,99,235,0.09);border:1px solid rgba(37,99,235,0.35);border-radius:12px;padding:11px 14px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;right:0;background:#2563EB;color:#000;font-size:0.5rem;font-weight:900;padding:3px 8px;border-bottom-left-radius:8px;letter-spacing:.08em">INTERMEDIÁRIO</div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <span style="font-size:0.68rem;font-weight:900;letter-spacing:.1em;color:#FF6B00">PRO</span>
-            <span style="font-size:0.6rem;color:rgba(255,107,0,0.6)">R$29,90/mês</span>
+            <span style="font-size:0.68rem;font-weight:900;letter-spacing:.1em;color:#2563EB">PRO</span>
+            <span style="font-size:0.6rem;color:rgba(37,99,235,0.6)">R$29,90/mês</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:5px">
             <div style="display:flex;align-items:center;gap:7px;font-size:0.7rem;color:rgba(255,255,255,0.7)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Treino com IA liberado
             </div>
             <div style="display:flex;align-items:center;gap:7px;font-size:0.7rem;color:rgba(255,255,255,0.7)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Dieta com IA liberada
             </div>
             <div style="display:flex;align-items:center;gap:7px;font-size:0.7rem;color:rgba(255,255,255,0.7)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Chat com IA liberado
             </div>
             <div style="display:flex;align-items:center;gap:7px;font-size:0.7rem;color:rgba(255,255,255,0.7)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Análise premium: nível intermediário
             </div>
           </div>
@@ -875,7 +875,7 @@
       <span style="font-size:0.72rem;font-weight:700;color:var(--text-2)">Normal</span>
     </button>
     <button onclick="selecionarDisposicao('pique')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 8px;background:var(--bg2);border:2px solid var(--border);border-radius:18px;cursor:pointer;font-family:var(--font);transition:all .15s" data-disp="pique">
-      <div style="width:48px;height:48px;background:linear-gradient(145deg,#f97316,#c2410c);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35)">
+      <div style="width:48px;height:48px;background:linear-gradient(145deg,#2563EB,#c2410c);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35)">
         <i data-lucide="zap" class="lucide" width="26" height="26" stroke="#fff" fill="none" stroke-width="1.75"></i>
       </div>
       <span style="font-size:0.72rem;font-weight:700;color:var(--text-2)">No pique!</span>
@@ -899,10 +899,10 @@
     </div>
     <div id="aiMessages" style="flex:1;overflow-y:auto;padding:14px 10px 10px;display:flex;flex-direction:column;gap:8px;"></div>
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);">
-      <div id="aiFileAttachBadge" style="display:none;align-items:center;gap:6px;padding:6px 10px;margin-bottom:6px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:12px;font-size:12px;color:#f97316;">
+      <div id="aiFileAttachBadge" style="display:none;align-items:center;gap:6px;padding:6px 10px;margin-bottom:6px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:12px;font-size:12px;color:#2563EB;">
         <i data-lucide="file-text" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="1.75"></i>
         <span id="aiFileAttachName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-        <button onclick="clearKronosChatFile()" style="border:none;background:none;color:#f97316;cursor:pointer;padding:0;line-height:1;font-size:14px;opacity:.7;">×</button>
+        <button onclick="clearKronosChatFile()" style="border:none;background:none;color:#2563EB;cursor:pointer;padding:0;line-height:1;font-size:14px;opacity:.7;">×</button>
       </div>
       <input type="file" id="aiFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handleKronosChatFileSelect(this)">
       <div class="ai-input-wrap" style="display:flex;align-items:flex-end;background:#1C1C1E;border:1px solid rgba(255,255,255,0.08);border-radius:22px;padding:8px 10px 8px 12px;gap:8px;transition:border-color .2s;">
@@ -917,7 +917,7 @@
           <i data-lucide="mic" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
         </button>
         <button onclick="sendAI()" id="aiSendBtn" class="k-pressable"
-          style="width:36px;height:36px;border-radius:10px;background:#f97316;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          style="width:36px;height:36px;border-radius:10px;background:#2563EB;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <i data-lucide="send" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
         </button>
       </div>
@@ -953,7 +953,7 @@
         <img src="layout.png" alt="KRONIA" style="height:40px;object-fit:contain;flex-shrink:0" />
       </div>
       <div class="streak-badge" id="streakBadge" style="display:none">
-        <i data-lucide="flame" class="lucide" width="10" height="10" stroke="#d97706" fill="none" stroke-width="1.75"></i>
+        <i data-lucide="flame" class="lucide" width="10" height="10" stroke="#2563EB" fill="none" stroke-width="1.75"></i>
         <span id="streakNum">0</span>
       </div>
     </div>
@@ -979,10 +979,10 @@
     </div>
   </div>
   <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
-    <button onclick="openPlanModal();closeAuthMenu()" style="width:100%;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:9px 12px;color:var(--accent);font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+    <button onclick="openPlanModal();closeAuthMenu()" style="width:100%;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:10px;padding:9px 12px;color:var(--accent);font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
       <i data-lucide="package" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       Meu Plano
-      <span id="authMenuPlanBadge" style="margin-left:auto;font-size:0.68rem;padding:2px 7px;border-radius:20px;background:rgba(249,115,22,0.2);color:var(--accent)">FREE</span>
+      <span id="authMenuPlanBadge" style="margin-left:auto;font-size:0.68rem;padding:2px 7px;border-radius:20px;background:rgba(37,99,235,0.2);color:var(--accent)">FREE</span>
     </button>
     <button onclick="exportUserData();closeAuthMenu()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text-2);font-family:var(--font);font-size:0.82rem;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
       <i data-lucide="download" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="1.75"></i>
@@ -1040,6 +1040,89 @@
       </div>
       <div style="font-size:0.62rem;font-weight:700;color:rgba(192,132,252,0.6);border:1px solid rgba(168,85,247,0.3);border-radius:8px;padding:3px 8px" id="homeTrialDays">7d</div>
     </div>
+  </div>
+
+  <!-- ═══ SCORE ADAPTATIVO ═══ -->
+  <div class="score-adaptativo-card">
+    <div class="score-ring-wrap">
+      <svg class="score-ring-svg" viewBox="0 0 100 100">
+        <circle class="score-ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="7"/>
+        <circle class="score-ring-progress" cx="50" cy="50" r="42" fill="none" stroke-width="7"
+          stroke-dasharray="263.9" id="homeScoreRing" stroke-dashoffset="53"
+          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+      </svg>
+      <div class="score-ring-inner">
+        <div class="score-ring-num" id="homeScoreNum">87</div>
+        <div class="score-ring-label" id="homeScoreLabel">ÓTIMO</div>
+        <div class="score-ring-title">SCORE</div>
+      </div>
+    </div>
+    <div class="score-stats">
+      <div class="score-stat-row">
+        <div class="score-stat-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="score-stat-info">
+          <div class="score-stat-name">Carga Recuperada</div>
+          <div class="score-stat-val" id="scoreStatCarga">92%</div>
+        </div>
+      </div>
+      <div class="score-stat-row">
+        <div class="score-stat-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
+        </div>
+        <div class="score-stat-info">
+          <div class="score-stat-name">Prontidão</div>
+          <div class="score-stat-val" id="scoreStatProntidao">Alta</div>
+        </div>
+      </div>
+      <div class="score-stat-row">
+        <div class="score-stat-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a9 9 0 0 0-9 9c0 4.17 2.84 7.7 6.75 8.66A9 9 0 0 0 12 20"/><path d="M12 12V2"/></svg>
+        </div>
+        <div class="score-stat-info">
+          <div class="score-stat-name">Fadiga</div>
+          <div class="score-stat-val" id="scoreStatFadiga">Baixa</div>
+        </div>
+      </div>
+      <div class="score-stat-row">
+        <div class="score-stat-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </div>
+        <div class="score-stat-info">
+          <div class="score-stat-name">Tendência</div>
+          <div class="score-stat-val" id="scoreStatTendencia">Positiva</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ KRONOS RECOMENDA ═══ -->
+  <div class="kronos-rec-section">
+    <div class="kronos-rec-label">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      KRONOS RECOMENDA
+    </div>
+    <div class="kronos-rec-card" onclick="openStartWorkoutScreen()">
+      <div class="kronos-rec-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.75" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
+      </div>
+      <div class="kronos-rec-body">
+        <div class="kronos-rec-title" id="kronosRecTitle">Força Superior</div>
+        <div class="kronos-rec-meta">
+          <span id="kronosRecType">Hipertrofia</span>
+          <span class="tg-meta-dot"></span>
+          <span id="kronosRecDuration">60 min</span>
+        </div>
+      </div>
+      <div class="kronos-rec-arrow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+    <button class="kronos-rec-initiate-btn" onclick="openStartWorkoutScreen()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      INICIAR TREINO
+    </button>
   </div>
 
   <!-- ═══ HERO ACTION CARDS — TREINO + DIETA ═══ -->
@@ -1217,8 +1300,8 @@
             stroke-dasharray="314" id="homeStreakRing" stroke-dashoffset="235"
             stroke-linecap="round" transform="rotate(-90 60 60)"/>
           <!-- Flame icons (dinâmicos conforme streak) -->
-          <text id="homeStreakFlame1" x="50" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.6)" style="display:none">🔥</text>
-          <text id="homeStreakFlame2" x="70" y="48" text-anchor="middle" font-size="10" fill="rgba(255,140,0,0.4)" style="display:none">🔥</text>
+          <text id="homeStreakFlame1" x="50" y="48" text-anchor="middle" font-size="10" fill="rgba(59,130,246,0.6)" style="display:none">🔥</text>
+          <text id="homeStreakFlame2" x="70" y="48" text-anchor="middle" font-size="10" fill="rgba(59,130,246,0.4)" style="display:none">🔥</text>
         </svg>
         <div class="weekly-ring-inner">
           <div class="weekly-ring-num" id="homeStreak">0</div>
@@ -1286,7 +1369,7 @@
 
   <div class="home-tools-grid" style="grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
     <div class="home-tool-card" onclick="openBasalSheet()">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
+      <div class="home-tool-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
         <i data-lucide="calculator" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
       </div>
       <div class="home-tool-name">Calculadora Basal</div>
@@ -1335,7 +1418,7 @@
   <div class="home-section-title">Acesso rápido</div>
   <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
     <div class="home-quick-card k-pressable" onclick="navTo('programa');openConfig()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
         <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
       </div>
       <div>
@@ -1362,7 +1445,7 @@
       </div>
     </div>
     <div class="home-quick-card k-pressable" onclick="openInstrucoes()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#f97316,#c2410c)">
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
         <i data-lucide="help-circle" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
       </div>
       <div>
@@ -1388,7 +1471,7 @@
     <div class="recommended-card" onclick="openStartWorkoutScreen()" id="recommendedWorkoutCard">
       <div class="achievement-card-title">TREINO RECOMENDADO</div>
       <div class="recommended-card-thumb">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,140,0,0.7)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.7)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
       </div>
       <div class="achievement-card-desc" id="recommendedWorkoutDesc">Treino A:<br>Foco força superior</div>
     </div>
@@ -1440,7 +1523,7 @@
       <!-- MANUAL -->
       <div class="diet-choice-card diet-choice-card--orange" onclick="startManualDiet()">
         <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--orange">
-          <i data-lucide="clipboard-edit" width="38" height="38" stroke="#F97316" fill="none" stroke-width="1.5"></i>
+          <i data-lucide="clipboard-edit" width="38" height="38" stroke="#2563EB" fill="none" stroke-width="1.5"></i>
         </div>
         <h3 class="diet-choice-card-title">MANUAL</h3>
         <p class="diet-choice-card-desc">Monte sua dieta do seu jeito</p>
@@ -1793,9 +1876,9 @@
     </div>
     <div class="heatmap-legend">
       <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:var(--bg2);border:1px solid var(--border)"></div>Não trabalhado</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(249,115,22,0.3)"></div>Leve</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(249,115,22,0.6)"></div>Moderado</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(249,115,22,0.9)"></div>Intenso</div>
+      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.3)"></div>Leve</div>
+      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.6)"></div>Moderado</div>
+      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.9)"></div>Intenso</div>
     </div>
   </div>
   <div style="height:100px"></div>
@@ -1879,19 +1962,19 @@
   <div class="settings-section-label">Conta</div>
   <div class="settings-group">
     <div class="settings-row" onclick="closeSettingsScreen();openEditarPerfil()">
-      <div class="settings-row-icon" style="background:rgba(249,115,22,0.22);color:#f97316">
+      <div class="settings-row-icon" style="background:rgba(37,99,235,0.22);color:#2563EB">
         <i data-lucide="user" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </div>
       <span class="settings-row-label">Editar Perfil</span>
       <i data-lucide="chevron-right" class="lucide settings-row-arrow" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
     </div>
     <div class="settings-row" onclick="openPricingScreen()">
-      <div class="settings-row-icon" style="background:rgba(249,115,22,0.22);color:#f97316">
+      <div class="settings-row-icon" style="background:rgba(37,99,235,0.22);color:#2563EB">
         <i data-lucide="zap" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </div>
       <span class="settings-row-label">Plano</span>
       <span class="settings-row-value">
-        <span id="settingsPlanBadge" class="settings-plan-badge" style="background:rgba(249,115,22,0.15);color:var(--accent);border:1px solid rgba(249,115,22,0.3)">FREE</span>
+        <span id="settingsPlanBadge" class="settings-plan-badge" style="background:rgba(37,99,235,0.15);color:var(--accent);border:1px solid rgba(37,99,235,0.3)">FREE</span>
       </span>
       <i data-lucide="chevron-right" class="lucide settings-row-arrow" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
     </div>
@@ -1942,7 +2025,7 @@
       <i data-lucide="chevron-right" class="lucide settings-row-arrow" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
     </div>
     <div class="settings-row" onclick="openTransformsScreen()">
-      <div class="settings-row-icon" style="background:rgba(249,115,22,0.22);color:#f97316">
+      <div class="settings-row-icon" style="background:rgba(37,99,235,0.22);color:#2563EB">
         <i data-lucide="network" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </div>
       <span class="settings-row-label">KRONIA TRANSFORMS</span>
@@ -2353,7 +2436,7 @@
 
     <!-- Suplementos -->
     <div onclick="orientPosTreinoSupl()" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;gap:6px">
-      <div style="width:34px;height:34px;border-radius:10px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);display:flex;align-items:center;justify-content:center">
+      <div style="width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25);display:flex;align-items:center;justify-content:center">
         <i data-lucide="zap" class="lucide" width="16" height="16" stroke="var(--accent)" fill="none" stroke-width="1.75"></i>
       </div>
       <div style="font-size:0.82rem;font-weight:700;color:var(--text)">Suplementação</div>
@@ -2372,7 +2455,7 @@
   </div>
 
   <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px">
-    <button onclick="salvarTreino()" style="background:linear-gradient(135deg,var(--accent),#fb923c);border:1.5px solid rgba(249,115,22,.55);border-radius:14px;padding:12px 14px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
+    <button onclick="salvarTreino()" style="background:linear-gradient(135deg,var(--accent),#fb923c);border:1.5px solid rgba(37,99,235,.55);border-radius:14px;padding:12px 14px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:7px">
       <i data-lucide="save" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
       Salvar Treino
     </button>
@@ -2530,6 +2613,448 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     GERAR TREINO — WIZARD
+══════════════════════════════════════════ -->
+<div id="gerarTreinoScreen">
+  <div class="gt-header">
+    <button class="gt-back-btn" onclick="closeGerarTreino()">
+      <i data-lucide="chevron-left" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+    </button>
+    <div class="gt-header-title">Gerar Treino</div>
+    <div class="gt-steps-indicator" id="gtDotsWrap">
+      <div class="gt-step-dot active" id="gtDot0"></div>
+      <div class="gt-step-dot" id="gtDot1"></div>
+      <div class="gt-step-dot" id="gtDot2"></div>
+      <div class="gt-step-dot" id="gtDot3"></div>
+    </div>
+  </div>
+  <div class="gt-progress-bar-wrap">
+    <div class="gt-progress-bar" id="gtProgressBar" style="width:25%"></div>
+  </div>
+  <div class="gt-body">
+
+    <!-- Step 0: Tipo de treino -->
+    <div class="gt-step active" id="gt-step-0">
+      <div class="gt-step-q">Passo 1 de 4</div>
+      <div class="gt-step-title">Que tipo de treino<br>você quer gerar?</div>
+      <div class="gt-step-sub">Isso nos ajuda a estruturar o melhor plano para você.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-tipo="completo" onclick="gtSelectTipo(this)">
+          <div class="gt-tipo-icon">
+            <i data-lucide="dumbbell" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <div class="gt-tipo-body">
+            <div class="gt-tipo-name">Treino completo</div>
+            <div class="gt-tipo-desc">Plano completo com todos os detalhes</div>
+          </div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-tipo="especifico" onclick="gtSelectTipo(this)">
+          <div class="gt-tipo-icon">
+            <i data-lucide="target" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <div class="gt-tipo-body">
+            <div class="gt-tipo-name">Treino específico</div>
+            <div class="gt-tipo-desc">Focar em um grupo muscular</div>
+          </div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-tipo="ajuste" onclick="gtSelectTipo(this)">
+          <div class="gt-tipo-icon">
+            <i data-lucide="settings-2" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <div class="gt-tipo-body">
+            <div class="gt-tipo-name">Ajuste de protocolo</div>
+            <div class="gt-tipo-desc">Modificar treino ou fase atual</div>
+          </div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Objetivo -->
+    <div class="gt-step" id="gt-step-1">
+      <div class="gt-step-q">Passo 2 de 4</div>
+      <div class="gt-step-title">Objetivo principal</div>
+      <div class="gt-step-sub">Qual é o foco deste ciclo?</div>
+      <div class="gt-obj-grid">
+        <div class="gt-obj-card" data-obj="hipertrofia" onclick="gtSelectObj(this)">
+          <div class="gt-obj-icon">
+            <i data-lucide="dumbbell" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <div class="gt-obj-name">Hipertrofia</div>
+        </div>
+        <div class="gt-obj-card" data-obj="forca" onclick="gtSelectObj(this)">
+          <div class="gt-obj-icon">
+            <i data-lucide="zap" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <div class="gt-obj-name">Força</div>
+        </div>
+        <div class="gt-obj-card" data-obj="performance" onclick="gtSelectObj(this)">
+          <div class="gt-obj-icon">
+            <i data-lucide="star" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
+          </div>
+          <div class="gt-obj-name">Performance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Dias -->
+    <div class="gt-step" id="gt-step-2">
+      <div class="gt-step-q">Passo 3 de 4</div>
+      <div class="gt-step-title">Dias de treino<br>por semana</div>
+      <div class="gt-step-sub">Quantos dias você tem disponíveis?</div>
+      <div class="gt-days-row">
+        <button class="gt-day-btn" data-days="2" onclick="gtSelectDays(this)">2</button>
+        <button class="gt-day-btn" data-days="3" onclick="gtSelectDays(this)">3</button>
+        <button class="gt-day-btn" data-days="4" onclick="gtSelectDays(this)">4</button>
+        <button class="gt-day-btn" data-days="5" onclick="gtSelectDays(this)">5</button>
+        <button class="gt-day-btn" data-days="6" onclick="gtSelectDays(this)">6</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Equipamentos -->
+    <div class="gt-step" id="gt-step-3">
+      <div class="gt-step-q">Passo 4 de 4</div>
+      <div class="gt-step-title">Equipamentos<br>disponíveis</div>
+      <div class="gt-step-sub">Selecione o que você tem acesso.</div>
+      <select class="gt-equip-select" id="gtEquipSelect">
+        <option value="academia_completa">Academia completa</option>
+        <option value="academia_basica">Academia básica</option>
+        <option value="casa_halteres">Casa com halteres</option>
+        <option value="casa_sem">Casa sem equipamento</option>
+        <option value="hotel">Academia de hotel</option>
+      </select>
+    </div>
+
+    <div style="height:24px"></div>
+  </div>
+
+  <div class="gt-footer">
+    <button class="gt-continuar-btn" id="gtContinuarBtn" disabled onclick="gtNext()">
+      Continuar
+      <i data-lucide="chevron-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TREINO GERADO
+══════════════════════════════════════════ -->
+<div id="treinoGeradoScreen">
+  <div class="tg-header">
+    <button class="tg-back-btn" onclick="closeTreinoGerado()">
+      <i data-lucide="chevron-left" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+    </button>
+    <div class="tg-header-label">Treino Gerado</div>
+    <button class="tg-menu-btn">
+      <i data-lucide="more-horizontal" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"></i>
+    </button>
+  </div>
+  <div class="tg-scroll app-scroll">
+    <div class="tg-title-area">
+      <div class="tg-workout-title" id="tgTreinoTitle">Força Superior</div>
+      <div class="tg-workout-meta">
+        <span id="tgTreinoObj">Hipertrofia</span>
+        <span class="tg-meta-dot"></span>
+        <span id="tgTreinoDuration">60 min</span>
+      </div>
+    </div>
+
+    <div class="tg-stats-bar">
+      <div class="tg-stat-item">
+        <div class="tg-stat-num" id="tgStatSeries">14</div>
+        <div class="tg-stat-lbl">Séries totais</div>
+      </div>
+      <div class="tg-stat-item">
+        <div class="tg-stat-num" id="tgStatExercicios">6</div>
+        <div class="tg-stat-lbl">Exercícios</div>
+      </div>
+      <div class="tg-stat-item">
+        <div class="tg-stat-num" id="tgStatVolume">Médio</div>
+        <div class="tg-stat-lbl">Volume</div>
+      </div>
+    </div>
+
+    <div class="tg-block-title">Bloco Principal</div>
+    <div id="tgExerciciosPrincipais">
+      <div class="tg-ex-item">
+        <div class="tg-ex-num">1</div>
+        <div class="tg-ex-body">
+          <div class="tg-ex-name">Supino Reto</div>
+          <div class="tg-ex-detail">4 séries · 6–8 reps</div>
+        </div>
+        <div class="tg-ex-rpe">RPE 8</div>
+      </div>
+      <div class="tg-ex-item">
+        <div class="tg-ex-num">2</div>
+        <div class="tg-ex-body">
+          <div class="tg-ex-name">Remada Curvada</div>
+          <div class="tg-ex-detail">4 séries · 6–8 reps</div>
+        </div>
+        <div class="tg-ex-rpe">RPE 8</div>
+      </div>
+      <div class="tg-ex-item">
+        <div class="tg-ex-num">3</div>
+        <div class="tg-ex-body">
+          <div class="tg-ex-name">Desenvolvimento Militar</div>
+          <div class="tg-ex-detail">3 séries · 8–10 reps</div>
+        </div>
+        <div class="tg-ex-rpe">RPE 8</div>
+      </div>
+    </div>
+
+    <div class="tg-block-title">Acessórios <span style="font-size:0.6rem;color:rgba(255,255,255,0.25);font-weight:600;letter-spacing:0">3 exercícios</span></div>
+    <div id="tgExerciciosAcessorios">
+      <div class="tg-ex-item">
+        <div class="tg-ex-num">4</div>
+        <div class="tg-ex-body">
+          <div class="tg-ex-name">Crossover</div>
+          <div class="tg-ex-detail">3 séries · 12–15 reps</div>
+        </div>
+        <div class="tg-ex-rpe">RPE 7</div>
+      </div>
+      <div class="tg-ex-item">
+        <div class="tg-ex-num">5</div>
+        <div class="tg-ex-body">
+          <div class="tg-ex-name">Rosca Direta</div>
+          <div class="tg-ex-detail">3 séries · 10–12 reps</div>
+        </div>
+        <div class="tg-ex-rpe">RPE 7</div>
+      </div>
+      <div class="tg-ex-item">
+        <div class="tg-ex-num">6</div>
+        <div class="tg-ex-body">
+          <div class="tg-ex-name">Tríceps Corda</div>
+          <div class="tg-ex-detail">3 séries · 12–15 reps</div>
+        </div>
+        <div class="tg-ex-rpe">RPE 7</div>
+      </div>
+    </div>
+
+    <div class="tg-progressao-card">
+      <div class="tg-prog-label">Progressão Prevista</div>
+      <div class="tg-prog-val" id="tgProgVal">+2,5%</div>
+      <div style="font-size:0.65rem;color:rgba(255,255,255,0.3);margin-bottom:10px">Carga nas próximas semanas</div>
+      <div class="tg-prog-chart">
+        <div class="tg-prog-bar-item" style="height:40%"></div>
+        <div class="tg-prog-bar-item" style="height:55%"></div>
+        <div class="tg-prog-bar-item" style="height:50%"></div>
+        <div class="tg-prog-bar-item" style="height:70%"></div>
+        <div class="tg-prog-bar-item" style="height:65%"></div>
+        <div class="tg-prog-bar-item" style="height:85%"></div>
+        <div class="tg-prog-bar-item current" style="height:100%"></div>
+      </div>
+    </div>
+
+    <button class="tg-iniciar-btn" onclick="iniciarTreinoGerado()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      INICIAR TREINO
+    </button>
+    <div style="height:24px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     EXECUÇÃO FOCADA
+══════════════════════════════════════════ -->
+<div id="execucaoScreen">
+  <div class="exec-header">
+    <button class="exec-back-btn" onclick="closeExecucao()">
+      <i data-lucide="chevron-left" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+    </button>
+    <div class="exec-series-badge">Série <span id="execSerieAtual">1</span> de <span id="execSerieTotal">4</span></div>
+    <div class="exec-series-progress" id="execSeriesProgress">
+      <div class="exec-series-dot current"></div>
+      <div class="exec-series-dot"></div>
+      <div class="exec-series-dot"></div>
+      <div class="exec-series-dot"></div>
+    </div>
+    <button style="width:32px;height:32px;background:none;border:none;color:rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+      <i data-lucide="more-horizontal" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i>
+    </button>
+  </div>
+
+  <div class="exec-exercise-area">
+    <div class="exec-exercise-name" id="execExerciseName">Supino Reto</div>
+    <div class="exec-muscle-name">
+      <i data-lucide="map-pin" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"></i>
+      <span id="execMuscleName">Peito · Peitoral Maior</span>
+    </div>
+  </div>
+
+  <!-- Body diagram SVG -->
+  <div class="exec-body-diagram">
+    <svg class="exec-body-svg" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Head -->
+      <ellipse cx="60" cy="18" rx="12" ry="14" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+      <!-- Neck -->
+      <rect x="56" y="30" width="8" height="8" rx="2" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+      <!-- Torso -->
+      <path d="M40 38 Q35 42 33 55 L32 85 Q32 90 40 92 L80 92 Q88 90 88 85 L87 55 Q85 42 80 38 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+      <!-- Chest highlight (active muscle) -->
+      <path id="bodyChestLeft" d="M42 42 Q38 46 37 58 L37 70 L60 70 L60 42 Z" fill="rgba(37,99,235,0.35)" stroke="#2563EB" stroke-width="1.5" opacity="0.9"/>
+      <path id="bodyChestRight" d="M78 42 Q82 46 83 58 L83 70 L60 70 L60 42 Z" fill="rgba(37,99,235,0.35)" stroke="#2563EB" stroke-width="1.5" opacity="0.9"/>
+      <!-- Abs -->
+      <rect x="48" y="72" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <rect x="62" y="72" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <rect x="48" y="81" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <rect x="62" y="81" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <!-- Left arm -->
+      <path d="M40 40 Q30 44 26 60 L25 80 Q25 85 29 85 L33 85 L35 60 L40 45 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+      <!-- Right arm -->
+      <path d="M80 40 Q90 44 94 60 L95 80 Q95 85 91 85 L87 85 L85 60 L80 45 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+      <!-- Forearms -->
+      <path d="M25 80 Q22 95 23 108 L27 108 L30 95 L33 80 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <path d="M95 80 Q98 95 97 108 L93 108 L90 95 L87 80 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <!-- Hips -->
+      <path d="M32 90 Q32 100 36 104 L84 104 Q88 100 88 90 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <!-- Left leg -->
+      <path d="M38 102 L34 150 Q33 155 37 156 L44 156 L46 108 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <!-- Right leg -->
+      <path d="M82 102 L86 150 Q87 155 83 156 L76 156 L74 108 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <!-- Left calf -->
+      <path d="M34 152 Q33 170 35 178 L42 178 L44 158 L37 152 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <!-- Right calf -->
+      <path d="M86 152 Q87 170 85 178 L78 178 L76 158 L83 152 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="exec-controls">
+    <div class="exec-ctrl-row">
+      <div class="exec-ctrl-label">Carga (kg)</div>
+      <div class="exec-ctrl-stepper">
+        <button class="exec-ctrl-btn" onclick="execAdjust('carga',-2.5)">−</button>
+        <div class="exec-ctrl-val" id="execCargaVal">80</div>
+        <button class="exec-ctrl-btn" onclick="execAdjust('carga',2.5)">+</button>
+      </div>
+    </div>
+    <div class="exec-ctrl-row">
+      <div class="exec-ctrl-label">Repetições</div>
+      <div class="exec-ctrl-stepper">
+        <button class="exec-ctrl-btn" onclick="execAdjust('reps',-1)">−</button>
+        <div class="exec-ctrl-val" id="execRepsVal">8</div>
+        <button class="exec-ctrl-btn" onclick="execAdjust('reps',1)">+</button>
+      </div>
+    </div>
+    <div class="exec-ctrl-row">
+      <div class="exec-ctrl-label">RPE</div>
+      <div class="exec-ctrl-stepper">
+        <button class="exec-ctrl-btn" onclick="execAdjust('rpe',-1)">−</button>
+        <div class="exec-ctrl-val" id="execRpeVal">8</div>
+        <button class="exec-ctrl-btn" onclick="execAdjust('rpe',1)">+</button>
+      </div>
+    </div>
+    <div class="exec-descanso-row">
+      <div class="exec-descanso-label">Descanso</div>
+      <div class="exec-descanso-val" id="execDescansoVal">01:15</div>
+      <button class="exec-pular-btn" onclick="execPularDescanso()">PULAR</button>
+    </div>
+  </div>
+
+  <div class="exec-footer">
+    <button class="exec-concluir-btn" onclick="execConcluirSerie()">
+      CONCLUIR SÉRIE
+    </button>
+    <div class="exec-encerrar-link" onclick="closeExecucao()">ENCERRAR EXERCÍCIO</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PROTOCOLOS
+══════════════════════════════════════════ -->
+<div id="protocolosScreen">
+  <div class="proto-header">
+    <div class="proto-title-row">
+      <div class="proto-screen-title">Protocolos</div>
+      <div class="proto-tabs">
+        <button class="proto-tab active" onclick="protoSetTab('ativo',this)">Ativo</button>
+        <button class="proto-tab" onclick="protoSetTab('historico',this)">Histórico</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="proto-scroll app-scroll" id="protoScroll">
+
+    <!-- Fase ativa -->
+    <div id="protoAtivoContent">
+      <div class="proto-fase-badge">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="#60A5FA"><circle cx="12" cy="12" r="10"/></svg>
+        Semana atual
+      </div>
+      <div class="proto-fase-title" id="protoFaseTitulo">Hipertrofia Estruturada</div>
+      <div class="proto-fase-desc" id="protoFaseDesc">Volume moderado-alto com foco em progressão de carga e técnica.</div>
+
+      <div class="proto-stats-grid">
+        <div class="proto-stat-card">
+          <div class="proto-stat-num" id="protoStatConcluido">57%</div>
+          <div class="proto-stat-lbl">Concluído</div>
+        </div>
+        <div class="proto-stat-card">
+          <div class="proto-stat-num" id="protoStatSeries">18/24</div>
+          <div class="proto-stat-lbl">Séries Semanais</div>
+        </div>
+        <div class="proto-stat-card">
+          <div class="proto-stat-num" id="protoStatRPE">7.8</div>
+          <div class="proto-stat-lbl">RPE Médio</div>
+        </div>
+      </div>
+
+      <div class="proto-section-title">Dados da fase</div>
+      <div class="proto-dados-card">
+        <div class="proto-dado-row">
+          <div class="proto-dado-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Volume semanal
+          </div>
+          <div class="proto-dado-val">
+            <div>
+              <div style="text-align:right">18/24 séries</div>
+              <div class="proto-progress-bar-wrap" style="width:80px">
+                <div class="proto-progress-bar" id="protoVolBar" style="width:75%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="proto-dado-row">
+          <div class="proto-dado-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3-9 4 18 3-9h6"/></svg>
+            Frequência
+          </div>
+          <div class="proto-dado-val">
+            5 treinos / semana
+            <span class="proto-dado-sub-val"></span>
+          </div>
+        </div>
+        <div class="proto-dado-row">
+          <div class="proto-dado-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Próxima adaptação
+          </div>
+          <div class="proto-dado-val" id="protoProxAdaptacao">
+            12 jun. de 2025
+          </div>
+        </div>
+      </div>
+
+      <button class="proto-ver-btn" onclick="abrirMesociclo()">
+        VER PERIODIZAÇÃO COMPLETA
+        <i data-lucide="chevron-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+      </button>
+
+      <div style="height:24px"></div>
+    </div>
+
+    <!-- Histórico (placeholder) -->
+    <div id="protoHistoricoContent" style="display:none;padding:40px 0;text-align:center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 12px"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+      <div style="font-size:0.82rem;color:rgba(255,255,255,0.25)">Nenhum protocolo anterior</div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Footer -->
 
 <div class="footer-actions">
@@ -2537,17 +3062,17 @@
     <span class="btn-icon"><i data-lucide="home" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Início</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');closeHome()">
+  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');openGerarTreino()">
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-dieta" onclick="navTo('dieta');openDietChoiceScreen()">
-    <span class="btn-icon"><i data-lucide="apple" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
-    <span class="btn-label">Dieta</span>
+  <button class="btn btn-nav k-pressable" id="nav-protocolos" onclick="navTo('protocolos');openProtocolos()">
+    <span class="btn-icon"><i data-lucide="layout-list" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
+    <span class="btn-label">Protocolos</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-evolucao" onclick="navTo('evolucao');openEvolutionDataScreen()">
-    <span class="btn-icon"><i data-lucide="trending-up" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
-    <span class="btn-label">Evolução</span>
+  <button class="btn btn-nav k-pressable" id="nav-kronos" onclick="navTo('kronos');openAI()">
+    <span class="btn-icon"><i data-lucide="zap" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
+    <span class="btn-label">KRONOS</span>
   </button>
   <button class="btn btn-nav k-pressable" id="nav-perfil" onclick="navTo('perfil');openPerfil()">
     <span class="btn-icon"><i data-lucide="user-circle" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
@@ -2757,7 +3282,7 @@
           <div id="dietaBasalTDEERows" style="display:flex;flex-direction:column;gap:3px"></div>
         </div>
         <!-- Meta calórica -->
-        <div style="padding:12px;border-bottom:1px solid var(--border);background:rgba(255,107,0,0.05)">
+        <div style="padding:12px;border-bottom:1px solid var(--border);background:rgba(37,99,235,0.05)">
           <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Meta calórica · <span id="dietaBasalObjLabel" style="color:var(--accent)">—</span></div>
           <div id="dietaBasalMeta" style="font-size:1.5rem;font-weight:800;color:var(--accent)">—</div>
           <div id="dietaBasalDelta" style="font-size:0.68rem;color:var(--muted);margin-top:2px"></div>
@@ -3012,7 +3537,7 @@
         <div class="te-ff-logo-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </div>
-        <span class="transforms-header-title">KRONIA <span style="color:#FF6B00">TRANSFORMS</span></span>
+        <span class="transforms-header-title">KRONIA <span style="color:#2563EB">TRANSFORMS</span></span>
       </div>
     </div>
     <span class="transforms-kernel-badge" style="display:inline-flex;align-items:center;gap:4px">MALTEGO KERNEL <i data-lucide="zap" class="lucide" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2.5"></i></span>
@@ -3086,8 +3611,8 @@
 
       <div id="kronosAnalysis" class="transforms-kronos-box" style="display:none">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
-          <i data-lucide="zap" class="lucide" width="15" height="15" stroke="#FF6B00" fill="none" stroke-width="1.75"></i>
-          <span style="font-size:0.7rem;font-weight:700;color:#FF6B00;letter-spacing:1px">KRONOS — ANÁLISE DEFENSIVA</span>
+          <i data-lucide="zap" class="lucide" width="15" height="15" stroke="#2563EB" fill="none" stroke-width="1.75"></i>
+          <span style="font-size:0.7rem;font-weight:700;color:#2563EB;letter-spacing:1px">KRONOS — ANÁLISE DEFENSIVA</span>
         </div>
         <p id="kronosAnalysisText" style="font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.7;margin:0"></p>
       </div>
@@ -3225,14 +3750,14 @@
           <div style="display:flex;align-items:center;gap:11px;font-size:0.8rem;color:rgba(255,255,255,0.2)"><span style="flex-shrink:0">✕</span>KRONIA TRANSFORMS</div>
           <div style="display:flex;align-items:center;gap:11px;font-size:0.8rem;color:rgba(255,255,255,0.2)"><span style="flex-shrink:0">✕</span>PDF premium · Análise premium</div>
         </div>
-        <div id="planFreeUsage" style="margin-top:14px;padding:9px 12px;border-radius:10px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.15);font-size:0.72rem;color:var(--accent);display:none"></div>
+        <div id="planFreeUsage" style="margin-top:14px;padding:9px 12px;border-radius:10px;background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.15);font-size:0.72rem;color:var(--accent);display:none"></div>
       </div>
 
       <!-- PRO -->
       <div class="plan-card-slide" id="planSlide1" data-plan="pro" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
           <div>
-            <div style="font-size:0.5rem;font-weight:800;letter-spacing:.16em;color:rgba(255,107,0,0.75);text-transform:uppercase;margin-bottom:4px">ATLETA</div>
+            <div style="font-size:0.5rem;font-weight:800;letter-spacing:.16em;color:rgba(37,99,235,0.75);text-transform:uppercase;margin-bottom:4px">ATLETA</div>
             <div style="font-family:var(--display);font-size:2.2rem;color:#fff;letter-spacing:.04em;line-height:1">PRO</div>
           </div>
           <div style="text-align:right;padding-top:2px">
@@ -3242,10 +3767,10 @@
             <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);margin-top:2px" id="planProPeriod">/mês</div>
           </div>
         </div>
-        <div style="background:rgba(255,107,0,0.07);border-radius:12px;padding:12px 14px;margin-bottom:16px;border:1px solid rgba(255,107,0,0.16)">
-          <div style="font-size:0.54rem;font-weight:800;letter-spacing:.14em;color:rgba(255,107,0,0.6);text-transform:uppercase;margin-bottom:6px">GANHO REAL</div>
+        <div style="background:rgba(37,99,235,0.07);border-radius:12px;padding:12px 14px;margin-bottom:16px;border:1px solid rgba(37,99,235,0.16)">
+          <div style="font-size:0.54rem;font-weight:800;letter-spacing:.14em;color:rgba(37,99,235,0.6);text-transform:uppercase;margin-bottom:6px">GANHO REAL</div>
           <div style="font-size:0.8rem;color:rgba(255,255,255,0.8);line-height:1.6;font-style:italic">"Saí do básico e comecei a usar treino, dieta e chat com IA no mesmo fluxo. Ficou mais simples manter consistência."</div>
-          <div style="font-size:0.62rem;color:rgba(255,107,0,0.5);margin-top:6px">— Plano intermediário para evolução contínua</div>
+          <div style="font-size:0.62rem;color:rgba(37,99,235,0.5);margin-top:6px">— Plano intermediário para evolução contínua</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;align-items:center;gap:11px;font-size:0.8rem;color:rgba(255,255,255,0.85)"><span style="color:var(--accent);font-weight:900;font-size:0.85rem;flex-shrink:0">✓</span>Treino com IA liberado</div>
@@ -3317,7 +3842,7 @@
      PAYWALL — quota esgotada
 ════════════════════════════════════════════════════ -->
 <div id="paywallModal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);align-items:flex-end;justify-content:center">
-  <div style="background:#111;border:1px solid rgba(249,115,22,0.35);border-radius:24px 24px 0 0;max-width:480px;width:100%;padding:28px 22px calc(28px + env(safe-area-inset-bottom));text-align:center">
+  <div style="background:#111;border:1px solid rgba(37,99,235,0.35);border-radius:24px 24px 0 0;max-width:480px;width:100%;padding:28px 22px calc(28px + env(safe-area-inset-bottom));text-align:center">
     <div style="display:flex;justify-content:center;margin-bottom:10px"><i data-lucide="zap" class="lucide" width="36" height="36" stroke="var(--accent)" fill="none" stroke-width="1.75"></i></div>
     <div style="font-family:var(--display);font-size:1.5rem;color:var(--accent);margin-bottom:6px;letter-spacing:.04em">Limite atingido</div>
     <div id="paywallMsg" style="font-size:0.82rem;color:var(--text-2);margin-bottom:20px;line-height:1.65">Você usou todas as consultas de IA gratuitas deste mês. Faça upgrade e desbloqueie o potencial completo.</div>

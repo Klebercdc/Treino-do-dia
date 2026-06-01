@@ -16065,3 +16065,325 @@ function updateHomeBanner() {
   if (t) t.textContent = m.t;
   if (s) s.textContent = m.s;
 }
+
+/* ════════════════════════════════════════════════════
+   NOVAS TELAS — GERAR TREINO, TREINO GERADO, EXECUÇÃO, PROTOCOLOS
+════════════════════════════════════════════════════ */
+
+// ── Gerar Treino Wizard ─────────────────────────────
+let _gtState = { tipo: null, obj: null, days: null, step: 0 };
+
+function openGerarTreino() {
+  _gtState = { tipo: null, obj: null, days: null, step: 0 };
+  _gtGoToStep(0);
+  document.getElementById('gerarTreinoScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeGerarTreino() {
+  document.getElementById('gerarTreinoScreen').classList.remove('show');
+}
+
+function gtSelectTipo(el) {
+  document.querySelectorAll('.gt-tipo-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.tipo = el.dataset.tipo;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtSelectObj(el) {
+  document.querySelectorAll('.gt-obj-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.obj = el.dataset.obj;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtSelectDays(el) {
+  document.querySelectorAll('.gt-day-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.days = parseInt(el.dataset.days);
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtNext() {
+  if (_gtState.step < 3) {
+    _gtGoToStep(_gtState.step + 1);
+  } else {
+    _gtConfirmar();
+  }
+}
+
+function _gtGoToStep(step) {
+  _gtState.step = step;
+  document.querySelectorAll('.gt-step').forEach((s, i) => {
+    s.classList.toggle('active', i === step);
+  });
+  const dots = document.querySelectorAll('.gt-step-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === step);
+    d.classList.toggle('done', i < step);
+  });
+  const pct = ((step + 1) / 4) * 100;
+  const bar = document.getElementById('gtProgressBar');
+  if (bar) bar.style.width = pct + '%';
+  const btn = document.getElementById('gtContinuarBtn');
+  if (btn) {
+    btn.disabled = (step === 0 && !_gtState.tipo) ||
+                   (step === 1 && !_gtState.obj) ||
+                   (step === 2 && !_gtState.days);
+    btn.innerHTML = step === 3
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Gerar Treino'
+      : 'Continuar <i data-lucide="chevron-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>';
+    if (step === 3) btn.disabled = false;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+function _gtConfirmar() {
+  const equip = document.getElementById('gtEquipSelect');
+  _gtState.equip = equip ? equip.value : 'academia_completa';
+  closeGerarTreino();
+  openTreinoGerado(_gtState);
+}
+
+// ── Treino Gerado ──────────────────────────────────
+function openTreinoGerado(state) {
+  const objMap = { hipertrofia:'Hipertrofia', forca:'Força', performance:'Performance' };
+  const titulosMap = {
+    hipertrofia: 'Força Superior',
+    forca: 'Força e Potência',
+    performance: 'Performance Total',
+  };
+  const titulo = titulosMap[state?.obj] || 'Treino Completo';
+  const obj = objMap[state?.obj] || 'Hipertrofia';
+  const days = state?.days || 4;
+  const dur = days <= 3 ? '45 min' : days <= 4 ? '60 min' : '75 min';
+
+  const el = id => document.getElementById(id);
+  if (el('tgTreinoTitle')) el('tgTreinoTitle').textContent = titulo;
+  if (el('tgTreinoObj')) el('tgTreinoObj').textContent = obj;
+  if (el('tgTreinoDuration')) el('tgTreinoDuration').textContent = dur;
+
+  document.getElementById('treinoGeradoScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTreinoGerado() {
+  document.getElementById('treinoGeradoScreen').classList.remove('show');
+}
+
+function iniciarTreinoGerado() {
+  closeTreinoGerado();
+  if (typeof iniciarTreino === 'function') {
+    iniciarTreino();
+  } else {
+    openStartWorkoutScreen();
+  }
+}
+
+// ── Execução Focada ────────────────────────────────
+let _execState = { carga: 80, reps: 8, rpe: 8 };
+
+function openExecucao(opts) {
+  if (opts) {
+    _execState.carga = opts.carga || 80;
+    _execState.reps = opts.reps || 8;
+    _execState.rpe = opts.rpe || 8;
+    const nm = document.getElementById('execExerciseName');
+    const mn = document.getElementById('execMuscleName');
+    if (nm && opts.nome) nm.textContent = opts.nome;
+    if (mn && opts.musculo) mn.textContent = opts.musculo;
+  }
+  _execRender();
+  document.getElementById('execucaoScreen').classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeExecucao() {
+  document.getElementById('execucaoScreen').classList.remove('show');
+}
+
+function execAdjust(field, delta) {
+  if (field === 'carga') {
+    _execState.carga = Math.max(0, +(_execState.carga + delta).toFixed(1));
+  } else if (field === 'reps') {
+    _execState.reps = Math.max(1, _execState.reps + delta);
+  } else if (field === 'rpe') {
+    _execState.rpe = Math.min(10, Math.max(1, _execState.rpe + delta));
+  }
+  _execRender();
+}
+
+function _execRender() {
+  const c = document.getElementById('execCargaVal');
+  const r = document.getElementById('execRepsVal');
+  const p = document.getElementById('execRpeVal');
+  if (c) c.textContent = _execState.carga % 1 === 0 ? _execState.carga : _execState.carga.toFixed(1);
+  if (r) r.textContent = _execState.reps;
+  if (p) p.textContent = _execState.rpe;
+}
+
+function execConcluirSerie() {
+  const atualEl = document.getElementById('execSerieAtual');
+  const totalEl = document.getElementById('execSerieTotal');
+  const atual = atualEl ? parseInt(atualEl.textContent) : 1;
+  const total = totalEl ? parseInt(totalEl.textContent) : 4;
+  if (atual < total) {
+    if (atualEl) atualEl.textContent = atual + 1;
+    const dots = document.querySelectorAll('#execucaoScreen .exec-series-dot');
+    dots.forEach((d, i) => {
+      d.classList.toggle('done', i < atual);
+      d.classList.toggle('current', i === atual);
+    });
+  } else {
+    closeExecucao();
+  }
+}
+
+function execPularDescanso() {
+  const d = document.getElementById('execDescansoVal');
+  if (d) d.textContent = '00:00';
+}
+
+// ── Protocolos ──────────────────────────────────────
+function openProtocolos() {
+  document.getElementById('protocolosScreen').classList.add('show');
+  _protoLoadData();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeProtocolos() {
+  document.getElementById('protocolosScreen').classList.remove('show');
+}
+
+function protoSetTab(tab, btn) {
+  document.querySelectorAll('.proto-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const ativo = document.getElementById('protoAtivoContent');
+  const hist = document.getElementById('protoHistoricoContent');
+  if (ativo) ativo.style.display = tab === 'ativo' ? '' : 'none';
+  if (hist) hist.style.display = tab === 'historico' ? '' : 'none';
+}
+
+function _protoLoadData() {
+  try {
+    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const total = hist.length;
+    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
+    const concl = document.getElementById('protoStatConcluido');
+    const ser = document.getElementById('protoStatSeries');
+    const rpeEl = document.getElementById('protoStatRPE');
+    const vol = document.getElementById('protoVolBar');
+
+    const thisWeek = hist.filter(s => {
+      const d = new Date(s.date || s.timestamp || 0);
+      const now = new Date();
+      const diff = (now - d) / 86400000;
+      return diff < 7;
+    });
+    const weekSeries = thisWeek.reduce((a, s) => a + (s.totalSeries || 0), 0);
+    const target = 24;
+    const pct = Math.min(100, Math.round((weekSeries / target) * 100));
+
+    if (concl) concl.textContent = pct + '%';
+    if (ser) ser.textContent = weekSeries + '/' + target;
+    if (vol) vol.style.width = pct + '%';
+
+    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e =>
+      (e.series || []).map(r => r.rpe).filter(v => v > 0)
+    ));
+    const avgRpe = rpeVals.length ? (rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length).toFixed(1) : '—';
+    if (rpeEl) rpeEl.textContent = avgRpe;
+  } catch(e) { /* falha silenciosa */ }
+}
+
+// ── Score Adaptativo ─────────────────────────────────
+function updateScoreAdaptativo() {
+  try {
+    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
+
+    const thisWeek = hist.filter(s => {
+      const d = new Date(s.date || s.timestamp || 0);
+      return (Date.now() - d) / 86400000 < 7;
+    });
+
+    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e =>
+      (e.series || []).map(r => r.rpe).filter(v => v > 0)
+    ));
+    const avgRpe = rpeVals.length ? rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length : 5;
+
+    const score = Math.min(100, Math.max(20,
+      50 + (streak * 3) + (thisWeek.length * 5) - ((avgRpe - 5) * 3)
+    ));
+    const scoreInt = Math.round(score);
+
+    const numEl = document.getElementById('homeScoreNum');
+    const lblEl = document.getElementById('homeScoreLabel');
+    const ringEl = document.getElementById('homeScoreRing');
+
+    if (numEl) numEl.textContent = scoreInt;
+    const lbl = scoreInt >= 85 ? 'ÓTIMO' : scoreInt >= 70 ? 'BOM' : scoreInt >= 50 ? 'OK' : 'BAIXO';
+    if (lblEl) lblEl.textContent = lbl;
+
+    // animate ring: circumference 263.9, offset = 263.9 * (1 - score/100)
+    if (ringEl) ringEl.style.strokeDashoffset = (263.9 * (1 - scoreInt / 100)).toFixed(1);
+
+    // stats
+    const cargaEl = document.getElementById('scoreStatCarga');
+    const prontEl = document.getElementById('scoreStatProntidao');
+    const fadEl   = document.getElementById('scoreStatFadiga');
+    const tendEl  = document.getElementById('scoreStatTendencia');
+
+    const cargaRec = Math.min(100, Math.round(80 + streak * 2));
+    if (cargaEl) cargaEl.textContent = cargaRec + '%';
+    if (prontEl) prontEl.textContent = avgRpe < 7 ? 'Alta' : avgRpe < 8.5 ? 'Média' : 'Baixa';
+    if (fadEl)   fadEl.textContent   = avgRpe > 8.5 ? 'Alta' : avgRpe > 7 ? 'Média' : 'Baixa';
+    if (tendEl)  tendEl.textContent  = streak >= 3 ? 'Positiva' : streak === 0 ? 'Neutra' : 'Estável';
+
+    // KRONOS rec
+    const rcTitle = document.getElementById('kronosRecTitle');
+    const rcType  = document.getElementById('kronosRecType');
+    if (rcTitle) {
+      const workouts = ['Força Superior', 'Costas e Bíceps', 'Pernas e Glúteos', 'Ombros e Tríceps'];
+      rcTitle.textContent = workouts[thisWeek.length % workouts.length];
+    }
+    if (rcType) rcType.textContent = 'Hipertrofia';
+  } catch(e) { /* falha silenciosa */ }
+}
+
+// Chama ao abrir home
+const _origOpenHome = typeof openHome === 'function' ? openHome : null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('kronia:home-opened', updateScoreAdaptativo);
+  // também atualiza na carga inicial
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateScoreAdaptativo);
+  } else {
+    setTimeout(updateScoreAdaptativo, 500);
+  }
+}
+
+// ── Garante que as novas telas fecham quando navTo é chamado ──
+(function() {
+  const _origNavTo = navTo;
+  window.navTo = function(tab) {
+    // fecha telas novas ao navegar
+    document.getElementById('gerarTreinoScreen')?.classList.remove('show');
+    document.getElementById('treinoGeradoScreen')?.classList.remove('show');
+    document.getElementById('execucaoScreen')?.classList.remove('show');
+    if (tab !== 'protocolos') {
+      document.getElementById('protocolosScreen')?.classList.remove('show');
+    } else {
+      // marca item ativo
+      document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
+      document.getElementById('nav-protocolos')?.classList.add('active');
+    }
+    if (tab === 'kronos') {
+      document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
+      document.getElementById('nav-kronos')?.classList.add('active');
+      return; // openAI é chamado no onclick do botão
+    }
+    _origNavTo(tab);
+  };
+})();
