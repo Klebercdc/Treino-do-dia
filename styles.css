@@ -8675,3 +8675,182 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   border-radius: 14px !important;
 }
 
+
+/* ══════════════════════════════════════════
+   HOME — header bar (Fix 1)
+══════════════════════════════════════════ */
+.home-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  gap: 12px;
+}
+.home-menu-btn,
+.home-bell-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .18s;
+}
+.home-menu-btn:active,
+.home-bell-btn:active { background: rgba(255,255,255,0.1); }
+.home-header-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.home-header-greeting {
+  font-size: 0.72rem;
+  color: var(--text-2);
+  letter-spacing: .03em;
+}
+.home-header-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.home-header-username {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  letter-spacing: .06em;
+  color: var(--text);
+}
+.home-header-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(37,99,235,0.15);
+  border: 1px solid rgba(37,99,235,0.3);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--accent2);
+}
+
+/* ══════════════════════════════════════════
+   SCORE RING — subtext (Fix 2)
+══════════════════════════════════════════ */
+.score-ring-sub {
+  font-size: 0.58rem;
+  color: var(--text-2);
+  letter-spacing: .02em;
+  text-align: center;
+  max-width: 72px;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* ══════════════════════════════════════════
+   KRONOS — empty state animation (Fix 4)
+══════════════════════════════════════════ */
+.kronos-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 20px;
+  padding: 40px 24px;
+}
+.kronos-pulse-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kronos-pulse-ring::before,
+.kronos-pulse-ring::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(37,99,235,0.4);
+  animation: kronosPulseRing 2.4s ease-out infinite;
+}
+.kronos-pulse-ring::before {
+  inset: 0;
+  animation-delay: 0s;
+}
+.kronos-pulse-ring::after {
+  inset: -14px;
+  opacity: .5;
+  animation-delay: 0.8s;
+}
+@keyframes kronosPulseRing {
+  0%   { transform: scale(.85); opacity: .6; }
+  60%  { transform: scale(1.1); opacity: .15; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+.kronos-pulse-core {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, rgba(37,99,235,0.35) 0%, rgba(37,99,235,0.08) 70%);
+  border: 1.5px solid rgba(37,99,235,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 0.7rem;
+  letter-spacing: .08em;
+  color: var(--accent2);
+  animation: kronosCoreGlow 3s ease-in-out infinite alternate;
+}
+@keyframes kronosCoreGlow {
+  from { box-shadow: 0 0 12px rgba(37,99,235,0.2); }
+  to   { box-shadow: 0 0 28px rgba(37,99,235,0.45); }
+}
+.kronos-empty-title {
+  font-family: var(--display);
+  font-size: 0.85rem;
+  letter-spacing: .08em;
+  color: var(--text);
+  text-align: center;
+}
+.kronos-empty-sub {
+  font-size: 0.75rem;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 240px;
+  margin-top: -10px;
+}
+.kronos-empty-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 280px;
+}
+.kronos-empty-pill {
+  padding: 7px 13px;
+  border-radius: 20px;
+  border: 1px solid rgba(37,99,235,0.25);
+  background: rgba(37,99,235,0.06);
+  font-size: 0.7rem;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background .18s, border-color .18s;
+}
+.kronos-empty-pill:hover,
+.kronos-empty-pill:active {
+  background: rgba(37,99,235,0.15);
+  border-color: rgba(37,99,235,0.4);
+  color: var(--text);
+}

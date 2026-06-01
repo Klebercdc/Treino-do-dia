@@ -897,7 +897,21 @@
         <i data-lucide="trash-2" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </button>
     </div>
-    <div id="aiMessages" style="flex:1;overflow-y:auto;padding:14px 10px 10px;display:flex;flex-direction:column;gap:8px;"></div>
+    <div id="aiMessages" style="flex:1;overflow-y:auto;padding:14px 10px 10px;display:flex;flex-direction:column;gap:8px;">
+      <div id="kronosEmptyState" class="kronos-empty-state">
+        <div class="kronos-pulse-ring">
+          <div class="kronos-pulse-core">KRONOS</div>
+        </div>
+        <div class="kronos-empty-title">Seu assistente de performance</div>
+        <div class="kronos-empty-sub">Cruzo seus treinos, exames e dieta para dar respostas precisas.</div>
+        <div class="kronos-empty-pills">
+          <button class="kronos-empty-pill" onclick="aiQuick('Revisar meu progresso e sugerir o que mudar esta semana.')">Como está meu progresso?</button>
+          <button class="kronos-empty-pill" onclick="aiQuick('Explique meu treino de hoje e os pontos de atenção.')">Sugestão de treino hoje</button>
+          <button class="kronos-empty-pill" onclick="aiQuick('Montar minha dieta com base no meu treino, objetivo e rotina.')">Analisar minha dieta</button>
+          <button class="kronos-empty-pill" onclick="aiQuick('Ver o que meus exames mudam na dieta e no treino.')">Revisar meus exames</button>
+        </div>
+      </div>
+    </div>
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);">
       <div id="aiFileAttachBadge" style="display:none;align-items:center;gap:6px;padding:6px 10px;margin-bottom:6px;background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);border-radius:12px;font-size:12px;color:#2563EB;">
         <i data-lucide="file-text" class="lucide" width="13" height="13" stroke="currentColor" fill="none" stroke-width="1.75"></i>
@@ -1023,12 +1037,24 @@
 
 <div id="homeScreen">
   <div class="home-header">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="home-greeting" id="homeGreeting">BOM DIA</div>
-      <!-- Badge do plano sempre visível -->
-      <div id="homePlanBadge" onclick="openPlanModal()" style="cursor:pointer;display:flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:0.65rem;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);-webkit-tap-highlight-color:transparent;transition:all .15s">FREE 5/5</div>
+    <div class="home-header-bar">
+      <button class="home-menu-btn" onclick="handleAuthClick()" aria-label="Menu">
+        <i data-lucide="menu" class="lucide" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+      </button>
+      <div class="home-header-center">
+        <div class="home-header-greeting" id="homeGreeting">Boa noite,</div>
+        <div class="home-header-name-row">
+          <span class="home-header-username" id="homeUserNameTitle">Kleber</span>
+          <div id="homePlanBadge" onclick="openPlanModal()" class="home-header-plan-badge" style="-webkit-tap-highlight-color:transparent">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="#60A5FA"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Membro FREE</span>
+          </div>
+        </div>
+      </div>
+      <button class="home-bell-btn" aria-label="Notificações">
+        <i data-lucide="bell" class="lucide" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
+      </button>
     </div>
-    <div class="home-title" id="homeUserNameTitle">ATLETA</div>
     <!-- Trial countdown strip -->
     <div id="homeTrialStrip" style="display:none;margin-top:10px;background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(124,58,237,0.08));border:1px solid rgba(168,85,247,0.35);border-radius:12px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openPlanModal()">
       <div style="display:flex;align-items:center;gap:8px">
@@ -1055,6 +1081,7 @@
         <div class="score-ring-num" id="homeScoreNum">87</div>
         <div class="score-ring-label" id="homeScoreLabel">ÓTIMO</div>
         <div class="score-ring-title">SCORE</div>
+        <div class="score-ring-sub" id="homeScoreSub">Pronto para evoluir hoje</div>
       </div>
     </div>
     <div class="score-stats">
@@ -2952,38 +2979,83 @@
 
   <!-- Body diagram SVG -->
   <div class="exec-body-diagram">
-    <svg class="exec-body-svg" viewBox="0 0 120 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg class="exec-body-svg" viewBox="0 0 120 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="chestGradL" cx="60%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#1D4ED8" stop-opacity="0.2"/>
+        </radialGradient>
+        <radialGradient id="chestGradR" cx="40%" cy="30%" r="60%">
+          <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#1D4ED8" stop-opacity="0.2"/>
+        </radialGradient>
+        <filter id="chestGlow">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+      </defs>
+
       <!-- Head -->
-      <ellipse cx="60" cy="18" rx="12" ry="14" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+      <ellipse cx="60" cy="16" rx="11" ry="13" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
       <!-- Neck -->
-      <rect x="56" y="30" width="8" height="8" rx="2" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-      <!-- Torso -->
-      <path d="M40 38 Q35 42 33 55 L32 85 Q32 90 40 92 L80 92 Q88 90 88 85 L87 55 Q85 42 80 38 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-      <!-- Chest highlight (active muscle) -->
-      <path id="bodyChestLeft" d="M42 42 Q38 46 37 58 L37 70 L60 70 L60 42 Z" fill="rgba(37,99,235,0.35)" stroke="#2563EB" stroke-width="1.5" opacity="0.9"/>
-      <path id="bodyChestRight" d="M78 42 Q82 46 83 58 L83 70 L60 70 L60 42 Z" fill="rgba(37,99,235,0.35)" stroke="#2563EB" stroke-width="1.5" opacity="0.9"/>
-      <!-- Abs -->
-      <rect x="48" y="72" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <rect x="62" y="72" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <rect x="48" y="81" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <rect x="62" y="81" width="10" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <!-- Left arm -->
-      <path d="M40 40 Q30 44 26 60 L25 80 Q25 85 29 85 L33 85 L35 60 L40 45 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
-      <!-- Right arm -->
-      <path d="M80 40 Q90 44 94 60 L95 80 Q95 85 91 85 L87 85 L85 60 L80 45 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
-      <!-- Forearms -->
-      <path d="M25 80 Q22 95 23 108 L27 108 L30 95 L33 80 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <path d="M95 80 Q98 95 97 108 L93 108 L90 95 L87 80 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <!-- Hips -->
-      <path d="M32 90 Q32 100 36 104 L84 104 Q88 100 88 90 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-      <!-- Left leg -->
-      <path d="M38 102 L34 150 Q33 155 37 156 L44 156 L46 108 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-      <!-- Right leg -->
-      <path d="M82 102 L86 150 Q87 155 83 156 L76 156 L74 108 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <path d="M55 28 Q56 33 60 34 Q64 33 65 28 L65 29 Q63 32 60 33 Q57 32 55 29 Z" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+
+      <!-- Trapezius (shoulders top) -->
+      <path d="M60 32 Q48 33 40 38 Q38 40 40 42 Q48 36 60 35 Q72 36 80 42 Q82 40 80 38 Q72 33 60 32 Z" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+
+      <!-- Torso base -->
+      <path d="M40 40 Q35 44 33 58 L32 88 Q32 94 40 96 L80 96 Q88 94 88 88 L87 58 Q85 44 80 40 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+
+      <!-- Left pectoral (active - highlight) -->
+      <path id="bodyChestLeft" d="M41 41 Q37 46 36 56 Q35.5 64 37 68 L59 68 L59 41 Q50 40 41 41 Z"
+        fill="url(#chestGradL)" stroke="#3B82F6" stroke-width="1.5" filter="url(#chestGlow)"/>
+      <!-- Left pec inner shadow line -->
+      <path d="M59 44 Q52 46 46 52 Q42 57 37 64" stroke="rgba(59,130,246,0.3)" stroke-width="0.8" fill="none"/>
+
+      <!-- Right pectoral (active - highlight) -->
+      <path id="bodyChestRight" d="M79 41 Q83 46 84 56 Q84.5 64 83 68 L61 68 L61 41 Q70 40 79 41 Z"
+        fill="url(#chestGradR)" stroke="#3B82F6" stroke-width="1.5" filter="url(#chestGlow)"/>
+      <!-- Right pec inner shadow line -->
+      <path d="M61 44 Q68 46 74 52 Q78 57 83 64" stroke="rgba(59,130,246,0.3)" stroke-width="0.8" fill="none"/>
+
+      <!-- Sternum divider -->
+      <line x1="60" y1="39" x2="60" y2="68" stroke="rgba(255,255,255,0.1)" stroke-width="0.7"/>
+
+      <!-- Abs (6-pack) -->
+      <rect x="49" y="71" width="9" height="6" rx="2" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="0.8"/>
+      <rect x="62" y="71" width="9" height="6" rx="2" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="0.8"/>
+      <rect x="49" y="79" width="9" height="6" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="0.8"/>
+      <rect x="62" y="79" width="9" height="6" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="0.8"/>
+      <rect x="50" y="87" width="8" height="5" rx="2" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="0.8"/>
+      <rect x="62" y="87" width="8" height="5" rx="2" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="0.8"/>
+
+      <!-- Left deltoid -->
+      <ellipse cx="34" cy="45" rx="7" ry="9" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="0.9" transform="rotate(-15 34 45)"/>
+      <!-- Right deltoid -->
+      <ellipse cx="86" cy="45" rx="7" ry="9" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="0.9" transform="rotate(15 86 45)"/>
+
+      <!-- Left upper arm -->
+      <path d="M29 53 Q26 65 27 78 L33 78 L35 63 L38 50 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="0.9"/>
+      <!-- Right upper arm -->
+      <path d="M91 53 Q94 65 93 78 L87 78 L85 63 L82 50 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.09)" stroke-width="0.9"/>
+
+      <!-- Left forearm -->
+      <path d="M27 78 Q24 92 25 106 L31 106 L33 92 L33 78 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="0.9"/>
+      <!-- Right forearm -->
+      <path d="M93 78 Q96 92 95 106 L89 106 L87 92 L87 78 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="0.9"/>
+
+      <!-- Hips/pelvis -->
+      <path d="M32 93 Q32 103 38 107 L82 107 Q88 103 88 93 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="0.9"/>
+
+      <!-- Left thigh -->
+      <path d="M37 105 Q34 130 35 152 Q35 157 40 158 L47 158 L47 110 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="0.9"/>
+      <!-- Right thigh -->
+      <path d="M83 105 Q86 130 85 152 Q85 157 80 158 L73 158 L73 110 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="0.9"/>
+
       <!-- Left calf -->
-      <path d="M34 152 Q33 170 35 178 L42 178 L44 158 L37 152 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <path d="M35 154 Q34 172 36 182 L43 182 L46 160 L40 154 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="0.9"/>
       <!-- Right calf -->
-      <path d="M86 152 Q87 170 85 178 L78 178 L76 158 L83 152 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <path d="M85 154 Q86 172 84 182 L77 182 L74 160 L80 154 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="0.9"/>
     </svg>
   </div>
 

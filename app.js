@@ -4064,33 +4064,10 @@ function openAI() {
   document.getElementById("aiModal").classList.add("show");
   document.getElementById("aiModal").style.display = "flex";
   if (_aiHistory.length === 0) {
-    const fromDiet = window._kronosEntryContext && window._kronosEntryContext.origin === "dieta_ia";
-    addAIMessage("assistant", fromDiet
-      ? `Olá! Sou o **KRONOS IA**. Entrei pelo seu contexto de Dieta IA e vou considerar seu plano alimentar, treino, exames e aderência antes de sugerir ajustes.\n\nO que vamos ajustar agora?`
-      : `Olá! Sou o **KRONOS IA**, seu coach central de treino, dieta, exames e progresso.\n\nAnalisei seu histórico e estou pronto para te ajudar. O que vamos fazer hoje?`);
-    const container = document.getElementById("aiMessages");
-    const sug = document.createElement("div");
-    sug.id = "aiSuggestions";
-    sug.style.cssText = "display:flex;flex-direction:column;gap:8px;padding-left:38px;";
-    const suggestions = fromDiet
-      ? [
-          { icon: "utensils", label: "Montar meu plano alimentar", msg: "Monte meu plano alimentar considerando meu treino, rotina, exames e aderência." },
-          { icon: "dumbbell", label: "Ajustar dieta para meu treino", msg: "Ajuste minha dieta para o treino de hoje e explique a distribuição de carboidratos." },
-          { icon: "replace", label: "Trocar uma refeição", msg: "Troque uma refeição mantendo meus macros, restrições e praticidade." },
-          { icon: "flask-conical", label: "Ver impacto dos exames na dieta", msg: "Explique o que meus exames mudam na minha dieta sem inventar diagnóstico." },
-          { icon: "shopping-cart", label: "Montar lista de compras", msg: "Monte uma lista de compras prática para seguir meu plano alimentar." },
-        ]
-      : [
-          { icon: "utensils", label: "Montar minha dieta", msg: "Montar minha dieta com base no meu treino, objetivo e rotina." },
-          { icon: "sliders-horizontal", label: "Ajustar meus macros", msg: "Ajustar meus macros e explicar o motivo." },
-          { icon: "dumbbell", label: "Explicar meu treino de hoje", msg: "Explique meu treino de hoje e os pontos de atenção." },
-          { icon: "flask-conical", label: "Ver o que meus exames mudam", msg: "Ver o que meus exames mudam na dieta e no treino." },
-          { icon: "trending-up", label: "Revisar meu progresso", msg: "Revisar meu progresso e sugerir o que mudar esta semana." },
-        ];
-    sug.innerHTML = suggestions.map(function(item) {
-      return `<button class="ai-suggest-btn" onclick="aiQuick(${JSON.stringify(item.msg).replace(/"/g, '&quot;')});document.getElementById('aiSuggestions')?.remove()">${_ico(item.icon, 16)} ${item.label}</button>`;
-    }).join("");
-    container.appendChild(sug);
+    const es = document.getElementById("kronosEmptyState");
+    if (es) es.style.display = "flex";
+    setTimeout(() => document.getElementById("aiInput")?.focus(), 300);
+    return;
   }
   setTimeout(() => document.getElementById("aiInput")?.focus(), 300);
 }
@@ -4102,8 +4079,22 @@ function closeAI() {
 
 function clearAIChat() {
   _aiHistory = [];
-  document.getElementById("aiMessages").innerHTML = "";
-  addAIMessage("assistant", `Chat limpo. Como posso te ajudar? ${_ico('dumbbell', 16)}`);
+  const container = document.getElementById("aiMessages");
+  const es = container.querySelector("#kronosEmptyState");
+  container.innerHTML = "";
+  if (es) { container.appendChild(es); es.style.display = "flex"; }
+  else {
+    container.insertAdjacentHTML("afterbegin", `<div id="kronosEmptyState" class="kronos-empty-state" style="display:flex;">
+      <div class="kronos-pulse-ring"><div class="kronos-pulse-core">KRONOS</div></div>
+      <div class="kronos-empty-title">Seu assistente de performance</div>
+      <div class="kronos-empty-sub">Cruzo seus treinos, exames e dieta para dar respostas precisas.</div>
+      <div class="kronos-empty-pills">
+        <button class="kronos-empty-pill" onclick="aiQuick('Revisar meu progresso e sugerir o que mudar esta semana.')">Como está meu progresso?</button>
+        <button class="kronos-empty-pill" onclick="aiQuick('Explique meu treino de hoje e os pontos de atenção.')">Sugestão de treino hoje</button>
+        <button class="kronos-empty-pill" onclick="aiQuick('Montar minha dieta com base no meu treino, objetivo e rotina.')">Analisar minha dieta</button>
+        <button class="kronos-empty-pill" onclick="aiQuick('Ver o que meus exames mudam na dieta e no treino.')">Revisar meus exames</button>
+      </div></div>`);
+  }
 }
 
 function renderMarkdown(text) {
@@ -4125,6 +4116,8 @@ function getKronosAvatarMarkup(wrapperClass = "kronos-reactor-avatar") {
 function addAIMessage(role, text, isThinking = false) {
   const container = document.getElementById("aiMessages");
   if (!container) return;
+  const es = document.getElementById("kronosEmptyState");
+  if (es) es.style.display = "none";
 
   const div = document.createElement("div");
   div.className = `ai-msg ${role}`;
