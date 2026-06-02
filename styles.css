@@ -835,7 +835,7 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 #homeScreen.show { display: flex; animation: homeIn .22s cubic-bezier(.25,.46,.45,.94) both; }
 @keyframes homeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 /* ═══ HOME SCREEN ═══ */
-.home-header { padding: 56px 20px 20px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
+.home-header { padding: 56px 20px 12px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
 .home-greeting { font-size: 0.82rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(var(--text-rgb),0.65); margin-bottom: 4px; }
 .home-title { font-family: var(--display); font-size: 2.4rem; letter-spacing: .03em; color: var(--text); line-height: 1.05; }
 .home-title span { color: var(--accent); }
@@ -9685,33 +9685,44 @@ p,
   margin-bottom: 2px;
 }
 
-/* HERO BANNER */
-.home-hero-banner {
+/* HERO + GREETING — texto sobreposto à imagem do casal */
+.home-hero-greeting {
   position: relative;
-  width: 100%;
-  height: 220px;
+  min-height: 190px;
   overflow: hidden;
-  background: #020812;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px 20px 24px;
 }
-.home-hero-banner-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 15%;
-  display: block;
+.home-hero-couple-img {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  bottom: -8px;
+  height: calc(100% + 16px);
+  width: auto;
+  object-fit: contain;
+  object-position: right center;
+  opacity: 0.55;
+  pointer-events: none;
+  filter: drop-shadow(0 0 24px rgba(0,194,255,0.18));
 }
-.home-hero-banner-overlay {
+.home-hero-couple-overlay {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(2,8,18,0.25) 0%, rgba(2,8,18,0) 35%, rgba(2,8,18,0.8) 85%, rgba(2,8,18,1) 100%),
-    radial-gradient(70% 60% at 50% 30%, rgba(0,194,255,0.10), transparent 75%);
+  background: linear-gradient(
+    95deg,
+    rgba(2,8,18,0.97) 0%,
+    rgba(2,8,18,0.88) 35%,
+    rgba(2,8,18,0.50) 65%,
+    rgba(2,8,18,0.08) 100%
+  );
   pointer-events: none;
 }
-
-/* GREETING BLOCK */
-.home-greeting-block {
-  padding: 16px 20px 18px;
+.home-greeting-content {
+  position: relative;
+  z-index: 1;
+  max-width: 65%;
 }
 .home-greeting-salut {
   font-size: 0.82rem;
@@ -9721,14 +9732,14 @@ p,
 }
 .home-greeting-name-row {
   font-family: var(--display);
-  font-size: 1.9rem;
+  font-size: 2rem;
   color: var(--text);
   line-height: 1.1;
   margin-bottom: 8px;
   letter-spacing: .01em;
 }
 .home-greeting-name { color: var(--accent); }
-.home-greeting-emoji { font-family: sans-serif; font-size: 1.6rem; }
+.home-greeting-emoji { font-family: sans-serif; font-size: 1.7rem; }
 .home-greeting-sub {
   font-size: 0.78rem;
   color: var(--text-2);
