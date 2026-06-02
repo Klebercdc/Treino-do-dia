@@ -11,12 +11,12 @@
   --chat-input-height: 0px;
 
   /* Backgrounds */
-  --bg:          #050D1A;
-  --bg2:         #0A1628;
-  --surface:     #0D1B30;
-  --card:        #0A1628;
-  --card-2:      #0D1B30;
-  --card-hover:  #112038;
+  --bg:          #0A0A0A;
+  --bg2:         #111111;
+  --surface:     #161616;
+  --card:        #141414;
+  --card-2:      #181818;
+  --card-hover:  #1E1E1E;
 
   /* Aliases legados (mantidos para não quebrar código existente) */
   --bg-app:      var(--bg);
@@ -28,12 +28,12 @@
   --accent-contrast: #ffffff;
   --input-bg:    var(--bg2);
   --input-border: var(--border);
-  --nav-bg:      rgba(7,14,26,.88);
+  --nav-bg:      rgba(10,10,10,.94);
   --shadow-soft: var(--shadow-sm);
 
   /* Bordas */
-  --border:      rgba(0,85,255,.15);
-  --border-soft: rgba(255,255,255,.06);
+  --border:      rgba(255,255,255,.08);
+  --border-soft: rgba(255,255,255,.05);
 
   /* Accent elétrico */
   --accent:      #0055FF;
@@ -86,7 +86,7 @@
   --r-xs:        6px;
   --kronia-card-radius: 16px;
   --kronia-card-padding: 20px;
-  --kronia-card-border: rgba(0,85,255,.15);
+  --kronia-card-border: rgba(255,255,255,.08);
   color-scheme: dark;
 }
 :root, html, body {
@@ -117,9 +117,8 @@ body {
   height: calc(var(--vh, 1vh) * 100);
   overflow: hidden;
   background:
-    radial-gradient(ellipse 90% 42% at 50% -6%, rgba(0,85,255,.22), transparent 62%),
-    radial-gradient(ellipse 70% 40% at 50% 108%, rgba(0,85,255,.10), transparent 60%),
-    #050D1A;
+    radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%),
+    #0A0A0A;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
@@ -350,6 +349,11 @@ body.diet-mini-app-active .footer-actions {
 .btn-nav.active .btn-label { color: #0055FF; font-weight: 800; }
 .btn-nav.diet-active .btn-icon,
 .btn-nav.diet-active .btn-label { color: #00C853; }
+/* Cores semânticas por aba */
+#nav-dieta.active .btn-icon,
+#nav-dieta.active .btn-label { color: #00C853 !important; }
+#nav-perfil.active .btn-icon,
+#nav-perfil.active .btn-label { color: #6B4EFF !important; }
 .btn-nav svg { transition: transform .18s, color .18s; }
 
 /* ══════════════════════════════════════════
@@ -376,7 +380,7 @@ body:not(.kronia-on-treino) .nav-pills { display: none !important; }
 /* ══════════════════════════════════════════
    EXERCISE CARD
 ══════════════════════════════════════════ */
-.exercise-card { background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628; border: 1px solid rgba(0,85,255,.15); border-radius: 16px; padding: 20px; margin-bottom: 12px; position: relative; overflow: hidden; animation: slideUp .22s ease; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); transition: border-color .2s; color: var(--text); }
+.exercise-card { background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 20px; margin-bottom: 12px; position: relative; overflow: hidden; animation: slideUp .22s ease; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); transition: border-color .2s; color: var(--text); }
 .exercise-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #0055FF 0%, #7fb0ff 100%); border-radius: 3px 0 0 3px; }
 .exercise-card.deleting { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
 .exercise-card.deleting::before { background: var(--red); }
@@ -854,16 +858,16 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 }
 .home-hero-card:active { transform: scale(.96); }
 
-/* TREINO — azul elétrico */
+/* TREINO */
 .home-hero-treino {
-  background: linear-gradient(145deg, rgba(0,85,255,.08) 0%, rgba(255,255,255,.02) 60%, rgba(0,0,0,0) 100%), #0A1628;
-  border: 1px solid rgba(0,85,255,.22);
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
 }
-/* DIETA — azul elétrico (mesma linguagem) */
+/* DIETA */
 .home-hero-dieta {
-  background: linear-gradient(145deg, rgba(0,85,255,.06) 0%, rgba(255,255,255,.02) 60%, rgba(0,0,0,0) 100%), #0A1628;
-  border: 1px solid rgba(0,85,255,.18);
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
+  border: 1px solid rgba(255,255,255,.09);
   box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
 }
 
@@ -1641,7 +1645,7 @@ body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.52)"] { color: rgba(15
 /* ══════════════════════════════════════════
    TELA ORIENTAÇÃO
 ══════════════════════════════════════════ */
-#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: radial-gradient(ellipse 80% 40% at 50% -5%, rgba(0,85,255,.18), transparent 60%), #050D1A; flex-direction: column; overflow: hidden; }
+#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A; flex-direction: column; overflow: hidden; }
 #orientacaoScreen.show { display: flex; }
 #dietaScreen {
   --diet-bg: var(--bg);
@@ -3706,7 +3710,7 @@ body.light-mode #transformsScreen {
 
 
 /* KRONOS chat skin — aplica também no modal compacto */
-body:not(.light-mode) #aiModal { background: #050D1A !important; }
+body:not(.light-mode) #aiModal { background: #0A0A0A !important; }
 body:not(.light-mode) #aiModal .ai-topbar { border-bottom: 1px solid rgba(0,85,255,.12); background: rgba(5,13,26,.95); }
 body:not(.light-mode) #aiMessages { background: transparent; }
 #aiMessages .ai-msg { gap: 8px; align-items: flex-end; }
@@ -4698,7 +4702,7 @@ body.light-mode .settings-plan-badge {
 .kronia-data-header p { color: var(--text-soft); font-size: .85rem; line-height: 1.4; margin-top: 8px; }
 .kronia-data-refresh { width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-card); color: #0055FF; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); }
 .kronia-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
-.kronia-card { background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628; border: 1px solid rgba(0,85,255,.15); border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); }
+.kronia-card { background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); }
 .kronia-card-wide { margin-bottom: 12px; }
 .kronia-card-title { color: var(--text-main); font-size: .92rem; font-weight: 900; font-style: italic; line-height: 1.2; }
 .kronia-card-value { color: var(--text-main); font-size: 1.55rem; font-weight: 900; margin-top: 10px; letter-spacing: 0; }
@@ -4723,13 +4727,13 @@ body.light-mode .settings-plan-badge {
    ===================================================================== */
 
 :root {
-  --kr-bg: #050D1A;
-  --kr-bg-elevated: #0A1628;
-  --kr-surface: #0A1628;
-  --kr-surface-2: #0D1B30;
-  --kr-surface-3: #112038;
-  --kr-border: rgba(0,85,255,.15);
-  --kr-border-strong: rgba(0,85,255,.25);
+  --kr-bg: #0A0A0A;
+  --kr-bg-elevated: #141414;
+  --kr-surface: #141414;
+  --kr-surface-2: #181818;
+  --kr-surface-3: #1E1E1E;
+  --kr-border: rgba(255,255,255,.08);
+  --kr-border-strong: rgba(255,255,255,.14);
   --kr-text: #ffffff;
   --kr-text-soft: rgba(255,255,255,.60);
   --kr-text-muted: rgba(255,255,255,.35);
@@ -4741,11 +4745,11 @@ body.light-mode .settings-plan-badge {
   --kr-danger: #FF3B3B;
   --kr-info: #0055FF;
   --kr-shadow: 0 4px 14px rgba(0,0,0,.35);
-  --kr-input-bg: rgba(0,85,255,.06);
-  --kr-chip-bg: rgba(0,85,255,.08);
-  --kr-overlay: rgba(5,13,26,.82);
-  --kr-nav-bg: rgba(7,14,26,.88);
-  --kr-divider: rgba(0,85,255,.12);
+  --kr-input-bg: rgba(255,255,255,.05);
+  --kr-chip-bg: rgba(255,255,255,.06);
+  --kr-overlay: rgba(0,0,0,.80);
+  --kr-nav-bg: rgba(10,10,10,.94);
+  --kr-divider: rgba(255,255,255,.07);
   --kr-card-radius: 16px;
   --kr-control-radius: 13px;
 }
@@ -6535,13 +6539,13 @@ body.dark-mode .settings-row-value {
 }
 .diet-choice-card:active { transform: scale(.97); }
 .diet-choice-card--green {
-  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628;
-  border: 1.5px solid rgba(0,85,255,.18);
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
+  border: 1.5px solid rgba(255,255,255,.09);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
 }
 .diet-choice-card--orange {
-  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628;
-  border: 1.5px solid rgba(0,85,255,.15);
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
+  border: 1.5px solid rgba(255,255,255,.08);
   box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
 }
 .diet-choice-card-icon-wrap {
@@ -7451,7 +7455,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: radial-gradient(ellipse 80% 35% at 50% -5%, rgba(0,85,255,.18), transparent 58%), #050D1A;
+  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A;
   flex-direction: column;
   overflow: hidden;
 }
@@ -7719,7 +7723,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: radial-gradient(ellipse 80% 35% at 50% -5%, rgba(0,85,255,.18), transparent 58%), #050D1A;
+  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A;
   flex-direction: column;
   overflow: hidden;
 }
@@ -7943,7 +7947,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2100;
-  background: radial-gradient(ellipse 80% 35% at 50% -5%, rgba(0,85,255,.18), transparent 58%), #050D1A;
+  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A;
   flex-direction: column;
   overflow: hidden;
 }
@@ -8150,201 +8154,6 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ══════════════════════════════════════════
-   PROTOCOLOS — SCREEN
-══════════════════════════════════════════ */
-#protocolosScreen {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 1500;
-  background: var(--bg);
-  flex-direction: column;
-  overflow: hidden;
-}
-#protocolosScreen.show { display: flex; }
-
-.proto-header {
-  padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 0;
-  flex-shrink: 0;
-}
-.proto-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-.proto-screen-title {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: .12em;
-  color: rgba(255,255,255,0.4);
-  text-transform: uppercase;
-}
-.proto-tabs {
-  display: flex;
-  gap: 2px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 10px;
-  padding: 3px;
-}
-.proto-tab {
-  flex: 1;
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  font-family: var(--font);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: rgba(255,255,255,0.4);
-  cursor: pointer;
-  transition: all .2s;
-  -webkit-tap-highlight-color: transparent;
-}
-.proto-tab.active {
-  background: #2563EB;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.4);
-}
-.proto-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
-  -webkit-overflow-scrolling: touch;
-}
-.proto-fase-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(37,99,235,0.15);
-  border: 1px solid rgba(37,99,235,0.35);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  color: #60A5FA;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-}
-.proto-fase-title {
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: #fff;
-  font-family: var(--display);
-  letter-spacing: .03em;
-  margin-bottom: 6px;
-}
-.proto-fase-desc {
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.45);
-  line-height: 1.6;
-  margin-bottom: 16px;
-}
-.proto-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.proto-stat-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 12px;
-  padding: 12px 10px;
-  text-align: center;
-}
-.proto-stat-num {
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: #fff;
-  margin-bottom: 3px;
-}
-.proto-stat-lbl {
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  color: rgba(255,255,255,0.3);
-  text-transform: uppercase;
-}
-.proto-section-title {
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: .1em;
-  color: rgba(255,255,255,0.25);
-  text-transform: uppercase;
-  margin: 16px 0 10px;
-}
-.proto-dados-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-}
-.proto-dado-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-.proto-dado-row:last-child { border-bottom: none; }
-.proto-dado-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.6);
-}
-.proto-dado-label svg { color: rgba(255,255,255,0.3); }
-.proto-dado-val {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.proto-dado-sub-val {
-  font-size: 0.68rem;
-  color: rgba(255,255,255,0.35);
-  font-weight: 500;
-}
-.proto-progress-bar-wrap {
-  height: 4px;
-  background: rgba(255,255,255,0.07);
-  border-radius: 2px;
-  margin-top: 6px;
-  overflow: hidden;
-}
-.proto-progress-bar {
-  height: 100%;
-  background: #2563EB;
-  border-radius: 2px;
-  transition: width .6s ease;
-}
-.proto-ver-btn {
-  width: 100%;
-  margin-top: 20px;
-  padding: 15px;
-  background: rgba(37,99,235,0.12);
-  border: 1px solid rgba(37,99,235,0.35);
-  border-radius: 14px;
-  color: #60A5FA;
-  font-family: var(--font);
-  font-size: 0.88rem;
-  font-weight: 800;
-  letter-spacing: .03em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  -webkit-tap-highlight-color: transparent;
-  transition: background .15s;
-}
-.proto-ver-btn:active { background: rgba(37,99,235,0.2); }
 
 /* ══════════════════════════════════════════
    BOTTOM NAV — update hover state for blue
@@ -9272,11 +9081,11 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 .tile,
 .widget,
 .box {
-  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%),
-              #0A1628 !important;
-  border: 1px solid rgba(0,85,255,.15) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%),
+              #141414 !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
   border-radius: 16px !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04) !important;
 }
 
 /* ─── Remover box-shadows com neon colorido ─── */
@@ -9286,10 +9095,10 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 .kronos-ai-card,
 .home-quick-card,
 .home-tool-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%),
-              #0A1628 !important;
-  border: 1px solid rgba(0,85,255,.15) !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%),
+              #141414 !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04) !important;
 }
 
 /* ─── Ícones em cards de atalho ─── */
@@ -9345,9 +9154,9 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 
 /* Home: card KRONOS RECOMENDA */
 .kronos-ai-card {
-  background: linear-gradient(180deg, rgba(0,85,255,.06), rgba(255,255,255,0) 60%),
-              #0A1628 !important;
-  border: 1px solid rgba(0,85,255,.20) !important;
+  background: linear-gradient(180deg, rgba(0,85,255,.05), rgba(255,255,255,0) 60%),
+              #161616 !important;
+  border: 1px solid rgba(0,85,255,.18) !important;
 }
 .kronos-ai-card .kronos-card-title,
 .kronos-ai-card .orient-title {
@@ -9356,9 +9165,9 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 
 /* Dieta: cards de escolha */
 .diet-choice-card--orange {
-  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%),
-              #0A1628 !important;
-  border: 1px solid rgba(0,85,255,.15) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%),
+              #141414 !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
   box-shadow: 0 4px 14px rgba(0,0,0,.35) !important;
 }
 .diet-choice-card-icon-wrap--orange {
@@ -9379,8 +9188,8 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 }
 .perfil-stat-card,
 .perfil-stats .stat-item {
-  background: #0A1628 !important;
-  border: 1px solid rgba(0,85,255,.15) !important;
+  background: #141414 !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
 }
 
 /* Mapa muscular: garantir visibilidade */
@@ -9497,7 +9306,7 @@ p,
   color: #7fb0ff;
 }
 
-#gerarTreinoScreen .gt-equip-select option { background: #0A1628; }
+#gerarTreinoScreen .gt-equip-select option { background: #141414; }
 
 #gerarTreinoScreen .gt-tipo-card.selected {
   background: rgba(0,85,255,.12);
@@ -9703,20 +9512,20 @@ p,
    KRONIA REDESIGN — Fix 3 problemas identificados em screenshots
 ══════════════════════════════════════════════════════════════════ */
 
-/* 1. Cards de tipo de treino — base (não-selecionado) com border azul */
+/* 1. Cards de tipo de treino — base (não-selecionado) */
 #gerarTreinoScreen .gt-tipo-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), #0A1628 !important;
-  border: 2px solid rgba(0,85,255,.15) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), #141414 !important;
+  border: 2px solid rgba(255,255,255,.08) !important;
 }
 
 /* obj-card e day-btn também */
 #gerarTreinoScreen .gt-obj-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), #0A1628 !important;
-  border: 2px solid rgba(0,85,255,.12) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), #141414 !important;
+  border: 2px solid rgba(255,255,255,.07) !important;
 }
 #gerarTreinoScreen .gt-day-btn {
-  background: #0A1628 !important;
-  border: 2px solid rgba(0,85,255,.14) !important;
+  background: #141414 !important;
+  border: 2px solid rgba(255,255,255,.07) !important;
   color: rgba(255,255,255,.55) !important;
 }
 
