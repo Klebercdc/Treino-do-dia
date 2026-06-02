@@ -9697,3 +9697,56 @@ p,
 .kronia-tools-subtitle { color: rgba(107,78,255,.85) !important; }
 .kronia-tools-tip      { color: #a78bfa !important; }
 
+
+
+/* ══════════════════════════════════════════════════════════════════
+   KRONIA REDESIGN — Fix 3 problemas identificados em screenshots
+══════════════════════════════════════════════════════════════════ */
+
+/* 1. Cards de tipo de treino — base (não-selecionado) com border azul */
+#gerarTreinoScreen .gt-tipo-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), #0A1628 !important;
+  border: 2px solid rgba(0,85,255,.15) !important;
+}
+
+/* obj-card e day-btn também */
+#gerarTreinoScreen .gt-obj-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), #0A1628 !important;
+  border: 2px solid rgba(0,85,255,.12) !important;
+}
+#gerarTreinoScreen .gt-day-btn {
+  background: #0A1628 !important;
+  border: 2px solid rgba(0,85,255,.14) !important;
+  color: rgba(255,255,255,.55) !important;
+}
+
+/* 2. Labs CTA card — troca verde por azul */
+.home-labs-cta-card {
+  border-color: rgba(0,85,255,.30) !important;
+  background: linear-gradient(145deg, rgba(0,85,255,.14), rgba(107,78,255,.06)) !important;
+  box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.home-labs-cta-card:hover {
+  border-color: rgba(0,85,255,.50) !important;
+}
+.home-labs-cta-badge {
+  border-color: rgba(0,85,255,.45) !important;
+  background: rgba(0,85,255,.18) !important;
+  color: #7fb0ff !important;
+}
+.home-labs-cta-icon {
+  background: linear-gradient(145deg, #0055FF, #6B4EFF) !important;
+}
+
+/* 3. Hero icon backgrounds — aumentar opacidade para ficar visível */
+.home-hero-icon--orange {
+  background: rgba(0,85,255,.28) !important;
+  box-shadow: 0 4px 16px rgba(0,85,255,.35) !important;
+}
+.home-hero-icon--green {
+  background: rgba(107,78,255,.28) !important;
+  box-shadow: 0 4px 16px rgba(107,78,255,.30) !important;
+}
+.home-hero-icon svg,
+.home-hero-icon i { color: #fff !important; }
+
