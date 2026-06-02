@@ -56,4 +56,11 @@ for (const file of staticFiles) {
   await cp(from, to);
 }
 
-console.log(`Static output ready: public (${staticFiles.length} files)`);
+// Copy assets/3d/ directory (3D PNG images)
+const assets3dSrc = path.join(root, 'assets', '3d');
+const assets3dDest = path.join(outputDir, 'assets', '3d');
+await mkdir(assets3dDest, { recursive: true });
+await cp(assets3dSrc, assets3dDest, { recursive: true });
+
+console.log(`Static output ready: public (${staticFiles.length} files + assets/3d/)`);
+

@@ -136,7 +136,7 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   background-image:
     linear-gradient(rgba(40,110,200,0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(40,110,200,0.04) 1px, transparent 1px);
@@ -1325,17 +1325,17 @@ body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.52)"] { color: rgba(15
 .start-workout-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   margin: 0 16px 16px; width: calc(100% - 32px);
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
   border: none; border-radius: 100px; padding: 18px 24px;
-  color: #fff; font-family: var(--font); font-size: 1rem; font-weight: 800;
+  color: #02101f; font-family: var(--font); font-size: 1rem; font-weight: 800;
   letter-spacing: .06em; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 6px 24px rgba(37,99,235,0.5);
+  box-shadow: 0 6px 24px rgba(0,194,255,0.4);
   animation: startBtnPulse 2.5s ease-in-out infinite;
 }
-.start-workout-btn:active { transform: scale(.97); box-shadow: 0 3px 12px rgba(37,99,235,0.4); }
+.start-workout-btn:active { transform: scale(.97); box-shadow: 0 3px 12px rgba(0,194,255,0.3); }
 @keyframes startBtnPulse {
-  0%, 100% { box-shadow: 0 6px 24px rgba(37,99,235,0.5); }
-  50% { box-shadow: 0 6px 32px rgba(37,99,235,0.75), 0 0 0 8px rgba(37,99,235,0.1); }
+  0%, 100% { box-shadow: 0 6px 24px rgba(0,194,255,0.4); }
+  50% { box-shadow: 0 6px 32px rgba(0,194,255,0.65), 0 0 0 8px rgba(0,194,255,0.1); }
 }
 
 /* ExercisePreviewList */
@@ -7522,8 +7522,8 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   width: 100%;
   margin-top: 10px;
   padding: 13px;
-  background: #2563EB;
-  color: #fff;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
+  color: #02101f;
   border: none;
   border-radius: 12px;
   font-family: var(--font);
@@ -7535,7 +7535,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 18px rgba(37,99,235,0.4);
+  box-shadow: 0 4px 18px rgba(0,194,255,0.35);
   -webkit-tap-highlight-color: transparent;
   transition: opacity .15s, transform .1s;
 }
@@ -8014,8 +8014,8 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   width: 100%;
   margin-top: 20px;
   padding: 16px;
-  background: #2563EB;
-  color: #fff;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
+  color: #02101f;
   border: none;
   border-radius: 14px;
   font-family: var(--font);
@@ -8027,7 +8027,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 24px rgba(37,99,235,0.45);
+  box-shadow: 0 4px 24px rgba(0,194,255,0.4);
   -webkit-tap-highlight-color: transparent;
   transition: opacity .15s, transform .1s;
 }
@@ -9197,20 +9197,19 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 
 /* ─── Ícones em cards de atalho ─── */
 .home-hero-icon,
-.home-hero-icon--orange,
-.home-hero-icon--green,
 .home-quick-icon,
 .home-tool-icon {
   background: rgba(0,194,255,0.10) !important;
   color: #00C2FF !important;
 }
+/* cores distintas por card */
+.home-hero-icon--orange { background: rgba(251,146,60,0.15) !important; color: #fb923c !important; }
+.home-hero-icon--green  { background: rgba(47,227,154,0.15) !important; color: #2fe39a !important; }
 
 /* ─── Glow nos cards hero ─── */
-.home-hero-glow,
-.home-hero-glow--orange,
-.home-hero-glow--green {
-  background: rgba(0,194,255,0.12) !important;
-}
+.home-hero-glow { background: rgba(0,194,255,0.10) !important; }
+.home-hero-glow--orange { background: rgba(251,146,60,0.18) !important; }
+.home-hero-glow--green  { background: rgba(47,227,154,0.14) !important; }
 
 /* ─── PARTE 5: Nav — já feita no bloco principal ─── */
 
