@@ -16113,7 +16113,7 @@ function updateHomeBanner() {
 }
 
 /* ════════════════════════════════════════════════════
-   NOVAS TELAS — GERAR TREINO, TREINO GERADO, EXECUÇÃO, PROTOCOLOS
+   NOVAS TELAS — GERAR TREINO, TREINO GERADO, EXECUÇÃO
 ════════════════════════════════════════════════════ */
 
 // ── Gerar Treino Wizard ─────────────────────────────
@@ -16291,57 +16291,6 @@ function execPularDescanso() {
   if (d) d.textContent = '00:00';
 }
 
-// ── Protocolos ──────────────────────────────────────
-function openProtocolos() {
-  document.getElementById('protocolosScreen').classList.add('show');
-  _protoLoadData();
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function closeProtocolos() {
-  document.getElementById('protocolosScreen').classList.remove('show');
-}
-
-function protoSetTab(tab, btn) {
-  document.querySelectorAll('.proto-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  const ativo = document.getElementById('protoAtivoContent');
-  const hist = document.getElementById('protoHistoricoContent');
-  if (ativo) ativo.style.display = tab === 'ativo' ? '' : 'none';
-  if (hist) hist.style.display = tab === 'historico' ? '' : 'none';
-}
-
-function _protoLoadData() {
-  try {
-    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
-    const total = hist.length;
-    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
-    const concl = document.getElementById('protoStatConcluido');
-    const ser = document.getElementById('protoStatSeries');
-    const rpeEl = document.getElementById('protoStatRPE');
-    const vol = document.getElementById('protoVolBar');
-
-    const thisWeek = hist.filter(s => {
-      const d = new Date(s.date || s.timestamp || 0);
-      const now = new Date();
-      const diff = (now - d) / 86400000;
-      return diff < 7;
-    });
-    const weekSeries = thisWeek.reduce((a, s) => a + (s.totalSeries || 0), 0);
-    const target = 24;
-    const pct = Math.min(100, Math.round((weekSeries / target) * 100));
-
-    if (concl) concl.textContent = pct + '%';
-    if (ser) ser.textContent = weekSeries + '/' + target;
-    if (vol) vol.style.width = pct + '%';
-
-    const rpeVals = thisWeek.flatMap(s => (s.exercises || []).flatMap(e =>
-      (e.series || []).map(r => r.rpe).filter(v => v > 0)
-    ));
-    const avgRpe = rpeVals.length ? (rpeVals.reduce((a,b) => a+b, 0) / rpeVals.length).toFixed(1) : '—';
-    if (rpeEl) rpeEl.textContent = avgRpe;
-  } catch(e) { /* falha silenciosa */ }
-}
 
 // ── Score Adaptativo ─────────────────────────────────
 function updateScoreAdaptativo() {
@@ -16418,13 +16367,6 @@ if (typeof window !== 'undefined') {
     document.getElementById('gerarTreinoScreen')?.classList.remove('show');
     document.getElementById('treinoGeradoScreen')?.classList.remove('show');
     document.getElementById('execucaoScreen')?.classList.remove('show');
-    if (tab !== 'protocolos') {
-      document.getElementById('protocolosScreen')?.classList.remove('show');
-    } else {
-      // marca item ativo
-      document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
-      document.getElementById('nav-protocolos')?.classList.add('active');
-    }
     if (tab === 'kronos') {
       document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
       document.getElementById('nav-kronos')?.classList.add('active');
