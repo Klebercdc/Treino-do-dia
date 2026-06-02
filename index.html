@@ -1039,17 +1039,12 @@
 <div id="homeScreen">
   <div class="home-header">
     <div class="home-header-bar">
-      <button class="home-menu-btn" onclick="handleAuthClick()" aria-label="Menu">
-        <i data-lucide="menu" class="lucide" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-      </button>
+      <img src="assets/3d/klogo.png" class="home-logo-img" alt="K" onclick="handleAuthClick()" draggable="false">
       <div class="home-header-center">
-        <div class="home-header-greeting" id="homeGreeting">Boa noite,</div>
-        <div class="home-header-name-row">
-          <span class="home-header-username" id="homeUserNameTitle">Kleber</span>
-          <div id="homePlanBadge" onclick="openPlanModal()" class="home-header-plan-badge" style="-webkit-tap-highlight-color:transparent">
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="#60A5FA"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            <span>Membro FREE</span>
-          </div>
+        <div class="home-header-brand">KRONIA</div>
+        <div id="homePlanBadge" onclick="openPlanModal()" class="home-header-plan-badge" style="-webkit-tap-highlight-color:transparent">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="#60A5FA"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span id="homePlanLabel">Membro FREE</span>
         </div>
       </div>
       <button class="home-bell-btn" aria-label="Notificações">
@@ -1069,77 +1064,122 @@
     </div>
   </div>
 
-  <!-- ═══ SCORE ADAPTATIVO ═══ -->
-  <div class="score-adaptativo-card" style="position:relative;overflow:hidden;">
-    <!-- corpo 3D ambiente -->
-    <div style="position:absolute;right:-10px;top:-10px;bottom:-10px;width:140px;pointer-events:none;z-index:0;
-                background:radial-gradient(60% 60% at 55% 45%, rgba(0,150,255,0.18), transparent 72%);filter:blur(6px);">
-    </div>
-    <img src="assets/3d/body-front.png" alt="" draggable="false" aria-hidden="true"
-      style="position:absolute;right:-4px;top:-6px;height:105%;width:auto;object-fit:contain;
-             opacity:0.18;filter:drop-shadow(0 0 14px rgba(0,194,255,0.3));pointer-events:none;z-index:0;
-             -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 40%);
-             mask-image:linear-gradient(90deg, transparent 0%, #000 40%);">
+  <!-- ═══ HERO BANNER ═══ -->
+  <div class="home-hero-banner">
+    <img src="assets/3d/body-back.png" class="home-hero-banner-img" alt="" draggable="false" aria-hidden="true">
+    <div class="home-hero-banner-overlay"></div>
+  </div>
 
-    <div class="score-ring-wrap" style="position:relative;z-index:1;">
-      <svg class="score-ring-svg" viewBox="0 0 100 100">
-        <defs>
-          <linearGradient id="scoreRingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#00C2FF"/>
-            <stop offset="55%" stop-color="#2a72e0"/>
-            <stop offset="100%" stop-color="#6D4AFE"/>
-          </linearGradient>
-        </defs>
-        <circle class="score-ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="7"/>
-        <circle class="score-ring-progress" cx="50" cy="50" r="42" fill="none" stroke-width="7"
-          stroke-dasharray="263.9" id="homeScoreRing" stroke-dashoffset="53"
-          stroke-linecap="round"/>
-      </svg>
-      <div class="score-ring-inner">
-        <div class="score-ring-num" id="homeScoreNum">87</div>
-        <div class="score-ring-label" id="homeScoreLabel">ÓTIMO</div>
-        <div class="score-ring-title">SCORE</div>
-        <div class="score-ring-sub" id="homeScoreSub">Pronto para evoluir hoje</div>
+  <!-- ═══ GREETING ═══ -->
+  <div class="home-greeting-block">
+    <div class="home-greeting-salut" id="homeGreeting">Boa noite,</div>
+    <div class="home-greeting-name-row">
+      <span class="home-greeting-name" id="homeUserNameTitle">Kleber</span>
+      <span class="home-greeting-emoji"> 👋</span>
+    </div>
+    <div class="home-greeting-sub">Seu sistema está em adaptação para máxima performance.</div>
+  </div>
+
+  <!-- ═══ PRONTIDÃO ═══ -->
+  <div class="score-adaptativo-card prontidao-v2">
+    <div class="prontidao-header-label">PRONTIDÃO · AUTO-DECLARADA</div>
+    <div class="prontidao-body-row">
+      <div class="prontidao-ring-col">
+        <div class="score-ring-wrap">
+          <svg class="score-ring-svg" viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="scoreRingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00C2FF"/>
+                <stop offset="55%" stop-color="#2a72e0"/>
+                <stop offset="100%" stop-color="#6D4AFE"/>
+              </linearGradient>
+            </defs>
+            <circle class="score-ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="7"/>
+            <circle class="score-ring-progress" cx="50" cy="50" r="42" fill="none" stroke-width="7"
+              stroke-dasharray="263.9" id="homeScoreRing" stroke-dashoffset="53"
+              stroke-linecap="round"/>
+          </svg>
+          <div class="score-ring-inner">
+            <div class="score-ring-num" id="homeScoreNum">87</div>
+            <div class="score-ring-label" id="homeScoreLabel">ÓTIMO</div>
+            <div class="score-ring-title">SCORE</div>
+          </div>
+        </div>
+        <div class="prontidao-calc-note" id="homeScoreSub">Calculado da sua fadiga registrada</div>
+      </div>
+      <div class="prontidao-metrics-col">
+        <div class="prontidao-metric-chip">
+          <div class="pmc-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e06060" stroke-width="2.2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <div class="pmc-info">
+            <div class="pmc-label">Recuperação</div>
+            <div class="pmc-val" id="scoreStatCarga">Boa</div>
+          </div>
+        </div>
+        <div class="prontidao-metric-chip">
+          <div class="pmc-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="pmc-info">
+            <div class="pmc-label">Energia</div>
+            <div class="pmc-val" id="scoreStatProntidao">Média-alta</div>
+          </div>
+        </div>
+        <div class="prontidao-metric-chip">
+          <div class="pmc-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="pmc-info">
+            <div class="pmc-label">Fadiga</div>
+            <div class="pmc-val" id="scoreStatFadiga">Baixa</div>
+          </div>
+        </div>
+        <span id="scoreStatTendencia" style="display:none"></span>
       </div>
     </div>
-    <div class="score-stats" style="position:relative;z-index:1;">
-      <div class="score-stat-row">
-        <div class="score-stat-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        </div>
-        <div class="score-stat-info">
-          <div class="score-stat-name">Carga Recuperada</div>
-          <div class="score-stat-val" id="scoreStatCarga">92%</div>
-        </div>
-      </div>
-      <div class="score-stat-row">
-        <div class="score-stat-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
-        </div>
-        <div class="score-stat-info">
-          <div class="score-stat-name">Prontidão</div>
-          <div class="score-stat-val" id="scoreStatProntidao">Alta</div>
-        </div>
-      </div>
-      <div class="score-stat-row">
-        <div class="score-stat-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a9 9 0 0 0-9 9c0 4.17 2.84 7.7 6.75 8.66A9 9 0 0 0 12 20"/><path d="M12 12V2"/></svg>
-        </div>
-        <div class="score-stat-info">
-          <div class="score-stat-name">Fadiga</div>
-          <div class="score-stat-val" id="scoreStatFadiga">Baixa</div>
-        </div>
-      </div>
-      <div class="score-stat-row">
-        <div class="score-stat-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-        </div>
-        <div class="score-stat-info">
-          <div class="score-stat-name">Tendência</div>
-          <div class="score-stat-val" id="scoreStatTendencia">Positiva</div>
-        </div>
-      </div>
+    <div class="prontidao-footer">
+      <span class="prontidao-update-link" onclick="navTo('kronos')">Atualizar fadiga ›</span>
     </div>
+  </div>
+
+  <!-- ═══ STATUS CHIPS ═══ -->
+  <div class="home-status-chips">
+    <div class="home-status-chip" onclick="openStartWorkoutScreen()">
+      <div class="home-status-chip-icon hsc-blue">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
+      </div>
+      <div class="home-status-chip-label">Treino</div>
+      <div class="home-status-chip-val">Hoje</div>
+    </div>
+    <div class="home-status-chip">
+      <div class="home-status-chip-icon hsc-green">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      <div class="home-status-chip-label">Recuperação</div>
+      <div class="home-status-chip-val">Pronta</div>
+    </div>
+    <div class="home-status-chip" onclick="navTo('dieta')">
+      <div class="home-status-chip-icon hsc-teal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
+      </div>
+      <div class="home-status-chip-label">Dieta</div>
+      <div class="home-status-chip-val">Alinhada</div>
+    </div>
+    <div class="home-status-chip">
+      <div class="home-status-chip-icon hsc-violet">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+      </div>
+      <div class="home-status-chip-label">Progresso</div>
+      <div class="home-status-chip-val">Evoluindo</div>
+    </div>
+  </div>
+
+  <!-- ═══ CTA CONTINUAR JORNADA ═══ -->
+  <div class="home-cta-wrap">
+    <button class="home-continuar-jornada-btn" onclick="openStartWorkoutScreen()">
+      Continuar jornada →
+    </button>
   </div>
 
   <!-- ═══ KRONOS RECOMENDA ═══ -->
