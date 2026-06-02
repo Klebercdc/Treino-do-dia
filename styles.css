@@ -2,18 +2,23 @@
 
 /* ══════════════════════════════════════════
    DESIGN SYSTEM — KRONIA
-   Aesthetic: Dark Athletic · Warm Amber Accent
-   Inspiração: Whoop · Nike Training · Strong
+   Aesthetic: Deep Space Athletic · Electric Blue
+   Redesign: 2026 — Kronia Visual System v2
 ══════════════════════════════════════════ */
 :root {
   --vh:          1vh;
   --keyboard-offset: 0px;
   --chat-input-height: 0px;
-  --bg:          #0f0f0f;
-  --bg2:         #161616;
-  --surface:     #1a1a1a;
-  --card:        #212121;
-  --card-hover:  #272727;
+
+  /* Backgrounds */
+  --bg:          #050D1A;
+  --bg2:         #0A1628;
+  --surface:     #0D1B30;
+  --card:        #0A1628;
+  --card-2:      #0D1B30;
+  --card-hover:  #112038;
+
+  /* Aliases legados (mantidos para não quebrar código existente) */
   --bg-app:      var(--bg);
   --bg-card:     var(--card);
   --bg-elevated: var(--surface);
@@ -23,39 +28,65 @@
   --accent-contrast: #ffffff;
   --input-bg:    var(--bg2);
   --input-border: var(--border);
-  --nav-bg:      rgba(255,255,255,0.96);
+  --nav-bg:      rgba(7,14,26,.88);
   --shadow-soft: var(--shadow-sm);
-  --border:      rgba(255,255,255,0.08);
-  --border-soft: rgba(255,255,255,0.04);
-  --accent:      #2563EB;
-  --accent-dim:  rgba(37,99,235,0.15);
-  --accent-glow: rgba(37,99,235,0.25);
-  --accent2:     #60A5FA;
-  --green:       #10b981;
-  --green-bg:    rgba(16,185,129,0.12);
-  --emerald:     #10b981;
-  --emerald-dim: rgba(16,185,129,0.12);
-  --red:         #ef4444;
-  --red-bg:      rgba(239,68,68,0.12);
-  --blue:        #3b82f6;
-  --blue-bg:     rgba(59,130,246,0.12);
-  --purple:      #a855f7;
-  --text:        #f5f5f5;
-  --text-2:      #a3a3a3;
-  --text-rgb:    245,245,245;
-  --muted:       #525252;
+
+  /* Bordas */
+  --border:      rgba(0,85,255,.15);
+  --border-soft: rgba(255,255,255,.06);
+
+  /* Accent elétrico */
+  --accent:      #0055FF;
+  --accent-dim:  rgba(0,85,255,.12);
+  --accent-soft: rgba(0,85,255,.20);
+  --accent-glow: rgba(0,85,255,.28);
+  --accent2:     #7fb0ff;
+  --secondary:   #6B4EFF;
+
+  /* Semânticas */
+  --positive:    #00C853;
+  --positive-dim: rgba(0,200,83,.13);
+  --green:       #00C853;
+  --green-bg:    rgba(0,200,83,.13);
+  --emerald:     #00C853;
+  --emerald-dim: rgba(0,200,83,.13);
+  --alert:       #FFB300;
+  --negative:    #FF3B3B;
+  --red:         #FF3B3B;
+  --red-bg:      rgba(255,59,59,.13);
+  --blue:        #0055FF;
+  --blue-bg:     rgba(0,85,255,.12);
+  --purple:      #6B4EFF;
+
+  /* Texto */
+  --text:        #ffffff;
+  --text-2:      rgba(255,255,255,.60);
+  --text-rgb:    255,255,255;
+  --muted:       rgba(255,255,255,.35);
+
+  /* Sombras */
+  --shadow:      0 4px 14px rgba(0,0,0,.35);
   --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
   --shadow-md:   0 4px 20px rgba(0,0,0,0.5);
   --shadow-lg:   0 8px 40px rgba(0,0,0,0.6);
-  --font:        'DM Sans', sans-serif;
-  --mono:        'DM Mono', monospace;
-  --display:     'Bebas Neue', sans-serif;
-  --r:           14px;
-  --r-sm:        10px;
+
+  /* Fontes */
+  --font-display: 'Chakra Petch', sans-serif;
+  --font-body:   'Inter', system-ui, sans-serif;
+  --font-mono:   'IBM Plex Mono', monospace;
+  --font:        'Inter', system-ui, sans-serif;
+  --mono:        'IBM Plex Mono', monospace;
+  --display:     'Chakra Petch', sans-serif;
+
+  /* Raios */
+  --radius:      16px;
+  --radius-sm:   12px;
+  --r:           16px;
+  --r-sm:        12px;
   --r-xs:        6px;
-  --kronia-card-radius: 32px;
-  --kronia-card-padding: 24px;
-  --kronia-card-border: #F1F5F9;
+  --kronia-card-radius: 16px;
+  --kronia-card-padding: 20px;
+  --kronia-card-border: rgba(0,85,255,.15);
   color-scheme: dark;
 }
 :root, html, body {
@@ -85,9 +116,12 @@ html {
 body {
   height: calc(var(--vh, 1vh) * 100);
   overflow: hidden;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 90% 42% at 50% -6%, rgba(0,85,255,.22), transparent 62%),
+    radial-gradient(ellipse 70% 40% at 50% 108%, rgba(0,85,255,.10), transparent 60%),
+    #050D1A;
   color: var(--text);
-  font-family: var(--font);
+  font-family: var(--font-body);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
@@ -250,7 +284,7 @@ body {
 .nav-pills { display: flex; gap: 6px; padding: 10px 12px; background: var(--bg); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; align-items: center; -webkit-overflow-scrolling: touch; }
 .nav-pills::-webkit-scrollbar { display: none; }
 .pill { flex: none; padding: 7px 16px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(var(--text-rgb),0.75); cursor: pointer; background: transparent; border-radius: 100px; border: 1px solid transparent; white-space: nowrap; transition: background .18s, border-color .18s, color .18s, opacity .18s; user-select: none; }
-.pill.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(37,99,235,0.3); }
+.pill.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(0,85,255,.30); }
 .pill-add { color: rgba(var(--text-rgb),0.7); background: transparent; border: 1px dashed var(--border); padding: 6px 14px; font-size: 1rem; letter-spacing: 0; }
 .btn-add-ex { display: flex; align-items: center; justify-content: center; gap: 7px; width: calc(100% - 24px); margin: 10px 12px 20px; padding: 14px; background: transparent; border: 1px dashed var(--border); border-radius: var(--r); font-family: var(--font); font-size: 0.94rem; font-weight: 600; color: rgba(var(--text-rgb),0.7); cursor: pointer; transition: background .2s, border-color .2s, color .2s, opacity .2s; }
 .btn-add-ex:active { background: var(--card); border-color: var(--accent); color: var(--accent); border-style: solid; }
@@ -262,14 +296,14 @@ body {
   position: fixed; bottom: 0; left: 0; right: 0;
   z-index: 3700;
   display: flex; align-items: stretch;
-  background: rgba(255,255,255,0.96);
-  border-top: 1px solid rgba(241,245,249,0.95);
-  border-top-left-radius: 40px;
-  border-top-right-radius: 40px;
+  background: rgba(7,14,26,.88);
+  border-top: 1px solid rgba(0,85,255,.15);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
   padding: 8px 14px max(8px, env(safe-area-inset-bottom));
   gap: 0;
   min-height: 72px;
-  box-shadow: 0 -12px 34px rgba(15,23,42,0.12);
+  box-shadow: 0 -4px 20px rgba(0,0,0,.40);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   /* Fix iOS Safari position:fixed disappearing during scroll */
@@ -310,10 +344,12 @@ body.diet-mini-app-active .footer-actions {
 }
 /* Indicador ativo — barra no topo do botão */
 .btn-nav::before { display: none; }
-.btn-nav.active .btn-icon { color: #F97316; transform: translateY(-1px); }
-.btn-nav.active .btn-label { color: #F97316; font-weight: 800; }
+.btn-nav .btn-icon { color: rgba(255,255,255,.35); }
+.btn-nav .btn-label { color: rgba(255,255,255,.35); }
+.btn-nav.active .btn-icon { color: #0055FF; transform: translateY(-1px); }
+.btn-nav.active .btn-label { color: #0055FF; font-weight: 800; }
 .btn-nav.diet-active .btn-icon,
-.btn-nav.diet-active .btn-label { color: #22C55E; }
+.btn-nav.diet-active .btn-label { color: #00C853; }
 .btn-nav svg { transition: transform .18s, color .18s; }
 
 /* ══════════════════════════════════════════
@@ -340,12 +376,12 @@ body:not(.kronia-on-treino) .nav-pills { display: none !important; }
 /* ══════════════════════════════════════════
    EXERCISE CARD
 ══════════════════════════════════════════ */
-.exercise-card { background: #fff; border: 1px solid #F1F5F9; border-radius: 32px; padding: 24px; margin-bottom: 12px; position: relative; overflow: hidden; animation: slideUp .22s ease; box-shadow: 0 12px 28px rgba(15,23,42,0.08); transition: border-color .2s; color:#0f172a; }
-.exercise-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--accent) 0%, var(--accent2) 100%); border-radius: 3px 0 0 3px; }
+.exercise-card { background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628; border: 1px solid rgba(0,85,255,.15); border-radius: 16px; padding: 20px; margin-bottom: 12px; position: relative; overflow: hidden; animation: slideUp .22s ease; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); transition: border-color .2s; color: var(--text); }
+.exercise-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #0055FF 0%, #7fb0ff 100%); border-radius: 3px 0 0 3px; }
 .exercise-card.deleting { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
 .exercise-card.deleting::before { background: var(--red); }
 .card-header { padding-left: 12px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
-.ex-title { font-size: 1rem; font-weight: 900; font-style: italic; color: #0f172a; cursor: pointer; line-height: 1.25; display: block; transition: color .15s; flex: 1; }
+.ex-title { font-size: 1rem; font-weight: 700; font-family: var(--font-display); color: var(--text); cursor: pointer; line-height: 1.25; display: block; transition: color .15s; flex: 1; }
 .ex-title:active { color: var(--accent); }
 .card-rm-badge { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; color: var(--emerald); background: var(--emerald-dim); padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.3); display: none; }
 .ex-target { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(var(--text-rgb),0.7); padding-left: 12px; display: block; margin-bottom: 10px; }
@@ -818,17 +854,17 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 }
 .home-hero-card:active { transform: scale(.96); }
 
-/* TREINO — laranja */
+/* TREINO — azul elétrico */
 .home-hero-treino {
-  background: linear-gradient(145deg,#1c1309 0%,#201508 60%,#1a1005 100%);
-  border: 1px solid rgba(37,99,235,0.28);
-  box-shadow: 0 6px 28px rgba(37,99,235,0.14), inset 0 1px 0 rgba(255,180,80,0.08);
+  background: linear-gradient(145deg, rgba(0,85,255,.08) 0%, rgba(255,255,255,.02) 60%, rgba(0,0,0,0) 100%), #0A1628;
+  border: 1px solid rgba(0,85,255,.22);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
 }
-/* DIETA — verde */
+/* DIETA — azul elétrico (mesma linguagem) */
 .home-hero-dieta {
-  background: linear-gradient(145deg,#0b1a0c 0%,#0c1f0e 60%,#091408 100%);
-  border: 1px solid rgba(34,197,94,0.25);
-  box-shadow: 0 6px 28px rgba(34,197,94,0.11), inset 0 1px 0 rgba(100,255,120,0.06);
+  background: linear-gradient(145deg, rgba(0,85,255,.06) 0%, rgba(255,255,255,.02) 60%, rgba(0,0,0,0) 100%), #0A1628;
+  border: 1px solid rgba(0,85,255,.18);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
 }
 
 /* Glow ambiental (blur circle no canto) */
@@ -840,8 +876,8 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   filter: blur(28px);
   pointer-events: none;
 }
-.home-hero-glow--orange { background: rgba(37,99,235,0.3); }
-.home-hero-glow--green  { background: rgba(34,197,94,0.22); }
+.home-hero-glow--orange { background: rgba(0,85,255,.28); }
+.home-hero-glow--green  { background: rgba(0,85,255,.18); }
 
 /* Ícone */
 .home-hero-icon {
@@ -852,12 +888,14 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   flex-shrink: 0;
 }
 .home-hero-icon--orange {
-  background: linear-gradient(135deg,#2563EB,#FF9A3C);
-  box-shadow: 0 4px 16px rgba(37,99,235,0.45);
+  background: rgba(0,85,255,.18);
+  box-shadow: 0 4px 16px rgba(0,85,255,.30);
+  color: #0055FF;
 }
 .home-hero-icon--green {
-  background: linear-gradient(135deg,#22c55e,#16a34a);
-  box-shadow: 0 4px 16px rgba(34,197,94,0.4);
+  background: rgba(0,85,255,.14);
+  box-shadow: 0 4px 16px rgba(0,85,255,.25);
+  color: #7fb0ff;
 }
 .home-hero-icon svg { color: #fff; }
 
@@ -1603,7 +1641,7 @@ body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.52)"] { color: rgba(15
 /* ══════════════════════════════════════════
    TELA ORIENTAÇÃO
 ══════════════════════════════════════════ */
-#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: #000; flex-direction: column; overflow: hidden; }
+#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: radial-gradient(ellipse 80% 40% at 50% -5%, rgba(0,85,255,.18), transparent 60%), #050D1A; flex-direction: column; overflow: hidden; }
 #orientacaoScreen.show { display: flex; }
 #dietaScreen {
   --diet-bg: var(--bg);
@@ -1658,10 +1696,10 @@ body.dark-mode #dietaScreen,
 .dav-th { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .dav-th:not(:first-child) { text-align: right; }
 .dav-th:nth-child(2) { color: var(--accent); }
-.orient-header { padding: 56px 20px 16px; background: #000; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; position: relative; }
+.orient-header { padding: 56px 20px 16px; background: rgba(5,13,26,.95); border-bottom: 1px solid rgba(0,85,255,.12); display: flex; align-items: center; justify-content: space-between; position: relative; }
 .orient-title { font-family: var(--display); font-size: 1.8rem; color: var(--text); letter-spacing: .04em; }
 .orient-content { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.orient-shortcuts-row { display: flex; gap: 6px; padding: 12px 16px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none; max-height: 32vh; border-bottom: 1px solid rgba(255,255,255,0.07); transition: max-height .3s ease, opacity .3s ease, padding .3s ease; background: #000; }
+.orient-shortcuts-row { display: flex; gap: 6px; padding: 12px 16px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none; max-height: 32vh; border-bottom: 1px solid rgba(0,85,255,.10); transition: max-height .3s ease, opacity .3s ease, padding .3s ease; background: rgba(5,13,26,.92); }
 .orient-shortcuts-row::-webkit-scrollbar { display: none; }
 .orient-category-label { font-size: 0.65rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); padding: 4px 2px 2px; margin-top: 6px; }
 .orient-category-label:first-child { margin-top: 0; }
@@ -1713,7 +1751,7 @@ body.dark-mode #dietaScreen,
 /* Gap entre mensagens consecutivas */
 #orientExpertMessages .ai-msg { margin-bottom: 6px !important; }
 /* Barra de input — pílula iOS nativa */
-.orient-chat-bar, .chat-input { position: fixed; left: 0; right: 0; bottom: var(--keyboard-offset, 0px); z-index: 1000; padding: 0 0 env(safe-area-inset-bottom); border-top: 1px solid rgba(255,255,255,0.06); flex: none; background: #000; }
+.orient-chat-bar, .chat-input { position: fixed; left: 0; right: 0; bottom: var(--keyboard-offset, 0px); z-index: 1000; padding: 0 0 env(safe-area-inset-bottom); border-top: 1px solid rgba(0,85,255,.10); flex: none; background: rgba(7,14,26,.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .orient-input-wrap { display: flex; align-items: center; margin: 8px 12px; padding: 8px 12px; gap: 8px; background: #1C1C1E; border-radius: 22px; border: 1px solid rgba(255,255,255,0.08); }
 .orient-input-wrap textarea { flex: 1; background: transparent; border: none; color: #fff; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif; font-size: 1.05rem; outline: none; -webkit-appearance: none; resize: none; overflow: hidden; line-height: 1.5; max-height: 120px; overflow-y: auto; padding: 1px 0; }
 .orient-input-wrap textarea::placeholder { color: rgba(var(--text-rgb),.45); }
@@ -2209,7 +2247,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
    HOME BANNER
 ══════════════════════════════════════════ */
 #homeBanner { margin: 0 16px 14px; background: linear-gradient(135deg,rgba(37,99,235,.14),rgba(96,165,250,.06)); border: 1px solid rgba(37,99,235,.22); border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-.home-banner-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: linear-gradient(145deg,var(--accent),#ea580c); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(37,99,235,.35); }
+.home-banner-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: rgba(0,85,255,.15); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,85,255,.25); color: #0055FF; }
 #homeBannerTitle { font-size: .88rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
 #homeBannerSub   { font-size: .72rem; color: var(--text-2); }
 
@@ -3668,9 +3706,9 @@ body.light-mode #transformsScreen {
 
 
 /* KRONOS chat skin — aplica também no modal compacto */
-body:not(.light-mode) #aiModal { background: #000 !important; }
-body:not(.light-mode) #aiModal .ai-topbar { border-bottom: 1px solid rgba(255,255,255,0.08); background: #000; }
-body:not(.light-mode) #aiMessages { background: #000; }
+body:not(.light-mode) #aiModal { background: #050D1A !important; }
+body:not(.light-mode) #aiModal .ai-topbar { border-bottom: 1px solid rgba(0,85,255,.12); background: rgba(5,13,26,.95); }
+body:not(.light-mode) #aiMessages { background: transparent; }
 #aiMessages .ai-msg { gap: 8px; align-items: flex-end; }
 #aiMessages .ai-msg.assistant { justify-content: flex-start; }
 #aiMessages .ai-msg.user { justify-content: flex-end; }
@@ -4655,12 +4693,12 @@ body.light-mode .settings-plan-badge {
 }
 .kronia-data-screen.show { display: block; animation: homeIn .22s cubic-bezier(.25,.46,.45,.94) both; }
 .kronia-data-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-.kronia-data-kicker { color: #F97316; font-size: .7rem; font-weight: 900; letter-spacing: .14em; }
+.kronia-data-kicker { color: #0055FF; font-size: .7rem; font-weight: 700; letter-spacing: .14em; font-family: 'Chakra Petch', sans-serif; }
 .kronia-data-header h1 { color: var(--text-main); font-size: 2rem; line-height: 1; margin-top: 5px; font-weight: 900; font-style: italic; }
 .kronia-data-header p { color: var(--text-soft); font-size: .85rem; line-height: 1.4; margin-top: 8px; }
-.kronia-data-refresh { width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-card); color: #F97316; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); }
+.kronia-data-refresh { width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-card); color: #0055FF; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); }
 .kronia-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
-.kronia-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 32px; padding: 24px; box-shadow: var(--shadow-soft); }
+.kronia-card { background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628; border: 1px solid rgba(0,85,255,.15); border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); }
 .kronia-card-wide { margin-bottom: 12px; }
 .kronia-card-title { color: var(--text-main); font-size: .92rem; font-weight: 900; font-style: italic; line-height: 1.2; }
 .kronia-card-value { color: var(--text-main); font-size: 1.55rem; font-weight: 900; margin-top: 10px; letter-spacing: 0; }
@@ -4668,7 +4706,7 @@ body.light-mode .settings-plan-badge {
 .kronia-progress-list { display: grid; gap: 14px; margin-top: 16px; }
 .kronia-progress-head { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: .78rem; font-weight: 800; margin-bottom: 7px; }
 .kronia-progress-track { height: 10px; border-radius: 999px; background: var(--border-soft); overflow: hidden; }
-.kronia-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: #F97316; transition: width .25s ease; }
+.kronia-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: #0055FF; transition: width .25s ease; }
 .kronia-progress-fill.green { background: #22C55E; }
 .kronia-progress-fill.blue { background: #3B82F6; }
 .kronia-progress-fill.amber { background: #F59E0B; }
@@ -4685,31 +4723,31 @@ body.light-mode .settings-plan-badge {
    ===================================================================== */
 
 :root {
-  --kr-bg: #0b0b0f;
-  --kr-bg-elevated: #12131a;
-  --kr-surface: #171923;
-  --kr-surface-2: #1d2130;
-  --kr-surface-3: #252a3a;
-  --kr-border: rgba(255,255,255,.09);
-  --kr-border-strong: rgba(255,255,255,.16);
-  --kr-text: #f5f7fb;
-  --kr-text-soft: #c2c8d4;
-  --kr-text-muted: #96a0b2;
-  --kr-accent: #7c3aed;
-  --kr-accent-2: #8b5cf6;
+  --kr-bg: #050D1A;
+  --kr-bg-elevated: #0A1628;
+  --kr-surface: #0A1628;
+  --kr-surface-2: #0D1B30;
+  --kr-surface-3: #112038;
+  --kr-border: rgba(0,85,255,.15);
+  --kr-border-strong: rgba(0,85,255,.25);
+  --kr-text: #ffffff;
+  --kr-text-soft: rgba(255,255,255,.60);
+  --kr-text-muted: rgba(255,255,255,.35);
+  --kr-accent: #0055FF;
+  --kr-accent-2: #7fb0ff;
   --kr-accent-contrast: #ffffff;
-  --kr-success: #16a34a;
-  --kr-warning: #2563EB;
-  --kr-danger: #dc2626;
-  --kr-info: #2563eb;
-  --kr-shadow: 0 10px 30px rgba(0,0,0,.22);
-  --kr-input-bg: rgba(255,255,255,.04);
-  --kr-chip-bg: rgba(255,255,255,.05);
-  --kr-overlay: rgba(6,8,14,.72);
-  --kr-nav-bg: rgba(10,11,16,.92);
-  --kr-divider: rgba(255,255,255,.08);
-  --kr-card-radius: 20px;
-  --kr-control-radius: 16px;
+  --kr-success: #00C853;
+  --kr-warning: #FFB300;
+  --kr-danger: #FF3B3B;
+  --kr-info: #0055FF;
+  --kr-shadow: 0 4px 14px rgba(0,0,0,.35);
+  --kr-input-bg: rgba(0,85,255,.06);
+  --kr-chip-bg: rgba(0,85,255,.08);
+  --kr-overlay: rgba(5,13,26,.82);
+  --kr-nav-bg: rgba(7,14,26,.88);
+  --kr-divider: rgba(0,85,255,.12);
+  --kr-card-radius: 16px;
+  --kr-control-radius: 13px;
 }
 
 :root[data-theme="light"], html.light-mode, body.light-mode {
@@ -5089,9 +5127,26 @@ hr, .divider, .separator, [class*="divider"], [class*="separator"] {
 :root[data-theme="dark"] .footer-actions,
 html.dark-mode .footer-actions,
 body.dark-mode .footer-actions {
-  background: var(--kr-nav-bg) !important;
-  border-top-color: var(--kr-border) !important;
-  box-shadow: 0 -12px 34px rgba(0,0,0,.32) !important;
+  background: rgba(7,14,26,.88) !important;
+  border-top-color: rgba(0,85,255,.15) !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.40) !important;
+}
+
+:root[data-theme="dark"] .btn-nav .btn-icon,
+html.dark-mode .btn-nav .btn-icon,
+body.dark-mode .btn-nav .btn-icon,
+:root[data-theme="dark"] .btn-nav .btn-label,
+html.dark-mode .btn-nav .btn-label,
+body.dark-mode .btn-nav .btn-label {
+  color: rgba(255,255,255,.35) !important;
+}
+:root[data-theme="dark"] .btn-nav.active .btn-icon,
+html.dark-mode .btn-nav.active .btn-icon,
+body.dark-mode .btn-nav.active .btn-icon,
+:root[data-theme="dark"] .btn-nav.active .btn-label,
+html.dark-mode .btn-nav.active .btn-label,
+body.dark-mode .btn-nav.active .btn-label {
+  color: #0055FF !important;
 }
 
 :root[data-theme="dark"] .exercise-card,
@@ -6480,14 +6535,14 @@ body.dark-mode .settings-row-value {
 }
 .diet-choice-card:active { transform: scale(.97); }
 .diet-choice-card--green {
-  background: rgba(15,23,42,.85);
-  border: 1.5px solid rgba(34,197,94,.45);
-  box-shadow: 0 0 28px rgba(34,197,94,.1), 0 16px 32px rgba(0,0,0,.3);
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628;
+  border: 1.5px solid rgba(0,85,255,.18);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
 }
 .diet-choice-card--orange {
-  background: rgba(28,15,8,.85);
-  border: 1.5px solid rgba(37,99,235,.45);
-  box-shadow: 0 0 28px rgba(37,99,235,.1), 0 16px 32px rgba(0,0,0,.3);
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%), #0A1628;
+  border: 1.5px solid rgba(0,85,255,.15);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
 }
 .diet-choice-card-icon-wrap {
   width: 68px;
@@ -6499,12 +6554,14 @@ body.dark-mode .settings-row-value {
   margin-bottom: 4px;
 }
 .diet-choice-card-icon-wrap--green {
-  background: rgba(34,197,94,.12);
-  box-shadow: 0 0 18px rgba(34,197,94,.2);
+  background: rgba(0,85,255,.12);
+  box-shadow: 0 0 18px rgba(0,85,255,.15);
+  color: #0055FF;
 }
 .diet-choice-card-icon-wrap--orange {
-  background: rgba(37,99,235,.12);
-  box-shadow: 0 0 18px rgba(37,99,235,.2);
+  background: rgba(107,78,255,.12);
+  box-shadow: 0 0 18px rgba(107,78,255,.15);
+  color: #6B4EFF;
 }
 .diet-choice-card-title {
   margin: 0;
@@ -6546,9 +6603,9 @@ body.dark-mode .settings-row-value {
   color: #22C55E;
 }
 .diet-choice-action-btn--orange {
-  background: rgba(37,99,235,.1);
-  border-color: rgba(37,99,235,.45);
-  color: #F97316;
+  background: #0055FF;
+  border-color: transparent;
+  color: #fff;
 }
 .diet-choice-hint-card {
   display: flex;
@@ -6677,9 +6734,9 @@ body.dark-mode .settings-row-value {
   color: #22C55E;
 }
 #dietDataScreen .diet-compact-action-btn--orange {
-  background: rgba(37,99,235,.1);
-  border-color: rgba(37,99,235,.35);
-  color: #F97316;
+  background: #0055FF;
+  border-color: transparent;
+  color: #fff;
 }
 
 /* ══════════════════════════════════════════
@@ -7231,12 +7288,12 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   height: 100%;
   transform: rotate(-90deg);
 }
-.score-ring-track { stroke: rgba(37,99,235,0.15); }
+.score-ring-track { stroke: rgba(0,85,255,.15); }
 .score-ring-progress {
-  stroke: #2563EB;
+  stroke: #0055FF;
   stroke-linecap: round;
   transition: stroke-dashoffset 1s ease;
-  filter: drop-shadow(0 0 6px rgba(37,99,235,0.6));
+  filter: drop-shadow(0 6px 26px rgba(0,85,255,.55));
 }
 .score-ring-inner {
   display: flex;
@@ -9184,3 +9241,232 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   font-size: 0.7rem;
   color: var(--text-2);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   KRONIA REDESIGN SYSTEM 2026
+   Partes 4-9: cards, botões, tipografia, telas específicas
+   Regra: só cor/fonte — layout não tocado.
+══════════════════════════════════════════════════════════════════ */
+
+/* ─── PARTE 4: Cards universais ─── */
+.card,
+.home-card,
+.kronos-card,
+.section-card,
+.list-card,
+.stat-card,
+.summary-card,
+.meal-card,
+.settings-card,
+.account-card,
+.chart-card,
+.report-card,
+.history-card,
+.upload-card,
+.premium-card,
+.plan-card,
+.pricing-card,
+.glass-card,
+.panel,
+.tile,
+.widget,
+.box {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%),
+              #0A1628 !important;
+  border: 1px solid rgba(0,85,255,.15) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+/* ─── Remover box-shadows com neon colorido ─── */
+.home-hero-card,
+.home-hero-treino,
+.home-hero-dieta,
+.kronos-ai-card,
+.home-quick-card,
+.home-tool-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%),
+              #0A1628 !important;
+  border: 1px solid rgba(0,85,255,.15) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+/* ─── Ícones em cards de atalho ─── */
+.home-hero-icon,
+.home-hero-icon--orange,
+.home-hero-icon--green,
+.home-quick-icon,
+.home-tool-icon {
+  background: rgba(0,85,255,.12) !important;
+  color: #0055FF !important;
+}
+
+/* ─── Glow nos cards hero ─── */
+.home-hero-glow,
+.home-hero-glow--orange,
+.home-hero-glow--green {
+  background: rgba(0,85,255,.18) !important;
+}
+
+/* ─── PARTE 5: Nav — já feita no bloco principal ─── */
+
+/* ─── PARTE 6: Botões primários ─── */
+.btn-primary,
+.button-primary,
+.primary-btn,
+.cta-btn,
+.cta-primary,
+.action-primary,
+[data-variant="primary"],
+[data-tone="primary"] {
+  background: #0055FF !important;
+  color: #fff !important;
+  font-weight: 700;
+  border-radius: 13px;
+  border: none !important;
+  box-shadow: 0 6px 18px rgba(0,85,255,.28) !important;
+}
+
+.btn-primary:active,
+.primary-btn:active,
+.cta-btn:active {
+  transform: scale(.99) !important;
+  box-shadow: 0 2px 8px rgba(0,85,255,.2) !important;
+}
+
+/* config-apply (botão salvar treino) */
+.config-apply {
+  background: #0055FF !important;
+  box-shadow: 0 6px 18px rgba(0,85,255,.28) !important;
+}
+
+/* ─── PARTE 7: Telas específicas ─── */
+
+/* Home: card KRONOS RECOMENDA */
+.kronos-ai-card {
+  background: linear-gradient(180deg, rgba(0,85,255,.06), rgba(255,255,255,0) 60%),
+              #0A1628 !important;
+  border: 1px solid rgba(0,85,255,.20) !important;
+}
+.kronos-ai-card .kronos-card-title,
+.kronos-ai-card .orient-title {
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+/* Dieta: cards de escolha */
+.diet-choice-card--orange {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 42%),
+              #0A1628 !important;
+  border: 1px solid rgba(0,85,255,.15) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35) !important;
+}
+.diet-choice-card-icon-wrap--orange {
+  background: rgba(0,85,255,.12) !important;
+  color: #0055FF !important;
+}
+.diet-choice-action-btn--orange {
+  background: #0055FF !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(0,85,255,.28) !important;
+}
+
+/* Perfil: avatar */
+.perfil-avatar-wrap,
+.perfil-hero-avatar {
+  background: rgba(0,85,255,.18) !important;
+  color: #0055FF !important;
+}
+.perfil-stat-card,
+.perfil-stats .stat-item {
+  background: #0A1628 !important;
+  border: 1px solid rgba(0,85,255,.15) !important;
+}
+
+/* Mapa muscular: garantir visibilidade */
+.body-map-svg path,
+.muscle-diagram path,
+.silhouette path {
+  fill: #2A2A2A;
+  stroke: #3A3A4A;
+}
+
+/* ─── PARTE 8: Telas extras — herdar sistema ─── */
+#settingsScreen,
+#labsScreen,
+#onboardingScreen,
+#biomarcadoresScreen,
+#historyScreen,
+#examesScreen {
+  background: transparent;
+}
+
+/* Garantir que todas as telas herdam o bg do body */
+.screen,
+[id$="Screen"] {
+  background: transparent;
+}
+
+/* ─── PARTE 9: Tipografia ─── */
+.screen-title,
+.hero-title,
+h1, h2,
+.workout-name,
+.workout-title,
+.section-title,
+.exercise-name,
+.ex-title,
+.modal-title,
+.sheet-title,
+.bs-title,
+.orient-title,
+.kronos-section-title,
+.perfil-name {
+  font-family: 'Chakra Petch', sans-serif !important;
+}
+
+.score-value,
+.data-value,
+.metric-label,
+.mono-text,
+.stat-number,
+.macro-value,
+.calorie-value,
+.progress-value,
+.timer-display {
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+body,
+p,
+.body-text,
+.description,
+.text-body,
+.card-desc {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ─── Badge de streak ─── */
+.streak-badge {
+  background: rgba(0,85,255,.10) !important;
+  border-color: rgba(0,85,255,.20) !important;
+  color: #7fb0ff !important;
+}
+
+/* ─── Banner/banner-icon ─── */
+.home-banner-icon,
+.an-profile-banner-icon {
+  background: rgba(0,85,255,.15) !important;
+  color: #0055FF !important;
+}
+
+/* ─── Home labs CTA ─── */
+.home-labs-cta-btn {
+  background: #0055FF !important;
+  box-shadow: 0 4px 14px rgba(0,85,255,.30) !important;
+}
+
+/* ─── Light-mode: não alterar (usuário pode ter tema claro) ─── */
+/* As regras acima só aplicam no default (dark). O tema claro
+   é gerenciado pelo engine existente em app.js — não tocar. */
+
