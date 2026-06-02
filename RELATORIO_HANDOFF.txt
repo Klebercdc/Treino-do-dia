@@ -1,7 +1,7 @@
 RELATORIO_HANDOFF — KRONIA REDESIGN VISUAL 2026
 ================================================
 Branch: claude/kronia-visual-redesign-9USEa
-Commit: 758cc0b
+Commits: 758cc0b, 0006cb7
 Data: 2026-06-02
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -9,163 +9,162 @@ Data: 2026-06-02
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 index.html
-  - Linha 7: meta theme-color alterado de #0f0f0f para #050D1A
-  - Linha 11-12: import de fontes expandido para incluir:
-      Chakra Petch (500, 600, 700, 700italic)
-      IBM Plex Mono (400, 500, 600)
-      (Inter ja existia; DM Sans/DM Mono/Bebas Neue mantidos para retrocompatibilidade)
+  - meta theme-color: #0f0f0f → #050D1A
+  - Import de fontes: adicionado Chakra Petch (500,600,700,700italic)
+    e IBM Plex Mono (400,500,600). DM Sans/DM Mono/Bebas Neue mantidos
+    para retrocompatibilidade com estilos inline existentes.
 
-styles.css (410 inserções, 123 deleções)
+styles.css (585 inserções, 126 deleções no total dos dois commits)
   Ver seções abaixo.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. MUDANÇAS POR PARTE
+2. SISTEMA DE DESIGN — VARIAVEIS CSS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PARTE 1 — Variaveis CSS (:root no topo do arquivo)
-  ANTES: bg #0f0f0f, card #212121, accent #2563EB (azul medio), fontes DM Sans/Bebas Neue
-  DEPOIS:
-    --bg: #050D1A           (fundo principal, deep navy)
-    --bg2: #0A1628          (superficie elevada)
-    --card: #0A1628         (fundo de card)
-    --card-2: #0D1B30       (card secundario, NOVO)
-    --border: rgba(0,85,255,.15)
-    --accent: #0055FF       (azul eletrico, era #2563EB)
-    --accent-dim: rgba(0,85,255,.12)
-    --accent-soft: rgba(0,85,255,.20)  (NOVO)
-    --accent-glow: rgba(0,85,255,.28)
-    --secondary: #6B4EFF    (NOVO, roxo eletrico)
-    --positive: #00C853     (NOVO)
-    --positive-dim: rgba(0,200,83,.13) (NOVO)
-    --alert: #FFB300        (NOVO)
-    --negative: #FF3B3B     (NOVO, era #ef4444)
-    --text: #ffffff         (era #f5f5f5)
-    --text-2: rgba(255,255,255,.60) (era #a3a3a3)
-    --muted: rgba(255,255,255,.35)  (era #525252)
-    --font-display: 'Chakra Petch', sans-serif  (NOVO)
-    --font-body: 'Inter', system-ui             (NOVO)
-    --font-mono: 'IBM Plex Mono', monospace     (NOVO)
-    --font: 'Inter' (era DM Sans)
-    --display: 'Chakra Petch' (era Bebas Neue)
-    --mono: 'IBM Plex Mono' (era DM Mono)
-    --radius: 16px, --r: 16px (era 14px)
-    --radius-sm: 12px, --r-sm: 12px (era 10px)
-    --kronia-card-radius: 16px (era 32px)
-    --kronia-card-border: rgba(0,85,255,.15) (era #F1F5F9)
+:root (topo do arquivo) — substituicao completa:
 
-PARTE 2 — Fundo atmosferico
-  body: background alterado de var(--bg) para:
-    radial-gradient(ellipse 90% 42% at 50% -6%, rgba(0,85,255,.22), transparent 62%),
-    radial-gradient(ellipse 70% 40% at 50% 108%, rgba(0,85,255,.10), transparent 60%),
-    #050D1A
-  Efeito: profundidade com halos azuis suaves no topo e base.
+  --bg: #050D1A           (era #0f0f0f)
+  --bg2: #0A1628          (era #161616)
+  --surface: #0D1B30      (era #1a1a1a)
+  --card: #0A1628         (era #212121)
+  --card-2: #0D1B30       [NOVO]
+  --border: rgba(0,85,255,.15)     (era rgba(255,255,255,.08))
+  --border-soft: rgba(255,255,255,.06)
+  --accent: #0055FF       (era #2563EB)
+  --accent-dim: rgba(0,85,255,.12)
+  --accent-soft: rgba(0,85,255,.20)  [NOVO]
+  --accent-glow: rgba(0,85,255,.28)
+  --secondary: #6B4EFF    [NOVO]
+  --positive: #00C853     [NOVO]
+  --positive-dim: rgba(0,200,83,.13) [NOVO]
+  --green: #00C853        (era #10b981)
+  --alert: #FFB300        [NOVO]
+  --negative: #FF3B3B     [NOVO]
+  --red: #FF3B3B          (era #ef4444)
+  --text: #ffffff         (era #f5f5f5)
+  --text-2: rgba(255,255,255,.60)  (era #a3a3a3)
+  --muted: rgba(255,255,255,.35)   (era #525252)
+  --font-display: 'Chakra Petch', sans-serif  [NOVO]
+  --font-body: 'Inter', system-ui             [NOVO]
+  --font-mono: 'IBM Plex Mono', monospace     [NOVO]
+  --font: 'Inter'         (era 'DM Sans')
+  --display: 'Chakra Petch'  (era 'Bebas Neue')
+  --mono: 'IBM Plex Mono'    (era 'DM Mono')
+  --radius: 16px, --r: 16px  (era 14px)
+  --radius-sm: 12px           (era 10px)
+  --kronia-card-radius: 16px  (era 32px)
+  --kronia-card-border: rgba(0,85,255,.15)
 
-PARTE 3 — Logo/Nav ativo
-  .btn-nav.active: cor de #F97316 (laranja) para #0055FF (azul eletrico)
-  .btn-nav .btn-icon/.btn-label inativos: cor rgba(255,255,255,.35)
-  Dark-mode overrides adicionados para garantir especificidade.
+KRONIA THEME NORMALIZATION LAYER (--kr-* vars):
+  --kr-bg: #050D1A
+  --kr-surface: #0A1628
+  --kr-surface-2: #0D1B30
+  --kr-border: rgba(0,85,255,.15)
+  --kr-accent: #0055FF    (era #7c3aed roxo)
+  --kr-nav-bg: rgba(7,14,26,.88)
+  --kr-card-radius: 16px  (era 20px)
+  --kr-success: #00C853, --kr-warning: #FFB300, --kr-danger: #FF3B3B
 
-PARTE 4 — Cards universais (bloco appended ao final)
-  Classes afetadas: .card, .home-card, .kronos-card, .section-card, .stat-card,
-    .meal-card, .home-hero-card, .home-hero-treino, .home-hero-dieta,
-    .kronos-ai-card, .home-quick-card, .home-tool-card + 15 classes de card.
-  ANTES: backgrounds brancos ou escuros com glow neon colorido.
-  DEPOIS: background #0A1628 com gradiente interno + borda rgba(0,85,255,.15)
-    + sombra neutra. Sem neon colorido.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. MUDANCAS POR TELA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  .home-hero-treino/.home-hero-dieta:
-    ANTES: gradiente escuro verde/laranja com borda colorida
-    DEPOIS: fundo unificado #0A1628 com acento azul sutil
+BODY / FUNDO GLOBAL
+  Antes: background: #0f0f0f (preto chapado)
+  Depois: radial-gradient azul no topo + base + #050D1A
+  Efeito: profundidade com halos azuis suaves
 
-  .home-hero-icon--orange/--green:
-    ANTES: gradiente laranja/verde
-    DEPOIS: rgba(0,85,255,.18) com cor #0055FF
+NAV INFERIOR (.footer-actions)
+  Antes: background rgba(255,255,255,0.96) — branco
+  Depois: background rgba(7,14,26,.88) + blur 18px
+    border-top: rgba(0,85,255,.15)
+  .btn-nav inativos: rgba(255,255,255,.35)
+  .btn-nav.active: #0055FF (era #F97316 laranja)
 
-PARTE 5 — Nav inferior (.footer-actions)
-  ANTES: background rgba(255,255,255,0.96) — branco
-  DEPOIS: background rgba(7,14,26,.88) — dark navy com blur
-    border-top: rgba(0,85,255,.15), sombra neutra
+CARDS UNIVERSAIS
+  Todos os cards (.card, .home-card, .kronos-card, .stat-card, .meal-card etc.):
+  Antes: backgrounds brancos ou escuros com glow neon colorido
+  Depois: #0A1628 + gradiente interno sutil + borda rgba(0,85,255,.15)
+    + sombra neutra 0 4px 14px rgba(0,0,0,.35)
 
-PARTE 6 — Botoes primarios
-  Classes: .btn-primary, .primary-btn, .cta-btn, .config-apply e similares
-  ANTES: gradiente var(--kr-accent) (roxo) ou azul medio
-  DEPOIS: #0055FF solido, box-shadow rgba(0,85,255,.28)
+HOME (#homeScreen)
+  - .home-hero-treino/.home-hero-dieta:
+    Antes: gradiente verde/laranja escuro com borda colorida
+    Depois: fundo unificado #0A1628 com acento azul sutil
+  - .home-hero-icon--orange/--green: gradiente → rgba(0,85,255,.18)
+  - .home-hero-glow: neon colorido → rgba(0,85,255,.28)
+  - .home-banner-icon: gradiente laranja → rgba(0,85,255,.15)
+  - .score-ring-progress: stroke #0055FF com drop-shadow azul
 
-PARTE 7 — Telas especificas
-
-  HOME:
-  - .score-ring-progress: stroke #0055FF (era #2563EB), drop-shadow azul eletrico
-  - .home-banner-icon: background rgba(0,85,255,.15) solido (era gradiente laranja)
-  - .kronos-ai-card: borda e gradiente azul mais pronunciados
-
-  DIETA:
-  - .diet-choice-card--green/--orange: fundo unificado #0A1628, sem glow colorido
-  - .diet-choice-card-icon-wrap--green: azul (#0055FF)
-  - .diet-choice-card-icon-wrap--orange: roxo (#6B4EFF)
-  - .diet-choice-action-btn--orange: fundo #0055FF (era cor laranja)
-  - #dietDataScreen .diet-compact-action-btn--orange: idem
-
-  KRONOS (orientacaoScreen):
-  - ANTES: background: #000 (tela preta total)
-  - DEPOIS: background gradiente azul escuro + #050D1A
+KRONOS / ORIENTACAO (#orientacaoScreen)
+  Antes: background: #000 (tela completamente preta)
+  Depois: gradiente azul escuro + #050D1A
   - .orient-header: rgba(5,13,26,.95) + borda azul
   - .orient-shortcuts-row: rgba(5,13,26,.92)
   - .orient-chat-bar: rgba(7,14,26,.96) + backdrop-filter blur
-  - #aiModal: fundo #050D1A (era #000)
+  - #aiModal: #050D1A (era #000)
+  - .kronos-empty-pill: cor do novo sistema azul eletrico
 
-  KRONIA DATA (biomarcadores):
-  - .kronia-data-kicker: cor #0055FF (era #F97316 laranja)
-  - .kronia-data-refresh: cor #0055FF
-  - .kronia-card: fundo #0A1628, borda azul, radius 16px (era 32px)
-  - .kronia-progress-fill: background #0055FF (era #F97316)
+DIETA — ESCOLHA (#dietChoiceScreen)
+  - .diet-choice-card--green/--orange:
+    Antes: fundos verde/marrom com neon
+    Depois: #0A1628 unificado com borda azul/roxa sutil
+  - Icone "Dieta IA": azul (#0055FF)
+  - Icone "Montar Manual": roxo (#6B4EFF)
+  - Botao acao laranja: #0055FF
 
-PARTE 8 — Telas extras
-  Todos os screens ja usavam var(--bg) que agora e #050D1A. Sem mudancas extras.
+GERAR TREINO (#gerarTreinoScreen)
+  Antes: background: #0d1117, accent azul velho #2563EB
+  Depois:
+  - Fundo: gradiente azul + #050D1A
+  - .gt-step-dot.active: #0055FF
+  - .gt-obj-card.selected: rgba(0,85,255,.15), borda #0055FF
+  - .gt-day-btn.selected: rgba(0,85,255,.20), borda #0055FF
+  - .gt-tipo-icon: rgba(0,85,255,.15)
+  - .gt-continuar-btn: #0055FF + shadow azul
+  - .gt-step-title: Chakra Petch
 
-PARTE 9 — Tipografia (bloco appended)
-  .screen-title, h1, h2, .workout-name, .ex-title, .modal-title → Chakra Petch
-  .score-value, .data-value, .metric-label, .timer-display → IBM Plex Mono
-  body, p, .body-text → Inter
+TREINO GERADO (#treinoGeradoScreen)
+  Antes: background: #0d1117, accent azul velho
+  Depois:
+  - Fundo: gradiente azul + #050D1A
+  - .tg-ex-num: badge azul rgba(0,85,255,.15)
+  - .tg-progressao-card: rgba(0,85,255,.06) com borda azul
+  - .tg-prog-bar-item.current: #0055FF
+  - .tg-iniciar-btn: #0055FF + shadow azul
+  - .tg-workout-title: Chakra Petch
+  - .tg-stat-num: IBM Plex Mono
 
-  NOTA: .ex-title teve font-style italic removido (era Bebas Neue italic).
+EXECUCAO FOCADA (#execucaoScreen)
+  Antes: background: #0d1117, accent azul velho
+  Depois:
+  - Fundo: gradiente azul + #050D1A
+  - .exec-series-dot.done/current: #0055FF
+  - .exec-ctrl-btn: rgba(0,85,255,.12) com borda e cor azul
+  - .exec-concluir-btn: #0055FF + shadow azul
+  - .exec-exercise-name: Chakra Petch
+  - .exec-ctrl-val: IBM Plex Mono
 
-KRONIA THEME NORMALIZATION LAYER (--kr-* vars)
-  Atualizado para alinhar com o novo sistema:
-    --kr-bg: #050D1A
-    --kr-surface: #0A1628
-    --kr-border: rgba(0,85,255,.15)
-    --kr-accent: #0055FF (era #7c3aed roxo)
-    --kr-nav-bg: rgba(7,14,26,.88)
-    --kr-card-radius: 16px (era 20px)
+ANAMNESE (#anamneseScreen)
+  Antes: fundo var(--bg), mas chips/cards com rgba(37,99,235,...) hardcoded
+  Depois:
+  - .an-chip.selected: rgba(0,85,255,.18)
+  - .an-confirm-card: rgba(0,85,255,.07) com borda azul
+  - .an-info-card: rgba(0,85,255,.08) com borda azul
+  - .an-profile-banner: rgba(0,85,255,.08) com borda azul
+  - .an-step-title: Chakra Petch
+  - .an-btn-next: ja usa var(--accent) — ok
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. ANTES E DEPOIS — RESUMO VISUAL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROTOCOLOS / BIOMARCADORES / PERFIL / LABS / SETTINGS
+  Todos ja usavam var(--bg), var(--card), var(--border) —
+  herdam automaticamente o novo sistema pelo :root atualizado.
 
-TELA HOME:
-  Antes: fundo preto #0f0f0f, cards verde/laranja, nav branco, icone ativo laranja
-  Depois: fundo navy #050D1A com halo azul, todos os cards #0A1628 com borda azul,
-    nav escuro com blur, icone ativo azul eletrico
-
-TELA TREINO (startWorkoutScreen):
-  Antes: fundo preto, exercise-cards brancos/cinza com barra lateral laranja
-  Depois: fundo #050D1A, exercise-cards #0A1628 com borda azul e accent bar azul
-
-TELA DIETA (dietChoiceScreen):
-  Antes: cards verde (IA) e laranja/marrom (manual) com neon
-  Depois: ambos #0A1628 com borda azul/roxo suave, icone verde→azul, laranja→roxo
-
-TELA KRONOS:
-  Antes: fundo #000 puro (tela preta), header preto
-  Depois: fundo #050D1A com halo azul, header navy semi-transparente
-
-TELA PERFIL:
-  Antes: var(--bg) = #0f0f0f
-  Depois: var(--bg) = #050D1A + sub-cards herdam novo sistema
-
-SCORE RING:
-  Antes: stroke azul medio #2563EB
-  Depois: stroke azul eletrico #0055FF com drop-shadow/glow
+TIPOGRAFIA (bloco appended)
+  Titulos/display: .screen-title, h1, h2, .workout-name,
+    .exercise-name, .modal-title, .ex-title → Chakra Petch
+  Dados/metricas: .score-value, .data-value, .metric-label,
+    .timer-display, .stat-number → IBM Plex Mono
+  Corpo: body, p, .body-text → Inter
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 4. LOGICA JS — CONFIRMACAO
@@ -182,42 +181,39 @@ Apenas CSS puro e o import de fontes no <head> do index.html.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. FONTES LEGADAS MANTIDAS NO IMPORT
-   Mantivemos DM Sans/DM Mono/Bebas Neue no import porque ha trechos de codigo
-   JS que renderizam elementos com essas fontes via style inline. Remoção do
-   import quebraria esses casos. Chakra Petch e IBM Plex Mono foram ADICIONADOS.
+   DM Sans/DM Mono/Bebas Neue mantidos porque ha estilos inline
+   no JS que as referenciam. Remover quebraria esses casos.
 
 2. ex-title: font-style italic removido
-   Era `font-style: italic` com Bebas Neue. Chakra Petch italic existe no import,
-   mas mantivemos upright para maior legibilidade no novo estilo. Facil de reverter.
+   Era italic para Bebas Neue. Chakra Petch upright tem peso
+   suficiente. Facil de reverter: adicionar font-style:italic na classe.
 
-3. Dieta choice card --orange: icone virou roxo (#6B4EFF) em vez de azul
-   A spec dizia azul para ambos os cards. Usei azul para "Dieta IA" e roxo
-   (--secondary) para "Montar Manual" para diferenciacao visual. 1 linha para unificar.
+3. Icone "Montar Manual" virou roxo (#6B4EFF) em vez de azul
+   Para diferenciar visualmente das duas opcoes de dieta.
+   Para unificar: 1 linha de CSS.
 
-4. .home-hero-icon--green: usa #7fb0ff em vez de #0055FF
-   Leve diferenca entre card Treino e Dieta. Facil de unificar se preferir.
+4. .home-hero-icon--green usa #7fb0ff (accent2) em vez de #0055FF
+   Leve diferenca entre card Treino e Dieta. Facil de unificar.
 
 5. Texture/ruido (::before no body) NAO adicionado
-   A spec marcava como "opcional". Nao adicionei para evitar risco de z-index
-   conflitando com elementos fixos. Pode ser adicionado isoladamente.
+   Marcado como opcional na spec. Risco de z-index com elementos fixos.
 
 6. Light mode NAO alterado
-   Todos os novos estilos ficam no default (dark). O light mode mantem sua
-   paleta laranja via `body.light-mode { --accent: #ea6c0a }` existente.
+   Mantem paleta laranja via body.light-mode. Escopo separado.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 6. DEPLOY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-NAO foi feito deploy. Branch commitada para revisao visual antes de qualquer merge.
+NAO foi feito deploy.
+Branch commitada para revisao visual antes de qualquer merge.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7. PROXIMOS PASSOS SUGERIDOS
+7. PROXIMOS PASSOS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. Revisar visualmente as 8 telas principais no device (ou DevTools mobile)
-2. Confirmar se .ex-title sem italic esta OK
-3. Decidir se os dois cards de dieta devem ter icones identicos (azul) ou
-   diferenciados (azul/roxo)
-4. Opcionalmente adicionar o ruido de textura (::before no body)
+1. Revisar visualmente as telas no device (ou DevTools mobile)
+2. Confirmar se ex-title sem italic esta OK
+3. Decidir se icones dos cards de dieta devem ser identicos ou diferenciados
+4. Opcionalmente adicionar ruido de textura (::before no body)
 5. Merge + deploy apos aprovacao visual
