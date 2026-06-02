@@ -7451,7 +7451,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: #0d1117;
+  background: radial-gradient(ellipse 80% 35% at 50% -5%, rgba(0,85,255,.18), transparent 58%), #050D1A;
   flex-direction: column;
   overflow: hidden;
 }
@@ -7719,7 +7719,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: #0d1117;
+  background: radial-gradient(ellipse 80% 35% at 50% -5%, rgba(0,85,255,.18), transparent 58%), #050D1A;
   flex-direction: column;
   overflow: hidden;
 }
@@ -7943,7 +7943,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2100;
-  background: #0d1117;
+  background: radial-gradient(ellipse 80% 35% at 50% -5%, rgba(0,85,255,.18), transparent 58%), #050D1A;
   flex-direction: column;
   overflow: hidden;
 }
@@ -9469,4 +9469,176 @@ p,
 /* ─── Light-mode: não alterar (usuário pode ter tema claro) ─── */
 /* As regras acima só aplicam no default (dark). O tema claro
    é gerenciado pelo engine existente em app.js — não tocar. */
+
+
+
+/* ══════════════════════════════════════════════════════════════════
+   KRONIA REDESIGN — Telas de Treino (Geração + Execução) e Anamnese
+   Corrige hardcodes #2563EB/rgba(37,99,235,...) nessas telas
+══════════════════════════════════════════════════════════════════ */
+
+/* ─── #gerarTreinoScreen ─── */
+#gerarTreinoScreen .gt-step-dot.active { background: #0055FF; }
+#gerarTreinoScreen .gt-step-dot.done   { background: rgba(0,85,255,.45); }
+#gerarTreinoScreen .gt-progress-bar    { background: #0055FF; }
+
+#gerarTreinoScreen .gt-obj-card.selected {
+  background: rgba(0,85,255,.15);
+  border-color: #0055FF;
+}
+#gerarTreinoScreen .gt-obj-card.selected .gt-obj-icon {
+  background: rgba(0,85,255,.25);
+}
+#gerarTreinoScreen .gt-obj-card.selected .gt-obj-name { color: #7fb0ff; }
+
+#gerarTreinoScreen .gt-day-btn.selected {
+  background: rgba(0,85,255,.20);
+  border-color: #0055FF;
+  color: #7fb0ff;
+}
+
+#gerarTreinoScreen .gt-equip-select option { background: #0A1628; }
+
+#gerarTreinoScreen .gt-tipo-card.selected {
+  background: rgba(0,85,255,.12);
+  border-color: rgba(0,85,255,.50);
+}
+#gerarTreinoScreen .gt-tipo-icon {
+  background: rgba(0,85,255,.15);
+}
+
+#gerarTreinoScreen .gt-continuar-btn {
+  background: #0055FF;
+  box-shadow: 0 6px 18px rgba(0,85,255,.28);
+}
+
+#gerarTreinoScreen .gt-step-title {
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+/* ─── #treinoGeradoScreen ─── */
+#treinoGeradoScreen .tg-ex-num {
+  background: rgba(0,85,255,.15);
+  border: 1px solid rgba(0,85,255,.30);
+  color: #7fb0ff;
+}
+
+#treinoGeradoScreen .tg-progressao-card {
+  background: rgba(0,85,255,.06);
+  border: 1px solid rgba(0,85,255,.18);
+}
+#treinoGeradoScreen .tg-prog-label { color: rgba(0,85,255,.8); }
+#treinoGeradoScreen .tg-prog-val   { color: #7fb0ff; }
+#treinoGeradoScreen .tg-prog-bar-item { background: rgba(0,85,255,.25); }
+#treinoGeradoScreen .tg-prog-bar-item.current { background: #0055FF; }
+
+#treinoGeradoScreen .tg-iniciar-btn {
+  background: #0055FF;
+  box-shadow: 0 6px 18px rgba(0,85,255,.28);
+}
+
+#treinoGeradoScreen .tg-workout-title {
+  font-family: 'Chakra Petch', sans-serif;
+}
+#treinoGeradoScreen .tg-stat-num {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ─── #execucaoScreen ─── */
+#execucaoScreen .exec-series-dot      { background: rgba(0,85,255,.25); }
+#execucaoScreen .exec-series-dot.done { background: #0055FF; }
+#execucaoScreen .exec-series-dot.current {
+  background: #0055FF;
+  width: 20px;
+}
+
+#execucaoScreen .exec-ctrl-btn {
+  background: rgba(0,85,255,.12);
+  border: 1px solid rgba(0,85,255,.30);
+  color: #7fb0ff;
+}
+#execucaoScreen .exec-ctrl-btn:active { background: rgba(0,85,255,.25); }
+
+#execucaoScreen .exec-descanso-val { color: #7fb0ff; }
+
+#execucaoScreen .exec-concluir-btn {
+  background: #0055FF;
+  box-shadow: 0 6px 18px rgba(0,85,255,.28);
+}
+
+#execucaoScreen .exec-exercise-name {
+  font-family: 'Chakra Petch', sans-serif;
+}
+#execucaoScreen .exec-ctrl-val {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ─── #anamneseScreen ─── */
+#anamneseScreen .an-header-title {
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+/* Opção selecionada: troca azul velho por azul elétrico */
+#anamneseScreen .an-option-card.selected,
+#anamneseScreen .an-radio-card.selected,
+#anamneseScreen [class*="an-"].selected {
+  background: rgba(0,85,255,.18) !important;
+  border-color: #0055FF !important;
+}
+
+/* Kicker/ícone de seção */
+#anamneseScreen .an-section-icon,
+#anamneseScreen .an-kicker {
+  color: #0055FF;
+}
+
+/* Botão de avançar */
+#anamneseScreen .an-footer-btn,
+#anamneseScreen .an-next-btn,
+#anamneseScreen .an-submit-btn {
+  background: #0055FF !important;
+  box-shadow: 0 6px 18px rgba(0,85,255,.28) !important;
+}
+
+/* Barra de progresso */
+#anamneseScreen .an-progress-fill { background: #0055FF; }
+
+
+/* ─── #anamneseScreen: elementos com hardcode rgba(37,99,235,...) ─── */
+.an-chip.selected {
+  background: rgba(0,85,255,.18);
+}
+.an-confirm-card {
+  background: rgba(0,85,255,.07);
+  border: 1.5px solid rgba(0,85,255,.18);
+}
+.an-info-card {
+  background: rgba(0,85,255,.08);
+  border: 1px solid rgba(0,85,255,.18);
+}
+.an-profile-banner {
+  background: rgba(0,85,255,.08);
+  border: 1.5px solid rgba(0,85,255,.20);
+}
+.an-profile-banner:active {
+  background: rgba(0,85,255,.15);
+  border-color: rgba(0,85,255,.38);
+}
+#anamneseScreen .an-step-tag {
+  color: #0055FF;
+}
+#anamneseScreen .an-step-title {
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+/* ─── KRONOS empty-state pills ─── */
+.kronos-empty-pill {
+  border: 1px solid rgba(0,85,255,.22);
+  background: rgba(0,85,255,.06);
+}
+.kronos-empty-pill:hover,
+.kronos-empty-pill:active {
+  background: rgba(0,85,255,.15);
+  border-color: rgba(0,85,255,.38);
+}
 
