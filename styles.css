@@ -11,12 +11,12 @@
   --chat-input-height: 0px;
 
   /* Backgrounds */
-  --bg:          #0A0A0A;
-  --bg2:         #111111;
-  --surface:     #161616;
-  --card:        #141414;
-  --card-2:      #181818;
-  --card-hover:  #1E1E1E;
+  --bg:          #020812;
+  --bg2:         #04101f;
+  --surface:     #060F1D;
+  --card:        #060F1D;
+  --card-2:      #08182b;
+  --card-hover:  #0e213a;
 
   /* Aliases legados (mantidos para não quebrar código existente) */
   --bg-app:      var(--bg);
@@ -25,50 +25,50 @@
   --text-main:   var(--text);
   --text-muted:  var(--text-2);
   --text-soft:   var(--muted);
-  --accent-contrast: #ffffff;
+  --accent-contrast: #02101f;
   --input-bg:    var(--bg2);
   --input-border: var(--border);
-  --nav-bg:      rgba(10,10,10,.94);
+  --nav-bg:      rgba(2,6,14,0.94);
   --shadow-soft: var(--shadow-sm);
 
   /* Bordas */
-  --border:      rgba(255,255,255,.08);
-  --border-soft: rgba(255,255,255,.05);
+  --border:      #0D1E30;
+  --border-soft: rgba(40,90,150,0.20);
 
-  /* Accent elétrico */
-  --accent:      #0055FF;
-  --accent-dim:  rgba(0,85,255,.12);
-  --accent-soft: rgba(0,85,255,.20);
-  --accent-glow: rgba(0,85,255,.28);
-  --accent2:     #7fb0ff;
-  --secondary:   #6B4EFF;
+  /* Accent ciano/violeta */
+  --accent:      #00C2FF;
+  --accent-dim:  rgba(0,194,255,0.10);
+  --accent-soft: rgba(0,194,255,0.18);
+  --accent-glow: rgba(0,194,255,0.28);
+  --accent2:     #6D4AFE;
+  --secondary:   #6D4AFE;
 
   /* Semânticas */
-  --positive:    #00C853;
-  --positive-dim: rgba(0,200,83,.13);
-  --green:       #00C853;
-  --green-bg:    rgba(0,200,83,.13);
-  --emerald:     #00C853;
-  --emerald-dim: rgba(0,200,83,.13);
-  --alert:       #FFB300;
-  --negative:    #FF3B3B;
-  --red:         #FF3B3B;
-  --red-bg:      rgba(255,59,59,.13);
-  --blue:        #0055FF;
-  --blue-bg:     rgba(0,85,255,.12);
-  --purple:      #6B4EFF;
+  --positive:    #2fe39a;
+  --positive-dim: rgba(47,227,154,0.14);
+  --green:       #2fe39a;
+  --green-bg:    rgba(47,227,154,0.13);
+  --emerald:     #2fe39a;
+  --emerald-dim: rgba(47,227,154,0.13);
+  --alert:       #ffb547;
+  --negative:    #ff6b6b;
+  --red:         #ff6b6b;
+  --red-bg:      rgba(255,107,107,.13);
+  --blue:        #2a72e0;
+  --blue-bg:     rgba(0,194,255,0.10);
+  --purple:      #6D4AFE;
 
   /* Texto */
-  --text:        #ffffff;
-  --text-2:      rgba(255,255,255,.60);
-  --text-rgb:    255,255,255;
-  --muted:       rgba(255,255,255,.35);
+  --text:        #eaf3ff;
+  --text-2:      #8aa4c4;
+  --text-rgb:    234,243,255;
+  --muted:       #5b748f;
 
   /* Sombras */
-  --shadow:      0 4px 14px rgba(0,0,0,.35);
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:   0 4px 20px rgba(0,0,0,0.5);
-  --shadow-lg:   0 8px 40px rgba(0,0,0,0.6);
+  --shadow:      0 2px 12px rgba(0,0,0,0.6);
+  --shadow-sm:   0 1px 4px rgba(0,0,0,0.5);
+  --shadow-md:   0 4px 20px rgba(0,0,0,0.7);
+  --shadow-lg:   0 8px 40px rgba(0,0,0,0.8);
 
   /* Fontes */
   --font-display: 'Chakra Petch', sans-serif;
@@ -86,7 +86,7 @@
   --r-xs:        6px;
   --kronia-card-radius: 16px;
   --kronia-card-padding: 20px;
-  --kronia-card-border: rgba(255,255,255,.08);
+  --kronia-card-border: #0D1E30;
   color-scheme: dark;
 }
 :root, html, body {
@@ -117,8 +117,9 @@ body {
   height: calc(var(--vh, 1vh) * 100);
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%),
-    #0A0A0A;
+    radial-gradient(1100px 650px at 18% -5%, rgba(0,194,255,0.05), transparent 60%),
+    radial-gradient(900px 600px at 95% 6%, rgba(109,74,254,0.045), transparent 55%),
+    linear-gradient(180deg, #03101e, #020812 42%, #020812);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
@@ -128,6 +129,20 @@ body {
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: pan-y;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(40,110,200,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40,110,200,0.04) 1px, transparent 1px);
+  background-size: 30px 30px;
+  mask-image: radial-gradient(130% 80% at 50% 0%, #000 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(130% 80% at 50% 0%, #000 30%, transparent 85%);
 }
 
 #__next, #root, .app-container {
@@ -295,8 +310,8 @@ body {
   position: fixed; bottom: 0; left: 0; right: 0;
   z-index: 3700;
   display: flex; align-items: stretch;
-  background: rgba(7,14,26,.88);
-  border-top: 1px solid rgba(0,85,255,.15);
+  background: rgba(2,6,14,0.94);
+  border-top: 1px solid rgba(40,110,200,0.16);
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
   padding: 8px 14px max(8px, env(safe-area-inset-bottom));
@@ -342,18 +357,35 @@ body.diet-mini-app-active .footer-actions {
   transition: color .18s;
 }
 /* Indicador ativo — barra no topo do botão */
-.btn-nav::before { display: none; }
+.btn-nav { position: relative; }
 .btn-nav .btn-icon { color: rgba(255,255,255,.35); }
 .btn-nav .btn-label { color: rgba(255,255,255,.35); }
-.btn-nav.active .btn-icon { color: #0055FF; transform: translateY(-1px); }
-.btn-nav.active .btn-label { color: #0055FF; font-weight: 800; }
+.btn-nav.active .btn-icon { color: #00C2FF; transform: translateY(-1px); }
+.btn-nav.active .btn-label { color: #00C2FF; font-weight: 800; }
 .btn-nav.diet-active .btn-icon,
-.btn-nav.diet-active .btn-label { color: #00C853; }
-/* Cores semânticas por aba */
+.btn-nav.diet-active .btn-label { color: #2fe39a; }
+/* Indicador ciano — barra no topo */
+.btn-nav.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, #2a72e0, #00C2FF);
+  box-shadow: 0 0 12px 1px rgba(0,194,255,0.7);
+}
+.btn-nav.active .btn-icon svg,
+.btn-nav.active i[data-lucide] {
+  filter: drop-shadow(0 0 7px rgba(0,194,255,0.55));
+}
+/* Cor única ciano para todas as abas ativas */
 #nav-dieta.active .btn-icon,
-#nav-dieta.active .btn-label { color: #00C853 !important; }
+#nav-dieta.active .btn-label { color: #00C2FF !important; }
 #nav-perfil.active .btn-icon,
-#nav-perfil.active .btn-label { color: #6B4EFF !important; }
+#nav-perfil.active .btn-label { color: #00C2FF !important; }
 .btn-nav svg { transition: transform .18s, color .18s; }
 
 /* ══════════════════════════════════════════
@@ -4727,29 +4759,29 @@ body.light-mode .settings-plan-badge {
    ===================================================================== */
 
 :root {
-  --kr-bg: #0A0A0A;
-  --kr-bg-elevated: #141414;
-  --kr-surface: #141414;
-  --kr-surface-2: #181818;
-  --kr-surface-3: #1E1E1E;
-  --kr-border: rgba(255,255,255,.08);
-  --kr-border-strong: rgba(255,255,255,.14);
-  --kr-text: #ffffff;
-  --kr-text-soft: rgba(255,255,255,.60);
-  --kr-text-muted: rgba(255,255,255,.35);
-  --kr-accent: #0055FF;
-  --kr-accent-2: #7fb0ff;
-  --kr-accent-contrast: #ffffff;
-  --kr-success: #00C853;
-  --kr-warning: #FFB300;
-  --kr-danger: #FF3B3B;
-  --kr-info: #0055FF;
-  --kr-shadow: 0 4px 14px rgba(0,0,0,.35);
-  --kr-input-bg: rgba(255,255,255,.05);
-  --kr-chip-bg: rgba(255,255,255,.06);
-  --kr-overlay: rgba(0,0,0,.80);
-  --kr-nav-bg: rgba(10,10,10,.94);
-  --kr-divider: rgba(255,255,255,.07);
+  --kr-bg: #020812;
+  --kr-bg-elevated: #060F1D;
+  --kr-surface: #060F1D;
+  --kr-surface-2: #08182b;
+  --kr-surface-3: #0e213a;
+  --kr-border: #0D1E30;
+  --kr-border-strong: rgba(40,90,150,0.55);
+  --kr-text: #eaf3ff;
+  --kr-text-soft: #8aa4c4;
+  --kr-text-muted: #5b748f;
+  --kr-accent: #00C2FF;
+  --kr-accent-2: #6D4AFE;
+  --kr-accent-contrast: #02101f;
+  --kr-success: #2fe39a;
+  --kr-warning: #ffb547;
+  --kr-danger: #ff6b6b;
+  --kr-info: #00C2FF;
+  --kr-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  --kr-input-bg: rgba(0,194,255,0.06);
+  --kr-chip-bg: rgba(0,194,255,0.08);
+  --kr-overlay: rgba(2,8,18,0.85);
+  --kr-nav-bg: rgba(2,6,14,0.94);
+  --kr-divider: rgba(13,30,48,0.8);
   --kr-card-radius: 16px;
   --kr-control-radius: 13px;
 }
@@ -9081,24 +9113,24 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 .tile,
 .widget,
 .box {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%),
-              #141414 !important;
-  border: 1px solid rgba(255,255,255,.08) !important;
+  background: linear-gradient(180deg, rgba(0,194,255,0.03), rgba(0,0,0,0) 42%),
+              #060F1D !important;
+  border: 1px solid #0D1E30 !important;
   border-radius: 16px !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(0,194,255,0.04) !important;
 }
 
-/* ─── Remover box-shadows com neon colorido ─── */
+/* ─── Cards hero ─── */
 .home-hero-card,
 .home-hero-treino,
 .home-hero-dieta,
 .kronos-ai-card,
 .home-quick-card,
 .home-tool-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%),
-              #141414 !important;
-  border: 1px solid rgba(255,255,255,.08) !important;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04) !important;
+  background: linear-gradient(180deg, rgba(0,194,255,0.03), rgba(0,0,0,0) 42%),
+              #060F1D !important;
+  border: 1px solid #0D1E30 !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(0,194,255,0.04) !important;
 }
 
 /* ─── Ícones em cards de atalho ─── */
@@ -9107,15 +9139,15 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 .home-hero-icon--green,
 .home-quick-icon,
 .home-tool-icon {
-  background: rgba(0,85,255,.12) !important;
-  color: #0055FF !important;
+  background: rgba(0,194,255,0.10) !important;
+  color: #00C2FF !important;
 }
 
 /* ─── Glow nos cards hero ─── */
 .home-hero-glow,
 .home-hero-glow--orange,
 .home-hero-glow--green {
-  background: rgba(0,85,255,.18) !important;
+  background: rgba(0,194,255,0.12) !important;
 }
 
 /* ─── PARTE 5: Nav — já feita no bloco principal ─── */
