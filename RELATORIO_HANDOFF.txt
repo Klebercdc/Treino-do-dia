@@ -1,259 +1,223 @@
-RELATORIO_HANDOFF — Anamnese inteligente + KRONOS clínico
-Branch: claude/anamnese-kronos-clinico
-Data: 2026-06-01
-========================================================
+RELATORIO_HANDOFF — KRONIA REDESIGN VISUAL 2026
+================================================
+Branch: claude/kronia-visual-redesign-9USEa
+Commit: 758cc0b
+Data: 2026-06-02
 
-## 1. ONDE FICOU CADA BLOCO DO WIZARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ARQUIVOS MODIFICADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Arquivo HTML: index.html
-  - <div id="anamneseScreen"> — inserido após linha ~3347 (após #biomarcadoresScreen)
-  - Step 0 (confirmação de dados): id="an-step-0"
-  - Step 1 (rotina alimentar): id="an-step-1"
-  - Step 2 (restrições e saúde): id="an-step-2"
-  - Step 3 (preferências reais): id="an-step-3"
-  - Step 4 (hidratação e hábitos): id="an-step-4"
-  - Step 5 (histórico e comportamento): id="an-step-5"
-  - Step 6 (campo livre): id="an-step-6"
-  - Banner "Completar perfil nutricional": id="anProfileBanner" — dentro do dietChoiceScreen
-  - Botão "Perfil Nutricional" em Configurações: settings-group "Nutrição"
+index.html
+  - Linha 7: meta theme-color alterado de #0f0f0f para #050D1A
+  - Linha 11-12: import de fontes expandido para incluir:
+      Chakra Petch (500, 600, 700, 700italic)
+      IBM Plex Mono (400, 500, 600)
+      (Inter ja existia; DM Sans/DM Mono/Bebas Neue mantidos para retrocompatibilidade)
 
-Arquivo JS: app.js
-  - Início das funções: linha ~16484
-  - _anDefaultState() — estado inicial da anamnese
-  - openAnamnese(fromDiet): linha 16584 — abre o wizard, carrega dados do Supabase
-  - closeAnamnese(): fecha e limpa estado
-  - _anLoadExistingProfile(): busca nutrition_profiles via window._sb
-  - _anShowConfirmCard(profile): renderiza card de confirmação (step 0)
-  - _anGoToStep(step): navega entre steps, atualiza progresso, sincroniza chips
-  - anamneseNext() / anamnesePrev(): navegação forward/back
-  - anChip(el): seleção de chip (single e multi)
-  - anChipExclusive(el, group): chip exclusivo (ex: "Nenhuma" limpa os outros)
-  - anField(field, value): atualiza campo de texto no estado
-  - anToggle(id, show): mostra/esconde elementos condicionais
-  - _anBuildSummary(): constrói card de resumo no último step
-  - _anSave(): linha 16878 — upsert no Supabase + salva localStorage + dispara dieta se fromDiet=true
-  - _anIsCompleted(): linha 16959 — verifica anamnese_completa em localStorage e Supabase
-  - _anUpdateUIHints(): linha 16983 — atualiza banner e badge de configurações
-  - navTo patch (final do arquivo): exibe hints ao navegar para 'dieta' ou 'perfil'
+styles.css (410 inserções, 123 deleções)
+  Ver seções abaixo.
 
-CSS: styles.css
-  - Bloco "ANAMNESE — Wizard de perfil nutricional" — final do arquivo (~linha 8856+)
-  - Classes: .an-header, .an-step, .an-chip (e .an-chip.selected), .an-input,
-    .an-confirm-card, .an-info-card, .an-summary-card, .an-footer, .an-btn-next,
-    .an-btn-next.finish, .an-profile-banner
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. MUDANÇAS POR PARTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+PARTE 1 — Variaveis CSS (:root no topo do arquivo)
+  ANTES: bg #0f0f0f, card #212121, accent #2563EB (azul medio), fontes DM Sans/Bebas Neue
+  DEPOIS:
+    --bg: #050D1A           (fundo principal, deep navy)
+    --bg2: #0A1628          (superficie elevada)
+    --card: #0A1628         (fundo de card)
+    --card-2: #0D1B30       (card secundario, NOVO)
+    --border: rgba(0,85,255,.15)
+    --accent: #0055FF       (azul eletrico, era #2563EB)
+    --accent-dim: rgba(0,85,255,.12)
+    --accent-soft: rgba(0,85,255,.20)  (NOVO)
+    --accent-glow: rgba(0,85,255,.28)
+    --secondary: #6B4EFF    (NOVO, roxo eletrico)
+    --positive: #00C853     (NOVO)
+    --positive-dim: rgba(0,200,83,.13) (NOVO)
+    --alert: #FFB300        (NOVO)
+    --negative: #FF3B3B     (NOVO, era #ef4444)
+    --text: #ffffff         (era #f5f5f5)
+    --text-2: rgba(255,255,255,.60) (era #a3a3a3)
+    --muted: rgba(255,255,255,.35)  (era #525252)
+    --font-display: 'Chakra Petch', sans-serif  (NOVO)
+    --font-body: 'Inter', system-ui             (NOVO)
+    --font-mono: 'IBM Plex Mono', monospace     (NOVO)
+    --font: 'Inter' (era DM Sans)
+    --display: 'Chakra Petch' (era Bebas Neue)
+    --mono: 'IBM Plex Mono' (era DM Mono)
+    --radius: 16px, --r: 16px (era 14px)
+    --radius-sm: 12px, --r-sm: 12px (era 10px)
+    --kronia-card-radius: 16px (era 32px)
+    --kronia-card-border: rgba(0,85,255,.15) (era #F1F5F9)
 
-## 2. ONDE FICOU buildKronosNutricaoContext()
+PARTE 2 — Fundo atmosferico
+  body: background alterado de var(--bg) para:
+    radial-gradient(ellipse 90% 42% at 50% -6%, rgba(0,85,255,.22), transparent 62%),
+    radial-gradient(ellipse 70% 40% at 50% 108%, rgba(0,85,255,.10), transparent 60%),
+    #050D1A
+  Efeito: profundidade com halos azuis suaves no topo e base.
 
-Arquivo: src/ai/contextBuilder.ts (módulo canônico per CLAUDE.md)
-  - Exportada na linha 391
-  - Signature: async function buildKronosNutricaoContext(supabase: SupabaseClient, userId: string): Promise<KronosNutricaoContext>
-  - serializeKronosNutricaoContext() exportada na linha 560
+PARTE 3 — Logo/Nav ativo
+  .btn-nav.active: cor de #F97316 (laranja) para #0055FF (azul eletrico)
+  .btn-nav .btn-icon/.btn-label inativos: cor rgba(255,255,255,.35)
+  Dark-mode overrides adicionados para garantir especificidade.
 
-Interfaces exportadas:
-  - KronosNutricaoProfile — todos os campos novos da anamnese
-  - KronosWorkoutSummary — resumo de treino dos últimos 7 dias
-  - KronosFadigaSummary — média e tendência de fadiga
-  - KronosBiomarkerEntry — valor + status + unidade por biomarcador
-  - KronosNutricaoContext — container raiz com flag .available por fonte de dados
+PARTE 4 — Cards universais (bloco appended ao final)
+  Classes afetadas: .card, .home-card, .kronos-card, .section-card, .stat-card,
+    .meal-card, .home-hero-card, .home-hero-treino, .home-hero-dieta,
+    .kronos-ai-card, .home-quick-card, .home-tool-card + 15 classes de card.
+  ANTES: backgrounds brancos ou escuros com glow neon colorido.
+  DEPOIS: background #0A1628 com gradiente interno + borda rgba(0,85,255,.15)
+    + sombra neutra. Sem neon colorido.
 
+  .home-hero-treino/.home-hero-dieta:
+    ANTES: gradiente escuro verde/laranja com borda colorida
+    DEPOIS: fundo unificado #0A1628 com acento azul sutil
 
-## 3. ONDE FOI INSERIDO O BLOCO CLÍNICO NO SYSTEM PROMPT
+  .home-hero-icon--orange/--green:
+    ANTES: gradiente laranja/verde
+    DEPOIS: rgba(0,85,255,.18) com cor #0055FF
 
-Arquivo: app.js
-  - Função: buildTrainingContext() (linha ~2636)
-  - Bloco inserido: após "ENCAMINHAMENTO PROFISSIONAL" — linha ~2941
-  - Título: "RACIOCÍNIO CLÍNICO — DIETA PERSONALIZADA" (linha 2944)
-  - Conteúdo: 6 regras de raciocínio (carga de treino, fadiga, biomarcadores,
-    anamnese, adesão, fallback resiliente)
+PARTE 5 — Nav inferior (.footer-actions)
+  ANTES: background rgba(255,255,255,0.96) — branco
+  DEPOIS: background rgba(7,14,26,.88) — dark navy com blur
+    border-top: rgba(0,85,255,.15), sombra neutra
 
-Integração no diet route:
-  - Arquivo: src/app/api/kronia/diet/route.ts
-  - Linha 6: import buildKronosNutricaoContext, serializeKronosNutricaoContext
-  - Linha 87: buildKronosNutricaoContext chamado em Promise.all com dietSupabaseContext
-  - O contexto serializado é adicionado ao enrichedBody como `kronosNutricaoContext`
+PARTE 6 — Botoes primarios
+  Classes: .btn-primary, .primary-btn, .cta-btn, .config-apply e similares
+  ANTES: gradiente var(--kr-accent) (roxo) ou azul medio
+  DEPOIS: #0055FF solido, box-shadow rgba(0,85,255,.28)
 
+PARTE 7 — Telas especificas
 
-## 4. EXEMPLO LITERAL DE CONTEXTO GERADO (mock)
+  HOME:
+  - .score-ring-progress: stroke #0055FF (era #2563EB), drop-shadow azul eletrico
+  - .home-banner-icon: background rgba(0,85,255,.15) solido (era gradiente laranja)
+  - .kronos-ai-card: borda e gradiente azul mais pronunciados
 
-buildKronosNutricaoContext(admin, "user-uuid-123") → retornaria:
+  DIETA:
+  - .diet-choice-card--green/--orange: fundo unificado #0A1628, sem glow colorido
+  - .diet-choice-card-icon-wrap--green: azul (#0055FF)
+  - .diet-choice-card-icon-wrap--orange: roxo (#6B4EFF)
+  - .diet-choice-action-btn--orange: fundo #0055FF (era cor laranja)
+  - #dietDataScreen .diet-compact-action-btn--orange: idem
 
-{
-  available: {
-    nutritionProfile: true,
-    workoutHistory: true,
-    fadiga: true,
-    biomarkers: true
-  },
-  nutritionProfile: {
-    sexo: "masculino",
-    idade: 35,
-    peso_kg: 80.0,
-    altura_cm: 175.0,
-    objetivo: "hipertrofia",
-    nivel_atividade: "ativo",
-    refeicoes_por_dia: 4,
-    faz_jejum: false,
-    tipo_jejum: null,
-    come_fora_frequencia: "as_vezes",
-    quem_cozinha: "basico",
-    restricoes_alimentares: [],
-    condicoes_saude: ["nenhuma"],
-    medicamentos_continuos: null,
-    alimentos_nao_abre_mao: "frango, arroz, café",
-    alimentos_nao_come: "fígado",
-    orcamento_alimentar: "medio",
-    agua_litros_dia: "2",
-    consumo_alcool: "ocasional",
-    consumo_cafeina: "moderado",
-    historico_dieta: "funcionou",
-    tem_compulsao: "nao",
-    observacoes: null,
-    anamnese_completa: true
-  },
-  workoutSummary: {
-    diasTreinados: 4,
-    frequenciaSemanal: 4,
-    ultimoTreinoData: "2026-05-31",
-    gruposMusculares: ["peito", "costas", "ombro"],
-    volumeEstimado: 480
-  },
-  fadigaSummary: {
-    media: 5.4,
-    tendencia: "estavel",
-    ultimaScore: 5
-  },
-  biomarkers: {
-    "Testosterona Total": { valor: 520, status: "normal", unidade: "ng/dL" },
-    "Vitamina D": { valor: 28, status: "baixo", unidade: "ng/mL" },
-    "Ferritina": { valor: 85, status: "normal", unidade: "ng/mL" }
-  }
-}
+  KRONOS (orientacaoScreen):
+  - ANTES: background: #000 (tela preta total)
+  - DEPOIS: background gradiente azul escuro + #050D1A
+  - .orient-header: rgba(5,13,26,.95) + borda azul
+  - .orient-shortcuts-row: rgba(5,13,26,.92)
+  - .orient-chat-bar: rgba(7,14,26,.96) + backdrop-filter blur
+  - #aiModal: fundo #050D1A (era #000)
 
-serializeKronosNutricaoContext(ctx) → string:
-═══════════════════════════════════════
-PERFIL NUTRICIONAL (anamnese)
-═══════════════════════════════════════
-refeicoes_por_dia: 4
-come_fora: as_vezes
-cozinha: basico
-nao_abre_mao: frango, arroz, café
-nao_come: fígado
-orcamento: medio
-agua: 2
-alcool: ocasional
-cafeina: moderado
-historico_dieta: funcionou
+  KRONIA DATA (biomarcadores):
+  - .kronia-data-kicker: cor #0055FF (era #F97316 laranja)
+  - .kronia-data-refresh: cor #0055FF
+  - .kronia-card: fundo #0A1628, borda azul, radius 16px (era 32px)
+  - .kronia-progress-fill: background #0055FF (era #F97316)
 
-CARGA DE TREINO (últimos 7 dias)
-dias_treinados: 4 | frequencia_semanal: 4
-ultimo_treino: 2026-05-31
-grupos_musculares: peito, costas, ombro
-volume_estimado_reps: 480
+PARTE 8 — Telas extras
+  Todos os screens ja usavam var(--bg) que agora e #050D1A. Sem mudancas extras.
 
-FADIGA
-media: 5.4/10 | tendencia: estavel | ultima: 5/10
+PARTE 9 — Tipografia (bloco appended)
+  .screen-title, h1, h2, .workout-name, .ex-title, .modal-title → Chakra Petch
+  .score-value, .data-value, .metric-label, .timer-display → IBM Plex Mono
+  body, p, .body-text → Inter
 
-BIOMARCADORES
-Testosterona Total: 520 ng/dL [normal]
-Vitamina D: 28 ng/mL [baixo]
-Ferritina: 85 ng/mL [normal]
+  NOTA: .ex-title teve font-style italic removido (era Bebas Neue italic).
 
+KRONIA THEME NORMALIZATION LAYER (--kr-* vars)
+  Atualizado para alinhar com o novo sistema:
+    --kr-bg: #050D1A
+    --kr-surface: #0A1628
+    --kr-border: rgba(0,85,255,.15)
+    --kr-accent: #0055FF (era #7c3aed roxo)
+    --kr-nav-bg: rgba(7,14,26,.88)
+    --kr-card-radius: 16px (era 20px)
 
-## 5. CONFIRMAÇÃO: gerarProtocolo() NÃO FOI TOCADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. ANTES E DEPOIS — RESUMO VISUAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-gerarProtocolo() está em app.js linha 482.
-Nenhuma alteração foi feita nessa função nem em suas chamadas.
-Verificação:
-  git diff HEAD -- app.js | grep -A2 -B2 "gerarProtocolo" → sem mudanças
+TELA HOME:
+  Antes: fundo preto #0f0f0f, cards verde/laranja, nav branco, icone ativo laranja
+  Depois: fundo navy #050D1A com halo azul, todos os cards #0A1628 com borda azul,
+    nav escuro com blur, icone ativo azul eletrico
 
+TELA TREINO (startWorkoutScreen):
+  Antes: fundo preto, exercise-cards brancos/cinza com barra lateral laranja
+  Depois: fundo #050D1A, exercise-cards #0A1628 com borda azul e accent bar azul
 
-## 6. CAMPOS NOVOS DE nutrition_profiles (ATENÇÃO)
+TELA DIETA (dietChoiceScreen):
+  Antes: cards verde (IA) e laranja/marrom (manual) com neon
+  Depois: ambos #0A1628 com borda azul/roxo suave, icone verde→azul, laranja→roxo
 
-Os seguintes campos foram referenciados no wizard mas podem NÃO existir ainda
-na tabela nutrition_profiles em produção:
+TELA KRONOS:
+  Antes: fundo #000 puro (tela preta), header preto
+  Depois: fundo #050D1A com halo azul, header navy semi-transparente
 
-  faz_jejum BOOLEAN
-  tipo_jejum TEXT
-  come_fora_frequencia TEXT
-  quem_cozinha TEXT
-  condicoes_saude TEXT[]
-  medicamentos_continuos TEXT
-  alimentos_nao_abre_mao TEXT
-  alimentos_nao_come TEXT
-  orcamento_alimentar TEXT
-  agua_litros_dia TEXT
-  consumo_alcool TEXT
-  consumo_cafeina TEXT
-  historico_dieta TEXT
-  tem_compulsao TEXT
-  anamnese_completa BOOLEAN DEFAULT FALSE
-  anamnese_versao INTEGER DEFAULT 0
+TELA PERFIL:
+  Antes: var(--bg) = #0f0f0f
+  Depois: var(--bg) = #050D1A + sub-cards herdam novo sistema
 
-O código usa upsert com onConflict:'user_id' e trata erros silenciosamente —
-se o campo não existir, o upsert falhará mas o app continua funcionando
-(geração resiliente). Se confirmado que a migration NÃO foi aplicada,
-executar em produção antes de ativar a feature:
+SCORE RING:
+  Antes: stroke azul medio #2563EB
+  Depois: stroke azul eletrico #0055FF com drop-shadow/glow
 
-  ALTER TABLE public.nutrition_profiles
-    ADD COLUMN IF NOT EXISTS faz_jejum BOOLEAN DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS tipo_jejum TEXT,
-    ADD COLUMN IF NOT EXISTS come_fora_frequencia TEXT,
-    ADD COLUMN IF NOT EXISTS quem_cozinha TEXT,
-    ADD COLUMN IF NOT EXISTS condicoes_saude TEXT[] NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS medicamentos_continuos TEXT,
-    ADD COLUMN IF NOT EXISTS alimentos_nao_abre_mao TEXT,
-    ADD COLUMN IF NOT EXISTS alimentos_nao_come TEXT,
-    ADD COLUMN IF NOT EXISTS orcamento_alimentar TEXT,
-    ADD COLUMN IF NOT EXISTS agua_litros_dia TEXT,
-    ADD COLUMN IF NOT EXISTS consumo_alcool TEXT,
-    ADD COLUMN IF NOT EXISTS consumo_cafeina TEXT,
-    ADD COLUMN IF NOT EXISTS historico_dieta TEXT,
-    ADD COLUMN IF NOT EXISTS tem_compulsao TEXT,
-    ADD COLUMN IF NOT EXISTS anamnese_completa BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS anamnese_versao INTEGER NOT NULL DEFAULT 0;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. LOGICA JS — CONFIRMACAO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+NENHUM arquivo .js foi modificado.
+NENHUMA logica de negocio foi tocada.
+NENHUMA chamada de API foi alterada.
+NENHUMA estrutura HTML foi alterada (IDs e classes funcionais intactos).
+Apenas CSS puro e o import de fontes no <head> do index.html.
 
-## 7. REGRAS NÃO VIOLADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. DECISOES QUE DIVERGIRAM DA ESPECIFICACAO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- ✓ Nenhum arquivo criado em api/
-- ✓ gerarProtocolo() não tocada
-- ✓ Novo endpoint usa src/app/api/ (diet/route.ts modificado, não criado)
-- ✓ buildKronosNutricaoContext em src/ai/contextBuilder.ts (módulo canônico)
-- ✓ Lógica clínica em TypeScript (não JS)
-- ✓ Sem migration nova — SQL documentado neste arquivo para aplicação manual
-- ✓ NUNCA bloquear geração: todos os paths têm fallback resiliente
-- ✓ Sem criar orchestrator paralelo ou intent classifier novo
+1. FONTES LEGADAS MANTIDAS NO IMPORT
+   Mantivemos DM Sans/DM Mono/Bebas Neue no import porque ha trechos de codigo
+   JS que renderizam elementos com essas fontes via style inline. Remoção do
+   import quebraria esses casos. Chakra Petch e IBM Plex Mono foram ADICIONADOS.
 
+2. ex-title: font-style italic removido
+   Era `font-style: italic` com Bebas Neue. Chakra Petch italic existe no import,
+   mas mantivemos upright para maior legibilidade no novo estilo. Facil de reverter.
 
-## 8. CONFIRMAÇÃO: contextoClinico CHEGA ao modelo
+3. Dieta choice card --orange: icone virou roxo (#6B4EFF) em vez de azul
+   A spec dizia azul para ambos os cards. Usei azul para "Dieta IA" e roxo
+   (--secondary) para "Montar Manual" para diferenciacao visual. 1 linha para unificar.
 
-O contexto da anamnese CHEGA ao modelo. Pipeline confirmado:
+4. .home-hero-icon--green: usa #7fb0ff em vez de #0055FF
+   Leve diferenca entre card Treino e Dieta. Facil de unificar se preferir.
 
-  api/chat.js → open_diet_flow → kronosHub.buildKronosContext(userId)
-    → buildKronosContextHub() → loadNutritionProfile() [NOVO: slot 8]
-    → buildClinicalContext(profile, labs, diet, nutritionProfileRow) [ATUALIZADO]
-    → ctx.contextoClinico.anamnese = { fazJejum, comeFora, naoAbreMao, ... }
-    → gerarDietaKronos(kronosContext, ...) → JSON.stringify(ctx) → modelo
+5. Texture/ruido (::before no body) NAO adicionado
+   A spec marcava como "opcional". Nao adicionei para evitar risco de z-index
+   conflitando com elementos fixos. Pode ser adicionado isoladamente.
 
-Arquivos alterados nesta etapa:
-  src/server/apihelpers/_kronosContextHub.js
-    - loadNutritionProfile(userId): nova função (query em nutrition_profiles)
-    - buildClinicalContext(): aceita 4º parâmetro nutritionProfile
-      → popula bloco 'anamnese' se anamnese_completa = true
-    - Promise.allSettled: slot 8 = loadNutritionProfile
-  src/server/apihelpers/_dietRouteHandler.js
-    - 'kronosNutricaoContext' adicionado ao directKeys (future-proof)
+6. Light mode NAO alterado
+   Todos os novos estilos ficam no default (dark). O light mode mantem sua
+   paleta laranja via `body.light-mode { --accent: #ea6c0a }` existente.
 
-Nota: o bloco adicionado em buildTrainingContext() (app.js linha ~2944)
-é o system prompt do CHAT geral do KRONOS, não do gerador de dieta.
-O gerador de dieta usa DIETA_KRONOS_SYSTEM (api/chat.js linha 275) +
-JSON.stringify(ctx) com contextoClinico. Ambos os caminhos agora têm
-dados da anamnese.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. DEPLOY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+NAO foi feito deploy. Branch commitada para revisao visual antes de qualquer merge.
 
-## 9. PRÓXIMOS PASSOS (antes de produção)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. PROXIMOS PASSOS SUGERIDOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. Confirmar/aplicar migration dos campos novos no Supabase (SQL na seção 6)
-2. Testar wizard com usuário real (abrir Dieta → DIETA IA)
-3. PARAR antes de deploy — revisar migration e RLS dos novos campos
+1. Revisar visualmente as 8 telas principais no device (ou DevTools mobile)
+2. Confirmar se .ex-title sem italic esta OK
+3. Decidir se os dois cards de dieta devem ter icones identicos (azul) ou
+   diferenciados (azul/roxo)
+4. Opcionalmente adicionar o ruido de textura (::before no body)
+5. Merge + deploy apos aprovacao visual
