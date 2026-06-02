@@ -16369,6 +16369,7 @@ if (typeof window !== 'undefined') {
     document.getElementById('gerarTreinoScreen')?.classList.remove('show');
     document.getElementById('treinoGeradoScreen')?.classList.remove('show');
     document.getElementById('execucaoScreen')?.classList.remove('show');
+    document.getElementById('startWorkoutScreen')?.classList.remove('show');
     if (tab === 'kronos') {
       document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
       document.getElementById('nav-kronos')?.classList.add('active');
