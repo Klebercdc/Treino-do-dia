@@ -1912,16 +1912,6 @@ body.light-mode #orientExpertMessages .ai-msg.user .ai-bubble {
 .muscle-card-item[data-level="2"] .mc-label { color: var(--accent); }
 .muscle-card-item[data-level="3"] .mc-label { color: var(--accent); }
 
-/* legacy heatmap kept for compat */
-.heatmap-wrap { display: flex; gap: 16px; justify-content: center; padding: 16px 0; flex-wrap: wrap; }
-.heatmap-side { text-align: center; }
-.heatmap-side-label { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(var(--text-rgb),0.7); margin-bottom: 8px; }
-.muscle-map svg { width: 120px; height: auto; }
-.muscle-group { transition: fill .3s; }
-.muscle-group.level-0 { fill: var(--bg2); }
-.muscle-group.level-1 { fill: rgba(0,194,255,0.25); }
-.muscle-group.level-2 { fill: rgba(0,194,255,0.55); }
-.muscle-group.level-3 { fill: rgba(0,194,255,0.85); }
 
 /* ══════════════════════════════════════════
    GUIA DE EXERCÍCIO
