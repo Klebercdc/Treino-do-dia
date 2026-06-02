@@ -1070,8 +1070,18 @@
   </div>
 
   <!-- ═══ SCORE ADAPTATIVO ═══ -->
-  <div class="score-adaptativo-card">
-    <div class="score-ring-wrap">
+  <div class="score-adaptativo-card" style="position:relative;overflow:hidden;">
+    <!-- corpo 3D ambiente -->
+    <div style="position:absolute;right:-10px;top:-10px;bottom:-10px;width:140px;pointer-events:none;z-index:0;
+                background:radial-gradient(60% 60% at 55% 45%, rgba(0,150,255,0.18), transparent 72%);filter:blur(6px);">
+    </div>
+    <img src="assets/3d/body-front.png" alt="" draggable="false" aria-hidden="true"
+      style="position:absolute;right:-4px;top:-6px;height:105%;width:auto;object-fit:contain;
+             opacity:0.18;filter:drop-shadow(0 0 14px rgba(0,194,255,0.3));pointer-events:none;z-index:0;
+             -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 40%);
+             mask-image:linear-gradient(90deg, transparent 0%, #000 40%);">
+
+    <div class="score-ring-wrap" style="position:relative;z-index:1;">
       <svg class="score-ring-svg" viewBox="0 0 100 100">
         <defs>
           <linearGradient id="scoreRingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1092,7 +1102,7 @@
         <div class="score-ring-sub" id="homeScoreSub">Pronto para evoluir hoje</div>
       </div>
     </div>
-    <div class="score-stats">
+    <div class="score-stats" style="position:relative;z-index:1;">
       <div class="score-stat-row">
         <div class="score-stat-icon">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -1164,9 +1174,14 @@
   <div class="home-hero-grid">
 
     <!-- Card TREINO -->
-    <div class="home-hero-card home-hero-treino k-pressable" onclick="navTo('programa');openConfig()">
+    <div class="home-hero-card home-hero-treino k-pressable" onclick="navTo('programa');openConfig()" style="overflow:hidden;">
       <div class="home-hero-glow home-hero-glow--orange"></div>
-      <div class="home-hero-body">
+      <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
+        style="position:absolute;bottom:-4px;right:-6px;height:90%;width:auto;object-fit:contain;
+               opacity:0.35;filter:drop-shadow(0 0 10px rgba(0,194,255,0.4));pointer-events:none;z-index:0;
+               -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 30%);
+               mask-image:linear-gradient(180deg,transparent 0%,#000 30%);">
+      <div class="home-hero-body" style="position:relative;z-index:1;">
         <div class="home-hero-icon home-hero-icon--orange">
           <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="2"></i>
         </div>
@@ -2879,9 +2894,12 @@
     </button>
   </div>
   <div class="tg-scroll app-scroll">
-    <div class="tg-title-area">
-      <div class="tg-workout-title" id="tgTreinoTitle">Força Superior</div>
-      <div class="tg-workout-meta">
+    <div class="tg-title-area" style="position:relative;overflow:hidden;">
+      <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
+        style="position:absolute;right:-8px;top:-10px;height:120px;width:auto;object-fit:contain;
+               opacity:0.55;filter:drop-shadow(0 0 18px rgba(0,194,255,0.4));pointer-events:none;z-index:0;">
+      <div class="tg-workout-title" id="tgTreinoTitle" style="position:relative;z-index:1;">Força Superior</div>
+      <div class="tg-workout-meta" style="position:relative;z-index:1;">
         <span id="tgTreinoObj">Hipertrofia</span>
         <span class="tg-meta-dot"></span>
         <span id="tgTreinoDuration">60 min</span>
@@ -3313,6 +3331,11 @@
 
     <!-- ── STEP 0: Confirmar dados existentes ── -->
     <div class="an-step active" id="an-step-0">
+      <div style="display:flex;justify-content:center;margin:-8px 0 18px;position:relative;">
+        <div style="position:absolute;inset:'-10%';background:radial-gradient(50% 50% at 50% 50%, rgba(0,150,255,0.18), transparent 70%);filter:blur(12px);pointer-events:none;animation:kr-glow 3.4s ease-in-out infinite;"></div>
+        <img src="assets/3d/fig-anamnese.png" alt="" draggable="false" aria-hidden="true"
+          style="position:relative;width:180px;height:auto;object-fit:contain;filter:drop-shadow(0 0 20px rgba(0,194,255,0.35));opacity:0.9;">
+      </div>
       <div class="an-step-tag">Antes de começar</div>
       <div class="an-step-title">Confirme seus dados</div>
       <div class="an-step-sub">O KRONOS usa esses dados para personalizar seu plano.</div>
