@@ -6626,26 +6626,28 @@ function updateHeatmap(hist) {
   });
 
   const maxCount = Math.max(1, ...Object.values(counts));
-  const muscToId = {
-    "peito":      ["hm-peito-e","hm-peito-d"],
-    "ombros":     ["hm-ombro-e","hm-ombro-d"],
-    "biceps":     ["hm-bic-e","hm-bic-d"],
-    "abdomen":    ["hm-abs"],
-    "quadriceps": ["hm-quad-e","hm-quad-d"],
-    "costas":     ["hm-trap","hm-lat-e","hm-lat-d","hm-lombar"],
-    "gluteos":    ["hm-glut-e","hm-glut-d"],
-    "posterior":  ["hm-post-e","hm-post-d"],
-    "triceps":    ["hm-tri-e","hm-tri-d"],
-  };
 
-  Object.entries(counts).forEach(([musc, cnt]) => {
-    const level = cnt === 0 ? 0 : cnt / maxCount < 0.34 ? 1 : cnt / maxCount < 0.67 ? 2 : 3;
-    (muscToId[musc] || []).forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.className = "muscle-group level-" + level;
-      }
-    });
+  // Agrega grupos menores nos 4 cards visuais
+  const cardGroups = {
+    "mc-peito":  counts["peito"] || 0,
+    "mc-costas": counts["costas"] || 0,
+    "mc-pernas": (counts["quadriceps"] || 0) + (counts["posterior"] || 0) + (counts["gluteos"] || 0),
+    "mc-ombros": (counts["ombros"] || 0) + (counts["biceps"] || 0) + (counts["triceps"] || 0),
+  };
+  const cardMax = Math.max(1, ...Object.values(cardGroups));
+
+  const levelLabel = ["—", "Leve", "Moderado", "Intenso"];
+
+  Object.entries(cardGroups).forEach(([id, cnt]) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const level = cnt === 0 ? 0 : cnt / cardMax < 0.34 ? 1 : cnt / cardMax < 0.67 ? 2 : 3;
+    card.dataset.level = level;
+    const dot = card.querySelector(".mc-dot");
+    const label = card.querySelector(".mc-label");
+    if (dot && label) {
+      label.textContent = levelLabel[level];
+    }
   });
 }
 

@@ -1958,55 +1958,32 @@
   </div>
 
   <div class="perfil-section">
-    <div class="perfil-section-title">Mapa muscular — últimos 7 dias</div>
-    <div class="heatmap-wrap">
-      <div class="heatmap-side">
-        <div class="heatmap-side-label">Anterior</div>
-        <div class="muscle-map" id="heatmapFront">
-          <svg viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="50" cy="20" rx="18" ry="18" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="44" y="35" width="12" height="10" rx="3" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <ellipse class="muscle-group level-0" id="hm-peito-e" cx="38" cy="60" rx="14" ry="12" data-muscle="peito"/>
-            <ellipse class="muscle-group level-0" id="hm-peito-d" cx="62" cy="60" rx="14" ry="12" data-muscle="peito"/>
-            <ellipse class="muscle-group level-0" id="hm-ombro-e" cx="22" cy="52" rx="9" ry="11" data-muscle="ombros"/>
-            <ellipse class="muscle-group level-0" id="hm-ombro-d" cx="78" cy="52" rx="9" ry="11" data-muscle="ombros"/>
-            <rect class="muscle-group level-0" id="hm-abs" x="38" y="74" width="24" height="30" rx="4" data-muscle="abdomen"/>
-            <rect class="muscle-group level-0" id="hm-quad-e" x="30" y="115" width="16" height="40" rx="6" data-muscle="quadriceps"/>
-            <rect class="muscle-group level-0" id="hm-quad-d" x="54" y="115" width="16" height="40" rx="6" data-muscle="quadriceps"/>
-            <ellipse class="muscle-group level-0" id="hm-bic-e" cx="16" cy="78" rx="7" ry="14" data-muscle="biceps"/>
-            <ellipse class="muscle-group level-0" id="hm-bic-d" cx="84" cy="78" rx="7" ry="14" data-muscle="biceps"/>
-            <rect x="31" y="157" width="14" height="35" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="55" y="157" width="14" height="35" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-          </svg>
-        </div>
+    <div class="perfil-section-title">Grupos musculares — últimos 7 dias</div>
+    <div class="muscle-cards-grid" id="muscleCardsGrid">
+      <div class="muscle-card-item" id="mc-peito" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-peito.png" alt="Peito" draggable="false" class="mc-img">
+        <div class="mc-name">Peito</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
       </div>
-      <div class="heatmap-side">
-        <div class="heatmap-side-label">Posterior</div>
-        <div class="muscle-map" id="heatmapBack">
-          <svg viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="50" cy="20" rx="18" ry="18" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="44" y="35" width="12" height="10" rx="3" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <path class="muscle-group level-0" id="hm-trap" d="M32 42 Q50 36 68 42 L65 60 Q50 55 35 60 Z" data-muscle="costas"/>
-            <path class="muscle-group level-0" id="hm-lat-e" d="M22 55 Q30 52 38 58 L36 90 Q28 88 20 80 Z" data-muscle="costas"/>
-            <path class="muscle-group level-0" id="hm-lat-d" d="M78 55 Q70 52 62 58 L64 90 Q72 88 80 80 Z" data-muscle="costas"/>
-            <rect class="muscle-group level-0" id="hm-lombar" x="38" y="88" width="24" height="18" rx="4" data-muscle="costas"/>
-            <ellipse class="muscle-group level-0" id="hm-glut-e" cx="38" cy="115" rx="14" ry="14" data-muscle="gluteos"/>
-            <ellipse class="muscle-group level-0" id="hm-glut-d" cx="62" cy="115" rx="14" ry="14" data-muscle="gluteos"/>
-            <rect class="muscle-group level-0" id="hm-post-e" x="30" y="130" width="16" height="38" rx="6" data-muscle="posterior"/>
-            <rect class="muscle-group level-0" id="hm-post-d" x="54" y="130" width="16" height="38" rx="6" data-muscle="posterior"/>
-            <ellipse class="muscle-group level-0" id="hm-tri-e" cx="16" cy="78" rx="7" ry="14" data-muscle="triceps"/>
-            <ellipse class="muscle-group level-0" id="hm-tri-d" cx="84" cy="78" rx="7" ry="14" data-muscle="triceps"/>
-            <rect x="31" y="170" width="14" height="24" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="55" y="170" width="14" height="24" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-          </svg>
-        </div>
+      <div class="muscle-card-item" id="mc-costas" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-costas.png" alt="Costas" draggable="false" class="mc-img">
+        <div class="mc-name">Costas</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
       </div>
-    </div>
-    <div class="heatmap-legend">
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:var(--bg2);border:1px solid var(--border)"></div>Não trabalhado</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.3)"></div>Leve</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.6)"></div>Moderado</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.9)"></div>Intenso</div>
+      <div class="muscle-card-item" id="mc-pernas" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-pernas.png" alt="Pernas" draggable="false" class="mc-img">
+        <div class="mc-name">Pernas</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
+      </div>
+      <div class="muscle-card-item" id="mc-ombros" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-ombros.png" alt="Ombros" draggable="false" class="mc-img">
+        <div class="mc-name">Ombros</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
+      </div>
     </div>
   </div>
   <div style="height:100px"></div>
