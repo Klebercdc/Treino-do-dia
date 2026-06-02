@@ -9642,3 +9642,58 @@ p,
   border-color: rgba(0,85,255,.38);
 }
 
+
+
+/* ══════════════════════════════════════════════════════════════════
+   KRONIA REDESIGN — Overrides !important para inline styles
+   Necessário porque os ícones/badges têm style="" no HTML
+══════════════════════════════════════════════════════════════════ */
+
+/* Hero badges — "Configurar" e "Gerar agora" */
+.home-hero-badge {
+  background: rgba(0,85,255,.18) !important;
+  color: #7fb0ff !important;
+  border-color: rgba(0,85,255,.28) !important;
+}
+.home-hero-badge--green {
+  background: rgba(0,85,255,.15) !important;
+  color: #7fb0ff !important;
+  border-color: rgba(0,85,255,.22) !important;
+}
+.home-hero-arrow { color: rgba(0,85,255,.50) !important; }
+.home-hero-arrow--green { color: rgba(0,85,255,.40) !important; }
+
+/* Ícone KRONOS AI Coach (inline style, class existe) */
+.kronos-ai-icon-wrap {
+  background: rgba(0,85,255,.20) !important;
+  box-shadow: 0 4px 14px rgba(0,85,255,.30) !important;
+}
+
+/* Ícone KRONIA Evolution Tools (inline style, class existe) */
+.kronia-tools-icon-wrap {
+  background: rgba(107,78,255,.22) !important;
+  box-shadow: 0 4px 14px rgba(107,78,255,.28) !important;
+}
+
+/* Home tool icons (inline style, class existe) */
+.home-tool-icon {
+  background: rgba(0,85,255,.18) !important;
+  box-shadow: none !important;
+}
+
+/* Home quick icons (inline style, class existe) */
+.home-quick-icon {
+  background: rgba(0,85,255,.18) !important;
+  box-shadow: none !important;
+}
+
+
+/* ─── KRONOS AI Coach card — textos ─── */
+.kronos-ai-title   { color: #ffffff !important; }
+.kronos-ai-subtitle { color: rgba(0,85,255,.80) !important; }
+.kronos-ai-tip     { color: #7fb0ff !important; }
+
+/* ─── KRONIA Evolution Tools card — textos ─── */
+.kronia-tools-subtitle { color: rgba(107,78,255,.85) !important; }
+.kronia-tools-tip      { color: #a78bfa !important; }
+
