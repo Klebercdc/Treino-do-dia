@@ -298,7 +298,7 @@ body::before {
 .nav-pills { display: flex; gap: 6px; padding: 10px 12px; background: var(--bg); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; align-items: center; -webkit-overflow-scrolling: touch; }
 .nav-pills::-webkit-scrollbar { display: none; }
 .pill { flex: none; padding: 7px 16px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(var(--text-rgb),0.75); cursor: pointer; background: transparent; border-radius: 100px; border: 1px solid transparent; white-space: nowrap; transition: background .18s, border-color .18s, color .18s, opacity .18s; user-select: none; }
-.pill.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(0,85,255,.30); }
+.pill.active { color: var(--accent); background: var(--accent-dim); border-color: rgba(0,194,255,.30); }
 .pill-add { color: rgba(var(--text-rgb),0.7); background: transparent; border: 1px dashed var(--border); padding: 6px 14px; font-size: 1rem; letter-spacing: 0; }
 .btn-add-ex { display: flex; align-items: center; justify-content: center; gap: 7px; width: calc(100% - 24px); margin: 10px 12px 20px; padding: 14px; background: transparent; border: 1px dashed var(--border); border-radius: var(--r); font-family: var(--font); font-size: 0.94rem; font-weight: 600; color: rgba(var(--text-rgb),0.7); cursor: pointer; transition: background .2s, border-color .2s, color .2s, opacity .2s; }
 .btn-add-ex:active { background: var(--card); border-color: var(--accent); color: var(--accent); border-style: solid; }
@@ -412,8 +412,8 @@ body:not(.kronia-on-treino) .nav-pills { display: none !important; }
 /* ══════════════════════════════════════════
    EXERCISE CARD
 ══════════════════════════════════════════ */
-.exercise-card { background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 20px; margin-bottom: 12px; position: relative; overflow: hidden; animation: slideUp .22s ease; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); transition: border-color .2s; color: var(--text); }
-.exercise-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #0055FF 0%, #7fb0ff 100%); border-radius: 3px 0 0 3px; }
+.exercise-card { background: linear-gradient(180deg, rgba(0,194,255,.03), rgba(0,194,255,0) 42%), #060F1D; border: 1px solid #0D1E30; border-radius: 16px; padding: 20px; margin-bottom: 12px; position: relative; overflow: hidden; animation: slideUp .22s ease; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(0,194,255,.04); transition: border-color .2s; color: var(--text); }
+.exercise-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #00C2FF 0%, #6D4AFE 100%); border-radius: 3px 0 0 3px; }
 .exercise-card.deleting { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
 .exercise-card.deleting::before { background: var(--red); }
 .card-header { padding-left: 12px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
@@ -818,7 +818,7 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 .ai-bubble strong { color: var(--accent); font-weight: 700; }
 .ai-bubble h3 { font-size: 0.95rem; font-weight: 700; margin: 14px 0 6px; color: var(--text); }
 .ai-bubble h4 { font-size: 0.88rem; font-weight: 700; margin: 10px 0 4px; color: rgba(var(--text-rgb),.8); }
-.ai-bubble code { background: rgba(255,255,255,.08); border-radius: 5px; padding: 1px 6px; font-size: 0.85em; font-family: monospace; }
+.ai-bubble code { background: rgba(0,194,255,.08); border-radius: 5px; padding: 1px 6px; font-size: 0.85em; font-family: monospace; }
 .ai-bubble hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 .ai-suggest-btn { display: block; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; color: var(--text); font-family: var(--font); font-size: 0.85rem; cursor: pointer; transition: background .15s, border-color .15s, opacity .15s, transform .15s; }
 .ai-suggest-btn:active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
@@ -892,15 +892,15 @@ body.overlay-open #aiFloatBtn { display: none !important; }
 
 /* TREINO */
 .home-hero-treino {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
-  border: 1px solid rgba(255,255,255,.09);
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  background: linear-gradient(180deg, rgba(0,194,255,.03), rgba(0,194,255,0) 42%), #060F1D;
+  border: 1px solid #0D1E30;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(0,194,255,.04);
 }
 /* DIETA */
 .home-hero-dieta {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
-  border: 1px solid rgba(255,255,255,.09);
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  background: linear-gradient(180deg, rgba(0,194,255,.03), rgba(0,194,255,0) 42%), #060F1D;
+  border: 1px solid #0D1E30;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(0,194,255,.04);
 }
 
 /* Glow ambiental (blur circle no canto) */
@@ -912,8 +912,8 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   filter: blur(28px);
   pointer-events: none;
 }
-.home-hero-glow--orange { background: rgba(0,85,255,.28); }
-.home-hero-glow--green  { background: rgba(0,85,255,.18); }
+.home-hero-glow--orange { background: rgba(0,194,255,.28); }
+.home-hero-glow--green  { background: rgba(47,227,154,.18); }
 
 /* Ícone */
 .home-hero-icon {
@@ -924,14 +924,14 @@ body.overlay-open #aiFloatBtn { display: none !important; }
   flex-shrink: 0;
 }
 .home-hero-icon--orange {
-  background: rgba(0,85,255,.18);
-  box-shadow: 0 4px 16px rgba(0,85,255,.30);
-  color: #0055FF;
+  background: rgba(0,194,255,.14);
+  box-shadow: 0 4px 16px rgba(0,194,255,.22);
+  color: #00C2FF;
 }
 .home-hero-icon--green {
-  background: rgba(0,85,255,.14);
-  box-shadow: 0 4px 16px rgba(0,85,255,.25);
-  color: #7fb0ff;
+  background: rgba(47,227,154,.13);
+  box-shadow: 0 4px 16px rgba(47,227,154,.20);
+  color: #2fe39a;
 }
 .home-hero-icon svg { color: #fff; }
 
@@ -1677,7 +1677,7 @@ body.light-mode #kronia-rec-card [style*="rgba(15,23,42,0.52)"] { color: rgba(15
 /* ══════════════════════════════════════════
    TELA ORIENTAÇÃO
 ══════════════════════════════════════════ */
-#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A; flex-direction: column; overflow: hidden; }
+#orientacaoScreen { display: none; position: fixed; inset: 0; z-index: 3500; background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,194,255,.07), transparent 55%), #020812; flex-direction: column; overflow: hidden; }
 #orientacaoScreen.show { display: flex; }
 #dietaScreen {
   --diet-bg: var(--bg);
@@ -1732,10 +1732,10 @@ body.dark-mode #dietaScreen,
 .dav-th { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .dav-th:not(:first-child) { text-align: right; }
 .dav-th:nth-child(2) { color: var(--accent); }
-.orient-header { padding: 56px 20px 16px; background: rgba(5,13,26,.95); border-bottom: 1px solid rgba(0,85,255,.12); display: flex; align-items: center; justify-content: space-between; position: relative; }
+.orient-header { padding: 56px 20px 16px; background: rgba(5,13,26,.95); border-bottom: 1px solid rgba(0,194,255,.12); display: flex; align-items: center; justify-content: space-between; position: relative; }
 .orient-title { font-family: var(--display); font-size: 1.8rem; color: var(--text); letter-spacing: .04em; }
 .orient-content { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.orient-shortcuts-row { display: flex; gap: 6px; padding: 12px 16px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none; max-height: 32vh; border-bottom: 1px solid rgba(0,85,255,.10); transition: max-height .3s ease, opacity .3s ease, padding .3s ease; background: rgba(5,13,26,.92); }
+.orient-shortcuts-row { display: flex; gap: 6px; padding: 12px 16px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; flex-direction: column; flex: none; max-height: 32vh; border-bottom: 1px solid rgba(0,194,255,.10); transition: max-height .3s ease, opacity .3s ease, padding .3s ease; background: rgba(5,13,26,.92); }
 .orient-shortcuts-row::-webkit-scrollbar { display: none; }
 .orient-category-label { font-size: 0.65rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); padding: 4px 2px 2px; margin-top: 6px; }
 .orient-category-label:first-child { margin-top: 0; }
@@ -1787,7 +1787,7 @@ body.dark-mode #dietaScreen,
 /* Gap entre mensagens consecutivas */
 #orientExpertMessages .ai-msg { margin-bottom: 6px !important; }
 /* Barra de input — pílula iOS nativa */
-.orient-chat-bar, .chat-input { position: fixed; left: 0; right: 0; bottom: var(--keyboard-offset, 0px); z-index: 1000; padding: 0 0 env(safe-area-inset-bottom); border-top: 1px solid rgba(0,85,255,.10); flex: none; background: rgba(7,14,26,.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.orient-chat-bar, .chat-input { position: fixed; left: 0; right: 0; bottom: var(--keyboard-offset, 0px); z-index: 1000; padding: 0 0 env(safe-area-inset-bottom); border-top: 1px solid rgba(0,194,255,.10); flex: none; background: rgba(7,14,26,.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .orient-input-wrap { display: flex; align-items: center; margin: 8px 12px; padding: 8px 12px; gap: 8px; background: #1C1C1E; border-radius: 22px; border: 1px solid rgba(255,255,255,0.08); }
 .orient-input-wrap textarea { flex: 1; background: transparent; border: none; color: #fff; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif; font-size: 1.05rem; outline: none; -webkit-appearance: none; resize: none; overflow: hidden; line-height: 1.5; max-height: 120px; overflow-y: auto; padding: 1px 0; }
 .orient-input-wrap textarea::placeholder { color: rgba(var(--text-rgb),.45); }
@@ -2283,7 +2283,7 @@ body.light-mode .home-section-title { color: rgba(0,0,0,0.4); }
    HOME BANNER
 ══════════════════════════════════════════ */
 #homeBanner { margin: 0 16px 14px; background: linear-gradient(135deg,rgba(37,99,235,.14),rgba(96,165,250,.06)); border: 1px solid rgba(37,99,235,.22); border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-.home-banner-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: rgba(0,85,255,.15); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,85,255,.25); color: #0055FF; }
+.home-banner-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: rgba(0,194,255,.12); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,194,255,.20); color: #00C2FF; }
 #homeBannerTitle { font-size: .88rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
 #homeBannerSub   { font-size: .72rem; color: var(--text-2); }
 
@@ -3213,7 +3213,7 @@ body.light-mode #transformsScreen {
 .ks-goal-chip.selected { background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.4);color:#fff; }
 .ks-goal-chip.selected svg { stroke:#2563EB; }
 #ksFooter { position:relative;z-index:4; }
-.ks-footer { padding:12px 20px max(24px, calc(12px + env(safe-area-inset-bottom)));background:linear-gradient(180deg, rgba(10,10,10,0) 0%, rgba(10,10,10,0.82) 18%, #0A0A0A 100%);backdrop-filter:blur(6px); }
+.ks-footer { padding:12px 20px max(24px, calc(12px + env(safe-area-inset-bottom)));background:linear-gradient(180deg, rgba(2,8,18,0) 0%, rgba(2,8,18,0.82) 18%, #020812 100%);backdrop-filter:blur(6px); }
 .ks-footer-hint { font-size:.66rem;letter-spacing:.04em;color:rgba(255,255,255,0.34);text-align:center;margin-bottom:10px; }
 .ks-cta { width:100%;border:none;border-radius:16px;padding:17px 18px;color:#fff;font-family:var(--font);font-size:1rem;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#2563EB 0%,#FF7E1F 100%);letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .14s ease,opacity .2s,filter .2s;box-shadow:0 14px 34px rgba(37,99,235,.28);touch-action:manipulation;-webkit-tap-highlight-color:transparent; }
 .ks-cta:active:not(:disabled) { transform:translateY(1px) scale(.997); }
@@ -3742,8 +3742,8 @@ body.light-mode #transformsScreen {
 
 
 /* KRONOS chat skin — aplica também no modal compacto */
-body:not(.light-mode) #aiModal { background: #0A0A0A !important; }
-body:not(.light-mode) #aiModal .ai-topbar { border-bottom: 1px solid rgba(0,85,255,.12); background: rgba(5,13,26,.95); }
+body:not(.light-mode) #aiModal { background: #020812 !important; }
+body:not(.light-mode) #aiModal .ai-topbar { border-bottom: 1px solid rgba(0,194,255,.12); background: rgba(5,13,26,.95); }
 body:not(.light-mode) #aiMessages { background: transparent; }
 #aiMessages .ai-msg { gap: 8px; align-items: flex-end; }
 #aiMessages .ai-msg.assistant { justify-content: flex-start; }
@@ -4729,12 +4729,12 @@ body.light-mode .settings-plan-badge {
 }
 .kronia-data-screen.show { display: block; animation: homeIn .22s cubic-bezier(.25,.46,.45,.94) both; }
 .kronia-data-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-.kronia-data-kicker { color: #0055FF; font-size: .7rem; font-weight: 700; letter-spacing: .14em; font-family: 'Chakra Petch', sans-serif; }
+.kronia-data-kicker { color: #00C2FF; font-size: .7rem; font-weight: 700; letter-spacing: .14em; font-family: 'Chakra Petch', sans-serif; }
 .kronia-data-header h1 { color: var(--text-main); font-size: 2rem; line-height: 1; margin-top: 5px; font-weight: 900; font-style: italic; }
 .kronia-data-header p { color: var(--text-soft); font-size: .85rem; line-height: 1.4; margin-top: 8px; }
-.kronia-data-refresh { width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-card); color: #0055FF; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); }
+.kronia-data-refresh { width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-card); color: #00C2FF; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--shadow-soft); }
 .kronia-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
-.kronia-card { background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); }
+.kronia-card { background: linear-gradient(180deg, rgba(0,194,255,.03), rgba(0,194,255,0) 42%), #060F1D; border: 1px solid #0D1E30; border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(0,194,255,.04); }
 .kronia-card-wide { margin-bottom: 12px; }
 .kronia-card-title { color: var(--text-main); font-size: .92rem; font-weight: 900; font-style: italic; line-height: 1.2; }
 .kronia-card-value { color: var(--text-main); font-size: 1.55rem; font-weight: 900; margin-top: 10px; letter-spacing: 0; }
@@ -4742,7 +4742,7 @@ body.light-mode .settings-plan-badge {
 .kronia-progress-list { display: grid; gap: 14px; margin-top: 16px; }
 .kronia-progress-head { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: .78rem; font-weight: 800; margin-bottom: 7px; }
 .kronia-progress-track { height: 10px; border-radius: 999px; background: var(--border-soft); overflow: hidden; }
-.kronia-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: #0055FF; transition: width .25s ease; }
+.kronia-progress-fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #00C2FF, #6D4AFE); transition: width .25s ease; }
 .kronia-progress-fill.green { background: #22C55E; }
 .kronia-progress-fill.blue { background: #3B82F6; }
 .kronia-progress-fill.amber { background: #F59E0B; }
@@ -5164,7 +5164,7 @@ hr, .divider, .separator, [class*="divider"], [class*="separator"] {
 html.dark-mode .footer-actions,
 body.dark-mode .footer-actions {
   background: rgba(7,14,26,.88) !important;
-  border-top-color: rgba(0,85,255,.15) !important;
+  border-top-color: rgba(0,194,255,.15) !important;
   box-shadow: 0 -4px 20px rgba(0,0,0,.40) !important;
 }
 
@@ -5182,7 +5182,7 @@ body.dark-mode .btn-nav.active .btn-icon,
 :root[data-theme="dark"] .btn-nav.active .btn-label,
 html.dark-mode .btn-nav.active .btn-label,
 body.dark-mode .btn-nav.active .btn-label {
-  color: #0055FF !important;
+  color: #00C2FF !important;
 }
 
 :root[data-theme="dark"] .exercise-card,
@@ -6156,8 +6156,8 @@ body.dark-mode .settings-row-value {
 }
 #dietDataScreen .diet-now-foods span,
 #dietDataScreen .diet-sub-chip-row button {
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.05);
+  border: 1px solid #0D1E30;
+  background: rgba(0,194,255,.05);
   border-radius: 14px;
   color: rgba(241,245,249,.9);
   padding: 10px 12px;
@@ -6291,7 +6291,7 @@ body.dark-mode .settings-row-value {
 }
 #dietDataScreen .diet-sub-options { display: grid; gap: 10px; }
 #dietDataScreen .diet-sub-option {
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid #0D1E30;
   border-radius: 18px;
   background: rgba(17,24,39,.78);
   color: #fff;
@@ -6325,7 +6325,7 @@ body.dark-mode .settings-row-value {
   gap: 10px;
 }
 #dietDataScreen .diet-profile-grid div {
-  border: 1px solid rgba(255,255,255,.07);
+  border: 1px solid #0D1E30;
   border-radius: 16px;
   padding: 12px;
   background: rgba(255,255,255,.04);
@@ -6381,7 +6381,7 @@ body.dark-mode .settings-row-value {
   align-items: center;
   gap: 12px;
   padding: 56px 20px 16px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid #0D1E30;
   flex-shrink: 0;
 }
 #dietSubstituirScreen .ds-back-btn {
@@ -6418,8 +6418,8 @@ body.dark-mode .settings-row-value {
   gap: 10px;
 }
 #dietSubstituirScreen .ds-option-card {
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,194,255,.04);
+  border: 1px solid #0D1E30;
   border-radius: 16px;
   padding: 16px;
   display: flex;
@@ -6571,14 +6571,14 @@ body.dark-mode .settings-row-value {
 }
 .diet-choice-card:active { transform: scale(.97); }
 .diet-choice-card--green {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
-  border: 1.5px solid rgba(255,255,255,.09);
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  background: linear-gradient(180deg, rgba(47,227,154,.03), rgba(47,227,154,0) 42%), #060F1D;
+  border: 1.5px solid #0D1E30;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(47,227,154,.04);
 }
 .diet-choice-card--orange {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), #141414;
-  border: 1.5px solid rgba(255,255,255,.08);
-  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  background: linear-gradient(180deg, rgba(0,194,255,.03), rgba(0,194,255,0) 42%), #060F1D;
+  border: 1.5px solid #0D1E30;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(0,194,255,.04);
 }
 .diet-choice-card-icon-wrap {
   width: 68px;
@@ -6590,14 +6590,14 @@ body.dark-mode .settings-row-value {
   margin-bottom: 4px;
 }
 .diet-choice-card-icon-wrap--green {
-  background: rgba(0,85,255,.12);
-  box-shadow: 0 0 18px rgba(0,85,255,.15);
-  color: #0055FF;
+  background: rgba(47,227,154,.12);
+  box-shadow: 0 0 18px rgba(47,227,154,.15);
+  color: #2fe39a;
 }
 .diet-choice-card-icon-wrap--orange {
-  background: rgba(107,78,255,.12);
-  box-shadow: 0 0 18px rgba(107,78,255,.15);
-  color: #6B4EFF;
+  background: rgba(0,194,255,.10);
+  box-shadow: 0 0 18px rgba(0,194,255,.14);
+  color: #00C2FF;
 }
 .diet-choice-card-title {
   margin: 0;
@@ -6615,7 +6615,7 @@ body.dark-mode .settings-row-value {
 }
 .diet-choice-separator {
   height: 1px;
-  background: rgba(255,255,255,.07);
+  background: #0D1E30;
   margin: 4px 0;
 }
 .diet-choice-action-btn {
@@ -6639,16 +6639,16 @@ body.dark-mode .settings-row-value {
   color: #22C55E;
 }
 .diet-choice-action-btn--orange {
-  background: #0055FF;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
   border-color: transparent;
-  color: #fff;
+  color: #02101f;
 }
 .diet-choice-hint-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(15,23,42,.75);
-  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(6,15,29,.75);
+  border: 1px solid #0D1E30;
   border-radius: 18px;
   padding: 16px;
 }
@@ -6770,9 +6770,9 @@ body.dark-mode .settings-row-value {
   color: #22C55E;
 }
 #dietDataScreen .diet-compact-action-btn--orange {
-  background: #0055FF;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
   border-color: transparent;
-  color: #fff;
+  color: #02101f;
 }
 
 /* ══════════════════════════════════════════
@@ -7017,8 +7017,8 @@ body.dark-mode .settings-row-value {
   transform: scale(.93);
 }
 #dietDataScreen .diet-chip:hover:not(.selected) {
-  border-color: rgba(255,255,255,.22);
-  background: rgba(255,255,255,.08);
+  border-color: rgba(0,194,255,.22);
+  background: rgba(0,194,255,.07);
   color: #e2e8f0;
 }
 #dietDataScreen .diet-chip.selected {
@@ -7129,8 +7129,8 @@ body.dark-mode .settings-row-value {
   align-items: center;
   gap: 10px;
   width: 100%;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,194,255,.04);
+  border: 1px solid #0D1E30;
   border-radius: 14px;
   padding: 13px 16px;
   color: rgba(226,232,240,.8);
@@ -7324,12 +7324,12 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   height: 100%;
   transform: rotate(-90deg);
 }
-.score-ring-track { stroke: rgba(0,85,255,.15); }
+.score-ring-track { stroke: rgba(0,194,255,.15); }
 .score-ring-progress {
-  stroke: #0055FF;
+  stroke: url(#scoreRingGradient);
   stroke-linecap: round;
   transition: stroke-dashoffset 1s ease;
-  filter: drop-shadow(0 6px 26px rgba(0,85,255,.55));
+  filter: drop-shadow(0 6px 26px rgba(0,194,255,.55));
 }
 .score-ring-inner {
   display: flex;
@@ -7487,7 +7487,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A;
+  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,194,255,.07), transparent 55%), #020812;
   flex-direction: column;
   overflow: hidden;
 }
@@ -7755,7 +7755,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A;
+  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,194,255,.07), transparent 55%), #020812;
   flex-direction: column;
   overflow: hidden;
 }
@@ -7979,7 +7979,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   position: fixed;
   inset: 0;
   z-index: 2100;
-  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,85,255,.07), transparent 55%), #0A0A0A;
+  background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,194,255,.07), transparent 55%), #020812;
   flex-direction: column;
   overflow: hidden;
 }
@@ -9161,34 +9161,35 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 .action-primary,
 [data-variant="primary"],
 [data-tone="primary"] {
-  background: #0055FF !important;
-  color: #fff !important;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE) !important;
+  color: #02101f !important;
   font-weight: 700;
   border-radius: 13px;
   border: none !important;
-  box-shadow: 0 6px 18px rgba(0,85,255,.28) !important;
+  box-shadow: 0 8px 22px -12px rgba(0,194,255,.6) !important;
 }
 
 .btn-primary:active,
 .primary-btn:active,
 .cta-btn:active {
   transform: scale(.99) !important;
-  box-shadow: 0 2px 8px rgba(0,85,255,.2) !important;
+  box-shadow: 0 2px 8px rgba(0,194,255,.2) !important;
 }
 
 /* config-apply (botão salvar treino) */
 .config-apply {
-  background: #0055FF !important;
-  box-shadow: 0 6px 18px rgba(0,85,255,.28) !important;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE) !important;
+  box-shadow: 0 8px 22px -12px rgba(0,194,255,.6) !important;
+  color: #02101f !important;
 }
 
 /* ─── PARTE 7: Telas específicas ─── */
 
 /* Home: card KRONOS RECOMENDA */
 .kronos-ai-card {
-  background: linear-gradient(180deg, rgba(0,85,255,.05), rgba(255,255,255,0) 60%),
-              #161616 !important;
-  border: 1px solid rgba(0,85,255,.18) !important;
+  background: linear-gradient(180deg, rgba(0,194,255,.05), rgba(0,194,255,0) 60%),
+              #060F1D !important;
+  border: 1px solid rgba(0,194,255,.18) !important;
 }
 .kronos-ai-card .kronos-card-title,
 .kronos-ai-card .orient-title {
@@ -9197,31 +9198,31 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 
 /* Dieta: cards de escolha */
 .diet-choice-card--orange {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%),
-              #141414 !important;
-  border: 1px solid rgba(255,255,255,.08) !important;
+  background: linear-gradient(180deg, rgba(0,194,255,.03), rgba(0,194,255,0) 42%),
+              #060F1D !important;
+  border: 1px solid #0D1E30 !important;
   box-shadow: 0 4px 14px rgba(0,0,0,.35) !important;
 }
 .diet-choice-card-icon-wrap--orange {
-  background: rgba(0,85,255,.12) !important;
-  color: #0055FF !important;
+  background: rgba(0,194,255,.10) !important;
+  color: #00C2FF !important;
 }
 .diet-choice-action-btn--orange {
-  background: #0055FF !important;
-  color: #fff !important;
-  box-shadow: 0 4px 12px rgba(0,85,255,.28) !important;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE) !important;
+  color: #02101f !important;
+  box-shadow: 0 4px 12px rgba(0,194,255,.28) !important;
 }
 
 /* Perfil: avatar */
 .perfil-avatar-wrap,
 .perfil-hero-avatar {
-  background: rgba(0,85,255,.18) !important;
-  color: #0055FF !important;
+  background: rgba(0,194,255,.14) !important;
+  color: #00C2FF !important;
 }
 .perfil-stat-card,
 .perfil-stats .stat-item {
-  background: #141414 !important;
-  border: 1px solid rgba(255,255,255,.08) !important;
+  background: #060F1D !important;
+  border: 1px solid #0D1E30 !important;
 }
 
 /* Mapa muscular: garantir visibilidade */
@@ -9289,22 +9290,23 @@ p,
 
 /* ─── Badge de streak ─── */
 .streak-badge {
-  background: rgba(0,85,255,.10) !important;
-  border-color: rgba(0,85,255,.20) !important;
-  color: #7fb0ff !important;
+  background: rgba(0,194,255,.10) !important;
+  border-color: rgba(0,194,255,.20) !important;
+  color: #bcd8ff !important;
 }
 
 /* ─── Banner/banner-icon ─── */
 .home-banner-icon,
 .an-profile-banner-icon {
-  background: rgba(0,85,255,.15) !important;
-  color: #0055FF !important;
+  background: rgba(0,194,255,.12) !important;
+  color: #00C2FF !important;
 }
 
 /* ─── Home labs CTA ─── */
 .home-labs-cta-btn {
-  background: #0055FF !important;
-  box-shadow: 0 4px 14px rgba(0,85,255,.30) !important;
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE) !important;
+  color: #02101f !important;
+  box-shadow: 0 4px 14px rgba(0,194,255,.30) !important;
 }
 
 /* ─── Light-mode: não alterar (usuário pode ter tema claro) ─── */
@@ -9319,38 +9321,39 @@ p,
 ══════════════════════════════════════════════════════════════════ */
 
 /* ─── #gerarTreinoScreen ─── */
-#gerarTreinoScreen .gt-step-dot.active { background: #0055FF; }
-#gerarTreinoScreen .gt-step-dot.done   { background: rgba(0,85,255,.45); }
-#gerarTreinoScreen .gt-progress-bar    { background: #0055FF; }
+#gerarTreinoScreen .gt-step-dot.active { background: #00C2FF; }
+#gerarTreinoScreen .gt-step-dot.done   { background: rgba(0,194,255,.45); }
+#gerarTreinoScreen .gt-progress-bar    { background: linear-gradient(90deg, #00C2FF, #6D4AFE); }
 
 #gerarTreinoScreen .gt-obj-card.selected {
-  background: rgba(0,85,255,.15);
-  border-color: #0055FF;
+  background: rgba(0,194,255,.12);
+  border-color: #00C2FF;
 }
 #gerarTreinoScreen .gt-obj-card.selected .gt-obj-icon {
-  background: rgba(0,85,255,.25);
+  background: rgba(0,194,255,.22);
 }
-#gerarTreinoScreen .gt-obj-card.selected .gt-obj-name { color: #7fb0ff; }
+#gerarTreinoScreen .gt-obj-card.selected .gt-obj-name { color: #bcd8ff; }
 
 #gerarTreinoScreen .gt-day-btn.selected {
-  background: rgba(0,85,255,.20);
-  border-color: #0055FF;
-  color: #7fb0ff;
+  background: rgba(0,194,255,.16);
+  border-color: #00C2FF;
+  color: #bcd8ff;
 }
 
-#gerarTreinoScreen .gt-equip-select option { background: #141414; }
+#gerarTreinoScreen .gt-equip-select option { background: #060F1D; }
 
 #gerarTreinoScreen .gt-tipo-card.selected {
-  background: rgba(0,85,255,.12);
-  border-color: rgba(0,85,255,.50);
+  background: rgba(0,194,255,.10);
+  border-color: rgba(0,194,255,.50);
 }
 #gerarTreinoScreen .gt-tipo-icon {
-  background: rgba(0,85,255,.15);
+  background: rgba(0,194,255,.12);
 }
 
 #gerarTreinoScreen .gt-continuar-btn {
-  background: #0055FF;
-  box-shadow: 0 6px 18px rgba(0,85,255,.28);
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
+  box-shadow: 0 6px 18px rgba(0,194,255,.28);
+  color: #02101f;
 }
 
 #gerarTreinoScreen .gt-step-title {
@@ -9359,23 +9362,24 @@ p,
 
 /* ─── #treinoGeradoScreen ─── */
 #treinoGeradoScreen .tg-ex-num {
-  background: rgba(0,85,255,.15);
-  border: 1px solid rgba(0,85,255,.30);
-  color: #7fb0ff;
+  background: rgba(0,194,255,.12);
+  border: 1px solid rgba(0,194,255,.28);
+  color: #bcd8ff;
 }
 
 #treinoGeradoScreen .tg-progressao-card {
-  background: rgba(0,85,255,.06);
-  border: 1px solid rgba(0,85,255,.18);
+  background: rgba(0,194,255,.05);
+  border: 1px solid rgba(0,194,255,.16);
 }
-#treinoGeradoScreen .tg-prog-label { color: rgba(0,85,255,.8); }
-#treinoGeradoScreen .tg-prog-val   { color: #7fb0ff; }
-#treinoGeradoScreen .tg-prog-bar-item { background: rgba(0,85,255,.25); }
-#treinoGeradoScreen .tg-prog-bar-item.current { background: #0055FF; }
+#treinoGeradoScreen .tg-prog-label { color: rgba(0,194,255,.8); }
+#treinoGeradoScreen .tg-prog-val   { color: #bcd8ff; }
+#treinoGeradoScreen .tg-prog-bar-item { background: rgba(0,194,255,.20); }
+#treinoGeradoScreen .tg-prog-bar-item.current { background: #00C2FF; }
 
 #treinoGeradoScreen .tg-iniciar-btn {
-  background: #0055FF;
-  box-shadow: 0 6px 18px rgba(0,85,255,.28);
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
+  box-shadow: 0 6px 18px rgba(0,194,255,.28);
+  color: #02101f;
 }
 
 #treinoGeradoScreen .tg-workout-title {
@@ -9386,25 +9390,26 @@ p,
 }
 
 /* ─── #execucaoScreen ─── */
-#execucaoScreen .exec-series-dot      { background: rgba(0,85,255,.25); }
-#execucaoScreen .exec-series-dot.done { background: #0055FF; }
+#execucaoScreen .exec-series-dot      { background: rgba(0,194,255,.22); }
+#execucaoScreen .exec-series-dot.done { background: #00C2FF; }
 #execucaoScreen .exec-series-dot.current {
-  background: #0055FF;
+  background: #00C2FF;
   width: 20px;
 }
 
 #execucaoScreen .exec-ctrl-btn {
-  background: rgba(0,85,255,.12);
-  border: 1px solid rgba(0,85,255,.30);
-  color: #7fb0ff;
+  background: rgba(0,194,255,.10);
+  border: 1px solid rgba(0,194,255,.28);
+  color: #bcd8ff;
 }
-#execucaoScreen .exec-ctrl-btn:active { background: rgba(0,85,255,.25); }
+#execucaoScreen .exec-ctrl-btn:active { background: rgba(0,194,255,.22); }
 
-#execucaoScreen .exec-descanso-val { color: #7fb0ff; }
+#execucaoScreen .exec-descanso-val { color: #bcd8ff; }
 
 #execucaoScreen .exec-concluir-btn {
-  background: #0055FF;
-  box-shadow: 0 6px 18px rgba(0,85,255,.28);
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
+  box-shadow: 0 6px 18px rgba(0,194,255,.28);
+  color: #02101f;
 }
 
 #execucaoScreen .exec-exercise-name {
@@ -9419,54 +9424,56 @@ p,
   font-family: 'Chakra Petch', sans-serif;
 }
 
-/* Opção selecionada: troca azul velho por azul elétrico */
+/* Opção selecionada */
 #anamneseScreen .an-option-card.selected,
 #anamneseScreen .an-radio-card.selected,
 #anamneseScreen [class*="an-"].selected {
-  background: rgba(0,85,255,.18) !important;
-  border-color: #0055FF !important;
+  background: rgba(0,194,255,.14) !important;
+  border-color: #00C2FF !important;
 }
 
 /* Kicker/ícone de seção */
 #anamneseScreen .an-section-icon,
 #anamneseScreen .an-kicker {
-  color: #0055FF;
+  color: #00C2FF;
 }
 
 /* Botão de avançar */
 #anamneseScreen .an-footer-btn,
 #anamneseScreen .an-next-btn,
-#anamneseScreen .an-submit-btn {
-  background: #0055FF !important;
-  box-shadow: 0 6px 18px rgba(0,85,255,.28) !important;
+#anamneseScreen .an-submit-btn,
+#anamneseScreen .an-btn-next {
+  background: linear-gradient(95deg, #00C2FF, #6D4AFE) !important;
+  color: #02101f !important;
+  box-shadow: 0 6px 18px rgba(0,194,255,.28) !important;
 }
 
 /* Barra de progresso */
-#anamneseScreen .an-progress-fill { background: #0055FF; }
+#anamneseScreen .an-progress-fill { background: linear-gradient(90deg, #00C2FF, #6D4AFE); }
 
 
-/* ─── #anamneseScreen: elementos com hardcode rgba(37,99,235,...) ─── */
+/* ─── #anamneseScreen: elementos com hardcode ─── */
 .an-chip.selected {
-  background: rgba(0,85,255,.18);
+  background: rgba(0,194,255,.14);
 }
 .an-confirm-card {
-  background: rgba(0,85,255,.07);
-  border: 1.5px solid rgba(0,85,255,.18);
+  background: rgba(0,194,255,.06);
+  border: 1.5px solid rgba(0,194,255,.16);
 }
 .an-info-card {
-  background: rgba(0,85,255,.08);
-  border: 1px solid rgba(0,85,255,.18);
+  background: rgba(0,194,255,.07);
+  border: 1px solid rgba(0,194,255,.16);
 }
 .an-profile-banner {
-  background: rgba(0,85,255,.08);
-  border: 1.5px solid rgba(0,85,255,.20);
+  background: rgba(0,194,255,.07);
+  border: 1.5px solid rgba(0,194,255,.18);
 }
 .an-profile-banner:active {
-  background: rgba(0,85,255,.15);
-  border-color: rgba(0,85,255,.38);
+  background: rgba(0,194,255,.14);
+  border-color: rgba(0,194,255,.36);
 }
 #anamneseScreen .an-step-tag {
-  color: #0055FF;
+  color: #00C2FF;
 }
 #anamneseScreen .an-step-title {
   font-family: 'Chakra Petch', sans-serif;
@@ -9474,13 +9481,13 @@ p,
 
 /* ─── KRONOS empty-state pills ─── */
 .kronos-empty-pill {
-  border: 1px solid rgba(0,85,255,.22);
-  background: rgba(0,85,255,.06);
+  border: 1px solid rgba(0,194,255,.20);
+  background: rgba(0,194,255,.05);
 }
 .kronos-empty-pill:hover,
 .kronos-empty-pill:active {
-  background: rgba(0,85,255,.15);
-  border-color: rgba(0,85,255,.38);
+  background: rgba(0,194,255,.14);
+  border-color: rgba(0,194,255,.36);
 }
 
 
@@ -9492,46 +9499,46 @@ p,
 
 /* Hero badges — "Configurar" e "Gerar agora" */
 .home-hero-badge {
-  background: rgba(0,85,255,.18) !important;
-  color: #7fb0ff !important;
-  border-color: rgba(0,85,255,.28) !important;
+  background: rgba(0,194,255,.14) !important;
+  color: #bcd8ff !important;
+  border-color: rgba(0,194,255,.24) !important;
 }
 .home-hero-badge--green {
-  background: rgba(0,85,255,.15) !important;
-  color: #7fb0ff !important;
-  border-color: rgba(0,85,255,.22) !important;
+  background: rgba(47,227,154,.12) !important;
+  color: #a7f3d0 !important;
+  border-color: rgba(47,227,154,.22) !important;
 }
-.home-hero-arrow { color: rgba(0,85,255,.50) !important; }
-.home-hero-arrow--green { color: rgba(0,85,255,.40) !important; }
+.home-hero-arrow { color: rgba(0,194,255,.50) !important; }
+.home-hero-arrow--green { color: rgba(47,227,154,.50) !important; }
 
 /* Ícone KRONOS AI Coach (inline style, class existe) */
 .kronos-ai-icon-wrap {
-  background: rgba(0,85,255,.20) !important;
-  box-shadow: 0 4px 14px rgba(0,85,255,.30) !important;
+  background: linear-gradient(150deg,rgba(109,74,254,0.22),rgba(0,194,255,0.12)) !important;
+  box-shadow: 0 4px 14px rgba(0,194,255,.22) !important;
 }
 
 /* Ícone KRONIA Evolution Tools (inline style, class existe) */
 .kronia-tools-icon-wrap {
-  background: rgba(107,78,255,.22) !important;
-  box-shadow: 0 4px 14px rgba(107,78,255,.28) !important;
+  background: linear-gradient(150deg,rgba(109,74,254,0.28),rgba(0,194,255,0.10)) !important;
+  box-shadow: 0 4px 14px rgba(109,74,254,.24) !important;
 }
 
 /* Home tool icons (inline style, class existe) */
 .home-tool-icon {
-  background: rgba(0,85,255,.18) !important;
+  background: linear-gradient(150deg,rgba(109,74,254,0.22),rgba(0,194,255,0.12)) !important;
   box-shadow: none !important;
 }
 
 /* Home quick icons (inline style, class existe) */
 .home-quick-icon {
-  background: rgba(0,85,255,.18) !important;
+  background: rgba(0,194,255,.10) !important;
   box-shadow: none !important;
 }
 
 
 /* ─── KRONOS AI Coach card — textos ─── */
 .kronos-ai-title   { color: #ffffff !important; }
-.kronos-ai-subtitle { color: rgba(0,85,255,.80) !important; }
+.kronos-ai-subtitle { color: rgba(0,194,255,.80) !important; }
 .kronos-ai-tip     { color: #7fb0ff !important; }
 
 /* ─── KRONIA Evolution Tools card — textos ─── */
@@ -9546,47 +9553,47 @@ p,
 
 /* 1. Cards de tipo de treino — base (não-selecionado) */
 #gerarTreinoScreen .gt-tipo-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), #141414 !important;
-  border: 2px solid rgba(255,255,255,.08) !important;
+  background: linear-gradient(180deg, rgba(0,194,255,.025), rgba(0,194,255,0) 40%), #060F1D !important;
+  border: 2px solid #0D1E30 !important;
 }
 
 /* obj-card e day-btn também */
 #gerarTreinoScreen .gt-obj-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), #141414 !important;
-  border: 2px solid rgba(255,255,255,.07) !important;
+  background: linear-gradient(180deg, rgba(0,194,255,.025), rgba(0,194,255,0) 40%), #060F1D !important;
+  border: 2px solid #0D1E30 !important;
 }
 #gerarTreinoScreen .gt-day-btn {
-  background: #141414 !important;
-  border: 2px solid rgba(255,255,255,.07) !important;
-  color: rgba(255,255,255,.55) !important;
+  background: #060F1D !important;
+  border: 2px solid #0D1E30 !important;
+  color: rgba(138,164,196,.8) !important;
 }
 
-/* 2. Labs CTA card — troca verde por azul */
+/* 2. Labs CTA card */
 .home-labs-cta-card {
-  border-color: rgba(0,85,255,.30) !important;
-  background: linear-gradient(145deg, rgba(0,85,255,.14), rgba(107,78,255,.06)) !important;
-  box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06) !important;
+  border-color: rgba(0,194,255,.25) !important;
+  background: linear-gradient(145deg, rgba(0,194,255,.08), rgba(109,74,254,.06)) !important;
+  box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(0,194,255,.06) !important;
 }
 .home-labs-cta-card:hover {
-  border-color: rgba(0,85,255,.50) !important;
+  border-color: rgba(0,194,255,.45) !important;
 }
 .home-labs-cta-badge {
-  border-color: rgba(0,85,255,.45) !important;
-  background: rgba(0,85,255,.18) !important;
-  color: #7fb0ff !important;
+  border-color: rgba(0,194,255,.35) !important;
+  background: rgba(0,194,255,.10) !important;
+  color: #bcd8ff !important;
 }
 .home-labs-cta-icon {
-  background: linear-gradient(145deg, #0055FF, #6B4EFF) !important;
+  background: linear-gradient(145deg, #00C2FF, #6D4AFE) !important;
 }
 
-/* 3. Hero icon backgrounds — aumentar opacidade para ficar visível */
+/* 3. Hero icon backgrounds */
 .home-hero-icon--orange {
-  background: rgba(0,85,255,.28) !important;
-  box-shadow: 0 4px 16px rgba(0,85,255,.35) !important;
+  background: rgba(0,194,255,.22) !important;
+  box-shadow: 0 4px 16px rgba(0,194,255,.28) !important;
 }
 .home-hero-icon--green {
-  background: rgba(107,78,255,.28) !important;
-  box-shadow: 0 4px 16px rgba(107,78,255,.30) !important;
+  background: rgba(47,227,154,.20) !important;
+  box-shadow: 0 4px 16px rgba(47,227,154,.22) !important;
 }
 .home-hero-icon svg,
 .home-hero-icon i { color: #fff !important; }

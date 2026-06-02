@@ -259,7 +259,7 @@
 </div>
 
 <!-- ═══ KRONA SETUP — Profile setup pós-login ═══ -->
-<div id="kronaSetup" style="display:none;position:fixed;inset:0;z-index:9600;background:#0A0A0A;flex-direction:column;overflow:hidden">
+<div id="kronaSetup" style="display:none;position:fixed;inset:0;z-index:9600;background:#020812;flex-direction:column;overflow:hidden">
 
   <!-- Header: logo + progress -->
   <div style="padding:env(safe-area-inset-top,20px) 20px 0;flex-shrink:0">
@@ -1073,10 +1073,17 @@
   <div class="score-adaptativo-card">
     <div class="score-ring-wrap">
       <svg class="score-ring-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="scoreRingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00C2FF"/>
+            <stop offset="55%" stop-color="#2a72e0"/>
+            <stop offset="100%" stop-color="#6D4AFE"/>
+          </linearGradient>
+        </defs>
         <circle class="score-ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="7"/>
         <circle class="score-ring-progress" cx="50" cy="50" r="42" fill="none" stroke-width="7"
           stroke-dasharray="263.9" id="homeScoreRing" stroke-dashoffset="53"
-          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          stroke-linecap="round"/>
       </svg>
       <div class="score-ring-inner">
         <div class="score-ring-num" id="homeScoreNum">87</div>
@@ -1213,7 +1220,7 @@
       </div>
       <div id="kronosDica" class="kronos-ai-tip">DICA DO KRONOS:<br>FOCO NA TÉCNICA HOJE</div>
       <!-- CTA Chat -->
-      <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,85,255,.18);border:1px solid rgba(0,85,255,.35);color:#7fb0ff;font-family:var(--display);font-size:0.62rem;font-weight:900;letter-spacing:.07em;padding:6px 11px;border-radius:99px">
+      <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,194,255,.14);border:1px solid rgba(0,194,255,.32);color:#bcd8ff;font-family:var(--display);font-size:0.62rem;font-weight:900;letter-spacing:.07em;padding:6px 11px;border-radius:99px">
         <i data-lucide="message-circle" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"></i>
         INICIAR CHAT
       </div>
