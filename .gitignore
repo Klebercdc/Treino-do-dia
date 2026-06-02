@@ -40,3 +40,4 @@ etl/scrapers/output/
 .env*.local
 __pycache__/
 .claude/settings.local.json
+kronia-design-reference/extracted/

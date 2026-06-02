@@ -259,7 +259,7 @@
 </div>
 
 <!-- ═══ KRONA SETUP — Profile setup pós-login ═══ -->
-<div id="kronaSetup" style="display:none;position:fixed;inset:0;z-index:9600;background:#0A0A0A;flex-direction:column;overflow:hidden">
+<div id="kronaSetup" style="display:none;position:fixed;inset:0;z-index:9600;background:#020812;flex-direction:column;overflow:hidden">
 
   <!-- Header: logo + progress -->
   <div style="padding:env(safe-area-inset-top,20px) 20px 0;flex-shrink:0">
@@ -1070,13 +1070,30 @@
   </div>
 
   <!-- ═══ SCORE ADAPTATIVO ═══ -->
-  <div class="score-adaptativo-card">
-    <div class="score-ring-wrap">
+  <div class="score-adaptativo-card" style="position:relative;overflow:hidden;">
+    <!-- corpo 3D ambiente -->
+    <div style="position:absolute;right:-10px;top:-10px;bottom:-10px;width:140px;pointer-events:none;z-index:0;
+                background:radial-gradient(60% 60% at 55% 45%, rgba(0,150,255,0.18), transparent 72%);filter:blur(6px);">
+    </div>
+    <img src="assets/3d/body-front.png" alt="" draggable="false" aria-hidden="true"
+      style="position:absolute;right:-4px;top:-6px;height:105%;width:auto;object-fit:contain;
+             opacity:0.18;filter:drop-shadow(0 0 14px rgba(0,194,255,0.3));pointer-events:none;z-index:0;
+             -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 40%);
+             mask-image:linear-gradient(90deg, transparent 0%, #000 40%);">
+
+    <div class="score-ring-wrap" style="position:relative;z-index:1;">
       <svg class="score-ring-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="scoreRingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00C2FF"/>
+            <stop offset="55%" stop-color="#2a72e0"/>
+            <stop offset="100%" stop-color="#6D4AFE"/>
+          </linearGradient>
+        </defs>
         <circle class="score-ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="7"/>
         <circle class="score-ring-progress" cx="50" cy="50" r="42" fill="none" stroke-width="7"
           stroke-dasharray="263.9" id="homeScoreRing" stroke-dashoffset="53"
-          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          stroke-linecap="round"/>
       </svg>
       <div class="score-ring-inner">
         <div class="score-ring-num" id="homeScoreNum">87</div>
@@ -1085,7 +1102,7 @@
         <div class="score-ring-sub" id="homeScoreSub">Pronto para evoluir hoje</div>
       </div>
     </div>
-    <div class="score-stats">
+    <div class="score-stats" style="position:relative;z-index:1;">
       <div class="score-stat-row">
         <div class="score-stat-icon">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -1157,9 +1174,14 @@
   <div class="home-hero-grid">
 
     <!-- Card TREINO -->
-    <div class="home-hero-card home-hero-treino k-pressable" onclick="navTo('programa');openConfig()">
+    <div class="home-hero-card home-hero-treino k-pressable" onclick="navTo('programa');openConfig()" style="overflow:hidden;">
       <div class="home-hero-glow home-hero-glow--orange"></div>
-      <div class="home-hero-body">
+      <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
+        style="position:absolute;bottom:-4px;right:-6px;height:90%;width:auto;object-fit:contain;
+               opacity:0.35;filter:drop-shadow(0 0 10px rgba(0,194,255,0.4));pointer-events:none;z-index:0;
+               -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 30%);
+               mask-image:linear-gradient(180deg,transparent 0%,#000 30%);">
+      <div class="home-hero-body" style="position:relative;z-index:1;">
         <div class="home-hero-icon home-hero-icon--orange">
           <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="2"></i>
         </div>
@@ -1213,7 +1235,7 @@
       </div>
       <div id="kronosDica" class="kronos-ai-tip">DICA DO KRONOS:<br>FOCO NA TÉCNICA HOJE</div>
       <!-- CTA Chat -->
-      <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,85,255,.18);border:1px solid rgba(0,85,255,.35);color:#7fb0ff;font-family:var(--display);font-size:0.62rem;font-weight:900;letter-spacing:.07em;padding:6px 11px;border-radius:99px">
+      <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,194,255,.14);border:1px solid rgba(0,194,255,.32);color:#bcd8ff;font-family:var(--display);font-size:0.62rem;font-weight:900;letter-spacing:.07em;padding:6px 11px;border-radius:99px">
         <i data-lucide="message-circle" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"></i>
         INICIAR CHAT
       </div>
@@ -1936,55 +1958,32 @@
   </div>
 
   <div class="perfil-section">
-    <div class="perfil-section-title">Mapa muscular — últimos 7 dias</div>
-    <div class="heatmap-wrap">
-      <div class="heatmap-side">
-        <div class="heatmap-side-label">Anterior</div>
-        <div class="muscle-map" id="heatmapFront">
-          <svg viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="50" cy="20" rx="18" ry="18" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="44" y="35" width="12" height="10" rx="3" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <ellipse class="muscle-group level-0" id="hm-peito-e" cx="38" cy="60" rx="14" ry="12" data-muscle="peito"/>
-            <ellipse class="muscle-group level-0" id="hm-peito-d" cx="62" cy="60" rx="14" ry="12" data-muscle="peito"/>
-            <ellipse class="muscle-group level-0" id="hm-ombro-e" cx="22" cy="52" rx="9" ry="11" data-muscle="ombros"/>
-            <ellipse class="muscle-group level-0" id="hm-ombro-d" cx="78" cy="52" rx="9" ry="11" data-muscle="ombros"/>
-            <rect class="muscle-group level-0" id="hm-abs" x="38" y="74" width="24" height="30" rx="4" data-muscle="abdomen"/>
-            <rect class="muscle-group level-0" id="hm-quad-e" x="30" y="115" width="16" height="40" rx="6" data-muscle="quadriceps"/>
-            <rect class="muscle-group level-0" id="hm-quad-d" x="54" y="115" width="16" height="40" rx="6" data-muscle="quadriceps"/>
-            <ellipse class="muscle-group level-0" id="hm-bic-e" cx="16" cy="78" rx="7" ry="14" data-muscle="biceps"/>
-            <ellipse class="muscle-group level-0" id="hm-bic-d" cx="84" cy="78" rx="7" ry="14" data-muscle="biceps"/>
-            <rect x="31" y="157" width="14" height="35" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="55" y="157" width="14" height="35" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-          </svg>
-        </div>
+    <div class="perfil-section-title">Grupos musculares — últimos 7 dias</div>
+    <div class="muscle-cards-grid" id="muscleCardsGrid">
+      <div class="muscle-card-item" id="mc-peito" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-peito.png" alt="Peito" draggable="false" class="mc-img">
+        <div class="mc-name">Peito</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
       </div>
-      <div class="heatmap-side">
-        <div class="heatmap-side-label">Posterior</div>
-        <div class="muscle-map" id="heatmapBack">
-          <svg viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="50" cy="20" rx="18" ry="18" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="44" y="35" width="12" height="10" rx="3" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <path class="muscle-group level-0" id="hm-trap" d="M32 42 Q50 36 68 42 L65 60 Q50 55 35 60 Z" data-muscle="costas"/>
-            <path class="muscle-group level-0" id="hm-lat-e" d="M22 55 Q30 52 38 58 L36 90 Q28 88 20 80 Z" data-muscle="costas"/>
-            <path class="muscle-group level-0" id="hm-lat-d" d="M78 55 Q70 52 62 58 L64 90 Q72 88 80 80 Z" data-muscle="costas"/>
-            <rect class="muscle-group level-0" id="hm-lombar" x="38" y="88" width="24" height="18" rx="4" data-muscle="costas"/>
-            <ellipse class="muscle-group level-0" id="hm-glut-e" cx="38" cy="115" rx="14" ry="14" data-muscle="gluteos"/>
-            <ellipse class="muscle-group level-0" id="hm-glut-d" cx="62" cy="115" rx="14" ry="14" data-muscle="gluteos"/>
-            <rect class="muscle-group level-0" id="hm-post-e" x="30" y="130" width="16" height="38" rx="6" data-muscle="posterior"/>
-            <rect class="muscle-group level-0" id="hm-post-d" x="54" y="130" width="16" height="38" rx="6" data-muscle="posterior"/>
-            <ellipse class="muscle-group level-0" id="hm-tri-e" cx="16" cy="78" rx="7" ry="14" data-muscle="triceps"/>
-            <ellipse class="muscle-group level-0" id="hm-tri-d" cx="84" cy="78" rx="7" ry="14" data-muscle="triceps"/>
-            <rect x="31" y="170" width="14" height="24" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-            <rect x="55" y="170" width="14" height="24" rx="5" fill="var(--bg2)" stroke="var(--border)" stroke-width="0.5"/>
-          </svg>
-        </div>
+      <div class="muscle-card-item" id="mc-costas" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-costas.png" alt="Costas" draggable="false" class="mc-img">
+        <div class="mc-name">Costas</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
       </div>
-    </div>
-    <div class="heatmap-legend">
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:var(--bg2);border:1px solid var(--border)"></div>Não trabalhado</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.3)"></div>Leve</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.6)"></div>Moderado</div>
-      <div class="heatmap-legend-item"><div class="heatmap-legend-dot" style="background:rgba(37,99,235,0.9)"></div>Intenso</div>
+      <div class="muscle-card-item" id="mc-pernas" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-pernas.png" alt="Pernas" draggable="false" class="mc-img">
+        <div class="mc-name">Pernas</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
+      </div>
+      <div class="muscle-card-item" id="mc-ombros" data-level="0">
+        <div class="mc-glow"></div>
+        <img src="assets/3d/muscle-ombros.png" alt="Ombros" draggable="false" class="mc-img">
+        <div class="mc-name">Ombros</div>
+        <div class="mc-status"><span class="mc-dot"></span><span class="mc-label">—</span></div>
+      </div>
     </div>
   </div>
   <div style="height:100px"></div>
@@ -2872,9 +2871,12 @@
     </button>
   </div>
   <div class="tg-scroll app-scroll">
-    <div class="tg-title-area">
-      <div class="tg-workout-title" id="tgTreinoTitle">Força Superior</div>
-      <div class="tg-workout-meta">
+    <div class="tg-title-area" style="position:relative;overflow:hidden;">
+      <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
+        style="position:absolute;right:-8px;top:-10px;height:120px;width:auto;object-fit:contain;
+               opacity:0.55;filter:drop-shadow(0 0 18px rgba(0,194,255,0.4));pointer-events:none;z-index:0;">
+      <div class="tg-workout-title" id="tgTreinoTitle" style="position:relative;z-index:1;">Força Superior</div>
+      <div class="tg-workout-meta" style="position:relative;z-index:1;">
         <span id="tgTreinoObj">Hipertrofia</span>
         <span class="tg-meta-dot"></span>
         <span id="tgTreinoDuration">60 min</span>
@@ -3306,6 +3308,11 @@
 
     <!-- ── STEP 0: Confirmar dados existentes ── -->
     <div class="an-step active" id="an-step-0">
+      <div style="display:flex;justify-content:center;margin:-8px 0 18px;position:relative;">
+        <div style="position:absolute;inset:'-10%';background:radial-gradient(50% 50% at 50% 50%, rgba(0,150,255,0.18), transparent 70%);filter:blur(12px);pointer-events:none;animation:kr-glow 3.4s ease-in-out infinite;"></div>
+        <img src="assets/3d/fig-anamnese.png" alt="" draggable="false" aria-hidden="true"
+          style="position:relative;width:180px;height:auto;object-fit:contain;filter:drop-shadow(0 0 20px rgba(0,194,255,0.35));opacity:0.9;">
+      </div>
       <div class="an-step-tag">Antes de começar</div>
       <div class="an-step-title">Confirme seus dados</div>
       <div class="an-step-sub">O KRONOS usa esses dados para personalizar seu plano.</div>
