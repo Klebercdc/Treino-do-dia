@@ -5028,16 +5028,16 @@
       <span class="execution-control-label">CARGA (KG)</span>
       <div class="execution-control-row">
         <button class="execution-ctrl-btn"
-          ontouchstart="geStartRepeat('kg',-1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          ontouchstart="geStartRepeat('kg',-1);event.preventDefault()" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
           onmousedown="geStartRepeat('kg',-1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
-          onclick="geUpdateField('kg',-1)" aria-label="Diminuir carga">
+          aria-label="Diminuir carga">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <span id="geKgValue" class="execution-ctrl-value">0</span>
         <button class="execution-ctrl-btn"
-          ontouchstart="geStartRepeat('kg',1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          ontouchstart="geStartRepeat('kg',1);event.preventDefault()" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
           onmousedown="geStartRepeat('kg',1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
-          onclick="geUpdateField('kg',1)" aria-label="Aumentar carga">
+          aria-label="Aumentar carga">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
@@ -5047,16 +5047,16 @@
       <span class="execution-control-label">REPETIÇÕES</span>
       <div class="execution-control-row">
         <button class="execution-ctrl-btn"
-          ontouchstart="geStartRepeat('reps',-1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          ontouchstart="geStartRepeat('reps',-1);event.preventDefault()" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
           onmousedown="geStartRepeat('reps',-1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
-          onclick="geUpdateField('reps',-1)" aria-label="Diminuir reps">
+          aria-label="Diminuir reps">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <span id="geRepsValue" class="execution-ctrl-value">0</span>
         <button class="execution-ctrl-btn"
-          ontouchstart="geStartRepeat('reps',1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          ontouchstart="geStartRepeat('reps',1);event.preventDefault()" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
           onmousedown="geStartRepeat('reps',1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
-          onclick="geUpdateField('reps',1)" aria-label="Aumentar reps">
+          aria-label="Aumentar reps">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
@@ -5066,16 +5066,16 @@
       <span class="execution-control-label">RPE</span>
       <div class="execution-control-row">
         <button class="execution-ctrl-btn"
-          ontouchstart="geStartRepeat('rpe',-1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          ontouchstart="geStartRepeat('rpe',-1);event.preventDefault()" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
           onmousedown="geStartRepeat('rpe',-1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
-          onclick="geUpdateField('rpe',-1)" aria-label="Diminuir RPE">
+          aria-label="Diminuir RPE">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <span id="geRpeValue" class="execution-ctrl-value">0</span>
         <button class="execution-ctrl-btn"
-          ontouchstart="geStartRepeat('rpe',1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          ontouchstart="geStartRepeat('rpe',1);event.preventDefault()" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
           onmousedown="geStartRepeat('rpe',1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
-          onclick="geUpdateField('rpe',1)" aria-label="Aumentar RPE">
+          aria-label="Aumentar RPE">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
