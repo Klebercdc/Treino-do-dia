@@ -17437,6 +17437,16 @@ function exitGuidedExecution() {
   if (sheet && sheet.classList.contains('show')) fecharTimer();
 }
 
+function geMuscleImage(muscle) {
+  const m = String(muscle || '').toLowerCase();
+  if (m.includes('peito') || m.includes('peitoral') || m.includes('chest') || m.includes('pec')) return 'assets/3d/muscle-peito.png';
+  if (m.includes('costas') || m.includes('dorsal') || m.includes('dorsais') || m.includes('back') || m.includes('lat')) return 'assets/3d/muscle-costas.png';
+  if (m.includes('ombro') || m.includes('deltoid') || m.includes('shoulder') || m.includes('trapezio') || m.includes('trapézio')) return 'assets/3d/muscle-ombros.png';
+  if (m.includes('perna') || m.includes('quadricep') || m.includes('posterior') || m.includes('gluteo') || m.includes('glúteo') || m.includes('panturrilha') || m.includes('leg') || m.includes('hamstring')) return 'assets/3d/muscle-pernas.png';
+  if (m.includes('costas') || m.includes('lombar')) return 'assets/3d/muscle-costas.png';
+  return 'assets/3d/body-front.png';
+}
+
 function geRender() {
   const card = geGetCurrentCard();
   if (!card) { exitGuidedExecution(); if (typeof showToast === 'function') showToast('Todos os exercícios concluídos! 💪 Salve o treino.', 'success', 4000); return; }
@@ -17468,6 +17478,18 @@ function geRender() {
     muscleEl.innerHTML = muscleLabel
       ? muscleLabel + (setsInfo ? ' · <span class="ge-meta-info">' + setsInfo + '</span>' : '')
       : setsInfo || '';
+  }
+
+  // Imagem muscular
+  const muscleImg = document.getElementById('geMuscleImg');
+  if (muscleImg) {
+    const imgSrc = geMuscleImage(muscle);
+    if (muscleImg.dataset.currentSrc !== imgSrc) {
+      muscleImg.dataset.currentSrc = imgSrc;
+      muscleImg.style.opacity = '0';
+      muscleImg.src = imgSrc;
+      muscleImg.onload = () => { muscleImg.style.opacity = '1'; };
+    }
   }
 
   // Progress geral

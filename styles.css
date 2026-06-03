@@ -10113,26 +10113,25 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
 }
 .ge-meta-info { color: var(--muted, #5a7a9a); font-weight: 500; }
 
-/* Card muscular (placeholder diagram) */
+/* Card muscular */
 .execution-muscle-card {
-  width: 80px;
-  height: 80px;
-  border-radius: 14px;
-  background: rgba(0,194,255,0.06);
-  border: 1px solid rgba(0,194,255,0.18);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  width: 88px;
+  height: 88px;
+  border-radius: 16px;
+  background: rgba(0,194,255,0.05);
+  border: 1px solid rgba(0,194,255,0.12);
+  overflow: hidden;
   flex-shrink: 0;
+  position: relative;
 }
-.execution-muscle-tag {
-  font-size: 0.42rem;
-  font-weight: 800;
-  letter-spacing: .1em;
-  color: rgba(0,194,255,0.45);
-  text-transform: uppercase;
+.execution-muscle-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  transition: opacity .3s ease;
+  filter: brightness(0.9) saturate(1.1);
 }
 
 /* Strip de séries */
