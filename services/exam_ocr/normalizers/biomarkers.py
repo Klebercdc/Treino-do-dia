@@ -842,7 +842,56 @@ MARKERS = [
     },
 
     # -----------------------------------------------------------------------
-    # 8. INFLAMAÇÃO E RISCO
+    # 8. ENZIMAS MUSCULARES
+    # -----------------------------------------------------------------------
+    {
+        'marker_key': 'ck_total',
+        'marker_name': 'Creatinofosfoquinase Total (CK-Total)',
+        'aliases': [
+            'creatinoquinase total',
+            'creatinofosfoquinase total',
+            'creatina quinase total',
+            'creatina fosfoquinase total',
+            'creatina-quinase total',
+            'creatinofosfokinase total',
+            'ck total',
+            'ck-total',
+            'cpk total',
+            'creatine kinase total',
+            'creatine phosphokinase total',
+            'cpk',
+        ],
+    },
+    {
+        'marker_key': 'ck_mb',
+        'marker_name': 'CK-MB',
+        'aliases': [
+            'creatinoquinase mb',
+            'creatina quinase mb',
+            'creatinaquinase-mb',
+            'ck-mb massa',
+            'ck-mb',
+            'ck mb',
+            'creatine kinase mb',
+            'ck frac mb',
+        ],
+    },
+    {
+        'marker_key': 'ldh',
+        'marker_name': 'Desidrogenase Lática (LDH)',
+        'aliases': [
+            'desidrogenase latica',
+            'desidrogenase lática',
+            'lactato desidrogenase',
+            'lactato-desidrogenase',
+            'lactic acid dehydrogenase',
+            'lactic dehydrogenase',
+            'ldh',
+        ],
+    },
+
+    # -----------------------------------------------------------------------
+    # 10. INFLAMAÇÃO E RISCO
     # -----------------------------------------------------------------------
     {
         'marker_key': 'crp',
@@ -882,7 +931,7 @@ MARKERS = [
     },
 
     # -----------------------------------------------------------------------
-    # 9. VITAMINAS E MICRONUTRIENTES
+    # 11. VITAMINAS E MICRONUTRIENTES
     # -----------------------------------------------------------------------
     {
         'marker_key': 'vitamin_d',

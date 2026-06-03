@@ -119,6 +119,8 @@ export interface ParsedLabReport {
   // PSA
   psa_total: number | null
   psa_free: number | null
+  // Muscle damage
+  ck_total: number | null
 }
 
 // ---------------------------------------------------------------------------
