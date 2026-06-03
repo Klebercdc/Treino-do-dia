@@ -16189,6 +16189,7 @@ function gtSelectTipo(el) {
   document.getElementById('gtContinuarBtn').disabled = false;
   _gtState.kronosCtx = null;
   _gtFetchKronosContext();
+  setTimeout(gtNext, 300);
 }
 
 async function _gtFetchKronosContext() {
