@@ -9987,3 +9987,413 @@ body.light-mode .prontidao-metric-chip { background: rgba(0,0,0,0.03); border-co
 body.light-mode .home-status-chip { background: #f8fafc; border-color: #e2e8f0; }
 body.light-mode .home-status-chip-label { color: #1e293b; }
 body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
+
+/* ══════════════════════════════════════════════════════
+   EXECUÇÃO GUIADA — KroniA Guided Execution Screen
+   Classes: kronia-execution-screen, execution-*
+   Dark/azul premium. Sem alterar lógica existente.
+══════════════════════════════════════════════════════ */
+
+/* Overlay full-screen */
+.kronia-execution-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: var(--bg, #020812);
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+.kronia-execution-screen.active {
+  display: flex;
+}
+
+/* Header */
+.execution-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  flex-shrink: 0;
+}
+.execution-back-btn,
+.execution-info-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text, #eaf3ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.execution-back-btn:active,
+.execution-info-btn:active { background: rgba(255,255,255,0.12); }
+.execution-header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.execution-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: var(--text, #eaf3ff);
+  text-transform: uppercase;
+}
+.execution-subtitle {
+  font-size: 0.75rem;
+  color: var(--accent, #00C2FF);
+  font-weight: 600;
+}
+
+/* Barra de progresso */
+.execution-progress-track {
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  margin: 0 16px;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.execution-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent, #00C2FF), #6D4AFE);
+  border-radius: 99px;
+  transition: width .4s ease;
+  width: 0%;
+}
+
+/* Card exercício */
+.execution-exercise-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 16px 12px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.execution-exercise-info {
+  flex: 1;
+  min-width: 0;
+}
+.ge-exercise-counter {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--muted, #5a7a9a);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.execution-exercise-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text, #eaf3ff);
+  line-height: 1.2;
+  margin: 0 0 6px;
+  font-style: italic;
+  letter-spacing: -.01em;
+}
+.execution-muscle-label {
+  font-size: 0.78rem;
+  color: var(--accent, #00C2FF);
+  font-weight: 600;
+  margin: 0;
+}
+.ge-meta-info { color: var(--muted, #5a7a9a); font-weight: 500; }
+
+/* Card muscular (placeholder diagram) */
+.execution-muscle-card {
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  background: rgba(0,194,255,0.06);
+  border: 1px solid rgba(0,194,255,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.execution-muscle-tag {
+  font-size: 0.42rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  color: rgba(0,194,255,0.45);
+  text-transform: uppercase;
+}
+
+/* Strip de séries */
+.execution-sets-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 10px;
+  flex-shrink: 0;
+}
+.ge-set-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+  font-size: 0.72rem;
+}
+.ge-set-chip.done {
+  background: rgba(47,227,154,0.12);
+  border-color: rgba(47,227,154,0.3);
+  color: var(--green, #2fe39a);
+}
+.ge-set-chip.current {
+  background: rgba(0,194,255,0.12);
+  border-color: var(--accent, #00C2FF);
+  color: var(--accent, #00C2FF);
+  font-weight: 700;
+}
+.ge-chip-label { font-weight: 700; }
+.ge-chip-detail { font-size: 0.65rem; opacity: .8; }
+
+/* Card insight (sugestão de carga) */
+.execution-insight-card {
+  margin: 0 16px 10px;
+  padding: 10px 14px;
+  background: rgba(0,194,255,0.07);
+  border: 1px solid rgba(0,194,255,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ge-insight-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.ge-insight-text { font-size: 0.78rem; color: var(--text, #eaf3ff); line-height: 1.5; font-weight: 600; }
+
+/* Controles */
+.execution-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+.execution-control-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.execution-control-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: var(--muted, #5a7a9a);
+  text-transform: uppercase;
+  min-width: 80px;
+}
+.execution-control-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.execution-ctrl-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text, #eaf3ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background .1s, transform .1s;
+  flex-shrink: 0;
+}
+.execution-ctrl-btn:active {
+  background: rgba(0,194,255,0.18);
+  transform: scale(0.93);
+}
+.execution-ctrl-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text, #eaf3ff);
+  min-width: 64px;
+  text-align: center;
+  letter-spacing: -.03em;
+  line-height: 1;
+}
+
+/* Card de descanso */
+.execution-rest-card {
+  margin: 10px 16px 0;
+  border-radius: 16px;
+  background: rgba(0,194,255,0.07);
+  border: 1px solid rgba(0,194,255,0.22);
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.execution-rest-card.active {
+  display: flex;
+}
+.ge-rest-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+.ge-rest-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ge-rest-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: var(--muted, #5a7a9a);
+  text-transform: uppercase;
+}
+.ge-rest-timer {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--accent, #00C2FF);
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.ge-rest-timer.done { color: var(--green, #2fe39a); }
+.ge-skip-btn {
+  padding: 8px 18px;
+  background: var(--accent, #00C2FF);
+  color: #020812;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .15s;
+}
+.ge-skip-btn:active { opacity: .75; }
+.ge-rest-progress-track {
+  height: 3px;
+  background: rgba(0,194,255,0.12);
+}
+.ge-rest-progress-fill {
+  height: 100%;
+  background: var(--accent, #00C2FF);
+  transition: width .9s linear;
+  width: 100%;
+}
+.ge-rest-progress-fill.done { background: var(--green, #2fe39a); }
+
+/* Card de análise */
+.execution-analysis-card {
+  margin: 8px 16px 0;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.ge-analysis-msg {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-2, #8fabc7);
+}
+.ge-analysis-msg.warning { color: var(--alert, #ffb547); }
+.ge-analysis-msg.ideal   { color: var(--green, #2fe39a); }
+.ge-analysis-msg.info    { color: var(--accent, #00C2FF); }
+
+/* Footer com botão principal */
+.execution-footer {
+  padding: 14px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.execution-primary-btn {
+  width: 100%;
+  padding: 17px;
+  background: var(--accent, #00C2FF);
+  color: #020812;
+  border: none;
+  border-radius: 16px;
+  font-family: var(--font, system-ui);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .15s, transform .1s;
+  box-shadow: 0 4px 24px rgba(0,194,255,0.28);
+}
+.execution-primary-btn:active {
+  opacity: .85;
+  transform: scale(0.98);
+}
+.execution-skip-btn {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  color: var(--muted, #5a7a9a);
+  border: none;
+  font-family: var(--font, system-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+}
+
+/* Botão de entrada no modo guiado */
+.ge-entry-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(0,194,255,0.08);
+  border: 1.5px solid rgba(0,194,255,0.28);
+  border-radius: 14px;
+  color: var(--accent, #00C2FF);
+  font-family: var(--font, system-ui);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background .15s;
+}
+.ge-entry-btn:active { background: rgba(0,194,255,0.15); }
+
+/* Quando modo guiado está ativo: evita scroll do body */
+body.ge-mode { overflow: hidden; }
+

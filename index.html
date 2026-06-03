@@ -2637,6 +2637,14 @@
 
 <div class="nav-pills" id="nav"></div>
 
+<!-- Botão de entrada no modo guiado (aparece após gerar treino) -->
+<div id="geEntryBar" style="display:none;padding:10px 12px 2px">
+  <button onclick="startGuidedExecution()" class="ge-entry-btn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Iniciar Execução Guiada
+  </button>
+</div>
+
 <main id="container"></main>
 
 <!-- Pós-Treino — aparece abaixo dos exercícios na tela de treino -->
@@ -4954,5 +4962,146 @@
 <script src="src/ui/diet/disable-legacy-diet.js?v=20260523-rebuild-v1"></script>
 <script src="src/ui/diet/kronia-diet-runtime.js?v=20260523-rebuild-v1"></script>
 <script src="src/ui/labs/home-labs-cta-bridge.js?v=20260522-home-labs-cta"></script>
+
+<!-- ══════════════════════════════════════════
+     EXECUÇÃO GUIADA — KroniA Guided Execution
+     Layout premium por série/exercício.
+     Toda lógica via funções reais do app.js.
+══════════════════════════════════════════ -->
+<div id="guidedExecutionOverlay" class="kronia-execution-screen">
+
+  <!-- Header -->
+  <div class="execution-header">
+    <button class="execution-back-btn" onclick="exitGuidedExecution()" aria-label="Voltar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="execution-header-center">
+      <span class="execution-title">EXECUÇÃO</span>
+      <span id="geSetLabel" class="execution-subtitle">Série 1 de 4</span>
+    </div>
+    <button class="execution-info-btn" onclick="geShowExerciseInfo()" aria-label="Info exercício">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+    </button>
+  </div>
+
+  <!-- Barra de progresso -->
+  <div class="execution-progress-track">
+    <div id="geProgressBar" class="execution-progress-fill"></div>
+  </div>
+
+  <!-- Card do exercício -->
+  <div class="execution-exercise-card">
+    <div class="execution-exercise-info">
+      <div id="geExerciseCounter" class="ge-exercise-counter">Exercício 1 de 5</div>
+      <h2 id="geExerciseName" class="execution-exercise-name">Supino Reto Com Barra</h2>
+      <p id="geMuscleGroup" class="execution-muscle-label">Peito · 4 sets</p>
+    </div>
+    <div class="execution-muscle-card">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.2" opacity="0.45" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
+      <div class="execution-muscle-tag">DIAGRAMA</div>
+    </div>
+  </div>
+
+  <!-- Strip de séries (chips de progresso) -->
+  <div id="geSetsStrip" class="execution-sets-strip"></div>
+
+  <!-- Card de sugestão (usa resultado real de calcNextSessionLoad) -->
+  <div id="geSuggestionCard" class="execution-insight-card" style="display:none">
+    <span class="ge-insight-icon">💡</span>
+    <span id="geSuggestionText" class="ge-insight-text"></span>
+  </div>
+
+  <!-- Controles principais -->
+  <div class="execution-controls">
+
+    <div class="execution-control-card">
+      <span class="execution-control-label">CARGA (KG)</span>
+      <div class="execution-control-row">
+        <button class="execution-ctrl-btn"
+          ontouchstart="geStartRepeat('kg',-1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          onmousedown="geStartRepeat('kg',-1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
+          onclick="geUpdateField('kg',-1)" aria-label="Diminuir carga">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <span id="geKgValue" class="execution-ctrl-value">0</span>
+        <button class="execution-ctrl-btn"
+          ontouchstart="geStartRepeat('kg',1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          onmousedown="geStartRepeat('kg',1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
+          onclick="geUpdateField('kg',1)" aria-label="Aumentar carga">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="execution-control-card">
+      <span class="execution-control-label">REPETIÇÕES</span>
+      <div class="execution-control-row">
+        <button class="execution-ctrl-btn"
+          ontouchstart="geStartRepeat('reps',-1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          onmousedown="geStartRepeat('reps',-1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
+          onclick="geUpdateField('reps',-1)" aria-label="Diminuir reps">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <span id="geRepsValue" class="execution-ctrl-value">0</span>
+        <button class="execution-ctrl-btn"
+          ontouchstart="geStartRepeat('reps',1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          onmousedown="geStartRepeat('reps',1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
+          onclick="geUpdateField('reps',1)" aria-label="Aumentar reps">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="execution-control-card">
+      <span class="execution-control-label">RPE</span>
+      <div class="execution-control-row">
+        <button class="execution-ctrl-btn"
+          ontouchstart="geStartRepeat('rpe',-1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          onmousedown="geStartRepeat('rpe',-1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
+          onclick="geUpdateField('rpe',-1)" aria-label="Diminuir RPE">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <span id="geRpeValue" class="execution-ctrl-value">0</span>
+        <button class="execution-ctrl-btn"
+          ontouchstart="geStartRepeat('rpe',1)" ontouchend="geStopRepeat()" ontouchcancel="geStopRepeat()"
+          onmousedown="geStartRepeat('rpe',1)" onmouseup="geStopRepeat()" onmouseleave="geStopRepeat()"
+          onclick="geUpdateField('rpe',1)" aria-label="Aumentar RPE">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Card de descanso (aparece após concluir série, timer real do app) -->
+  <div id="geRestCard" class="execution-rest-card">
+    <div class="ge-rest-body">
+      <div class="ge-rest-left">
+        <span class="ge-rest-label">DESCANSO</span>
+        <span id="geTimerDisplay" class="ge-rest-timer">--:--</span>
+      </div>
+      <button class="ge-skip-btn" onclick="geSkipRest()">PULAR</button>
+    </div>
+    <div class="ge-rest-progress-track">
+      <div id="geTimerProgressBar" class="ge-rest-progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Card de análise de RPE (usa mesma lógica de checkRPEAlert) -->
+  <div id="geAnalysisCard" class="execution-analysis-card" style="display:none"></div>
+
+  <!-- Footer de ação -->
+  <div class="execution-footer">
+    <button class="execution-primary-btn" onclick="geCompleteSet()">
+      CONCLUIR SÉRIE
+    </button>
+    <button class="execution-skip-btn" onclick="geSkipCurrentSet()">
+      Pular esta série
+    </button>
+  </div>
+
+</div>
+
+
 </body>
 </html>
