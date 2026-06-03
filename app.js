@@ -1123,6 +1123,7 @@ function loadState(state) {
     tabEl.classList.add("active");
     scheduleDraftSave(); applyPrevGhostsToAll(); updateWorkoutProgress();
   }
+  geShowEntryButton();
   return true;
 }
 function clearAllInputsToGhost() {
@@ -17389,6 +17390,9 @@ function geGetCurrentSetRow() {
 function geShowEntryButton() {
   const btn = document.getElementById('geEntryBar');
   if (btn) btn.style.display = 'block';
+  // Auto-inicia o modo guiado após gerar/carregar o treino
+  // (só ativa se o overlay não estiver já aberto)
+  if (!window._ge.active) setTimeout(startGuidedExecution, 400);
 }
 
 function startGuidedExecution() {

@@ -9998,7 +9998,8 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
 .kronia-execution-screen {
   position: fixed;
   inset: 0;
-  z-index: 9000;
+  z-index: 10001;
+  background: #020812;
   background: var(--bg, #020812);
   display: none;
   flex-direction: column;
@@ -10395,5 +10396,21 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
 .ge-entry-btn:active { background: rgba(0,194,255,0.15); }
 
 /* Quando modo guiado está ativo: evita scroll do body */
+/* Modo guiado ativo: cards ficam no DOM (JS le inputs) mas ficam invisiveis */
 body.ge-mode { overflow: hidden; }
+body.ge-mode #container,
+body.ge-mode #nav,
+body.ge-mode #geEntryBar,
+body.ge-mode .timer-area,
+body.ge-mode #timerSheet,
+body.ge-mode .footer-actions,
+body.ge-mode #posTreinoSection,
+body.ge-mode .btn-add-ex {
+  visibility: hidden;
+  pointer-events: none;
+}
+body.ge-mode #guidedExecutionOverlay {
+  visibility: visible;
+  pointer-events: auto;
+}
 
