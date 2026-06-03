@@ -1213,7 +1213,7 @@
   <div class="home-hero-grid">
 
     <!-- Card TREINO -->
-    <div class="home-hero-card home-hero-treino k-pressable" onclick="navTo('programa');openConfig()" style="overflow:hidden;">
+    <div class="home-hero-card home-hero-treino k-pressable" onclick="openKronosWorkoutEntry()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0" style="overflow:hidden;">
       <div class="home-hero-glow home-hero-glow--orange"></div>
       <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
         style="position:absolute;bottom:-4px;right:-6px;height:90%;width:auto;object-fit:contain;
@@ -1506,13 +1506,13 @@
 
   <div class="home-section-title">Acesso rápido</div>
   <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
-    <div class="home-quick-card k-pressable" onclick="navTo('programa');openConfig()">
+    <div class="home-quick-card k-pressable" onclick="openKronosWorkoutEntry()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0">
       <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
         <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
       </div>
       <div>
-        <div class="home-quick-name">Programa</div>
-        <div class="home-quick-sub">Configurar treino</div>
+        <div class="home-quick-name">Gerar Treino</div>
+        <div class="home-quick-sub">KRONOS IA</div>
       </div>
     </div>
     <div class="home-quick-card k-pressable" onclick="closeHome();showEvoChart()">
@@ -1609,7 +1609,7 @@
       </div>
 
       <!-- MANUAL -->
-      <div class="diet-choice-card diet-choice-card--orange" onclick="closeTreinoChoiceScreen();navTo('programa');openConfig()">
+      <div class="diet-choice-card diet-choice-card--orange" onclick="closeTreinoChoiceScreen();openKronosWorkoutEntry()">
         <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--orange">
           <i data-lucide="clipboard-edit" width="38" height="38" stroke="#2563EB" fill="none" stroke-width="1.5"></i>
         </div>
@@ -1844,7 +1844,7 @@
   <div class="workout-hero-card" id="workoutHeroCard">
     <div class="workout-hero-badge">TREINO DE HOJE</div>
     <div class="workout-hero-title" id="swsTodayTreino">TREINO A: FOCO FORÇA SUPERIOR (AVANÇADO)</div>
-    <button onclick="navTo('programa');openConfig();closeStartWorkoutScreen()" class="workout-hero-customize-btn">
+    <button onclick="closeStartWorkoutScreen();openKronosWorkoutEntry()" class="workout-hero-customize-btn">
       <i data-lucide="settings" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"></i>
       PERSONALIZAR PROGRAMA
     </button>
@@ -2217,11 +2217,11 @@
   <!-- Preferências -->
   <div class="settings-section-label">Preferências</div>
   <div class="settings-group">
-    <div class="settings-row" onclick="closeSettingsScreen();setTimeout(openConfig,200)">
+    <div class="settings-row" onclick="closeSettingsScreen();setTimeout(openKronosWorkoutEntry,200)">
       <div class="settings-row-icon" style="background:rgba(59,130,246,0.22);color:#3b82f6">
         <i data-lucide="dumbbell" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </div>
-      <span class="settings-row-label">Programa de Treino</span>
+      <span class="settings-row-label">Gerar Treino</span>
       <i data-lucide="chevron-right" class="lucide settings-row-arrow" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
     </div>
     <div class="settings-row" data-action="toggle-theme">
@@ -2278,7 +2278,7 @@
       <span class="settings-row-label">Como usar o app</span>
       <i data-lucide="chevron-right" class="lucide settings-row-arrow" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
     </div>
-    <div class="settings-row" onclick="closeSettingsScreen();navTo('programa');openConfig()">
+    <div class="settings-row" onclick="closeSettingsScreen();openKronosWorkoutEntry()">
       <div class="settings-row-icon" style="background:rgba(245,158,11,0.24);color:#f59e0b">
         <i data-lucide="help-circle" class="lucide" width="17" height="17" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </div>
@@ -2868,7 +2868,7 @@
       <div class="gt-step-title">Que tipo de treino<br>você quer gerar?</div>
       <div class="gt-step-sub">Isso nos ajuda a estruturar o melhor plano para você.</div>
       <div class="gt-tipo-list">
-        <div class="gt-tipo-card" data-tipo="completo" onclick="gtSelectTipo(this)">
+        <div class="gt-tipo-card" data-tipo="completo" data-kronos-workout-mode="full_workout" onclick="gtSelectTipo(this)">
           <div class="gt-tipo-icon">
             <i data-lucide="dumbbell" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
           </div>
@@ -2878,7 +2878,7 @@
           </div>
           <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
         </div>
-        <div class="gt-tipo-card" data-tipo="especifico" onclick="gtSelectTipo(this)">
+        <div class="gt-tipo-card" data-tipo="especifico" data-kronos-workout-mode="specific_workout" onclick="gtSelectTipo(this)">
           <div class="gt-tipo-icon">
             <i data-lucide="target" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
           </div>
@@ -2888,7 +2888,7 @@
           </div>
           <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
         </div>
-        <div class="gt-tipo-card" data-tipo="ajuste" onclick="gtSelectTipo(this)">
+        <div class="gt-tipo-card" data-tipo="ajuste" data-kronos-workout-mode="protocol_adjustment" onclick="gtSelectTipo(this)">
           <div class="gt-tipo-icon">
             <i data-lucide="settings-2" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
           </div>
@@ -4101,7 +4101,7 @@
     <span class="btn-icon"><i data-lucide="home" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Início</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');openTreinoChoiceScreen()">
+  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="openKronosWorkoutEntry()">
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>
