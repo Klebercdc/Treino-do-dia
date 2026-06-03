@@ -17743,7 +17743,7 @@ function geInitSwipe() {
   }, { passive: true });
 }
 
-// Chama ao abrir a tela de dieta (navTo 'dieta') e ao abrir configurações
+// Hooks de navegação: UI hints + auto-start execução guiada no tab treino
 (function() {
   var _origNavTo = typeof navTo === 'function' ? navTo : null;
   if (!_origNavTo) return;
@@ -17751,6 +17751,13 @@ function geInitSwipe() {
     _origNavTo.apply(this, arguments);
     if (tab === 'dieta' || tab === 'perfil') {
       setTimeout(_anUpdateUIHints, 300);
+    }
+    // Abre guided execution ao entrar no tab treino (se há treino carregado e overlay inativo)
+    if (tab === 'treino' && !window._ge.active) {
+      setTimeout(() => {
+        const cards = geGetCards ? geGetCards() : [];
+        if (cards.length) startGuidedExecution();
+      }, 300);
     }
   };
 })();
