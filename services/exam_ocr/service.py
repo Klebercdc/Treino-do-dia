@@ -1,5 +1,7 @@
 from tempfile import NamedTemporaryFile
 import os
+import re
+from datetime import datetime
 
 import httpx
 import numpy as np
@@ -12,6 +14,56 @@ from .normalizers.biomarkers import parse_biomarkers
 from .ocr.tesseract_engine import run_and_get_multiple_output
 from .parsers.lab_table_parser import rows_to_table
 from .preprocess.image_pipeline import preprocess_image
+
+# Labels that indicate an exam/collection date (PT-BR)
+_DATE_LABEL_RE = re.compile(
+    r'(?:data\s+de\s+coleta|data\s+coleta|data\s+do\s+exame|data\s+exame'
+    r'|data\s+de\s+emiss[aã]o|emiss[aã]o|data\s+do\s+laudo'
+    r'|data\s+de\s+resultado|data\s+de\s+refer[eê]ncia'
+    r'|coleta|data)\s*[:\-]?\s*'
+    r'(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})',
+    re.IGNORECASE,
+)
+# Fallback: bare DD/MM/YYYY (only in first-page area)
+_DATE_BARE_RE = re.compile(r'\b(\d{1,2}\/\d{1,2}\/\d{4})\b')
+# Context before match that signals it is NOT an exam date
+_EXCLUDE_CONTEXT_RE = re.compile(
+    r'(?:nascimento|nasc\b|validade|vencimento|prazo|refer[eê]ncia\s+de\s+data)',
+    re.IGNORECASE,
+)
+
+
+def _parse_date_str(raw: str) -> 'str | None':
+    for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y', '%d/%m/%y',
+                '%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d'):
+        try:
+            dt = datetime.strptime(raw.strip(), fmt)
+            if 1990 <= dt.year <= 2100:
+                return dt.strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+    return None
+
+
+def extract_exam_date(raw_text: str) -> 'str | None':
+    """Extract the exam collection/issue date from raw OCR text. Returns ISO date or None."""
+    search_area = raw_text[:4000]  # First ~2 pages
+    for m in _DATE_LABEL_RE.finditer(search_area):
+        context_before = search_area[max(0, m.start() - 40):m.start()]
+        if _EXCLUDE_CONTEXT_RE.search(context_before):
+            continue
+        parsed = _parse_date_str(m.group(1))
+        if parsed:
+            return parsed
+    # Fallback: first bare date in search area that is not birth-date context
+    for m in _DATE_BARE_RE.finditer(search_area):
+        context_before = search_area[max(0, m.start() - 40):m.start()]
+        if _EXCLUDE_CONTEXT_RE.search(context_before):
+            continue
+        parsed = _parse_date_str(m.group(1))
+        if parsed:
+            return parsed
+    return None
 
 
 def health_payload():
@@ -71,6 +123,7 @@ def extract_payload(payload: dict):
 
         table_rows = rows_to_table(rows)
         biomarkers = parse_biomarkers(table_rows, raw_text=raw_text, pages=pages)
+        exam_date = extract_exam_date(raw_text)
         mean_conf = 0.0
         if rows:
             mean_conf = sum(float(row.get("conf", 0)) for row in rows) / max(1, len(rows))
@@ -93,6 +146,7 @@ def extract_payload(payload: dict):
             "confidence_summary": {"mean_confidence": mean_conf, "pages": len(pages)},
             "warnings": warnings,
             "metadata": {"source_id": source_id},
+            "exam_date": exam_date,
         }
     except Exception:
         return {
@@ -107,6 +161,7 @@ def extract_payload(payload: dict):
             "confidence_summary": {"mean_confidence": 0},
             "warnings": ["ocr_failed"],
             "metadata": {"source_id": source_id},
+            "exam_date": None,
         }
     finally:
         if should_remove and path and os.path.exists(path):

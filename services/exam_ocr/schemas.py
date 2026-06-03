@@ -21,3 +21,4 @@ class ExtractResponse(BaseModel):
     confidence_summary: dict
     warnings: list[str]
     metadata: dict
+    exam_date: Optional[str] = None

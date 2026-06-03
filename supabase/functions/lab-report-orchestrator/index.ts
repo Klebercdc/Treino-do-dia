@@ -63,6 +63,7 @@ type OcrResponse = {
   confidence_summary: Record<string, unknown>;
   warnings: string[];
   metadata: Record<string, unknown>;
+  exam_date?: string | null;
 };
 
 type OptionalTableName = 'lab_report_extractions' | 'lab_report_biomarkers';
@@ -148,6 +149,7 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
 function buildNormalizedPayload(ocr: OcrResponse, biomarkers: Biomarker[]) {
   return {
     biomarkers,
+    exam_date: ocr.exam_date || null,
     extraction: {
       engine: 'exam_ocr_python',
       extraction_mode: ocr.extraction_mode,
@@ -774,6 +776,7 @@ async function finalizeNeedsReview(labReportId: string, ocr: OcrResponse, reason
       confidence_summary: ocr.confidence_summary || {},
       processing_error: reason,
       processed_at: new Date().toISOString(),
+      exam_date: ocr.exam_date || null,
       is_valid: false,
       last_orchestrator_note: reason,
     },
@@ -800,6 +803,7 @@ async function finalizeAnalyzed(
       ai_insights: aiInsights,
       processing_error: isFallback ? 'groq_unavailable_fallback_used' : null,
       processed_at: new Date().toISOString(),
+      exam_date: ocr.exam_date || null,
       is_valid: true,
       last_orchestrator_note: isFallback ? 'fallback_analyzed' : 'analyzed',
     },

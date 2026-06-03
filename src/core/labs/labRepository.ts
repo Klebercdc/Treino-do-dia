@@ -31,6 +31,7 @@ type LabReportRow = {
   critical_flags?: unknown
   created_at: unknown
   processed_at: unknown
+  exam_date?: unknown
 }
 
 function normalizeStringArray(input: unknown): string[] {
@@ -170,9 +171,10 @@ async function listValidLabReports(
 ): Promise<LabReportRow[]> {
   const { data, error } = await admin
     .from("lab_reports")
-    .select("id, normalized_payload, ai_insights, is_valid, created_at, processed_at")
+    .select("id, normalized_payload, ai_insights, is_valid, created_at, processed_at, exam_date")
     .eq("user_id", userId)
     .eq("is_valid", true)
+    .order("exam_date", { ascending: false, nullsFirst: false })
     .order("processed_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(limit)
