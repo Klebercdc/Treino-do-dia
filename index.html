@@ -1073,15 +1073,14 @@
       <div class="home-greeting-salut" id="homeGreeting">Boa noite,</div>
       <div class="home-greeting-name-row">
         <span class="home-greeting-name" id="homeUserNameTitle">Kleber</span>
-        <span class="home-greeting-emoji"> 👋</span>
       </div>
       <div class="home-greeting-sub">Seu sistema está em adaptação para máxima performance.</div>
     </div>
   </div>
 
-  <!-- ═══ PRONTIDÃO ═══ -->
+  <!-- ═══ FORMA DA SEMANA ═══ -->
   <div class="score-adaptativo-card prontidao-v2">
-    <div class="prontidao-header-label">PRONTIDÃO · AUTO-DECLARADA</div>
+    <div class="prontidao-header-label">FORMA DA SEMANA</div>
     <div class="prontidao-body-row">
       <div class="prontidao-ring-col">
         <div class="score-ring-wrap">
@@ -1104,25 +1103,15 @@
             <div class="score-ring-title">SCORE</div>
           </div>
         </div>
-        <div class="prontidao-calc-note" id="homeScoreSub">Calculado da sua fadiga registrada</div>
       </div>
       <div class="prontidao-metrics-col">
-        <div class="prontidao-metric-chip">
-          <div class="pmc-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e06060" stroke-width="2.2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-          <div class="pmc-info">
-            <div class="pmc-label">Recuperação</div>
-            <div class="pmc-val" id="scoreStatCarga">Boa</div>
-          </div>
-        </div>
         <div class="prontidao-metric-chip">
           <div class="pmc-icon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
           <div class="pmc-info">
             <div class="pmc-label">Energia</div>
-            <div class="pmc-val" id="scoreStatProntidao">Média-alta</div>
+            <div class="pmc-val" id="scoreStatProntidao">Alta</div>
           </div>
         </div>
         <div class="prontidao-metric-chip">
@@ -1134,79 +1123,8 @@
             <div class="pmc-val" id="scoreStatFadiga">Baixa</div>
           </div>
         </div>
-        <span id="scoreStatTendencia" style="display:none"></span>
       </div>
     </div>
-    <div class="prontidao-footer">
-      <span class="prontidao-update-link" onclick="navTo('kronos')">Atualizar fadiga ›</span>
-    </div>
-  </div>
-
-  <!-- ═══ STATUS CHIPS ═══ -->
-  <div class="home-status-chips">
-    <div class="home-status-chip" onclick="openStartWorkoutScreen()">
-      <div class="home-status-chip-icon hsc-blue">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
-      </div>
-      <div class="home-status-chip-label">Treino</div>
-      <div class="home-status-chip-val">Hoje</div>
-    </div>
-    <div class="home-status-chip">
-      <div class="home-status-chip-icon hsc-green">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      </div>
-      <div class="home-status-chip-label">Recuperação</div>
-      <div class="home-status-chip-val">Pronta</div>
-    </div>
-    <div class="home-status-chip" onclick="navTo('dieta')">
-      <div class="home-status-chip-icon hsc-teal">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
-      </div>
-      <div class="home-status-chip-label">Dieta</div>
-      <div class="home-status-chip-val">Alinhada</div>
-    </div>
-    <div class="home-status-chip">
-      <div class="home-status-chip-icon hsc-violet">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
-      </div>
-      <div class="home-status-chip-label">Progresso</div>
-      <div class="home-status-chip-val">Evoluindo</div>
-    </div>
-  </div>
-
-  <!-- ═══ CTA CONTINUAR JORNADA ═══ -->
-  <div class="home-cta-wrap">
-    <button class="home-continuar-jornada-btn" onclick="openStartWorkoutScreen()">
-      Continuar jornada →
-    </button>
-  </div>
-
-  <!-- ═══ KRONOS RECOMENDA ═══ -->
-  <div class="kronos-rec-section">
-    <div class="kronos-rec-label">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="#2563EB"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      KRONOS RECOMENDA
-    </div>
-    <div class="kronos-rec-card" onclick="openStartWorkoutScreen()">
-      <div class="kronos-rec-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.75" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
-      </div>
-      <div class="kronos-rec-body">
-        <div class="kronos-rec-title" id="kronosRecTitle">Força Superior</div>
-        <div class="kronos-rec-meta">
-          <span id="kronosRecType">Hipertrofia</span>
-          <span class="tg-meta-dot"></span>
-          <span id="kronosRecDuration">60 min</span>
-        </div>
-      </div>
-      <div class="kronos-rec-arrow">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-    </div>
-    <button class="kronos-rec-initiate-btn" onclick="openStartWorkoutScreen()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      INICIAR TREINO
-    </button>
   </div>
 
   <!-- ═══ HERO ACTION CARDS — TREINO + DIETA ═══ -->
