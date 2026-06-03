@@ -1,0 +1,131 @@
+═══════════════════════════════════════════════════════════════
+PRÉ-MERGE REPORT — branch: claude/treino-selection-screen-NSkuX
+Data: 2026-06-03
+═══════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. O QUE MUDA (resumo dos 3 commits)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMMIT 1 — Tela de seleção de treino
+  index.html  → novo bloco #treinoChoiceScreen (2 cards: TREINO IA / MANUAL)
+  app.js      → openTreinoChoiceScreen(), closeTreinoChoiceScreen(), navTo() atualizado
+
+COMMIT 2 — Wizard multi-step (3 fluxos)
+  index.html  → 17 novos steps: gt-c-1..7, gt-e-1..6, gt-a-1..4
+  app.js      → _gtFlows, _gtState, gtSelectTipo(), gtNext(), gtBack(),
+                gtPick(), gtToggleChip(), _gtIsComplete(), _gtRenderStep(),
+                _gtBuildPayload(), _gtGerarComIA(), _gtShowGenError()
+  styles.css  → .gt-chips-wrap, .gt-chip, .gt-loading-wrap, animação gtSpin
+
+COMMIT 3 — KRONOS Workout Engine
+  NOVOS (backend):
+    src/server/apihelpers/_kronosWorkoutContext.js    (299 linhas)
+    src/server/apihelpers/_kronosWorkoutDecision.js   (110 linhas)
+    src/server/apihelpers/_kronosWorkoutAnamnesis.js  (64 linhas)
+    src/server/apihelpers/_defaultTrainingKnowledge.js (32 linhas)
+  NOVOS (migration):
+    supabase/migrations/20260603000000_kronos_workout_engine.sql
+  MODIFICADOS:
+    src/app/api/kronia/workout/route.ts    → integra KRONOS helpers
+    src/server/apihelpers/_workoutRouteContract.js → + GET_KRONOS_CONTEXT
+    index.html  → step #gt-kronos-ctx
+    app.js      → _gtFetchKronosContext(), _gtRenderKronosCtx(), fluxos atualizados
+    styles.css  → estilos .gt-kronos-*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ARQUIVOS TOCADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  index.html                                          (modificado)
+  app.js                                              (modificado)
+  styles.css                                          (modificado)
+  src/app/api/kronia/workout/route.ts                 (modificado)
+  src/server/apihelpers/_workoutRouteContract.js      (modificado)
+  src/server/apihelpers/_kronosWorkoutContext.js      (novo)
+  src/server/apihelpers/_kronosWorkoutDecision.js     (novo)
+  src/server/apihelpers/_kronosWorkoutAnamnesis.js    (novo)
+  src/server/apihelpers/_defaultTrainingKnowledge.js  (novo)
+  supabase/migrations/20260603000000_kronos_workout_engine.sql (novo)
+
+  NENHUM arquivo criado em api/ (regra crítica respeitada).
+  NENHUM arquivo legacy modificado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. O QUE PODE QUEBRAR — REVISAR ANTES DO MERGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[CRÍTICO] Migration SQL não aplicada
+  - As tabelas workout_anamnesis_responses e workout_generation_logs
+    não existem em produção ainda.
+  - Aplicar ANTES do deploy. Ver seção 5.
+
+[ATENÇÃO] Fluxo de geração de treino
+  - _gtGerarComIA() ainda chama requestWorkoutRoute → /api/chat
+    (rota legada). A integração KRONOS completa acontece via
+    /api/kronia/workout — rota separada, não usada pelo frontend atual.
+  - Impacto: geração funciona igual a antes. KRONOS enriquece apenas
+    quando o /api/kronia/workout é chamado diretamente.
+  - Risco: nenhum de regressão. Melhoria futura: migrar
+    requestWorkoutRoute para /api/kronia/workout.
+
+[ATENÇÃO] Step gt-kronos-ctx faz fetch autenticado
+  - _gtFetchKronosContext() chama apiFetch('/api/kronia/workout')
+    com action GET_KRONOS_CONTEXT.
+  - Se o usuário não estiver logado ou o token expirar, o fetch
+    falha silenciosamente (non-blocking) e o step exibe mensagem
+    de fallback. Sem crash.
+
+[BAIXO] Contagem de passos nos steps
+  - Os steps ainda mostram "Passo X de Y" hardcoded no HTML
+    (ex: "Passo 1 de 4"). Com a inserção do gt-kronos-ctx, o
+    total agora é maior. Estético apenas — não afeta funcionalidade.
+
+[BAIXO] Tabelas lidas em _kronosWorkoutContext.js
+  - alertas_kronos: existe em produção? Verificar.
+  - adaptation_events: existe em produção? Verificar.
+  - fadiga_scores: existe em produção? Verificar.
+  - Se não existirem, safeQuery() captura o erro e retorna [] sem quebrar.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. O QUE NÃO FOI TOCADO (conforme combinado)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  api/chat.js                  — intacto
+  src/services/workout/        — intacto
+  src/ai/                      — intacto
+  src/core/nutrition/          — intacto
+  Nenhum schema de RLS alterado (apenas tabelas novas com RLS)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. SQL A EXECUTAR NO SUPABASE (antes do deploy)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Arquivo: supabase/migrations/20260603000000_kronos_workout_engine.sql
+
+  Executar via: Supabase Dashboard → SQL Editor
+  Projeto: twxoddzogbmaysebhour (sa-east-1)
+
+  O SQL é idempotente:
+    - CREATE TABLE IF NOT EXISTS → seguro re-executar
+    - DO $$ BEGIN IF NOT EXISTS (pg_policies) ... → não duplica policies
+    - RLS já habilitado nas duas tabelas
+
+  Validar após execução:
+    SELECT tablename FROM pg_tables WHERE schemaname='public'
+      AND tablename IN ('workout_anamnesis_responses','workout_generation_logs');
+    -- deve retornar 2 linhas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. CHECKLIST FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [ ] Revisar step gt-kronos-ctx no app (abrir wizard, selecionar tipo)
+  [ ] Confirmar que tela de seleção (IA/Manual) abre corretamente
+  [ ] Confirmar que os 3 fluxos do wizard navegam sem erro
+  [ ] Confirmar que "Gerar com IA" no último passo chama a geração
+  [ ] Executar migration SQL no Supabase (ver seção 5)
+  [ ] Após migration: testar GET_KRONOS_CONTEXT no step de análise
+  [ ] Deploy (Vercel vai fazer build automático após merge)
+
+═══════════════════════════════════════════════════════════════
