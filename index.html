@@ -1571,6 +1571,77 @@
 </div>
 
 <!-- ══════════════════════════════════════════
+     TREINO — TELA DE ESCOLHA (ENTRY)
+══════════════════════════════════════════ -->
+<div id="treinoChoiceScreen" class="kronia-data-screen app-scroll" aria-label="Escolha do Treino">
+  <header class="diet-choice-header">
+    <button type="button" class="diet-choice-back-btn" onclick="closeTreinoChoiceScreen();navTo('inicio');openHome()" aria-label="Voltar">
+      <i data-lucide="arrow-left" stroke-width="2" width="18" height="18"></i>
+    </button>
+    <div class="diet-choice-header-text">
+      <h1 class="diet-choice-title">TREINO</h1>
+    </div>
+  </header>
+
+  <div class="diet-choice-body">
+    <div class="diet-choice-hero">
+      <h2 class="diet-choice-question">
+        <span style="color:#00C2FF;">Como você quer</span><br>
+        montar seu treino hoje?
+      </h2>
+      <p class="diet-choice-sub">Escolha a melhor forma para alcançar seu objetivo de forma prática e eficiente.</p>
+    </div>
+
+    <div class="diet-choice-cards">
+      <!-- TREINO IA -->
+      <div class="diet-choice-card diet-choice-card--green" onclick="closeTreinoChoiceScreen();openGerarTreino()">
+        <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--green">
+          <i data-lucide="dumbbell" width="38" height="38" stroke="#22C55E" fill="none" stroke-width="1.5"></i>
+        </div>
+        <h3 class="diet-choice-card-title">TREINO IA</h3>
+        <p class="diet-choice-card-desc">Plano de treino inteligente e automático</p>
+        <div class="diet-choice-separator"></div>
+        <button type="button" class="diet-choice-action-btn diet-choice-action-btn--green">
+          <i data-lucide="sparkles" width="14" height="14"></i>
+          Gerar plano
+          <i data-lucide="chevron-right" width="14" height="14"></i>
+        </button>
+      </div>
+
+      <!-- MANUAL -->
+      <div class="diet-choice-card diet-choice-card--orange" onclick="closeTreinoChoiceScreen();navTo('programa');openConfig()">
+        <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--orange">
+          <i data-lucide="clipboard-edit" width="38" height="38" stroke="#2563EB" fill="none" stroke-width="1.5"></i>
+        </div>
+        <h3 class="diet-choice-card-title">MANUAL</h3>
+        <p class="diet-choice-card-desc">Monte seu treino do seu jeito</p>
+        <div class="diet-choice-separator"></div>
+        <button type="button" class="diet-choice-action-btn diet-choice-action-btn--orange">
+          <i data-lucide="pencil" width="14" height="14"></i>
+          Configurar
+          <i data-lucide="chevron-right" width="14" height="14"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Hint card -->
+    <div class="diet-choice-hint-card">
+      <div class="diet-choice-hint-icon">
+        <i data-lucide="star" width="20" height="20" stroke="#00C2FF" fill="none" stroke-width="1.5"></i>
+      </div>
+      <div class="diet-choice-hint-body">
+        <strong>Não sabe qual escolher?</strong>
+        <p>A IA pode gerar um plano inicial e você ajusta do seu jeito depois.</p>
+      </div>
+      <button type="button" class="diet-choice-hint-link" onclick="closeTreinoChoiceScreen();openGerarTreino()">
+        Saiba mais
+        <i data-lucide="chevron-right" width="14" height="14"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
      DIETA — TELA DE ESCOLHA (ENTRY)
 ══════════════════════════════════════════ -->
 <div id="dietChoiceScreen" class="kronia-data-screen app-scroll" aria-label="Escolha da Dieta">
@@ -3654,7 +3725,7 @@
     <span class="btn-icon"><i data-lucide="home" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Início</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');openGerarTreino()">
+  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');openTreinoChoiceScreen()">
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>

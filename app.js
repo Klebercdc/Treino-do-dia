@@ -3012,6 +3012,7 @@ function navTo(tab) {
   if (tab !== "inicio" && tab !== "programa") document.getElementById("homeScreen")?.classList.remove("show");
   if (tab !== "treino") { try { closeStartWorkoutScreen?.(); } catch(_) {} }
   if (tab !== "treino") { try { closeExerciseDiscSheet?.(); } catch(_) {} }
+  if (tab !== "treino") document.getElementById("treinoChoiceScreen")?.classList.remove("show");
   if (tab !== "dieta") document.getElementById("dietDataScreen")?.classList.remove("show");
   if (tab !== "dieta") document.getElementById("dietChoiceScreen")?.classList.remove("show");
   if (tab !== "evolucao") document.getElementById("evolutionDataScreen")?.classList.remove("show");
@@ -16117,6 +16118,20 @@ function updateHomeBanner() {
 /* ════════════════════════════════════════════════════
    NOVAS TELAS — GERAR TREINO, TREINO GERADO, EXECUÇÃO
 ════════════════════════════════════════════════════ */
+
+// ── Treino Choice Screen ─────────────────────────────
+
+function openTreinoChoiceScreen() {
+  scheduleKroniaUIUnblock('before-treino-choice-open');
+  var sc = document.getElementById('treinoChoiceScreen');
+  if (sc) sc.classList.add('show');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTreinoChoiceScreen() {
+  var sc = document.getElementById('treinoChoiceScreen');
+  if (sc) sc.classList.remove('show');
+}
 
 // ── Gerar Treino Wizard ─────────────────────────────
 let _gtState = { tipo: null, obj: null, days: null, step: 0 };
