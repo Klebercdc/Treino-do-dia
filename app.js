@@ -16424,8 +16424,34 @@ async function _gtGerarComIA() {
 
   const payload = _gtBuildPayload();
 
+  const supportsAbort = typeof AbortController === 'function';
+  const controller = supportsAbort ? new AbortController() : null;
+  let timeoutId = null;
+
   try {
-    const resp = await requestWorkoutRoute(payload, 15000);
+    const fetchPromise = apiFetch(resolveAppApiUrl('/api/kronia/workout'), {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'GENERATE_WORKOUT',
+        payload: payload,
+        requestId: 'gt_' + Date.now(),
+      }),
+      signal: controller ? controller.signal : undefined,
+    });
+
+    let resp;
+    if (supportsAbort) {
+      const timeoutPromise = new Promise(function(_, reject) {
+        timeoutId = setTimeout(function() {
+          try { controller.abort(); } catch (_) {}
+          reject(new Error('Tempo limite excedido.'));
+        }, 15000);
+      });
+      resp = await Promise.race([fetchPromise, timeoutPromise]);
+    } else {
+      resp = await fetchPromise;
+    }
+
     const data = await parseWorkoutApiJsonSafely(resp);
 
     if (data && data.error === 'INVALID_JSON') {
@@ -16450,6 +16476,10 @@ async function _gtGerarComIA() {
     });
   } catch (e) {
     _gtShowGenError('Tempo esgotado. Verifique sua conexão e tente novamente.');
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    const btnFinal = document.getElementById('gtContinuarBtn');
+    if (btnFinal) btnFinal.disabled = false;
   }
 }
 
