@@ -17424,12 +17424,13 @@ function startGuidedExecution() {
 function exitGuidedExecution() {
   window._ge.active = false;
   geStopRepeat();
+  // Mostra home ANTES de remover overlay/ge-mode — evita flash de tela preta
+  if (typeof navTo === 'function') navTo('inicio');
+  if (typeof openHome === 'function') openHome();
   document.getElementById('guidedExecutionOverlay')?.classList.remove('active');
   document.body.classList.remove('ge-mode');
   const sheet = document.getElementById('timerSheet');
   if (sheet && sheet.classList.contains('show')) fecharTimer();
-  // Vai para home — nunca expõe o layout de tabela antigo
-  if (typeof navTo === 'function') setTimeout(() => navTo('inicio'), 50);
 }
 
 
@@ -17753,9 +17754,11 @@ function geInitSwipe() {
       setTimeout(_anUpdateUIHints, 300);
     }
     // Abre guided execution ao entrar no tab treino (se há treino carregado e overlay inativo)
-    if (tab === 'treino' && !window._ge.active) {
-      const cards = geGetCards ? geGetCards() : [];
-      if (cards.length) startGuidedExecution();
+    if (tab === 'treino' && window._ge && !window._ge.active) {
+      setTimeout(() => {
+        const cards = geGetCards ? geGetCards() : [];
+        if (cards.length && !window._ge.active) startGuidedExecution();
+      }, 50);
     }
   };
 })();
