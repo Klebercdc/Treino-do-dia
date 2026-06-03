@@ -9742,7 +9742,6 @@ p,
   letter-spacing: .01em;
 }
 .home-greeting-name { color: var(--accent); }
-.home-greeting-emoji { font-family: sans-serif; font-size: 1.7rem; }
 .home-greeting-sub {
   font-size: 0.78rem;
   color: var(--text-2);
