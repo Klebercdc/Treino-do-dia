@@ -1,0 +1,126 @@
+================================================================================
+RELATÓRIO DE MUDANÇA — feat(labs): data real do exame via OCR
+Branch: claude/kronia-guided-execution-layout-AXhCs
+Commit: a40841b
+Data: 2026-06-03
+================================================================================
+
+
+PROBLEMA
+--------
+O KRONOS ordenava os exames de sangue pela data de upload (processed_at),
+não pela data real do documento. Se o usuário enviasse hoje um exame de
+6 meses atrás, o KRONOS o tratava como o mais recente, distorcendo a
+análise longitudinal de evolução dos biomarcadores.
+
+
+SOLUÇÃO
+-------
+Extrair a data real do exame durante o OCR e persistir como campo
+estruturado (exam_date DATE) na tabela lab_reports. A ordenação do
+histórico passa a usar essa data, com fallback para processed_at
+nos exames já existentes.
+
+
+================================================================================
+MIGRATION — APLICAR NO SUPABASE
+================================================================================
+
+Arquivo: supabase/migrations/20260603120000_lab_reports_exam_date.sql
+
+---- INÍCIO DO SQL ----
+
+-- Adiciona coluna exam_date em lab_reports
+-- Populada pelo pipeline OCR com a data real do exame extraída do documento.
+-- Exames anteriores ficam NULL e aparecem por último na ordenação (NULLS LAST).
+
+ALTER TABLE lab_reports
+  ADD COLUMN IF NOT EXISTS exam_date DATE;
+
+-- Índice para ordenação eficiente por usuário + data do exame
+CREATE INDEX IF NOT EXISTS idx_lab_reports_exam_date
+  ON lab_reports (user_id, exam_date DESC NULLS LAST);
+
+---- FIM DO SQL ----
+
+
+================================================================================
+ARQUIVOS ALTERADOS
+================================================================================
+
+1. services/exam_ocr/service.py
+   - Adiciona função extract_exam_date(raw_text) com regex PT-BR
+   - Prioridade: "Data de Coleta:", "Coleta:", "Data do Exame:", "Emissão:",
+     "Data do Laudo:", "Data de Resultado:" + data adjacente
+   - Fallback: primeira data DD/MM/YYYY na primeira página (4000 chars)
+   - Exclui contextos de nascimento, validade, prazo
+   - Retorna string ISO "YYYY-MM-DD" ou None
+   - Adiciona exam_date no dict de retorno do extract_payload()
+
+2. services/exam_ocr/schemas.py
+   - Adiciona campo exam_date: Optional[str] = None no ExtractResponse
+
+3. supabase/functions/lab-report-orchestrator/index.ts
+   - Adiciona exam_date?: string | null no type OcrResponse
+   - buildNormalizedPayload() inclui exam_date no payload persistido
+   - finalizeAnalyzed() salva exam_date na coluna lab_reports.exam_date
+   - finalizeNeedsReview() salva exam_date na coluna lab_reports.exam_date
+
+4. supabase/migrations/20260603120000_lab_reports_exam_date.sql  ← NOVA
+   - ALTER TABLE lab_reports ADD COLUMN IF NOT EXISTS exam_date DATE
+   - CREATE INDEX idx_lab_reports_exam_date ON lab_reports (user_id, exam_date DESC NULLS LAST)
+
+5. src/core/labs/labRepository.ts
+   - LabReportRow type: adiciona exam_date?: unknown
+   - listValidLabReports(): select inclui exam_date
+   - ORDER BY exam_date DESC NULLS LAST, processed_at DESC, created_at DESC
+
+
+================================================================================
+COMPORTAMENTO PÓS-DEPLOY
+================================================================================
+
+Exames novos:
+  - OCR extrai data do documento → salva em exam_date
+  - KRONOS ordena corretamente pela data real do exame
+
+Exames existentes (já no banco):
+  - exam_date = NULL
+  - Aparecem APÓS os exames com data real (NULLS LAST)
+  - Ordenados entre si por processed_at DESC (comportamento anterior)
+  - Não precisam de reprocessamento — continuam funcionais
+
+KRONOS (getUserLabLongitudinalContext):
+  - Busca até 12 exames válidos
+  - Ordenação agora reflete a cronologia real dos exames, não dos uploads
+  - Análise de melhora/piora de biomarcadores fica correta
+
+
+================================================================================
+CHECKLIST ANTES DO DEPLOY
+================================================================================
+
+[ ] Aplicar migration no Supabase (painel SQL Editor ou CLI)
+[ ] Fazer deploy da Edge Function lab-report-orchestrator (atualizada)
+[ ] Fazer deploy do serviço Python exam_ocr (atualizado)
+[ ] Fazer deploy do Next.js / Vercel (labRepository.ts atualizado)
+[ ] Testar: enviar um PDF de exame antigo → verificar se exam_date foi
+    extraída corretamente na tabela lab_reports
+[ ] Verificar: no KRONOS, exame mais antigo aparece antes de exame mais
+    recente mesmo que o antigo tenha sido enviado depois
+
+
+================================================================================
+ROLLBACK (se necessário)
+================================================================================
+
+A coluna exam_date é nullable e o índice é separado.
+Para reverter sem quebrar nada:
+
+  DROP INDEX IF EXISTS idx_lab_reports_exam_date;
+  ALTER TABLE lab_reports DROP COLUMN IF EXISTS exam_date;
+
+O código voltaria a usar processed_at como antes (comportamento anterior).
+
+
+================================================================================
