@@ -10337,33 +10337,12 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
   text-align: center;
 }
 
-/* Botão de entrada no modo guiado */
-.ge-entry-btn {
-  width: 100%;
-  padding: 12px 16px;
-  background: rgba(0,194,255,0.08);
-  border: 1.5px solid rgba(0,194,255,0.28);
-  border-radius: 14px;
-  color: var(--accent, #00C2FF);
-  font-family: var(--font, system-ui);
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background .15s;
-}
-.ge-entry-btn:active { background: rgba(0,194,255,0.15); }
 
 /* Quando modo guiado está ativo: evita scroll do body */
 /* Modo guiado ativo: cards ficam no DOM (JS le inputs) mas ficam invisiveis */
 body.ge-mode { overflow: hidden; }
 body.ge-mode #container,
 body.ge-mode #nav,
-body.ge-mode #geEntryBar,
 body.ge-mode .timer-area,
 body.ge-mode #timerSheet,
 body.ge-mode .footer-actions,
@@ -10439,3 +10418,29 @@ body.ge-mode #guidedExecutionOverlay {
   60%  { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(1); }
 }
+/* Barra de ações do exercício (VER · SS · Mic) */
+.ge-ex-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+.ge-ex-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.55);
+  font-family: var(--font, system-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s, color .15s;
+}
+.ge-ex-action-btn:active { background: rgba(255,255,255,0.12); color: #fff; }
+#geVozBtn.listening { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #ef4444; }
