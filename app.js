@@ -17753,12 +17753,5 @@ function geInitSwipe() {
     if (tab === 'dieta' || tab === 'perfil') {
       setTimeout(_anUpdateUIHints, 300);
     }
-    // Abre guided execution ao entrar no tab treino (se há treino carregado e overlay inativo)
-    if (tab === 'treino' && window._ge && !window._ge.active) {
-      setTimeout(() => {
-        const cards = geGetCards ? geGetCards() : [];
-        if (cards.length && !window._ge.active) startGuidedExecution();
-      }, 50);
-    }
   };
 })();
