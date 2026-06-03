@@ -4,7 +4,7 @@ var domain = require('../../types/domain');
 
 function normalizeWorkoutAction(action) {
   var raw = String(action || 'GENERATE_WORKOUT').trim().toUpperCase();
-  if (raw === 'GENERATE_WORKOUT' || raw === 'ADJUST_WORKOUT' || raw === 'ANALYZE_WORKOUT') return raw;
+  if (raw === 'GENERATE_WORKOUT' || raw === 'ADJUST_WORKOUT' || raw === 'ANALYZE_WORKOUT' || raw === 'GET_KRONOS_CONTEXT') return raw;
   return null;
 }
 

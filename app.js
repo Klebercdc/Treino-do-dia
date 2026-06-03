@@ -16136,9 +16136,9 @@ function closeTreinoChoiceScreen() {
 // ── Gerar Treino Wizard ─────────────────────────────
 
 const _gtFlows = {
-  completo:   ['gt-step-0','gt-c-1','gt-c-2','gt-c-3','gt-c-4','gt-c-5','gt-c-6','gt-c-7'],
-  especifico: ['gt-step-0','gt-e-1','gt-e-2','gt-e-3','gt-e-4','gt-e-5','gt-e-6'],
-  ajuste:     ['gt-step-0','gt-a-1','gt-a-2','gt-a-3','gt-a-4'],
+  completo:   ['gt-step-0','gt-kronos-ctx','gt-c-1','gt-c-2','gt-c-3','gt-c-4','gt-c-5','gt-c-6','gt-c-7'],
+  especifico: ['gt-step-0','gt-kronos-ctx','gt-e-1','gt-e-2','gt-e-3','gt-e-4','gt-e-5','gt-e-6'],
+  ajuste:     ['gt-step-0','gt-kronos-ctx','gt-a-1','gt-a-2','gt-a-3','gt-a-4'],
 };
 
 let _gtState = {};
@@ -16150,6 +16150,7 @@ function _gtResetState() {
     limitacoes: ['nao'],
     musculo: null, focoSessao: null,
     problema: null, tempoProtocolo: null, direcao: null,
+    kronosCtx: null,
   };
 }
 
@@ -16191,6 +16192,56 @@ function gtSelectTipo(el) {
   el.classList.add('selected');
   _gtState.tipo = el.dataset.tipo || el.dataset.val;
   document.getElementById('gtContinuarBtn').disabled = false;
+  _gtState.kronosCtx = null;
+  _gtFetchKronosContext();
+}
+
+async function _gtFetchKronosContext() {
+  try {
+    const resp = await apiFetch(resolveAppApiUrl('/api/kronia/workout'), {
+      method: 'POST',
+      body: JSON.stringify({ action: 'GET_KRONOS_CONTEXT' }),
+    });
+    if (!resp || !resp.ok) return;
+    const json = await resp.json().catch(() => null);
+    if (json && json.data && Array.isArray(json.data.content) && json.data.content[0]) {
+      _gtState.kronosCtx = json.data.content[0].data || null;
+    }
+  } catch (e) {
+    // non-blocking — context is optional for display
+  }
+  if (_gtState.stepId === 'gt-kronos-ctx') _gtRenderKronosCtx();
+}
+
+function _gtRenderKronosCtx() {
+  const wrap = document.getElementById('gtKronosStatusWrap');
+  if (!wrap) return;
+  const ctx = _gtState.kronosCtx;
+  if (!ctx) {
+    wrap.innerHTML = '<div class="gt-kronos-status-note">O KRONOS vai usar suas respostas para personalizar o treino. Complete dieta, exames e fadiga para personalização avançada.</div>';
+    return;
+  }
+  const av = ctx.available || {};
+  const level = ctx.personalizationLevel || 'base';
+  const readiness = ctx.readiness || {};
+  const levelLabels = { precision: 'Precisão clínica', advanced: 'Avançado', contextual: 'Contextual', base: 'Base' };
+  const levelColors = { precision: '#22c55e', advanced: '#60a5fa', contextual: '#f59e0b', base: '#9ca3af' };
+  const sources = [
+    { key: 'profile', label: 'Perfil' },
+    { key: 'diet', label: 'Dieta' },
+    { key: 'labs', label: 'Exames' },
+    { key: 'fatigue', label: 'Fadiga' },
+    { key: 'workoutHistory', label: 'Histórico' },
+    { key: 'currentProtocol', label: 'Protocolo' },
+  ];
+  const chips = sources.map(s => '<span class="gt-kronos-chip ' + (av[s.key] ? 'ok' : 'off') + '">' + s.label + '</span>').join('');
+  const readinessLine = readiness.level && readiness.level !== 'desconhecida'
+    ? '<div class="gt-kronos-readiness">Disposição: <strong>' + readiness.level + '</strong>' + (readiness.reasons && readiness.reasons[0] ? ' · ' + readiness.reasons[0] : '') + '</div>'
+    : '';
+  const missingLine = ctx.missingAdvancedData && ctx.missingAdvancedData.length
+    ? '<div class="gt-kronos-missing">Para personalização avançada: complete ' + ctx.missingAdvancedData.join(', ') + '</div>'
+    : '';
+  wrap.innerHTML = '<div class="gt-kronos-level">Modo: <strong style="color:' + (levelColors[level] || '#9ca3af') + '">' + (levelLabels[level] || 'Base') + '</strong></div>' + readinessLine + '<div class="gt-kronos-chips">' + chips + '</div>' + missingLine;
 }
 
 function gtPick(field, el) {
@@ -16229,7 +16280,7 @@ function gtToggleChip(field, el, isExclusive) {
 }
 
 function _gtIsComplete(stepId) {
-  if (['gt-c-7','gt-e-6','gt-a-4'].includes(stepId)) return true;
+  if (['gt-c-7','gt-e-6','gt-a-4','gt-kronos-ctx'].includes(stepId)) return true;
   const map = {
     'gt-step-0': () => !!_gtState.tipo,
     'gt-c-1': () => !!_gtState.obj,
@@ -16283,6 +16334,8 @@ function _gtRenderStep(stepId) {
       : 'Continuar <i data-lucide="chevron-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+
+  if (stepId === 'gt-kronos-ctx') _gtRenderKronosCtx();
 }
 
 function _gtBuildPayload() {
