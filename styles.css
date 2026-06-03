@@ -10445,3 +10445,19 @@ body.ge-mode #guidedExecutionOverlay {
 }
 .ge-ex-action-btn:active { background: rgba(255,255,255,0.12); color: #fff; }
 #geVozBtn.listening { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #ef4444; }
+/* Card executar treino no choice screen */
+.diet-choice-card--execute {
+  width: 100%;
+  margin-bottom: 12px;
+  border-color: rgba(0,194,255,0.3);
+  background: rgba(0,194,255,0.06);
+}
+.diet-choice-card-icon-wrap--execute {
+  background: rgba(0,194,255,0.1);
+  border: 1px solid rgba(0,194,255,0.2);
+}
+.diet-choice-action-btn--execute {
+  background: rgba(0,194,255,0.12);
+  color: var(--accent,#00C2FF);
+  border-color: rgba(0,194,255,0.25);
+}
