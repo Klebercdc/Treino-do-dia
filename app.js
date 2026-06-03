@@ -1123,9 +1123,8 @@ function loadState(state) {
     tabEl.classList.add("active");
     scheduleDraftSave(); applyPrevGhostsToAll(); updateWorkoutProgress();
   }
-  // Mostra botão de entrada mas NÃO auto-inicia (loadState é chamado na inicialização)
-  const geBtn = document.getElementById('geEntryBar');
-  if (geBtn) geBtn.style.display = 'block';
+  // Auto-inicia execução guiada (é a interface principal)
+  if (!window._ge.active) setTimeout(startGuidedExecution, 400);
   return true;
 }
 function clearAllInputsToGhost() {
@@ -15798,11 +15797,11 @@ function toggleSuperset(cardEl) {
 ═══════════════════════════════════════════════════ */
 let _vozRec = null, _vozCard = null;
 
-function iniciarLogVoz(btn) {
+function iniciarLogVoz(btn, cardOverride) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { showToast('Voz não suportada neste navegador.', 'error'); return; }
   if (_vozRec) { _vozRec.stop(); return; }
-  _vozCard = btn.closest('.exercise-card');
+  _vozCard = cardOverride || btn.closest('.exercise-card');
   const r = new SR();
   r.lang = 'pt-BR'; r.interimResults = false; r.maxAlternatives = 1;
   r.onstart = () => {
@@ -17390,10 +17389,6 @@ function geGetCurrentSetRow() {
 }
 
 function geShowEntryButton() {
-  const btn = document.getElementById('geEntryBar');
-  if (btn) btn.style.display = 'block';
-  // Auto-inicia o modo guiado após gerar/carregar o treino
-  // (só ativa se o overlay não estiver já aberto)
   if (!window._ge.active) setTimeout(startGuidedExecution, 400);
 }
 
@@ -17433,11 +17428,29 @@ function exitGuidedExecution() {
   geStopRepeat();
   document.getElementById('guidedExecutionOverlay')?.classList.remove('active');
   document.body.classList.remove('ge-mode');
-  // Fecha timer se estiver rodando (via fecharTimer normal)
   const sheet = document.getElementById('timerSheet');
   if (sheet && sheet.classList.contains('show')) fecharTimer();
+  // Vai para home — nunca expõe o layout de tabela antigo
+  if (typeof navTo === 'function') setTimeout(() => navTo('inicio'), 50);
 }
 
+
+function geVer() {
+  const card = geGetCurrentCard();
+  if (card && typeof openExerciseOnYouTube === 'function') openExerciseOnYouTube(card);
+}
+
+function geSS() {
+  const card = geGetCurrentCard();
+  if (card && typeof toggleSuperset === 'function') toggleSuperset(card);
+}
+
+function geVoz() {
+  const btn = document.getElementById('geVozBtn');
+  const card = geGetCurrentCard();
+  if (!card) return;
+  iniciarLogVoz(btn, card);
+}
 
 function geRender() {
   const card = geGetCurrentCard();
