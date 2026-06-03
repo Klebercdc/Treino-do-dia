@@ -10338,24 +10338,14 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
 }
 
 
-/* Cards antigos ficam no DOM para o JS ler/escrever inputs, mas nunca visíveis */
-.exercise-card {
-  visibility: hidden !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: none !important;
-  min-height: 0 !important;
-}
-.btn-add-ex, .footer-actions, #posTreinoSection { display: none !important; }
+/* Layout de tabela antigo: permanentemente oculto.
+   display:none !important sobrescreve qualquer inline style.display="" do navTo.
+   Os elementos ficam no DOM — o JS ainda lê/escreve inputs normalmente. */
+#container, #nav { display: none !important; }
+.btn-add-ex, .footer-actions, #posTreinoSection, .timer-area, #timerSheet { display: none !important; }
 
 /* Quando modo guiado está ativo: evita scroll do body */
 body.ge-mode { overflow: hidden; }
-body.ge-mode #container,
-body.ge-mode #nav,
-body.ge-mode .timer-area,
-body.ge-mode #timerSheet,
 body.ge-mode .footer-actions,
 body.ge-mode #posTreinoSection,
 body.ge-mode .btn-add-ex {

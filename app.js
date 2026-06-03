@@ -17754,10 +17754,8 @@ function geInitSwipe() {
     }
     // Abre guided execution ao entrar no tab treino (se há treino carregado e overlay inativo)
     if (tab === 'treino' && !window._ge.active) {
-      setTimeout(() => {
-        const cards = geGetCards ? geGetCards() : [];
-        if (cards.length) startGuidedExecution();
-      }, 300);
+      const cards = geGetCards ? geGetCards() : [];
+      if (cards.length) startGuidedExecution();
     }
   };
 })();
