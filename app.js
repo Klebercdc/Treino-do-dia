@@ -297,6 +297,11 @@ function playBeep() {
 }
 
 function abrirTimer() {
+  // No modo guiado: mostra o card de descanso inline em vez do bottom sheet
+  if (window._ge && window._ge.active) {
+    document.getElementById("geRestCard")?.classList.add("active");
+    return;
+  }
   try { getAudioCtx().resume(); } catch(_) {}
   const bar = document.getElementById("timerSheet");
   if (!bar) return;
@@ -321,6 +326,7 @@ function mostrarDicaTimer(msg) {
 
 function fecharTimer() {
   document.getElementById("timerSheet")?.classList.remove("show");
+  if (window._ge && window._ge.active) document.getElementById("geRestCard")?.classList.remove("active");
   clearInterval(timerInt); isRunning = false;
   timeLeft = baseTime; updateT();
   scheduleKroniaUIUnblock('timer-close');
@@ -361,6 +367,10 @@ function tickT() {
     setTimeout(() => {
       if (!isRunning) fecharTimer();
     }, 5000);
+    // No modo guiado: avançar para próxima série após o timer
+    if (window._ge && window._ge.active) {
+      setTimeout(() => { if (window._ge.active) geAdvanceAfterRest(); }, 5500);
+    }
   }
 }
 
@@ -405,6 +415,12 @@ function updateT() {
   // Botão play/pause inline (timerArea)
   const btnI = document.getElementById("ctrlBtnInline");
   if (btnI) { btnI.className = btnCls; btnI.innerHTML = btnIcon; }
+
+  // Display execução guiada
+  const elGE = document.getElementById("geTimerDisplay");
+  if (elGE) { elGE.textContent = txt; elGE.className = done ? "done" : ""; }
+  const barGE = document.getElementById("geTimerProgressBar");
+  if (barGE) { barGE.style.width = (pct * 100) + "%"; barGE.className = done ? "done" : ""; }
 }
 
 function toggleT() {
@@ -1107,6 +1123,9 @@ function loadState(state) {
     tabEl.classList.add("active");
     scheduleDraftSave(); applyPrevGhostsToAll(); updateWorkoutProgress();
   }
+  // Mostra botão de entrada mas NÃO auto-inicia (loadState é chamado na inicialização)
+  const geBtn = document.getElementById('geEntryBar');
+  if (geBtn) geBtn.style.display = 'block';
   return true;
 }
 function clearAllInputsToGhost() {
@@ -5392,6 +5411,7 @@ function applyAIWorkout(data) {
     applyPrevGhostsToAll();
     scheduleDraftSave();
     closeAI();
+    geShowEntryButton();
 
     const total = grupos.reduce((a, g) => a + g.exercicios.length, 0);
     showToast("✅ " + grupos.length + " treino(s) aplicado(s) — " + total + " exercícios!", "success", 3000);
@@ -17335,6 +17355,433 @@ async function _anUpdateUIHints() {
     var badge = document.getElementById('settingsAnamneseBadge');
     if (badge) badge.textContent = done ? 'Completo ✓' : 'Pendente';
   } catch (_) {}
+}
+
+/* ═══════════════════════════════════════════════════
+   EXECUÇÃO GUIADA — KroniA Guided Execution Layer
+   Adapter visual sobre a lógica existente.
+   Preserva 100% de: onPressSetCell, calcNextSessionLoad,
+   updateSuggests, checkRPEAlert, salvarTreino,
+   histórico, progressão, PRs, volume.
+═══════════════════════════════════════════════════ */
+
+window._ge = { active: false, cardIdx: 0, setIdx: 0, cards: [], _repeatTimer: null };
+
+function geGetCards() {
+  // Pega apenas cards da seção ativa
+  const activeSec = document.querySelector('.section.active');
+  if (activeSec) {
+    const cards = Array.from(activeSec.querySelectorAll('.exercise-card'));
+    if (cards.length) return cards;
+  }
+  return Array.from(document.querySelectorAll('#container .exercise-card'));
+}
+
+function geGetCurrentCard() { return window._ge.cards[window._ge.cardIdx] || null; }
+
+function geGetCurrentSets(card) {
+  return Array.from((card || geGetCurrentCard()).querySelectorAll('.series-grid[data-row]'));
+}
+
+function geGetCurrentSetRow() {
+  const card = geGetCurrentCard();
+  if (!card) return null;
+  return geGetCurrentSets(card)[window._ge.setIdx] || null;
+}
+
+function geShowEntryButton() {
+  const btn = document.getElementById('geEntryBar');
+  if (btn) btn.style.display = 'block';
+  // Auto-inicia o modo guiado após gerar/carregar o treino
+  // (só ativa se o overlay não estiver já aberto)
+  if (!window._ge.active) setTimeout(startGuidedExecution, 400);
+}
+
+function startGuidedExecution() {
+  const cards = geGetCards();
+  if (!cards.length) {
+    if (typeof showToast === 'function') showToast('Gere um treino antes de iniciar a execução guiada.', 'warning', 3000);
+    return;
+  }
+
+  // Começa no primeiro set não concluído
+  let startCardIdx = 0, startSetIdx = 0;
+  outer: for (let ci = 0; ci < cards.length; ci++) {
+    const sets = Array.from(cards[ci].querySelectorAll('.series-grid[data-row]'));
+    for (let si = 0; si < sets.length; si++) {
+      if (!sets[si].classList.contains('done')) {
+        startCardIdx = ci; startSetIdx = si; break outer;
+      }
+    }
+  }
+
+  window._ge.active = true;
+  window._ge.cards = cards;
+  window._ge.cardIdx = startCardIdx;
+  window._ge.setIdx = startSetIdx;
+
+  const overlay = document.getElementById('guidedExecutionOverlay');
+  if (overlay) overlay.classList.add('active');
+  document.body.classList.add('ge-mode');
+  if (navigator.vibrate) navigator.vibrate(20);
+  geInitSwipe();
+  geRender();
+}
+
+function exitGuidedExecution() {
+  window._ge.active = false;
+  geStopRepeat();
+  document.getElementById('guidedExecutionOverlay')?.classList.remove('active');
+  document.body.classList.remove('ge-mode');
+  // Fecha timer se estiver rodando (via fecharTimer normal)
+  const sheet = document.getElementById('timerSheet');
+  if (sheet && sheet.classList.contains('show')) fecharTimer();
+}
+
+function geMuscleImage(muscle) {
+  const m = String(muscle || '').toLowerCase();
+  if (m.includes('peito') || m.includes('peitoral') || m.includes('chest') || m.includes('pec')) return 'assets/3d/muscle-peito.png';
+  if (m.includes('costas') || m.includes('dorsal') || m.includes('dorsais') || m.includes('lombar') || m.includes('back') || m.includes('lat')) return 'assets/3d/muscle-costas.png';
+  if (m.includes('ombro') || m.includes('deltoid') || m.includes('shoulder') || m.includes('trapezio') || m.includes('trap')) return 'assets/3d/muscle-ombros.png';
+  if (m.includes('perna') || m.includes('quadricep') || m.includes('posterior') || m.includes('gluteo') || m.includes('panturrilha') || m.includes('leg') || m.includes('hamstring') || m.includes('adut') || m.includes('abut')) return 'assets/3d/muscle-pernas.png';
+  if (m.includes('bicep') || m.includes('tricep') || m.includes('abdomen') || m.includes('abdom') || m.includes('core')) return 'assets/3d/body-front.png';
+  return 'assets/3d/body-front.png';
+}
+
+function geMuscleLabel(muscle) {
+  const labels = {
+    'peito': 'Peito', 'peitoral': 'Peitoral', 'peito_superior': 'Peitoral Superior',
+    'costas': 'Costas', 'dorsais': 'Dorsais', 'lombar': 'Lombar',
+    'ombros': 'Ombros', 'trapezio': 'Trapézio',
+    'pernas': 'Pernas', 'quadriceps': 'Quadríceps',
+    'posteriores_de_coxa': 'Posteriores', 'gluteos': 'Glúteos', 'panturrilhas': 'Panturrilhas',
+    'biceps': 'Bíceps', 'triceps': 'Tríceps',
+    'abdomen': 'Abdômen', 'core': 'Core',
+  };
+  if (!muscle) return '';
+  const k = String(muscle).toLowerCase();
+  if (labels[k]) return labels[k];
+  return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function geRender() {
+  const card = geGetCurrentCard();
+  if (!card) { exitGuidedExecution(); if (typeof showToast === 'function') showToast('Todos os exercícios concluídos! 💪 Salve o treino.', 'success', 4000); return; }
+
+  const sets = geGetCurrentSets(card);
+  const totalSets = Math.max(parseInt(card.getAttribute('data-ex-sets') || '0'), sets.length);
+  const currentSetNum = window._ge.setIdx + 1;
+
+  // Nome e info do exercício
+  const name = card.querySelector('.ex-title')?.textContent || card.getAttribute('data-ex-name') || '';
+  const metaEl = card.querySelector('.ex-target');
+  const metaText = metaEl?.textContent || '';
+  let ref = {};
+  try { ref = JSON.parse(card.getAttribute('data-ex-ref') || '{}'); } catch(_) {}
+  const muscle = ref.target_muscle || ref.muscle_group || '';
+  const muscleLabel = geMuscleLabel(muscle);
+
+  // Header
+  const setLabelEl = document.getElementById('geSetLabel');
+  if (setLabelEl) setLabelEl.textContent = 'Série ' + currentSetNum + ' de ' + totalSets;
+
+  const nameEl = document.getElementById('geExerciseName');
+  if (nameEl) nameEl.textContent = name;
+
+  const muscleEl = document.getElementById('geMuscleGroup');
+  if (muscleEl) {
+    const metaParts = metaText.split('·');
+    const setsInfo = (metaParts[0] || '').trim();
+    muscleEl.innerHTML = muscleLabel
+      ? muscleLabel + (setsInfo ? ' · <span class="ge-meta-info">' + setsInfo + '</span>' : '')
+      : setsInfo || '';
+  }
+
+  // Setas de navegação entre exercícios
+  const prevBtn = document.getElementById('gePrevExBtn');
+  const nextBtn = document.getElementById('geNextExBtn');
+  if (prevBtn) prevBtn.style.opacity = window._ge.cardIdx > 0 ? '1' : '0.25';
+  if (nextBtn) nextBtn.style.opacity = window._ge.cardIdx < window._ge.cards.length - 1 ? '1' : '0.25';
+
+  // Imagem muscular
+  const muscleImg = document.getElementById('geMuscleImg');
+  if (muscleImg) {
+    const imgSrc = geMuscleImage(muscle);
+    if (muscleImg.dataset.currentSrc !== imgSrc) {
+      muscleImg.dataset.currentSrc = imgSrc;
+      muscleImg.style.opacity = '0';
+      muscleImg.src = imgSrc;
+      muscleImg.onload = () => { muscleImg.style.opacity = '1'; };
+    }
+  }
+
+  // Progress geral
+  const totalCards = window._ge.cards.length;
+  let totalAllSets = 0, doneSets = 0;
+  window._ge.cards.forEach((c, ci) => {
+    const n = Math.max(parseInt(c.getAttribute('data-ex-sets') || '0'), geGetCurrentSets(c).length);
+    totalAllSets += n;
+    if (ci < window._ge.cardIdx) doneSets += n;
+  });
+  doneSets += window._ge.setIdx;
+  const pct = totalAllSets > 0 ? Math.round((doneSets / totalAllSets) * 100) : 0;
+  const progressBar = document.getElementById('geProgressBar');
+  if (progressBar) progressBar.style.width = pct + '%';
+
+  // Contador de exercício
+  const exCounter = document.getElementById('geExerciseCounter');
+  if (exCounter) exCounter.textContent = 'Exercício ' + (window._ge.cardIdx + 1) + ' de ' + totalCards;
+
+  // Valores do set atual
+  const row = geGetCurrentSetRow();
+  if (row) {
+    const inputs = row.querySelectorAll('input');
+    const kg   = inputs[0]?.value !== '' ? inputs[0]?.value : (inputs[0]?.placeholder || '0');
+    const reps = inputs[1]?.value !== '' ? inputs[1]?.value : (inputs[1]?.placeholder || '0');
+    const rpe  = inputs[2]?.value !== '' ? inputs[2]?.value : (inputs[2]?.placeholder || '0');
+    const kgEl   = document.getElementById('geKgValue');
+    const repsEl = document.getElementById('geRepsValue');
+    const rpeEl  = document.getElementById('geRpeValue');
+    if (kgEl)   kgEl.textContent   = kg   || '0';
+    if (repsEl) repsEl.textContent = reps || '0';
+    if (rpeEl)  rpeEl.textContent  = rpe  || '0';
+  }
+
+  // Chips de séries
+  geRenderSetsStrip(card, sets, window._ge.setIdx);
+
+  // Sugestão da lógica existente (updateSuggests / calcNextSessionLoad)
+  geRenderSuggestion(card);
+
+  // Análise de RPE (mesma lógica de checkRPEAlert)
+  geRenderAnalysis(row);
+
+  // Esconde rest card ao mudar de série
+  document.getElementById('geRestCard')?.classList.remove('active');
+}
+
+function geRenderSetsStrip(card, sets, currentIdx) {
+  const strip = document.getElementById('geSetsStrip');
+  if (!strip) return;
+  strip.innerHTML = sets.map((row, i) => {
+    const inputs = row.querySelectorAll('input');
+    const kg   = inputs[0]?.value;
+    const reps = inputs[1]?.value;
+    const rpe  = inputs[2]?.value;
+    const isDone    = row.classList.contains('done');
+    const isCurrent = i === currentIdx;
+    let detail = '';
+    if (isDone && kg && reps) { detail = kg + 'kg×' + reps; if (rpe) detail += ' R' + rpe; }
+    return '<div class="ge-set-chip' + (isDone ? ' done' : '') + (isCurrent ? ' current' : '') + '" onclick="geJumpToSet(' + i + ')">'
+      + '<span class="ge-chip-label">S' + (i + 1) + '</span>'
+      + (isDone ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '')
+      + (detail ? '<span class="ge-chip-detail">' + detail + '</span>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function geRenderSuggestion(card) {
+  const sugEl  = card.querySelector('.card-load-suggest');
+  const geCard = document.getElementById('geSuggestionCard');
+  const geText = document.getElementById('geSuggestionText');
+  if (!geCard || !geText) return;
+  if (sugEl && sugEl.style.display !== 'none' && sugEl.innerHTML.trim()) {
+    geText.innerHTML = sugEl.innerHTML;
+    geCard.style.display = 'flex';
+  } else {
+    geCard.style.display = 'none';
+  }
+}
+
+function geRenderAnalysis(row) {
+  const el = document.getElementById('geAnalysisCard');
+  if (!el) return;
+  if (!row) { el.style.display = 'none'; return; }
+  const inputs = row.querySelectorAll('input');
+  const kg  = parseFloat(inputs[0]?.value || 0);
+  const rpe = parseFloat(inputs[2]?.value || 0);
+  const reps = parseFloat(inputs[1]?.value || 0);
+  if (!rpe || !kg) { el.style.display = 'none'; return; }
+  // Mesma lógica de checkRPEAlert (Zourdos et al. 2016)
+  const diff = rpe - 8;
+  let msg = '', cls = '';
+  if (rpe >= 9) {
+    const sug = Math.round(kg * (1 - diff * 0.025) * 2) / 2;
+    msg = '⚠️ RPE alto. Próxima série: ' + sug + 'kg'; cls = 'warning';
+  } else if (rpe >= 7 && rpe <= 8.5) {
+    msg = '✓ RPE ideal. Mantenha a carga ou aumente as reps.'; cls = 'ideal';
+  } else if (rpe <= 6 && reps > 0) {
+    const sug = Math.round(kg * (1 - diff * 0.025) * 2) / 2;
+    msg = '💡 RPE baixo. Pode subir para ' + sug + 'kg.'; cls = 'info';
+  }
+  if (msg) { el.innerHTML = '<span class="ge-analysis-msg ' + cls + '">' + msg + '</span>'; el.style.display = 'block'; }
+  else el.style.display = 'none';
+}
+
+function geJumpToSet(setIdx) {
+  const sets = geGetCurrentSets(geGetCurrentCard());
+  if (setIdx >= 0 && setIdx < sets.length) { window._ge.setIdx = setIdx; geRender(); }
+}
+
+function gePrevExercise() {
+  if (window._ge.cardIdx <= 0) return;
+  window._ge.cardIdx--;
+  window._ge.setIdx = 0;
+  if (navigator.vibrate) navigator.vibrate(15);
+  geRender();
+}
+
+function geNextExercise() {
+  if (window._ge.cardIdx >= window._ge.cards.length - 1) return;
+  window._ge.cardIdx++;
+  window._ge.setIdx = 0;
+  if (navigator.vibrate) navigator.vibrate(15);
+  geRender();
+}
+
+function geUpdateField(field, delta) {
+  const row = geGetCurrentSetRow();
+  if (!row) return;
+  const inputs = row.querySelectorAll('input');
+  let input, step, min, max;
+  if      (field === 'kg')   { input = inputs[0]; step = 2.5; min = 0;   max = 500; }
+  else if (field === 'reps') { input = inputs[1]; step = 1;   min = 1;   max = 100; }
+  else if (field === 'rpe')  { input = inputs[2]; step = 0.5; min = 0;   max = 10;  }
+  if (!input) return;
+  const cur  = parseFloat(input.value !== '' ? input.value : (input.placeholder || '0')) || 0;
+  const next = parseFloat(Math.min(max, Math.max(min, cur + delta * step)).toFixed(1));
+  input.value = String(next);
+  input.classList.remove('ghost');
+  // Dispara eventos reais: updateSuggests, checkRPEAlert, atualizarBtnConfirm, scheduleDraftSave
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  // Atualiza display guiado imediatamente
+  const dispId = field === 'kg' ? 'geKgValue' : field === 'reps' ? 'geRepsValue' : 'geRpeValue';
+  const dispEl = document.getElementById(dispId);
+  if (dispEl) dispEl.textContent = next;
+  // Atualiza sugestão e análise com pequeno delay (aguarda updateSuggests processar)
+  const card = geGetCurrentCard();
+  if (card) setTimeout(() => { geRenderSuggestion(card); geRenderAnalysis(geGetCurrentSetRow()); }, 60);
+}
+
+// Long-press para +/- contínuo
+let _geRepeatTimer = null, _geRepeatInterval = null;
+function geStartRepeat(field, dir) {
+  geUpdateField(field, dir);
+  _geRepeatTimer = setTimeout(() => {
+    _geRepeatInterval = setInterval(() => geUpdateField(field, dir), 120);
+  }, 400);
+}
+function geStopRepeat() {
+  clearTimeout(_geRepeatTimer); clearInterval(_geRepeatInterval);
+  _geRepeatTimer = null; _geRepeatInterval = null;
+}
+
+async function geCompleteSet() {
+  const row = geGetCurrentSetRow();
+  if (!row) return;
+  if (row.classList.contains('done')) { geAdvanceAfterRest(); return; }
+  const inputs = row.querySelectorAll('input');
+  const kg   = parseFloat(inputs[0]?.value || 0);
+  const reps = parseFloat(inputs[1]?.value || 0);
+  if (!kg && !reps) {
+    if (typeof showToast === 'function') showToast('Preencha pelo menos Carga ou Repetições.', 'warning', 2500);
+    return;
+  }
+  // Chama a lógica REAL de conclusão de série (onPressSetCell)
+  const setcell = row.querySelector('.setcell');
+  if (setcell) await onPressSetCell(setcell);
+  // Atualiza strip (o rest card já foi mostrado via abrirTimer interceptado)
+  const card = geGetCurrentCard();
+  if (card) geRenderSetsStrip(card, geGetCurrentSets(card), window._ge.setIdx);
+}
+
+function geSkipRest() {
+  // Pula descanso: fecha timer e avança
+  document.getElementById("timerSheet")?.classList.remove("show");
+  document.getElementById("geRestCard")?.classList.remove("active");
+  clearInterval(timerInt); isRunning = false; timeLeft = baseTime; updateT();
+  if (typeof scheduleKroniaUIUnblock === 'function') scheduleKroniaUIUnblock('timer-close');
+  geAdvanceAfterRest();
+}
+
+function geAdvanceAfterRest() {
+  if (!window._ge.active) return;
+  document.getElementById('geRestCard')?.classList.remove('active');
+  const card = geGetCurrentCard();
+  if (!card) return;
+  const sets = geGetCurrentSets(card);
+  const nextSetIdx = window._ge.setIdx + 1;
+  if (nextSetIdx < sets.length) {
+    window._ge.setIdx = nextSetIdx;
+    geRender();
+  } else {
+    // Próximo exercício
+    const nextCardIdx = window._ge.cardIdx + 1;
+    // Atualiza lista de cards (pode ter mudado)
+    window._ge.cards = geGetCards();
+    if (nextCardIdx < window._ge.cards.length) {
+      window._ge.cardIdx = nextCardIdx;
+      window._ge.setIdx  = 0;
+      geRender();
+    } else {
+      geShowFinishScreen();
+    }
+  }
+}
+
+function geShowFinishScreen() {
+  // Mostra tela de conclusão dentro do overlay antes de salvar
+  const overlay = document.getElementById('guidedExecutionOverlay');
+  if (!overlay) { exitGuidedExecution(); return; }
+  overlay.innerHTML = `
+    <div class="ge-finish-screen">
+      <div class="ge-finish-icon">🏆</div>
+      <div class="ge-finish-title">Treino Concluído!</div>
+      <div class="ge-finish-sub">Todos os exercícios registrados. Salve para guardar seu progresso.</div>
+      <button class="execution-primary-btn" onclick="geConfirmSave()" style="margin-top:32px">
+        SALVAR TREINO
+      </button>
+      <button class="execution-skip-btn" onclick="exitGuidedExecution()" style="margin-top:8px">
+        Sair sem salvar
+      </button>
+    </div>`;
+}
+
+function geConfirmSave() {
+  exitGuidedExecution();
+  if (typeof salvarTreino === 'function') salvarTreino();
+}
+
+function geSkipCurrentSet() {
+  geAdvanceAfterRest();
+}
+
+function geShowExerciseInfo() {
+  const card = geGetCurrentCard();
+  if (card && typeof openExerciseOnYouTube === 'function') openExerciseOnYouTube(card);
+}
+
+function geInitSwipe() {
+  const overlay = document.getElementById('guidedExecutionOverlay');
+  if (!overlay || overlay._swipeInit) return;
+  overlay._swipeInit = true;
+  let sx = 0, sy = 0;
+  overlay.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+  overlay.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    // Swipe horizontal > 70px e mais horizontal que vertical
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) {
+      // Não acionar se o toque foi nos botões de controle
+      const target = e.target;
+      if (target.closest('.execution-ctrl-btn') || target.closest('.execution-control-card')) return;
+      if (dx < 0) geNextExercise();
+      else gePrevExercise();
+    }
+  }, { passive: true });
 }
 
 // Chama ao abrir a tela de dieta (navTo 'dieta') e ao abrir configurações
