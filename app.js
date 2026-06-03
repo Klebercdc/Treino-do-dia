@@ -1123,7 +1123,9 @@ function loadState(state) {
     tabEl.classList.add("active");
     scheduleDraftSave(); applyPrevGhostsToAll(); updateWorkoutProgress();
   }
-  geShowEntryButton();
+  // Mostra botão de entrada mas NÃO auto-inicia (loadState é chamado na inicialização)
+  const geBtn = document.getElementById('geEntryBar');
+  if (geBtn) geBtn.style.display = 'block';
   return true;
 }
 function clearAllInputsToGhost() {
