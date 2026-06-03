@@ -17438,16 +17438,6 @@ function exitGuidedExecution() {
   if (sheet && sheet.classList.contains('show')) fecharTimer();
 }
 
-function geMuscleImage(muscle) {
-  const m = String(muscle || '').toLowerCase();
-  if (m.includes('peito') || m.includes('peitoral') || m.includes('chest') || m.includes('pec')) return 'assets/3d/muscle-peito.png';
-  if (m.includes('costas') || m.includes('dorsal') || m.includes('dorsais') || m.includes('lombar') || m.includes('back') || m.includes('lat')) return 'assets/3d/muscle-costas.png';
-  if (m.includes('ombro') || m.includes('deltoid') || m.includes('shoulder') || m.includes('trapezio') || m.includes('trap')) return 'assets/3d/muscle-ombros.png';
-  if (m.includes('perna') || m.includes('quadricep') || m.includes('posterior') || m.includes('gluteo') || m.includes('panturrilha') || m.includes('leg') || m.includes('hamstring') || m.includes('adut') || m.includes('abut')) return 'assets/3d/muscle-pernas.png';
-  if (m.includes('bicep') || m.includes('tricep') || m.includes('abdomen') || m.includes('abdom') || m.includes('core')) return 'assets/3d/body-front.png';
-  return 'assets/3d/body-front.png';
-}
-
 function geMuscleLabel(muscle) {
   const labels = {
     'peito': 'Peito', 'peitoral': 'Peitoral', 'peito_superior': 'Peitoral Superior',
@@ -17502,18 +17492,6 @@ function geRender() {
   const nextBtn = document.getElementById('geNextExBtn');
   if (prevBtn) prevBtn.style.opacity = window._ge.cardIdx > 0 ? '1' : '0.25';
   if (nextBtn) nextBtn.style.opacity = window._ge.cardIdx < window._ge.cards.length - 1 ? '1' : '0.25';
-
-  // Imagem muscular
-  const muscleImg = document.getElementById('geMuscleImg');
-  if (muscleImg) {
-    const imgSrc = geMuscleImage(muscle);
-    if (muscleImg.dataset.currentSrc !== imgSrc) {
-      muscleImg.dataset.currentSrc = imgSrc;
-      muscleImg.style.opacity = '0';
-      muscleImg.src = imgSrc;
-      muscleImg.onload = () => { muscleImg.style.opacity = '1'; };
-    }
-  }
 
   // Progress geral
   const totalCards = window._ge.cards.length;
