@@ -6732,6 +6732,36 @@ body.dark-mode .settings-row-value {
   border-radius: 18px;
   padding: 16px;
 }
+.treino-choice-quick-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.treino-choice-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.treino-choice-quick-btn:active { transform: scale(.96); }
+.treino-choice-quick-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .diet-choice-hint-icon {
   width: 40px;
   height: 40px;

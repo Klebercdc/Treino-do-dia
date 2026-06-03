@@ -1186,24 +1186,6 @@
         <div class="home-quick-sub">IA ou manual</div>
       </div>
     </div>
-    <div class="home-quick-card k-pressable" onclick="closeHome();showEvoChart()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
-        <i data-lucide="trending-up" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Evolução</div>
-        <div class="home-quick-sub">Gráficos e PRs</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="closeHome();verHistorico()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
-        <i data-lucide="clock" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Histórico</div>
-        <div class="home-quick-sub">Sessões anteriores</div>
-      </div>
-    </div>
     <div class="home-quick-card k-pressable" onclick="openInstrucoes()">
       <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
         <i data-lucide="help-circle" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
@@ -1555,6 +1537,22 @@
         Saiba mais
         <i data-lucide="chevron-right" width="14" height="14"></i>
       </button>
+    </div>
+
+    <!-- Acesso rápido: Evolução + Histórico -->
+    <div class="treino-choice-quick-row">
+      <div class="treino-choice-quick-btn k-pressable" onclick="closeTreinoChoiceScreen();closeHome();showEvoChart()">
+        <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
+          <i data-lucide="trending-up" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+        </div>
+        <span>Evolução</span>
+      </div>
+      <div class="treino-choice-quick-btn k-pressable" onclick="closeTreinoChoiceScreen();closeHome();verHistorico()">
+        <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
+          <i data-lucide="clock" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+        </div>
+        <span>Histórico</span>
+      </div>
     </div>
   </div>
 </div>
