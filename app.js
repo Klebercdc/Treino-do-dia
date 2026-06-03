@@ -16748,7 +16748,7 @@ function _renderBioHistoricoList(reports, container) {
     var badgeClass = isAtencao ? 'bio-hist-badge--atencao' : 'bio-hist-badge--analisado';
     var badgeLabel = isAtencao ? 'ATENÇÃO' : 'ANALISADO';
     var fileName = r.fileName ? r.fileName.replace(/^\d+-/, '').replace(/\.[^.]+$/, '') : 'Exame';
-    return '<div class="bio-hist-item k-pressable" onclick="closeBiomarcadores();openLabsUploadScreen(\'bio_hist\')">'
+    return '<div class="bio-hist-item k-pressable" onclick="_labsSelectedReportId=\'' + String(r.id) + '\';closeBiomarcadores();openLabsScreen();">'
       + '<div class="bio-hist-icon">' + docSvg + '</div>'
       + '<div class="bio-hist-info"><div class="bio-hist-name">' + escapeHTML(fileName) + '</div><div class="bio-hist-date">' + escapeHTML(date) + '</div></div>'
       + '<span class="bio-hist-badge ' + badgeClass + '">' + badgeLabel + '</span>'
