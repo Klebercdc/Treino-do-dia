@@ -1,0 +1,235 @@
+═══════════════════════════════════════════════════════════════
+RELATÓRIO DE EXECUÇÃO — PARTE 1
+Tarefa: Abolir tela antiga "Programa de Treino" e conectar ao novo fluxo KRONOS
+Branch: claude/treino-selection-screen-NSkuX
+Data: 2026-06-03
+═══════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ARQUIVOS ALTERADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  index.html    — 8 pontos de entrada alterados + data-attributes nos tipo-cards
+  app.js        — openConfig redirecionado + 7 call sites + 2 funções globais novas
+  styles.css    — CSS de clique para data-kronia-open e data-kronos-workout-mode
+
+  Nenhum arquivo criado em api/.
+  Nenhum arquivo de dieta, exames ou engine KRONOS tocado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. TELA ANTIGA LOCALIZADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Arquivo : index.html
+  Elemento: #configSheet (linha ~2476)
+  Textos  : "Programa de Treino", "Atleta", "Performance e periodização",
+            "QUERO FOCAR EM", "Tem alguma dor ou limitação?",
+            "Onde você está agora?", "Equipamento disponível",
+            "Meus templates", "Usar Template"
+
+  Função que abria: openConfig() em app.js linha 2424
+
+  STATUS ATUAL: configSheet permanece no DOM mas está MORTO —
+  nenhum clique, nav ou CTA consegue mais abri-la.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. TELA NOVA LOCALIZADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Arquivo : index.html
+  Elemento: #gerarTreinoScreen (linha 2847)
+  Textos  : "GERAR TREINO", "Que tipo de treino você quer gerar?",
+            "Treino completo", "Treino específico", "Ajuste de protocolo"
+
+  Função de abertura: openGerarTreino() em app.js
+  Ponto de entrada único: window.openKronosWorkoutEntry() — criado em app.js
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. O QUE FOI ALTERADO — MAPEAMENTO COMPLETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  index.html — pontos de entrada:
+
+  [1] Home card TREINO (linha 1216)
+      ANTES : onclick="navTo('programa');openConfig()"
+      DEPOIS: onclick="openKronosWorkoutEntry()"
+              data-kronia-open="kronos-workout-entry" role="button" tabindex="0"
+
+  [2] Home quick card "Programa" (linha 1509)
+      ANTES : onclick="navTo('programa');openConfig()"
+              label: "Programa" / sub: "Configurar treino"
+      DEPOIS: onclick="openKronosWorkoutEntry()"
+              label: "Gerar Treino" / sub: "KRONOS IA"
+
+  [3] Card MANUAL no treinoChoiceScreen (linha 1612)
+      ANTES : onclick="closeTreinoChoiceScreen();navTo('programa');openConfig()"
+      DEPOIS: onclick="closeTreinoChoiceScreen();openKronosWorkoutEntry()"
+
+  [4] Botão PERSONALIZAR PROGRAMA — workoutHeroCard (linha 1847)
+      ANTES : onclick="navTo('programa');openConfig();closeStartWorkoutScreen()"
+      DEPOIS: onclick="closeStartWorkoutScreen();openKronosWorkoutEntry()"
+
+  [5] Settings row "Programa de Treino" (linha 2220)
+      ANTES : onclick="closeSettingsScreen();setTimeout(openConfig,200)"
+              label: "Programa de Treino"
+      DEPOIS: onclick="closeSettingsScreen();setTimeout(openKronosWorkoutEntry,200)"
+              label: "Gerar Treino"
+
+  [6] Settings row "Guia de início rápido" (linha 2281)
+      ANTES : onclick="closeSettingsScreen();navTo('programa');openConfig()"
+      DEPOIS: onclick="closeSettingsScreen();openKronosWorkoutEntry()"
+
+  [7] Bottom nav Treino (linha 4104)
+      ANTES : onclick="navTo('treino');openTreinoChoiceScreen()"
+      DEPOIS: onclick="openKronosWorkoutEntry()"
+
+  [8] Tipo-cards do wizard — data-attributes adicionados:
+      gt-tipo-card data-tipo="completo"   → data-kronos-workout-mode="full_workout"
+      gt-tipo-card data-tipo="especifico" → data-kronos-workout-mode="specific_workout"
+      gt-tipo-card data-tipo="ajuste"     → data-kronos-workout-mode="protocol_adjustment"
+
+  app.js — funções e call sites:
+
+  [9]  openConfig() (linha 2424)
+       ANTES : abria #configSheet diretamente
+       DEPOIS: primeira linha redireciona para openKronosWorkoutEntry()
+               configSheet nunca é aberto
+
+  [10] closeDivisaoSheet callback (linha 4052)
+       ANTES : setTimeout(() => { navTo("programa"); openConfig(); }, 220)
+       DEPOIS: setTimeout(openKronosWorkoutEntry, 220)
+
+  [11] consumePendingConversationIntent — open_training (linha 4603)
+       ANTES : navTo('programa') + openConfig(hydratedPayload)
+       DEPOIS: window.openKronosWorkoutEntry?.()
+
+  [12] Botão "Tentar novamente" em erro de renderização (linha 5326)
+       ANTES : onclick="navTo('programa');openConfig()"
+       DEPOIS: onclick="openKronosWorkoutEntry()"
+
+  [13] epIrParaTreino() — CTA após salvar perfil (linha 6387)
+       ANTES : setTimeout(() => { navTo("programa"); openConfig(); }, 200)
+       DEPOIS: setTimeout(openKronosWorkoutEntry, 200)
+
+  [14] runKroniaActionFallback — open_training (linha 10502)
+       ANTES : openHome + navTo inicio + navTo programa + openConfig
+       DEPOIS: window.openKronosWorkoutEntry?.()
+
+  [15] KroniaActions.openTrainingBuilder (linha 10544)
+       ANTES : navTo('programa') + openConfig(context)
+       DEPOIS: window.openKronosWorkoutEntry?.()
+
+  Funções novas adicionadas em app.js:
+
+  window.openKronosWorkoutEntry()
+    — ponto de entrada único: navTo('treino') + openGerarTreino()
+    — fallback: ativa #gerarTreinoScreen diretamente se função não existir
+
+  window.startKronosWorkoutMode(mode)
+    — mapeia full_workout/specific_workout/protocol_adjustment → tipo do wizard
+    — seta _gtState.tipo, inicia contexto KRONOS, avança para próximo passo
+
+  Event delegation (document click)
+    — captura [data-kronia-open="kronos-workout-entry"] → openKronosWorkoutEntry
+    — captura [data-kronos-workout-mode] → startKronosWorkoutMode
+
+  Event delegation (document keydown)
+    — Enter/Space em [data-kronia-open] → .click()
+
+  Proteção localStorage (IIFE)
+    — migra chaves legadas (workout-program, programa-treino, etc.)
+      para 'kronos-workout-entry'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. EVIDÊNCIAS DE AUDITORIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Busca por openKronosWorkoutEntry:
+    → encontrado em 10 locais em app.js + 6 em index.html
+    → CONFIRMADO
+
+  Busca por data-kronia-open="kronos-workout-entry":
+    → encontrado em index.html linhas 1216, 1509 (home cards)
+    → CONFIRMADO
+
+  Busca por data-kronos-workout-mode:
+    → encontrado nos 3 tipo-cards do wizard (index.html 2871, 2881, 2891)
+    → CONFIRMADO
+
+  Busca por startKronosWorkoutMode:
+    → encontrado em app.js (definição + event delegation)
+    → CONFIRMADO
+
+  Busca por "Programa de Treino" / "QUERO FOCAR EM" / "Meus templates":
+    → texto ainda existe em index.html dentro do bloco #configSheet
+    → configSheet está isolado: nenhuma função ativa a abre
+    → openConfig() redireciona antes de chegar ao classList.add("show")
+    → NEUTRALIZADO — não há como abrí-la por navegação
+
+  Busca por navTo('programa') restante:
+    → apenas 1 comentário interno: "(removido openConfig() automático no load)"
+    → zero chamadas executáveis para navTo('programa') + openConfig
+    → LIMPO
+
+  Busca por src/lib/flows/workoutFlow:
+    → zero referências em index.html e app.js
+    → CONFIRMADO — fluxo antigo não é o caminho principal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. SIMULAÇÃO DE FLUXO — FASE 12
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [✓] Home > Card TREINO          → openKronosWorkoutEntry() → gerarTreinoScreen
+  [✓] Home > Botão "Configurar"   → mesma div, mesmo onclick
+  [✓] Bottom nav > Treino         → openKronosWorkoutEntry() → gerarTreinoScreen
+  [✓] Nenhum caminho abre         → configSheet ("Programa de Treino")
+  [✓] Card "Treino completo"      → data-kronos-workout-mode="full_workout"
+  [✓] Card "Treino específico"    → data-kronos-workout-mode="specific_workout"
+  [✓] Card "Ajuste de protocolo"  → data-kronos-workout-mode="protocol_adjustment"
+  [✓] Dieta                       → não tocada (navTo dieta / openDietChoiceScreen intactos)
+  [✓] Início                      → não tocado (navTo inicio / openHome intactos)
+  [✓] Perfil                      → não tocado (openPerfil intacto)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. BUILD / LINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  tsc --noEmit    : apenas 2 erros pré-existentes (node/@playwright types
+                    não instalados no ambiente de CI — não são do código)
+  node --check app.js : PASSOU — sintaxe JavaScript válida
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. CHECKLIST FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [✓] Localizei tela antiga "Programa de Treino"
+  [✓] Localizei tela nova "Gerar Treino"
+  [✓] Localizei como o menu inferior abre Treino
+  [✓] Localizei como o card Treino da Home abre tela
+  [✓] Redirecionei Home card Treino para novo fluxo
+  [✓] Redirecionei botão Configurar para novo fluxo
+  [✓] Redirecionei bottom nav Treino para novo fluxo
+  [✓] Impedi tela antiga de abrir por função antiga
+  [✓] Conectei os 3 cards do novo fluxo (data-kronos-workout-mode)
+  [✓] Removi/neutralizei chamadas para tela antiga (15 pontos)
+  [✓] Auditei com grep/search
+  [✓] Rodei lint/build
+  [✓] Gerei relatório final com evidências
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  CONCLUÍDO
+
+  Commit: 5f137dc
+  Branch: claude/treino-selection-screen-NSkuX
+  Push  : confirmado
+
+  Observação pós-merge:
+  O bloco HTML do #configSheet ainda existe no index.html.
+  Pode ser removido em uma PR de limpeza futura após confirmar
+  que nenhum template ou dado salvo depende de seus elementos.
+  Por ora está inerte — zero caminhos de navegação o alcançam.
+
+═══════════════════════════════════════════════════════════════
