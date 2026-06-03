@@ -17647,8 +17647,8 @@ let _geRepeatTimer = null, _geRepeatInterval = null;
 function geStartRepeat(field, dir) {
   geUpdateField(field, dir);
   _geRepeatTimer = setTimeout(() => {
-    _geRepeatInterval = setInterval(() => geUpdateField(field, dir), 300);
-  }, 600);
+    _geRepeatInterval = setInterval(() => geUpdateField(field, dir), 500);
+  }, 800);
 }
 function geStopRepeat() {
   clearTimeout(_geRepeatTimer); clearInterval(_geRepeatInterval);
