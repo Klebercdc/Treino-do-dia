@@ -16134,11 +16134,31 @@ function closeTreinoChoiceScreen() {
 }
 
 // ── Gerar Treino Wizard ─────────────────────────────
-let _gtState = { tipo: null, obj: null, days: null, step: 0 };
+
+const _gtFlows = {
+  completo:   ['gt-step-0','gt-c-1','gt-c-2','gt-c-3','gt-c-4','gt-c-5','gt-c-6','gt-c-7'],
+  especifico: ['gt-step-0','gt-e-1','gt-e-2','gt-e-3','gt-e-4','gt-e-5','gt-e-6'],
+  ajuste:     ['gt-step-0','gt-a-1','gt-a-2','gt-a-3','gt-a-4'],
+};
+
+let _gtState = {};
+
+function _gtResetState() {
+  _gtState = {
+    tipo: null, stepId: 'gt-step-0',
+    obj: null, nivel: null, dias: null, tempo: null, equip: null, fase: null,
+    limitacoes: ['nao'],
+    musculo: null, focoSessao: null,
+    problema: null, tempoProtocolo: null, direcao: null,
+  };
+}
 
 function openGerarTreino() {
-  _gtState = { tipo: null, obj: null, days: null, step: 0 };
-  _gtGoToStep(0);
+  _gtResetState();
+  document.querySelectorAll('#gerarTreinoScreen .gt-tipo-card, #gerarTreinoScreen .gt-obj-card, #gerarTreinoScreen .gt-day-btn').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('#gerarTreinoScreen .gt-chip').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('#gerarTreinoScreen .gt-chip[data-val="nao"]').forEach(c => c.classList.add('selected'));
+  _gtRenderStep('gt-step-0');
   document.getElementById('gerarTreinoScreen').classList.add('show');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -16147,67 +16167,255 @@ function closeGerarTreino() {
   document.getElementById('gerarTreinoScreen').classList.remove('show');
 }
 
-function gtSelectTipo(el) {
-  document.querySelectorAll('.gt-tipo-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  _gtState.tipo = el.dataset.tipo;
-  document.getElementById('gtContinuarBtn').disabled = false;
-}
-
-function gtSelectObj(el) {
-  document.querySelectorAll('.gt-obj-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  _gtState.obj = el.dataset.obj;
-  document.getElementById('gtContinuarBtn').disabled = false;
-}
-
-function gtSelectDays(el) {
-  document.querySelectorAll('.gt-day-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  _gtState.days = parseInt(el.dataset.days);
-  document.getElementById('gtContinuarBtn').disabled = false;
+function gtBack() {
+  if (_gtState.stepId === 'gt-step-0') { closeGerarTreino(); return; }
+  const flow = _gtFlows[_gtState.tipo] || _gtFlows.completo;
+  const idx = flow.indexOf(_gtState.stepId);
+  const prevId = idx > 0 ? flow[idx - 1] : 'gt-step-0';
+  _gtState.stepId = prevId;
+  _gtRenderStep(prevId);
 }
 
 function gtNext() {
-  if (_gtState.step < 3) {
-    _gtGoToStep(_gtState.step + 1);
+  const flow = _gtFlows[_gtState.tipo] || _gtFlows.completo;
+  const idx = flow.indexOf(_gtState.stepId);
+  if (idx < 0) return;
+  if (idx === flow.length - 1) { _gtGerarComIA(); return; }
+  const nextId = flow[idx + 1];
+  _gtState.stepId = nextId;
+  _gtRenderStep(nextId);
+}
+
+function gtSelectTipo(el) {
+  document.querySelectorAll('#gt-step-0 .gt-tipo-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState.tipo = el.dataset.tipo || el.dataset.val;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtPick(field, el) {
+  const step = el.closest('.gt-step');
+  step.querySelectorAll('.gt-tipo-card, .gt-obj-card, .gt-day-btn').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState[field] = el.dataset.val;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtPickChip(field, el) {
+  const wrap = el.closest('.gt-chips-wrap');
+  wrap.querySelectorAll('.gt-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  _gtState[field] = el.dataset.val;
+  document.getElementById('gtContinuarBtn').disabled = false;
+}
+
+function gtToggleChip(field, el, isExclusive) {
+  const wrap = el.closest('.gt-chips-wrap');
+  if (isExclusive) {
+    wrap.querySelectorAll('.gt-chip').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    _gtState[field] = ['nao'];
   } else {
-    _gtConfirmar();
+    wrap.querySelector('.gt-chip[data-val="nao"]')?.classList.remove('selected');
+    el.classList.toggle('selected');
+    const selected = Array.from(wrap.querySelectorAll('.gt-chip.selected')).map(c => c.dataset.val);
+    if (selected.length === 0) {
+      wrap.querySelector('.gt-chip[data-val="nao"]')?.classList.add('selected');
+      _gtState[field] = ['nao'];
+    } else {
+      _gtState[field] = selected;
+    }
   }
 }
 
-function _gtGoToStep(step) {
-  _gtState.step = step;
-  document.querySelectorAll('.gt-step').forEach((s, i) => {
-    s.classList.toggle('active', i === step);
-  });
-  const dots = document.querySelectorAll('.gt-step-dot');
-  dots.forEach((d, i) => {
-    d.classList.toggle('active', i === step);
-    d.classList.toggle('done', i < step);
-  });
-  const pct = ((step + 1) / 4) * 100;
+function _gtIsComplete(stepId) {
+  if (['gt-c-7','gt-e-6','gt-a-4'].includes(stepId)) return true;
+  const map = {
+    'gt-step-0': () => !!_gtState.tipo,
+    'gt-c-1': () => !!_gtState.obj,
+    'gt-c-2': () => !!_gtState.nivel,
+    'gt-c-3': () => !!_gtState.dias,
+    'gt-c-4': () => !!_gtState.tempo,
+    'gt-c-5': () => !!_gtState.equip,
+    'gt-c-6': () => !!_gtState.fase,
+    'gt-e-1': () => !!_gtState.musculo,
+    'gt-e-2': () => !!_gtState.focoSessao,
+    'gt-e-3': () => !!_gtState.nivel,
+    'gt-e-4': () => !!_gtState.equip,
+    'gt-e-5': () => !!_gtState.tempo,
+    'gt-a-1': () => !!_gtState.problema,
+    'gt-a-2': () => !!_gtState.tempoProtocolo,
+    'gt-a-3': () => !!_gtState.direcao,
+  };
+  return map[stepId] ? map[stepId]() : true;
+}
+
+function _gtRenderStep(stepId) {
+  _gtState.stepId = stepId;
+  const flow = _gtFlows[_gtState.tipo] || _gtFlows.completo;
+  const idx = flow.indexOf(stepId);
+  const total = flow.length;
+
+  document.querySelectorAll('#gerarTreinoScreen .gt-step').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(stepId);
+  if (el) el.classList.add('active');
+
+  const dotsWrap = document.getElementById('gtDotsWrap');
+  if (dotsWrap) {
+    dotsWrap.innerHTML = '';
+    for (let i = 0; i < Math.min(total, 8); i++) {
+      const d = document.createElement('div');
+      d.className = 'gt-step-dot' + (i === idx ? ' active' : '') + (i < idx ? ' done' : '');
+      dotsWrap.appendChild(d);
+    }
+  }
+
+  const pct = ((idx + 1) / total) * 100;
   const bar = document.getElementById('gtProgressBar');
   if (bar) bar.style.width = pct + '%';
+
+  const isLast = idx === total - 1;
   const btn = document.getElementById('gtContinuarBtn');
   if (btn) {
-    btn.disabled = (step === 0 && !_gtState.tipo) ||
-                   (step === 1 && !_gtState.obj) ||
-                   (step === 2 && !_gtState.days);
-    btn.innerHTML = step === 3
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Gerar Treino'
+    btn.disabled = !_gtIsComplete(stepId);
+    btn.innerHTML = isLast
+      ? '<i data-lucide="sparkles" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"></i> Gerar com IA'
       : 'Continuar <i data-lucide="chevron-right" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.5"></i>';
-    if (step === 3) btn.disabled = false;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }
 
-function _gtConfirmar() {
-  const equip = document.getElementById('gtEquipSelect');
-  _gtState.equip = equip ? equip.value : 'academia_completa';
-  closeGerarTreino();
-  openTreinoGerado(_gtState);
+function _gtBuildPayload() {
+  const lims = (_gtState.limitacoes || ['nao']).filter(v => v !== 'nao');
+  const limitacoesStr = lims.join(', ') || 'nao';
+
+  if (_gtState.tipo === 'especifico') {
+    return {
+      objetivo: _gtState.focoSessao || 'hipertrofia',
+      nivel: _gtState.nivel || 'iniciante',
+      dias: '1',
+      tempo: (_gtState.tempo || '45') + ' min',
+      equipamentos: _gtState.equip || 'academia_completa',
+      limitacoes: limitacoesStr,
+      tipoGeracao: 'especifico',
+      profile: {
+        objetivo: _gtState.focoSessao || 'hipertrofia',
+        nivel: _gtState.nivel || 'iniciante',
+        dias: '1',
+        equipamentos: _gtState.equip || 'academia_completa',
+        persona: 'dedicado',
+        restricoes: lims,
+        musculosPrioritarios: [_gtState.musculo].filter(Boolean),
+        fase: '2',
+      },
+      context: { source: 'wizard_especifico', tipoGeracao: 'especifico', musculoAlvo: _gtState.musculo },
+    };
+  }
+
+  if (_gtState.tipo === 'ajuste') {
+    return {
+      objetivo: 'ajuste',
+      nivel: 'intermediario',
+      dias: '4',
+      tempo: '60 min',
+      equipamentos: 'academia_completa',
+      limitacoes: limitacoesStr,
+      tipoGeracao: 'ajuste',
+      profile: {
+        objetivo: 'ajuste',
+        nivel: 'intermediario',
+        dias: '4',
+        equipamentos: 'academia_completa',
+        persona: 'dedicado',
+        restricoes: lims,
+        musculosPrioritarios: [],
+        fase: '2',
+      },
+      context: {
+        source: 'wizard_ajuste',
+        tipoGeracao: 'ajuste',
+        problema: _gtState.problema,
+        tempoProtocolo: _gtState.tempoProtocolo,
+        direcao: _gtState.direcao,
+      },
+    };
+  }
+
+  // completo (default)
+  return {
+    objetivo: _gtState.obj || 'hipertrofia',
+    nivel: _gtState.nivel || 'iniciante',
+    dias: String(_gtState.dias || 4),
+    tempo: (_gtState.tempo || '60') + ' min',
+    equipamentos: _gtState.equip || 'academia_completa',
+    limitacoes: limitacoesStr,
+    tipoGeracao: 'completo',
+    profile: {
+      objetivo: _gtState.obj || 'hipertrofia',
+      nivel: _gtState.nivel || 'iniciante',
+      dias: String(_gtState.dias || 4),
+      equipamentos: _gtState.equip || 'academia_completa',
+      persona: 'dedicado',
+      restricoes: lims,
+      musculosPrioritarios: [],
+      fase: String(_gtState.fase || '2'),
+    },
+    context: { source: 'wizard_completo', tipoGeracao: 'completo' },
+  };
 }
+
+async function _gtGerarComIA() {
+  document.querySelectorAll('#gerarTreinoScreen .gt-step').forEach(s => s.classList.remove('active'));
+  const loadingEl = document.getElementById('gt-loading');
+  if (loadingEl) {
+    loadingEl.innerHTML = '<div class="gt-loading-wrap"><div class="gt-loading-spinner"></div><div class="gt-loading-title">Gerando seu treino</div><div class="gt-loading-sub">A IA está montando um plano personalizado para você...</div></div>';
+    loadingEl.classList.add('active');
+  }
+  const btn = document.getElementById('gtContinuarBtn');
+  if (btn) btn.disabled = true;
+
+  const payload = _gtBuildPayload();
+
+  try {
+    const resp = await requestWorkoutRoute(payload, 15000);
+    const data = await parseWorkoutApiJsonSafely(resp);
+
+    if (data && data.error === 'INVALID_JSON') {
+      _gtShowGenError('Erro ao processar resposta. Tente novamente.');
+      return;
+    }
+
+    const renderModel = extractWorkoutRenderModel(data);
+
+    if (!resp.ok || !renderModel || !renderModel.plan || !Array.isArray(renderModel.plan.treinos) || renderModel.plan.treinos.length === 0) {
+      _gtShowGenError('Não foi possível gerar o treino. Tente novamente.');
+      return;
+    }
+
+    closeGerarTreino();
+    applyAIWorkout({
+      treino: {
+        grupos: renderModel.plan.treinos.map(function(t) {
+          return { nome: String(t.nome || ''), exercicios: Array.isArray(t.exercicios) ? t.exercicios : [] };
+        }),
+      }
+    });
+  } catch (e) {
+    _gtShowGenError('Tempo esgotado. Verifique sua conexão e tente novamente.');
+  }
+}
+
+function _gtShowGenError(msg) {
+  const loadingEl = document.getElementById('gt-loading');
+  if (loadingEl) {
+    loadingEl.innerHTML = '<div class="gt-loading-wrap"><div style="font-size:2.5rem;margin-bottom:8px">⚠️</div><div class="gt-loading-title">Ops!</div><div class="gt-loading-sub">' + msg + '</div><button class="gt-continuar-btn" style="margin-top:24px;opacity:1" onclick="openGerarTreino()">Tentar novamente</button></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+// compat shims for old callers
+function gtSelectObj(el)  { gtPick('obj',  el); }
+function gtSelectDays(el) { gtPick('dias', el); }
 
 // ── Treino Gerado ──────────────────────────────────
 function openTreinoGerado(state) {
