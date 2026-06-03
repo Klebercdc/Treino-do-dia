@@ -16430,12 +16430,14 @@ async function _gtGerarComIA() {
   let timeoutId = null;
 
   try {
-    const fetchPromise = apiFetch(resolveAppApiUrl('/api/kronia/workout'), {
+    const fetchPromise = apiFetch(resolveAppApiUrl('/api/chat'), {
       method: 'POST',
       body: JSON.stringify({
-        action: 'GENERATE_WORKOUT',
-        payload: payload,
         requestId: 'gt_' + Date.now(),
+        messages: [{ role: 'user', content: 'Gerar treino pelo KRONOS central.' }],
+        isWorkoutDirect: true,
+        workoutProfile: payload,
+        payload: payload,
       }),
       signal: controller ? controller.signal : undefined,
     });
