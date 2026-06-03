@@ -15892,66 +15892,6 @@ function checkHidratacaoPosTreino(state, durationMin) {
 }
 
 /* ═══════════════════════════════════════════════════
-   RESPIRAÇÃO / BOX BREATHING
-═══════════════════════════════════════════════════ */
-let _breathRunning = false, _breathTick = null;
-const BREATH_SEQ = [
-  { label:'INSPIRE',   dur:4, expand:true  },
-  { label:'SEGURE',    dur:4, expand:true  },
-  { label:'EXPIRE',    dur:4, expand:false },
-  { label:'SEGURE',    dur:4, expand:false },
-];
-
-function abrirRespiracao() {
-  closeSummary();
-  setTimeout(() => {
-    _showEl('breathingModal');
-    _breathRunning = true;
-    runBreathPhase(0, 1);
-  }, 200);
-}
-
-function fecharRespiracao() {
-  _breathRunning = false;
-  clearInterval(_breathTick);
-  document.getElementById('breathingModal').classList.remove('show');
-  const c = document.getElementById('breathCircle');
-  c.classList.remove('expand','contract');
-}
-
-function runBreathPhase(phaseIdx, cycle) {
-  if (!_breathRunning) return;
-  if (cycle > 5) {
-    document.getElementById('breathPhase').textContent  = 'Concluído. Ótimo trabalho!';
-    document.getElementById('breathCycles').textContent = '';
-    setTimeout(() => { if (_breathRunning) fecharRespiracao(); }, 2800);
-    return;
-  }
-  const phase  = BREATH_SEQ[phaseIdx];
-  const circle = document.getElementById('breathCircle');
-  document.getElementById('breathPhase').textContent  = phase.label;
-  document.getElementById('breathCycles').textContent = `Ciclo ${cycle} de 5`;
-  circle.classList.remove('expand','contract');
-  requestAnimationFrame(() => {
-    circle.classList.add(phase.expand ? 'expand' : 'contract');
-  });
-  let t = phase.dur;
-  document.getElementById('breathCount').textContent = t;
-  clearInterval(_breathTick);
-  _breathTick = setInterval(() => {
-    if (!_breathRunning) { clearInterval(_breathTick); return; }
-    t--;
-    document.getElementById('breathCount').textContent = t;
-    if (t <= 0) {
-      clearInterval(_breathTick);
-      const nextPhase = (phaseIdx + 1) % BREATH_SEQ.length;
-      const nextCycle = nextPhase === 0 ? cycle + 1 : cycle;
-      setTimeout(() => runBreathPhase(nextPhase, nextCycle), 150);
-    }
-  }, 1000);
-}
-
-/* ═══════════════════════════════════════════════════
    TRACKING DE SONO
 ═══════════════════════════════════════════════════ */
 function getSonoWarning(h) {
@@ -16048,64 +15988,6 @@ function renderDesafios() {
       <div class="desafio-pct">${v.toLocaleString('pt-BR')} / ${t.toLocaleString('pt-BR')} &nbsp;·&nbsp; ${pct}%</div>
     </div>`;
   }).join('');
-}
-
-/* ═══════════════════════════════════════════════════
-   GERADOR DE MESOCICLOS
-═══════════════════════════════════════════════════ */
-let _mesoConf = { dur:4, obj:'hipertrofia' }, _mesoAtual = null;
-
-function abrirMesociclo() {
-  _showEl('mesocicloSheet');
-}
-function fecharMesociclo() {
-  document.getElementById('mesocicloSheet').classList.remove('show');
-}
-function selectMesoChip(el, type) {
-  const id = type==='dur' ? 'mesoDurChips' : 'mesoObjChips';
-  document.querySelectorAll(`#${id} .bs-chip`).forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  _mesoConf[type] = el.dataset.val;
-}
-const MESO_FASES = {
-  hipertrofia: [{n:'Adaptação',c:'adapt',w:.25},{n:'Sobrecarga',c:'sob',w:.5},{n:'Pico',c:'pico',w:.12},{n:'Deload',c:'deload',w:.13}],
-  forca:       [{n:'Adaptação',c:'adapt',w:.2}, {n:'Sobrecarga',c:'sob',w:.4},{n:'Pico',c:'pico',w:.25},{n:'Deload',c:'deload',w:.15}],
-  definicao:   [{n:'Adaptação',c:'adapt',w:.2}, {n:'Sobrecarga',c:'sob',w:.6},{n:'Deload',c:'deload',w:.2}],
-  performance: [{n:'Adaptação',c:'adapt',w:.15},{n:'Sobrecarga',c:'sob',w:.45},{n:'Pico',c:'pico',w:.25},{n:'Deload',c:'deload',w:.15}],
-};
-function gerarMesociclo() {
-  const total = parseInt(_mesoConf.dur);
-  const fases = MESO_FASES[_mesoConf.obj] || MESO_FASES.hipertrofia;
-  const cfg   = safeJSON('kronia_config', {});
-  const freq  = parseInt(cfg.freq || '3');
-  const weeks = [];
-  fases.forEach(f => {
-    const n = Math.max(1, Math.round(f.w * total));
-    for (let i=0; i<n && weeks.length<total; i++) weeks.push({n:f.n, c:f.c});
-  });
-  while (weeks.length < total) weeks.push({n:'Deload',c:'deload'});
-  const trainDays = ({2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]})[freq]||[1,3,5];
-  const dayLbls = ['D','S','T','Q','Q','S','S'];
-  document.getElementById('mesoFases').innerHTML =
-    [...new Set(weeks.map(w=>JSON.stringify({n:w.n,c:w.c})))].map(s=>{const p=JSON.parse(s);return `<span class="meso-badge ${p.c}">${p.n}</span>`;}).join('');
-  document.getElementById('mesoGrid').innerHTML = weeks.map((w,i) =>
-    `<div class="meso-week-row"><span class="meso-week-lbl">S${i+1}</span>` +
-    dayLbls.map((d,di)=>{
-      const isTrain = trainDays.includes(di);
-      const cls = w.c==='deload' ? 'deload' : (isTrain?'treino':'rest');
-      const lbl = w.c==='deload' ? (isTrain?'DLD':'') : (isTrain?'TRN':'');
-      return `<div class="meso-day ${cls}">${lbl}</div>`;
-    }).join('') +
-    `<span class="meso-badge ${w.c}" style="font-size:.48rem;padding:2px 5px;margin-left:4px">${w.n.slice(0,3)}</span></div>`
-  ).join('');
-  _mesoAtual = {weeks, freq, obj:_mesoConf.obj, total, createdAt:new Date().toISOString()};
-  document.getElementById('mesoVisualizacao').style.display = 'block';
-}
-function salvarMesociclo() {
-  if (!_mesoAtual) return;
-  localStorage.setItem('kronia_mesociclo', JSON.stringify(_mesoAtual));
-  showToast('Mesociclo salvo!', 'success', 3000);
-  fecharMesociclo();
 }
 
 /* ═══════════════════════════════════════════════════

@@ -785,10 +785,6 @@
         <button id="kroniaAdaptationIgnore" style="padding:10px 16px;background:var(--bg2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:0.82rem;cursor:pointer" onclick="resolveAdaptation('reject')">Ignorar</button>
       </div>
     </div>
-    <button class="btn-respira" onclick="abrirRespiracao()">
-      <i data-lucide="circle-dashed" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-      Respiração &amp; Cool-down
-    </button>
     <button class="btn-share-rel" onclick="compartilharRelatorio()">
       <i data-lucide="share-2" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       Compartilhar Relatório
@@ -806,54 +802,6 @@
 
 <!-- Breathing Modal -->
 
-<div id="breathingModal">
-  <div class="breath-title">RESPIRAÇÃO</div>
-  <div class="breath-sub">BOX BREATHING · COOL-DOWN</div>
-  <div class="breath-phase-label" id="breathPhase">Prepare-se</div>
-  <div class="breath-circle-wrap">
-    <div id="breathCircle">
-      <div class="breath-count" id="breathCount">4</div>
-    </div>
-  </div>
-  <div class="breath-cycles-label" id="breathCycles">Ciclo 1 de 5</div>
-  <button class="breath-btn-close" onclick="fecharRespiracao()">Encerrar</button>
-</div>
-
-<!-- Mesociclo Sheet -->
-
-<div class="bottom-sheet" id="mesocicloSheet" onclick="if(event.target===this)fecharMesociclo()">
-  <div class="bs-box" style="max-height:90vh;overflow-y:auto">
-    <div class="bs-handle"></div>
-    <div class="bs-title">Gerador de Mesociclo</div>
-    <div class="bs-sub" style="font-size:.75rem;color:var(--muted);margin-bottom:16px">Planeje seu bloco de treinamento</div>
-
-```
-<span class="bs-label">Duração</span>
-<div class="bs-chips" id="mesoDurChips" style="margin-bottom:12px">
-  <div class="bs-chip active" data-val="4"  onclick="selectMesoChip(this,'dur')">4 sem</div>
-  <div class="bs-chip"        data-val="6"  onclick="selectMesoChip(this,'dur')">6 sem</div>
-  <div class="bs-chip"        data-val="8"  onclick="selectMesoChip(this,'dur')">8 sem</div>
-  <div class="bs-chip"        data-val="12" onclick="selectMesoChip(this,'dur')">12 sem</div>
-</div>
-<span class="bs-label">Objetivo</span>
-<div class="bs-chips" id="mesoObjChips" style="margin-bottom:20px">
-  <div class="bs-chip active" data-val="hipertrofia" onclick="selectMesoChip(this,'obj')">Hipertrofia</div>
-  <div class="bs-chip"        data-val="forca"       onclick="selectMesoChip(this,'obj')">Força</div>
-  <div class="bs-chip"        data-val="definicao"   onclick="selectMesoChip(this,'obj')">Definição</div>
-  <div class="bs-chip"        data-val="performance" onclick="selectMesoChip(this,'obj')">Performance</div>
-</div>
-<button onclick="gerarMesociclo()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;margin-bottom:16px">Gerar Plano</button>
-
-<div id="mesoVisualizacao" style="display:none">
-  <div id="mesoFases" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-  <div id="mesoGrid"></div>
-  <button onclick="salvarMesociclo()" style="width:100%;padding:12px;margin-top:12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:var(--r);font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer">Salvar Mesociclo</button>
-</div>
-<div style="height:16px"></div>
-```
-
-  </div>
-</div>
 
 <!-- Modal: Check-in de disposição -->
 
@@ -1381,27 +1329,6 @@
       </div>
       <div class="home-tool-name">Calculadora Basal</div>
       <div class="home-tool-sub">TMB e TDEE personalizados</div>
-    </div>
-    <div class="home-tool-card" onclick="navTo('orientacao');openOrientacao();setTimeout(()=>orientExpertQuick('analise'),400)">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
-        <i data-lucide="bar-chart-3" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Análise de Treino</div>
-      <div class="home-tool-sub">Feedback baseado no seu histórico</div>
-    </div>
-    <div class="home-tool-card" onclick="abrirRespiracao()">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#0ea5e9,#0369a1)">
-        <i data-lucide="circle-dashed" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Respiração</div>
-      <div class="home-tool-sub">Box breathing · cool-down · 5 ciclos</div>
-    </div>
-    <div class="home-tool-card" onclick="abrirMesociclo()">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#a855f7,#7c3aed)">
-        <i data-lucide="calendar" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Mesociclo</div>
-      <div class="home-tool-sub">Plano visual de 4–12 semanas</div>
     </div>
   </div>
 
