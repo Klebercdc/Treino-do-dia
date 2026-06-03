@@ -1494,21 +1494,6 @@
       </button>
     </div>
 
-    <!-- Acesso rápido: Evolução + Histórico -->
-    <div class="treino-choice-quick-row">
-      <div class="treino-choice-quick-btn k-pressable" onclick="closeTreinoChoiceScreen();closeHome();showEvoChart()">
-        <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
-          <i data-lucide="trending-up" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
-        </div>
-        <span>Evolução</span>
-      </div>
-      <div class="treino-choice-quick-btn k-pressable" onclick="closeTreinoChoiceScreen();closeHome();verHistorico()">
-        <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
-          <i data-lucide="clock" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
-        </div>
-        <span>Histórico</span>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2769,6 +2754,20 @@
             <div class="gt-tipo-desc">Modificar treino ou fase atual</div>
           </div>
           <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+      <div class="treino-choice-quick-row" style="margin-top:16px">
+        <div class="treino-choice-quick-btn k-pressable" onclick="closeGerarTreino();closeHome();showEvoChart()">
+          <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
+            <i data-lucide="trending-up" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span>Evolução</span>
+        </div>
+        <div class="treino-choice-quick-btn k-pressable" onclick="closeGerarTreino();closeHome();verHistorico()">
+          <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
+            <i data-lucide="clock" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span>Histórico</span>
         </div>
       </div>
     </div>
