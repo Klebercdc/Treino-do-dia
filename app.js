@@ -1123,8 +1123,6 @@ function loadState(state) {
     tabEl.classList.add("active");
     scheduleDraftSave(); applyPrevGhostsToAll(); updateWorkoutProgress();
   }
-  // Auto-inicia execução guiada (é a interface principal)
-  if (!window._ge.active) setTimeout(startGuidedExecution, 400);
   return true;
 }
 function clearAllInputsToGhost() {
