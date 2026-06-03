@@ -7479,85 +7479,6 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   margin-top: 1px;
 }
 
-/* KRONOS RECOMENDA */
-.kronos-rec-section {
-  margin: 0 16px 16px;
-}
-.kronos-rec-label {
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: .1em;
-  color: rgba(255,255,255,0.35);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.kronos-rec-card {
-  background: var(--card);
-  border: 1px solid rgba(37,99,235,0.2);
-  border-radius: 16px;
-  padding: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background .15s;
-}
-.kronos-rec-card:active { background: var(--card-hover); }
-.kronos-rec-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  background: linear-gradient(145deg, #1e40af, #1d4ed8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(37,99,235,0.35);
-}
-.kronos-rec-body { flex: 1; min-width: 0; }
-.kronos-rec-title {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.2;
-  margin-bottom: 2px;
-}
-.kronos-rec-meta {
-  font-size: 0.68rem;
-  color: rgba(255,255,255,0.4);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.kronos-rec-arrow {
-  color: rgba(255,255,255,0.3);
-}
-.kronos-rec-initiate-btn {
-  width: 100%;
-  margin-top: 10px;
-  padding: 13px;
-  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
-  color: #02101f;
-  border: none;
-  border-radius: 12px;
-  font-family: var(--font);
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: .04em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 18px rgba(0,194,255,0.35);
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity .15s, transform .1s;
-}
-.kronos-rec-initiate-btn:active { opacity: .85; transform: scale(.98); }
 
 /* ══════════════════════════════════════════
    GERAR TREINO — WIZARD SCREEN
@@ -9911,81 +9832,10 @@ p,
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 4 STATUS CHIPS */
-.home-status-chips {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 0 16px 16px;
-}
-.home-status-chip {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 6px 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform .15s, border-color .2s;
-}
-.home-status-chip:active { transform: scale(.93); }
-.home-status-chip-icon {
-  width: 34px; height: 34px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.hsc-blue   { background: rgba(0,194,255,0.12); color: #00C2FF; }
-.hsc-green  { background: rgba(16,185,129,0.12); color: #10b981; }
-.hsc-teal   { background: rgba(47,227,154,0.12); color: #2fe39a; }
-.hsc-violet { background: rgba(109,74,254,0.12); color: #a78bfa; }
-.home-status-chip-label {
-  font-size: 0.57rem;
-  font-weight: 700;
-  color: var(--text);
-  text-align: center;
-  line-height: 1.2;
-}
-.home-status-chip-val {
-  font-size: 0.54rem;
-  color: var(--accent);
-  font-weight: 600;
-  text-align: center;
-}
-
-/* CTA CONTINUAR JORNADA */
-.home-cta-wrap { padding: 0 16px 20px; }
-.home-continuar-jornada-btn {
-  width: 100%;
-  padding: 16px;
-  background: linear-gradient(95deg, #00C2FF, #6D4AFE);
-  color: #02101f;
-  font-family: var(--font);
-  font-size: 1rem;
-  font-weight: 800;
-  border: none;
-  border-radius: 16px;
-  cursor: pointer;
-  letter-spacing: .02em;
-  box-shadow: 0 6px 24px rgba(0,194,255,0.30);
-  -webkit-tap-highlight-color: transparent;
-  transition: transform .15s, box-shadow .15s;
-}
-.home-continuar-jornada-btn:active {
-  transform: scale(.97);
-  box-shadow: 0 3px 12px rgba(0,194,255,0.18);
-}
-
 /* Light mode overrides */
 body.light-mode .home-greeting-salut,
 body.light-mode .home-greeting-sub { color: rgba(0,0,0,0.5); }
 body.light-mode .prontidao-metric-chip { background: rgba(0,0,0,0.03); border-color: #e2e8f0; }
-body.light-mode .home-status-chip { background: #f8fafc; border-color: #e2e8f0; }
-body.light-mode .home-status-chip-label { color: #1e293b; }
 body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
 
 /* ══════════════════════════════════════════════════════
