@@ -1213,7 +1213,7 @@
   <div class="home-hero-grid">
 
     <!-- Card TREINO -->
-    <div class="home-hero-card home-hero-treino k-pressable" onclick="openKronosWorkoutEntry()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0" style="overflow:hidden;">
+    <div class="home-hero-card home-hero-treino k-pressable" onclick="openTreinoChoiceScreen()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0" style="overflow:hidden;">
       <div class="home-hero-glow home-hero-glow--orange"></div>
       <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
         style="position:absolute;bottom:-4px;right:-6px;height:90%;width:auto;object-fit:contain;
@@ -1506,7 +1506,7 @@
 
   <div class="home-section-title">Acesso rápido</div>
   <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
-    <div class="home-quick-card k-pressable" onclick="openKronosWorkoutEntry()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0">
+    <div class="home-quick-card k-pressable" onclick="openTreinoChoiceScreen()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0">
       <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
         <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
       </div>
@@ -1609,7 +1609,7 @@
       </div>
 
       <!-- MANUAL -->
-      <div class="diet-choice-card diet-choice-card--orange" onclick="closeTreinoChoiceScreen();openKronosWorkoutEntry()">
+      <div class="diet-choice-card diet-choice-card--orange" onclick="closeTreinoChoiceScreen();openGerarTreino()">
         <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--orange">
           <i data-lucide="clipboard-edit" width="38" height="38" stroke="#2563EB" fill="none" stroke-width="1.5"></i>
         </div>
@@ -4106,7 +4106,7 @@
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-dieta" onclick="navTo('dieta');openDietChoiceScreen()">
+  <button class="btn btn-nav k-pressable" id="nav-dieta" onclick="openDietaEntry()">
     <span class="btn-icon"><i data-lucide="utensils" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Dieta</span>
   </button>

@@ -16525,20 +16525,39 @@ function gtSelectDays(el) { gtPick('dias', el); }
 
 // ── KRONOS Workout Entry — ponto de entrada único ─────────────
 
+window.openDietaEntry = function() {
+  navTo('dieta');
+  // Dieta criada → abre direto
+  const hasDiet = window._kroniaDietPlan || (typeof readLocalActiveDietPlan === 'function' && readLocalActiveDietPlan());
+  if (hasDiet && typeof openDietDataScreen === 'function') {
+    openDietDataScreen();
+    return;
+  }
+  // Sem dieta → tela de criação
+  if (typeof openDietChoiceScreen === 'function') openDietChoiceScreen();
+};
+
 window.openKronosWorkoutEntry = function() {
   try {
     navTo('treino');
+    // Treino carregado → execução guiada direta
+    const cards = geGetCards ? geGetCards() : [];
+    if (cards.length && typeof startGuidedExecution === 'function') {
+      startGuidedExecution();
+      return true;
+    }
+    // Sem treino → tela de criação
+    if (typeof openTreinoChoiceScreen === 'function') {
+      openTreinoChoiceScreen();
+      return true;
+    }
     if (typeof openGerarTreino === 'function') {
       openGerarTreino();
       return true;
     }
-    // fallback: tenta ativar o elemento direto
-    var screen = document.getElementById('gerarTreinoScreen');
-    if (screen) { screen.classList.add('show'); return true; }
-    console.error('[KRONOS_WORKOUT] gerarTreinoScreen não encontrado.');
     return false;
   } catch (err) {
-    console.error('[KRONOS_WORKOUT] Erro ao abrir novo fluxo:', err);
+    console.error('[KRONOS_WORKOUT] Erro ao abrir fluxo:', err);
     return false;
   }
 };
@@ -17752,13 +17771,6 @@ function geInitSwipe() {
     _origNavTo.apply(this, arguments);
     if (tab === 'dieta' || tab === 'perfil') {
       setTimeout(_anUpdateUIHints, 300);
-    }
-    // Abre guided execution ao entrar no tab treino (se há treino carregado e overlay inativo)
-    if (tab === 'treino' && window._ge && !window._ge.active) {
-      setTimeout(() => {
-        const cards = geGetCards ? geGetCards() : [];
-        if (cards.length && !window._ge.active) startGuidedExecution();
-      }, 50);
     }
   };
 })();
