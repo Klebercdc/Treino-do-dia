@@ -7566,7 +7566,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 4000;
   background: radial-gradient(ellipse 80% 30% at 50% -5%, rgba(0,194,255,.07), transparent 55%), #020812;
   flex-direction: column;
   overflow: hidden;
