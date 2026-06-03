@@ -507,7 +507,7 @@ body:not(.kronia-on-treino) .nav-pills { display: none !important; }
 /* ══════════════════════════════════════════
    SUMMARY MODAL
 ══════════════════════════════════════════ */
-#summaryModal { display: none; position: fixed; inset: 0; z-index: 6000; background: rgba(0,0,0,0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); align-items: flex-end; justify-content: center; }
+#summaryModal { display: none; position: fixed; inset: 0; z-index: 10003; background: rgba(0,0,0,0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); align-items: flex-end; justify-content: center; }
 #summaryModal.show { display: flex; }
 #summaryBox { background: var(--card); width: 100%; max-width: 520px; border-top: 1px solid var(--border); border-radius: 24px 24px 0 0; padding: 24px 18px calc(32px + env(safe-area-inset-bottom)); animation: slideUp .3s cubic-bezier(.34,1.1,.64,1); }
 .sum-handle { width: 32px; height: 3px; background: var(--border); border-radius: 2px; margin: 0 auto 22px; }
@@ -10413,3 +10413,65 @@ body.ge-mode #guidedExecutionOverlay {
   pointer-events: auto;
 }
 
+/* ══════════════════════════════════════════
+   GUIDED EXECUTION — NAV ARROWS & FINISH SCREEN
+══════════════════════════════════════════ */
+.ge-nav-arrows {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px 4px;
+}
+.ge-nav-arrow-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: color .2s, opacity .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ge-nav-arrow-btn:active { color: rgba(255,255,255,0.8); }
+.ge-nav-arrow-btn[style*="opacity: 0.25"],
+.ge-nav-arrow-btn[style*="opacity:0.25"] { pointer-events: none; }
+
+/* Finish screen */
+.ge-finish-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px 24px;
+  text-align: center;
+}
+.ge-finish-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: geBounceIn .5s cubic-bezier(.34,1.5,.64,1);
+}
+.ge-finish-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+.ge-finish-sub {
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.6;
+  max-width: 300px;
+  margin-bottom: 40px;
+}
+@keyframes geBounceIn {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}

@@ -17424,6 +17424,7 @@ function startGuidedExecution() {
   if (overlay) overlay.classList.add('active');
   document.body.classList.add('ge-mode');
   if (navigator.vibrate) navigator.vibrate(20);
+  geInitSwipe();
   geRender();
 }
 
@@ -17440,11 +17441,27 @@ function exitGuidedExecution() {
 function geMuscleImage(muscle) {
   const m = String(muscle || '').toLowerCase();
   if (m.includes('peito') || m.includes('peitoral') || m.includes('chest') || m.includes('pec')) return 'assets/3d/muscle-peito.png';
-  if (m.includes('costas') || m.includes('dorsal') || m.includes('dorsais') || m.includes('back') || m.includes('lat')) return 'assets/3d/muscle-costas.png';
-  if (m.includes('ombro') || m.includes('deltoid') || m.includes('shoulder') || m.includes('trapezio') || m.includes('trapézio')) return 'assets/3d/muscle-ombros.png';
-  if (m.includes('perna') || m.includes('quadricep') || m.includes('posterior') || m.includes('gluteo') || m.includes('glúteo') || m.includes('panturrilha') || m.includes('leg') || m.includes('hamstring')) return 'assets/3d/muscle-pernas.png';
-  if (m.includes('costas') || m.includes('lombar')) return 'assets/3d/muscle-costas.png';
+  if (m.includes('costas') || m.includes('dorsal') || m.includes('dorsais') || m.includes('lombar') || m.includes('back') || m.includes('lat')) return 'assets/3d/muscle-costas.png';
+  if (m.includes('ombro') || m.includes('deltoid') || m.includes('shoulder') || m.includes('trapezio') || m.includes('trap')) return 'assets/3d/muscle-ombros.png';
+  if (m.includes('perna') || m.includes('quadricep') || m.includes('posterior') || m.includes('gluteo') || m.includes('panturrilha') || m.includes('leg') || m.includes('hamstring') || m.includes('adut') || m.includes('abut')) return 'assets/3d/muscle-pernas.png';
+  if (m.includes('bicep') || m.includes('tricep') || m.includes('abdomen') || m.includes('abdom') || m.includes('core')) return 'assets/3d/body-front.png';
   return 'assets/3d/body-front.png';
+}
+
+function geMuscleLabel(muscle) {
+  const labels = {
+    'peito': 'Peito', 'peitoral': 'Peitoral', 'peito_superior': 'Peitoral Superior',
+    'costas': 'Costas', 'dorsais': 'Dorsais', 'lombar': 'Lombar',
+    'ombros': 'Ombros', 'trapezio': 'Trapézio',
+    'pernas': 'Pernas', 'quadriceps': 'Quadríceps',
+    'posteriores_de_coxa': 'Posteriores', 'gluteos': 'Glúteos', 'panturrilhas': 'Panturrilhas',
+    'biceps': 'Bíceps', 'triceps': 'Tríceps',
+    'abdomen': 'Abdômen', 'core': 'Core',
+  };
+  if (!muscle) return '';
+  const k = String(muscle).toLowerCase();
+  if (labels[k]) return labels[k];
+  return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function geRender() {
@@ -17462,7 +17479,7 @@ function geRender() {
   let ref = {};
   try { ref = JSON.parse(card.getAttribute('data-ex-ref') || '{}'); } catch(_) {}
   const muscle = ref.target_muscle || ref.muscle_group || '';
-  const muscleLabel = muscle ? muscle.charAt(0).toUpperCase() + muscle.slice(1) : '';
+  const muscleLabel = geMuscleLabel(muscle);
 
   // Header
   const setLabelEl = document.getElementById('geSetLabel');
@@ -17479,6 +17496,12 @@ function geRender() {
       ? muscleLabel + (setsInfo ? ' · <span class="ge-meta-info">' + setsInfo + '</span>' : '')
       : setsInfo || '';
   }
+
+  // Setas de navegação entre exercícios
+  const prevBtn = document.getElementById('gePrevExBtn');
+  const nextBtn = document.getElementById('geNextExBtn');
+  if (prevBtn) prevBtn.style.opacity = window._ge.cardIdx > 0 ? '1' : '0.25';
+  if (nextBtn) nextBtn.style.opacity = window._ge.cardIdx < window._ge.cards.length - 1 ? '1' : '0.25';
 
   // Imagem muscular
   const muscleImg = document.getElementById('geMuscleImg');
@@ -17600,6 +17623,22 @@ function geJumpToSet(setIdx) {
   if (setIdx >= 0 && setIdx < sets.length) { window._ge.setIdx = setIdx; geRender(); }
 }
 
+function gePrevExercise() {
+  if (window._ge.cardIdx <= 0) return;
+  window._ge.cardIdx--;
+  window._ge.setIdx = 0;
+  if (navigator.vibrate) navigator.vibrate(15);
+  geRender();
+}
+
+function geNextExercise() {
+  if (window._ge.cardIdx >= window._ge.cards.length - 1) return;
+  window._ge.cardIdx++;
+  window._ge.setIdx = 0;
+  if (navigator.vibrate) navigator.vibrate(15);
+  geRender();
+}
+
 function geUpdateField(field, delta) {
   const row = geGetCurrentSetRow();
   if (!row) return;
@@ -17685,21 +17724,64 @@ function geAdvanceAfterRest() {
       window._ge.setIdx  = 0;
       geRender();
     } else {
-      exitGuidedExecution();
-      if (typeof showToast === 'function') showToast('Todos os exercícios concluídos! 💪 Salve o treino.', 'success', 4000);
+      geShowFinishScreen();
     }
   }
 }
 
+function geShowFinishScreen() {
+  // Mostra tela de conclusão dentro do overlay antes de salvar
+  const overlay = document.getElementById('guidedExecutionOverlay');
+  if (!overlay) { exitGuidedExecution(); return; }
+  overlay.innerHTML = `
+    <div class="ge-finish-screen">
+      <div class="ge-finish-icon">🏆</div>
+      <div class="ge-finish-title">Treino Concluído!</div>
+      <div class="ge-finish-sub">Todos os exercícios registrados. Salve para guardar seu progresso.</div>
+      <button class="execution-primary-btn" onclick="geConfirmSave()" style="margin-top:32px">
+        SALVAR TREINO
+      </button>
+      <button class="execution-skip-btn" onclick="exitGuidedExecution()" style="margin-top:8px">
+        Sair sem salvar
+      </button>
+    </div>`;
+}
+
+function geConfirmSave() {
+  exitGuidedExecution();
+  if (typeof salvarTreino === 'function') salvarTreino();
+}
+
 function geSkipCurrentSet() {
-  // Pula a série sem registrar (avança sem marcar como done)
   geAdvanceAfterRest();
 }
 
 function geShowExerciseInfo() {
-  // Abre YouTube ou instrução do exercício atual via função existente
   const card = geGetCurrentCard();
   if (card && typeof openExerciseOnYouTube === 'function') openExerciseOnYouTube(card);
+}
+
+function geInitSwipe() {
+  const overlay = document.getElementById('guidedExecutionOverlay');
+  if (!overlay || overlay._swipeInit) return;
+  overlay._swipeInit = true;
+  let sx = 0, sy = 0;
+  overlay.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+  overlay.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    // Swipe horizontal > 70px e mais horizontal que vertical
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) {
+      // Não acionar se o toque foi nos botões de controle
+      const target = e.target;
+      if (target.closest('.execution-ctrl-btn') || target.closest('.execution-control-card')) return;
+      if (dx < 0) geNextExercise();
+      else gePrevExercise();
+    }
+  }, { passive: true });
 }
 
 // Chama ao abrir a tela de dieta (navTo 'dieta') e ao abrir configurações
