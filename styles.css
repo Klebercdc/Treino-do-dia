@@ -10076,17 +10076,8 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
 }
 
 /* Card exercício */
-.execution-exercise-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 20px 16px 12px;
-  gap: 12px;
-  flex-shrink: 0;
-}
 .execution-exercise-info {
-  flex: 1;
-  min-width: 0;
+  padding: 20px 16px 12px;
 }
 .ge-exercise-counter {
   font-size: 0.65rem;
@@ -10105,13 +10096,6 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
   font-style: italic;
   letter-spacing: -.01em;
 }
-.execution-muscle-label {
-  font-size: 0.78rem;
-  color: var(--accent, #00C2FF);
-  font-weight: 600;
-  margin: 0;
-}
-.ge-meta-info { color: var(--muted, #5a7a9a); font-weight: 500; }
 
 
 /* Strip de séries */
