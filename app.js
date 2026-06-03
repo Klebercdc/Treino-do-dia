@@ -17438,21 +17438,6 @@ function exitGuidedExecution() {
   if (sheet && sheet.classList.contains('show')) fecharTimer();
 }
 
-function geMuscleLabel(muscle) {
-  const labels = {
-    'peito': 'Peito', 'peitoral': 'Peitoral', 'peito_superior': 'Peitoral Superior',
-    'costas': 'Costas', 'dorsais': 'Dorsais', 'lombar': 'Lombar',
-    'ombros': 'Ombros', 'trapezio': 'Trapézio',
-    'pernas': 'Pernas', 'quadriceps': 'Quadríceps',
-    'posteriores_de_coxa': 'Posteriores', 'gluteos': 'Glúteos', 'panturrilhas': 'Panturrilhas',
-    'biceps': 'Bíceps', 'triceps': 'Tríceps',
-    'abdomen': 'Abdômen', 'core': 'Core',
-  };
-  if (!muscle) return '';
-  const k = String(muscle).toLowerCase();
-  if (labels[k]) return labels[k];
-  return k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
 
 function geRender() {
   const card = geGetCurrentCard();
@@ -17464,12 +17449,6 @@ function geRender() {
 
   // Nome e info do exercício
   const name = card.querySelector('.ex-title')?.textContent || card.getAttribute('data-ex-name') || '';
-  const metaEl = card.querySelector('.ex-target');
-  const metaText = metaEl?.textContent || '';
-  let ref = {};
-  try { ref = JSON.parse(card.getAttribute('data-ex-ref') || '{}'); } catch(_) {}
-  const muscle = ref.target_muscle || ref.muscle_group || '';
-  const muscleLabel = geMuscleLabel(muscle);
 
   // Header
   const setLabelEl = document.getElementById('geSetLabel');
@@ -17477,15 +17456,6 @@ function geRender() {
 
   const nameEl = document.getElementById('geExerciseName');
   if (nameEl) nameEl.textContent = name;
-
-  const muscleEl = document.getElementById('geMuscleGroup');
-  if (muscleEl) {
-    const metaParts = metaText.split('·');
-    const setsInfo = (metaParts[0] || '').trim();
-    muscleEl.innerHTML = muscleLabel
-      ? muscleLabel + (setsInfo ? ' · <span class="ge-meta-info">' + setsInfo + '</span>' : '')
-      : setsInfo || '';
-  }
 
   // Setas de navegação entre exercícios
   const prevBtn = document.getElementById('gePrevExBtn');
