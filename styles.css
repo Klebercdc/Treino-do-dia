@@ -10342,7 +10342,7 @@ body.light-mode .prontidao-footer { border-top-color: #e2e8f0; }
    display:none !important sobrescreve qualquer inline style.display="" do navTo.
    Os elementos ficam no DOM — o JS ainda lê/escreve inputs normalmente. */
 #container, #nav { display: none !important; }
-.btn-add-ex, .footer-actions, #posTreinoSection, .timer-area, #timerSheet { display: none !important; }
+.btn-add-ex, #posTreinoSection { display: none !important; }
 
 /* Quando modo guiado está ativo: evita scroll do body */
 body.ge-mode { overflow: hidden; }
