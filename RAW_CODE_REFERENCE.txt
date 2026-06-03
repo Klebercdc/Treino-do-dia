@@ -1,0 +1,362 @@
+════════════════════════════════════════════════════════════════
+CONTEÚDO RAW — 4 ARQUIVOS/FUNÇÕES
+════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────
+1. _gtGerarComIA() — app.js linha 16415
+────────────────────────────────────────────────────────────────
+
+async function _gtGerarComIA() {
+  document.querySelectorAll('#gerarTreinoScreen .gt-step').forEach(s => s.classList.remove('active'));
+  const loadingEl = document.getElementById('gt-loading');
+  if (loadingEl) {
+    loadingEl.innerHTML = '<div class="gt-loading-wrap"><div class="gt-loading-spinner"></div><div class="gt-loading-title">Gerando seu treino</div><div class="gt-loading-sub">A IA está montando um plano personalizado para você...</div></div>';
+    loadingEl.classList.add('active');
+  }
+  const btn = document.getElementById('gtContinuarBtn');
+  if (btn) btn.disabled = true;
+
+  const payload = _gtBuildPayload();
+
+  try {
+    const resp = await requestWorkoutRoute(payload, 15000);
+    const data = await parseWorkoutApiJsonSafely(resp);
+
+    if (data && data.error === 'INVALID_JSON') {
+      _gtShowGenError('Erro ao processar resposta. Tente novamente.');
+      return;
+    }
+
+    const renderModel = extractWorkoutRenderModel(data);
+
+    if (!resp.ok || !renderModel || !renderModel.plan || !Array.isArray(renderModel.plan.treinos) || renderModel.plan.treinos.length === 0) {
+      _gtShowGenError('Não foi possível gerar o treino. Tente novamente.');
+      return;
+    }
+
+    closeGerarTreino();
+    applyAIWorkout({
+      treino: {
+        grupos: renderModel.plan.treinos.map(function(t) {
+          return { nome: String(t.nome || ''), exercicios: Array.isArray(t.exercicios) ? t.exercicios : [] };
+        }),
+      }
+    });
+  } catch (e) {
+    _gtShowGenError('Tempo esgotado. Verifique sua conexão e tente novamente.');
+  }
+}
+
+────────────────────────────────────────────────────────────────
+2. requestWorkoutRoute() — app.js linha 2027
+────────────────────────────────────────────────────────────────
+
+async function requestWorkoutRoute(payload, timeoutMs) {
+  const timeout = Number(timeoutMs);
+  const supportsAbort = typeof AbortController === "function";
+  const controller = supportsAbort ? new AbortController() : null;
+  const requestPromise = apiFetch(resolveAppApiUrl("/api/chat"), {
+    method: "POST",
+    body: JSON.stringify({
+      requestId: "workout_" + Date.now(),
+      messages: [{ role: "user", content: "Gerar treino pelo KRONOS central." }],
+      isWorkoutDirect: true,
+      workoutProfile: payload,
+      payload: payload,
+    }),
+    signal: controller ? controller.signal : undefined,
+  });
+
+  if (!supportsAbort || !Number.isFinite(timeout) || timeout <= 0) {
+    return requestPromise;
+  }
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise(function (_, reject) {
+    timeoutId = setTimeout(function () {
+      try { controller.abort(); } catch (_) {}
+      reject(new Error("Tempo limite da rota de treino excedido."));
+    }, timeout);
+  });
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+────────────────────────────────────────────────────────────────
+3. src/server/apihelpers/_workoutRouteContract.js — completo
+────────────────────────────────────────────────────────────────
+
+var responseUtil = require('./_response');
+var planRules = require('../../lib/plans/planRules');
+var domain = require('../../types/domain');
+
+function normalizeWorkoutAction(action) {
+  var raw = String(action || 'GENERATE_WORKOUT').trim().toUpperCase();
+  if (raw === 'GENERATE_WORKOUT' || raw === 'ADJUST_WORKOUT' || raw === 'ANALYZE_WORKOUT' || raw === 'GET_KRONOS_CONTEXT') return raw;
+  return null;
+}
+
+function mapPlanForGate(dbPlan) {
+  var canonical = planRules.toCanonicalPlan(dbPlan || domain.PLAN.FREE);
+  if (canonical === domain.PLAN.TRIAL_ULTRA_7_DAYS) return domain.PLAN.ULTRA;
+  if (canonical === domain.PLAN.PRO || canonical === domain.PLAN.ULTRA) return canonical;
+  return domain.PLAN.FREE;
+}
+
+function buildWorkoutRouteEnvelope(result, options) {
+  var input = result && typeof result === 'object' ? result : {};
+  var opts = options && typeof options === 'object' ? options : {};
+  var plan = input.payload && input.payload.plan && typeof input.payload.plan === 'object'
+    ? input.payload.plan
+    : {};
+  var isFailSafe = !!plan.failSafe;
+  var responseType = isFailSafe ? 'workout_failsafe' : 'workout_primary';
+  return responseUtil.createApiEnvelope({
+    success: true,
+    type: responseType,
+    state: isFailSafe ? 'validation_required' : 'success',
+    message: String(input.message || 'Treino processado com sucesso.'),
+    requestId: opts.requestId || null,
+    userId: opts.userId || null,
+    error: null,
+    data: {
+      content: [{
+        type: responseType,
+        data: plan,
+        text: String(input.message || 'Treino processado com sucesso.')
+      }],
+      service: {
+        action: input.action || 'GENERATE_WORKOUT',
+        domain: input.domain || 'workout',
+        errorCode: input.errorCode || null,
+        validation: input.payload && input.payload.validation ? input.payload.validation : null,
+        gatedPlan: opts.plan || null,
+        renderMode: responseType,
+      },
+    },
+    meta: {
+      flow: 'kronia_workout_route',
+      failSafe: isFailSafe,
+      renderMode: responseType,
+      plan: opts.plan || null,
+    }
+  });
+}
+
+function buildWorkoutRouteErrorEnvelope(input, options) {
+  var err = input && typeof input === 'object' ? input : {};
+  var opts = options && typeof options === 'object' ? options : {};
+  return responseUtil.createApiEnvelope({
+    success: false,
+    type: 'error',
+    state: err.state || 'invalid_request',
+    message: String(err.message || 'Não consegui processar o treino agora.'),
+    requestId: opts.requestId || null,
+    userId: opts.userId || null,
+    error: err.error || 'WORKOUT_ROUTE_ERROR',
+    data: { content: [] },
+    meta: {
+      flow: 'kronia_workout_route',
+      plan: opts.plan || null,
+    }
+  });
+}
+
+module.exports = {
+  normalizeWorkoutAction: normalizeWorkoutAction,
+  mapPlanForGate: mapPlanForGate,
+  buildWorkoutRouteEnvelope: buildWorkoutRouteEnvelope,
+  buildWorkoutRouteErrorEnvelope: buildWorkoutRouteErrorEnvelope,
+};
+
+────────────────────────────────────────────────────────────────
+4. src/app/api/kronia/workout/route.ts — completo
+────────────────────────────────────────────────────────────────
+
+import { NextRequest, NextResponse } from "next/server"
+import { requireBearerAuth } from "../../_shared/requireBearerAuth"
+import { checkRateLimit } from "../../../../lib/utils/serverRateLimit"
+import { createAdminSupabaseClient } from "../../../../lib/supabase/admin"
+import { getRequestId } from "../../_shared/requestId"
+
+const workoutRouteContract = require("../../../../server/apihelpers/_workoutRouteContract")
+const workoutRouteHandler = require("../../../../server/apihelpers/_workoutRouteHandler")
+const workoutSupabaseContext = require("../../../../server/apihelpers/_workoutSupabaseContext")
+const kronosWorkoutContext = require("../../../../server/apihelpers/_kronosWorkoutContext")
+const kronosWorkoutDecision = require("../../../../server/apihelpers/_kronosWorkoutDecision")
+
+async function getEffectivePlan(userId: string): Promise<string> {
+  try {
+    const admin = createAdminSupabaseClient()
+    const { data } = await admin
+      .from("user_plans")
+      .select("plan")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    return workoutRouteContract.mapPlanForGate(data?.plan ?? "free")
+  } catch (error) {
+    console.error("[workout-route] failed to resolve effective plan", error)
+    return "FREE"
+  }
+}
+
+async function buildWorkoutErrorFromAuthFailure(authFailure: Response, requestId: string) {
+  const status = authFailure.status || 401
+  const payload = await authFailure.clone().json().catch(() => null)
+  const errorCode = typeof payload?.error === "string" ? payload.error : "UNAUTHORIZED"
+  const message =
+    typeof payload?.message === "string" && payload.message
+      ? payload.message
+      : "Falha de autenticação ao gerar treino."
+
+  const state =
+    status === 401
+      ? "unauthorized"
+      : errorCode.toLowerCase() === "server_misconfigured"
+        ? "server_misconfigured"
+        : "provider_unavailable"
+
+  return NextResponse.json(
+    workoutRouteContract.buildWorkoutRouteErrorEnvelope(
+      {
+        state,
+        error: errorCode.toUpperCase(),
+        message,
+      },
+      { requestId },
+    ),
+    { status },
+  )
+}
+
+function _resolveKronosMode(action: string | null): string {
+  if (action === "ADJUST_WORKOUT") return "protocol_adjustment"
+  return "full_workout"
+}
+
+export async function POST(req: NextRequest) {
+  const requestId = getRequestId(req)
+
+  try {
+    const auth = await requireBearerAuth(req)
+    if (!auth.ok) return buildWorkoutErrorFromAuthFailure(auth.response as Response, requestId)
+
+    const userId = auth.user.id
+    const rl = await checkRateLimit(userId, { max: 10, windowMs: 60000, category: "ai_heavy_operation" })
+    if (!rl.allowed) {
+      return NextResponse.json(
+        workoutRouteContract.buildWorkoutRouteErrorEnvelope(
+          {
+            state: "rate_limited_temporary",
+            error: "RATE_LIMITED_TEMPORARY",
+            message: "Muitas requisições em pouco tempo. Aguarde alguns segundos e tente novamente.",
+          },
+          { requestId, userId },
+        ),
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      )
+    }
+
+    const body = await req.json().catch(() => null)
+    const safeBody = body && typeof body === "object" ? body : {}
+    const action = workoutRouteContract.normalizeWorkoutAction(safeBody.action || "GENERATE_WORKOUT")
+
+    // Fast path: return KRONOS context without AI generation
+    if (action === "GET_KRONOS_CONTEXT") {
+      try {
+        const admin = createAdminSupabaseClient()
+        const ctx = await kronosWorkoutContext.buildKronosWorkoutContext(admin, userId)
+        return NextResponse.json(
+          workoutRouteContract.buildWorkoutRouteEnvelope(
+            {
+              message: "Contexto KRONOS carregado.",
+              action: "GET_KRONOS_CONTEXT",
+              domain: "workout",
+              payload: {
+                plan: {
+                  available: ctx.available,
+                  readiness: ctx.readiness,
+                  personalizationLevel: ctx.personalizationLevel,
+                  missingAdvancedData: ctx.missingAdvancedData,
+                },
+              },
+            },
+            { requestId, userId, plan: null },
+          ),
+          { status: 200 },
+        )
+      } catch (ctxError) {
+        console.error("[workout-route] GET_KRONOS_CONTEXT failed", ctxError)
+        return NextResponse.json(
+          workoutRouteContract.buildWorkoutRouteErrorEnvelope(
+            {
+              state: "provider_unavailable",
+              error: "KRONOS_CONTEXT_ERROR",
+              message: "Não foi possível carregar o contexto KRONOS.",
+            },
+            { requestId, userId },
+          ),
+          { status: 500 },
+        )
+      }
+    }
+
+    const effectivePlan = await getEffectivePlan(userId)
+    let enrichedBody = body
+
+    try {
+      const admin = createAdminSupabaseClient()
+      const [scResult, kcResult] = await Promise.allSettled([
+        workoutSupabaseContext.loadWorkoutSupabaseContext(admin, userId),
+        kronosWorkoutContext.buildKronosWorkoutContext(admin, userId),
+      ])
+
+      if (scResult.status === "fulfilled") {
+        enrichedBody = workoutSupabaseContext.enrichWorkoutRequestBody(body, scResult.value)
+      }
+
+      if (kcResult.status === "fulfilled") {
+        const ctx = kcResult.value
+        const decision = kronosWorkoutDecision.deriveKronosWorkoutDecision({
+          mode: _resolveKronosMode(action),
+          kronosContext: ctx,
+          anamnesisAnswers:
+            safeBody.payload && typeof safeBody.payload === "object" ? safeBody.payload : {},
+        })
+        enrichedBody = Object.assign({}, enrichedBody, {
+          kronosContext: kronosWorkoutContext.serializeKronosWorkoutContext(ctx),
+          kronosDecision: decision,
+        })
+      }
+    } catch (enrichError) {
+      console.error("[workout-route] failed to enrich payload from supabase", enrichError)
+    }
+
+    const result = await workoutRouteHandler.processWorkoutRouteRequest({
+      body: enrichedBody,
+      requestId,
+      userId,
+      effectivePlan,
+    })
+    return NextResponse.json(result.body, { status: result.status })
+  } catch (error) {
+    return NextResponse.json(
+      workoutRouteContract.buildWorkoutRouteErrorEnvelope(
+        {
+          state: "provider_unavailable",
+          error: "WORKOUT_ROUTE_INTERNAL_ERROR",
+          message: error instanceof Error ? error.message : "Não foi possível gerar o treino agora.",
+        },
+        { requestId },
+      ),
+      { status: 500 },
+    )
+  }
+}
+
+════════════════════════════════════════════════════════════════

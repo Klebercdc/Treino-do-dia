@@ -2422,6 +2422,8 @@ function gerarTreinoDoPrograma(silent) {
 }
 
 function openConfig(context) {
+  // Redirecionado: tela antiga "Programa de Treino" abolida — usa novo fluxo KRONOS
+  if (window.openKronosWorkoutEntry) { window.openKronosWorkoutEntry(); return; }
   scheduleKroniaUIUnblock('before-training-config-open');
   document.getElementById("configWarning").style.display="none";
   if (context && typeof context === 'object') {
@@ -4049,7 +4051,7 @@ function abrirConfigComFreq(modo) {
   closeDivisaoSheet();
   // Store chosen mode so config buttons know what was intended
   window._divModo = modo;
-  setTimeout(() => { navTo("programa"); openConfig(); }, 220);
+  setTimeout(openKronosWorkoutEntry, 220);
 }
 
 function usarTemplateManualConfig() {
@@ -4601,11 +4603,8 @@ function consumePendingConversationIntentFromHome(reason) {
 
   try {
     if (intent.type === 'open_training') {
-      navTo?.('programa');
-      var hydratedTrainingPayload = hydrateTrainingFromConversationIntent(intent.payload || {});
-      openConfig?.(Object.assign({}, hydratedTrainingPayload, { source: 'chat', fromChatIntent: true }));
+      window.openKronosWorkoutEntry?.();
       trackKroniaCta('home_card_auto_opened', 'success', { type: intent.type, target: intent.target });
-      trackKroniaCta('home_card_hydrated_from_chat', 'success', { type: intent.type, hasPayload: !!Object.keys(hydratedTrainingPayload).length });
       return true;
     }
     if (intent.type === 'open_diet' || intent.type === 'generate_diet') {
@@ -5324,7 +5323,7 @@ function renderWorkoutError(message) {
   var errCont = document.getElementById('container');
   if (errNav) errNav.innerHTML = '<div class="pill active">Treino</div>';
   if (errCont) {
-    errCont.innerHTML = '<div class="section active" id="sec-workout-error" data-treino-key="Erro"><div class="exercise-card" style="padding:18px;border:1px solid var(--border);background:var(--card);"><div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">Não foi possível renderizar o treino</div><div style="font-size:12px;line-height:1.45;color:var(--text-2)">' + escapeHTML(safeMsg) + '</div><button onclick="navTo(\'programa\');openConfig()" style="margin-top:14px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;">Tentar novamente</button></div></div>';
+    errCont.innerHTML = '<div class="section active" id="sec-workout-error" data-treino-key="Erro"><div class="exercise-card" style="padding:18px;border:1px solid var(--border);background:var(--card);"><div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">Não foi possível renderizar o treino</div><div style="font-size:12px;line-height:1.45;color:var(--text-2)">' + escapeHTML(safeMsg) + '</div><button onclick="openKronosWorkoutEntry()" style="margin-top:14px;padding:10px 20px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;">Tentar novamente</button></div></div>';
   }
   showToast(safeMsg, 'error', 3500);
   return false;
@@ -6386,7 +6385,7 @@ function salvarPerfilEdit() {
 }
 function epIrParaTreino() {
   closeEditarPerfil();
-  setTimeout(() => { try { navTo("programa"); openConfig(); } catch(e) {} }, 200);
+  setTimeout(openKronosWorkoutEntry, 200);
 }
 
 function salvarMedidas() {
@@ -10500,11 +10499,8 @@ function autoResizeOrientInput(el) {
 function runKroniaActionFallback(action, context) {
   var safeContext = sanitizeCtaObject(context);
   if (action === 'open_training') {
-    try { openHome?.(); } catch (_) {}
-    try { navTo?.('inicio'); } catch (_) {}
     try { schedulePendingConversationIntentConsumption('fallback_training'); } catch (_) {}
-    try { navTo?.('programa'); } catch (_) {}
-    try { openConfig?.(safeContext); return true; } catch (_) {}
+    try { window.openKronosWorkoutEntry?.(); return true; } catch (_) {}
     try { navTo?.('treino'); return true; } catch (_) {}
   }
   if (action === 'open_diet') {
@@ -10546,8 +10542,7 @@ window.KroniaActions = {
     try { closeAI?.(); } catch (_) {}
     try { closeOrientacao?.(); } catch (_) {}
     try { schedulePendingConversationIntentConsumption('kronia_action_training'); } catch (_) {}
-    try { navTo?.('programa'); } catch (_) {}
-    try { openConfig?.(Object.assign({}, sanitizeCtaObject(context), { source: 'kronia_action_training', fromChatIntent: true })); } catch (_) {}
+    try { window.openKronosWorkoutEntry?.(); } catch (_) {}
   },
 
   openDietGenerator: function (context) {
@@ -16429,8 +16424,34 @@ async function _gtGerarComIA() {
 
   const payload = _gtBuildPayload();
 
+  const supportsAbort = typeof AbortController === 'function';
+  const controller = supportsAbort ? new AbortController() : null;
+  let timeoutId = null;
+
   try {
-    const resp = await requestWorkoutRoute(payload, 15000);
+    const fetchPromise = apiFetch(resolveAppApiUrl('/api/kronia/workout'), {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'GENERATE_WORKOUT',
+        payload: payload,
+        requestId: 'gt_' + Date.now(),
+      }),
+      signal: controller ? controller.signal : undefined,
+    });
+
+    let resp;
+    if (supportsAbort) {
+      const timeoutPromise = new Promise(function(_, reject) {
+        timeoutId = setTimeout(function() {
+          try { controller.abort(); } catch (_) {}
+          reject(new Error('Tempo limite excedido.'));
+        }, 15000);
+      });
+      resp = await Promise.race([fetchPromise, timeoutPromise]);
+    } else {
+      resp = await fetchPromise;
+    }
+
     const data = await parseWorkoutApiJsonSafely(resp);
 
     if (data && data.error === 'INVALID_JSON') {
@@ -16455,6 +16476,10 @@ async function _gtGerarComIA() {
     });
   } catch (e) {
     _gtShowGenError('Tempo esgotado. Verifique sua conexão e tente novamente.');
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    const btnFinal = document.getElementById('gtContinuarBtn');
+    if (btnFinal) btnFinal.disabled = false;
   }
 }
 
@@ -16469,6 +16494,98 @@ function _gtShowGenError(msg) {
 // compat shims for old callers
 function gtSelectObj(el)  { gtPick('obj',  el); }
 function gtSelectDays(el) { gtPick('dias', el); }
+
+// ── KRONOS Workout Entry — ponto de entrada único ─────────────
+
+window.openKronosWorkoutEntry = function() {
+  try {
+    navTo('treino');
+    if (typeof openGerarTreino === 'function') {
+      openGerarTreino();
+      return true;
+    }
+    // fallback: tenta ativar o elemento direto
+    var screen = document.getElementById('gerarTreinoScreen');
+    if (screen) { screen.classList.add('show'); return true; }
+    console.error('[KRONOS_WORKOUT] gerarTreinoScreen não encontrado.');
+    return false;
+  } catch (err) {
+    console.error('[KRONOS_WORKOUT] Erro ao abrir novo fluxo:', err);
+    return false;
+  }
+};
+
+window.startKronosWorkoutMode = function(mode) {
+  try {
+    var allowed = ['full_workout', 'specific_workout', 'protocol_adjustment'];
+    var modeToTipo = { full_workout: 'completo', specific_workout: 'especifico', protocol_adjustment: 'ajuste' };
+    var selectedMode = allowed.includes(mode) ? mode : 'full_workout';
+    var tipo = modeToTipo[selectedMode] || 'completo';
+
+    window.kronosWorkoutState = window.kronosWorkoutState || {};
+    window.kronosWorkoutState.mode = selectedMode;
+    window.kronosWorkoutState.step = 0;
+    window.kronosWorkoutState.answers = {};
+
+    try {
+      localStorage.setItem('kronos_workout_mode', selectedMode);
+      localStorage.setItem('kronos_workout_step', '0');
+    } catch (_) {}
+
+    _gtState.tipo = tipo;
+    _gtState.kronosCtx = null;
+
+    var card = document.querySelector('#gt-step-0 .gt-tipo-card[data-tipo="' + tipo + '"]');
+    if (card) {
+      document.querySelectorAll('#gt-step-0 .gt-tipo-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+    }
+    document.getElementById('gtContinuarBtn').disabled = false;
+    _gtFetchKronosContext();
+    gtNext();
+    return true;
+  } catch (err) {
+    console.error('[KRONOS_WORKOUT] Erro ao iniciar modo:', err);
+    return false;
+  }
+};
+
+// Event delegation: data-kronia-open e data-kronos-workout-mode
+document.addEventListener('click', function(event) {
+  var entry = event.target.closest('[data-kronia-open="kronos-workout-entry"]');
+  if (entry) {
+    event.preventDefault();
+    event.stopPropagation();
+    window.openKronosWorkoutEntry && window.openKronosWorkoutEntry();
+    return;
+  }
+  var modeCard = event.target.closest('[data-kronos-workout-mode]');
+  if (modeCard && !modeCard.classList.contains('gt-tipo-card')) {
+    // gt-tipo-card já tem onclick; só interceptar outros elementos com o atributo
+    event.preventDefault();
+    event.stopPropagation();
+    window.startKronosWorkoutMode && window.startKronosWorkoutMode(modeCard.getAttribute('data-kronos-workout-mode'));
+  }
+});
+
+document.addEventListener('keydown', function(event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  var clickable = event.target.closest('[data-kronia-open="kronos-workout-entry"]');
+  if (!clickable) return;
+  event.preventDefault();
+  clickable.click();
+});
+
+// Proteção: migrar estado legado de localStorage
+(function() {
+  try {
+    var legacyScreens = ['workout-program','programa-treino','training-program','workout-config','workout-builder','programaDeTreino'];
+    ['activeTab','currentScreen','selectedScreen','currentPage','lastRoute','currentRoute','activeScreen'].forEach(function(key) {
+      var val = localStorage.getItem(key);
+      if (val && legacyScreens.includes(val)) localStorage.setItem(key, 'kronos-workout-entry');
+    });
+  } catch (_) {}
+}());
 
 // ── Treino Gerado ──────────────────────────────────
 function openTreinoGerado(state) {

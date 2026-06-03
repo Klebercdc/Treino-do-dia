@@ -1,5 +1,23 @@
 @import url('./styles/animations.css');
 
+/* ── KRONOS Workout Entry — interatividade de clique ────────── */
+[data-kronia-open="kronos-workout-entry"],
+[data-kronos-workout-mode] {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
+[data-kronia-open="kronos-workout-entry"]:active {
+  transform: scale(0.985);
+  opacity: 0.92;
+}
+.home-hero-glow,
+.home-hero-card::before,
+.home-hero-card::after {
+  pointer-events: none;
+}
+
 /* ══════════════════════════════════════════
    DESIGN SYSTEM — KRONIA
    Aesthetic: Deep Space Athletic · Electric Blue
