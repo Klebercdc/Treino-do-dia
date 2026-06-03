@@ -1571,6 +1571,77 @@
 </div>
 
 <!-- ══════════════════════════════════════════
+     TREINO — TELA DE ESCOLHA (ENTRY)
+══════════════════════════════════════════ -->
+<div id="treinoChoiceScreen" class="kronia-data-screen app-scroll" aria-label="Escolha do Treino">
+  <header class="diet-choice-header">
+    <button type="button" class="diet-choice-back-btn" onclick="closeTreinoChoiceScreen();navTo('inicio');openHome()" aria-label="Voltar">
+      <i data-lucide="arrow-left" stroke-width="2" width="18" height="18"></i>
+    </button>
+    <div class="diet-choice-header-text">
+      <h1 class="diet-choice-title">TREINO</h1>
+    </div>
+  </header>
+
+  <div class="diet-choice-body">
+    <div class="diet-choice-hero">
+      <h2 class="diet-choice-question">
+        <span style="color:#00C2FF;">Como você quer</span><br>
+        montar seu treino hoje?
+      </h2>
+      <p class="diet-choice-sub">Escolha a melhor forma para alcançar seu objetivo de forma prática e eficiente.</p>
+    </div>
+
+    <div class="diet-choice-cards">
+      <!-- TREINO IA -->
+      <div class="diet-choice-card diet-choice-card--green" onclick="closeTreinoChoiceScreen();openGerarTreino()">
+        <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--green">
+          <i data-lucide="dumbbell" width="38" height="38" stroke="#22C55E" fill="none" stroke-width="1.5"></i>
+        </div>
+        <h3 class="diet-choice-card-title">TREINO IA</h3>
+        <p class="diet-choice-card-desc">Plano de treino inteligente e automático</p>
+        <div class="diet-choice-separator"></div>
+        <button type="button" class="diet-choice-action-btn diet-choice-action-btn--green">
+          <i data-lucide="sparkles" width="14" height="14"></i>
+          Gerar plano
+          <i data-lucide="chevron-right" width="14" height="14"></i>
+        </button>
+      </div>
+
+      <!-- MANUAL -->
+      <div class="diet-choice-card diet-choice-card--orange" onclick="closeTreinoChoiceScreen();navTo('programa');openConfig()">
+        <div class="diet-choice-card-icon-wrap diet-choice-card-icon-wrap--orange">
+          <i data-lucide="clipboard-edit" width="38" height="38" stroke="#2563EB" fill="none" stroke-width="1.5"></i>
+        </div>
+        <h3 class="diet-choice-card-title">MANUAL</h3>
+        <p class="diet-choice-card-desc">Monte seu treino do seu jeito</p>
+        <div class="diet-choice-separator"></div>
+        <button type="button" class="diet-choice-action-btn diet-choice-action-btn--orange">
+          <i data-lucide="pencil" width="14" height="14"></i>
+          Configurar
+          <i data-lucide="chevron-right" width="14" height="14"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Hint card -->
+    <div class="diet-choice-hint-card">
+      <div class="diet-choice-hint-icon">
+        <i data-lucide="star" width="20" height="20" stroke="#00C2FF" fill="none" stroke-width="1.5"></i>
+      </div>
+      <div class="diet-choice-hint-body">
+        <strong>Não sabe qual escolher?</strong>
+        <p>A IA pode gerar um plano inicial e você ajusta do seu jeito depois.</p>
+      </div>
+      <button type="button" class="diet-choice-hint-link" onclick="closeTreinoChoiceScreen();openGerarTreino()">
+        Saiba mais
+        <i data-lucide="chevron-right" width="14" height="14"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
      DIETA — TELA DE ESCOLHA (ENTRY)
 ══════════════════════════════════════════ -->
 <div id="dietChoiceScreen" class="kronia-data-screen app-scroll" aria-label="Escolha da Dieta">
@@ -2775,7 +2846,7 @@
 ══════════════════════════════════════════ -->
 <div id="gerarTreinoScreen">
   <div class="gt-header">
-    <button class="gt-back-btn" onclick="closeGerarTreino()">
+    <button class="gt-back-btn" onclick="gtBack()">
       <i data-lucide="chevron-left" width="20" height="20" stroke="currentColor" fill="none" stroke-width="1.75"></i>
     </button>
     <div class="gt-header-title">Gerar Treino</div>
@@ -2830,59 +2901,435 @@
       </div>
     </div>
 
-    <!-- Step 1: Objetivo -->
-    <div class="gt-step" id="gt-step-1">
-      <div class="gt-step-q">Passo 2 de 4</div>
-      <div class="gt-step-title">Objetivo principal</div>
-      <div class="gt-step-sub">Qual é o foco deste ciclo?</div>
-      <div class="gt-obj-grid">
-        <div class="gt-obj-card" data-obj="hipertrofia" onclick="gtSelectObj(this)">
-          <div class="gt-obj-icon">
-            <i data-lucide="dumbbell" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
-          </div>
-          <div class="gt-obj-name">Hipertrofia</div>
+    <!-- ── TREINO COMPLETO ──────────────────────── -->
+    <!-- C-1: Objetivo -->
+    <div class="gt-step" id="gt-c-1">
+      <div class="gt-step-q" id="gt-label-c-1">Passo 2 de 8</div>
+      <div class="gt-step-title">Qual é o seu<br>objetivo principal?</div>
+      <div class="gt-step-sub">Define rep range, volume e intensidade do plano.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="hipertrofia" onclick="gtPick('obj',this)">
+          <div class="gt-tipo-icon"><i data-lucide="dumbbell" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Hipertrofia</div><div class="gt-tipo-desc">Ganho de massa muscular</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
         </div>
-        <div class="gt-obj-card" data-obj="forca" onclick="gtSelectObj(this)">
-          <div class="gt-obj-icon">
-            <i data-lucide="zap" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
-          </div>
-          <div class="gt-obj-name">Força</div>
+        <div class="gt-tipo-card" data-val="forca" onclick="gtPick('obj',this)">
+          <div class="gt-tipo-icon"><i data-lucide="zap" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Força</div><div class="gt-tipo-desc">Aumento de carga e potência</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
         </div>
-        <div class="gt-obj-card" data-obj="performance" onclick="gtSelectObj(this)">
-          <div class="gt-obj-icon">
-            <i data-lucide="star" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
-          </div>
-          <div class="gt-obj-name">Performance</div>
+        <div class="gt-tipo-card" data-val="definicao" onclick="gtPick('obj',this)">
+          <div class="gt-tipo-icon"><i data-lucide="flame" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Definição</div><div class="gt-tipo-desc">Perda de gordura com manutenção</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="saude" onclick="gtPick('obj',this)">
+          <div class="gt-tipo-icon"><i data-lucide="heart" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Saúde & Disposição</div><div class="gt-tipo-desc">Bem-estar e qualidade de vida</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="resistencia" onclick="gtPick('obj',this)">
+          <div class="gt-tipo-icon"><i data-lucide="activity" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Resistência</div><div class="gt-tipo-desc">Condicionamento e endurance</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
         </div>
       </div>
     </div>
 
-    <!-- Step 2: Dias -->
-    <div class="gt-step" id="gt-step-2">
-      <div class="gt-step-q">Passo 3 de 4</div>
+    <!-- C-2: Nível -->
+    <div class="gt-step" id="gt-c-2">
+      <div class="gt-step-q">Passo 3 de 8</div>
+      <div class="gt-step-title">Seu nível de<br>experiência</div>
+      <div class="gt-step-sub">Define a complexidade dos movimentos e o volume.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="iniciante" onclick="gtPick('nivel',this)">
+          <div class="gt-tipo-icon"><i data-lucide="star" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Iniciante</div><div class="gt-tipo-desc">Menos de 1 ano de treino</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="intermediario" onclick="gtPick('nivel',this)">
+          <div class="gt-tipo-icon"><i data-lucide="trending-up" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Intermediário</div><div class="gt-tipo-desc">1 a 3 anos de treino</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="avancado" onclick="gtPick('nivel',this)">
+          <div class="gt-tipo-icon"><i data-lucide="flame" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Avançado</div><div class="gt-tipo-desc">Mais de 3 anos de treino</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-3: Dias -->
+    <div class="gt-step" id="gt-c-3">
+      <div class="gt-step-q">Passo 4 de 8</div>
       <div class="gt-step-title">Dias de treino<br>por semana</div>
-      <div class="gt-step-sub">Quantos dias você tem disponíveis?</div>
+      <div class="gt-step-sub">Define a estrutura do split.</div>
       <div class="gt-days-row">
-        <button class="gt-day-btn" data-days="2" onclick="gtSelectDays(this)">2</button>
-        <button class="gt-day-btn" data-days="3" onclick="gtSelectDays(this)">3</button>
-        <button class="gt-day-btn" data-days="4" onclick="gtSelectDays(this)">4</button>
-        <button class="gt-day-btn" data-days="5" onclick="gtSelectDays(this)">5</button>
-        <button class="gt-day-btn" data-days="6" onclick="gtSelectDays(this)">6</button>
+        <button class="gt-day-btn" data-val="2" onclick="gtPick('dias',this)">2</button>
+        <button class="gt-day-btn" data-val="3" onclick="gtPick('dias',this)">3</button>
+        <button class="gt-day-btn" data-val="4" onclick="gtPick('dias',this)">4</button>
+        <button class="gt-day-btn" data-val="5" onclick="gtPick('dias',this)">5</button>
+        <button class="gt-day-btn" data-val="6" onclick="gtPick('dias',this)">6</button>
       </div>
     </div>
 
-    <!-- Step 3: Equipamentos -->
-    <div class="gt-step" id="gt-step-3">
-      <div class="gt-step-q">Passo 4 de 4</div>
-      <div class="gt-step-title">Equipamentos<br>disponíveis</div>
-      <div class="gt-step-sub">Selecione o que você tem acesso.</div>
-      <select class="gt-equip-select" id="gtEquipSelect">
-        <option value="academia_completa">Academia completa</option>
-        <option value="academia_basica">Academia básica</option>
-        <option value="casa_halteres">Casa com halteres</option>
-        <option value="casa_sem">Casa sem equipamento</option>
-        <option value="hotel">Academia de hotel</option>
-      </select>
+    <!-- C-4: Tempo por sessão -->
+    <div class="gt-step" id="gt-c-4">
+      <div class="gt-step-q">Passo 5 de 8</div>
+      <div class="gt-step-title">Tempo disponível<br>por sessão</div>
+      <div class="gt-step-sub">Define o volume de exercícios por treino.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="30" onclick="gtPick('tempo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="clock" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">30–45 min</div><div class="gt-tipo-desc">Treino curto e focado</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="60" onclick="gtPick('tempo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="clock" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">45–60 min</div><div class="gt-tipo-desc">Volume moderado</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="90" onclick="gtPick('tempo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="clock" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">60–90 min</div><div class="gt-tipo-desc">Sessão completa e detalhada</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-5: Equipamento -->
+    <div class="gt-step" id="gt-c-5">
+      <div class="gt-step-q">Passo 6 de 8</div>
+      <div class="gt-step-title">Equipamento<br>disponível</div>
+      <div class="gt-step-sub">Define a biblioteca de exercícios do plano.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="academia_completa" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="building" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Academia completa</div><div class="gt-tipo-desc">Máquinas, barras e halteres</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="academia_basica" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="building" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Academia básica</div><div class="gt-tipo-desc">Equipamento limitado</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="casa_halteres" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="home" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Casa com halteres</div><div class="gt-tipo-desc">Pesos livres em casa</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="casa_sem" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="user" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Sem equipamento</div><div class="gt-tipo-desc">Apenas peso corporal</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="hotel" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="star" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Academia de hotel</div><div class="gt-tipo-desc">Equipamento reduzido em viagem</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-6: Fase atual -->
+    <div class="gt-step" id="gt-c-6">
+      <div class="gt-step-q">Passo 7 de 8</div>
+      <div class="gt-step-title">Onde você está<br>agora?</div>
+      <div class="gt-step-sub">Ajusta a periodização ao seu momento atual.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="1" onclick="gtPick('fase',this)">
+          <div class="gt-tipo-icon"><i data-lucide="star" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Começando</div><div class="gt-tipo-desc">Aprendendo a técnica</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="2" onclick="gtPick('fase',this)">
+          <div class="gt-tipo-icon"><i data-lucide="trending-up" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Evoluindo</div><div class="gt-tipo-desc">Aumentando a carga</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="3" onclick="gtPick('fase',this)">
+          <div class="gt-tipo-icon"><i data-lucide="zap" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">No limite</div><div class="gt-tipo-desc">Máxima intensidade</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-7: Limitações -->
+    <div class="gt-step" id="gt-c-7">
+      <div class="gt-step-q">Passo 8 de 8</div>
+      <div class="gt-step-title">Tem alguma dor<br>ou limitação?</div>
+      <div class="gt-step-sub">O treino será adaptado. Pode escolher mais de uma.</div>
+      <div class="gt-chips-wrap">
+        <button class="gt-chip selected" data-val="nao" onclick="gtToggleChip('limitacoes',this,true)">Nenhuma</button>
+        <button class="gt-chip" data-val="joelho" onclick="gtToggleChip('limitacoes',this)">Joelho</button>
+        <button class="gt-chip" data-val="ombro" onclick="gtToggleChip('limitacoes',this)">Ombro</button>
+        <button class="gt-chip" data-val="lombar" onclick="gtToggleChip('limitacoes',this)">Lombar</button>
+        <button class="gt-chip" data-val="cervical" onclick="gtToggleChip('limitacoes',this)">Cervical</button>
+        <button class="gt-chip" data-val="punho" onclick="gtToggleChip('limitacoes',this)">Punho</button>
+        <button class="gt-chip" data-val="cotovelo" onclick="gtToggleChip('limitacoes',this)">Cotovelo</button>
+        <button class="gt-chip" data-val="quadril" onclick="gtToggleChip('limitacoes',this)">Quadril</button>
+      </div>
+    </div>
+
+    <!-- ── TREINO ESPECÍFICO ──────────────────────── -->
+    <!-- E-1: Músculo alvo -->
+    <div class="gt-step" id="gt-e-1">
+      <div class="gt-step-q">Passo 2 de 7</div>
+      <div class="gt-step-title">Qual músculo<br>quer trabalhar?</div>
+      <div class="gt-step-sub">Foco total neste grupo muscular.</div>
+      <div class="gt-chips-wrap">
+        <button class="gt-chip" data-val="peito" onclick="gtPickChip('musculo',this)">Peito</button>
+        <button class="gt-chip" data-val="costas" onclick="gtPickChip('musculo',this)">Costas</button>
+        <button class="gt-chip" data-val="ombros" onclick="gtPickChip('musculo',this)">Ombros</button>
+        <button class="gt-chip" data-val="biceps" onclick="gtPickChip('musculo',this)">Bíceps</button>
+        <button class="gt-chip" data-val="triceps" onclick="gtPickChip('musculo',this)">Tríceps</button>
+        <button class="gt-chip" data-val="quadriceps" onclick="gtPickChip('musculo',this)">Quadríceps</button>
+        <button class="gt-chip" data-val="posterior" onclick="gtPickChip('musculo',this)">Posterior</button>
+        <button class="gt-chip" data-val="gluteos" onclick="gtPickChip('musculo',this)">Glúteos</button>
+        <button class="gt-chip" data-val="abdomen" onclick="gtPickChip('musculo',this)">Abdômen</button>
+      </div>
+    </div>
+
+    <!-- E-2: Foco da sessão -->
+    <div class="gt-step" id="gt-e-2">
+      <div class="gt-step-q">Passo 3 de 7</div>
+      <div class="gt-step-title">Foco desta<br>sessão</div>
+      <div class="gt-step-sub">Como você quer trabalhar esse músculo hoje?</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="hipertrofia" onclick="gtPick('focoSessao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="dumbbell" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Hipertrofia</div><div class="gt-tipo-desc">Volume moderado, fadiga muscular total</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="forca" onclick="gtPick('focoSessao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="zap" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Força</div><div class="gt-tipo-desc">Cargas altas, menos repetições</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="ativacao" onclick="gtPick('focoSessao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="target" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Ativação & Técnica</div><div class="gt-tipo-desc">Conexão mente-músculo, cargas leves</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-3: Nível -->
+    <div class="gt-step" id="gt-e-3">
+      <div class="gt-step-q">Passo 4 de 7</div>
+      <div class="gt-step-title">Seu nível de<br>experiência</div>
+      <div class="gt-step-sub">Determina variações e complexidade dos exercícios.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="iniciante" onclick="gtPick('nivel',this)">
+          <div class="gt-tipo-icon"><i data-lucide="star" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Iniciante</div><div class="gt-tipo-desc">Menos de 1 ano</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="intermediario" onclick="gtPick('nivel',this)">
+          <div class="gt-tipo-icon"><i data-lucide="trending-up" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Intermediário</div><div class="gt-tipo-desc">1 a 3 anos</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="avancado" onclick="gtPick('nivel',this)">
+          <div class="gt-tipo-icon"><i data-lucide="flame" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Avançado</div><div class="gt-tipo-desc">Mais de 3 anos</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-4: Equipamento -->
+    <div class="gt-step" id="gt-e-4">
+      <div class="gt-step-q">Passo 5 de 7</div>
+      <div class="gt-step-title">Equipamento<br>disponível</div>
+      <div class="gt-step-sub">Define os exercícios disponíveis para este grupo.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="academia_completa" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="building" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Academia completa</div><div class="gt-tipo-desc">Máquinas, barras e halteres</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="casa_halteres" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="home" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Casa com halteres</div><div class="gt-tipo-desc">Pesos livres em casa</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="casa_sem" onclick="gtPick('equip',this)">
+          <div class="gt-tipo-icon"><i data-lucide="user" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Sem equipamento</div><div class="gt-tipo-desc">Apenas peso corporal</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-5: Tempo -->
+    <div class="gt-step" id="gt-e-5">
+      <div class="gt-step-q">Passo 6 de 7</div>
+      <div class="gt-step-title">Tempo disponível<br>para a sessão</div>
+      <div class="gt-step-sub">Define o número de exercícios e séries.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="25" onclick="gtPick('tempo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="clock" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">20–30 min</div><div class="gt-tipo-desc">Sessão curta e intensa</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="40" onclick="gtPick('tempo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="clock" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">30–45 min</div><div class="gt-tipo-desc">Volume moderado</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="60" onclick="gtPick('tempo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="clock" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">45–60 min</div><div class="gt-tipo-desc">Sessão completa</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-6: Limitações -->
+    <div class="gt-step" id="gt-e-6">
+      <div class="gt-step-q">Passo 7 de 7</div>
+      <div class="gt-step-title">Limitação nesta<br>região?</div>
+      <div class="gt-step-sub">Opcional. Pode escolher mais de uma.</div>
+      <div class="gt-chips-wrap">
+        <button class="gt-chip selected" data-val="nao" onclick="gtToggleChip('limitacoes',this,true)">Nenhuma</button>
+        <button class="gt-chip" data-val="joelho" onclick="gtToggleChip('limitacoes',this)">Joelho</button>
+        <button class="gt-chip" data-val="ombro" onclick="gtToggleChip('limitacoes',this)">Ombro</button>
+        <button class="gt-chip" data-val="lombar" onclick="gtToggleChip('limitacoes',this)">Lombar</button>
+        <button class="gt-chip" data-val="cervical" onclick="gtToggleChip('limitacoes',this)">Cervical</button>
+        <button class="gt-chip" data-val="punho" onclick="gtToggleChip('limitacoes',this)">Punho</button>
+        <button class="gt-chip" data-val="cotovelo" onclick="gtToggleChip('limitacoes',this)">Cotovelo</button>
+        <button class="gt-chip" data-val="quadril" onclick="gtToggleChip('limitacoes',this)">Quadril</button>
+      </div>
+    </div>
+
+    <!-- ── AJUSTE DE PROTOCOLO ──────────────────────── -->
+    <!-- A-1: Problema -->
+    <div class="gt-step" id="gt-a-1">
+      <div class="gt-step-q">Passo 2 de 5</div>
+      <div class="gt-step-title">O que não está<br>funcionando?</div>
+      <div class="gt-step-sub">Conta o que motivou o ajuste.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="estagnei" onclick="gtPick('problema',this)">
+          <div class="gt-tipo-icon"><i data-lucide="alert-circle" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Estagnei nos resultados</div><div class="gt-tipo-desc">Sem evolução há semanas</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="fadiga" onclick="gtPick('problema',this)">
+          <div class="gt-tipo-icon"><i data-lucide="zap" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Fadiga ou overtraining</div><div class="gt-tipo-desc">Cansaço excessivo, falta de energia</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="objetivo" onclick="gtPick('problema',this)">
+          <div class="gt-tipo-icon"><i data-lucide="flag" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Mudei de objetivo</div><div class="gt-tipo-desc">Quero ir numa direção diferente</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="lesao" onclick="gtPick('problema',this)">
+          <div class="gt-tipo-icon"><i data-lucide="heart" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Nova lesão ou limitação</div><div class="gt-tipo-desc">Preciso adaptar por restrição física</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- A-2: Tempo no protocolo -->
+    <div class="gt-step" id="gt-a-2">
+      <div class="gt-step-q">Passo 3 de 5</div>
+      <div class="gt-step-title">Há quanto tempo<br>neste protocolo?</div>
+      <div class="gt-step-sub">Ajuda a calibrar se é hora de mudar ou insistir.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="menos1mes" onclick="gtPick('tempoProtocolo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="calendar" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Menos de 1 mês</div><div class="gt-tipo-desc">Ainda em adaptação</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="1a3meses" onclick="gtPick('tempoProtocolo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="calendar" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">1 a 3 meses</div><div class="gt-tipo-desc">Protocolo já consolidado</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="3a6meses" onclick="gtPick('tempoProtocolo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="calendar" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">3 a 6 meses</div><div class="gt-tipo-desc">Ciclo longo, precisa de novo estímulo</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="mais6meses" onclick="gtPick('tempoProtocolo',this)">
+          <div class="gt-tipo-icon"><i data-lucide="calendar" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Mais de 6 meses</div><div class="gt-tipo-desc">Hora de renovar completamente</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- A-3: Direção -->
+    <div class="gt-step" id="gt-a-3">
+      <div class="gt-step-q">Passo 4 de 5</div>
+      <div class="gt-step-title">O que você quer<br>ajustar?</div>
+      <div class="gt-step-sub">Define o tipo de intervenção no protocolo.</div>
+      <div class="gt-tipo-list">
+        <div class="gt-tipo-card" data-val="aumentar_volume" onclick="gtPick('direcao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="trending-up" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Aumentar volume</div><div class="gt-tipo-desc">Mais séries e exercícios</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="reduzir_volume" onclick="gtPick('direcao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="activity" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Reduzir / deload</div><div class="gt-tipo-desc">Recuperação ativa e deload</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="trocar_exercicios" onclick="gtPick('direcao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="settings-2" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Trocar exercícios</div><div class="gt-tipo-desc">Variar os movimentos</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+        <div class="gt-tipo-card" data-val="mudar_split" onclick="gtPick('direcao',this)">
+          <div class="gt-tipo-icon"><i data-lucide="target" width="20" height="20" stroke="#60A5FA" fill="none" stroke-width="1.75"></i></div>
+          <div class="gt-tipo-body"><div class="gt-tipo-name">Mudar split</div><div class="gt-tipo-desc">Reorganizar dias e grupos musculares</div></div>
+          <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- A-4: Limitação -->
+    <div class="gt-step" id="gt-a-4">
+      <div class="gt-step-q">Passo 5 de 5</div>
+      <div class="gt-step-title">Alguma limitação<br>física?</div>
+      <div class="gt-step-sub">Opcional. O protocolo será adaptado. Pode escolher mais de uma.</div>
+      <div class="gt-chips-wrap">
+        <button class="gt-chip selected" data-val="nao" onclick="gtToggleChip('limitacoes',this,true)">Nenhuma</button>
+        <button class="gt-chip" data-val="joelho" onclick="gtToggleChip('limitacoes',this)">Joelho</button>
+        <button class="gt-chip" data-val="ombro" onclick="gtToggleChip('limitacoes',this)">Ombro</button>
+        <button class="gt-chip" data-val="lombar" onclick="gtToggleChip('limitacoes',this)">Lombar</button>
+        <button class="gt-chip" data-val="cervical" onclick="gtToggleChip('limitacoes',this)">Cervical</button>
+        <button class="gt-chip" data-val="punho" onclick="gtToggleChip('limitacoes',this)">Punho</button>
+        <button class="gt-chip" data-val="cotovelo" onclick="gtToggleChip('limitacoes',this)">Cotovelo</button>
+        <button class="gt-chip" data-val="quadril" onclick="gtToggleChip('limitacoes',this)">Quadril</button>
+      </div>
+    </div>
+
+    <!-- ── KRONOS CONTEXT ──────────────── -->
+    <div class="gt-step" id="gt-kronos-ctx">
+      <div class="gt-step-q">KRONOS</div>
+      <div class="gt-step-title">Analisando<br>seu perfil</div>
+      <div class="gt-step-sub">O KRONOS cruzou seus dados para personalizar o treino.</div>
+      <div class="gt-kronos-status-wrap" id="gtKronosStatusWrap">
+        <div class="gt-kronos-loading">
+          <div class="gt-loading-spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div>
+          <span>Carregando dados...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LOADING ──────────────────────── -->
+    <div class="gt-step" id="gt-loading">
+      <div class="gt-loading-wrap">
+        <div class="gt-loading-spinner"></div>
+        <div class="gt-loading-title">Gerando seu treino</div>
+        <div class="gt-loading-sub">A IA está montando um plano personalizado para você...</div>
+      </div>
     </div>
 
     <div style="height:24px"></div>
@@ -3654,7 +4101,7 @@
     <span class="btn-icon"><i data-lucide="home" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Início</span>
   </button>
-  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');openGerarTreino()">
+  <button class="btn btn-nav k-pressable" id="nav-treino" onclick="navTo('treino');openTreinoChoiceScreen()">
     <span class="btn-icon"><i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.75"></i></span>
     <span class="btn-label">Treino</span>
   </button>

@@ -7,6 +7,8 @@ import { getRequestId } from "../../_shared/requestId"
 const workoutRouteContract = require("../../../../server/apihelpers/_workoutRouteContract")
 const workoutRouteHandler = require("../../../../server/apihelpers/_workoutRouteHandler")
 const workoutSupabaseContext = require("../../../../server/apihelpers/_workoutSupabaseContext")
+const kronosWorkoutContext = require("../../../../server/apihelpers/_kronosWorkoutContext")
+const kronosWorkoutDecision = require("../../../../server/apihelpers/_kronosWorkoutDecision")
 
 async function getEffectivePlan(userId: string): Promise<string> {
   try {
@@ -53,6 +55,11 @@ async function buildWorkoutErrorFromAuthFailure(authFailure: Response, requestId
   )
 }
 
+function _resolveKronosMode(action: string | null): string {
+  if (action === "ADJUST_WORKOUT") return "protocol_adjustment"
+  return "full_workout"
+}
+
 export async function POST(req: NextRequest) {
   const requestId = getRequestId(req)
 
@@ -77,15 +84,80 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null)
+    const safeBody = body && typeof body === "object" ? body : {}
+    const action = workoutRouteContract.normalizeWorkoutAction(safeBody.action || "GENERATE_WORKOUT")
+
+    // Fast path: return KRONOS context without AI generation
+    if (action === "GET_KRONOS_CONTEXT") {
+      try {
+        const admin = createAdminSupabaseClient()
+        const ctx = await kronosWorkoutContext.buildKronosWorkoutContext(admin, userId)
+        return NextResponse.json(
+          workoutRouteContract.buildWorkoutRouteEnvelope(
+            {
+              message: "Contexto KRONOS carregado.",
+              action: "GET_KRONOS_CONTEXT",
+              domain: "workout",
+              payload: {
+                plan: {
+                  available: ctx.available,
+                  readiness: ctx.readiness,
+                  personalizationLevel: ctx.personalizationLevel,
+                  missingAdvancedData: ctx.missingAdvancedData,
+                },
+              },
+            },
+            { requestId, userId, plan: null },
+          ),
+          { status: 200 },
+        )
+      } catch (ctxError) {
+        console.error("[workout-route] GET_KRONOS_CONTEXT failed", ctxError)
+        return NextResponse.json(
+          workoutRouteContract.buildWorkoutRouteErrorEnvelope(
+            {
+              state: "provider_unavailable",
+              error: "KRONOS_CONTEXT_ERROR",
+              message: "Não foi possível carregar o contexto KRONOS.",
+            },
+            { requestId, userId },
+          ),
+          { status: 500 },
+        )
+      }
+    }
+
     const effectivePlan = await getEffectivePlan(userId)
     let enrichedBody = body
+
     try {
       const admin = createAdminSupabaseClient()
-      const supabaseContext = await workoutSupabaseContext.loadWorkoutSupabaseContext(admin, userId)
-      enrichedBody = workoutSupabaseContext.enrichWorkoutRequestBody(body, supabaseContext)
-    } catch (error) {
-      console.error("[workout-route] failed to enrich payload from supabase", error)
+      const [scResult, kcResult] = await Promise.allSettled([
+        workoutSupabaseContext.loadWorkoutSupabaseContext(admin, userId),
+        kronosWorkoutContext.buildKronosWorkoutContext(admin, userId),
+      ])
+
+      if (scResult.status === "fulfilled") {
+        enrichedBody = workoutSupabaseContext.enrichWorkoutRequestBody(body, scResult.value)
+      }
+
+      if (kcResult.status === "fulfilled") {
+        const ctx = kcResult.value
+        const decision = kronosWorkoutDecision.deriveKronosWorkoutDecision({
+          mode: _resolveKronosMode(action),
+          kronosContext: ctx,
+          anamnesisAnswers:
+            safeBody.payload && typeof safeBody.payload === "object" ? safeBody.payload : {},
+        })
+        enrichedBody = Object.assign({}, enrichedBody, {
+          kronosContext: kronosWorkoutContext.serializeKronosWorkoutContext(ctx),
+          kronosDecision: decision,
+        })
+      }
+    } catch (enrichError) {
+      console.error("[workout-route] failed to enrich payload from supabase", enrichError)
     }
+
     const result = await workoutRouteHandler.processWorkoutRouteRequest({
       body: enrichedBody,
       requestId,
