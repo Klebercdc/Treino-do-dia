@@ -16256,6 +16256,14 @@ function gtPickChip(field, el) {
   document.getElementById('gtContinuarBtn').disabled = false;
 }
 
+function gtMultiSelectChip(field, el) {
+  el.classList.toggle('selected');
+  const wrap = el.closest('.gt-chips-wrap');
+  const selected = Array.from(wrap.querySelectorAll('.gt-chip.selected')).map(c => c.dataset.val);
+  _gtState[field] = selected;
+  document.getElementById('gtContinuarBtn').disabled = selected.length === 0;
+}
+
 function gtToggleChip(field, el, isExclusive) {
   const wrap = el.closest('.gt-chips-wrap');
   if (isExclusive) {
@@ -16285,7 +16293,7 @@ function _gtIsComplete(stepId) {
     'gt-c-4': () => !!_gtState.tempo,
     'gt-c-5': () => !!_gtState.equip,
     'gt-c-6': () => !!_gtState.fase,
-    'gt-e-1': () => !!_gtState.musculo,
+    'gt-e-1': () => Array.isArray(_gtState.musculo) ? _gtState.musculo.length > 0 : !!_gtState.musculo,
     'gt-e-2': () => !!_gtState.focoSessao,
     'gt-e-3': () => !!_gtState.nivel,
     'gt-e-4': () => !!_gtState.equip,
@@ -16354,7 +16362,7 @@ function _gtBuildPayload() {
         equipamentos: _gtState.equip || 'academia_completa',
         persona: 'dedicado',
         restricoes: lims,
-        musculosPrioritarios: [_gtState.musculo].filter(Boolean),
+        musculosPrioritarios: Array.isArray(_gtState.musculo) ? _gtState.musculo : [_gtState.musculo].filter(Boolean),
         fase: '2',
       },
       context: { source: 'wizard_especifico', tipoGeracao: 'especifico', musculoAlvo: _gtState.musculo },
