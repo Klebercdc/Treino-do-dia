@@ -1131,7 +1131,7 @@
   <div class="home-hero-grid">
 
     <!-- Card TREINO -->
-    <div class="home-hero-card home-hero-treino k-pressable" onclick="openTreinoChoiceScreen()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0" style="overflow:hidden;">
+    <div class="home-hero-card home-hero-treino k-pressable" onclick="openTreinoChoiceScreen()" role="button" tabindex="0" style="overflow:hidden;">
       <div class="home-hero-glow home-hero-glow--orange"></div>
       <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
         style="position:absolute;bottom:-4px;right:-6px;height:90%;width:auto;object-fit:contain;
@@ -1173,6 +1173,37 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ═══ ACESSO RÁPIDO ═══ -->
+  <div class="home-quick-grid" style="gap:10px;padding:0 16px 8px">
+    <div class="home-quick-card k-pressable" onclick="openTreinoChoiceScreen()">
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
+        <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
+      </div>
+      <div>
+        <div class="home-quick-name">Gerar Treino</div>
+        <div class="home-quick-sub">IA ou manual</div>
+      </div>
+    </div>
+    <div class="home-quick-card k-pressable" onclick="closeHome();showEvoChart()">
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
+        <i data-lucide="trending-up" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
+      </div>
+      <div>
+        <div class="home-quick-name">Evolução</div>
+        <div class="home-quick-sub">Gráficos e PRs</div>
+      </div>
+    </div>
+    <div class="home-quick-card k-pressable" onclick="closeHome();verHistorico()">
+      <div class="home-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
+        <i data-lucide="clock" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
+      </div>
+      <div>
+        <div class="home-quick-name">Histórico</div>
+        <div class="home-quick-sub">Sessões anteriores</div>
+      </div>
+    </div>
   </div>
 
   <!-- IA ROW — KRONOS + KRONIA lado a lado -->
@@ -1421,46 +1452,6 @@
 
   <div class="home-section-title">Meus Desafios</div>
   <div style="padding:0 16px 4px" id="desafiosSection"></div>
-
-  <div class="home-section-title">Acesso rápido</div>
-  <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
-    <div class="home-quick-card k-pressable" onclick="openTreinoChoiceScreen()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
-        <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Gerar Treino</div>
-        <div class="home-quick-sub">KRONOS IA</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="closeHome();showEvoChart()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
-        <i data-lucide="trending-up" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Evolução</div>
-        <div class="home-quick-sub">Gráficos e PRs</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="closeHome();verHistorico()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
-        <i data-lucide="clock" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Histórico</div>
-        <div class="home-quick-sub">Sessões anteriores</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="openInstrucoes()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
-        <i data-lucide="help-circle" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Como Usar</div>
-        <div class="home-quick-sub">Guia completo e vantagens do app</div>
-      </div>
-    </div>
-  </div>
 
   <!-- ÚLTIMA CONQUISTA + TREINO RECOMENDADO — lado a lado -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 20px">
