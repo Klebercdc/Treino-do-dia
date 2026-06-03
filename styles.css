@@ -9469,8 +9469,8 @@ p,
 #gerarTreinoScreen .gt-progress-bar    { background: linear-gradient(90deg, #00C2FF, #6D4AFE); }
 
 #gerarTreinoScreen .gt-obj-card.selected {
-  background: rgba(0,194,255,.12);
-  border-color: #00C2FF;
+  background: rgba(0,194,255,.12) !important;
+  border-color: #00C2FF !important;
 }
 #gerarTreinoScreen .gt-obj-card.selected .gt-obj-icon {
   background: rgba(0,194,255,.22);
@@ -9478,16 +9478,16 @@ p,
 #gerarTreinoScreen .gt-obj-card.selected .gt-obj-name { color: #bcd8ff; }
 
 #gerarTreinoScreen .gt-day-btn.selected {
-  background: rgba(0,194,255,.16);
-  border-color: #00C2FF;
-  color: #bcd8ff;
+  background: rgba(0,194,255,.16) !important;
+  border-color: #00C2FF !important;
+  color: #bcd8ff !important;
 }
 
 #gerarTreinoScreen .gt-equip-select option { background: #060F1D; }
 
 #gerarTreinoScreen .gt-tipo-card.selected {
-  background: rgba(0,194,255,.10);
-  border-color: rgba(0,194,255,.50);
+  background: rgba(0,194,255,.12) !important;
+  border-color: rgba(0,194,255,.60) !important;
 }
 #gerarTreinoScreen .gt-tipo-icon {
   background: rgba(0,194,255,.12);
