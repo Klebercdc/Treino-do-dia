@@ -17623,9 +17623,9 @@ function geUpdateField(field, delta) {
   if (!row) return;
   const inputs = row.querySelectorAll('input');
   let input, step, min, max;
-  if      (field === 'kg')   { input = inputs[0]; step = 2.5; min = 0;   max = 500; }
+  if      (field === 'kg')   { input = inputs[0]; step = 5;   min = 0;   max = 500; }
   else if (field === 'reps') { input = inputs[1]; step = 1;   min = 1;   max = 100; }
-  else if (field === 'rpe')  { input = inputs[2]; step = 0.5; min = 0;   max = 10;  }
+  else if (field === 'rpe')  { input = inputs[2]; step = 1;   min = 0;   max = 10;  }
   if (!input) return;
   const cur  = parseFloat(input.value !== '' ? input.value : (input.placeholder || '0')) || 0;
   const next = parseFloat(Math.min(max, Math.max(min, cur + delta * step)).toFixed(1));
