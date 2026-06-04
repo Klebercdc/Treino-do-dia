@@ -1,3 +1,5 @@
+export type UserProfile = 'bodybuilder' | 'beginner'
+
 // Sports/bodybuilding performance thresholds — distinct from general population references.
 // Athletes (especially hormonalized) require tighter ranges than standard clinical cutoffs.
 // Source of truth for labRules.ts numeric thresholds.

@@ -1,6 +1,7 @@
 import type { BiomarkerEntry, ClinicalRuleResult, HealthPerformanceProfile, ParsedLabReport } from './labTypes'
 import { buildHealthPerformanceProfile } from './labHealthProfile'
 import { SPORTS_THRESHOLDS as ST } from './benchmarks'
+import type { UserProfile } from './benchmarks'
 
 function hasValue(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value)
@@ -184,7 +185,7 @@ export function parsedFromBiomarkers(biomarkers: BiomarkerEntry[]): ParsedLabRep
  * Derive clinical flags directly from a BiomarkerEntry list.
  * Builds ParsedLabReport then applies clinical rules.
  */
-export function applyClinicalRulesFromBiomarkers(biomarkers: BiomarkerEntry[]): ClinicalRuleResult {
+export function applyClinicalRulesFromBiomarkers(biomarkers: BiomarkerEntry[], _userProfile?: UserProfile): ClinicalRuleResult {
   const parsed = parsedFromBiomarkers(biomarkers)
   const fallback = applyClinicalRules(parsed)
   const byKey = new Map(biomarkers.map((item) => [item.marker_key, item] as const))
