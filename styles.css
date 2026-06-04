@@ -6732,6 +6732,36 @@ body.dark-mode .settings-row-value {
   border-radius: 18px;
   padding: 16px;
 }
+.treino-choice-quick-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.treino-choice-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.treino-choice-quick-btn:active { transform: scale(.96); }
+.treino-choice-quick-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .diet-choice-hint-icon {
   width: 40px;
   height: 40px;
@@ -8441,6 +8471,145 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
   transition: background .15s;
 }
 .bio-ver-btn:active { background: rgba(37,99,235,0.18); }
+
+/* ── Biomarcadores v2 — grid layout ─────── */
+.bio-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.bio-section-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.bio-section-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2dd4bf;
+}
+.bio-ver-todos-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2dd4bf;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+.bio-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bio-card2 {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 14px;
+}
+.bio-card2-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bio-card2-name {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  line-height: 1;
+}
+.bio-dot2 {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.bio-dot2--normal  { background: #10b981; }
+.bio-dot2--atencao { background: #f59e0b; }
+.bio-dot2--critico { background: #ef4444; }
+.bio-card2-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.bio-card2-val {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+.bio-card2-unit {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+}
+.bio-card2-status { font-size: 0.72rem; font-weight: 800; }
+.bio-card2-status--normal  { color: #10b981; }
+.bio-card2-status--atencao { color: #f59e0b; }
+.bio-card2-status--critico { color: #ef4444; }
+
+/* Histórico list */
+.bio-hist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bio-hist-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(45,212,191,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bio-hist-info { flex: 1; min-width: 0; }
+.bio-hist-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bio-hist-date {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+}
+.bio-hist-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.bio-hist-badge--analisado {
+  background: rgba(45,212,191,0.1);
+  color: #2dd4bf;
+  border: 1px solid rgba(45,212,191,0.2);
+}
+.bio-hist-badge--atencao {
+  background: rgba(245,158,11,0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.2);
+}
 
 /* ══════════════════════════════════════════
    PERFIL — HERO REDESIGN

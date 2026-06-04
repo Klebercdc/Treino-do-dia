@@ -785,10 +785,6 @@
         <button id="kroniaAdaptationIgnore" style="padding:10px 16px;background:var(--bg2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:0.82rem;cursor:pointer" onclick="resolveAdaptation('reject')">Ignorar</button>
       </div>
     </div>
-    <button class="btn-respira" onclick="abrirRespiracao()">
-      <i data-lucide="circle-dashed" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
-      Respiração &amp; Cool-down
-    </button>
     <button class="btn-share-rel" onclick="compartilharRelatorio()">
       <i data-lucide="share-2" class="lucide" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       Compartilhar Relatório
@@ -806,54 +802,6 @@
 
 <!-- Breathing Modal -->
 
-<div id="breathingModal">
-  <div class="breath-title">RESPIRAÇÃO</div>
-  <div class="breath-sub">BOX BREATHING · COOL-DOWN</div>
-  <div class="breath-phase-label" id="breathPhase">Prepare-se</div>
-  <div class="breath-circle-wrap">
-    <div id="breathCircle">
-      <div class="breath-count" id="breathCount">4</div>
-    </div>
-  </div>
-  <div class="breath-cycles-label" id="breathCycles">Ciclo 1 de 5</div>
-  <button class="breath-btn-close" onclick="fecharRespiracao()">Encerrar</button>
-</div>
-
-<!-- Mesociclo Sheet -->
-
-<div class="bottom-sheet" id="mesocicloSheet" onclick="if(event.target===this)fecharMesociclo()">
-  <div class="bs-box" style="max-height:90vh;overflow-y:auto">
-    <div class="bs-handle"></div>
-    <div class="bs-title">Gerador de Mesociclo</div>
-    <div class="bs-sub" style="font-size:.75rem;color:var(--muted);margin-bottom:16px">Planeje seu bloco de treinamento</div>
-
-```
-<span class="bs-label">Duração</span>
-<div class="bs-chips" id="mesoDurChips" style="margin-bottom:12px">
-  <div class="bs-chip active" data-val="4"  onclick="selectMesoChip(this,'dur')">4 sem</div>
-  <div class="bs-chip"        data-val="6"  onclick="selectMesoChip(this,'dur')">6 sem</div>
-  <div class="bs-chip"        data-val="8"  onclick="selectMesoChip(this,'dur')">8 sem</div>
-  <div class="bs-chip"        data-val="12" onclick="selectMesoChip(this,'dur')">12 sem</div>
-</div>
-<span class="bs-label">Objetivo</span>
-<div class="bs-chips" id="mesoObjChips" style="margin-bottom:20px">
-  <div class="bs-chip active" data-val="hipertrofia" onclick="selectMesoChip(this,'obj')">Hipertrofia</div>
-  <div class="bs-chip"        data-val="forca"       onclick="selectMesoChip(this,'obj')">Força</div>
-  <div class="bs-chip"        data-val="definicao"   onclick="selectMesoChip(this,'obj')">Definição</div>
-  <div class="bs-chip"        data-val="performance" onclick="selectMesoChip(this,'obj')">Performance</div>
-</div>
-<button onclick="gerarMesociclo()" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;margin-bottom:16px">Gerar Plano</button>
-
-<div id="mesoVisualizacao" style="display:none">
-  <div id="mesoFases" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-  <div id="mesoGrid"></div>
-  <button onclick="salvarMesociclo()" style="width:100%;padding:12px;margin-top:12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:var(--r);font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer">Salvar Mesociclo</button>
-</div>
-<div style="height:16px"></div>
-```
-
-  </div>
-</div>
 
 <!-- Modal: Check-in de disposição -->
 
@@ -1131,7 +1079,7 @@
   <div class="home-hero-grid">
 
     <!-- Card TREINO -->
-    <div class="home-hero-card home-hero-treino k-pressable" onclick="openTreinoChoiceScreen()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0" style="overflow:hidden;">
+    <div class="home-hero-card home-hero-treino k-pressable" onclick="openTreinoChoiceScreen()" role="button" tabindex="0" style="overflow:hidden;">
       <div class="home-hero-glow home-hero-glow--orange"></div>
       <img src="assets/3d/fig-treino.png" alt="" draggable="false" aria-hidden="true"
         style="position:absolute;bottom:-4px;right:-6px;height:90%;width:auto;object-fit:contain;
@@ -1175,7 +1123,7 @@
 
   </div>
 
-  <!-- IA ROW — KRONOS + KRONIA lado a lado -->
+  <!-- IA ROW — KRONOS + EXAMES -->
   <div class="home-section-title">Inteligência IA</div>
   <div style="display:flex;gap:10px;padding:0 16px 16px">
 
@@ -1191,50 +1139,30 @@
         </div>
       </div>
       <div id="kronosDica" class="kronos-ai-tip">DICA DO KRONOS:<br>FOCO NA TÉCNICA HOJE</div>
-      <!-- CTA Chat -->
       <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,194,255,.14);border:1px solid rgba(0,194,255,.32);color:#bcd8ff;font-family:var(--display);font-size:0.62rem;font-weight:900;letter-spacing:.07em;padding:6px 11px;border-radius:99px">
         <i data-lucide="message-circle" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"></i>
         INICIAR CHAT
       </div>
     </div>
 
-    <!-- KRONIA Evolution Tools -->
-    <div onclick="openTransformsScreen()" class="kronia-tools-card k-pressable">
+    <!-- Exames IA -->
+    <div onclick="openBiomarcadores()" class="kronia-tools-card k-pressable">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
-        <div class="kronia-tools-icon-wrap" style="width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#0891b2,#0e7490);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(8,145,178,0.4)">
-          <i data-lucide="trending-up" class="lucide kronia-tools-icon" width="18" height="18" stroke="#fff" fill="none" stroke-width="2"></i>
+        <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(37,99,235,0.4)">
+          <i data-lucide="flask-conical" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.9"></i>
         </div>
         <div>
-          <div class="kronia-tools-title">KRONIA</div>
-          <div class="kronia-tools-subtitle">EVOLUTION TOOLS</div>
+          <div class="kronia-tools-title">EXAMES</div>
+          <div class="kronia-tools-subtitle">ANÁLISE CLÍNICA</div>
         </div>
       </div>
-      <div class="kronia-tools-tip">DASHBOARD DE EVOLUÇÃO:<br>CARGA, FADIGA E PROGRESSO</div>
-      <!-- Mini line chart -->
-      <svg width="100%" height="36" viewBox="0 0 100 36" preserveAspectRatio="none" style="display:block;margin-bottom:6px;opacity:0.85">
-        <polyline points="0,28 15,22 30,26 45,14 60,18 75,8 90,12 100,6" fill="none" stroke="#6B4EFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline points="0,28 15,22 30,26 45,14 60,18 75,8 90,12 100,6 100,36 0,36" fill="url(#kroniGrad)" opacity="0.25"/>
-        <defs><linearGradient id="kroniGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6B4EFF"/><stop offset="100%" stop-color="transparent"/></linearGradient></defs>
-      </svg>
-    </div>
-
-  </div>
-
-  <div class="home-labs-cta-card" onclick="openLabsUploadScreen('home_cta_card')">
-    <div class="home-labs-cta-badge">Novo no KRONOS IA</div>
-    <div style="display:flex;align-items:flex-start;gap:12px">
-      <div class="home-labs-cta-icon">
-        <i data-lucide="flask-conical" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.9"></i>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div class="home-labs-cta-title">Envie seus exames e destrave uma análise clínica da IA</div>
-        <div class="home-labs-cta-sub">Faça upload do PDF/JPEG/PNG e o KRONOS personaliza dieta e treino com seus biomarcadores.</div>
+      <div class="kronia-tools-tip">BIOMARCADORES:<br>TREINO E DIETA PERSONALIZADOS</div>
+      <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(37,99,235,.14);border:1px solid rgba(37,99,235,.32);color:#93c5fd;font-family:var(--display);font-size:0.62rem;font-weight:900;letter-spacing:.07em;padding:6px 11px;border-radius:99px">
+        <i data-lucide="activity" class="lucide" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"></i>
+        VER
       </div>
     </div>
-    <button class="home-labs-cta-btn" type="button" onclick="event.stopPropagation();openLabsUploadScreen('home_cta_button')">
-      Enviar exames agora
-      <i data-lucide="arrow-up-right" class="lucide" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2"></i>
-    </button>
+
   </div>
 
   <!-- ═══ KRONOS INTELLIGENCE INSIGHTS ═══ -->
@@ -1382,27 +1310,6 @@
       <div class="home-tool-name">Calculadora Basal</div>
       <div class="home-tool-sub">TMB e TDEE personalizados</div>
     </div>
-    <div class="home-tool-card" onclick="navTo('orientacao');openOrientacao();setTimeout(()=>orientExpertQuick('analise'),400)">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
-        <i data-lucide="bar-chart-3" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Análise de Treino</div>
-      <div class="home-tool-sub">Feedback baseado no seu histórico</div>
-    </div>
-    <div class="home-tool-card" onclick="abrirRespiracao()">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#0ea5e9,#0369a1)">
-        <i data-lucide="circle-dashed" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Respiração</div>
-      <div class="home-tool-sub">Box breathing · cool-down · 5 ciclos</div>
-    </div>
-    <div class="home-tool-card" onclick="abrirMesociclo()">
-      <div class="home-tool-icon" style="background:linear-gradient(145deg,#a855f7,#7c3aed)">
-        <i data-lucide="calendar" class="lucide" width="24" height="24" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div class="home-tool-name">Mesociclo</div>
-      <div class="home-tool-sub">Plano visual de 4–12 semanas</div>
-    </div>
   </div>
 
   <div id="turistaBanner" style="display:none;margin:0 16px 4px;background:linear-gradient(135deg,rgba(14,165,233,0.15),rgba(56,189,248,0.08));border:1px solid rgba(14,165,233,0.3);border-radius:16px;padding:16px 18px;">
@@ -1421,69 +1328,6 @@
 
   <div class="home-section-title">Meus Desafios</div>
   <div style="padding:0 16px 4px" id="desafiosSection"></div>
-
-  <div class="home-section-title">Acesso rápido</div>
-  <div class="home-quick-grid" style="gap:12px;padding:0 16px 16px">
-    <div class="home-quick-card k-pressable" onclick="openTreinoChoiceScreen()" data-kronia-open="kronos-workout-entry" role="button" tabindex="0">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
-        <i data-lucide="dumbbell" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Gerar Treino</div>
-        <div class="home-quick-sub">KRONOS IA</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="closeHome();showEvoChart()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
-        <i data-lucide="trending-up" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Evolução</div>
-        <div class="home-quick-sub">Gráficos e PRs</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="closeHome();verHistorico()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
-        <i data-lucide="clock" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Histórico</div>
-        <div class="home-quick-sub">Sessões anteriores</div>
-      </div>
-    </div>
-    <div class="home-quick-card k-pressable" onclick="openInstrucoes()">
-      <div class="home-quick-icon" style="background:linear-gradient(145deg,#2563EB,#c2410c)">
-        <i data-lucide="help-circle" class="lucide" width="22" height="22" stroke="#fff" fill="none" stroke-width="1.75"></i>
-      </div>
-      <div>
-        <div class="home-quick-name">Como Usar</div>
-        <div class="home-quick-sub">Guia completo e vantagens do app</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ÚLTIMA CONQUISTA + TREINO RECOMENDADO — lado a lado -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 20px">
-
-    <!-- AchievementCard -->
-    <div class="achievement-card" id="achievementCard">
-      <div class="achievement-card-title">ÚLTIMA CONQUISTA</div>
-      <div style="display:flex;align-items:center;justify-content:center;padding:10px 0">
-        <div style="font-size:2rem">🏆</div>
-      </div>
-      <div class="achievement-card-desc" id="achievementDesc">Sua conquista</div>
-    </div>
-
-    <!-- RecommendedWorkoutCard -->
-    <div class="recommended-card" onclick="openStartWorkoutScreen()" id="recommendedWorkoutCard">
-      <div class="achievement-card-title">TREINO RECOMENDADO</div>
-      <div class="recommended-card-thumb">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(59,130,246,0.7)" stroke-width="1.5" stroke-linecap="round"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
-      </div>
-      <div class="achievement-card-desc" id="recommendedWorkoutDesc">Treino A:<br>Foco força superior</div>
-    </div>
-
-  </div>
 
   <div style="height:120px"></div>
 </div>
@@ -1556,6 +1400,7 @@
         <i data-lucide="chevron-right" width="14" height="14"></i>
       </button>
     </div>
+
   </div>
 </div>
 
@@ -2818,6 +2663,20 @@
           <i data-lucide="chevron-right" width="16" height="16" stroke="rgba(255,255,255,0.3)" fill="none" stroke-width="2"></i>
         </div>
       </div>
+      <div class="treino-choice-quick-row" style="margin-top:16px">
+        <div class="treino-choice-quick-btn k-pressable" onclick="closeGerarTreino();closeHome();showEvoChart()">
+          <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#22c55e,#15803d)">
+            <i data-lucide="trending-up" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span>Evolução</span>
+        </div>
+        <div class="treino-choice-quick-btn k-pressable" onclick="closeGerarTreino();closeHome();verHistorico()">
+          <div class="treino-choice-quick-icon" style="background:linear-gradient(145deg,#3b82f6,#1d4ed8)">
+            <i data-lucide="clock" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.75"></i>
+          </div>
+          <span>Histórico</span>
+        </div>
+      </div>
     </div>
 
     <!-- ── TREINO COMPLETO ──────────────────────── -->
@@ -3537,152 +3396,115 @@
      BIOMARCADORES
 ══════════════════════════════════════════ -->
 <div id="biomarcadoresScreen">
+  <!-- Header -->
   <div class="bio-header">
     <div class="bio-title-row">
       <button class="bio-back-btn" onclick="closeBiomarcadores()">
         <i data-lucide="chevron-left" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.75"></i>
       </button>
-      <div class="bio-screen-title">Biomarcadores</div>
-      <div style="width:34px"></div>
-    </div>
-    <div class="bio-tabs">
-      <button class="bio-tab active" onclick="bioSetTab('geral',this)">Visão Geral</button>
-      <button class="bio-tab" onclick="bioSetTab('exames',this)">Exames</button>
-      <button class="bio-tab" onclick="bioSetTab('historico',this)">Histórico</button>
+      <div class="bio-screen-title">Exames</div>
+      <button onclick="closeBiomarcadores();openLabsUploadScreen('bio_upload')" style="background:none;border:none;color:#2dd4bf;font-family:var(--font);font-size:0.72rem;font-weight:700;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent">Enviar</button>
     </div>
   </div>
 
   <div class="bio-scroll app-scroll" id="bioScroll">
-    <div id="bioGeralContent">
 
+    <!-- Biomarcadores section -->
+    <div class="bio-section-head">
+      <span class="bio-section-title">Biomarcadores</span>
+      <span class="bio-section-tag">Painel Hormonal</span>
+    </div>
+
+    <div class="bio-grid">
       <!-- Testosterona -->
-      <div class="bio-marker-card">
-        <div class="bio-marker-left">
-          <div class="bio-marker-name">Testosterona Total</div>
-          <div>
-            <span class="bio-marker-val" id="bioTestoVal">620</span>
-            <span class="bio-marker-unit"> ng/dL</span>
-          </div>
-          <div class="bio-trend-up" id="bioTestoTrend">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-            12%
-          </div>
+      <div class="bio-card2">
+        <div class="bio-card2-top">
+          <span class="bio-card2-name">Testosterona</span>
+          <span class="bio-dot2 bio-dot2--normal" id="bioTestoDot"></span>
         </div>
-        <div class="bio-marker-right">
-          <svg class="bio-sparkline" viewBox="0 0 64 28">
-            <polyline points="0,20 10,18 20,22 30,14 40,12 54,8 64,6" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="0,20 10,18 20,22 30,14 40,12 54,8 64,6 64,28 0,28" fill="rgba(16,185,129,0.12)"/>
-          </svg>
-          <span class="bio-status-badge otimo">Ótimo</span>
+        <div class="bio-card2-val-row">
+          <span class="bio-card2-val" id="bioTestoVal">680</span>
+          <span class="bio-card2-unit">ng/dL</span>
         </div>
+        <span class="bio-card2-status bio-card2-status--normal" id="bioTestoStatus">Normal</span>
       </div>
 
-      <!-- Vitamina D -->
-      <div class="bio-marker-card">
-        <div class="bio-marker-left">
-          <div class="bio-marker-name">Vitamina D</div>
-          <div>
-            <span class="bio-marker-val" id="bioVitDVal">42</span>
-            <span class="bio-marker-unit"> ng/mL</span>
-          </div>
-          <div class="bio-trend-up" id="bioVitDTrend">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-            15%
-          </div>
+      <!-- TSH -->
+      <div class="bio-card2">
+        <div class="bio-card2-top">
+          <span class="bio-card2-name">TSH</span>
+          <span class="bio-dot2 bio-dot2--normal" id="bioTSHDot"></span>
         </div>
-        <div class="bio-marker-right">
-          <svg class="bio-sparkline" viewBox="0 0 64 28">
-            <polyline points="0,22 12,20 24,18 36,15 48,12 56,9 64,7" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="0,22 12,20 24,18 36,15 48,12 56,9 64,7 64,28 0,28" fill="rgba(16,185,129,0.12)"/>
-          </svg>
-          <span class="bio-status-badge otimo">Ótimo</span>
+        <div class="bio-card2-val-row">
+          <span class="bio-card2-val" id="bioTSHVal">2,1</span>
+          <span class="bio-card2-unit">mUI/L</span>
         </div>
+        <span class="bio-card2-status bio-card2-status--normal" id="bioTSHStatus">Normal</span>
+      </div>
+
+      <!-- Hemoglobina -->
+      <div class="bio-card2">
+        <div class="bio-card2-top">
+          <span class="bio-card2-name">Hemoglobina</span>
+          <span class="bio-dot2 bio-dot2--normal" id="bioHemoDot"></span>
+        </div>
+        <div class="bio-card2-val-row">
+          <span class="bio-card2-val" id="bioHemoVal">15,2</span>
+          <span class="bio-card2-unit">g/dL</span>
+        </div>
+        <span class="bio-card2-status bio-card2-status--normal" id="bioHemoStatus">Normal</span>
       </div>
 
       <!-- Ferritina -->
-      <div class="bio-marker-card">
-        <div class="bio-marker-left">
-          <div class="bio-marker-name">Ferritina</div>
-          <div>
-            <span class="bio-marker-val" id="bioFerritinaVal">106</span>
-            <span class="bio-marker-unit"> ng/mg</span>
-          </div>
-          <div class="bio-trend-up" id="bioFerritinaTrend">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-            8%
-          </div>
+      <div class="bio-card2">
+        <div class="bio-card2-top">
+          <span class="bio-card2-name">Ferritina</span>
+          <span class="bio-dot2 bio-dot2--atencao" id="bioFerritinaDot"></span>
         </div>
-        <div class="bio-marker-right">
-          <svg class="bio-sparkline" viewBox="0 0 64 28">
-            <polyline points="0,24 10,22 22,20 32,18 44,16 54,13 64,11" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="0,24 10,22 22,20 32,18 44,16 54,13 64,11 64,28 0,28" fill="rgba(37,99,235,0.12)"/>
-          </svg>
-          <span class="bio-status-badge bom">Bom</span>
+        <div class="bio-card2-val-row">
+          <span class="bio-card2-val" id="bioFerritinaVal">38</span>
+          <span class="bio-card2-unit">ng/mL</span>
         </div>
+        <span class="bio-card2-status bio-card2-status--atencao" id="bioFerritinaStatus">Atenção</span>
       </div>
 
-      <!-- Cortisol -->
-      <div class="bio-marker-card">
-        <div class="bio-marker-left">
-          <div class="bio-marker-name">Cortisol (Manhã)</div>
-          <div>
-            <span class="bio-marker-val" id="bioCortisolVal">9.1</span>
-            <span class="bio-marker-unit"> μg/dL</span>
-          </div>
-          <div class="bio-trend-up" id="bioCortisolTrend">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-            5%
-          </div>
+      <!-- Vitamina D -->
+      <div class="bio-card2">
+        <div class="bio-card2-top">
+          <span class="bio-card2-name">Vitamina D</span>
+          <span class="bio-dot2 bio-dot2--atencao" id="bioVitDDot"></span>
         </div>
-        <div class="bio-marker-right">
-          <svg class="bio-sparkline" viewBox="0 0 64 28">
-            <polyline points="0,18 12,16 24,20 36,14 46,16 56,13 64,11" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="0,18 12,16 24,20 36,14 46,16 56,13 64,11 64,28 0,28" fill="rgba(37,99,235,0.12)"/>
-          </svg>
-          <span class="bio-status-badge bom">Bom</span>
+        <div class="bio-card2-val-row">
+          <span class="bio-card2-val" id="bioVitDVal">28</span>
+          <span class="bio-card2-unit">ng/mL</span>
         </div>
+        <span class="bio-card2-status bio-card2-status--atencao" id="bioVitDStatus">Atenção</span>
       </div>
 
-      <!-- PCR -->
-      <div class="bio-marker-card">
-        <div class="bio-marker-left">
-          <div class="bio-marker-name">PCR Ultrassensível</div>
-          <div>
-            <span class="bio-marker-val" id="bioPCRVal">0.8</span>
-            <span class="bio-marker-unit"> mg/L</span>
-          </div>
-          <div class="bio-trend-up" id="bioPCRTrend">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
-            20%
-          </div>
+      <!-- Glicose -->
+      <div class="bio-card2">
+        <div class="bio-card2-top">
+          <span class="bio-card2-name">Glicose</span>
+          <span class="bio-dot2 bio-dot2--normal" id="bioGlicoseDot"></span>
         </div>
-        <div class="bio-marker-right">
-          <svg class="bio-sparkline" viewBox="0 0 64 28">
-            <polyline points="0,10 10,12 22,14 32,16 42,12 54,9 64,7" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="0,10 10,12 22,14 32,16 42,12 54,9 64,7 64,28 0,28" fill="rgba(16,185,129,0.12)"/>
-          </svg>
-          <span class="bio-status-badge otimo">Ótimo</span>
+        <div class="bio-card2-val-row">
+          <span class="bio-card2-val" id="bioGlicoseVal">92</span>
+          <span class="bio-card2-unit">mg/dL</span>
         </div>
+        <span class="bio-card2-status bio-card2-status--normal" id="bioGlicoseStatus">Normal</span>
       </div>
-
-      <button class="bio-ver-btn" onclick="closeBiomarcadores();openLabsUploadScreen('bio_screen')">
-        VER TODOS OS EXAMES
-        <i data-lucide="arrow-up-right" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"></i>
-      </button>
-      <div style="height:20px"></div>
     </div>
 
-    <!-- Exames placeholder -->
-    <div id="bioExamesContent" style="display:none;padding:40px 0;text-align:center">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 12px"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <div style="font-size:0.82rem;color:rgba(255,255,255,0.25);margin-bottom:14px">Nenhum exame enviado</div>
-      <button onclick="closeBiomarcadores();openLabsUploadScreen('bio_exames')" style="background:var(--accent);border:none;border-radius:12px;padding:10px 20px;color:#fff;font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer">Enviar exame</button>
+    <!-- Histórico section -->
+    <div class="bio-section-head" style="margin-top:24px">
+      <span class="bio-section-title">Histórico</span>
+      <button class="bio-ver-todos-btn" onclick="closeBiomarcadores();openLabsUploadScreen('bio_screen')">Ver todos</button>
+    </div>
+    <div id="bioHistList">
+      <div style="color:rgba(255,255,255,0.25);font-size:0.75rem;text-align:center;padding:20px 0">Carregando…</div>
     </div>
 
-    <!-- Histórico placeholder -->
-    <div id="bioHistoricoContent" style="display:none;padding:40px 0;text-align:center">
-      <div style="font-size:0.82rem;color:rgba(255,255,255,0.25)">Histórico disponível após enviar exames</div>
-    </div>
+    <div style="height:100px"></div>
   </div>
 </div>
 

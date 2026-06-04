@@ -1,0 +1,233 @@
+================================================================================
+RELATÓRIO DE MUDANÇA — feat(labs): thresholds esportivos e marcadores musculares
+Branch: claude/kronia-guided-execution-layout-AXhCs
+Commit: 7990a9d
+Data: 2026-06-03
+================================================================================
+
+
+PROBLEMA
+--------
+O pipeline de avaliação de exames usava limiares da população geral (clínicos),
+não limiares específicos para atletas e usuários hormonizados. Isso causava:
+
+1. Ferritina < 30 ng/mL → flag, mas atleta já está comprometido com < 50
+2. Vitamina D < 30 ng/mL → flag apagado pelo lab_flag quando lab diz "normal"
+3. Testosterona < 350 → não detecta hipogonadismo funcional em atletas (< 400)
+4. Hematócrito sem limite superior → risco de trombose não detectado (> 54%)
+5. Cortisol baixo não detectado → supressão do eixo HPA invisível
+6. E2, SHBG, prolactina sem thresholds numéricos → dependia só do lab_flag
+7. PSA sem regra numérica
+8. CK (dano muscular/rabdomiólise) não extraída pelo OCR
+
+O KRONOS não tinha como detectar esses padrões de risco específicos de
+fisiculturismo e uso de hormônios.
+
+
+SOLUÇÃO
+-------
+Centralizar limiares esportivos em benchmarks.ts e aplicá-los em labRules.ts,
+garantindo que aplyClinicalRules() e applyClinicalRulesFromBiomarkers() gerem
+as flags corretas para a audiência alvo.
+
+Adicionar CK-Total, CK-MB e LDH ao catálogo de biomarcadores do OCR.
+
+
+================================================================================
+MIGRATION — NÃO HÁ NOVA MIGRATION NESTA IMPLEMENTAÇÃO
+================================================================================
+
+A migration desta sessão foi a do commit anterior (a40841b):
+
+  supabase/migrations/20260603120000_lab_reports_exam_date.sql
+
+  ---- INÍCIO DO SQL ----
+
+  -- Adiciona coluna exam_date em lab_reports
+  ALTER TABLE lab_reports
+    ADD COLUMN IF NOT EXISTS exam_date DATE;
+
+  -- Índice para ordenação eficiente por usuário + data do exame
+  CREATE INDEX IF NOT EXISTS idx_lab_reports_exam_date
+    ON lab_reports (user_id, exam_date DESC NULLS LAST);
+
+  ---- FIM DO SQL ----
+
+Esta migration AINDA PRECISA ser aplicada no Supabase se ainda não foi.
+As mudanças desta sessão (labRules.ts, benchmarks.ts, biomarkers.py) são
+apenas código — sem schema novo.
+
+
+================================================================================
+ARQUIVOS ALTERADOS (commit 7990a9d)
+================================================================================
+
+1. src/core/labs/benchmarks.ts  ← NOVO
+   Fonte única de verdade para limiares esportivos/fisiculturismo.
+   Exporta SPORTS_THRESHOLDS (const) com:
+
+   ferritin:           critical_low=20, attention_low=50
+   vitamin_d:          critical_low=20, attention_low=40
+   testosterone_total: attention_low=400
+   cortisol:           critical_low=10, attention_high=25
+   hematocrit:         attention_high=52, critical_high=54
+   estradiol:          attention_low=15, attention_high=60
+   shbg:               attention_high=60
+   prolactin:          attention_high=25, critical_high=50
+   psa_total:          attention_high=4
+   ck_total:           attention_high=5000, critical_high=10000
+   hdl:                critical_low=25
+   creatinine:         attention_high=1.5
+
+2. src/core/labs/labTypes.ts
+   - ParsedLabReport: adiciona campo ck_total: number | null
+
+3. src/core/labs/labRules.ts
+   a) Importa SPORTS_THRESHOLDS as ST de benchmarks.ts
+   b) applyClinicalRules() — novas/alteradas regras:
+
+   LIPÍDIOS:
+     [NOVO CRÍTICO]   HDL < 25   → hdl_critical
+
+   RIM:
+     [NOVO ATENÇÃO]   creatinina >= 1.5   → creatinine_elevated
+     (mantém kidney_alert em >= 2.0)
+
+   HEMATOLÓGICO:
+     [ALTERADO] ferritina < 50 (era 30) → low_ferritin
+     [NOVO ATENÇÃO] hematócrito > 52   → hematocrit_attention
+     [NOVO CRÍTICO]  ferritina < 20    → ferritin_critical
+     [NOVO CRÍTICO]  hematócrito > 54  → hematocrit_critical ← INEGOCIÁVEL
+
+   HORMONAL:
+     [ALTERADO] testosterona < 400 (era 350) → low_testosterone
+     [ALTERADO] cortisol > 25 (sem mudança de valor) → high_cortisol
+     [NOVO ATENÇÃO] cortisol < 10             → cortisol_low_hpa
+     [NOVO ATENÇÃO] estradiol < 15            → low_estradiol_sports
+     [NOVO ATENÇÃO] estradiol > 60            → high_estradiol_sports
+     [NOVO ATENÇÃO] SHBG > 60                → high_shbg_free_t_impact
+     [NOVO ATENÇÃO] prolactina > 25           → prolactin_elevated
+     [NOVO CRÍTICO]  prolactina > 50          → prolactin_critical
+     [NOVO ATENÇÃO] PSA total > 4             → psa_elevated
+
+   DANO MUSCULAR (nova seção):
+     [NOVO ATENÇÃO] CK-Total > 5000    → ck_rhabdo_risk
+     [NOVO CRÍTICO]  CK-Total > 10000  → ck_rhabdo_critical
+
+   MICRONUTRIENTES:
+     [ALTERADO] vitamina D < 40 (era 30) → low_vitamin_d
+     [NOVO CRÍTICO]  vitamina D < 20    → vitamin_d_critical
+
+   c) applyClinicalRulesFromBiomarkers() — fix vitamina D:
+     Antes: apagava low_vitamin_d se lab_flag != 'low'
+            (lab usa ref < 20, código usa < 40 → flag sempre apagada)
+     Depois: preserva low_vitamin_d se lab_flag == 'low' OU valor < 40
+
+   d) parsedFromBiomarkers(): mapeia ck_total → get('ck_total')
+
+4. services/exam_ocr/normalizers/biomarkers.py
+   Nova seção 8 — ENZIMAS MUSCULARES:
+
+   ck_total (Creatinofosfoquinase Total / CK-Total):
+     aliases: creatinoquinase total, creatinofosfoquinase total,
+              creatina quinase total, creatina fosfoquinase total,
+              ck total, ck-total, cpk total, cpk,
+              creatine kinase total, creatine phosphokinase total
+
+   ck_mb (CK-MB):
+     aliases: creatinoquinase mb, creatina quinase mb, ck-mb, ck mb,
+              creatine kinase mb, ck frac mb
+
+   ldh (Desidrogenase Lática):
+     aliases: desidrogenase latica, lactato desidrogenase, ldh,
+              lactic dehydrogenase, lactic acid dehydrogenase
+
+   Seções antigas renumeradas: 8→10 (inflamação), 9→11 (vitaminas)
+
+
+================================================================================
+FLAGS NOVAS — INTERPRETAÇÃO
+================================================================================
+
+FLAG                       SIGNIFICADO
+----------------------------------------------------------------------------------
+hdl_critical               HDL < 25: risco CV severo (comum em uso de esteroides)
+creatinine_elevated        Creatinina >= 1.5: elevada mesmo para atleta musculoso
+hematocrit_attention       Hematócrito > 52%: eritrocitose, monitorar
+hematocrit_critical        Hematócrito > 54%: risco trombose — ação imediata
+ferritin_critical          Ferritina < 20: deficiência de ferro → anemia
+cortisol_low_hpa           Cortisol < 10: supressão eixo HPA (overtraining ou GC)
+low_estradiol_sports       E2 < 15: libido, articulações, ossos em risco
+high_estradiol_sports      E2 > 60: investigar ginecomastia, retenção hídrica
+high_shbg_free_t_impact    SHBG > 60: testosterona livre comprometida
+prolactin_elevated         Prolactina > 25: investigar 19-nor, adenoma hipofisário
+prolactin_critical         Prolactina > 50: galactorreia, adenoma → não ignorar
+psa_elevated               PSA > 4: investigar próstata (TRT/androgênios)
+vitamin_d_critical         Vitamina D < 20: deficiência severa
+ck_rhabdo_risk             CK > 5000: risco de rabdomiólise
+ck_rhabdo_critical         CK > 10000: rabdomiólise — emergência
+
+
+================================================================================
+CHECKLIST ANTES DO DEPLOY
+================================================================================
+
+MIGRATION (se ainda não aplicada):
+[ ] Executar no Supabase SQL Editor:
+    ALTER TABLE lab_reports ADD COLUMN IF NOT EXISTS exam_date DATE;
+    CREATE INDEX IF NOT EXISTS idx_lab_reports_exam_date
+      ON lab_reports (user_id, exam_date DESC NULLS LAST);
+
+CÓDIGO:
+[ ] Deploy do Next.js/Vercel (labRules.ts, labTypes.ts, benchmarks.ts)
+[ ] Deploy do serviço Python exam_ocr (biomarkers.py atualizado)
+[ ] Deploy da Edge Function lab-report-orchestrator (se alterada)
+
+TESTES:
+[ ] Exame com ferritina = 35: deve gerar low_ferritin (antes não gerava)
+[ ] Exame com ferritina = 18: deve gerar ferritin_critical E low_ferritin
+[ ] Exame com hematócrito = 55: deve gerar hematocrit_critical
+[ ] Exame com hematócrito = 53: deve gerar hematocrit_attention (não critical)
+[ ] Exame com vitamina D = 35: deve gerar low_vitamin_d (antes o lab apagava)
+[ ] Exame com vitamina D = 18: deve gerar vitamin_d_critical E low_vitamin_d
+[ ] Exame com prolactina = 30: deve gerar prolactin_elevated
+[ ] Exame com prolactina = 55: deve gerar prolactin_critical E prolactin_elevated
+[ ] Exame com CK = 8000: deve gerar ck_rhabdo_risk
+[ ] Exame com CK = 12000: deve gerar ck_rhabdo_critical E ck_rhabdo_risk
+[ ] PDF com "CK-Total": OCR deve extrair e persistir marker_key 'ck_total'
+[ ] KRONOS menciona hematócrito alto quando > 54 em usuário TRT
+
+
+================================================================================
+ROLLBACK
+================================================================================
+
+labRules.ts, labTypes.ts, benchmarks.ts:
+  Reverter commit 7990a9d. Nenhum schema foi alterado — rollback seguro
+  sem necessidade de migration reversa.
+
+biomarkers.py:
+  Reverter commit 7990a9d. Exames já processados com CK retêm o dado
+  no normalized_payload, mas sem a flag CK nas regras isso é inerte.
+
+
+================================================================================
+RESUMO DE TODOS OS COMMITS DA SESSÃO
+================================================================================
+
+a40841b — feat(labs): data real do exame via OCR (exam_date)
+           Arquivos: services/exam_ocr/service.py,
+                     services/exam_ocr/schemas.py,
+                     supabase/functions/lab-report-orchestrator/index.ts,
+                     supabase/migrations/20260603120000_lab_reports_exam_date.sql,
+                     src/core/labs/labRepository.ts
+           Migration: APLICAR NO SUPABASE (ver RELATORIO_EXAM_DATE.txt)
+
+7990a9d — feat(labs): thresholds esportivos, hematócrito e marcadores musculares
+           Arquivos: src/core/labs/benchmarks.ts (NOVO),
+                     src/core/labs/labTypes.ts,
+                     src/core/labs/labRules.ts,
+                     services/exam_ocr/normalizers/biomarkers.py
+           Migration: nenhuma necessária
+
+================================================================================

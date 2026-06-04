@@ -1,5 +1,7 @@
 import type { BiomarkerEntry, ClinicalRuleResult, HealthPerformanceProfile, ParsedLabReport } from './labTypes'
 import { buildHealthPerformanceProfile } from './labHealthProfile'
+import { SPORTS_THRESHOLDS as ST } from './benchmarks'
+import type { UserProfile } from './benchmarks'
 
 function hasValue(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value)
@@ -39,6 +41,7 @@ export function applyClinicalRules(parsed?: Partial<ParsedLabReport> | null): Cl
 
   if (hasValue(parsed.ldl) && parsed.ldl >= 160) criticalFlags.add('ldl_alert')
   if (hasValue(parsed.triglycerides) && parsed.triglycerides >= 500) criticalFlags.add('triglycerides_critical')
+  if (hasValue(parsed.hdl) && parsed.hdl < ST.hdl.critical_low) criticalFlags.add('hdl_critical')
 
   // Liver
   if (hasValue(parsed.ast) && parsed.ast > 40) clinicalFlags.add('ast_elevated')
@@ -50,6 +53,7 @@ export function applyClinicalRules(parsed?: Partial<ParsedLabReport> | null): Cl
 
   // Kidney
   if (hasValue(parsed.creatinine) && parsed.creatinine >= 1.3) clinicalFlags.add('creatinine_borderline')
+  if (hasValue(parsed.creatinine) && parsed.creatinine >= ST.creatinine.attention_high) clinicalFlags.add('creatinine_elevated')
   if (hasValue(parsed.potassium) && parsed.potassium > 5) clinicalFlags.add('high_potassium')
   if (hasValue(parsed.uric_acid) && parsed.uric_acid > 6.5) clinicalFlags.add('high_uric_acid')
 
@@ -59,11 +63,14 @@ export function applyClinicalRules(parsed?: Partial<ParsedLabReport> | null): Cl
 
   // Hematologic
   if (hasValue(parsed.hemoglobin) && parsed.hemoglobin < 12.5) clinicalFlags.add('low_hemoglobin')
-  if (hasValue(parsed.ferritin) && parsed.ferritin < 30) clinicalFlags.add('low_ferritin')
+  if (hasValue(parsed.ferritin) && parsed.ferritin < ST.ferritin.attention_low) clinicalFlags.add('low_ferritin')
+  if (hasValue(parsed.hematocrit) && parsed.hematocrit > ST.hematocrit.attention_high) clinicalFlags.add('hematocrit_attention')
   if (hasValue(parsed.vitamin_b12) && parsed.vitamin_b12 < 300) clinicalFlags.add('low_b12')
   if (hasValue(parsed.folate) && parsed.folate < 3) clinicalFlags.add('low_folate')
 
   if (hasValue(parsed.hemoglobin) && parsed.hemoglobin < 8) criticalFlags.add('hemoglobin_critical')
+  if (hasValue(parsed.ferritin) && parsed.ferritin < ST.ferritin.critical_low) criticalFlags.add('ferritin_critical')
+  if (hasValue(parsed.hematocrit) && parsed.hematocrit > ST.hematocrit.critical_high) criticalFlags.add('hematocrit_critical')
 
   // Thyroid
   if (hasValue(parsed.tsh) && parsed.tsh > 4.5) clinicalFlags.add('tsh_elevated')
@@ -72,8 +79,19 @@ export function applyClinicalRules(parsed?: Partial<ParsedLabReport> | null): Cl
   if (hasValue(parsed.tsh) && parsed.tsh > 10) criticalFlags.add('tsh_critical')
 
   // Hormonal
-  if (hasValue(parsed.testosterone_total) && parsed.testosterone_total < 350) clinicalFlags.add('low_testosterone')
-  if (hasValue(parsed.cortisol) && parsed.cortisol > 25) clinicalFlags.add('high_cortisol')
+  if (hasValue(parsed.testosterone_total) && parsed.testosterone_total < ST.testosterone_total.attention_low) clinicalFlags.add('low_testosterone')
+  if (hasValue(parsed.cortisol) && parsed.cortisol > ST.cortisol.attention_high) clinicalFlags.add('high_cortisol')
+  if (hasValue(parsed.cortisol) && parsed.cortisol < ST.cortisol.critical_low) clinicalFlags.add('cortisol_low_hpa')
+  if (hasValue(parsed.estradiol) && parsed.estradiol < ST.estradiol.attention_low) clinicalFlags.add('low_estradiol_sports')
+  if (hasValue(parsed.estradiol) && parsed.estradiol > ST.estradiol.attention_high) clinicalFlags.add('high_estradiol_sports')
+  if (hasValue(parsed.shbg) && parsed.shbg > ST.shbg.attention_high) clinicalFlags.add('high_shbg_free_t_impact')
+  if (hasValue(parsed.prolactin) && parsed.prolactin > ST.prolactin.attention_high) clinicalFlags.add('prolactin_elevated')
+  if (hasValue(parsed.prolactin) && parsed.prolactin > ST.prolactin.critical_high) criticalFlags.add('prolactin_critical')
+  if (hasValue(parsed.psa_total) && parsed.psa_total > ST.psa_total.attention_high) clinicalFlags.add('psa_elevated')
+
+  // Muscle damage
+  if (hasValue(parsed.ck_total) && parsed.ck_total > ST.ck_total.attention_high) clinicalFlags.add('ck_rhabdo_risk')
+  if (hasValue(parsed.ck_total) && parsed.ck_total > ST.ck_total.critical_high) criticalFlags.add('ck_rhabdo_critical')
 
   // Inflammation
   if (hasValue(parsed.crp) && parsed.crp >= 1) clinicalFlags.add('crp_elevated')
@@ -82,8 +100,9 @@ export function applyClinicalRules(parsed?: Partial<ParsedLabReport> | null): Cl
   if (hasValue(parsed.crp) && parsed.crp >= 10) criticalFlags.add('crp_critical')
 
   // Micronutrients
-  if (hasValue(parsed.vitamin_d) && parsed.vitamin_d < 30) clinicalFlags.add('low_vitamin_d')
+  if (hasValue(parsed.vitamin_d) && parsed.vitamin_d < ST.vitamin_d.attention_low) clinicalFlags.add('low_vitamin_d')
   if (hasValue(parsed.zinc) && parsed.zinc < 65) clinicalFlags.add('low_zinc')
+  if (hasValue(parsed.vitamin_d) && parsed.vitamin_d < ST.vitamin_d.critical_low) criticalFlags.add('vitamin_d_critical')
 
   const mode = clinicalFlags.size > 0 || criticalFlags.size > 0 ? 'clinical' : 'standard'
   return {
@@ -158,6 +177,7 @@ export function parsedFromBiomarkers(biomarkers: BiomarkerEntry[]): ParsedLabRep
     zinc: get('zinc'),
     psa_total: get('psa_total'),
     psa_free: get('psa_free'),
+    ck_total: get('ck_total'),
   }
 }
 
@@ -165,7 +185,7 @@ export function parsedFromBiomarkers(biomarkers: BiomarkerEntry[]): ParsedLabRep
  * Derive clinical flags directly from a BiomarkerEntry list.
  * Builds ParsedLabReport then applies clinical rules.
  */
-export function applyClinicalRulesFromBiomarkers(biomarkers: BiomarkerEntry[]): ClinicalRuleResult {
+export function applyClinicalRulesFromBiomarkers(biomarkers: BiomarkerEntry[], _userProfile?: UserProfile): ClinicalRuleResult {
   const parsed = parsedFromBiomarkers(biomarkers)
   const fallback = applyClinicalRules(parsed)
   const byKey = new Map(biomarkers.map((item) => [item.marker_key, item] as const))
@@ -175,7 +195,8 @@ export function applyClinicalRulesFromBiomarkers(biomarkers: BiomarkerEntry[]): 
   const labFlagOf = (key: string) => byKey.get(key)?.lab_flag ?? byKey.get(key)?.flag ?? null
   const contextFlagOf = (key: string) => byKey.get(key)?.context_flag ?? null
 
-  if (labFlagOf('vitamin_d') !== 'low') {
+  // Preserve low_vitamin_d when sports threshold is met (< 40), even if lab ref isn't flagged low
+  if (labFlagOf('vitamin_d') !== 'low' && !(hasValue(parsed.vitamin_d) && parsed.vitamin_d < ST.vitamin_d.attention_low)) {
     clinicalFlags.delete('low_vitamin_d')
   }
 
