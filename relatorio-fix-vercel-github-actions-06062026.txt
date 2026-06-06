@@ -1,0 +1,126 @@
+RELATÓRIO DE CORREÇÃO — VERCEL + GITHUB ACTIONS
+Data: 06/06/2026
+Projeto: KroniA (titanpro.app.br)
+Branch principal: main
+
+=======================================================
+CONTEXTO
+=======================================================
+
+O deploy do Supabase edge function "lab-report-orchestrator" estava
+falhando no GitHub Actions desde o run #24. O motivo era que o Deno
+runtime v1.74.0 passou a exigir extensão .ts explícita em todos os
+imports transitivos de arquivos TypeScript.
+
+Para corrigir, adicionamos .ts nos imports dos módulos do lab. Isso
+introduziu um conflito com o TypeScript do Vercel (TS5096), que levou
+a 4 deploys consecutivos com falha na produção.
+
+=======================================================
+LINHA DO TEMPO DOS ERROS
+=======================================================
+
+COMMIT a52d4f4 (main) — "fix(labs): imports .ts explícitos para Deno"
+  - Corrigiu: labHealthProfile.ts, labInterpretation.ts, canonical.ts
+  - ESQUECEU: labRules.ts (ficou sem .ts nos imports)
+  - Adicionou allowImportingTsExtensions no root tsconfig.json
+  - Resultado Vercel: ERROR — TS5096 disparado globalmente
+    (allowImportingTsExtensions exige noEmit no tsconfig)
+
+COMMIT 3612e01 (main) — "fix(tsconfig): adiciona noEmit:true"
+  - Adicionou noEmit:true no root tsconfig.json
+  - Resultado Vercel: ERROR — noEmit:true impede o Vercel de emitir JS
+    para as serverless functions
+
+COMMIT 3e5a03b (main) — "fix(tsconfig): isola allowImportingTsExtensions"
+  - Criou tsconfig.labs.json (com allowImportingTsExtensions + noEmit)
+  - Restaurou root tsconfig.json ao estado limpo
+  - Scripts lint/build passaram a usar --project tsconfig.labs.json
+  - Resultado Vercel: ERROR — novo erro exposto:
+    TS2741: Property 'ck_total' is missing in EMPTY_PARSED_LAB_REPORT
+    (labValidator.ts:15 — ck_total foi adicionado ao ParsedLabReport
+    mas o objeto de defaults não foi atualizado)
+
+=======================================================
+CORREÇÕES APLICADAS NESTA SESSÃO
+=======================================================
+
+1. labValidator.ts — COMMIT 33ee88c
+   Adicionou ck_total: null ao EMPTY_PARSED_LAB_REPORT.
+   O campo existe em ParsedLabReport (labTypes.ts) desde um commit
+   anterior, mas o validador não foi atualizado junto.
+   → Fix do erro Vercel TS2741.
+
+2. labRules.ts — COMMIT 9781312
+   Adicionou .ts nos 4 imports:
+     ./labTypes     → ./labTypes.ts
+     ./labHealthProfile → ./labHealthProfile.ts
+     ./benchmarks   → ./benchmarks.ts (×2)
+   Este arquivo foi esquecido no fix original (a52d4f4).
+   → Fix do erro GitHub Actions "Module not found labHealthProfile".
+
+3. index.ts (edge function) — COMMITS 3faed20 e 8a72640
+   Toques mínimos em supabase/functions/lab-report-orchestrator/index.ts
+   para disparar novos runs do GitHub Actions após cada fix.
+   (O workflow só aciona em push para supabase/functions/**)
+
+=======================================================
+RESULTADO FINAL
+=======================================================
+
+Vercel (produção)
+  SHA: 8a72640 / 3faed20
+  Status: ✅ READY
+  Deployment ID: dpl_3dZDYLB9f1ttoaqGcf2zkwxf1vmm
+
+GitHub Actions — Deploy Edge Functions
+  Run: #27068866923
+  SHA: 8a72640
+  Status: ✅ success
+  Functions deployadas: telegram-kronia-bot, labs-watchdog,
+                        lab-report-orchestrator
+
+=======================================================
+CAUSA RAIZ
+=======================================================
+
+O commit a52d4f4 corrigiu 3 dos 4 arquivos que precisavam de .ts
+nos imports (labHealthProfile.ts, labInterpretation.ts, canonical.ts),
+mas não incluiu labRules.ts. A feature branch tinha o fix completo
+(a48d035), mas ele nunca foi levado ao main.
+
+=======================================================
+ARQUIVOS MODIFICADOS (MAIN)
+=======================================================
+
+src/core/labs/labRules.ts
+  imports: ./labTypes, ./labHealthProfile, ./benchmarks → com .ts
+
+src/core/labs/labValidator.ts
+  EMPTY_PARSED_LAB_REPORT: adicionado ck_total: null
+
+tsconfig.json
+  restaurado ao estado limpo (sem allowImportingTsExtensions/noEmit)
+
+tsconfig.labs.json (novo)
+  allowImportingTsExtensions: true + noEmit: true
+  includes: src/core/labs/**, src/server/internal/**, tests/**
+
+package.json
+  scripts lint/build: tsc → tsc --project tsconfig.labs.json
+
+supabase/functions/lab-report-orchestrator/index.ts
+  sem alteração funcional (commits de trigger do GitHub Actions)
+
+=======================================================
+DÍVIDA TÉCNICA REGISTRADA
+=======================================================
+
+- labRules.ts e labValidator.ts precisariam de revisão quando
+  labTypes.ts for atualizado (campos novos no ParsedLabReport
+  podem passar despercebidos no objeto de defaults).
+- src/core/nutrition/ e src/lib/nutrition/ ainda em .js — não tocado.
+- Imports .ts nos módulos labs são necessários apenas porque o Deno
+  importa esses arquivos diretamente da edge function. Se no futuro
+  esses módulos forem movidos para um pacote exclusivo Deno, o
+  tsconfig.labs.json pode ser simplificado.
