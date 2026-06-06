@@ -1,14 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type { BiomarkerEntry } from '../../../src/core/labs/labTypes.ts';
-import { buildHealthPerformanceProfile } from '../../../src/core/labs/labHealthProfile.ts';
+import type { BiomarkerEntry } from './labTypes.ts';
+import { buildHealthPerformanceProfile } from './labHealthProfile.ts';
 import {
   enrichBiomarkerEntries,
   extractHormoneContextFromProfileRow,
   summarizeMarkerInterpretations,
-} from '../../../src/core/labs/labInterpretation.ts';
-import { persistCanonicalMachineResult } from '../../../src/server/internal/labReports/canonical.ts';
-import { applyClinicalRulesFromBiomarkers } from '../../../src/core/labs/labRules.ts';
-import type { UserProfile } from '../../../src/core/labs/benchmarks.ts';
+} from './labInterpretation.ts';
+import { persistCanonicalMachineResult } from './canonical.ts';
+import { applyClinicalRulesFromBiomarkers } from './labRules.ts';
+import type { UserProfile } from './benchmarks.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
