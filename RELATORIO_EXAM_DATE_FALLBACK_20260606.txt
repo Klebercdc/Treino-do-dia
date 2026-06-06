@@ -1,0 +1,148 @@
+===========================================================
+RELATÓRIO — FALLBACK DE exam_date NO ORCHESTRATOR
+Projeto: KroniA / Treino-do-dia
+Data: 06/06/2026
+Branch: claude/kronia-guided-execution-layout-AXhCs
+Commit: d80b6ca
+===========================================================
+
+
+------------------------------------------------------------
+1. PROBLEMA RESOLVIDO
+------------------------------------------------------------
+
+Pendência identificada no relatório anterior (seção 6-a):
+
+  "O serviço OCR Python (services/exam_ocr) atualmente NÃO extrai a
+   data de coleta do laudo — por isso os exames chegavam com
+   exam_date NULL."
+
+O orchestrator já gravava `exam_date: ocr.exam_date || null`, mas se
+o OCR não retornasse a data (comportamento atual do serviço Python),
+o campo ficava NULL para todos os uploads futuros.
+
+
+------------------------------------------------------------
+2. SOLUÇÃO IMPLEMENTADA
+------------------------------------------------------------
+
+Arquivo: supabase/functions/lab-report-orchestrator/index.ts
+
+Duas novas funções adicionadas:
+
+  brDateToIso(br: string): string | null
+    Converte "DD/MM/YYYY" → "YYYY-MM-DD".
+    Rejeita datas implausíveis (antes de 2000, além do próximo ano).
+
+  extractExamDateFromRawText(rawText): string | null
+    Extrai data de coleta de forma conservadora do raw_text do OCR.
+
+    Regex única que cobre todos os rótulos de coleta inequívocos:
+      - "Data da Coleta"
+      - "Data de Coleta"
+      - "Data do Exame"
+      - "Realizado em"
+      - "Coleta" (genérico)
+
+    DELIBERADAMENTE AUSENTE: "Data de nascimento", "Data Entrada",
+    "Emissão", "Assinatura" — todos passíveis de capturar data de
+    nascimento em laudos UNIMED (problema documentado no relatório
+    anterior de backfill).
+
+    Regra de ambiguidade: se o raw_text contiver mais de uma data
+    DISTINTA para esses rótulos → retorna null.
+    Só grava quando há exatamente uma data candidata.
+
+  resolveExamDate(ocr: OcrResponse): string | null
+    Aplica a prioridade final:
+      1. ocr.exam_date  (vem direto do OCR Python — mais confiável)
+      2. extractExamDateFromRawText(ocr.raw_text)  (fallback)
+      3. null  (se nenhum encontrar)
+    Loga a fonte usada ("ocr" | "raw_text" | "none") para
+    rastreabilidade nos logs da edge function.
+
+Pontos de aplicação (foram de `ocr.exam_date || null` para
+`resolveExamDate(ocr)`):
+  - buildNormalizedPayload()   — exam_date dentro do JSON do payload
+  - finalizeNeedsReview()      — exam_date na coluna do banco
+  - finalizeAnalyzed()         — exam_date na coluna do banco
+
+
+------------------------------------------------------------
+3. COMPORTAMENTO ESPERADO APÓS O DEPLOY
+------------------------------------------------------------
+
+Cenário A — OCR retorna exam_date (futuro, quando OCR for atualizado):
+  Fonte: "ocr". Nenhuma mudança de comportamento.
+
+Cenário B — OCR NÃO retorna exam_date (comportamento atual):
+  O orchestrator tenta extrair do raw_text.
+  Se encontrar exatamente uma data de coleta → grava corretamente.
+  Se ambíguo ou não encontrar → grava null (seguro, sem invenção).
+
+Cenário C — raw_text ausente ou não tem rótulo de coleta:
+  null. Idêntico ao comportamento anterior.
+
+
+------------------------------------------------------------
+4. VALIDAÇÃO
+------------------------------------------------------------
+
+Build (npm run build): EXIT 0
+  - npx tsc --noEmit: sem erros
+  - esbuild: OK
+  - build-static-public.mjs: public/ gerado (40 arquivos)
+  - force-diet-wizard-6step-build.mjs: OK
+
+Testes unitários (npm run test:labs): 30/30 PASS
+
+Nota: teste de integração real do fallback não é executável neste
+runner headless (requer sessão autenticada + serviço OCR ativo).
+A lógica da função foi validada estruturalmente; o cenário de
+regex está alinhado com o script de backfill já validado em produção.
+
+
+------------------------------------------------------------
+5. PENDÊNCIA DE DEPLOY
+------------------------------------------------------------
+
+O commit está na branch claude/kronia-guided-execution-layout-AXhCs.
+O workflow deploy-edge-functions.yml só dispara automaticamente em
+push para main (path: supabase/functions/**).
+
+O MCP do GitHub retorna 403 para workflow_dispatch — mesma limitação
+da sessão anterior.
+
+AÇÃO MANUAL NECESSÁRIA (uma vez):
+  GitHub → Actions → "Deploy Edge Functions"
+  → Run workflow → branch: claude/kronia-guided-execution-layout-AXhCs
+  → Run
+
+  OU fazer merge da branch para main (auto-dispara o deploy).
+
+
+------------------------------------------------------------
+6. STATUS GERAL DO MÓDULO DE EXAMES
+------------------------------------------------------------
+
+[OK] Fluxo único (CTAs em openLabsScreen)
+[OK] Upload funcionando (handler testado + exames reais processados)
+[OK] Histórico ordenado por data real (exam_date DESC NULLS LAST)
+[OK] Exames legados com exam_date preenchido (0 NULL)
+[OK] Mock antigo removido (HTML + funções órfãs)
+[OK] KRONOS lê exam_date como data primária do exame
+[OK] Build limpo (exit 0)
+[OK] exam_date para uploads futuros — fallback implementado no
+     orchestrator (aguarda deploy)
+
+Pendências remanescentes (fora do escopo JS/TS):
+  - OCR Python: pode ser atualizado para retornar exam_date
+    nativamente (reduz dependência do fallback).
+  - 3 exames legados: can_insights / is_valid ainda antigos
+    (reprocessamento opcional, não bloqueante).
+  - CSS órfão (.bio-card2, .bio-hist-*): inofensivo, limpeza futura.
+
+
+===========================================================
+FIM DO RELATÓRIO
+===========================================================
