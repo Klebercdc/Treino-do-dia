@@ -1,4 +1,3 @@
-// deno-lint-ignore-file
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { BiomarkerEntry } from '../../../src/core/labs/labTypes.ts';
 import { buildHealthPerformanceProfile } from '../../../src/core/labs/labHealthProfile.ts';
