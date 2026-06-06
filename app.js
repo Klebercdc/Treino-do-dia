@@ -3680,7 +3680,7 @@ function renderLabReportHistory(reports, container, emptyEl) {
   };
 
   container.innerHTML = reports.map(function(r) {
-    var date = r.processedAt || r.createdAt ? new Date(r.processedAt || r.createdAt).toLocaleDateString('pt-BR') : '—';
+    var date = r.examDate || r.processedAt || r.createdAt ? new Date(r.examDate || r.processedAt || r.createdAt).toLocaleDateString('pt-BR') : '—';
     var statusKey = r.status || r.parseStatus;
     var statusLabel = _getLabStatusLabel(statusKey);
     var fileName = r.fileName ? escapeHTML(r.fileName.replace(/^\d+-/, '')) : 'Exame';
