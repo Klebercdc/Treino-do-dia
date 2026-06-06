@@ -1,0 +1,73 @@
+/* KRONIA Liquid Glass visual layer
+   Premium dark + glassmorphism controlado.
+   Sem alterar fluxo, JS, navegação ou regra de negócio. */
+
+:root {
+  --k-glass-bg: rgba(7, 18, 33, 0.64);
+  --k-glass-bg-strong: rgba(8, 21, 39, 0.78);
+  --k-glass-border: rgba(180, 224, 255, 0.16);
+  --k-glass-border-soft: rgba(180, 224, 255, 0.09);
+  --k-glass-highlight: rgba(255, 255, 255, 0.12);
+  --k-glass-shadow: 0 18px 54px rgba(0, 0, 0, 0.42);
+}
+
+html body {
+  background:
+    radial-gradient(720px 520px at 18% -12%, rgba(0, 194, 255, 0.13), transparent 62%),
+    radial-gradient(680px 520px at 110% 4%, rgba(109, 74, 254, 0.12), transparent 58%),
+    radial-gradient(520px 420px at 48% 110%, rgba(47, 227, 154, 0.07), transparent 64%),
+    linear-gradient(180deg, #020916 0%, #020711 46%, #01040a 100%) !important;
+}
+
+html body :is(.top-header, .footer-actions, .nav-pills, #timerSheet, #configBox, .bs-box, .bottom-sheet .bs-box, .modal-content) {
+  background: linear-gradient(145deg, rgba(8, 22, 40, 0.86), rgba(3, 10, 22, 0.74)) !important;
+  border-color: var(--k-glass-border) !important;
+  box-shadow: var(--k-glass-shadow) !important;
+  backdrop-filter: blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+}
+
+html body :is(.home-hero-card, .kronos-card, .kronos-ai-card, .kronia-tools-card, .home-tool-card, .home-labs-cta-card, .metric-card, .exercise-card, .diet-choice-card, .treino-choice-card, .bio-card2, .bio-hist-item, .settings-card, .profile-card, .stat-card, .card) {
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025) 42%, rgba(255, 255, 255, 0.045)),
+    radial-gradient(260px 160px at 18% 0%, rgba(0, 194, 255, 0.11), transparent 62%),
+    var(--k-glass-bg) !important;
+  border: 1px solid var(--k-glass-border) !important;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.32), inset 0 1px 0 var(--k-glass-highlight) !important;
+  backdrop-filter: blur(18px) saturate(142%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(142%) !important;
+}
+
+html body :is(.pill.active, .config-chip.active, .bs-chip.active, .bio-tab.active, .nav-item.active, .footer-actions .active) {
+  background: linear-gradient(135deg, rgba(0, 194, 255, 0.20), rgba(109, 74, 254, 0.16)) !important;
+  border-color: rgba(0, 194, 255, 0.38) !important;
+  color: #dff7ff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 0 22px rgba(0, 194, 255, 0.16) !important;
+}
+
+html body :is(#ctrlBtn, .config-apply, .primary-btn, .btn-primary, .home-labs-cta-btn, .btn-share-rel) {
+  background: linear-gradient(135deg, #00c2ff 0%, #6d4afe 58%, #2fe39a 135%) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: 0 12px 30px rgba(0, 194, 255, 0.24), inset 0 1px 0 rgba(255,255,255,0.26) !important;
+}
+
+html body :is(input, textarea, select, .config-chip, .bs-chip, .pill, .date-badge, .dark-toggle, .tbar-adj-btn, .btn-t, .tsheet-close) {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: var(--k-glass-border-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(12px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(130%) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html body .k-pressable {
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  html body .k-pressable:active {
+    transform: translateY(1px) scale(0.985) !important;
+    opacity: 0.92 !important;
+    filter: brightness(1.08) saturate(1.08);
+  }
+}
