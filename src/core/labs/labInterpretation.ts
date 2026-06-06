@@ -12,12 +12,20 @@ type ReferenceCandidate = {
   maxAge: number | null
   matchedBy: NormalizedReference['matched_by']
   mentionsAdult: boolean
+  /** true = laudo especifica jejum, false = sem jejum, null = não especificado */
+  fasting: boolean | null
 }
 
 const RANGE_RE = /(-?\d+(?:[.,]\d+)?)\s*(?:a|até|-)\s*(-?\d+(?:[.,]\d+)?)/i
 const LESS_THAN_RE = /(?:inferior|menor|abaixo|less than|below)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
 const GREATER_THAN_RE = /(?:superior|maior|acima|greater than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
 const PHASE_REFERENCE_RE = /\b(folicular|lutea|luteal|ovulatoria|ovulat|gestante|gravidez|trimestre|menopausa|pos-menopausa|pós-menopausa|fase)\b/i
+// Fases do ciclo feminino — ambíguas para qualquer sexo/contexto
+const CYCLE_PHASE_RE = /\b(folicular|lutea|luteal|ovulatoria|ovulat|gestante|gravidez|trimestre|fase)\b/i
+// Menopausa é específica do sexo feminino — pode ser ignorada quando o usuário é reconhecidamente masculino
+const MENOPAUSE_PHASE_RE = /\b(menopausa|pos-menopausa|pós-menopausa)\b/i
+// Laudo que declara explicitamente ausência de referência
+const NO_REFERENCE_BY_DESIGN_RE = /n[aã]o\s+h[aá]\s+valores?\s+de\s+refer[eê]ncia|sem\s+valores?\s+de\s+refer[eê]ncia|valores?\s+de\s+refer[eê]ncia\s+n[aã]o\s+(?:definid|estabelecid)/i
 
 const HORMONE_MARKERS = new Set([
   'testosterone_total',
@@ -222,6 +230,12 @@ function parseReferenceCandidate(text: string): ReferenceCandidate | null {
   const ageRange = parseAgeRange(text)
   const mentionsAdult = /\badult[oa]s?\b|\bacima de 18\b|\bacima de 20\b/.test(normalized)
 
+  const mentionsFasting = /\bcom\s+jejum\b|\bem\s+jejum\b/i.test(normalized)
+  const mentionsNonFasting = /\bsem\s+jejum\b/i.test(normalized)
+  const fasting: boolean | null = mentionsFasting && !mentionsNonFasting ? true
+    : mentionsNonFasting && !mentionsFasting ? false
+    : null
+
   const rangeMatch = RANGE_RE.exec(numericText)
   if (rangeMatch) {
     return {
@@ -234,6 +248,7 @@ function parseReferenceCandidate(text: string): ReferenceCandidate | null {
       maxAge: ageRange.maxAge,
       matchedBy: 'generic',
       mentionsAdult,
+      fasting,
     }
   }
 
@@ -249,6 +264,7 @@ function parseReferenceCandidate(text: string): ReferenceCandidate | null {
       maxAge: ageRange.maxAge,
       matchedBy: 'generic',
       mentionsAdult,
+      fasting,
     }
   }
 
@@ -264,6 +280,7 @@ function parseReferenceCandidate(text: string): ReferenceCandidate | null {
       maxAge: ageRange.maxAge,
       matchedBy: 'generic',
       mentionsAdult,
+      fasting,
     }
   }
 
@@ -289,6 +306,8 @@ function normalizeCandidateMatch(candidate: ReferenceCandidate, input: { sex: 'm
 
   if (candidate.mentionsAdult) score += 10
   if (candidate.kind !== 'text') score += 5
+  // Preferir referência de jejum como padrão conservador quando estado de jejum é desconhecido
+  if (candidate.fasting === true) score += 1
 
   return score
 }
@@ -298,6 +317,35 @@ function normalizeFlag(value: number | null, min: number | null, max: number | n
   if (min != null && value < min) return 'low'
   if (max != null && value > max) return 'high'
   return 'normal'
+}
+
+/**
+ * Une segmentos de rótulo (sexo/faixa etária, sem numérico) com o segmento numérico
+ * seguinte. Necessário para formatos do tipo "Homens de 20 a 70 anos: | 13,2 a 89,5"
+ * onde o contexto e o valor ficam em segmentos separados pelo pipe.
+ */
+function buildMergedSegments(segments: string[]): string[] {
+  const result: string[] = []
+  let i = 0
+  while (i < segments.length) {
+    const current = segments[i]
+    const hasSexLabel = /\b(?:homens?|mulheres?|masculino|feminino)\b/i.test(current)
+    const numericPart = current.includes(':') ? current.slice(current.lastIndexOf(':') + 1).trim() : current
+    const currentHasNumeric = RANGE_RE.test(numericPart) || LESS_THAN_RE.test(numericPart) || GREATER_THAN_RE.test(numericPart)
+    if (hasSexLabel && !currentHasNumeric && i + 1 < segments.length) {
+      const next = segments[i + 1]
+      const nextPart = next.includes(':') ? next.slice(next.lastIndexOf(':') + 1).trim() : next
+      const nextHasNumeric = RANGE_RE.test(nextPart) || LESS_THAN_RE.test(nextPart) || GREATER_THAN_RE.test(nextPart)
+      if (nextHasNumeric) {
+        result.push(current + ' ' + next)
+        i += 2
+        continue
+      }
+    }
+    result.push(current)
+    i++
+  }
+  return result
 }
 
 function selectNormalizedReference(
@@ -312,21 +360,29 @@ function selectNormalizedReference(
   sourceReferenceKind: string | null
 } {
   const referenceTextRaw = biomarker.reference_text ?? biomarker.reference_text_raw ?? null
-  const segments = referenceTextRaw ? splitReferenceText(referenceTextRaw) : []
+  const rawSegments = referenceTextRaw ? splitReferenceText(referenceTextRaw) : []
+  const segments = buildMergedSegments(rawSegments)
   const candidates = segments
     .map((segment) => parseReferenceCandidate(segment))
     .filter((candidate): candidate is ReferenceCandidate => Boolean(candidate))
 
   const hasPhaseSpecificReference = Boolean(referenceTextRaw && PHASE_REFERENCE_RE.test(referenceTextRaw))
+  // Menopause-only references são específicas do sexo feminino: usuário masculino conhecido pode prosseguir
+  const hasMenopauseOnlyPhase = hasPhaseSpecificReference
+    && Boolean(referenceTextRaw && MENOPAUSE_PHASE_RE.test(referenceTextRaw))
+    && !Boolean(referenceTextRaw && CYCLE_PHASE_RE.test(referenceTextRaw))
+  const phaseBlocksRelease = hasPhaseSpecificReference && !(hasMenopauseOnlyPhase && input.sex === 'male')
+
   const hasSexSpecificReference = candidates.some((candidate) => candidate.sex !== 'any')
   const hasAgeSpecificReference = candidates.some((candidate) => candidate.minAge != null || candidate.maxAge != null)
+  const hasAgeAgnosticCandidate = candidates.some((candidate) => candidate.minAge == null && candidate.maxAge == null)
 
   if (
     referenceTextRaw
     && (
-      hasPhaseSpecificReference
+      phaseBlocksRelease
       || (hasSexSpecificReference && input.sex !== 'male' && input.sex !== 'female')
-      || (hasAgeSpecificReference && input.age == null)
+      || (hasAgeSpecificReference && !hasAgeAgnosticCandidate && input.age == null)
     )
   ) {
     return {
@@ -343,7 +399,7 @@ function selectNormalizedReference(
       referenceMin: null,
       referenceMax: null,
       referenceTextRaw,
-      labFlag: biomarker.flag ?? biomarker.lab_flag ?? null,
+      labFlag: null,
       sourceReferenceKind: 'ambiguous',
     }
   }
@@ -377,12 +433,32 @@ function selectNormalizedReference(
       referenceMin: null,
       referenceMax: null,
       referenceTextRaw,
-      labFlag: biomarker.flag ?? biomarker.lab_flag ?? null,
+      labFlag: null,
       sourceReferenceKind: 'ambiguous',
     }
   }
 
   if (!selected && biomarker.reference_min == null && biomarker.reference_max == null && referenceTextRaw) {
+    // Laudo que declara explicitamente ausência de referência (ex.: PSA livre)
+    if (NO_REFERENCE_BY_DESIGN_RE.test(referenceTextRaw)) {
+      return {
+        normalizedReference: {
+          kind: 'text',
+          min: null,
+          max: null,
+          raw_text: referenceTextRaw,
+          matched_by: 'no_reference',
+          sex: 'any',
+          min_age: null,
+          max_age: null,
+        },
+        referenceMin: null,
+        referenceMax: null,
+        referenceTextRaw,
+        labFlag: null,
+        sourceReferenceKind: 'no_reference',
+      }
+    }
     return {
       normalizedReference: {
         kind: 'text',

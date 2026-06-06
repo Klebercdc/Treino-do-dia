@@ -229,6 +229,8 @@ function isReferenceAmbiguous(marker: BiomarkerEntry): boolean {
 
 function needsReferenceResolution(marker: BiomarkerEntry): boolean {
   const normalizedReference = marker.normalized_reference
+  // Laudo que declara explicitamente ausência de referência não bloqueia o gate
+  if (normalizedReference?.matched_by === 'no_reference') return false
   if (normalizedReference?.matched_by === 'ambiguous') return true
   if (normalizedReference?.matched_by === 'text_only') return true
   if (!normalizedReference && marker.reference_min == null && marker.reference_max == null && (marker.reference_text_raw || marker.reference_text)) {
