@@ -96,6 +96,33 @@ function resolveExamOcrBaseUrl() {
   return `${APP_URL.replace(/\/$/, '')}/api/exam_ocr`;
 }
 
+function brDateToIso(br: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(br);
+  if (!m) return null;
+  const [, dd, mm, yyyy] = m;
+  const day = Number(dd), month = Number(mm), year = Number(yyyy);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (year < 2000 || year > new Date().getFullYear() + 1) return null;
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Extrai data de coleta do raw_text de forma conservadora.
+// Prioriza rótulos inequívocos ("Coleta", "Data da Coleta", "Data do Exame", "Realizado em").
+// Retorna null se nenhuma data encontrada ou se houver ambiguidade (datas distintas).
+function extractExamDateFromRawText(rawText: string | null | undefined): string | null {
+  if (!rawText || typeof rawText !== 'string') return null;
+  // Matches labels that unambiguously refer to collection/exam date. "Data de nascimento" is
+  // deliberately absent — UNIMED layouts place birth date near "Data Entrada" / similar labels.
+  const re = /(?:Data\s+d[ae]\s+[Cc]oleta|Data\s+do\s+[Ee]xame|[Rr]ealizado\s+em|[Cc]oleta)[^0-9]{0,50}?(\d{2}\/\d{2}\/\d{4})/gi;
+  const found = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(rawText)) !== null) {
+    const iso = brDateToIso(match[1]);
+    if (iso) found.add(iso);
+  }
+  return found.size === 1 ? [...found][0] : null;
+}
+
 function isMissingOptionalTable(error: unknown, table: OptionalTableName): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
@@ -104,10 +131,17 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
     && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message);
 }
 
+function resolveExamDate(ocr: OcrResponse): string | null {
+  const date = ocr.exam_date || extractExamDateFromRawText(ocr.raw_text);
+  const source = ocr.exam_date ? 'ocr' : date ? 'raw_text' : 'none';
+  if (source !== 'none') console.log(`[orchestrator] exam_date resolved via ${source}: ${date}`);
+  return date || null;
+}
+
 function buildNormalizedPayload(ocr: OcrResponse, biomarkers: Biomarker[]) {
   return {
     biomarkers,
-    exam_date: ocr.exam_date || null,
+    exam_date: resolveExamDate(ocr),
     extraction: {
       engine: 'exam_ocr_python',
       extraction_mode: ocr.extraction_mode,
@@ -658,7 +692,7 @@ async function finalizeNeedsReview(labReportId: string, ocr: OcrResponse, reason
       confidence_summary: ocr.confidence_summary || {},
       processing_error: reason,
       processed_at: new Date().toISOString(),
-      exam_date: ocr.exam_date || null,
+      exam_date: resolveExamDate(ocr),
       is_valid: false,
       last_orchestrator_note: reason,
     },
@@ -685,7 +719,7 @@ async function finalizeAnalyzed(
       ai_insights: aiInsights,
       processing_error: isFallback ? 'groq_unavailable_fallback_used' : null,
       processed_at: new Date().toISOString(),
-      exam_date: ocr.exam_date || null,
+      exam_date: resolveExamDate(ocr),
       is_valid: true,
       last_orchestrator_note: isFallback ? 'fallback_analyzed' : 'analyzed',
     },
