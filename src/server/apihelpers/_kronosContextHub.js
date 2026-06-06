@@ -718,6 +718,7 @@ function firstPayloadDate(payload, labRow) {
     ? extraction.metadata
     : {};
   return firstStr(
+    labRow && labRow.exam_date,
     payload && payload.collection_date,
     payload && payload.collected_at,
     payload && payload.sample_collected_at,
