@@ -1,0 +1,150 @@
+RELATÓRIO DE SESSÃO — KroniA
+Data: 06/06/2026
+SHA final no main: ba18f1d
+
+=======================================================
+1. TAREFAS CONCLUÍDAS
+=======================================================
+
+1.1 exam_date fallback no lab-report-orchestrator
+─────────────────────────────────────────────────
+Problema: quando o serviço OCR Python não retorna exam_date,
+o campo ficava NULL permanentemente no banco.
+
+Solução implementada em index.ts (feature branch → main):
+
+  function extractExamDateFromRawText(rawText)
+    Regex conservadora: Data da Coleta / Data do Exame /
+    Realizado em / Coleta — sem "Data de nascimento".
+    Retorna null se houver datas distintas (ambiguidade).
+
+  function resolveExamDate(ocr)
+    Prioridade: ocr.exam_date → raw_text → null
+    Log sempre: [orchestrator] exam_date_source: ocr|raw_text|none
+
+  Usada em: buildNormalizedPayload, finalizeNeedsReview,
+            finalizeAnalyzed (3 pontos de persistência).
+
+1.2 Vercel — 4 deploys com falha → produção verde
+──────────────────────────────────────────────────
+Causa raiz: allowImportingTsExtensions no root tsconfig.json
+disparava TS5096 globalmente. noEmit:true como correção
+impedia o Vercel de emitir JS das serverless functions.
+
+Solução:
+  tsconfig.json     → estado limpo (sem allowImportingTsExtensions)
+  tsconfig.labs.json → novo, com allowImportingTsExtensions + noEmit
+                        inclui src/core/labs/**, src/server/internal/**,
+                        tests/**
+
+  labValidator.ts   → adicionado ck_total: null ao
+                      EMPTY_PARSED_LAB_REPORT (campo foi adicionado
+                      ao ParsedLabReport mas objeto de defaults não
+                      foi atualizado)
+
+  Resultado: Vercel READY em produção (dpl_3dZDYLB9)
+
+1.3 GitHub Actions — deploy edge function falhando
+───────────────────────────────────────────────────
+Causa: Deno v1.74.0 exige extensão .ts explícita em todos
+os imports transitivos. labRules.ts importava ./labHealthProfile
+sem .ts — foi esquecido no fix original (a52d4f4 só corrigiu
+labHealthProfile.ts, labInterpretation.ts, canonical.ts).
+
+Solução em labRules.ts:
+  ./labTypes      → ./labTypes.ts
+  ./labHealthProfile → ./labHealthProfile.ts
+  ./benchmarks    → ./benchmarks.ts (×2)
+
+  Resultado: GitHub Actions run #27068866923 — success
+
+1.4 Build script — typecheck separado
+──────────────────────────────────────
+Problema: build e lint dependiam exclusivamente de
+tsconfig.labs.json, ignorando erros de tipo fora do domínio
+de labs (src/lib/supabase, src/lib/utils, etc.).
+
+Solução em package.json:
+  typecheck:web  = tsc --noEmit           (root tsconfig)
+  typecheck:labs = tsc --project tsconfig.labs.json
+  typecheck      = typecheck:web && typecheck:labs
+  lint           = typecheck
+  build          = typecheck && esbuild && scripts
+
+  npm run build: passou sem erros
+
+=======================================================
+2. ARQUIVOS MODIFICADOS (MAIN — ba18f1d)
+=======================================================
+
+src/core/labs/labRules.ts
+  imports: .ts explícito em todos os módulos
+
+src/core/labs/labValidator.ts
+  EMPTY_PARSED_LAB_REPORT: ck_total: null adicionado
+
+tsconfig.json
+  restaurado: sem allowImportingTsExtensions, sem noEmit,
+  sem tests/** no include
+
+tsconfig.labs.json  [NOVO]
+  allowImportingTsExtensions: true + noEmit: true
+  includes: labs, server/internal, tests
+
+package.json
+  typecheck:web / typecheck:labs / typecheck adicionados
+  lint e build usam typecheck (ambos os domínios)
+
+supabase/functions/lab-report-orchestrator/index.ts
+  extractExamDateFromRawText() — fallback conservador
+  resolveExamDate() — prioridade ocr → raw_text → null
+  log: exam_date_source: ocr | raw_text | none (sempre)
+  buildNormalizedPayload: usa resolveExamDate
+  finalizeNeedsReview: usa resolveExamDate
+  finalizeAnalyzed: usa resolveExamDate
+
+api/kronia-labs.js
+  shapeReportSummary expõe examDate no payload
+  handleReports ordena por exam_date DESC NULLS LAST
+
+app.js / index.html
+  CTAs de exames unificados para openLabsScreen()
+  _renderBioHistoricoList: examDate > processedAt > createdAt
+
+src/ui/labs/home-labs-cta-bridge.js
+  versão completa com upload, biomarkers, status, reload
+
+src/server/apihelpers/_kronosContextHub.js
+  loadLatestLabSummary: seleciona exam_date, ordena por
+  exam_date DESC NULLS LAST
+
+scripts/backfill-lab-exam-date.mjs  [NOVO]
+  script idempotente para reprocessar exames legados
+
+=======================================================
+3. ESTADO ATUAL DOS PIPELINES
+=======================================================
+
+Vercel (produção)       ✅  READY — ba18f1d
+GitHub Actions          ✅  success — run #27068866923
+npm run build           ✅  typecheck:web + typecheck:labs + esbuild
+
+=======================================================
+4. DÍVIDA TÉCNICA IDENTIFICADA (NÃO TOCADA)
+=======================================================
+
+- src/core/nutrition/ e src/lib/nutrition/ ainda em .js
+  Regra: migrar para .ts ao tocar a feature.
+
+- labValidator.ts: se novos campos forem adicionados a
+  ParsedLabReport, EMPTY_PARSED_LAB_REPORT precisa ser
+  atualizado manualmente. Sem automação hoje.
+
+- tsconfig.json (root) inclui apenas src/lib/supabase/**
+  e src/lib/utils/**. O código em src/ai/ e src/app/ só
+  é tipado pelo Next.js internamente (não pelo tsc do build).
+  Oportunidade: adicionar src/ai/** ao root tsconfig no futuro.
+
+- 3 exames legados sem ai_insights / is_valid=true.
+  Script de backfill disponível: scripts/backfill-lab-exam-date.mjs
+  Não executado — requer confirmação antes de rodar em produção.
