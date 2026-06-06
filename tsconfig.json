@@ -8,6 +8,7 @@
     "noEmitOnError": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "outDir": "./tests/dist",
     "types": ["node", "@playwright/test"]

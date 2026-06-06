@@ -1,4 +1,4 @@
-import type { BiomarkerEntry, HormoneContextProfile, HormoneContextType, NormalizedReference } from './labTypes'
+import type { BiomarkerEntry, HormoneContextProfile, HormoneContextType, NormalizedReference } from './labTypes.ts'
 
 type GenericRecord = Record<string, unknown>
 

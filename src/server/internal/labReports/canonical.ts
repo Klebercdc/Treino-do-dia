@@ -1,4 +1,4 @@
-import type { BiomarkerEntry, NormalizedReference } from '../../../core/labs/labTypes'
+import type { BiomarkerEntry, NormalizedReference } from '../../../core/labs/labTypes.ts'
 
 export type CanonicalLabStatus =
   | 'pending_upload'
@@ -126,7 +126,7 @@ export function isMissingOptionalRelation(error: unknown, table: string): boolea
   const code = 'code' in error ? String((error as { code?: unknown }).code || '') : ''
   const message = 'message' in error ? String((error as { message?: unknown }).message || '') : ''
   return (code === 'PGRST205' || code === '42P01' || !code)
-    && new RegExp(`(?:table|relation) ['"]?public\\.${table}['"]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"]?public\\.${table}['"]?`, 'i').test(message)
+    && new RegExp(`(?:table|relation) ['"\`]?public\\.${table}['"\`]?(?: in the schema cache)? (?:does not exist|was not found)|could not find the table ['"\`]?public\\.${table}['"\`]?`, 'i').test(message)
 }
 
 export function isParseStatusConstraintViolation(error: unknown): boolean {
