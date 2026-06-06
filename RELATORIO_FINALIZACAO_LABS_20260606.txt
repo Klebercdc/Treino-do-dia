@@ -1,0 +1,233 @@
+===========================================================
+RELATÓRIO DE FINALIZAÇÃO — MÓDULO DE EXAMES (LABS)
+Projeto: KroniA / Treino-do-dia
+Data: 06/06/2026
+Branch: claude/kronia-guided-execution-layout-AXhCs
+===========================================================
+
+
+------------------------------------------------------------
+1. ARQUIVOS ALTERADOS
+------------------------------------------------------------
+
+src/core/labs/labValidator.ts
+  - Adicionado ck_total: null ao EMPTY_PARSED_LAB_REPORT.
+  - Corrige erro de build TS2741 (ck_total fora do objeto literal
+    depois que o campo entrou no tipo ParsedLabReport em sessão
+    anterior).
+  - Commit: 04b4831
+
+app.js
+  - closeBiomarcadores() convertido em no-op defensivo (optional
+    chaining), já que a tela mock foi removida.
+  - Removidas as funções órfãs _loadBioHistoricoList e
+    _renderBioHistoricoList (só alimentavam o histórico interno
+    da tela mock).
+  - openBiomarcadores() permanece como alias seguro -> openLabsScreen().
+  - Commit: 6da1ed6
+
+index.html
+  - Removido o bloco HTML #biomarcadoresScreen (painel com valores
+    estáticos de demonstração + histórico interno).
+  - Commit: 6da1ed6
+
+scripts/backfill-lab-exam-date.mjs (NOVO)
+  - Script idempotente para preencher exam_date de exames legados
+    a partir do raw_text, de forma conservadora.
+  - Commit: eb2d565
+
+OBS: a pasta public/ é artefato de build (gerada por
+build-static-public.mjs) e não é versionada; foi regenerada e
+confirmada sem referências à tela mock.
+
+
+------------------------------------------------------------
+2. O QUE FOI REMOVIDO DO FLUXO ANTIGO
+------------------------------------------------------------
+
+Tela mock #biomarcadoresScreen (index.html):
+  - Cards estáticos com valores fixos no HTML que NÃO vinham do
+    usuário: Testosterona 680, TSH 2.1, Hemoglobina 15.2,
+    Ferritina 38, Vitamina D 28, Glicose 92.
+  - Seção de histórico interna (#bioHistList).
+  - Botões internos "Enviar" e "Ver todos".
+  Já não havia nenhum CTA apontando para essa tela (todos foram
+  redirecionados para openLabsScreen em sessão anterior), então a
+  remoção é segura.
+
+Funções órfãs (app.js):
+  - _loadBioHistoricoList()  — buscava reports só para a tela mock.
+  - _renderBioHistoricoList() — renderizava #bioHistList.
+
+Mantido por compatibilidade (alias seguro):
+  - openBiomarcadores()  -> delega para openLabsScreen().
+  - closeBiomarcadores() -> no-op defensivo (não quebra se a div
+    não existir).
+
+NÃO removido (decisão conservadora, fora do escopo / risco):
+  - CSS órfão de .bio-card2 / .bio-hist-* em styles.css. É inofensivo
+    (regras não aplicadas a nada) e remover mexeria em layout.
+    Pode ser limpo numa passada futura de CSS.
+
+
+------------------------------------------------------------
+3. COMO O BACKFILL DE exam_date FOI FEITO
+------------------------------------------------------------
+
+Estado inicial: 3 exames (lab_reports), TODOS com exam_date NULL.
+Nenhum tinha data estruturada em normalized_payload, ai_insights
+ou metadata. A data só existia no raw_text do OCR.
+
+Auditoria de segurança (por que NÃO usar regex ingênuo):
+  - Nos laudos UNIMED, o OCR agrupa os rótulos antes dos valores.
+    A primeira data após "Data Entrada" no texto é, na verdade, a
+    DATA DE NASCIMENTO (25/02/1985). Um regex automático pegaria a
+    data errada. Isso ficou comprovado durante a auditoria.
+
+Datas aplicadas (fonte documentada por exame):
+  - faeec9e6 -> 2024-01-12
+    Fonte: "Coleta: 12/01/2024" (rótulo explícito e inequívoco).
+  - 04dfcb1e (UNIMED) -> 2026-02-25
+    Fonte: Data de Entrada/coleta 25/02/2026, coerente com cadeia
+    do laudo (assinatura eletrônica 27/02/2026, Data de Saída
+    03/03/2026) e DISTINTA da Data de Nascimento 25/02/1985.
+  - 51310243 (UNIMED) -> 2026-02-25
+    Fonte: mesmo atendimento/laboratório, mesma Data de Entrada.
+
+Forma de aplicação:
+  - UPDATEs idempotentes (WHERE id = X AND exam_date IS NULL),
+    aplicados via conexão administrativa ao Supabase.
+  - Nenhuma data foi inventada: todas vieram do laudo.
+
+Resultado (ordenado por exam_date DESC NULLS LAST):
+  04dfcb1e  2026-02-25
+  51310243  2026-02-25
+  faeec9e6  2024-01-12
+  -> 0 exames com exam_date NULL.
+
+Validação do efeito: o exame faeec9e6 foi enviado (upload) em
+2026-05-30, mas a coleta foi em 2024-01-12. Agora ele aparece por
+ÚLTIMO na ordenação por data real — provando que a lista segue a
+data do exame, não a do upload.
+
+Script idempotente (scripts/backfill-lab-exam-date.mjs):
+  - Para uso futuro/qualquer ambiente.
+  - Extração CONSERVADORA: só preenche quando há uma única data de
+    "Coleta" inequívoca no raw_text; layouts ambíguos ficam NULL e
+    são listados para revisão manual.
+  - dry-run por padrão; grava só com --apply.
+  - Requer SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente.
+
+
+------------------------------------------------------------
+4. RESULTADO DO TESTE DE UPLOAD
+------------------------------------------------------------
+
+Teste unitário do handler (npm run test:labs):
+  30/30 testes OK (inclui handleInitUpload e handleRegister
+  montando os payloads corretos de init-upload e register).
+
+Evidência de pipeline real (via banco de produção):
+  Os 3 exames existentes passaram pelo fluxo completo
+  (init-upload -> storage -> register -> OCR -> biomarcadores):
+    - parse_status = processed
+    - biomarcadores extraídos: 35, 5 e 6 respectivamente
+    - exam_date preenchido (após backfill)
+
+LIMITAÇÃO (ambiente externo):
+  Um upload E2E real pela UI (abrir Exames, enviar PDF, observar
+  polling até "pronto") NÃO pode ser executado neste runner
+  headless, pois exige navegador + sessão autenticada + serviço
+  OCR Python ativo. A validação aqui foi feita por:
+    (a) testes unitários do handler, e
+    (b) inspeção dos exames reais já processados em produção.
+  Recomenda-se um teste manual final pela UI quando conveniente.
+
+
+------------------------------------------------------------
+5. RESULTADO DO BUILD
+------------------------------------------------------------
+
+npm run build -> EXIT 0 (limpo).
+
+  - npx tsc --noEmit: sem erros.
+  - esbuild dos módulos KRONOS: OK.
+  - build-static-public.mjs: public/ gerado (40 arquivos).
+  - force-diet-wizard-6step-build.mjs: OK.
+
+Sobre os erros TS2688 ("Cannot find type definition file for 'node'
+e '@playwright/test'") reportados antes:
+  - CAUSA REAL: node_modules não estava instalado no ambiente.
+    NÃO era problema de tsconfig nem de pacote errado.
+  - @types/node e @playwright/test JÁ constam em devDependencies
+    e os nomes em tsconfig.json ("types": ["node","@playwright/test"])
+    estão corretos.
+  - SOLUÇÃO: npm ci (instalou 110 pacotes). Após isso, o tsc
+    avançou e revelou o único erro real (ck_total), já corrigido.
+  - NÃO foi instalado @types/playwright-test (o pacote correto é
+    @playwright/test, que já estava declarado).
+
+
+------------------------------------------------------------
+6. PENDÊNCIAS RESTANTES
+------------------------------------------------------------
+
+a) [EXTERNO] Extração de exam_date para exames FUTUROS:
+   O orchestrator (edge function) JÁ grava exam_date na coluna
+   quando recebe ocr.exam_date. Porém o serviço OCR Python
+   (services/exam_ocr) atualmente NÃO extrai a data de coleta do
+   laudo — por isso os exames chegavam com exam_date NULL.
+   AÇÃO SUGERIDA (fora do escopo deste patch JS/TS): ensinar o
+   serviço OCR a extrair a data de coleta, OU adicionar um parser
+   de data no raw_text dentro do orchestrator (TypeScript) com a
+   mesma lógica conservadora do script de backfill. Requer redeploy
+   da edge function e validação clínica.
+
+b) [DADOS] Os 3 exames legados estão com status needs_review,
+   is_valid=false e SEM ai_insights, porque foram processados pela
+   versão ANTIGA do orchestrator (antes do deploy de hoje, que
+   adicionou interpretação Groq + user_profile).
+   COMPORTAMENTO ATUAL: o KRONOS os trata como "partial" (OCR ok,
+   interpretação pendente) — seguro, não inventa análise.
+   AÇÃO OPCIONAL: reprocessar esses 3 exames pela edge function
+   nova para ganharem ai_insights e is_valid=true. Não é
+   bloqueante e não foi feito para não acionar serviços externos
+   sem necessidade.
+
+c) [COSMÉTICO] CSS órfão (.bio-card2, .bio-hist-*) permanece em
+   styles.css. Inofensivo. Limpeza opcional futura.
+
+
+------------------------------------------------------------
+COMMITS DESTA SESSÃO
+------------------------------------------------------------
+
+04b4831  fix(labs): adiciona ck_total ao EMPTY_PARSED_LAB_REPORT
+         (corrige build TS2741)
+6da1ed6  refactor(labs): remove tela mock #biomarcadoresScreen e
+         funções órfãs
+eb2d565  chore(labs): script idempotente de backfill de exam_date
+         para exames legados
+
+
+------------------------------------------------------------
+CRITÉRIO DE SUCESSO — STATUS
+------------------------------------------------------------
+
+[OK] Fluxo novo único (CTAs unificados em openLabsScreen)
+[OK] Upload funcionando (handler testado + exames reais processados)
+[OK] Histórico ordenado por data real (exam_date DESC NULLS LAST)
+[OK] Exames antigos tratados (backfill aplicado, 0 NULL)
+[OK] Mock antigo removido (HTML + funções órfãs)
+[OK] KRONOS lendo exame correto (exam_date priorizado; legados
+     como "partial" com segurança)
+[OK] Build limpo (exit 0); erro externo (node_modules) justificado
+     e resolvido
+
+Pendências restantes são externas (OCR Python) ou opcionais
+(reprocessar legados, limpar CSS) — todas documentadas acima.
+
+
+===========================================================
+FIM DO RELATÓRIO DE FINALIZAÇÃO
+===========================================================
