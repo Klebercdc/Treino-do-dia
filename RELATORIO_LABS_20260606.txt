@@ -1,0 +1,220 @@
+===========================================================
+RELATÓRIO DE ALTERAÇÕES — MÓDULO DE EXAMES (LABS)
+Projeto: KroniA / Treino-do-dia
+Data: 06/06/2026
+Branch: claude/kronia-guided-execution-layout-AXhCs
+===========================================================
+
+
+------------------------------------------------------------
+1. CONTEXTO
+------------------------------------------------------------
+
+O módulo de exames tinha dois fluxos coexistindo:
+
+FLUXO ANTIGO (desativado):
+- openBiomarcadores() abria #biomarcadoresScreen
+- Tela exibia valores hardcodados no HTML (Testosterona 680,
+  TSH 2.1, Ferritina 38 etc.) — não eram dados reais do usuário
+- Tinha uma lista de histórico real no rodapé, mas o painel
+  principal era mockup estático
+
+FLUXO NOVO (oficial, agora único):
+- openLabsScreen() abre #labsScreen
+- Tela com upload real (PDF/imagem), polling de processamento,
+  histórico dinâmico com biomarcadores extraídos via OCR
+- Pipeline: init-upload → Storage → register → Edge Function
+  lab-report-orchestrator → OCR → biomarcadores → clinical rules
+  → salvo em lab_reports e lab_report_biomarkers
+
+
+------------------------------------------------------------
+2. EDGE FUNCTION DEPLOYADA
+------------------------------------------------------------
+
+lab-report-orchestrator deployada via GitHub Actions (run #22)
+em 04/06/2026 às 18:00 UTC.
+
+Mudanças na Edge Function (sessão anterior):
+- Importa applyClinicalRulesFromBiomarkers() de labRules.ts
+  canônico (eliminou duplicatas locais)
+- resolveUserProfile() lê profiles.user_profile
+  → 'bodybuilder' | 'beginner' (default: 'beginner')
+- user_profile enviado ao Groq no payload de contexto hormonal
+- evaluated_with_profile salvo em ai_insights
+
+
+------------------------------------------------------------
+3. MIGRAÇÃO SQL APLICADA
+------------------------------------------------------------
+
+Projeto Supabase: twxoddzogbmaysebhour
+
+ALTER TABLE lab_reports ADD COLUMN IF NOT EXISTS exam_date DATE;
+CREATE INDEX IF NOT EXISTS idx_lab_reports_exam_date
+  ON lab_reports (user_id, exam_date DESC NULLS LAST);
+
+Status: aplicado e verificado em produção (06/06/2026).
+
+
+------------------------------------------------------------
+4. ARQUIVOS ALTERADOS
+------------------------------------------------------------
+
+4.1 index.html
+- Linha ~1149: Home card EXAMES
+  ANTES:  onclick="openBiomarcadores()"
+  DEPOIS: onclick="openLabsScreen()"
+
+- Linha ~1708: Perfil > Biomarcadores
+  ANTES:  onclick="openBiomarcadores()"
+  DEPOIS: onclick="openLabsScreen()"
+
+- Linha ~3501: #biomarcadoresScreen "Ver todos"
+  ANTES:  onclick="closeBiomarcadores();openLabsUploadScreen('bio_screen')"
+  DEPOIS: onclick="openLabsScreen()"
+
+
+4.2 app.js
+- openBiomarcadores() convertida em wrapper de compatibilidade:
+  ANTES: abria #biomarcadoresScreen com valores estáticos
+  DEPOIS:
+    function openBiomarcadores() {
+      if (typeof window.openLabsScreen === 'function')
+        return window.openLabsScreen();
+      if (typeof window.openLabsUploadScreen === 'function')
+        return window.openLabsUploadScreen('legacy_alias');
+      console.warn('[labs] Nenhum fluxo novo de exames encontrado.');
+    }
+
+- _renderBioHistoricoList e renderLabReportHistory:
+  Data exibida agora usa: examDate > processedAt > createdAt
+  ANTES:  new Date(r.processedAt || r.createdAt)
+  DEPOIS: new Date(r.examDate || r.processedAt || r.createdAt)
+
+
+4.3 api/kronia-labs.js
+- shapeReportSummary(): adicionado campo examDate no payload:
+    examDate: row.exam_date || null,
+
+- handleReports(): ordenação corrigida:
+  ANTES:  .order('created_at', { ascending: false })
+  DEPOIS: .order('exam_date', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+  Resultado: exames ordenados pela data real do exame (não upload)
+
+
+4.4 src/server/apihelpers/_kronosContextHub.js
+- loadLatestLabSummary():
+  SELECT adicionado: exam_date
+  Ordenação primária corrigida:
+  ANTES:  order=processed_at.desc.nullslast,created_at.desc
+  DEPOIS: order=exam_date.desc.nullslast,
+                processed_at.desc.nullslast,
+                created_at.desc
+  Resultado: KRONOS sempre lê o exame com a data de coleta
+  mais recente, não o último upload
+
+
+4.5 src/ui/labs/home-labs-cta-bridge.js
+- window.openLabsUploadScreen sobrescrita para delegar ao fluxo oficial:
+  ANTES:  window.openLabsUploadScreen = openLabsUploadScreen
+          (abria labsCtaModal — tela paralela)
+  DEPOIS: window.openLabsUploadScreen = function(source) {
+            if (typeof window.openLabsScreen === 'function')
+              return window.openLabsScreen();
+            return openLabsUploadScreen(source); // fallback
+          }
+
+
+------------------------------------------------------------
+5. FLUXO OFICIAL APÓS AS MUDANÇAS
+------------------------------------------------------------
+
+Usuário clica em EXAMES (Home ou Perfil)
+  ↓
+openLabsScreen()
+  ↓
+#labsScreen abre (upload + histórico)
+  ↓
+Usuário envia PDF/imagem
+  ↓
+POST /api/kronia/labs/init-upload → signed URL
+  ↓
+Upload direto para Storage (bucket: lab-reports)
+  ↓
+POST /api/kronia/labs/register → status: uploaded
+  ↓
+Dispatch para Edge Function lab-report-orchestrator
+  ↓
+OCR extrai raw_text + biomarcadores
+  ↓
+Clinical rules aplicadas (labRules.ts)
+  ↓
+Salvo em lab_reports (exam_date, ai_insights, normalized_payload)
+     e lab_report_biomarkers
+  ↓
+Status final: analyzed
+  ↓
+Lista ordenada por exam_date DESC
+  ↓
+KRONOS lê via Context Hub (exam_date como critério primário)
+
+
+------------------------------------------------------------
+6. KRONOS E CONTEXT HUB
+------------------------------------------------------------
+
+- Context Hub busca o exame mais recente pela data real de
+  coleta (exam_date), não pela data de upload
+- Se exam_date for NULL (exames antigos), fallback para
+  processed_at e depois created_at
+- KRONOS recebe: data real do exame, biomarcadores, flags
+  clínicas, scores de saúde, perfil do usuário (bodybuilder/beginner)
+
+
+------------------------------------------------------------
+7. STATUS DO BUILD
+------------------------------------------------------------
+
+Erros pré-existentes (não introduzidos por estas mudanças):
+  TS2688: Cannot find type definition file for '@playwright/test'
+  TS2688: Cannot find type definition file for 'node'
+
+Causa: pacotes de tipo ausentes no ambiente de CI remoto.
+Não afeta o runtime da aplicação.
+
+
+------------------------------------------------------------
+8. COMMITS DESTA SESSÃO
+------------------------------------------------------------
+
+5a7c8ff  ci: adiciona lab-report-orchestrator no workflow de deploy
+b9aeae2  fix(labs): unifica fluxo de exames — CTAs, ordenação por
+         exam_date, KRONOS
+29906b5  fix(labs): renderLabReportHistory usa examDate como data
+         primária do exame
+
+
+------------------------------------------------------------
+9. PENDÊNCIAS / PRÓXIMOS PASSOS
+------------------------------------------------------------
+
+a) exam_date nos exames antigos:
+   O campo exam_date foi adicionado ao banco mas exames já
+   processados têm valor NULL. O OCR extrai exam_date de
+   novos uploads. Para exames antigos: ou reprocessar, ou
+   atualizar manualmente via SQL se souber a data.
+
+b) #biomarcadoresScreen (HTML no DOM):
+   A tela com valores mockados permanece no HTML mas não tem
+   CTA apontando para ela. Pode ser removida numa próxima
+   sessão quando confirmado que não há dependência oculta.
+
+c) Build: instalar @types/node e @types/playwright-test
+   no ambiente de CI para eliminar os erros de tsc.
+
+
+===========================================================
+FIM DO RELATÓRIO
+===========================================================
