@@ -1,0 +1,169 @@
+===========================================================
+RELATÓRIO DE VALIDAÇÃO — MÓDULO DE EXAMES (LABS)
+Projeto: KroniA / Treino-do-dia
+Data: 06/06/2026
+Branch: claude/kronia-guided-execution-layout-AXhCs
+===========================================================
+
+
+------------------------------------------------------------
+OBJETIVO
+------------------------------------------------------------
+
+Validar a correção do módulo de exames sem refatorar.
+Conferir 10 pontos críticos e corrigir apenas o que
+estivesse com problema, sem alterar layout e sem remover
+o #biomarcadoresScreen.
+
+
+------------------------------------------------------------
+RESULTADO DA VALIDAÇÃO — 10 PONTOS
+------------------------------------------------------------
+
+1. openLabsScreen definido globalmente antes dos CTAs
+   STATUS: OK
+   - app.js (linha 3073) é carregado em index.html linha 4428
+   - home-labs-cta-bridge.js carregado depois, na linha 4697
+   - Ordem de carregamento correta: a função existe antes de
+     qualquer CTA ou override poder chamá-la
+
+2. Home > Exames abre #labsScreen
+   STATUS: OK
+   - index.html linha 1149: onclick="openLabsScreen()"
+
+3. Perfil > Biomarcadores abre #labsScreen
+   STATUS: OK
+   - index.html linha 1708: onclick="openLabsScreen()"
+
+4. openBiomarcadores não abre mais a tela mockada
+   STATUS: OK
+   - app.js linha 16707: virou wrapper de compatibilidade
+     que chama window.openLabsScreen() (ou fallback
+     openLabsUploadScreen('legacy_alias'))
+   - Não acessa mais #biomarcadoresScreen com valores estáticos
+
+5. Upload real chama init-upload e register
+   STATUS: OK
+   - app.js linha 3168: POST /api/kronia/labs/init-upload
+   - app.js linha 3212: POST /api/kronia/labs/register
+   - Pipeline de upload real intacto em _handleLabsScreenUpload
+
+6. /api/kronia/labs/reports retorna examDate
+   STATUS: OK
+   - api/kronia-labs.js linha 138 (shapeReportSummary):
+     examDate: row.exam_date || null
+
+7. Lista ordena por exam_date antes de created_at
+   STATUS: OK
+   - api/kronia-labs.js linha 465 (handleReports):
+     .order('exam_date', { ascending: false, nullsFirst: false })
+     .order('created_at', { ascending: false })
+
+8. Context Hub lê exam_date e envia o exame ao KRONOS
+   STATUS: CORRIGIDO (gap encontrado)
+   - loadLatestLabSummary já selecionava exam_date e ordenava
+     por exam_date DESC NULLS LAST (linhas 219, 227, 241) — OK
+   - PROBLEMA: a função firstPayloadDate() — que define a data
+     final entregue ao KRONOS (campo lastReportAt / dataUltimaColeta)
+     — NÃO lia labRow.exam_date. Pulava a coluna canônica do banco
+     e caía em payload.* ou processed_at.
+   - CORREÇÃO: adicionado labRow.exam_date como PRIMEIRA prioridade
+     na cadeia de fallback de firstPayloadDate (linha ~721)
+   - Commit: fca672c
+
+9. Exames antigos com exam_date NULL continuam aparecendo
+   STATUS: OK
+   - loadLatestLabSummary tem query de fallback (var any) SEM
+     filtro is_valid, ordenada com NULLS LAST — laudos antigos
+     com exam_date NULL não são excluídos
+   - Na listagem (handleReports), nullsFirst:false garante que
+     NULL vai para o fim, mas continua na lista
+   - firstPayloadDate ainda resolve a data via processed_at/
+     created_at quando exam_date é NULL
+
+10. Build falha apenas pelos tipos já conhecidos
+    STATUS: OK
+    - Únicos erros:
+      TS2688: Cannot find type definition file for '@playwright/test'
+      TS2688: Cannot find type definition file for 'node'
+    - Pré-existentes, ausência de pacotes de tipo no CI remoto
+    - Nenhuma regressão introduzida pelas mudanças
+    - NÃO foi instalado @types/playwright-test cegamente
+
+
+------------------------------------------------------------
+CORREÇÃO APLICADA NESTA VALIDAÇÃO
+------------------------------------------------------------
+
+Arquivo: src/server/apihelpers/_kronosContextHub.js
+Função: firstPayloadDate(payload, labRow)
+
+ANTES (cadeia de prioridade da data do exame):
+  payload.collection_date
+  payload.collected_at
+  payload.sample_collected_at
+  payload.exam_date
+  payload.report_date
+  metadata.collection_date
+  metadata.collected_at
+  metadata.sample_collected_at
+  metadata.exam_date
+  metadata.report_date
+  labRow.processed_at
+  labRow.created_at
+
+DEPOIS (adicionada 1 linha no topo):
+  labRow.exam_date          <-- NOVO, prioridade máxima
+  payload.collection_date
+  payload.collected_at
+  ... (resto inalterado)
+
+Impacto: o KRONOS agora usa a data real do exame (coluna
+exam_date do banco) como referência primária, em vez de
+cair em processed_at/created_at quando o payload OCR não
+trazia a data.
+
+Diff: 1 linha adicionada, 0 removidas.
+
+
+------------------------------------------------------------
+COMMITS DA SEQUÊNCIA DE CORREÇÃO DO MÓDULO
+------------------------------------------------------------
+
+b9aeae2  fix(labs): unifica fluxo de exames — CTAs, ordenação
+         por exam_date, KRONOS
+29906b5  fix(labs): renderLabReportHistory usa examDate como
+         data primária do exame
+fca672c  fix(labs): firstPayloadDate prioriza labRow.exam_date
+         antes de processed_at   <-- correção desta validação
+
+
+------------------------------------------------------------
+RESTRIÇÕES RESPEITADAS
+------------------------------------------------------------
+
+- Layout NÃO alterado
+- #biomarcadoresScreen NÃO removido (continua no DOM, sem CTA)
+- @types/playwright-test NÃO instalado (verificado que os erros
+  de build são pré-existentes e não relacionados às mudanças)
+- Correção pontual: apenas o gap do firstPayloadDate foi tocado
+
+
+------------------------------------------------------------
+PENDÊNCIAS (informativas, sem ação obrigatória)
+------------------------------------------------------------
+
+a) Exames já processados têm exam_date NULL no banco. Novos
+   uploads preenchem via OCR. Para popular os antigos: reprocessar
+   ou atualizar via SQL manual com a data conhecida.
+
+b) #biomarcadoresScreen (HTML mockado) permanece no DOM sem CTA.
+   Remoção segura possível numa próxima sessão.
+
+c) Build CI: instalar @types/node e tipos do Playwright no
+   ambiente para eliminar os 2 erros de tsc (não afeta runtime).
+
+
+===========================================================
+FIM DO RELATÓRIO DE VALIDAÇÃO
+===========================================================
