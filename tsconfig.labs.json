@@ -5,16 +5,20 @@
     "moduleResolution": "node16",
     "lib": ["ES2020", "DOM"],
     "strict": true,
+    "noEmit": true,
     "noEmitOnError": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "outDir": "./tests/dist",
     "types": ["node", "@playwright/test"]
   },
   "include": [
     "src/lib/supabase/**/*.ts",
     "src/lib/utils/**/*.ts",
+    "src/core/labs/**/*.ts",
+    "src/server/internal/**/*.ts",
+    "tests/**/*.ts",
     "playwright.config.ts"
   ],
   "exclude": ["node_modules", "api", "tests/dist"]
