@@ -42,8 +42,11 @@
     "exam:ocr:health": "node -e \"fetch(process.env.EXAM_OCR_SERVICE_URL||'http://localhost:8010').then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e.message);process.exit(1);})\"",
     "exam:process:test": "tsx --test tests/unit/lab-reports-service.test.ts",
     "test:labs": "node --test tests/unit/kronia-labs-handler.test.js",
-    "lint": "npx tsc --project tsconfig.labs.json --pretty false",
-    "build": "npx tsc --project tsconfig.labs.json --pretty false && npx esbuild src/ai/kronos/*.ts src/lib/agents/kronosAgent.ts --bundle=false --format=cjs --platform=node --target=node20 --outbase=src --outdir=src && node scripts/build-static-public.mjs && node scripts/force-diet-wizard-6step-build.mjs",
+    "typecheck:web": "npx tsc --noEmit --pretty false",
+    "typecheck:labs": "npx tsc --project tsconfig.labs.json --pretty false",
+    "typecheck": "npm run typecheck:web && npm run typecheck:labs",
+    "lint": "npm run typecheck",
+    "build": "npm run typecheck && npx esbuild src/ai/kronos/*.ts src/lib/agents/kronosAgent.ts --bundle=false --format=cjs --platform=node --target=node20 --outbase=src --outdir=src && node scripts/build-static-public.mjs && node scripts/force-diet-wizard-6step-build.mjs",
     "check:labs-upload": "node --env-file=.env.local scripts/check-labs-upload.mjs",
     "check:labs-pipeline": "tsx scripts/labs-pipeline-check.ts",
     "fix:home-labs-cta": "node scripts/fix-home-labs-cta.mjs"

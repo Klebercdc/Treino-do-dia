@@ -134,7 +134,7 @@ function isMissingOptionalTable(error: unknown, table: OptionalTableName): boole
 function resolveExamDate(ocr: OcrResponse): string | null {
   const date = ocr.exam_date || extractExamDateFromRawText(ocr.raw_text);
   const source = ocr.exam_date ? 'ocr' : date ? 'raw_text' : 'none';
-  if (source !== 'none') console.log(`[orchestrator] exam_date resolved via ${source}: ${date}`);
+  console.log(`[orchestrator] exam_date_source: ${source}${date ? ` date: ${date}` : ''}`);
   return date || null;
 }
 
