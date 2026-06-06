@@ -16710,51 +16710,9 @@ function openBiomarcadores() {
   console.warn('[labs] Nenhum fluxo novo de exames encontrado.');
 }
 function closeBiomarcadores() {
-  document.getElementById('biomarcadoresScreen').classList.remove('show');
-}
-
-async function _loadBioHistoricoList() {
-  var container = document.getElementById('bioHistList');
-  if (!container) return;
-  if (_labsHistoryCache) {
-    _renderBioHistoricoList(_labsHistoryCache, container);
-    return;
-  }
-  try {
-    var headers = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : {};
-    var resp = await fetch(resolveInternalApiPath('/api/kronia/labs/reports?limit=5'), { headers: headers, credentials: 'same-origin' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var payload = await resp.json();
-    _labsHistoryCache = payload.reports || [];
-    _renderBioHistoricoList(_labsHistoryCache, container);
-  } catch (err) {
-    container.innerHTML = '<div style="color:rgba(255,255,255,0.25);font-size:0.75rem;text-align:center;padding:20px 0">Histórico disponível após enviar exames</div>';
-  }
-}
-
-function _renderBioHistoricoList(reports, container) {
-  if (!container) return;
-  if (!reports || !reports.length) {
-    container.innerHTML = '<div style="color:rgba(255,255,255,0.25);font-size:0.75rem;text-align:center;padding:20px 0">Histórico disponível após enviar exames</div>';
-    return;
-  }
-  var docSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
-  var chevSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-  container.innerHTML = reports.slice(0, 5).map(function(r) {
-    var date = (r.examDate || r.processedAt || r.createdAt) ? new Date(r.examDate || r.processedAt || r.createdAt).toLocaleDateString('pt-BR') : '—';
-    var hasCritical = typeof _getCriticalFlags === 'function' && _getCriticalFlags(r).length > 0;
-    var hasClinical = typeof _getClinicalFlags === 'function' && _getClinicalFlags(r).length > 0;
-    var isAtencao = hasCritical || hasClinical;
-    var badgeClass = isAtencao ? 'bio-hist-badge--atencao' : 'bio-hist-badge--analisado';
-    var badgeLabel = isAtencao ? 'ATENÇÃO' : 'ANALISADO';
-    var fileName = r.fileName ? r.fileName.replace(/^\d+-/, '').replace(/\.[^.]+$/, '') : 'Exame';
-    return '<div class="bio-hist-item k-pressable" onclick="_labsSelectedReportId=\'' + String(r.id) + '\';closeBiomarcadores();openLabsScreen();">'
-      + '<div class="bio-hist-icon">' + docSvg + '</div>'
-      + '<div class="bio-hist-info"><div class="bio-hist-name">' + escapeHTML(fileName) + '</div><div class="bio-hist-date">' + escapeHTML(date) + '</div></div>'
-      + '<span class="bio-hist-badge ' + badgeClass + '">' + badgeLabel + '</span>'
-      + chevSvg
-      + '</div>';
-  }).join('');
+  // Alias defensivo: a tela #biomarcadoresScreen (mock legado) foi removida.
+  // Mantido para compatibilidade com chamadas externas; no-op se a div não existir.
+  document.getElementById('biomarcadoresScreen')?.classList.remove('show');
 }
 
 /* ════════════════════════════════════════════════════
