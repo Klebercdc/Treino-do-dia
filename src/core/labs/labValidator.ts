@@ -55,6 +55,7 @@ const EMPTY_PARSED_LAB_REPORT: ParsedLabReport = {
   zinc: null,
   psa_total: null,
   psa_free: null,
+  ck_total: null,
 }
 
 function normalizeNumber(value: unknown): number | null {
