@@ -1146,7 +1146,7 @@
     </div>
 
     <!-- Exames IA -->
-    <div onclick="openBiomarcadores()" class="kronia-tools-card k-pressable">
+    <div onclick="openLabsScreen()" class="kronia-tools-card k-pressable">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
         <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(37,99,235,0.4)">
           <i data-lucide="flask-conical" class="lucide" width="18" height="18" stroke="#fff" fill="none" stroke-width="1.9"></i>
@@ -1705,7 +1705,7 @@
           <span class="perfil-menu-name">Dados Pessoais</span>
           <i data-lucide="chevron-right" width="15" height="15" stroke="rgba(255,255,255,0.2)" fill="none" stroke-width="2" class="perfil-menu-arrow"></i>
         </div>
-        <div class="perfil-menu-row" onclick="openBiomarcadores()">
+        <div class="perfil-menu-row" onclick="openLabsScreen()">
           <div class="perfil-menu-icon">
             <i data-lucide="activity" width="15" height="15" stroke="#60A5FA" fill="none" stroke-width="1.75"></i>
           </div>
@@ -3498,7 +3498,7 @@
     <!-- Histórico section -->
     <div class="bio-section-head" style="margin-top:24px">
       <span class="bio-section-title">Histórico</span>
-      <button class="bio-ver-todos-btn" onclick="closeBiomarcadores();openLabsUploadScreen('bio_screen')">Ver todos</button>
+      <button class="bio-ver-todos-btn" onclick="openLabsScreen()">Ver todos</button>
     </div>
     <div id="bioHistList">
       <div style="color:rgba(255,255,255,0.25);font-size:0.75rem;text-align:center;padding:20px 0">Carregando…</div>

@@ -290,9 +290,17 @@
     await loadIndicators();
   }
 
-  window.openLabsUploadScreen = openLabsUploadScreen;
+  window.openLabsUploadScreen = function(source) {
+    if (typeof window.openLabsScreen === 'function') return window.openLabsScreen();
+    console.warn('[labs-bridge] openLabsScreen não encontrado, usando fallback');
+    return openLabsUploadScreen(source);
+  };
   document.addEventListener('DOMContentLoaded', function () {
-    window.openLabsUploadScreen = openLabsUploadScreen;
+    window.openLabsUploadScreen = function(source) {
+      if (typeof window.openLabsScreen === 'function') return window.openLabsScreen();
+      console.warn('[labs-bridge] openLabsScreen não encontrado, usando fallback');
+      return openLabsUploadScreen(source);
+    };
     ensureModal();
     log('bridge ready', BRIDGE_VERSION);
   });

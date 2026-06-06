@@ -135,6 +135,7 @@ function shapeReportSummary(row, biomarkers) {
     biomarkers: biomarkers || [],
     clinicalFlags: flags.clinicalFlags,
     criticalFlags: flags.criticalFlags,
+    examDate: row.exam_date || null,
     createdAt: row.created_at,
     processedAt: row.processed_at
   };
@@ -461,6 +462,7 @@ function handleReports(req, res) {
       .from('lab_reports')
       .select('*')
       .eq('user_id', user.id)
+      .order('exam_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(limit);
 

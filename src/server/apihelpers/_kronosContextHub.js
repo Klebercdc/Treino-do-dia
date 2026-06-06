@@ -216,15 +216,15 @@ async function loadTodayFoodLogs(userId) {
 }
 
 async function loadLatestLabSummary(userId) {
-  var select = 'id,created_at,processed_at,parse_status,is_valid,ai_insights,normalized_payload';
+  var select = 'id,created_at,processed_at,exam_date,parse_status,is_valid,ai_insights,normalized_payload';
 
-  // Prioridade: laudos válidos e processados
+  // Prioridade: laudos válidos e processados, ordenados por data real do exame
   var rows = await supabase(
     'GET',
     'lab_reports?user_id=eq.' + userId +
     '&is_valid=eq.true' +
     '&select=' + select +
-    '&order=processed_at.desc.nullslast,created_at.desc&limit=1',
+    '&order=exam_date.desc.nullslast,processed_at.desc.nullslast,created_at.desc&limit=1',
     null
   ).catch(function () { return []; });
   if (rows && rows[0]) return rows[0];
@@ -238,7 +238,7 @@ async function loadLatestLabSummary(userId) {
     'GET',
     'lab_reports?user_id=eq.' + userId +
     '&select=' + select +
-    '&order=created_at.desc&limit=1',
+    '&order=exam_date.desc.nullslast,created_at.desc&limit=1',
     null
   ).catch(function () { return []; });
   return (any && any[0]) ? any[0] : null;

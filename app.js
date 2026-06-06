@@ -16705,9 +16705,9 @@ if (typeof window !== 'undefined') {
    BIOMARCADORES
 ════════════════════════════════════════════════════ */
 function openBiomarcadores() {
-  document.getElementById('biomarcadoresScreen').classList.add('show');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-  _loadBioHistoricoList();
+  if (typeof window.openLabsScreen === 'function') return window.openLabsScreen();
+  if (typeof window.openLabsUploadScreen === 'function') return window.openLabsUploadScreen('legacy_alias');
+  console.warn('[labs] Nenhum fluxo novo de exames encontrado.');
 }
 function closeBiomarcadores() {
   document.getElementById('biomarcadoresScreen').classList.remove('show');
@@ -16741,7 +16741,7 @@ function _renderBioHistoricoList(reports, container) {
   var docSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
   var chevSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
   container.innerHTML = reports.slice(0, 5).map(function(r) {
-    var date = (r.processedAt || r.createdAt) ? new Date(r.processedAt || r.createdAt).toLocaleDateString('pt-BR') : '—';
+    var date = (r.examDate || r.processedAt || r.createdAt) ? new Date(r.examDate || r.processedAt || r.createdAt).toLocaleDateString('pt-BR') : '—';
     var hasCritical = typeof _getCriticalFlags === 'function' && _getCriticalFlags(r).length > 0;
     var hasClinical = typeof _getClinicalFlags === 'function' && _getClinicalFlags(r).length > 0;
     var isAtencao = hasCritical || hasClinical;
