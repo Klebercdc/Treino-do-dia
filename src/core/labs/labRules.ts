@@ -1,7 +1,7 @@
-import type { BiomarkerEntry, ClinicalRuleResult, HealthPerformanceProfile, ParsedLabReport } from './labTypes'
-import { buildHealthPerformanceProfile } from './labHealthProfile'
-import { SPORTS_THRESHOLDS as ST } from './benchmarks'
-import type { UserProfile } from './benchmarks'
+import type { BiomarkerEntry, ClinicalRuleResult, HealthPerformanceProfile, ParsedLabReport } from './labTypes.ts'
+import { buildHealthPerformanceProfile } from './labHealthProfile.ts'
+import { SPORTS_THRESHOLDS as ST } from './benchmarks.ts'
+import type { UserProfile } from './benchmarks.ts'
 
 function hasValue(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value)

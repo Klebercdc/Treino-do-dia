@@ -12,7 +12,7 @@
  * - Severity: ok < attention < caution < critical
  */
 
-import type { BiomarkerEntry, HealthPerformanceProfile, SignalGroup, SignalLevel } from './labTypes'
+import type { BiomarkerEntry, HealthPerformanceProfile, SignalGroup, SignalLevel } from './labTypes.ts'
 
 // ---------------------------------------------------------------------------
 // Value helpers

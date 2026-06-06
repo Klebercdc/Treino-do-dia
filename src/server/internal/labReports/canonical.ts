@@ -1,4 +1,4 @@
-import type { BiomarkerEntry, NormalizedReference } from '../../../core/labs/labTypes'
+import type { BiomarkerEntry, NormalizedReference } from '../../../core/labs/labTypes.ts'
 
 export type CanonicalLabStatus =
   | 'pending_upload'
