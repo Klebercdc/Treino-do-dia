@@ -1,0 +1,434 @@
+DIAGNÓSTICO — PARSER DE REFERÊNCIA LABORATORIAL
+KroniA / lab-report-orchestrator
+Data: 2026-06-07
+Exames afetados: 51310243 (shbg), 04dfcb1e (vitamin_d)
+Usuário: Kleber, male, 41 anos, hormonizado
+================================================================================
+
+CONTEXTO
+--------
+Três commits foram deploiados via PR #566 → main (workflow run #31):
+  b79c66a — fix phaseBlocksRelease: && input.sex !== 'male' (linha 367)
+  df95a8e — buildMergedSegments: une rótulo + valor separados por pipe
+  508828b — deploy workflow: adiciona --no-verify-jwt
+
+Os exames NÃO foram reprocessados ainda. O estado atual no banco ainda reflete
+o processamento anterior aos fixes. O diagnóstico abaixo avalia o código ATUAL
+(pós-deploy) para determinar o que resolve ao reprocessar vs. o que ainda falha.
+
+
+================================================================================
+PADRÃO 1 — SHBG (exame 51310243)
+================================================================================
+
+REFERENCE_TEXT (confirmado do banco):
+  "Resultado: 8,4 nmol/L Homens de 20 a 70 anos: 13,2 a 89,5 nmol/L |
+   Mulheres de 20 a 46 anos: 18,2 a 135,7 nmol/L |
+   Mulheres de 47 a 91 anos (Pós-Menopausa): 16,8 a 125,2 nmol/L"
+
+CAUSA RAIZ ORIGINAL (código antigo):
+  labInterpretation.ts:365-367 (versão antiga):
+    const hasPhaseSpecificReference = true   // "pós-menopausa" bate PHASE_REFERENCE_RE
+    const phaseBlocksRelease = hasPhaseSpecificReference   // SEM && sex !== 'male'
+  → entra no bloco if linha 373 → retorna matched_by='ambiguous' antes de avaliar candidatos
+
+RASTREAMENTO COM CÓDIGO ATUAL:
+
+  1. splitReferenceText → 3 segmentos (split em |):
+       [0] "Resultado: 8,4 nmol/L Homens de 20 a 70 anos: 13,2 a 89,5 nmol/L"
+       [1] "Mulheres de 20 a 46 anos: 18,2 a 135,7 nmol/L"
+       [2] "Mulheres de 47 a 91 anos (Pós-Menopausa): 16,8 a 125,2 nmol/L"
+
+  2. buildMergedSegments:
+       Seg[0]: hasSexLabel=true ("Homens"), numericPart="13,2 a 89,5 nmol/L",
+               currentHasNumeric=true → sem merge, push as-is
+       Seg[1]: hasSexLabel=true ("Mulheres"), numericPart="18,2 a 135,7 nmol/L",
+               currentHasNumeric=true → sem merge
+       Seg[2]: idem → sem merge
+
+  3. parseReferenceCandidate:
+       Seg[0]: normalized.includes('homens')=true → sex='male'
+               numericText (após lastIndexOf(':')) = "13,2 a 89,5 nmol/L"
+               RANGE_RE → min=13.2, max=89.5
+               parseAgeRange("20 a 70 anos") → minAge=20, maxAge=70
+               → Candidato: male, 20-70, range 13.2–89.5
+
+       Seg[1]: sex='female', 20-46, range 18.2–135.7
+       Seg[2]: sex='female', 47-91, range 16.8–125.2
+
+  4. Gate check (linha 373):
+       phaseBlocksRelease = true && (input.sex !== 'male') = true && false = FALSE
+       → gate NÃO bloqueia
+
+  5. Scoring (male, age=41):
+       Candidato male 20-70:  +40(sex) +20(age 41∈[20,70]) +5(range) = 65
+       Candidato female 20-46: input.sex='male' ≠ candidate.sex='female' → -Infinity
+       Candidato female 47-91: idem → -Infinity
+
+  6. selectedCount=1, selected=male 20-70
+     matched_by='sex_age' → NÃO ambíguo
+
+STATUS: ✅ RESOLVIDO pelo commit b79c66a — precisa reprocessar
+
+
+================================================================================
+PADRÃO 2 — PSA (exame 04dfcb1e)
+================================================================================
+
+REFERENCE_TEXT (confirmado do banco):
+  "Resultado: 0,31 ng/mL Homens: | Até 60 anos: Inferior a 2,50 ng/mL |
+   Acima de 60 anos: Inferior a 4,00 ng/mL | Mulheres: Não detectável"
+
+CAUSA RAIZ ORIGINAL (código sem buildMergedSegments):
+  Seg[0] "Resultado: 0,31 ng/mL Homens:" → numericPart="" → LESS_THAN_RE("")=false
+  → parseReferenceCandidate retorna null
+  → sem candidato masculino; apenas candidato any maxAge=60 vencia (score=33)
+  → matched_by='age' (não ambíguo por si só)
+  NOTA: PSA provavelmente estava sendo bloqueado por missing_unit ou
+        critical_low_confidence no exame 04dfcb1e, não por ambiguous_reference.
+
+RASTREAMENTO COM CÓDIGO ATUAL:
+
+  1. splitReferenceText → 4 segmentos:
+       [0] "Resultado: 0,31 ng/mL Homens:"
+       [1] "Até 60 anos: Inferior a 2,50 ng/mL"
+       [2] "Acima de 60 anos: Inferior a 4,00 ng/mL"
+       [3] "Mulheres: Não detectável"
+
+  2. buildMergedSegments:
+       Seg[0]: hasSexLabel=true ("Homens"), numericPart="" → currentHasNumeric=false
+               next=Seg[1], nextPart="Inferior a 2,50 ng/mL"
+               LESS_THAN_RE("Inferior a 2,50 ng/mL") = true → nextHasNumeric=true
+               MERGE → "Resultado: 0,31 ng/mL Homens: Até 60 anos: Inferior a 2,50 ng/mL"
+               i += 2
+
+       Seg[2]: hasSexLabel=false → push as-is
+       Seg[3]: hasSexLabel=true ("Mulheres"), numericPart="Não detectável"
+               LESS_THAN_RE=false, RANGE_RE=false → sem numeric
+               i+1 fora dos limites → push as-is
+
+  3. parseReferenceCandidate:
+       Mesclado: sex='male' (inclui "homens")
+                 numericText (após lastIndexOf(':')="Inferior a 2,50 ng/mL")
+                 LESS_THAN_RE → max=2.50
+                 parseAgeRange("até 60 anos") → maxAge=60
+                 → Candidato: male, maxAge=60, max=2.50, kind=less_than
+
+       Seg[2]: sex='any', minAge=61 (acima de 60 → 61), max=4.00
+       Seg[3]: sex='female', nenhum numérico → null
+
+  4. Scoring (male, age=41):
+       male maxAge=60: +40 +20(41≤60) +5 = 65
+       any minAge=61:  age 41 < minAge 61 → -Infinity
+
+  5. selectedCount=1 → matched_by='sex_age' → NÃO ambíguo
+
+STATUS: ✅ RESOLVIDO pelo commit df95a8e — precisa reprocessar
+
+
+================================================================================
+PADRÃO 3 — FSH (exame 04dfcb1e)
+================================================================================
+
+REFERENCE_TEXT (confirmado parcialmente do banco):
+  "Meninos: 0,60 a 4,60 | Meninas: 0,70 a 6,70 | Homens.: 1,27 a 19,26 mUI/mL |
+   Mulheres: | Fase folicular: 3,50 a 12,50 | ..."
+
+CAUSA RAIZ ORIGINAL:
+  PHASE_REFERENCE_RE.test("Fase folicular") = true
+  phaseBlocksRelease = true (sem exceção para male)
+  → gate bloqueia → ambiguous
+
+RASTREAMENTO COM CÓDIGO ATUAL:
+
+  1. splitReferenceText → segmentos:
+       [0] "Meninos: 0,60 a 4,60"
+       [1] "Meninas: 0,70 a 6,70"
+       [2] "Homens.: 1,27 a 19,26 mUI/mL"
+       [3] "Mulheres:"
+       [4] "Fase folicular: 3,50 a 12,50"
+       ...
+
+  2. buildMergedSegments:
+       Seg[0]: hasSexLabel? "Meninos" NÃO bate /\b(?:homens?|mulheres?|masculino|feminino)\b/
+               → push as-is
+       Seg[1]: "Meninas" → idem → push as-is
+       Seg[2]: "Homens." — \b casa antes de 'H' e depois de 's' (antes de '.')
+               hasSexLabel=true
+               numericPart="1,27 a 19,26 mUI/mL" → RANGE_RE=true → currentHasNumeric=true
+               → sem merge, push as-is
+       Seg[3]: "Mulheres:" → hasSexLabel=true, numericPart="" → sem numérico
+               next=Seg[4] "Fase folicular: 3,50 a 12,50" → nextPart="3,50 a 12,50"
+               RANGE_RE=true → MERGE → "Mulheres: Fase folicular: 3,50 a 12,50"
+               i += 2
+
+  3. parseReferenceCandidate:
+       "Meninos":    normalized.includes('homens')=false, includes('mulheres')=false
+                    → sex='any', RANGE_RE → min=0.60, max=4.60, score=13
+       "Meninas":   idem → sex='any', min=0.70, max=6.70, score=13
+       "Homens.":   normalized.includes('homens')=true → sex='male'
+                    RANGE_RE → min=1.27, max=19.26, sem age → score=45
+       "Mulheres:Fase folicular:":  sex='female', range → score=-Infinity (male user)
+
+  4. Gate: phaseBlocksRelease=false (male user) → não bloqueia
+
+  5. Scoring: male 45 > any 13 → selectedCount=1 → matched_by='sex'
+
+STATUS: ✅ RESOLVIDO pelo commit b79c66a — precisa reprocessar
+
+
+================================================================================
+PADRÃO 4 — LH (exame 04dfcb1e)
+================================================================================
+
+REFERENCE_TEXT (confirmado do banco):
+  "Mulheres: [fases] | Pós-menopausa | Homens: 1,24 a 8,62 mUI/mL"
+
+CAUSA RAIZ ORIGINAL: idêntica ao FSH — "Pós-menopausa" → phaseBlocksRelease=true → gate.
+
+RASTREAMENTO COM CÓDIGO ATUAL:
+  buildMergedSegments: "Homens:" (sem numérico) → next="1,24 a 8,62 mUI/mL"
+  → MERGE → "Homens: 1,24 a 8,62 mUI/mL"
+  → sex='male', range 1.24–8.62, sem age → score=45
+  Candidatas femininas → -Infinity
+  selectedCount=1 → matched_by='sex'
+
+STATUS: ✅ RESOLVIDO pelo commit b79c66a — precisa reprocessar
+
+
+================================================================================
+PADRÃO 5 — TESTOSTERONA LIVRE (exame 04dfcb1e)
+================================================================================
+
+REFERENCE_TEXT (confirmado do banco):
+  "Homens: | 17 a 40 anos: 3,400 a 24,600 | 41 a 60 anos: 1,670 a 18,300 |
+   Fase folicular: ... | Pós menopausa: ..."
+
+CAUSA RAIZ ORIGINAL: "Fase folicular" → phaseBlocksRelease=true → gate.
+
+RASTREAMENTO COM CÓDIGO ATUAL:
+
+  1. buildMergedSegments:
+       "Homens:" (sem numérico) → next="17 a 40 anos: 3,400 a 24,600"
+       nextPart="3,400 a 24,600" → RANGE_RE=true → MERGE
+       → "Homens: 17 a 40 anos: 3,400 a 24,600"
+
+       "41 a 60 anos: 1,670 a 18,300" → hasSexLabel=false → push as-is
+
+  2. parseReferenceCandidate:
+       "Homens: 17 a 40 anos: 3,400 a 24,600":
+         sex='male', parseAgeRange → minAge=17, maxAge=40
+         numericText="3,400 a 24,600" → min=3.4, max=24.6
+         → Candidato: male, 17–40
+
+       "41 a 60 anos: 1,670 a 18,300":
+         sex='any', minAge=41, maxAge=60
+         numericText="1,670 a 18,300" → min=1.67, max=18.3
+         → Candidato: any, 41–60
+
+  3. Scoring (male, age=41):
+       male 17–40: input.age(41) > maxAge(40) → linha 299: return -Infinity
+       any  41–60: +8(any) +20(age∈[41,60]) +5(range) = 33
+
+  4. selectedCount=1, selected=any 41-60 → matched_by='age'
+     NÃO ambíguo.
+
+OBSERVAÇÃO: O candidato masculino é eliminado porque a faixa "17 a 40 anos" não
+cobre a idade 41. O sistema resolve via candidato any-sex da faixa etária correta.
+A referência clínica usada é correta (1,67–18,3 para 41–60 anos), porém perde o
+rótulo de sexo explícito. Aceitável.
+
+STATUS: ✅ RESOLVIDO pelo commit b79c66a + df95a8e — precisa reprocessar
+
+
+================================================================================
+PADRÃO 6 — LDL (exames 51310243 e 04dfcb1e)
+================================================================================
+
+REFERENCE_TEXT (confirmado do banco):
+  "ADULTOS: | Ótimo: < 100 | Limiar ótimo: 100-129 | Limiar elevado: 130-159 |
+   Elevado: 160-189 | Muito elevado: > 190"
+
+CAUSA RAIZ — AINDA FALHA COM CÓDIGO ATUAL:
+
+  CAUSA A — Símbolos < e > não reconhecidos:
+
+    labInterpretation.ts:20-21:
+      LESS_THAN_RE  = /(?:inferior|menor|abaixo|less than|below)\s+.../i
+      GREATER_THAN_RE = /(?:superior|maior|acima|greater than|above)\s+.../i
+
+    "Ótimo: < 100":
+      numericText = "< 100"
+      RANGE_RE("< 100") = false
+      LESS_THAN_RE("< 100") = false  ← símbolo '<' não está nos keywords
+      GREATER_THAN_RE("< 100") = false
+      → parseReferenceCandidate retorna NULL
+
+    "Muito elevado: > 190":
+      numericText = "> 190"
+      GREATER_THAN_RE("> 190") = false  ← símbolo '>' não está nos keywords
+      → retorna NULL
+
+  CAUSA B — Três candidatos empatados, tiebreaker não resolve:
+
+    Candidatos sobreviventes (os que têm numérico reconhecido):
+      "Limiar ótimo: 100-129"   → sex='any', min=100, max=129, kind=range
+      "Limiar elevado: 130-159" → sex='any', min=130, max=159, kind=range
+      "Elevado: 160-189"        → sex='any', min=160, max=189, kind=range
+      ("ADULTOS:" → numericText="" → RANGE_RE=false → null)
+
+    Scoring (male, age=41):
+      Todos: +8(any sex) +5(range kind) = 13
+      (sem age constraints → sem bônus de idade)
+      → 3 candidatos empatados em score=13
+
+    Tiebreaker (linhas 414–429):
+      topScore = 13
+      tied = [100-129, 130-159, 160-189]
+      allSameSex: todos 'any' → true
+      ranges = [todos os três]
+      maxW = Math.max(29, 29, 29) = 29
+        (100→129 = 29, 130→159 = 29, 160→189 = 29)
+      widest = [todos os três]
+      widest.length = 3 ≠ 1 → tiebreaker NÃO resolve
+
+    Linha 432: selectedCount(3) > 1 → retorna matched_by='ambiguous'
+
+  IMPACTO:
+    canonical.ts:250: isReferenceAmbiguous → true
+    collectBiomarkerGateWarnings: "ldl_cholesterol:ambiguous_reference"
+    decideClinicalGate → releaseAllowed=false
+
+STATUS: ❌ AINDA FALHA — precisa de PASSO 4 (parser de formato categoria)
+
+  CORREÇÃO NECESSÁRIA:
+    1. Adicionar SYMBOL_LESS_THAN_RE = /^[<＜]\s*(-?\d+(?:[.,]\d+)?)/ em parseReferenceCandidate
+    2. Adicionar SYMBOL_GREATER_THAN_RE = /^[>＞]\s*(-?\d+(?:[.,]\d+)?)/
+    3. Tratar segmentos com rótulos de categoria (Ótimo, Limiar, Elevado) como
+       not-comparable entre si — não entram no scoring de referência do paciente.
+       A referência do LDL deve ser selecionada via regra de negócio separada
+       (ex.: selecionar o range que contém o valor do paciente), não por scoring.
+
+
+================================================================================
+PADRÃO 7 — ESTRADIOL (exame 04dfcb1e)
+================================================================================
+
+REFERENCE_TEXT: apenas referências femininas e pediátricas.
+Sem referência masculina adulta no laudo.
+
+CAUSA RAIZ — AINDA FALHA COM CÓDIGO ATUAL:
+
+  PASSO 1 — Scoring elimina todos os candidatos:
+    Todos os candidatos: sex='female'
+    normalizeCandidateMatch para male:
+      linha 291: candidate.sex !== 'any' e candidate.sex !== input.sex
+      → return Number.NEGATIVE_INFINITY
+    selected = null após loop
+
+  PASSO 2 — Caminho !selected (linha 452):
+    biomarker.reference_min = null, reference_max = null (sem OCR numérico para male)
+    referenceTextRaw = [texto com fases femininas]
+    NO_REFERENCE_BY_DESIGN_RE.test(referenceTextRaw) = false
+    → retorna: matched_by='text_only'
+
+  PASSO 3 — isReferenceAmbiguous (canonical.ts:224):
+    normalizedReference.matched_by = 'text_only'
+    rawText contém "Fase folicular", "Pós-menopausa" etc.
+    PHASE_REFERENCE_RE.test(rawText) = true
+    && matched_by === 'text_only' = true
+    → retorna TRUE  ← ARMADILHA
+
+  PASSO 4 — collectBiomarkerGateWarnings (canonical.ts:250):
+    critical=true (estradiol ∈ CRITICAL_MARKERS)
+    isReferenceAmbiguous=true → "estradiol:ambiguous_reference"
+    needsReferenceResolution: matched_by='text_only' → true → "estradiol:unresolved_reference"
+    → duas warnings para estradiol sozinho
+
+  CAUSA RAIZ REAL: o lab não incluiu referência masculina para estradiol neste exame.
+  O sistema interpreta "sem match masculino + fases femininas" como "ambíguo",
+  quando a interpretação correta é "sem referência para este sexo/contexto —
+  usar benchmark clínico (SPORTS_THRESHOLDS) ou flag 'no_male_reference'".
+
+  IMPACTO PARA USUÁRIO HORMONIZADO:
+    Para usuário em TRT/androgens, estradiol é marcador crítico de monitoramento.
+    A ausência de referência laboratorial masculina não deve bloquear o exame —
+    deve ser sinalizado para interpretação clínica assistida (hormone_context_type='trt').
+
+STATUS: ❌ AINDA FALHA — precisa de PASSO 5 (gate resiliente) +
+        possível fallback para "no_male_reference" em vez de "ambiguous"
+
+  CORREÇÃO NECESSÁRIA:
+    Em selectNormalizedReference: quando selected=null e todos candidatos foram
+    eliminados por sexo errado (não por pontuação negativa por outros motivos),
+    retornar matched_by='no_male_reference' em vez de 'text_only'.
+    Em decideClinicalGate (PASSO 5): matched_by='no_male_reference' em marcador
+    crítico → context_flag='needs_review', NÃO bloqueia o exame.
+
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+
+PADRÃO               EXAME       STATUS ATUAL          AÇÃO
+─────────────────────────────────────────────────────────────────────────────
+SHBG                 51310243    ✅ Resolvido (b79c66a)  Reprocessar
+LDL                  51310243    ❌ Ainda falha          PASSO 4
+PSA                  04dfcb1e    ✅ Resolvido (df95a8e)  Reprocessar
+FSH                  04dfcb1e    ✅ Resolvido (b79c66a)  Reprocessar
+LH                   04dfcb1e    ✅ Resolvido (b79c66a)  Reprocessar
+Testosterona livre   04dfcb1e    ✅ Resolvido (b79c66a)  Reprocessar
+Estradiol            04dfcb1e    ❌ Ainda falha          PASSO 5
+T4_free, TSH,        04dfcb1e    ⚠️  Status incerto      Verificar conf/unit
+Vitamina B12,
+Hemoglobina,
+Hematócrito
+
+EXAME 51310243 após reprocessamento:
+  SHBG → resolve. LDL → ainda bloqueia. Exame permanece em needs_clinical_review.
+
+EXAME 04dfcb1e após reprocessamento:
+  PSA, FSH, LH, T.livre → resolvem. Estradiol → ainda bloqueia.
+  T4_free/TSH/vit_B12/hemoglobin/hematocrit → depende de confidence/unit do OCR.
+  Exame permanece em needs_clinical_review até PASSO 5.
+
+PLANO DE AÇÃO (por ordem de dependência):
+  PASSO 4: Parser LDL — adicionar símbolo <> + tratar categoria-format como
+           "range que contém o valor" em vez de scoring
+  PASSO 5: Gate resiliente — ambiguous/no_male_reference → context_flag,
+           não bloqueia exame
+  PASSO 6: Resetar os 3 exames e reprocessar via watchdog
+
+PASSOS 1-3 (enum, profile, parser hormonal) aumentam a QUALIDADE da interpretação
+mas não desbloqueiam os exames — o desbloqueio real vem dos PASSOs 4 e 5.
+
+
+================================================================================
+INFORMAÇÃO TÉCNICA ADICIONAL
+================================================================================
+
+Arquivo principal afetado:
+  supabase/functions/lab-report-orchestrator/labInterpretation.ts
+    RANGE_RE       linha 19
+    LESS_THAN_RE   linha 20
+    GREATER_THAN_RE linha 21
+    PHASE_REFERENCE_RE (canonical.ts) linha 61
+    parseReferenceCandidate  linha 218
+    buildMergedSegments      linha 323
+    selectNormalizedReference linha 347
+    phaseBlocksRelease       linha 367
+
+  supabase/functions/lab-report-orchestrator/canonical.ts
+    CRITICAL_MARKERS         linha 63
+    isReferenceAmbiguous     linha 218
+    needsReferenceResolution linha 230
+    collectBiomarkerGateWarnings linha 242
+    decideClinicalGate       linha 256
+
+Branch ativo: claude/kronia-guided-execution-layout-AXhCs (mergeado em main via PR #566)
+Função produção: lab-report-orchestrator (--no-verify-jwt ativo)
+Projeto Supabase: twxoddzogbmaysebhour
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================
