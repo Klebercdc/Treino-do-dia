@@ -219,9 +219,11 @@ function isReferenceAmbiguous(marker: BiomarkerEntry): boolean {
   const normalizedReference = marker.normalized_reference
   const rawText = String(marker.reference_text_raw || marker.reference_text || '').trim()
   if (!rawText) return false
-  if (normalizedReference?.matched_by === 'ambiguous') return true
+  const mb = normalizedReference?.matched_by
+  if (mb === 'no_male_reference' || mb === 'category' || mb === 'category_out_of_range') return false
+  if (mb === 'ambiguous') return true
   if (marker.source_reference_kind === 'ambiguous') return true
-  if (PHASE_REFERENCE_RE.test(rawText) && (!normalizedReference || normalizedReference.matched_by === 'text_only')) {
+  if (PHASE_REFERENCE_RE.test(rawText) && (!normalizedReference || mb === 'text_only')) {
     return true
   }
   return false
@@ -229,10 +231,10 @@ function isReferenceAmbiguous(marker: BiomarkerEntry): boolean {
 
 function needsReferenceResolution(marker: BiomarkerEntry): boolean {
   const normalizedReference = marker.normalized_reference
-  // Laudo que declara explicitamente ausência de referência não bloqueia o gate
-  if (normalizedReference?.matched_by === 'no_reference') return false
-  if (normalizedReference?.matched_by === 'ambiguous') return true
-  if (normalizedReference?.matched_by === 'text_only') return true
+  const mb = normalizedReference?.matched_by
+  if (mb === 'no_reference' || mb === 'no_male_reference' || mb === 'category' || mb === 'category_out_of_range') return false
+  if (mb === 'ambiguous') return true
+  if (mb === 'text_only') return true
   if (!normalizedReference && marker.reference_min == null && marker.reference_max == null && (marker.reference_text_raw || marker.reference_text)) {
     return true
   }
@@ -247,8 +249,6 @@ function collectBiomarkerGateWarnings(marker: BiomarkerEntry): string[] {
   if (confidence < MIN_BIOMARKER_CONFIDENCE) warnings.push(buildGateWarning(marker, 'low_extraction_confidence'))
   if (critical && confidence < MIN_CRITICAL_BIOMARKER_CONFIDENCE) warnings.push(buildGateWarning(marker, 'critical_low_confidence'))
   if (critical && !marker.unit) warnings.push(buildGateWarning(marker, 'missing_unit'))
-  if (critical && isReferenceAmbiguous(marker)) warnings.push(buildGateWarning(marker, 'ambiguous_reference'))
-  if (critical && needsReferenceResolution(marker)) warnings.push(buildGateWarning(marker, 'unresolved_reference'))
 
   return warnings
 }

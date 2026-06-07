@@ -19,6 +19,8 @@ type ReferenceCandidate = {
 const RANGE_RE = /(-?\d+(?:[.,]\d+)?)\s*(?:a|até|-|e)\s*(-?\d+(?:[.,]\d+)?)/i
 const LESS_THAN_RE = /(?:inferior|menor|abaixo|less than|below)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
 const GREATER_THAN_RE = /(?:superior|maior|acima|greater than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
+const SYMBOL_LESS_THAN_RE = /^[<＜]\s*(\d+(?:[.,]\d+)?)/
+const SYMBOL_GREATER_THAN_RE = /^[>＞]\s*(\d+(?:[.,]\d+)?)/
 const PHASE_REFERENCE_RE = /\b(folicular|lutea|luteal|ovulatoria|ovulat|gestante|gravidez|trimestre|menopausa|pos-menopausa|pós-menopausa|fase)\b/i
 // Laudo que declara explicitamente ausência de referência
 const NO_REFERENCE_BY_DESIGN_RE = /n[aã]o\s+h[aá]\s+valores?\s+de\s+refer[eê]ncia|sem\s+valores?\s+de\s+refer[eê]ncia|valores?\s+de\s+refer[eê]ncia\s+n[aã]o\s+(?:definid|estabelecid)/i
@@ -280,6 +282,38 @@ function parseReferenceCandidate(text: string): ReferenceCandidate | null {
     }
   }
 
+  const symbolLessMatch = SYMBOL_LESS_THAN_RE.exec(numericText)
+  if (symbolLessMatch) {
+    return {
+      kind: 'less_than',
+      min: null,
+      max: toNumber(symbolLessMatch[1]),
+      rawText: text.trim(),
+      sex,
+      minAge: ageRange.minAge,
+      maxAge: ageRange.maxAge,
+      matchedBy: 'generic',
+      mentionsAdult,
+      fasting,
+    }
+  }
+
+  const symbolGreaterMatch = SYMBOL_GREATER_THAN_RE.exec(numericText)
+  if (symbolGreaterMatch) {
+    return {
+      kind: 'greater_than',
+      min: toNumber(symbolGreaterMatch[1]),
+      max: null,
+      rawText: text.trim(),
+      sex,
+      minAge: ageRange.minAge,
+      maxAge: ageRange.maxAge,
+      matchedBy: 'generic',
+      mentionsAdult,
+      fasting,
+    }
+  }
+
   return null
 }
 
@@ -400,6 +434,7 @@ function selectNormalizedReference(
   let selected: ReferenceCandidate | null = null
   let selectedScore = Number.NEGATIVE_INFINITY
   let selectedCount = 0
+  let selectedByCategory = false
   for (const candidate of candidates) {
     const score = normalizeCandidateMatch(candidate, input)
     if (score > selectedScore) {
@@ -426,6 +461,50 @@ function selectNormalizedReference(
           selectedCount = 1
         }
       }
+    }
+  }
+
+  // Formato de categoria (ex.: LDL Ótimo/Limiar/Elevado): candidatos any-sex sem age empatados.
+  // Seleciona o range que CONTÉM o valor do paciente em vez de scoring.
+  if (referenceTextRaw && selected && selectedCount > 1) {
+    const topScore = selectedScore
+    const tiedCats = candidates.filter((c) => normalizeCandidateMatch(c, input) === topScore)
+    const allAnyNoAge = tiedCats.every((c) => c.sex === 'any' && c.minAge == null && c.maxAge == null)
+    if (allAnyNoAge) {
+      if (biomarker.value_numeric != null) {
+        const v = biomarker.value_numeric
+        const containing = tiedCats.filter((c) => {
+          if (c.kind === 'range' && c.min != null && c.max != null) return v >= c.min && v <= c.max
+          if (c.kind === 'less_than' && c.max != null) return v < c.max
+          if (c.kind === 'greater_than' && c.min != null) return v >= c.min
+          return false
+        })
+        if (containing.length === 1) {
+          selected = containing[0]
+          selectedCount = 1
+          selectedByCategory = true
+        } else if (containing.length === 0) {
+          return {
+            normalizedReference: {
+              kind: 'text',
+              min: null,
+              max: null,
+              raw_text: referenceTextRaw,
+              matched_by: 'category_out_of_range',
+              sex: 'any',
+              min_age: null,
+              max_age: null,
+            },
+            referenceMin: null,
+            referenceMax: null,
+            referenceTextRaw,
+            labFlag: biomarker.lab_flag ?? biomarker.flag ?? null,
+            sourceReferenceKind: 'category_out_of_range',
+          }
+        }
+        // containing.length > 1: ranges sobrepostos → cai no ambiguous abaixo
+      }
+      // value_numeric null: sem valor para selecionar categoria → cai no ambiguous abaixo
     }
   }
 
@@ -468,6 +547,29 @@ function selectNormalizedReference(
         referenceTextRaw,
         labFlag: null,
         sourceReferenceKind: 'no_reference',
+      }
+    }
+    // Candidatos existem mas todos são do sexo oposto (ex.: estradiol sem referência masculina)
+    if (candidates.length > 0 && (input.sex === 'male' || input.sex === 'female')) {
+      const allWrongSex = candidates.every((c) => c.sex !== 'any' && c.sex !== input.sex)
+      if (allWrongSex) {
+        return {
+          normalizedReference: {
+            kind: 'text',
+            min: null,
+            max: null,
+            raw_text: referenceTextRaw,
+            matched_by: 'no_male_reference',
+            sex: 'any',
+            min_age: null,
+            max_age: null,
+          },
+          referenceMin: null,
+          referenceMax: null,
+          referenceTextRaw,
+          labFlag: biomarker.lab_flag ?? biomarker.flag ?? null,
+          sourceReferenceKind: 'no_male_reference',
+        }
       }
     }
     return {
@@ -526,15 +628,17 @@ function selectNormalizedReference(
   }
 
   const matchedBy: NormalizedReference['matched_by'] =
-    selected.sex !== 'any' && (selected.minAge != null || selected.maxAge != null)
-      ? 'sex_age'
-      : selected.sex !== 'any'
-        ? 'sex'
-        : selected.minAge != null || selected.maxAge != null
-          ? 'age'
-          : selected.mentionsAdult
-            ? 'adult'
-            : 'generic'
+    selectedByCategory
+      ? 'category'
+      : selected.sex !== 'any' && (selected.minAge != null || selected.maxAge != null)
+        ? 'sex_age'
+        : selected.sex !== 'any'
+          ? 'sex'
+          : selected.minAge != null || selected.maxAge != null
+            ? 'age'
+            : selected.mentionsAdult
+              ? 'adult'
+              : 'generic'
 
   const referenceMin = selected.min
   const referenceMax = selected.max
@@ -581,6 +685,10 @@ function hormoneContextSummary(hormone: HormoneContextProfile): string {
 
 function buildContextFlag(entry: BiomarkerEntry, hormone: HormoneContextProfile): string | null {
   const labFlag = entry.lab_flag ?? entry.flag
+  const matchedBy = entry.normalized_reference?.matched_by
+  if (matchedBy === 'no_male_reference' || matchedBy === 'category' || matchedBy === 'category_out_of_range' || matchedBy === 'ambiguous') {
+    return 'needs_review'
+  }
   if (!labFlag || labFlag === 'normal') return null
 
   if (entry.marker_key === 'testosterone_total' || entry.marker_key === 'testosterone_free') {
