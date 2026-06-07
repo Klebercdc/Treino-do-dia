@@ -20,10 +20,6 @@ const RANGE_RE = /(-?\d+(?:[.,]\d+)?)\s*(?:a|até|-|e)\s*(-?\d+(?:[.,]\d+)?)/i
 const LESS_THAN_RE = /(?:inferior|menor|abaixo|less than|below)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
 const GREATER_THAN_RE = /(?:superior|maior|acima|greater than|above)\s+(?:a|de|que|than)?\s*(-?\d+(?:[.,]\d+)?)(?!\s*anos?\b)/i
 const PHASE_REFERENCE_RE = /\b(folicular|lutea|luteal|ovulatoria|ovulat|gestante|gravidez|trimestre|menopausa|pos-menopausa|pós-menopausa|fase)\b/i
-// Fases do ciclo feminino — ambíguas para qualquer sexo/contexto
-const CYCLE_PHASE_RE = /\b(folicular|lutea|luteal|ovulatoria|ovulat|gestante|gravidez|trimestre|fase)\b/i
-// Menopausa é específica do sexo feminino — pode ser ignorada quando o usuário é reconhecidamente masculino
-const MENOPAUSE_PHASE_RE = /\b(menopausa|pos-menopausa|pós-menopausa)\b/i
 // Laudo que declara explicitamente ausência de referência
 const NO_REFERENCE_BY_DESIGN_RE = /n[aã]o\s+h[aá]\s+valores?\s+de\s+refer[eê]ncia|sem\s+valores?\s+de\s+refer[eê]ncia|valores?\s+de\s+refer[eê]ncia\s+n[aã]o\s+(?:definid|estabelecid)/i
 
@@ -367,11 +363,8 @@ function selectNormalizedReference(
     .filter((candidate): candidate is ReferenceCandidate => Boolean(candidate))
 
   const hasPhaseSpecificReference = Boolean(referenceTextRaw && PHASE_REFERENCE_RE.test(referenceTextRaw))
-  // Menopause-only references são específicas do sexo feminino: usuário masculino conhecido pode prosseguir
-  const hasMenopauseOnlyPhase = hasPhaseSpecificReference
-    && Boolean(referenceTextRaw && MENOPAUSE_PHASE_RE.test(referenceTextRaw))
-    && !Boolean(referenceTextRaw && CYCLE_PHASE_RE.test(referenceTextRaw))
-  const phaseBlocksRelease = hasPhaseSpecificReference && !(hasMenopauseOnlyPhase && input.sex === 'male')
+  // Para usuário masculino conhecido, todas as fases do ciclo são referências femininas — não bloqueia
+  const phaseBlocksRelease = hasPhaseSpecificReference && input.sex !== 'male'
 
   const hasSexSpecificReference = candidates.some((candidate) => candidate.sex !== 'any')
   const hasAgeSpecificReference = candidates.some((candidate) => candidate.minAge != null || candidate.maxAge != null)
