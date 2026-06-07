@@ -247,7 +247,13 @@ function collectBiomarkerGateWarnings(marker: BiomarkerEntry): string[] {
   const confidence = marker.confidence ?? 0
 
   if (confidence < MIN_BIOMARKER_CONFIDENCE) warnings.push(buildGateWarning(marker, 'low_extraction_confidence'))
-  if (critical && confidence < MIN_CRITICAL_BIOMARKER_CONFIDENCE) warnings.push(buildGateWarning(marker, 'critical_low_confidence'))
+  if (critical && confidence < MIN_CRITICAL_BIOMARKER_CONFIDENCE) {
+    const withinRange = marker.value_numeric != null
+      && (marker.reference_min != null || marker.reference_max != null)
+      && (marker.reference_min == null || marker.value_numeric >= marker.reference_min)
+      && (marker.reference_max == null || marker.value_numeric <= marker.reference_max)
+    if (!withinRange) warnings.push(buildGateWarning(marker, 'critical_low_confidence'))
+  }
   if (critical && !marker.unit) {
     const withinRange = marker.value_numeric != null
       && (marker.reference_min != null || marker.reference_max != null)

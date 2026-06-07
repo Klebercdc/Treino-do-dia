@@ -695,6 +695,12 @@ function buildContextFlag(entry: BiomarkerEntry, hormone: HormoneContextProfile)
       && (entry.reference_max == null || entry.value_numeric <= entry.reference_max)
     if (inRange) return 'missing_unit'
   }
+  if (entry.confidence != null && entry.confidence < 0.95 && entry.value_numeric != null) {
+    const inRange = (entry.reference_min != null || entry.reference_max != null)
+      && (entry.reference_min == null || entry.value_numeric >= entry.reference_min)
+      && (entry.reference_max == null || entry.value_numeric <= entry.reference_max)
+    if (inRange) return 'low_confidence_in_range'
+  }
   if (!labFlag || labFlag === 'normal') return null
 
   if (entry.marker_key === 'testosterone_total' || entry.marker_key === 'testosterone_free') {
