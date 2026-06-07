@@ -282,6 +282,16 @@ async function callOcr(input: { sourceId: string; mimeType: string; fileUrl: str
   }
 }
 
+// OCR perde caractere µ (Unicode) em unidades de TSH e similares — normaliza para forma canônica
+const UNIT_ALIASES: Record<string, string> = {
+  'µui/ml': 'mUI/mL', 'uui/ml': 'mUI/mL', 'µiu/ml': 'mUI/mL', 'uiu/ml': 'mUI/mL',
+  'µui/l': 'mUI/L', 'uui/l': 'mUI/L', 'µiu/l': 'mUI/L', 'uiu/l': 'mUI/L',
+}
+function normalizeUnit(unit: string | null): string | null {
+  if (!unit) return null
+  return UNIT_ALIASES[unit.toLowerCase()] ?? unit
+}
+
 function cleanBiomarkers(items: Array<Record<string, unknown>>, profileRow: Record<string, unknown> | null): Biomarker[] {
   const mapped = (items ?? []).map((item) => {
     const markerKey = String(item.marker_key ?? item.marker ?? item.name ?? '').trim().toLowerCase();
@@ -294,7 +304,7 @@ function cleanBiomarkers(items: Array<Record<string, unknown>>, profileRow: Reco
       marker_name: markerName,
       value_numeric: valueNumeric,
       value_text: item.value_text != null ? String(item.value_text) : null,
-      unit: item.unit != null ? String(item.unit) : null,
+      unit: normalizeUnit(item.unit != null ? String(item.unit) : null),
       reference_min: referenceMin,
       reference_max: referenceMax,
       reference_text: item.reference_text != null ? String(item.reference_text) : null,

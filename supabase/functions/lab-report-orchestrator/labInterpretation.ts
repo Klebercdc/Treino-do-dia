@@ -689,6 +689,12 @@ function buildContextFlag(entry: BiomarkerEntry, hormone: HormoneContextProfile)
   if (matchedBy === 'no_male_reference' || matchedBy === 'category' || matchedBy === 'category_out_of_range' || matchedBy === 'ambiguous') {
     return 'needs_review'
   }
+  if (!entry.unit && entry.value_numeric != null) {
+    const inRange = (entry.reference_min != null || entry.reference_max != null)
+      && (entry.reference_min == null || entry.value_numeric >= entry.reference_min)
+      && (entry.reference_max == null || entry.value_numeric <= entry.reference_max)
+    if (inRange) return 'missing_unit'
+  }
   if (!labFlag || labFlag === 'normal') return null
 
   if (entry.marker_key === 'testosterone_total' || entry.marker_key === 'testosterone_free') {
