@@ -657,3 +657,9 @@ window.KroniaAuth.setOAuthRedirectTo = function setOAuthRedirectTo(url) {
 window.KroniaAuth.getOAuthRedirectTo = function getOAuthRedirectTo() {
   return resolveOAuthRedirectUrl() || KRONIA_DEFAULT_MOBILE_REDIRECT;
 };
+
+// Garante que home re-renderiza ao usar botão voltar do browser
+window.addEventListener('popstate', function() {
+  if (typeof navTo === 'function') navTo('inicio');
+  if (typeof openHome === 'function') openHome();
+});
