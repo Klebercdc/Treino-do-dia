@@ -49,11 +49,6 @@ if (typeof window !== 'undefined') {
   window._sb = _sb;
 }
 
-// Redireciona para /login.html imediatamente se não há sessão ativa
-_sb.auth.getSession().then(function(res) {
-  if (!res.data.session) window.location.href = '/login.html';
-}).catch(function() { window.location.href = '/login.html'; });
-
 // ══════════════════════════════════════════════════════
 // TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
 // ══════════════════════════════════════════════════════
@@ -439,8 +434,9 @@ function checkFirstTimeFlow() {
 function showLogin() {
   hideSplash();
   const login = document.getElementById('loginScreen');
-  if (login) login.style.display = 'flex';
-  // Esconde a home para não ficar visível atrás
+  if (login) {
+    login.style.cssText = 'display:flex !important; position:fixed !important; z-index:9999 !important; top:0; left:0; width:100%; height:100%; background:#121212;';
+  }
   const home = document.getElementById('homeScreen');
   if (home) home.classList.remove('show');
 }
@@ -472,8 +468,8 @@ function updateAuthUI(user) {
 function handleAuthClick() {
   _sb.auth.getSession().then(({ data: { session } }) => {
     if (session?.user) toggleAuthMenu();
-    else window.location.href = '/login.html';
-  }).catch(() => { window.location.href = '/login.html'; });
+    else showLogin();
+  }).catch(() => showLogin());
 }
 
 function handleAvatarUpload(event) {
@@ -638,14 +634,14 @@ _sb.auth.onAuthStateChange((_event, session) => {
   } else if (_appUnlocked) {
     _appUnlocked = false;
     refreshIntelligenceAdminAccessSafe();
-    window.location.href = '/login.html';
+    showLogin();
   }
 });
 
-// Checar sessão ao carregar — após splash (mín 2.5s)
+// Checar sessão ao carregar — após splash (mín 4s)
 Promise.all([
   _sb.auth.getSession(),
-  new Promise(r => setTimeout(r, 2500))
+  new Promise(r => setTimeout(r, 4000))
 ]).then(async ([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
@@ -654,10 +650,12 @@ Promise.all([
     if (firstLoad) { navTo('inicio'); openHome(); }
     bootstrapAuthenticatedSession(session);
   } else {
-    window.location.href = '/login.html';
+    refreshIntelligenceAdminAccessSafe();
+    showLogin();
   }
 }).catch(() => {
-  window.location.href = '/login.html';
+  refreshIntelligenceAdminAccessSafe();
+  showLogin();
 });
 
 window.KroniaAuth = window.KroniaAuth || {};
