@@ -214,6 +214,11 @@ function parseAgeRange(text: string): { minAge: number | null; maxAge: number | 
     return { minAge: Number(aboveMatch[1]) + 1, maxAge: null }
   }
 
+  // "Adultos" sem faixa etária explícita → convenção clínica: ≥ 18 anos
+  if (/\badult[oa]s?\b/.test(normalized)) {
+    return { minAge: 18, maxAge: null }
+  }
+
   return { minAge: null, maxAge: null }
 }
 
