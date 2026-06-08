@@ -16695,7 +16695,8 @@ if (typeof window !== 'undefined') {
     if (tab === 'kronos') {
       document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
       document.getElementById('nav-kronos')?.classList.add('active');
-      return; // openAI é chamado no onclick do botão
+      openAI();
+      return;
     }
     _origNavTo(tab);
   };
