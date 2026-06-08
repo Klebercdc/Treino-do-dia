@@ -5570,7 +5570,7 @@ function validateClientRuntimeEnv() {
     const legacy = safeGet(LEGACY_THEME_KEY);
     if (legacy === '1') return LIGHT;
     if (legacy === '0') return DARK;
-    return getSystemTheme();
+    return DARK;
   }
 
   function syncThemeUI(theme) {
