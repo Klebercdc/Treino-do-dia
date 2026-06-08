@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><title>Kronia - Atualizando...</title>
+<meta http-equiv="refresh" content="3;url=/">
+</head>
+<body style="background:#080c14;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column">
+<h2>Atualizando Kronia...</h2>
+<script>
+(async () => {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  }
+  setTimeout(() => window.location.href = '/', 1000);
+})();
+</script>
+</body>
+</html>

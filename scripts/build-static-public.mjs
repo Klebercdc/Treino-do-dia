@@ -7,6 +7,7 @@ const outputDir = path.join(root, 'public');
 const staticFiles = [
   'index.html',
   'login.html',
+  'clear-sw.html',
   'styles.css',
   'app.js',
   'auth.js',
