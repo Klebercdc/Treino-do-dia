@@ -5934,21 +5934,23 @@ function updateHomeScreen() {
   }
 
   // Card Configurar Treino
-  try { _updateConfigTreinoCard(); } catch(e) {}
+  try { if (typeof _updateConfigTreinoCard === 'function') _updateConfigTreinoCard(); } catch(e) {}
 
   // AchievementCard — última conquista
-  _updateAchievementCard(streak, hist.length);
+  try { if (typeof _updateAchievementCard === 'function') _updateAchievementCard(streak, hist.length); } catch(e) {}
 
   // RecommendedWorkoutCard
-  const recDesc = document.getElementById("recommendedWorkoutDesc");
-  if (recDesc) {
-    const focusMap = { A:"Foco força superior", B:"Foco força inferior", C:"Hipertrofia total", D:"Força e potência", E:"Resistência muscular", F:"Full body" };
-    recDesc.innerHTML = `Treino ${nextTreinoKey}:<br>${focusMap[nextTreinoKey] || "Treino personalizado"}`;
-  }
+  try {
+    const recDesc = document.getElementById("recommendedWorkoutDesc");
+    if (recDesc) {
+      const focusMap = { A:"Foco força superior", B:"Foco força inferior", C:"Hipertrofia total", D:"Força e potência", E:"Resistência muscular", F:"Full body" };
+      recDesc.innerHTML = `Treino ${nextTreinoKey}:<br>${focusMap[nextTreinoKey] || "Treino personalizado"}`;
+    }
+  } catch(e) {}
 
   // Passes streak/hist pré-computados para evitar reler
-  try { renderDesafios(); } catch(e) {}
-  try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+  try { if (typeof renderDesafios === 'function') renderDesafios(); } catch(e) {}
+  try { if (typeof _updateHomeBannerFast === 'function') _updateHomeBannerFast(streak, hist.length); } catch(e) {}
 
   // Fallback para estado vazio: garante que a tela não fica em branco sem dados
   const homeEl = document.getElementById("homeScreen");
