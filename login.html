@@ -33,7 +33,7 @@ async function entrar() {
   const senha = document.getElementById('senha').value;
   const { error } = await _sb.auth.signInWithPassword({ email, password: senha });
   if (error) { document.getElementById('erro').textContent = 'Email ou senha incorretos'; return; }
-  window.location.href = '/';
+  window.location.replace('/');
 }
 </script>
 </body>
