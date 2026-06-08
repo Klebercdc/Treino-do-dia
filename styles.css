@@ -10455,3 +10455,22 @@ body.ge-mode #guidedExecutionOverlay {
   color: var(--accent,#00C2FF);
   border-color: rgba(0,194,255,0.25);
 }
+
+/* ============================================
+   SCREEN FOUNDATION — nunca sobrescrever
+   ============================================ */
+[id$="Screen"] {
+  background: var(--bg) !important;
+  color: var(--text-primary, #ffffff) !important;
+  min-height: 100vh;
+}
+
+#homeScreen,
+#labsScreen,
+#profileScreen,
+#treinoScreen,
+#dietaScreen,
+#aiScreen {
+  background: var(--bg) !important;
+  color: var(--text-primary, #ffffff) !important;
+}
