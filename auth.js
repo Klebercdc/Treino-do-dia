@@ -638,11 +638,8 @@ _sb.auth.onAuthStateChange((_event, session) => {
   }
 });
 
-// Checar sessão ao carregar — após splash (mín 4s)
-Promise.all([
-  _sb.auth.getSession(),
-  new Promise(r => setTimeout(r, 4000))
-]).then(async ([{ data: { session } }]) => {
+// Checar sessão ao carregar — sem delay, splash fica visível até resolver
+_sb.auth.getSession().then(({ data: { session } }) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
     const firstLoad = !_appUnlocked;
