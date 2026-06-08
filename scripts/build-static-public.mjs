@@ -9,6 +9,7 @@ const staticFiles = [
   'login.html',
   'clear-sw.html',
   'styles.css',
+  'styles/animations.css',
   'app.js',
   'auth.js',
   'icons.js',

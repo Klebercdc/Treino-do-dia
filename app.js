@@ -80,7 +80,7 @@ window.KroniaUI.unblockScreens = function(reason) {
       && el.id !== 'summaryModal'
       && el.id !== 'breathingModal';
 
-    if ((isSuspicious && !isOpen) || isInvisible || (isSuspicious && isAggressiveRouteCleanup)) {
+    if ((isSuspicious && !isOpen) || (isSuspicious && isAggressiveRouteCleanup)) {
       el.classList.remove('show', 'active', 'open');
       el.style.pointerEvents = 'none';
       el.style.display = 'none';
