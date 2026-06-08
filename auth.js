@@ -1,6 +1,21 @@
 /* ═══════════════════════════════════════════════════
    SUPABASE AUTH — Google OAuth
 ═══════════════════════════════════════════════════ */
+
+// Fallback de segurança — fecha o splash mesmo se auth falhar totalmente
+setTimeout(function() {
+  var splash = document.getElementById('splashScreen');
+  if (splash && splash.style.display !== 'none') {
+    splash.style.display = 'none';
+    splash.classList.remove('show');
+    var home = document.getElementById('homeScreen');
+    if (home && !home.classList.contains('show')) {
+      home.classList.add('show');
+      var footer = document.querySelector('.footer-actions');
+      if (footer) footer.style.display = '';
+    }
+  }
+}, 5000);
 const KRONIA_FALLBACK_SUPABASE_URL = 'https://twxoddzogbmaysebhour.supabase.co';
 const KRONIA_FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E';
 
