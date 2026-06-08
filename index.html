@@ -4555,17 +4555,6 @@
 }
 </script>
 
-<!-- ✅ PWA Service Worker -->
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js?v=20260502-fix-nav', { updateViaCache: 'none' })
-        .then(() => console.log('KRONIA PWA ativo ✅'))
-        .catch(err => console.log('SW erro:', err));
-    });
-  }
-</script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

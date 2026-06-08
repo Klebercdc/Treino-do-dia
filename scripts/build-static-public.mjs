@@ -21,7 +21,6 @@ const staticFiles = [
   'transforms_dashboard_acwr.js',
   'plans.js',
   'manifest.json',
-  'sw.js',
   'Kronia.png',
   'splash.png',
   'layout.png',
