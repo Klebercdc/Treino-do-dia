@@ -11,13 +11,80 @@
   }
   window.__KRONIA_DIET_RUNTIME__ = true;
 
-  var VERSION = '20260523-rebuild-v1';
+  var VERSION = '20260608-login-diet-entry-fix-v1';
 
   function log(msg) {
     console.log('[KroniaDiet] ' + msg);
   }
 
   log('runtime mounted');
+
+  /* ── Hotfix: login precisa aparecer visualmente mesmo com CSS legado ── */
+  function forceLoginScreenVisible() {
+    var splash = document.getElementById('splashScreen');
+    if (splash) {
+      splash.classList.remove('show', 'active', 'open');
+      splash.style.setProperty('display', 'none', 'important');
+      splash.style.setProperty('visibility', 'hidden', 'important');
+      splash.style.setProperty('opacity', '0', 'important');
+      splash.setAttribute('aria-hidden', 'true');
+    }
+
+    var login = document.getElementById('loginScreen');
+    if (login) {
+      login.classList.add('show', 'active', 'open');
+      login.removeAttribute('aria-hidden');
+      login.style.setProperty('display', 'flex', 'important');
+      login.style.setProperty('visibility', 'visible', 'important');
+      login.style.setProperty('opacity', '1', 'important');
+      login.style.setProperty('pointer-events', 'auto', 'important');
+      login.style.setProperty('position', 'fixed', 'important');
+      login.style.setProperty('inset', '0', 'important');
+      login.style.setProperty('z-index', '2147483646', 'important');
+      login.style.setProperty('transform', 'none', 'important');
+    }
+
+    var home = document.getElementById('homeScreen');
+    if (home) {
+      home.classList.remove('show', 'active', 'open');
+      home.setAttribute('aria-hidden', 'true');
+    }
+
+    var footer = document.querySelector('.footer-actions');
+    if (footer) footer.style.setProperty('display', 'none', 'important');
+
+    if (document.body) {
+      document.body.classList.add('overlay-open');
+    }
+  }
+
+  function installLoginShowFix() {
+    if (window.__KRONIA_LOGIN_SHOW_FIX__) return;
+    window.__KRONIA_LOGIN_SHOW_FIX__ = true;
+
+    var originalShowLogin = typeof window.showLogin === 'function' ? window.showLogin : null;
+
+    function fixedShowLogin() {
+      try {
+        if (originalShowLogin && originalShowLogin !== fixedShowLogin) {
+          originalShowLogin.apply(window, arguments);
+        }
+      } catch (err) {
+        console.warn('[KroniaDiet] original showLogin failed, forcing login visibility', err);
+      }
+
+      forceLoginScreenVisible();
+      return true;
+    }
+
+    fixedShowLogin.__kroniaLoginShowFix = true;
+    window.showLogin = fixedShowLogin;
+    window.KroniaLoginFix = Object.assign({}, window.KroniaLoginFix || {}, {
+      show: fixedShowLogin,
+      forceVisible: forceLoginScreenVisible
+    });
+    log('login show fix installed');
+  }
 
   /* ── Garante que o controller está funcional ─────────────────────── */
   function ensureController() {
@@ -68,6 +135,8 @@
 
   /* ── Garante controller no DOMContentLoaded se não estiver pronto ── */
   function onReady() {
+    installLoginShowFix();
+
     ensureController().then(function (ok) {
       if (!ok) {
         console.warn('[KroniaDiet] controller unavailable after load attempt');
@@ -82,13 +151,17 @@
 
       var aliases = [
         ['startAIDiet', 'generate'],
+        ['startManualDiet', 'generate'],
         ['createAnotherDiet', 'generate'],
         ['createDietPlan', 'generate'],
         ['generateDietPlan', 'generate'],
         ['regenerateDiet', 'generate'],
         ['regenerateDietPlan', 'generate'],
         ['regeneratePlan', 'generate'],
+        ['openDietaEntry', 'open'],
+        ['openDietEntry', 'open'],
         ['openDietaSheet', 'open'],
+        ['openDietChoiceScreen', 'open'],
         ['openNutritionFlow', 'generate'],
         ['openNutritionFlowFull', 'generate']
       ];
@@ -97,9 +170,13 @@
         var globalName = pair[0];
         var method = pair[1];
         var existing = window[globalName];
-        /* Só substitui wrappers que não sejam do controller real */
+        /* Só substitui wrappers ausentes/legados ou funções marcadas como wrapper */
         if (typeof existing !== 'function' || existing.__kroniaDietEntryWrapper || existing.__kroniaForcedAnamnese) {
-          window[globalName] = function (ctx) { return ctrl[method](ctx); };
+          window[globalName] = function (ctx) {
+            var payload = Object.assign({ source: globalName + '_global_alias' }, ctx || {});
+            return ctrl[method](payload);
+          };
+          window[globalName].__kroniaDietRuntimeAlias = true;
           log('alias set: window.' + globalName + ' → KroniaDiet.' + method);
         }
       });

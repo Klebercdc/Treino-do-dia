@@ -5570,7 +5570,7 @@ function validateClientRuntimeEnv() {
     const legacy = safeGet(LEGACY_THEME_KEY);
     if (legacy === '1') return LIGHT;
     if (legacy === '0') return DARK;
-    return getSystemTheme();
+    return DARK;
   }
 
   function syncThemeUI(theme) {
@@ -5934,21 +5934,23 @@ function updateHomeScreen() {
   }
 
   // Card Configurar Treino
-  try { _updateConfigTreinoCard(); } catch(e) {}
+  try { if (typeof _updateConfigTreinoCard === 'function') _updateConfigTreinoCard(); } catch(e) {}
 
   // AchievementCard — última conquista
-  _updateAchievementCard(streak, hist.length);
+  try { if (typeof _updateAchievementCard === 'function') _updateAchievementCard(streak, hist.length); } catch(e) {}
 
   // RecommendedWorkoutCard
-  const recDesc = document.getElementById("recommendedWorkoutDesc");
-  if (recDesc) {
-    const focusMap = { A:"Foco força superior", B:"Foco força inferior", C:"Hipertrofia total", D:"Força e potência", E:"Resistência muscular", F:"Full body" };
-    recDesc.innerHTML = `Treino ${nextTreinoKey}:<br>${focusMap[nextTreinoKey] || "Treino personalizado"}`;
-  }
+  try {
+    const recDesc = document.getElementById("recommendedWorkoutDesc");
+    if (recDesc) {
+      const focusMap = { A:"Foco força superior", B:"Foco força inferior", C:"Hipertrofia total", D:"Força e potência", E:"Resistência muscular", F:"Full body" };
+      recDesc.innerHTML = `Treino ${nextTreinoKey}:<br>${focusMap[nextTreinoKey] || "Treino personalizado"}`;
+    }
+  } catch(e) {}
 
   // Passes streak/hist pré-computados para evitar reler
-  try { renderDesafios(); } catch(e) {}
-  try { _updateHomeBannerFast(streak, hist.length); } catch(e) {}
+  try { if (typeof renderDesafios === 'function') renderDesafios(); } catch(e) {}
+  try { if (typeof _updateHomeBannerFast === 'function') _updateHomeBannerFast(streak, hist.length); } catch(e) {}
 
   // Fallback para estado vazio: garante que a tela não fica em branco sem dados
   const homeEl = document.getElementById("homeScreen");
@@ -16695,7 +16697,8 @@ if (typeof window !== 'undefined') {
     if (tab === 'kronos') {
       document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
       document.getElementById('nav-kronos')?.classList.add('active');
-      return; // openAI é chamado no onclick do botão
+      openAI();
+      return;
     }
     _origNavTo(tab);
   };
@@ -16720,9 +16723,10 @@ function closeBiomarcadores() {
 ════════════════════════════════════════════════════ */
 function _updatePerfilHero() {
   try {
-    const nome = localStorage.getItem('kronia_nome') || localStorage.getItem('userName') || 'ATLETA';
-    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
-    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const _cfg = safeJSON('kronia_config', {});
+    const nome = _cfg.nome || localStorage.getItem('userName') || 'ATLETA';
+    const streak = typeof calcStreak === 'function' ? calcStreak() : parseInt(localStorage.getItem('kronia_streak') || '0');
+    const hist = safeJSON(STORAGE.historyKey, []);
     const plan = localStorage.getItem('kronia_plan') || 'free';
     const planLabel = plan === 'ultra' ? 'Membro ULTRA' : plan === 'pro' ? 'Membro PRO' : 'Membro FREE';
 
