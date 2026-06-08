@@ -452,7 +452,8 @@ function updateAuthUI(user) {
 function handleAuthClick() {
   _sb.auth.getSession().then(({ data: { session } }) => {
     if (session?.user) toggleAuthMenu();
-  });
+    else window.location.href = '/login.html';
+  }).catch(() => { window.location.href = '/login.html'; });
 }
 
 function handleAvatarUpload(event) {
