@@ -806,6 +806,16 @@ function buildFeedbackSummary(entry: BiomarkerEntry, hormone: HormoneContextProf
   return `${markerName} ${labFlag === 'high' ? 'acima' : 'abaixo'} da faixa laboratorial${referenceClause ? ` (${referenceClause})` : ''}.`
 }
 
+type InternalThreshold = { min?: number | null; max?: number | null; sex?: 'male' | 'female' | 'any' }
+
+// Fallback clínico para marcadores cujo laudo tem formato de referência não parseable.
+// Usado APENAS quando o parser retorna 'ambiguous' ou 'text_only'.
+const INTERNAL_THRESHOLDS: Record<string, InternalThreshold> = {
+  tsh:             { min: 0.38, max: 5.33, sex: 'any' },
+  ldl_cholesterol: {},
+  estradiol:       {},
+}
+
 export function enrichBiomarkerEntries(
   biomarkers: BiomarkerEntry[],
   profileRow?: GenericRecord | null,
@@ -813,7 +823,34 @@ export function enrichBiomarkerEntries(
   const context = extractReferenceSelectionContext(profileRow)
 
   return biomarkers.map((entry) => {
-    const selectedReference = selectNormalizedReference(entry, context)
+    let selectedReference = selectNormalizedReference(entry, context)
+    const parsedMatchedBy = selectedReference.normalizedReference?.matched_by
+    if ((parsedMatchedBy === 'ambiguous' || parsedMatchedBy === 'text_only') && entry.marker_key in INTERNAL_THRESHOLDS) {
+      const t = INTERNAL_THRESHOLDS[entry.marker_key]
+      const refMin = t.min ?? null
+      const refMax = t.max ?? null
+      const kind: NormalizedReference['kind'] = refMin != null && refMax != null ? 'range'
+        : refMax != null ? 'less_than'
+        : refMin != null ? 'greater_than'
+        : 'text'
+      selectedReference = {
+        normalizedReference: {
+          kind,
+          min: refMin,
+          max: refMax,
+          raw_text: selectedReference.referenceTextRaw ?? '',
+          matched_by: 'internal_threshold',
+          sex: t.sex ?? 'any',
+          min_age: null,
+          max_age: null,
+        },
+        referenceMin: refMin,
+        referenceMax: refMax,
+        referenceTextRaw: selectedReference.referenceTextRaw,
+        labFlag: normalizeFlag(entry.value_numeric, refMin, refMax),
+        sourceReferenceKind: 'internal_threshold',
+      }
+    }
     const lab_flag = selectedReference.labFlag
     const safety_relevance = SAFETY_MARKERS.has(entry.marker_key)
     const interpretation_mode = context.hormone.hormone_context_type

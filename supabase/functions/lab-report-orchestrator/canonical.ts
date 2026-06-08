@@ -220,7 +220,7 @@ function isReferenceAmbiguous(marker: BiomarkerEntry): boolean {
   const rawText = String(marker.reference_text_raw || marker.reference_text || '').trim()
   if (!rawText) return false
   const mb = normalizedReference?.matched_by
-  if (mb === 'no_male_reference' || mb === 'category' || mb === 'category_out_of_range') return false
+  if (mb === 'no_male_reference' || mb === 'category' || mb === 'category_out_of_range' || mb === 'internal_threshold') return false
   if (mb === 'ambiguous') return true
   if (marker.source_reference_kind === 'ambiguous') return true
   if (PHASE_REFERENCE_RE.test(rawText) && (!normalizedReference || mb === 'text_only')) {
@@ -232,7 +232,7 @@ function isReferenceAmbiguous(marker: BiomarkerEntry): boolean {
 function needsReferenceResolution(marker: BiomarkerEntry): boolean {
   const normalizedReference = marker.normalized_reference
   const mb = normalizedReference?.matched_by
-  if (mb === 'no_reference' || mb === 'no_male_reference' || mb === 'category' || mb === 'category_out_of_range') return false
+  if (mb === 'no_reference' || mb === 'no_male_reference' || mb === 'category' || mb === 'category_out_of_range' || mb === 'internal_threshold') return false
   if (mb === 'ambiguous') return true
   if (mb === 'text_only') return true
   if (!normalizedReference && marker.reference_min == null && marker.reference_max == null && (marker.reference_text_raw || marker.reference_text)) {

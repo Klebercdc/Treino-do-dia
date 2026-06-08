@@ -55,7 +55,7 @@ export interface NormalizedReference {
   min: number | null
   max: number | null
   raw_text: string
-  matched_by: 'sex_age' | 'sex' | 'age' | 'adult' | 'generic' | 'ocr_numeric' | 'text_only' | 'ambiguous' | 'no_reference' | 'no_male_reference' | 'category' | 'category_out_of_range'
+  matched_by: 'sex_age' | 'sex' | 'age' | 'adult' | 'generic' | 'ocr_numeric' | 'text_only' | 'ambiguous' | 'no_reference' | 'no_male_reference' | 'category' | 'category_out_of_range' | 'internal_threshold'
   sex: 'male' | 'female' | 'any'
   min_age: number | null
   max_age: number | null
