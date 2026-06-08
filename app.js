@@ -16721,9 +16721,10 @@ function closeBiomarcadores() {
 ════════════════════════════════════════════════════ */
 function _updatePerfilHero() {
   try {
-    const nome = localStorage.getItem('kronia_nome') || localStorage.getItem('userName') || 'ATLETA';
-    const streak = parseInt(localStorage.getItem('kronia_streak') || '0');
-    const hist = JSON.parse(localStorage.getItem('kronia_history') || '[]');
+    const _cfg = safeJSON('kronia_config', {});
+    const nome = _cfg.nome || localStorage.getItem('userName') || 'ATLETA';
+    const streak = typeof calcStreak === 'function' ? calcStreak() : parseInt(localStorage.getItem('kronia_streak') || '0');
+    const hist = safeJSON(STORAGE.historyKey, []);
     const plan = localStorage.getItem('kronia_plan') || 'free';
     const planLabel = plan === 'ultra' ? 'Membro ULTRA' : plan === 'pro' ? 'Membro PRO' : 'Membro FREE';
 
