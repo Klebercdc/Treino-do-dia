@@ -49,6 +49,11 @@ if (typeof window !== 'undefined') {
   window._sb = _sb;
 }
 
+// Redireciona para /login.html imediatamente se não há sessão ativa
+_sb.auth.getSession().then(function(res) {
+  if (!res.data.session) window.location.href = '/login.html';
+}).catch(function() { window.location.href = '/login.html'; });
+
 // ══════════════════════════════════════════════════════
 // TOKEN DE AUTENTICAÇÃO — enviado em todas as chamadas à API
 // ══════════════════════════════════════════════════════
@@ -633,14 +638,14 @@ _sb.auth.onAuthStateChange((_event, session) => {
   } else if (_appUnlocked) {
     _appUnlocked = false;
     refreshIntelligenceAdminAccessSafe();
-    showLogin();
+    window.location.href = '/login.html';
   }
 });
 
 // Checar sessão ao carregar — após splash (mín 2.5s)
 Promise.all([
   _sb.auth.getSession(),
-  new Promise(r => setTimeout(r, 4000))
+  new Promise(r => setTimeout(r, 2500))
 ]).then(async ([{ data: { session } }]) => {
   updateAuthUI(session?.user || null);
   if (session?.user) {
@@ -649,12 +654,10 @@ Promise.all([
     if (firstLoad) { navTo('inicio'); openHome(); }
     bootstrapAuthenticatedSession(session);
   } else {
-    refreshIntelligenceAdminAccessSafe();
-    showLogin();
+    window.location.href = '/login.html';
   }
 }).catch(() => {
-  refreshIntelligenceAdminAccessSafe();
-  showLogin();
+  window.location.href = '/login.html';
 });
 
 window.KroniaAuth = window.KroniaAuth || {};
