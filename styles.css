@@ -9468,7 +9468,6 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 
 /* ─── PARTE 8: Telas extras — herdar sistema ─── */
 #settingsScreen,
-#labsScreen,
 #onboardingScreen,
 #biomarcadoresScreen,
 #historyScreen,
@@ -9479,7 +9478,7 @@ body.kronia-ui-unblocked #configSheet:not(.show) {
 /* Garantir que todas as telas herdam o bg do body */
 .screen,
 [id$="Screen"] {
-  background: transparent;
+  background: var(--bg);
 }
 
 /* ─── PARTE 9: Tipografia ─── */
