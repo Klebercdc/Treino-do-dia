@@ -432,13 +432,7 @@ function checkFirstTimeFlow() {
 }
 
 function showLogin() {
-  hideSplash();
-  const login = document.getElementById('loginScreen');
-  if (login) {
-    login.style.cssText = 'display:flex !important; position:fixed !important; z-index:9999 !important; top:0; left:0; width:100%; height:100%; background:#121212;';
-  }
-  const home = document.getElementById('homeScreen');
-  if (home) home.classList.remove('show');
+  window.location.href = '/login.html';
 }
 
 function updateAuthUI(user) {
@@ -468,8 +462,8 @@ function updateAuthUI(user) {
 function handleAuthClick() {
   _sb.auth.getSession().then(({ data: { session } }) => {
     if (session?.user) toggleAuthMenu();
-    else showLogin();
-  }).catch(() => showLogin());
+    else window.location.href = '/login.html';
+  }).catch(() => { window.location.href = '/login.html'; });
 }
 
 function handleAvatarUpload(event) {
