@@ -270,7 +270,7 @@
       '.kdw-summary-card{display:grid;gap:10px}',
       '.kdw-summary-card div{display:flex;justify-content:space-between;gap:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:13px}',
       '.kdw-summary-card span{color:#94a3b8;font-size:13px}.kdw-summary-card strong{color:#fff;font-size:14px;text-align:right}',
-      '@media(max-width:430px){.kdw-card{padding:22px 18px}.kdw-grid{grid-template-columns:1fr}.kdw-card h2{font-size:25px}.kdw-footer{position:sticky;bottom:calc(env(safe-area-inset-bottom, 0px) + 16px);background:linear-gradient(180deg,rgba(2,6,23,0),#020617 30%);padding-top:14px}}'
+      '@media(max-width:430px){.kdw-card{padding:22px 18px}.kdw-grid{grid-template-columns:1fr}.kdw-card h2{font-size:25px}.kdw-footer{background:linear-gradient(180deg,rgba(2,6,23,0),#020617 30%);padding-top:14px;padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)}}'
     ].join('');
     doc.head.appendChild(style);
   }
