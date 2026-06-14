@@ -8843,6 +8843,15 @@ async function saveActiveDietPlan(options) {
         var rows = [];
         plan.meals.forEach(function(meal, mealIndex) {
           (meal.items || []).forEach(function(item, itemIndex) {
+            var gramsVal = (function(it) {
+              var candidates = [it.grams, it.gramas, it.peso_g, it.weight_g, it.quantidade];
+              for (var ci = 0; ci < candidates.length; ci++) {
+                var g = asKroniaNumber(candidates[ci], 0);
+                if (g > 0) return g;
+              }
+              var qMatch = String(it.quantity || '').match(/(\d+(?:[.,]\d+)?)\s*(?:g|gramas)\b/i);
+              return qMatch ? (asKroniaNumber(qMatch[1], 0) || null) : null;
+            })(item);
             rows.push({
               meal_plan_id: planInsert.data.id,
               meal_name: meal.name,
@@ -8855,10 +8864,52 @@ async function saveActiveDietPlan(options) {
               carbs_g: item.carbs,
               fat_g: item.fat,
               notes: item.notes || null,
-              sort_order: (mealIndex + 1) * 100 + itemIndex
+              sort_order: (mealIndex + 1) * 100 + itemIndex,
+              grams: gramsVal,
+              fiber_g: null,
+              food_catalog_id: null,
+              macro_source: 'llm_estimate',
+              macro_audit: null
             });
           });
         });
+        try {
+          var catalogResp = await _sb.from('food_catalog')
+            .select('id, code, nome, porcao_gramas, calorias, proteinas, carboidratos, gorduras, fibras, fonte')
+            .eq('ativo', true);
+          if (!catalogResp.error && catalogResp.data && catalogResp.data.length) {
+            var catalogMap = {};
+            catalogResp.data.forEach(function(fc) {
+              var fcKey = String(fc.nome || '').toLowerCase().trim();
+              if (fcKey) catalogMap[fcKey] = fc;
+            });
+            rows = rows.map(function(row) {
+              var rowKey = String(row.food_name || '').toLowerCase().trim();
+              var fc = catalogMap[rowKey];
+              if (!fc) return row;
+              var gramsForCalc = (row.grams && row.grams > 0) ? row.grams : Number(fc.porcao_gramas);
+              var porcao = Number(fc.porcao_gramas) || 1;
+              var fator = gramsForCalc / porcao;
+              return Object.assign({}, row, {
+                calories:        Math.round(Number(fc.calorias)      * fator * 10) / 10,
+                protein_g:       Math.round(Number(fc.proteinas)     * fator * 10) / 10,
+                carbs_g:         Math.round(Number(fc.carboidratos)  * fator * 10) / 10,
+                fat_g:           Math.round(Number(fc.gorduras)      * fator * 10) / 10,
+                fiber_g:         Math.round(Number(fc.fibras)        * fator * 10) / 10,
+                food_catalog_id: fc.id,
+                macro_source:    'food_catalog',
+                macro_audit: {
+                  source:      fc.fonte,
+                  grams:       gramsForCalc,
+                  catalogName: fc.nome,
+                  catalogCode: fc.code,
+                  porcaoBase:  porcao,
+                  fator:       fator
+                }
+              });
+            });
+          }
+        } catch (_) {}
         if (rows.length) await _sb.from('meal_plan_items').insert(rows);
         plan.id = planInsert.data.id;
         savedRemote = true;
