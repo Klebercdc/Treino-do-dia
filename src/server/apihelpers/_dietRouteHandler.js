@@ -1,6 +1,8 @@
 var dietService = require('../../services/diet/dietService');
 var dietRouteContract = require('./_dietRouteContract');
 var { planGate } = require('../../core/plans/planGate');
+var trainingRecoveryHelper = require('./_trainingRecoveryContext');
+var { createAdminSupabaseClient } = require('../../lib/supabase/admin');
 
 function buildPayload(body) {
   var safeBody = body && typeof body === 'object' ? body : {};
@@ -45,6 +47,86 @@ function buildPayload(body) {
   return payload;
 }
 
+function mergeTrainingRecovery(payload, trainingRecovery) {
+  if (!trainingRecovery) return payload;
+  var safePayload = payload && typeof payload === 'object' ? Object.assign({}, payload) : {};
+  var context = safePayload.context && typeof safePayload.context === 'object' ? Object.assign({}, safePayload.context) : {};
+  var profile = safePayload.profile && typeof safePayload.profile === 'object' ? Object.assign({}, safePayload.profile) : {};
+  var training = safePayload.contextoTreino && typeof safePayload.contextoTreino === 'object'
+    ? Object.assign({}, safePayload.contextoTreino)
+    : safePayload.trainingContext && typeof safePayload.trainingContext === 'object'
+      ? Object.assign({}, safePayload.trainingContext)
+      : {};
+  var adherence = safePayload.aderencia && typeof safePayload.aderencia === 'object'
+    ? Object.assign({}, safePayload.aderencia)
+    : safePayload.adherenceContext && typeof safePayload.adherenceContext === 'object'
+      ? Object.assign({}, safePayload.adherenceContext)
+      : {};
+
+  var trainingContext = Object.assign({}, training, {
+    trainingRecovery: trainingRecovery,
+    kroniaTrainingSignals: trainingRecovery,
+    loadState: trainingRecovery.loadState,
+    avgRpe: trainingRecovery.avgRpe,
+    totalSetsLast7Days: trainingRecovery.totalSetsLast7Days,
+    totalSetsLast14Days: trainingRecovery.totalSetsLast14Days,
+    daysSinceLastWorkout: trainingRecovery.daysSinceLastWorkout,
+    lastWorkoutDate: trainingRecovery.lastWorkoutDate,
+    totalTrainingDays: trainingRecovery.totalTrainingDays,
+    recoveryScore: trainingRecovery.recoveryScore,
+    recoveryStatus: trainingRecovery.recoveryStatus,
+    readiness: trainingRecovery.readiness,
+    recentPRCount: trainingRecovery.recentPRCount,
+    recentPRs: trainingRecovery.recentPRs,
+    adaptations: trainingRecovery.adaptations,
+    fadiga: trainingRecovery.fatigue && trainingRecovery.fatigue.score != null ? trainingRecovery.fatigue.score : training.fadiga,
+    tendenciaForca: trainingRecovery.strengthTrend || training.tendenciaForca,
+    prioridadeMetabolica: trainingRecovery.prioridadeMetabolica || training.prioridadeMetabolica,
+    needsDeload: trainingRecovery.needsDeload,
+    needsRecoveryFuel: trainingRecovery.needsRecoveryFuel,
+    needsProteinDistribution: trainingRecovery.needsProteinDistribution,
+    carbohydrateStrategy: trainingRecovery.carbohydrateStrategy,
+    trainingNotes: trainingRecovery.trainingNotes,
+  });
+  var adherenceContext = Object.assign({}, adherence, {
+    fadiga: trainingRecovery.fatigue && trainingRecovery.fatigue.score != null ? trainingRecovery.fatigue.score : adherence.fadiga,
+    tendenciaForca: trainingRecovery.strengthTrend || adherence.tendenciaForca,
+    prioridadeMetabolica: trainingRecovery.prioridadeMetabolica || adherence.prioridadeMetabolica,
+    recoveryStatus: trainingRecovery.recoveryStatus,
+    recoveryScore: trainingRecovery.recoveryScore,
+  });
+
+  return Object.assign({}, safePayload, {
+    contextoTreino: trainingContext,
+    trainingContext: trainingContext,
+    trainingSnapshot: safePayload.trainingSnapshot || trainingRecovery,
+    aderencia: adherenceContext,
+    adherenceContext: adherenceContext,
+    profile: Object.assign({}, profile, {
+      contextoTreino: profile.contextoTreino || trainingContext,
+      trainingSnapshot: profile.trainingSnapshot || trainingRecovery,
+      adherenceContext: profile.adherenceContext || adherenceContext,
+    }),
+    context: Object.assign({}, context, {
+      contextoTreino: context.contextoTreino || trainingContext,
+      trainingContext: context.trainingContext || trainingContext,
+      trainingSnapshot: context.trainingSnapshot || trainingRecovery,
+      adherenceContext: context.adherenceContext || adherenceContext,
+    }),
+  });
+}
+
+async function tryLoadTrainingRecovery(userId) {
+  if (!userId) return null;
+  try {
+    var admin = createAdminSupabaseClient();
+    return await trainingRecoveryHelper.loadTrainingRecoveryContext(admin, userId);
+  } catch (error) {
+    console.warn('[diet-route-handler] training recovery unavailable', error && error.message);
+    return null;
+  }
+}
+
 async function processDietRouteRequest(input) {
   var request = input && typeof input === 'object' ? input : {};
   var body = request.body && typeof request.body === 'object' ? request.body : {};
@@ -84,6 +166,8 @@ async function processDietRouteRequest(input) {
   }
 
   var payload = buildPayload(body);
+  var trainingRecovery = await tryLoadTrainingRecovery(userId);
+  payload = mergeTrainingRecovery(payload, trainingRecovery);
   var result = await dietService.execute(action, payload);
   return {
     status: 200,
@@ -97,5 +181,6 @@ async function processDietRouteRequest(input) {
 
 module.exports = {
   buildPayload: buildPayload,
+  mergeTrainingRecovery: mergeTrainingRecovery,
   processDietRouteRequest: processDietRouteRequest
 };
