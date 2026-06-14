@@ -3,6 +3,7 @@ const { buildMasterContext } = require('../../core/nutrition/diet_context_master
 const { buildTrainingContext, buildAdherenceContext } = require('../../core/nutrition/diet_context_training');
 const { buildClinicalContext } = require('../../core/nutrition/diet_context_clinical');
 const adaptiveNutrition = require('../../lib/nutrition/adaptiveNutrition');
+const tacoService = require('../../lib/nutrition/tacoService');
 
 function normalizeObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -38,10 +39,17 @@ function pickNumber() {
   for (let index = 0; index < arguments.length; index += 1) {
     const value = arguments[index];
     if (value === undefined || value === null || value === '') continue;
-    const parsed = Number(value);
+    const parsed = Number(String(value).replace(',', '.').replace(/[^0-9.\-]/g, ''));
     if (Number.isFinite(parsed)) return parsed;
   }
   return undefined;
+}
+
+function roundNumber(value, digits) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const p = Math.pow(10, typeof digits === 'number' ? digits : 1);
+  return Math.round(n * p) / p;
 }
 
 function unwrapDietPayload(payload) {
@@ -70,6 +78,45 @@ function readAdaptiveMemory(payload) {
   }
 }
 
+function buildBiomarkerNutritionStrategy(labContext) {
+  const lab = normalizeObject(labContext);
+  const biomarkers = Array.isArray(lab.biomarkers) ? lab.biomarkers : [];
+  const flags = [].concat(
+    Array.isArray(lab.clinicalFlags) ? lab.clinicalFlags : [],
+    Array.isArray(lab.criticalFlags) ? lab.criticalFlags : []
+  );
+  const notes = [];
+  const markerNames = biomarkers.map((b) => String(b && b.name || '').trim()).filter(Boolean).slice(0, 12);
+
+  if (markerNames.length) {
+    notes.push('Biomarcadores reais considerados: ' + markerNames.join(', ') + '.');
+  }
+  if (flags.indexOf('high_potassium') >= 0 || flags.indexOf('potassium_alert') >= 0) {
+    notes.push('Atenção a alimentos muito ricos em potássio; priorizar distribuição e substituições conservadoras.');
+  }
+  if (flags.indexOf('pre_diabetes') >= 0 || flags.indexOf('glycemic_risk') >= 0 || flags.indexOf('hyperglycemia_alert') >= 0 || flags.indexOf('hba1c_alert') >= 0) {
+    notes.push('Distribuir carboidratos ao longo do dia e evitar picos glicêmicos simples.');
+  }
+  if (flags.indexOf('high_ldl') >= 0 || flags.indexOf('ldl_alert') >= 0) {
+    notes.push('Priorizar fibras, gorduras melhores e reduzir escolhas com maior gordura saturada.');
+  }
+  if (flags.indexOf('kidney_alert') >= 0) {
+    notes.push('Aplicar cautela renal: revisar proteína, sódio, potássio e fósforo conforme contexto clínico.');
+  }
+
+  return {
+    enabled: biomarkers.length > 0 || flags.length > 0,
+    source: 'kronia_labs_reports',
+    mode: lab.mode || 'standard',
+    biomarkersCount: biomarkers.length,
+    biomarkersUsed: biomarkers,
+    clinicalFlags: Array.isArray(lab.clinicalFlags) ? lab.clinicalFlags : [],
+    criticalFlags: Array.isArray(lab.criticalFlags) ? lab.criticalFlags : [],
+    scores: lab.scores || null,
+    notes,
+  };
+}
+
 function normalizeDietPayload(payload) {
   const safePayload = unwrapDietPayload(payload);
   const master = buildMasterContext(safePayload);
@@ -83,6 +130,7 @@ function normalizeDietPayload(payload) {
   const intakeSnapshot = normalizeObject(safePayload.intakeSnapshot || context.intakeSnapshot);
   const nutritionFlowSelections = normalizeObject(safePayload.nutritionFlowSelections || context.nutritionFlowSelections);
   const supabaseSnapshot = normalizeObject(safePayload.supabaseSnapshot || profile.supabaseSnapshot || context.supabaseSnapshot);
+  const biomarkerStrategy = buildBiomarkerNutritionStrategy(clinical.labContext);
 
   const preferredMealCount = pickNumber(adaptiveMemory.preferred_meal_count);
   const dislikedFoods = uniqueArray([].concat(
@@ -134,6 +182,7 @@ function normalizeDietPayload(payload) {
     aderencia: adherence,
     nutritionGoals: master.nutritionGoals,
     labContext: clinical.labContext,
+    labBiomarkerStrategy: biomarkerStrategy,
     clinicalData: clinical.clinicalData,
     intakeSnapshot: Object.keys(intakeSnapshot).length ? intakeSnapshot : null,
     nutritionFlowSelections: Object.keys(nutritionFlowSelections).length ? nutritionFlowSelections : null,
@@ -168,7 +217,11 @@ function normalizeDietPayload(payload) {
       flags: normalized.clinicalData && normalized.clinicalData.flags,
       bcmManual: normalized.clinicalData && normalized.clinicalData.bcmManual ? '(present)' : null,
       exams: normalized.clinicalData && normalized.clinicalData.exams,
-      labContext: normalized.labContext ? { mode: normalized.labContext.mode, clinicalFlags: normalized.labContext.clinicalFlags } : null,
+      labContext: normalized.labContext ? {
+        mode: normalized.labContext.mode,
+        biomarkers: Array.isArray(normalized.labContext.biomarkers) ? normalized.labContext.biomarkers.length : 0,
+        clinicalFlags: normalized.labContext.clinicalFlags,
+      } : null,
     }));
   }
 
@@ -262,8 +315,170 @@ function buildDietPlanWithFallback(normalizedInput) {
   };
 }
 
-function decoratePlanWithAdaptiveLayer(plan, normalizedInput) {
+function parsePortionGrams(item) {
+  const candidates = [item.grams, item.gramas, item.peso_g, item.weight_g, item.qtde, item.porcao, item.portionLabel, item.qty, item.quantidade];
+  for (let i = 0; i < candidates.length; i += 1) {
+    const value = candidates[i];
+    if (value == null || value === '') continue;
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+    const text = String(value).toLowerCase().replace(',', '.');
+    const kg = text.match(/(\d+(?:\.\d+)?)\s*kg\b/);
+    if (kg) return Number(kg[1]) * 1000;
+    const g = text.match(/(\d+(?:\.\d+)?)\s*g\b/);
+    if (g) return Number(g[1]);
+  }
+  return null;
+}
+
+function itemName(item) {
+  return pickString(item.nome, item.name, item.alimento, item.food, item.item) || '';
+}
+
+function buildTacoEquivalent(item) {
+  const name = itemName(item);
+  if (!name) return null;
+  const match = tacoService.findBestTacoMatch(name);
+  if (!match) return null;
+  const grams = parsePortionGrams(item);
+  const estimated = grams ? tacoService.estimateNutritionFromTaco(match, grams) : null;
+  return {
+    source: 'TACO',
+    match: tacoService.mapTacoFoodToKroniaMacros(match),
+    grams: grams || null,
+    estimated: estimated || null,
+  };
+}
+
+function decorateFoodItemWithTaco(item) {
+  const safeItem = normalizeObject(item);
+  const tacoEquivalent = buildTacoEquivalent(safeItem);
+  if (!tacoEquivalent) return safeItem;
+  const estimated = tacoEquivalent.estimated;
+  const next = Object.assign({}, safeItem, {
+    macroSource: 'TACO',
+    taco_id: tacoEquivalent.match && tacoEquivalent.match.taco_id,
+    codigo_taco: tacoEquivalent.match && tacoEquivalent.match.codigo_taco,
+    tacoEquivalent,
+  });
+  if (estimated) {
+    next.kcal = roundNumber(estimated.kcal, 0);
+    next.prot = roundNumber(estimated.proteina, 1);
+    next.carb = roundNumber(estimated.carbo, 1);
+    next.gord = roundNumber(estimated.gordura, 1);
+    next.fibra = roundNumber(estimated.fibra, 1);
+  }
+  return next;
+}
+
+function tacoSubtotal(items) {
+  return (Array.isArray(items) ? items : []).reduce((acc, item) => {
+    if (!item || item.macroSource !== 'TACO') return acc;
+    acc.kcal += Number(item.kcal || 0);
+    acc.prot += Number(item.prot || 0);
+    acc.carb += Number(item.carb || 0);
+    acc.gord += Number(item.gord || 0);
+    acc.fibra += Number(item.fibra || 0);
+    acc.items += 1;
+    return acc;
+  }, { kcal: 0, prot: 0, carb: 0, gord: 0, fibra: 0, items: 0 });
+}
+
+function decorateStructuredItemWithTaco(item) {
+  const enriched = decorateFoodItemWithTaco(Object.assign({}, item, {
+    nome: item.nome || item.name,
+    qtde: item.porcao || item.qtde || item.portionLabel,
+  }));
+  const next = Object.assign({}, item, {
+    macroSource: enriched.macroSource || item.macroSource,
+    taco_id: enriched.taco_id || item.taco_id,
+    codigo_taco: enriched.codigo_taco || item.codigo_taco,
+    tacoEquivalent: enriched.tacoEquivalent || item.tacoEquivalent,
+  });
+  if (enriched.macroSource === 'TACO') {
+    next.calorias = enriched.kcal;
+    next.proteinas = enriched.prot;
+    next.carboidratos = enriched.carb;
+    next.gorduras = enriched.gord;
+    next.fibras = enriched.fibra;
+  }
+  return next;
+}
+
+function decoratePlanWithTacoMacros(plan) {
   const safePlan = plan && typeof plan === 'object' ? plan : {};
+  const audit = { source: 'TACO', matchedItems: 0, unmatchedItems: [], totals: { kcal: 0, proteina: 0, carbo: 0, gordura: 0, fibra: 0 } };
+
+  const refeicoes = Array.isArray(safePlan.refeicoes) ? safePlan.refeicoes.map((meal) => {
+    const alimentos = Array.isArray(meal.alimentos) ? meal.alimentos.map((item) => {
+      const enriched = decorateFoodItemWithTaco(item);
+      if (enriched.macroSource === 'TACO') audit.matchedItems += 1;
+      else if (itemName(item)) audit.unmatchedItems.push(itemName(item));
+      return enriched;
+    }) : [];
+    const subtotal = tacoSubtotal(alimentos);
+    audit.totals.kcal += subtotal.kcal;
+    audit.totals.proteina += subtotal.prot;
+    audit.totals.carbo += subtotal.carb;
+    audit.totals.gordura += subtotal.gord;
+    audit.totals.fibra += subtotal.fibra;
+    return Object.assign({}, meal, {
+      alimentos,
+      macroSource: subtotal.items ? 'TACO' : meal.macroSource,
+      subtotalTaco: subtotal.items ? {
+        kcal: roundNumber(subtotal.kcal, 0),
+        prot: roundNumber(subtotal.prot, 1),
+        carb: roundNumber(subtotal.carb, 1),
+        gord: roundNumber(subtotal.gord, 1),
+        fibra: roundNumber(subtotal.fibra, 1),
+      } : null,
+    });
+  }) : safePlan.refeicoes;
+
+  let planoEstruturado = safePlan.planoEstruturado;
+  if (planoEstruturado && Array.isArray(planoEstruturado.refeicoes)) {
+    planoEstruturado = Object.assign({}, planoEstruturado, {
+      refeicoes: planoEstruturado.refeicoes.map((meal) => Object.assign({}, meal, {
+        itens: Array.isArray(meal.itens) ? meal.itens.map(decorateStructuredItemWithTaco) : meal.itens,
+      })),
+    });
+  }
+
+  audit.totals = {
+    kcal: roundNumber(audit.totals.kcal, 0),
+    proteina: roundNumber(audit.totals.proteina, 1),
+    carbo: roundNumber(audit.totals.carbo, 1),
+    gordura: roundNumber(audit.totals.gordura, 1),
+    fibra: roundNumber(audit.totals.fibra, 1),
+  };
+  audit.unmatchedItems = uniqueArray(audit.unmatchedItems).slice(0, 20);
+
+  return Object.assign({}, safePlan, {
+    refeicoes,
+    planoEstruturado,
+    macroSource: audit.matchedItems ? 'TACO' : safePlan.macroSource,
+    tacoMacroAudit: audit,
+  });
+}
+
+function decoratePlanWithBiomarkers(plan, normalizedInput) {
+  const safePlan = plan && typeof plan === 'object' ? plan : {};
+  const strategy = normalizedInput && normalizedInput.labBiomarkerStrategy ? normalizedInput.labBiomarkerStrategy : buildBiomarkerNutritionStrategy(normalizedInput && normalizedInput.labContext);
+  if (!strategy || !strategy.enabled) return safePlan;
+  const observacoes = Array.isArray(safePlan.observacoes) ? safePlan.observacoes.slice() : [];
+  strategy.notes.forEach((note) => {
+    if (note && observacoes.indexOf(note) === -1) observacoes.push(note);
+  });
+  return Object.assign({}, safePlan, {
+    observacoes,
+    labContext: normalizedInput.labContext || safePlan.labContext || null,
+    biomarkerNutritionStrategy: strategy,
+    biomarkersUsed: strategy.biomarkersUsed,
+    clinicalContext: Object.assign({}, normalizeObject(safePlan.clinicalContext), { labContext: normalizedInput.labContext || null }),
+  });
+}
+
+function decoratePlanWithAdaptiveLayer(plan, normalizedInput) {
+  const safePlan = decoratePlanWithTacoMacros(decoratePlanWithBiomarkers(plan, normalizedInput));
   const adaptive = normalizedInput && normalizedInput.adaptivePersonalization;
   const memory = adaptive && adaptive.memory ? adaptive.memory : adaptiveNutrition.normalizeMemory();
   const suggestions = adaptiveNutrition.suggestDietAdaptations(safePlan, memory, normalizedInput);
@@ -302,9 +517,11 @@ function buildDietResponse(action, normalizedInput) {
   const isFallbackPlan = !!generation.generatedFromFallback;
   const message = isFallbackPlan
     ? `Plano inicial gerado com fallback seguro. Complete os dados ausentes para uma dieta mais precisa.`
-    : plan.clinicalContext && plan.clinicalContext.mode === 'clinical'
-      ? 'Plano alimentar gerado com ajustes clínicos conservadores baseados no exame mais recente.'
-      : `Plano alimentar gerado com ${(plan.refeicoes || []).length} refeicoes.`;
+    : plan.biomarkerNutritionStrategy && plan.biomarkerNutritionStrategy.enabled
+      ? 'Plano alimentar gerado com biomarcadores reais e macros equivalentes TACO.'
+      : plan.clinicalContext && plan.clinicalContext.mode === 'clinical'
+        ? 'Plano alimentar gerado com ajustes clínicos conservadores baseados no exame mais recente.'
+        : `Plano alimentar gerado com ${(plan.refeicoes || []).length} refeicoes.`;
 
   return {
     action,
@@ -396,6 +613,8 @@ async function _enrichWithAIStrategy(normalizedInput) {
   const aiParams = {
     profile: normalizedInput,
     clinicalContext: normalizedInput.clinicalData,
+    labContext: normalizedInput.labContext,
+    biomarkerNutritionStrategy: normalizedInput.labBiomarkerStrategy,
     trainingContext: normalizedInput.contextoTreino,
     adherenceContext: normalizedInput.aderencia,
     adaptiveMemory,
@@ -474,6 +693,8 @@ async function execute(action, payload) {
               hasObjective: Boolean(normalizedInput.objetivo),
               hasRestrictions: normalizedInput.restricoes.length > 0,
               hasAnthropometrics: Boolean(normalizedInput.peso && normalizedInput.altura && normalizedInput.idade),
+              hasRealBiomarkers: Boolean(normalizedInput.labBiomarkerStrategy && normalizedInput.labBiomarkerStrategy.biomarkersCount),
+              tacoMacroSource: true,
               adaptiveScore: normalizedInput.adaptivePersonalization.score,
             },
           },
