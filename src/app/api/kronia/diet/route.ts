@@ -9,6 +9,7 @@ const dietRouteContract = require("../../../../server/apihelpers/_dietRouteContr
 const dietRouteHandler = require("../../../../server/apihelpers/_dietRouteHandler")
 const dietSupabaseContext = require("../../../../server/apihelpers/_dietSupabaseContext")
 const dietDataBridge = require("../../../../server/apihelpers/_dietDataBridgeContext")
+const trainingRecoveryHelper = require("../../../../server/apihelpers/_trainingRecoveryContext")
 
 async function getEffectivePlan(userId: string): Promise<string> {
   try {
@@ -83,13 +84,17 @@ export async function POST(req: NextRequest) {
     let enrichedBody = body
     try {
       const admin = createAdminSupabaseClient()
-      const [supabaseContext, kronosNutricaoCtx, bridgeContext] = await Promise.all([
+      const [supabaseContext, kronosNutricaoCtx, bridgeContext, trainingRecovery] = await Promise.all([
         dietSupabaseContext.loadDietSupabaseContext(admin, userId),
         buildKronosNutricaoContext(admin, userId),
         dietDataBridge.loadDietBridgeContext(admin, userId),
+        trainingRecoveryHelper.loadTrainingRecoveryContext(admin, userId),
       ])
       enrichedBody = dietSupabaseContext.enrichDietRequestBody(body, supabaseContext)
       enrichedBody = dietDataBridge.mergeDietBridgeContext(enrichedBody, bridgeContext)
+      if (trainingRecovery && enrichedBody && enrichedBody.payload) {
+        enrichedBody.payload = dietRouteHandler.mergeTrainingRecovery(enrichedBody.payload, trainingRecovery)
+      }
       const nutricaoBlock = serializeKronosNutricaoContext(kronosNutricaoCtx)
       if (nutricaoBlock) {
         enrichedBody = { ...enrichedBody, kronosNutricaoContext: nutricaoBlock }
