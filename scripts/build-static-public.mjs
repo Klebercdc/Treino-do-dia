@@ -35,6 +35,7 @@ const staticFiles = [
   'src/ui/diet/kronia-diet-runtime.js',
   'src/ui/diet/diet-entry-controller.js',
   'src/ui/diet/diet-plan-renderer.js',
+  'src/ui/diet/diet-labs-bridge.js',
   'src/ui/diet/diet-wizard-standalone.js',
   'src/ui/diet/diet-wizard-state.js',
   'src/ui/diet/diet-wizard.js',
@@ -66,4 +67,3 @@ await mkdir(assets3dDest, { recursive: true });
 await cp(assets3dSrc, assets3dDest, { recursive: true });
 
 console.log(`Static output ready: public (${staticFiles.length} files + assets/3d/)`);
-
