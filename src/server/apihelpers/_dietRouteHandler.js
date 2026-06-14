@@ -294,7 +294,11 @@ async function processDietRouteRequest(input) {
 
   var payload = buildPayload(body);
   var result = await dietService.execute(action, payload);
-  result = applyFoodCatalogMacrosToResult(result, payload);
+  try {
+    result = applyFoodCatalogMacrosToResult(result, payload);
+  } catch (catalogError) {
+    console.warn('[food_catalog] Falha no match — seguindo com llm_estimate:', catalogError);
+  }
   return {
     status: 200,
     body: dietRouteContract.buildDietRouteEnvelope(result, {
