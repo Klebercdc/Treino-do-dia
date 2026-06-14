@@ -142,12 +142,27 @@ function normalizeFoodCatalogRow(row) {
 }
 
 async function loadFoodCatalogForDiet(adminClient) {
+  // MATCH FOOD_CATALOG — falha silenciosa, nunca interrompe o save
   if (!adminClient) return [];
-  var result = await adminClient
-    .from('food_catalog')
-    .select('*')
-    .limit(300);
-  return Array.isArray(result && result.data) ? result.data.map(normalizeFoodCatalogRow).filter(function(row) { return row.name; }) : [];
+  try {
+    var result = await adminClient
+      .from('food_catalog')
+      .select('id, taco_id, codigo_taco, codigo, nome, name, alimento, description, porcao_gramas, portion_grams, grams, gramas, kcal_100g, calorias_100g, calories_100g, kcal, calorias, calories, protein_g_100g, proteina_g_100g, proteinas_100g, protein_g, proteinas, proteina, carbs_g_100g, carboidratos_g_100g, carboidratos_100g, carbs_g, carboidratos, fat_g_100g, gorduras_g_100g, gorduras_100g, fat_g, gorduras, fiber_g_100g, fibras_g_100g, fibras_100g, fiber_g, fibras, fonte, source')
+      .eq('ativo', true)
+      .limit(300);
+
+    if (result && result.error) {
+      console.warn('[food_catalog] Falha no match — seguindo com llm_estimate:', result.error);
+      return [];
+    }
+
+    return Array.isArray(result && result.data)
+      ? result.data.map(normalizeFoodCatalogRow).filter(function(row) { return row.name; })
+      : [];
+  } catch (catalogError) {
+    console.warn('[food_catalog] Falha no match — seguindo com llm_estimate:', catalogError);
+    return [];
+  }
 }
 
 function mergeDietBridgeContext(body, bridgeContext) {
@@ -179,7 +194,10 @@ function mergeDietBridgeContext(body, bridgeContext) {
 
 async function loadDietBridgeContext(adminClient, userId) {
   var latestLabReport = await loadLatestLabReportForDiet(adminClient, userId).catch(function() { return null; });
-  var foodCatalog = await loadFoodCatalogForDiet(adminClient).catch(function() { return []; });
+  var foodCatalog = await loadFoodCatalogForDiet(adminClient).catch(function(catalogError) {
+    console.warn('[food_catalog] Falha no match — seguindo com llm_estimate:', catalogError);
+    return [];
+  });
   return { latestLabReport: latestLabReport, foodCatalog: foodCatalog };
 }
 
