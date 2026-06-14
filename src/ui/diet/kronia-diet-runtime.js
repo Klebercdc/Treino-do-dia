@@ -11,7 +11,7 @@
   }
   window.__KRONIA_DIET_RUNTIME__ = true;
 
-  var VERSION = '20260608-login-diet-entry-fix-v1';
+  var VERSION = '20260614-diet-real-labs-v1';
 
   function log(msg) {
     console.log('[KroniaDiet] ' + msg);
@@ -19,28 +19,35 @@
 
   log('runtime mounted');
 
+  function loadScript(src, marker, testFn) {
+    if (typeof testFn === 'function' && testFn()) return Promise.resolve(true);
+    return new Promise(function (resolve) {
+      var existing = document.querySelector('script[data-kronia-runtime-loader="' + marker + '"]');
+      if (existing) existing.remove();
+      var s = document.createElement('script');
+      s.src = src + '?v=' + VERSION + '&t=' + Date.now();
+      s.async = false;
+      s.dataset.kroniaRuntimeLoader = marker;
+      s.onload = function () { resolve(typeof testFn === 'function' ? !!testFn() : true); };
+      s.onerror = function () { console.warn('[KroniaDiet] failed to load ' + src); resolve(false); };
+      document.head.appendChild(s);
+    });
+  }
+
   /* ── Garante que o controller está funcional ─────────────────────── */
   function ensureController() {
     if (window.KroniaDiet && typeof window.KroniaDiet.open === 'function' && !window.KroniaDiet.open.__kroniaDietEntryWrapper) {
       return Promise.resolve(true);
     }
     log('controller not found — loading diet-entry-controller.js');
-    return new Promise(function (resolve) {
-      var existing = document.querySelector('script[data-kronia-runtime-loader="controller"]');
-      if (existing) existing.remove();
-      var s = document.createElement('script');
-      s.src = '/src/ui/diet/diet-entry-controller.js?v=' + VERSION + '&t=' + Date.now();
-      s.async = false;
-      s.dataset.kroniaRuntimeLoader = 'controller';
-      s.onload = function () {
-        log('diet-entry-controller.js loaded');
-        resolve(true);
-      };
-      s.onerror = function () {
-        console.warn('[KroniaDiet] failed to load diet-entry-controller.js');
-        resolve(false);
-      };
-      document.head.appendChild(s);
+    return loadScript('/src/ui/diet/diet-entry-controller.js', 'controller', function () {
+      return !!(window.KroniaDiet && typeof window.KroniaDiet.open === 'function');
+    });
+  }
+
+  function ensureDietLabsBridge() {
+    return loadScript('/src/ui/diet/diet-labs-bridge.js', 'diet-labs-bridge', function () {
+      return !!window.__KRONIA_DIET_LABS_BRIDGE__;
     });
   }
 
@@ -53,6 +60,7 @@
       document.body.classList.remove('diet-wizard-active', 'overlay-open', 'kdw-active');
     }
     ensureController().then(function () {
+      ensureDietLabsBridge();
       if (window.KroniaDiet && typeof window.KroniaDiet.generate === 'function') {
         log('auto-heal: remounting wizard');
         window.KroniaDiet.generate({ source: 'auto_heal' });
@@ -74,6 +82,7 @@
         return;
       }
 
+      ensureDietLabsBridge();
       log('runtime ready — KroniaDiet.open: ' + (typeof (window.KroniaDiet && window.KroniaDiet.open)));
 
       /* Assegura que todas as funções globais de dieta apontam para o controller */
