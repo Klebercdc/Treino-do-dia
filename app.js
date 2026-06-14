@@ -3074,6 +3074,7 @@ function openLabsScreen() {
   try { closeAI?.(); } catch (_) {}
   try { closeOrientacao?.(); } catch (_) {}
   const _ls = document.getElementById('labsScreen');
+  if (!_ls) { console.error('[labs] #labsScreen ausente'); return; }
   _ls.style.display = ''; _ls.style.visibility = ''; _ls.style.pointerEvents = ''; _ls.removeAttribute('aria-hidden');
   _ls.classList.add('show');
   document.body.classList.add('overlay-open');
