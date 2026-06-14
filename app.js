@@ -8909,13 +8909,17 @@ async function saveActiveDietPlan(options) {
               });
             });
           }
-        } catch (_) {}
+        } catch (catalogErr) {
+          console.warn('[food_catalog] match falhou, seguindo com llm_estimate:', catalogErr);
+        }
         if (rows.length) await _sb.from('meal_plan_items').insert(rows);
         plan.id = planInsert.data.id;
         savedRemote = true;
       }
     }
-  } catch (_) {}
+  } catch (saveErr) {
+    console.error('[saveActiveDietPlan] erro ao salvar no Supabase:', saveErr);
+  }
   setActiveDietPlan(Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' }));
   if (!opts.silent) showToast(savedRemote ? 'Dieta salva como versão ativa.' : 'Dieta salva localmente. Entre na conta para sincronizar.', savedRemote ? 'success' : 'info', 3200);
   return Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' });
@@ -13110,7 +13114,10 @@ async function nutritionFlowGeneratePlan() {
   persistDietGenerationPrefs(input);
   persistCanonicalNutritionSnapshot({ source: "nutrition_plan_generated" });
   var savedPlan = null;
-  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
+  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (saveError) {
+    console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
+    showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
+  }
   finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || finalPlan);
 }
 
@@ -15127,7 +15134,11 @@ async function gerarDieta() {
       }), { render: false });
       var savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
       finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || renderModel);
-    } catch (_) {}
+    } catch (saveError) {
+      console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
+      showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
+      try { finishDietGenerationSuccess(window._kroniaDietPlan || renderModel); } catch (_) {}
+    }
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({
         type: "diet",

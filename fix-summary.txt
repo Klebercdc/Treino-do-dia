@@ -1,0 +1,64 @@
+RESUMO DAS MUDANÇAS — saveActiveDietPlan error logging
+Branch: claude/saveactivedietplan-error-logging-9kpfg0
+Commits: 826c010, 0cd4ca5
+Arquivo: app.js
+
+==============================================================
+MUDANÇA 1 — catch interno (food_catalog) — linha 8912
+==============================================================
+
+DE:
+        } catch (_) {}
+
+PARA:
+        } catch (catalogErr) {
+          console.warn('[food_catalog] match falhou, seguindo com llm_estimate:', catalogErr);
+        }
+
+==============================================================
+MUDANÇA 2 — catch externo (bloco principal) — linha 8920
+==============================================================
+
+DE:
+  } catch (_) {}
+
+PARA:
+  } catch (saveErr) {
+    console.error('[saveActiveDietPlan] erro ao salvar no Supabase:', saveErr);
+  }
+
+==============================================================
+MUDANÇA 3 — fluxo de geração principal — linha 13117
+==============================================================
+
+DE:
+  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
+  finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || finalPlan);
+
+PARA:
+  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (saveError) {
+    console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
+    showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
+  }
+  finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || finalPlan);
+
+==============================================================
+MUDANÇA 4 — fluxo legacy redirect — linha 15135
+==============================================================
+
+DE:
+      var savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
+      finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || renderModel);
+    } catch (_) {}
+
+PARA:
+      var savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
+      finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || renderModel);
+    } catch (saveError) {
+      console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
+      showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
+      finishDietGenerationSuccess(window._kroniaDietPlan || renderModel);
+    }
+
+==============================================================
+NENHUMA outra lógica foi alterada.
