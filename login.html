@@ -9,357 +9,130 @@
 <style>
   :root {
     --bg: #020617;
-    --card: rgba(15, 23, 42, 0.78);
-    --line: rgba(148, 163, 184, 0.18);
-    --line-strong: rgba(34, 197, 94, 0.42);
+    --card: rgba(15, 23, 42, .82);
+    --line: rgba(148, 163, 184, .18);
+    --green: #22c55e;
+    --cyan: #38bdf8;
     --text: #f8fafc;
     --muted: #94a3b8;
     --soft: #64748b;
-    --green: #22c55e;
-    --danger-bg: rgba(248, 113, 113, 0.11);
-    --shadow: 0 24px 70px rgba(0, 0, 0, 0.56);
+    --danger-bg: rgba(248, 113, 113, .11);
   }
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  html, body {
-    min-height: 100%;
-    background: var(--bg);
-  }
-
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { min-height: 100%; background: var(--bg); }
   body {
-    color: var(--text);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
     overflow: hidden;
+    padding: max(20px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     position: relative;
   }
-
   body::before, body::after {
     content: "";
     position: fixed;
-    width: 420px;
-    height: 420px;
+    width: 440px;
+    height: 440px;
     border-radius: 50%;
-    filter: blur(24px);
-    opacity: 0.72;
+    filter: blur(28px);
     pointer-events: none;
   }
-
-  body::before {
-    top: -180px;
-    right: -160px;
-    background: radial-gradient(circle, rgba(34, 197, 94, 0.42), rgba(14, 165, 233, 0.08) 50%, transparent 72%);
-  }
-
-  body::after {
-    left: -180px;
-    bottom: -170px;
-    background: radial-gradient(circle, rgba(14, 165, 233, 0.34), rgba(34, 197, 94, 0.06) 54%, transparent 73%);
-  }
-
-  .login-shell {
-    width: 100%;
-    max-width: 430px;
-    position: relative;
-    z-index: 1;
-  }
-
-  .brand {
-    text-align: center;
-    margin-bottom: 22px;
-  }
-
+  body::before { top: -190px; right: -170px; background: radial-gradient(circle, rgba(34,197,94,.42), rgba(56,189,248,.08) 52%, transparent 74%); }
+  body::after { left: -190px; bottom: -180px; background: radial-gradient(circle, rgba(56,189,248,.34), rgba(34,197,94,.06) 54%, transparent 75%); }
+  .login-shell { position: relative; z-index: 1; width: 100%; max-width: 430px; }
+  .brand { text-align: center; margin-bottom: 20px; }
   .brand-mark {
-    width: 74px;
-    height: 74px;
+    width: 72px;
+    height: 72px;
     margin: 0 auto 14px;
     border-radius: 26px;
     display: grid;
     place-items: center;
-    background: linear-gradient(145deg, rgba(34, 197, 94, 0.22), rgba(14, 165, 233, 0.14)), rgba(15, 23, 42, 0.88);
-    border: 1px solid rgba(34, 197, 94, 0.34);
-    box-shadow: 0 18px 50px rgba(34, 197, 94, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, rgba(34,197,94,.22), rgba(56,189,248,.14)), rgba(15,23,42,.92);
+    border: 1px solid rgba(34,197,94,.34);
+    box-shadow: 0 18px 50px rgba(34,197,94,.16), inset 0 1px 0 rgba(255,255,255,.08);
   }
-
-  .brand-mark span {
-    font-size: 28px;
-    font-weight: 1000;
-    letter-spacing: -0.08em;
-    color: #eafff1;
-  }
-
-  .brand h1 {
-    font-size: clamp(34px, 10vw, 46px);
-    line-height: 1;
-    font-weight: 1000;
-    letter-spacing: -0.07em;
-    text-transform: uppercase;
-    text-shadow: 0 0 28px rgba(34, 197, 94, 0.16);
-  }
-
-  .brand p {
-    margin-top: 9px;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    line-height: 1.45;
-  }
-
+  .brand-mark span { font-size: 28px; font-weight: 1000; letter-spacing: -.08em; color: #eafff1; }
+  h1 { font-size: clamp(36px, 10vw, 48px); line-height: 1; font-weight: 1000; letter-spacing: -.07em; text-transform: uppercase; }
+  .brand p { margin-top: 9px; color: var(--muted); font-size: 13px; font-weight: 800; line-height: 1.45; }
   .login-card {
     border-radius: 30px;
     padding: 22px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)), var(--card);
+    background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)), var(--card);
     border: 1px solid var(--line);
-    box-shadow: var(--shadow);
+    box-shadow: 0 24px 70px rgba(0,0,0,.56);
     backdrop-filter: blur(22px);
     -webkit-backdrop-filter: blur(22px);
   }
-
-  .card-head {
-    margin-bottom: 18px;
-  }
-
   .eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #86efac;
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.18);
-    border-radius: 999px;
     padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(34,197,94,.1);
+    border: 1px solid rgba(34,197,94,.18);
+    color: #86efac;
     font-size: 11px;
     font-weight: 950;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: .1em;
   }
-
-  .eyebrow i {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: var(--green);
-    box-shadow: 0 0 14px rgba(34, 197, 94, 0.9);
-  }
-
-  .card-head h2 {
-    margin-top: 14px;
-    font-size: 25px;
-    line-height: 1.08;
-    font-weight: 1000;
-    letter-spacing: -0.035em;
-  }
-
-  .card-head p {
-    margin-top: 8px;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.45;
-  }
-
-  .field {
-    margin-top: 14px;
-  }
-
-  .field label {
-    display: block;
-    margin: 0 0 8px 4px;
-    color: #cbd5e1;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .input-wrap {
-    position: relative;
-  }
-
-  .input-wrap .icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #7dd3fc;
-    font-size: 17px;
-    opacity: 0.9;
-  }
-
+  .eyebrow i { width: 7px; height: 7px; border-radius: 999px; background: var(--green); box-shadow: 0 0 14px rgba(34,197,94,.9); }
+  .card-head h2 { margin-top: 14px; font-size: 25px; line-height: 1.08; font-weight: 1000; letter-spacing: -.035em; }
+  .card-head p { margin-top: 8px; margin-bottom: 18px; color: var(--muted); font-size: 13px; font-weight: 700; line-height: 1.45; }
+  .field { margin-top: 14px; }
+  .field label { display: block; margin: 0 0 8px 4px; color: #cbd5e1; font-size: 12px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+  .input-wrap { position: relative; }
+  .input-wrap .icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #7dd3fc; font-size: 17px; opacity: .9; }
   input {
     width: 100%;
     min-height: 56px;
     padding: 16px 16px 16px 48px;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    border: 1px solid rgba(148,163,184,.24);
     border-radius: 18px;
-    background: rgba(2, 6, 23, 0.58);
+    background: rgba(2,6,23,.58);
     color: var(--text);
     font-size: 16px;
     font-weight: 800;
     outline: none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
   }
-
-  input::placeholder {
-    color: rgba(148, 163, 184, 0.72);
-    font-weight: 750;
-  }
-
-  input:focus {
-    border-color: var(--line-strong);
-    background: rgba(2, 6, 23, 0.78);
-    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-
-  .password-toggle {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: 0;
-    background: transparent;
-    color: #93c5fd;
-    font-size: 12px;
-    font-weight: 950;
-    padding: 10px;
-    width: auto;
-    min-height: auto;
-    box-shadow: none;
-    cursor: pointer;
-  }
-
-  .actions {
-    margin-top: 18px;
-  }
-
-  button.primary {
+  input::placeholder { color: rgba(148,163,184,.72); font-weight: 750; }
+  input:focus { border-color: rgba(34,197,94,.42); background: rgba(2,6,23,.78); box-shadow: 0 0 0 4px rgba(34,197,94,.11); }
+  .password-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #93c5fd; font-size: 12px; font-weight: 950; padding: 10px; cursor: pointer; }
+  .primary {
     width: 100%;
     min-height: 58px;
+    margin-top: 18px;
     border: 0;
     border-radius: 20px;
-    background: linear-gradient(135deg, var(--green), #2dd4bf 45%, #38bdf8);
+    background: linear-gradient(135deg, var(--green), #2dd4bf 45%, var(--cyan));
     color: #02120a;
     font-size: 16px;
     font-weight: 1000;
-    letter-spacing: -0.015em;
     cursor: pointer;
-    box-shadow: 0 18px 42px rgba(34, 197, 94, 0.3);
-    transition: transform .16s ease, opacity .16s ease, filter .16s ease;
+    box-shadow: 0 18px 42px rgba(34,197,94,.3);
+    touch-action: manipulation;
   }
-
-  button.primary:active {
-    transform: scale(0.985);
-  }
-
-  button.primary:disabled {
-    opacity: 0.7;
-    filter: grayscale(0.1);
-    cursor: progress;
-  }
-
-  .row-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 15px;
-    flex-wrap: wrap;
-  }
-
-  .link-btn {
-    border: 0;
-    background: transparent;
-    color: #86efac;
-    font-size: 13px;
-    font-weight: 900;
-    cursor: pointer;
-    padding: 6px 2px;
-  }
-
-  .link-muted {
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 800;
-  }
-
-  .error-box {
-    display: none;
-    margin-top: 14px;
-    padding: 12px 13px;
-    border-radius: 16px;
-    background: var(--danger-bg);
-    border: 1px solid rgba(251, 113, 133, 0.26);
-    color: #fecdd3;
-    font-size: 13px;
-    font-weight: 850;
-    line-height: 1.35;
-  }
-
-  .error-box.show {
-    display: block;
-  }
-
-  .trust {
-    margin-top: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--soft);
-    font-size: 12px;
-    font-weight: 850;
-  }
-
-  .trust span {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: var(--green);
-    box-shadow: 0 0 12px rgba(34, 197, 94, 0.85);
-  }
-
-  .version-note {
-    margin-top: 16px;
-    text-align: center;
-    color: rgba(148, 163, 184, 0.58);
-    font-size: 11px;
-    font-weight: 800;
-  }
-
+  .primary:active { transform: scale(.985); }
+  .primary:disabled { opacity: .7; cursor: progress; }
+  .row-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+  .link-btn { border: 0; background: transparent; color: #86efac; font-size: 13px; font-weight: 900; cursor: pointer; padding: 6px 2px; }
+  .link-muted { color: var(--muted); font-size: 12px; font-weight: 800; }
+  .error-box { display: none; margin-top: 14px; padding: 12px 13px; border-radius: 16px; background: var(--danger-bg); border: 1px solid rgba(251,113,133,.26); color: #fecdd3; font-size: 13px; font-weight: 850; line-height: 1.35; }
+  .error-box.show { display: block; }
+  .trust { margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--soft); font-size: 12px; font-weight: 850; }
+  .trust span { width: 8px; height: 8px; border-radius: 999px; background: var(--green); box-shadow: 0 0 12px rgba(34,197,94,.85); }
+  .version-note { margin-top: 16px; text-align: center; color: rgba(148,163,184,.58); font-size: 11px; font-weight: 800; }
   @media (max-width: 420px) {
-    body {
-      align-items: stretch;
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-
-    .login-shell {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .login-card {
-      border-radius: 28px;
-      padding: 20px;
-    }
-
-    .brand {
-      margin-bottom: 18px;
-    }
+    body { align-items: stretch; }
+    .login-shell { display: flex; flex-direction: column; justify-content: center; }
+    .login-card { border-radius: 28px; padding: 20px; }
   }
 </style>
 </head>
@@ -378,12 +151,12 @@
         <p>Sincronize treino, dieta, evolução e recomendações do KRONOS.</p>
       </div>
 
-      <form onsubmit="entrar(); return false;" novalidate>
+      <form id="loginForm" autocomplete="off" onsubmit="entrar(); return false;" novalidate>
         <div class="field">
           <label for="email">E-mail</label>
           <div class="input-wrap">
             <span class="icon" aria-hidden="true">@</span>
-            <input type="email" id="email" placeholder="seuemail@exemplo.com" autocomplete="email" inputmode="email" />
+            <input type="text" id="email" name="kronia_identifier" placeholder="seuemail@exemplo.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" data-lpignore="true" data-1p-ignore="true" />
           </div>
         </div>
 
@@ -391,14 +164,12 @@
           <label for="senha">Senha</label>
           <div class="input-wrap">
             <span class="icon" aria-hidden="true">●</span>
-            <input type="password" id="senha" placeholder="Digite sua senha" autocomplete="current-password" />
+            <input type="password" id="senha" name="kronia_access_code" placeholder="Digite sua senha" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" />
             <button class="password-toggle" type="button" onclick="alternarSenha()">Ver</button>
           </div>
         </div>
 
-        <div class="actions">
-          <button class="primary" id="btnEntrar" type="submit">Entrar na conta</button>
-        </div>
+        <button class="primary" id="btnEntrar" type="submit">Entrar na conta</button>
 
         <div class="row-actions">
           <button class="link-btn" type="button" onclick="recuperarSenha()">Esqueci minha senha</button>
@@ -414,20 +185,13 @@
     <p class="version-note">KroniA Adaptive Core</p>
   </main>
 
-<script src="/auth.js?v=login-premium"></script>
 <script>
-function getSupabaseClient() {
-  return window._sb || (typeof _sb !== 'undefined' ? _sb : null);
-}
+let kroniaLoginClientPromise = null;
 
 function setErro(message, type) {
   const el = document.getElementById('erro');
   if (!el) return;
-  if (!message) {
-    el.textContent = '';
-    el.classList.remove('show');
-    return;
-  }
+  if (!message) { el.textContent = ''; el.classList.remove('show'); return; }
   el.textContent = message;
   el.classList.add('show');
   el.style.color = type === 'success' ? '#bbf7d0' : '#fecdd3';
@@ -451,22 +215,47 @@ function alternarSenha() {
   btn.textContent = visible ? 'Ver' : 'Ocultar';
 }
 
+function parseAuthConstant(source, name) {
+  const pattern = new RegExp('const\\s+' + name + '\\s*=\\s*[\\\"\\\']([^\\\"\\\']+)[\\\"\\\']');
+  const match = String(source || '').match(pattern);
+  return match ? match[1] : '';
+}
+
+async function getLoginSupabaseClient() {
+  if (kroniaLoginClientPromise) return kroniaLoginClientPromise;
+  kroniaLoginClientPromise = (async function() {
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      throw new Error('Biblioteca de autenticação não carregou. Atualize a página.');
+    }
+
+    let url = '';
+    let anonKey = '';
+
+    try {
+      const runtime = window.__KRONIA_ENV__ || {};
+      url = String(window.KRONIA_SUPABASE_URL || runtime.SUPABASE_URL || runtime.NEXT_PUBLIC_SUPABASE_URL || localStorage.getItem('kronia_supabase_url') || '').trim();
+      anonKey = String(window.KRONIA_SUPABASE_ANON_KEY || runtime.SUPABASE_ANON_KEY || runtime.NEXT_PUBLIC_SUPABASE_ANON_KEY || localStorage.getItem('kronia_supabase_anon_key') || '').trim();
+    } catch (_) {}
+
+    if (!url || !anonKey) {
+      const response = await fetch('/auth.js?v=login-config-' + Date.now(), { cache: 'no-store' });
+      const source = await response.text();
+      url = url || parseAuthConstant(source, 'KRONIA_FALLBACK_SUPABASE_URL');
+      anonKey = anonKey || parseAuthConstant(source, 'KRONIA_FALLBACK_SUPABASE_ANON_KEY');
+    }
+
+    if (!url || !anonKey) throw new Error('Configuração de login indisponível. Atualize a página.');
+    return window.supabase.createClient(url, anonKey);
+  })();
+  return kroniaLoginClientPromise;
+}
+
 async function recuperarSenha() {
   const email = document.getElementById('email').value.trim();
-  const client = getSupabaseClient();
-  if (!client) {
-    setErro('Cliente de autenticação indisponível. Atualize a página.');
-    return;
-  }
-  if (!email) {
-    setErro('Digite seu e-mail primeiro para receber a recuperação de senha.');
-    return;
-  }
-
+  if (!email) { setErro('Digite seu e-mail primeiro para receber a recuperação de senha.'); return; }
   try {
-    const { error } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
-    });
+    const client = await getLoginSupabaseClient();
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
     if (error) throw error;
     setErro('Enviamos um e-mail de recuperação de senha.', 'success');
   } catch (error) {
@@ -477,33 +266,14 @@ async function recuperarSenha() {
 async function entrar() {
   const email = document.getElementById('email').value.trim();
   const senha = document.getElementById('senha').value;
-  const client = getSupabaseClient();
-
   setErro('');
-
-  if (!client) {
-    setErro('Cliente de autenticação indisponível. Atualize a página.');
-    return;
-  }
-
-  if (!email || !senha) {
-    setErro('Preencha e-mail e senha para entrar.');
-    return;
-  }
-
-  if (senha.length < 6) {
-    setErro('A senha precisa ter pelo menos 6 caracteres.');
-    return;
-  }
-
+  if (!email || !senha) { setErro('Preencha e-mail e senha para entrar.'); return; }
+  if (senha.length < 6) { setErro('A senha precisa ter pelo menos 6 caracteres.'); return; }
   setLoading(true);
-
   try {
+    const client = await getLoginSupabaseClient();
     const { error } = await client.auth.signInWithPassword({ email, password: senha });
-    if (error) {
-      setErro(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message);
-      return;
-    }
+    if (error) { setErro(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message); return; }
     window.location.replace('/');
   } catch (error) {
     setErro(error && error.message ? error.message : 'Não foi possível entrar agora. Tente novamente.');
@@ -511,6 +281,18 @@ async function entrar() {
     setLoading(false);
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    const email = document.getElementById('email');
+    const senha = document.getElementById('senha');
+    [email, senha].forEach(function(input) {
+      if (!input) return;
+      input.setAttribute('autocomplete', 'off');
+      input.addEventListener('focus', function() { setErro(''); });
+    });
+  } catch (_) {}
+});
 </script>
 </body>
 </html>
