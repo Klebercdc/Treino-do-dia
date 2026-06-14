@@ -36,6 +36,7 @@ function buildPayload(body) {
     'trainingSnapshot',
     'nutritionGoals', 'goals',
     'supabaseSnapshot',
+    'foodCatalogContext',
     'profile', 'context',
     'kronosNutricaoContext'
   ];
@@ -116,6 +117,145 @@ function mergeTrainingRecovery(payload, trainingRecovery) {
   });
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pickNumber() {
+  for (var i = 0; i < arguments.length; i += 1) {
+    var value = arguments[i];
+    if (value === undefined || value === null || value === '') continue;
+    var parsed = Number(String(value).replace(',', '.').replace(/[^0-9.\-]/g, ''));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function parsePortionGrams(item) {
+  var candidates = [item.grams, item.gramas, item.peso_g, item.weight_g, item.qtde, item.porcao, item.portionLabel, item.qty, item.quantidade];
+  for (var i = 0; i < candidates.length; i += 1) {
+    var value = candidates[i];
+    if (value == null || value === '') continue;
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+    var text = String(value).toLowerCase().replace(',', '.');
+    var kg = text.match(/(\d+(?:\.\d+)?)\s*kg\b/);
+    if (kg) return Number(kg[1]) * 1000;
+    var g = text.match(/(\d+(?:\.\d+)?)\s*g\b/);
+    if (g) return Number(g[1]);
+  }
+  return null;
+}
+
+function foodName(item) {
+  return String((item && (item.nome || item.name || item.alimento || item.food || item.item)) || '').trim();
+}
+
+function foodCatalogItems(payload) {
+  var source = payload && payload.foodCatalogContext && Array.isArray(payload.foodCatalogContext.items)
+    ? payload.foodCatalogContext.items
+    : payload && payload.context && payload.context.foodCatalogContext && Array.isArray(payload.context.foodCatalogContext.items)
+      ? payload.context.foodCatalogContext.items
+      : [];
+  return source.filter(function(item) { return item && item.name && item.per100g; });
+}
+
+function findFoodCatalogMatch(name, catalog) {
+  var normalized = normalizeText(name);
+  if (!normalized || !Array.isArray(catalog) || !catalog.length) return null;
+  var tokens = normalized.split(' ').filter(function(t) { return t.length > 2; });
+  var best = null;
+  var bestScore = 0;
+  catalog.forEach(function(item) {
+    var food = normalizeText(item.name);
+    if (!food) return;
+    var score = 0;
+    if (food === normalized) score += 100;
+    if (food.indexOf(normalized) >= 0 || normalized.indexOf(food) >= 0) score += 50;
+    tokens.forEach(function(token) { if (food.indexOf(token) >= 0) score += 8; });
+    if (score > bestScore) { bestScore = score; best = item; }
+  });
+  return bestScore >= 16 ? best : null;
+}
+
+function applyCatalogMacro(item, match) {
+  var grams = parsePortionGrams(item) || 100;
+  var per = match && match.per100g ? match.per100g : {};
+  var ratio = grams / 100;
+  var kcal = pickNumber(per.kcal) != null ? Math.round(pickNumber(per.kcal) * ratio) : null;
+  var protein = pickNumber(per.protein) != null ? Math.round(pickNumber(per.protein) * ratio * 10) / 10 : null;
+  var carbs = pickNumber(per.carbs) != null ? Math.round(pickNumber(per.carbs) * ratio * 10) / 10 : null;
+  var fat = pickNumber(per.fat) != null ? Math.round(pickNumber(per.fat) * ratio * 10) / 10 : null;
+  var fiber = pickNumber(per.fiber) != null ? Math.round(pickNumber(per.fiber) * ratio * 10) / 10 : null;
+  return Object.assign({}, item, {
+    kcal: kcal != null ? kcal : item.kcal,
+    calories: kcal != null ? kcal : item.calories,
+    calorias: kcal != null ? kcal : item.calorias,
+    prot: protein != null ? protein : item.prot,
+    protein: protein != null ? protein : item.protein,
+    protein_g: protein != null ? protein : item.protein_g,
+    proteinas: protein != null ? protein : item.proteinas,
+    carb: carbs != null ? carbs : item.carb,
+    carbs: carbs != null ? carbs : item.carbs,
+    carbs_g: carbs != null ? carbs : item.carbs_g,
+    carboidratos: carbs != null ? carbs : item.carboidratos,
+    gord: fat != null ? fat : item.gord,
+    fat: fat != null ? fat : item.fat,
+    fat_g: fat != null ? fat : item.fat_g,
+    gorduras: fat != null ? fat : item.gorduras,
+    fibra: fiber != null ? fiber : item.fibra,
+    fiber_g: fiber != null ? fiber : item.fiber_g,
+    food_catalog_id: match.id || item.food_catalog_id || null,
+    taco_id: match.taco_id || item.taco_id || null,
+    macroSource: match.source || 'food_catalog',
+    macro_source: match.source || 'food_catalog',
+    macroAudit: { source: match.source || 'food_catalog', grams: grams, catalogName: match.name },
+  });
+}
+
+function applyFoodCatalogMacrosToResult(result, payload) {
+  var catalog = foodCatalogItems(payload);
+  if (!result || !result.payload || !result.payload.plan || !catalog.length) return result;
+  var plan = result.payload.plan;
+  var audit = { source: 'food_catalog', matchedItems: 0, unmatchedItems: [] };
+
+  function enrichItem(item) {
+    var name = foodName(item);
+    var match = findFoodCatalogMatch(name, catalog);
+    if (!match) {
+      if (name) audit.unmatchedItems.push(name);
+      return Object.assign({}, item, { macroSource: item.macroSource || 'llm_estimate', macro_source: item.macro_source || 'llm_estimate' });
+    }
+    audit.matchedItems += 1;
+    return applyCatalogMacro(item, match);
+  }
+
+  var nextPlan = Object.assign({}, plan);
+  if (Array.isArray(plan.refeicoes)) {
+    nextPlan.refeicoes = plan.refeicoes.map(function(meal) {
+      var alimentos = Array.isArray(meal.alimentos) ? meal.alimentos.map(enrichItem) : meal.alimentos;
+      return Object.assign({}, meal, { alimentos: alimentos });
+    });
+  }
+  if (plan.planoEstruturado && Array.isArray(plan.planoEstruturado.refeicoes)) {
+    nextPlan.planoEstruturado = Object.assign({}, plan.planoEstruturado, {
+      refeicoes: plan.planoEstruturado.refeicoes.map(function(meal) {
+        return Object.assign({}, meal, { itens: Array.isArray(meal.itens) ? meal.itens.map(enrichItem) : meal.itens });
+      }),
+    });
+  }
+  audit.unmatchedItems = audit.unmatchedItems.filter(function(value, index, arr) { return arr.indexOf(value) === index; }).slice(0, 30);
+  nextPlan.macroSource = audit.matchedItems ? 'food_catalog' : (nextPlan.macroSource || 'llm_estimate');
+  nextPlan.foodCatalogMacroAudit = audit;
+  result.payload.plan = nextPlan;
+  return result;
+}
+
 async function tryLoadTrainingRecovery(userId) {
   if (!userId) return null;
   try {
@@ -169,6 +309,7 @@ async function processDietRouteRequest(input) {
   var trainingRecovery = await tryLoadTrainingRecovery(userId);
   payload = mergeTrainingRecovery(payload, trainingRecovery);
   var result = await dietService.execute(action, payload);
+  result = applyFoodCatalogMacrosToResult(result, payload);
   return {
     status: 200,
     body: dietRouteContract.buildDietRouteEnvelope(result, {
@@ -182,5 +323,6 @@ async function processDietRouteRequest(input) {
 module.exports = {
   buildPayload: buildPayload,
   mergeTrainingRecovery: mergeTrainingRecovery,
+  applyFoodCatalogMacrosToResult: applyFoodCatalogMacrosToResult,
   processDietRouteRequest: processDietRouteRequest
 };
