@@ -9514,11 +9514,31 @@ function applyDietRebalanceEngine(plan) {
   return { plan: recalculateDietPlan(next), changed: changed };
 }
 
-function recalculateDietWithKronos() {
+async function recalculateDietWithKronos() {
   var result = applyDietRebalanceEngine(window._kroniaDietPlan || readLocalActiveDietPlan() || buildFallbackActiveDietPlan());
   setActiveDietPlan(result.plan);
-  schedulePersistActiveDietPlan();
-  showToast(result.changed ? 'Dieta rebalanceada pelo motor de macros.' : 'Dieta já estava dentro da margem segura.', result.changed ? 'success' : 'info', 2800);
+  console.info('[diet_rebalance] macros pós-rebalanceamento:', {
+    totals: result.plan && result.plan.totals,
+    meals: result.plan && result.plan.meals && result.plan.meals.map(function(m) { return m.subtotal; })
+  });
+  try {
+    var savedPlan = await saveActiveDietPlan({
+      silent: true,
+      contextSnapshot: typeof buildNutritionIntakeSnapshot === 'function'
+        ? buildNutritionIntakeSnapshot()
+        : analyzeUserContext()
+    });
+    if (savedPlan && savedPlan.source === 'supabase_meal_plans') {
+      showToast(result.changed ? 'Dieta rebalanceada e salva no Supabase.' : 'Dieta conferida e salva no Supabase.', 'success', 3200);
+    } else {
+      showToast('Dieta rebalanceada localmente. Não consegui confirmar sincronização no Supabase agora.', 'info', 4200);
+    }
+    try { finishDietGenerationSuccess(savedPlan || result.plan); } catch (_) {}
+  } catch (saveError) {
+    console.warn('[diet_rebalance] Falha ao salvar rebalanceamento:', saveError);
+    showToast('Dieta rebalanceada, mas não consegui salvar no Supabase agora.', 'error', 5000);
+    try { finishDietGenerationSuccess(result.plan); } catch (_) {}
+  }
 }
 
 function _tpMealSlotIcon(slot) {
