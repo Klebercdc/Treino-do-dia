@@ -29,6 +29,7 @@ function hasAny(content, tokens) {
 }
 
 const files = {
+  dietRoute: 'src/app/api/kronia/diet/route.ts',
   dietRouteHandler: 'src/server/apihelpers/_dietRouteHandler.js',
   trainingRecovery: 'src/server/apihelpers/_trainingRecoveryContext.js',
   dietTrainingContext: 'src/core/nutrition/diet_context_training.js',
@@ -128,8 +129,9 @@ check(
 );
 
 check(
-  'Dieta: fluxo segue recebendo contexto Supabase/exames',
-  hasAny(src.dietRouteHandler, ['dietSupabaseContext.enrichDietRequestBody']) &&
+  'Dieta: rota/handler segue recebendo contexto Supabase/exames',
+  (hasAny(src.dietRoute, ['dietSupabaseContext.enrichDietRequestBody', 'loadDietSupabaseContext']) ||
+    hasAny(src.dietRouteHandler, ['dietSupabaseContext.enrichDietRequestBody', 'loadDietSupabaseContext'])) &&
     hasAny(src.dietClinicalContext, ['pickLabSource'])
 );
 
