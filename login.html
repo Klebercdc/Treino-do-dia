@@ -3,38 +3,279 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kronia — Entrar</title>
+<title>KroniA — Entrar</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #080c14; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.box { width: 100%; max-width: 400px; padding: 40px 24px; }
-h1 { font-size: 24px; margin-bottom: 32px; text-align: center; }
-input { width: 100%; padding: 14px; background: #1a1f2e; border: 1px solid #2a3040; border-radius: 8px; color: white; font-size: 16px; margin-bottom: 16px; }
-button { width: 100%; padding: 14px; background: #0055FF; border: none; border-radius: 8px; color: white; font-size: 16px; cursor: pointer; }
-.erro { color: #ff4444; margin-top: 12px; text-align: center; font-size: 14px; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #020812;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* background glow */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 900px 600px at 20% -10%, rgba(0,194,255,0.07), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 85% 10%,  rgba(109,74,254,0.06), transparent 55%),
+    linear-gradient(180deg, #03101e 0%, #020812 50%);
+  pointer-events: none;
+}
+
+/* subtle grid */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(40,110,200,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40,110,200,0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(60% 60% at 50% 30%, #000 30%, transparent 90%);
+  -webkit-mask-image: radial-gradient(60% 60% at 50% 30%, #000 30%, transparent 90%);
+  pointer-events: none;
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 20px;
+}
+
+/* logo */
+.logo {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00C2FF, #6D4AFE);
+  margin-bottom: 14px;
+  box-shadow: 0 0 28px rgba(0,194,255,0.25);
+}
+
+.logo-mark svg { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+
+.logo-name {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.logo-name span { color: #00C2FF; }
+
+.logo-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.02em;
+}
+
+/* card */
+.card {
+  background: rgba(6, 15, 29, 0.85);
+  border: 1px solid rgba(0,194,255,0.12);
+  border-radius: 20px;
+  padding: 32px 28px;
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 32px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(0,194,255,0.06);
+}
+
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 20px;
+}
+
+/* inputs */
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+
+.field input::placeholder { color: rgba(255,255,255,0.25); }
+
+.field input:focus {
+  border-color: rgba(0,194,255,0.5);
+  box-shadow: 0 0 0 3px rgba(0,194,255,0.08);
+}
+
+/* buttons */
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #0080ff, #00C2FF);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 4px 20px rgba(0,194,255,0.25);
+  letter-spacing: 0.01em;
+}
+
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: rgba(0,194,255,0.85);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn-link:hover { color: #00C2FF; }
+
+/* feedback */
+.feedback-row {
+  margin-top: 14px;
+  text-align: center;
+  min-height: 20px;
+}
+
+#erro {
+  display: none;
+  color: #ff5b5b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#info {
+  display: none;
+  color: #00C2FF;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* recovery section hidden by default */
+#recoverySection { display: none; }
+
+.recovery-back {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.forgot-row {
+  margin-top: 16px;
+  text-align: center;
+}
 </style>
 </head>
 <body>
-<div class="box">
-  <h1>KRONIA</h1>
-  <input type="email" id="email" placeholder="Email" />
-  <input type="password" id="senha" placeholder="Senha" />
-  <button onclick="entrar()">Entrar na conta</button>
-  <p class="erro" id="erro"></p>
+
+<div class="page">
+
+  <!-- Logo -->
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+        <path d="M8 12h8M12 8v8"/>
+      </svg>
+    </div>
+    <div class="logo-name">KRONI<span>A</span></div>
+    <div class="logo-sub">Seu coach de saúde com IA</div>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- Seção login -->
+    <div id="loginSection">
+      <div class="section-title">Acessar conta</div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="seu@email.com" autocomplete="email" />
+      </div>
+
+      <div class="field">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button class="btn-primary" id="btnEntrar" onclick="entrar()">Entrar na conta</button>
+
+      <div class="forgot-row">
+        <button class="btn-link" onclick="irParaRecuperar()">Esqueceu a senha?</button>
+      </div>
+    </div>
+
+    <!-- Seção recuperação -->
+    <div id="recoverySection">
+      <div class="section-title">Recuperar senha</div>
+
+      <div class="field">
+        <label for="emailRecuperar">Email da conta</label>
+        <input type="email" id="emailRecuperar" placeholder="seu@email.com" autocomplete="email" />
+      </div>
+
+      <button class="btn-primary" id="btnRecuperar" onclick="recuperarSenha()">Enviar link de recuperação</button>
+
+      <div class="recovery-back">
+        <button class="btn-link" onclick="voltarLogin()">Voltar para o login</button>
+      </div>
+    </div>
+
+    <!-- Feedback unificado -->
+    <div class="feedback-row">
+      <span id="erro"></span>
+      <span id="info"></span>
+    </div>
+
+  </div>
 </div>
-<script>
-const _sb = supabase.createClient(
-  'https://twxoddzogbmaysebhour.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3eG9kZHpvZ2JtYXlzZWJob3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTk4MzgsImV4cCI6MjA4OTA3NTgzOH0.8xXiTS863_rtKOE3g2wDn7PdQVKCFj2hxhtnya3Wa5E'
-);
-async function entrar() {
-  const email = document.getElementById('email').value;
-  const senha = document.getElementById('senha').value;
-  const { error } = await _sb.auth.signInWithPassword({ email, password: senha });
-  if (error) { document.getElementById('erro').textContent = 'Email ou senha incorretos'; return; }
-  window.location.replace('/');
-}
-</script>
+
+<script src="/src/auth/login-page-auth.js"></script>
 </body>
 </html>
