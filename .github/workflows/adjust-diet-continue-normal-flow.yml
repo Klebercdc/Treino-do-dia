@@ -1,0 +1,70 @@
+name: Adjust diet continue normal flow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/adjust-diet-continue-normal-flow.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Keep diet continue button in normal flow
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          replacements = [
+              (
+                  'src/ui/diet/diet-wizard.js',
+                  '.kdw-footer{position:sticky;bottom:calc(env(safe-area-inset-bottom, 0px) + 16px);background:#020617;padding-top:12px}',
+                  '.kdw-footer{background:#020617;padding-top:12px;padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)}',
+              ),
+              (
+                  'src/ui/diet/diet-wizard-standalone.js',
+                  '.kdw-footer{position:sticky;bottom:calc(env(safe-area-inset-bottom, 0px) + 16px);background:linear-gradient(180deg,rgba(2,6,23,0),#020617 30%);padding-top:14px}',
+                  '.kdw-footer{background:linear-gradient(180deg,rgba(2,6,23,0),#020617 30%);padding-top:14px;padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)}',
+              ),
+          ]
+
+          missing = []
+          for file_name, old, new in replacements:
+              path = Path(file_name)
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  if new in text:
+                      continue
+                  missing.append(file_name)
+                  continue
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          if missing:
+              raise SystemExit('Padrões não encontrados: ' + ', '.join(missing))
+
+          workflow = Path('.github/workflows/adjust-diet-continue-normal-flow.yml')
+          if workflow.exists():
+              workflow.unlink()
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add -A
+            git commit -m "fix: mantém continuar da dieta no fluxo normal"
+            git push
+          fi
