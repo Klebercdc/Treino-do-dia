@@ -8436,9 +8436,30 @@ function syncDietPlanVisualPrescription(plan) {
       items: (Array.isArray(safeMeal.items) ? safeMeal.items : []).map(function(item) {
         var safeItem = item && typeof item === 'object' ? item : {};
         var name = String(safeItem.name || getDietItemName(safeItem)).trim();
-        var quantity = String(safeItem.quantity || (safeItem.grams ? (safeItem.grams + ' g') : '')).trim();
-        return quantity ? (name + ' - ' + quantity) : name;
-      }).filter(Boolean)
+        var quantity = String(safeItem.quantity || safeItem.qtde || safeItem.porcao || (safeItem.grams ? (safeItem.grams + ' g') : '')).trim();
+        return {
+          name: name, nome: name,
+          quantity: quantity, qtde: quantity,
+          grams: safeItem.grams || safeItem.gramas || null,
+          gramas: safeItem.grams || safeItem.gramas || null,
+          kcal: safeItem.kcal || safeItem.calories || safeItem.calorias || 0,
+          calories: safeItem.kcal || safeItem.calories || safeItem.calorias || 0,
+          calorias: safeItem.kcal || safeItem.calories || safeItem.calorias || 0,
+          protein: safeItem.protein || safeItem.proteinas || safeItem.prot || 0,
+          proteinas: safeItem.protein || safeItem.proteinas || safeItem.prot || 0,
+          prot: safeItem.protein || safeItem.proteinas || safeItem.prot || 0,
+          carbs: safeItem.carbs || safeItem.carboidratos || safeItem.carb || 0,
+          carboidratos: safeItem.carbs || safeItem.carboidratos || safeItem.carb || 0,
+          carb: safeItem.carbs || safeItem.carboidratos || safeItem.carb || 0,
+          fat: safeItem.fat || safeItem.gorduras || safeItem.gord || 0,
+          gorduras: safeItem.fat || safeItem.gorduras || safeItem.gord || 0,
+          gord: safeItem.fat || safeItem.gorduras || safeItem.gord || 0,
+          fiber: safeItem.fiber || safeItem.fibras || safeItem.fibra || 0,
+          fibra: safeItem.fiber || safeItem.fibras || safeItem.fibra || 0,
+          sourceType: safeItem.sourceType || safeItem.source_type || null,
+          sourceId: safeItem.sourceId || safeItem.source_id || safeItem.food_id || null
+        };
+      }).filter(function(item) { return item && item.name; })
     };
   });
   return baseVisual;
@@ -8446,8 +8467,17 @@ function syncDietPlanVisualPrescription(plan) {
 
 function mapVisualMealToLegacyMeal(meal, mealIndex) {
   var safeMeal = meal && typeof meal === 'object' ? meal : {};
-  var foods = Array.isArray(safeMeal.items) ? safeMeal.items.map(parseDietVisualItem).filter(Boolean) : [];
-  var kcal = asKroniaNumber(safeMeal.kcal_estimada, 0);
+  var rawItems = Array.isArray(safeMeal.items) ? safeMeal.items.map(function(item) {
+    if (item && typeof item === 'object') return item;
+    return parseDietVisualItem(item);
+  }).filter(Boolean) : [];
+  var foods = rawItems.map(function(item, itemIndex) {
+    return normalizeDietEditorItem(item, itemIndex + 1);
+  });
+  var subtotalKcal = foods.reduce(function(s, it) { return s + asKroniaNumber(it.kcal, 0); }, 0) || asKroniaNumber(safeMeal.kcal_estimada, 0);
+  var subtotalProt = foods.reduce(function(s, it) { return s + asKroniaNumber(it.protein, 0); }, 0);
+  var subtotalCarb = foods.reduce(function(s, it) { return s + asKroniaNumber(it.carbs, 0); }, 0);
+  var subtotalGord = foods.reduce(function(s, it) { return s + asKroniaNumber(it.fat, 0); }, 0);
   return {
     id: safeMeal.id || ('visual_meal_' + (mealIndex + 1)),
     nome: safeMeal.name || ('Refeição ' + (mealIndex + 1)),
@@ -8457,19 +8487,19 @@ function mapVisualMealToLegacyMeal(meal, mealIndex) {
     substituicoes: [],
     alimentos: foods.map(function(item) {
       return {
-        nome: item.nome,
-        qtde: item.porcao,
-        kcal: 0,
-        prot: 0,
-        carb: 0,
-        gord: 0
+        nome: item.name,
+        qtde: item.quantity,
+        kcal: item.kcal,
+        prot: item.protein,
+        carb: item.carbs,
+        gord: item.fat
       };
     }),
     subtotal: {
-      kcal: kcal,
-      prot: 0,
-      carb: 0,
-      gord: 0
+      kcal: dietRound(subtotalKcal, 0),
+      prot: dietRound(subtotalProt, 1),
+      carb: dietRound(subtotalCarb, 1),
+      gord: dietRound(subtotalGord, 1)
     },
     itens: foods
   };
@@ -8481,12 +8511,15 @@ function getDietRenderableMeals(plan) {
   if (visual && Array.isArray(visual.meals) && visual.meals.length) {
     return visual.meals.map(function(meal, mealIndex) {
       var safeMeal = meal && typeof meal === 'object' ? meal : {};
-      var rawItems = Array.isArray(safeMeal.items) ? safeMeal.items.map(parseDietVisualItem).filter(Boolean) : [];
+      var rawItems = Array.isArray(safeMeal.items) ? safeMeal.items.map(function(item) {
+        if (item && typeof item === 'object') return item;
+        return parseDietVisualItem(item);
+      }).filter(Boolean) : [];
       var normalizedItems = rawItems.map(function(item, itemIndex) {
         return normalizeDietEditorItem(item, itemIndex + 1);
       });
       var computedSub = normalizedItems.reduce(function(acc, it) {
-        acc.kcal  += asKroniaNumber(it.kcal,    0);
+        acc.kcal    += asKroniaNumber(it.kcal,    0);
         acc.protein += asKroniaNumber(it.protein, 0);
         acc.carbs   += asKroniaNumber(it.carbs,   0);
         acc.fat     += asKroniaNumber(it.fat,     0);
@@ -8495,6 +8528,20 @@ function getDietRenderableMeals(plan) {
         return acc;
       }, { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0 });
       var estimatedKcal = asKroniaNumber(safeMeal.kcal_estimada, 0);
+      var originalMeal = Array.isArray(safePlan.meals) ? safePlan.meals[mealIndex] : null;
+      var originalSubtotal = originalMeal && originalMeal.subtotal ? originalMeal.subtotal : null;
+      var subtotalProtein = computedSub.protein || asKroniaNumber(originalSubtotal && originalSubtotal.protein, 0);
+      var subtotalCarbs   = computedSub.carbs   || asKroniaNumber(originalSubtotal && originalSubtotal.carbs,   0);
+      var subtotalFat     = computedSub.fat     || asKroniaNumber(originalSubtotal && originalSubtotal.fat,     0);
+      var subtotalFiber   = computedSub.fiber   || asKroniaNumber(originalSubtotal && originalSubtotal.fiber,   0);
+      if ((computedSub.kcal || estimatedKcal) > 0 && !subtotalProtein && !subtotalCarbs && !subtotalFat) {
+        console.warn('[diet_macros] Refeição com kcal mas macros zerados:', {
+          meal: safeMeal.name,
+          estimatedKcal: estimatedKcal,
+          rawItems: safeMeal.items,
+          originalSubtotal: originalSubtotal
+        });
+      }
       return {
         id: safeMeal.id || ('visual_meal_' + (mealIndex + 1)),
         name: safeMeal.name || ('Refeição ' + (mealIndex + 1)),
@@ -8503,12 +8550,12 @@ function getDietRenderableMeals(plan) {
         notes: '',
         substituicoes: [],
         subtotal: {
-          kcal:    dietRound(computedSub.kcal    || estimatedKcal, 0),
-          protein: dietRound(computedSub.protein, 1),
-          carbs:   dietRound(computedSub.carbs,   1),
-          fat:     dietRound(computedSub.fat,     1),
-          fiber:   dietRound(computedSub.fiber,   1),
-          sodium:  dietRound(computedSub.sodium,  0)
+          kcal:    dietRound(computedSub.kcal || estimatedKcal || asKroniaNumber(originalSubtotal && originalSubtotal.kcal, 0), 0),
+          protein: dietRound(subtotalProtein, 1),
+          carbs:   dietRound(subtotalCarbs,   1),
+          fat:     dietRound(subtotalFat,     1),
+          fiber:   dietRound(subtotalFiber,   1),
+          sodium:  dietRound(computedSub.sodium, 0)
         },
         items: normalizedItems
       };
