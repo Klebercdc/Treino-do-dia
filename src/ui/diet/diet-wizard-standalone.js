@@ -246,8 +246,8 @@
     var style = doc.createElement('style');
     style.id = 'kdwAnamneseStyle';
     style.textContent = [
-      '.kdw-anamnese-screen{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:flex-end;justify-content:center;font-family:inherit;background:rgba(0,0,0,.78);backdrop-filter:blur(10px)}',
-      '.kdw-card{position:relative;width:100%;max-width:560px;max-height:92vh;overflow:auto;background:linear-gradient(180deg,#08111f,#020617);color:#fff;border:1px solid rgba(34,197,94,.38);border-radius:30px 30px 0 0;padding:22px;box-shadow:0 -20px 70px rgba(0,0,0,.55),0 0 36px rgba(34,197,94,.14);-webkit-overflow-scrolling:touch}',
+      '.kdw-anamnese-screen{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:flex-end;justify-content:center;font-family:inherit;background:rgba(0,0,0,.78);backdrop-filter:blur(10px);padding-bottom:var(--kdw-browser-bottom,0px)}',
+      '.kdw-card{position:relative;width:100%;max-width:560px;max-height:calc((var(--kdw-vh,1vh) * 100) - var(--kdw-browser-bottom,0px));overflow:auto;background:linear-gradient(180deg,#08111f,#020617);color:#fff;border:1px solid rgba(34,197,94,.38);border-radius:30px 30px 0 0;padding:22px;box-shadow:0 -20px 70px rgba(0,0,0,.55),0 0 36px rgba(34,197,94,.14);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}',
       '.kdw-close{position:absolute;right:16px;top:14px;background:rgba(255,255,255,.08);color:#fff;border:0;border-radius:999px;width:38px;height:38px;font-size:24px;cursor:pointer}',
       '.kdw-kicker{text-transform:uppercase;letter-spacing:.13em;color:#22c55e;font-weight:950;font-size:11px;margin:0 46px 8px 0}',
       '.kdw-card h2{font-size:28px;margin:0 46px 8px 0;line-height:1.05}',
@@ -260,8 +260,8 @@
       '.kdw-card select,.kdw-card textarea,.kdw-card input{width:100%;box-sizing:border-box;margin-top:7px;background:#0f172a;color:#fff;border:1px solid rgba(148,163,184,.38);border-radius:16px;padding:13px;font:inherit;outline:none}',
       '.kdw-card textarea{resize:vertical;min-height:76px}',
       '.kdw-card select:focus,.kdw-card textarea:focus,.kdw-card input:focus{border-color:rgba(34,197,94,.8);box-shadow:0 0 0 3px rgba(34,197,94,.12)}',
-      '.kdw-footer{display:flex;gap:10px;margin-top:18px}',
-      '.kdw-btn{flex:1;border:0;border-radius:18px;padding:15px;font-weight:950;font-size:15px;cursor:pointer}',
+      '.kdw-footer{position:sticky;bottom:0;z-index:5;display:flex;gap:10px;margin:18px -22px -22px;padding:14px 22px calc(env(safe-area-inset-bottom,0px) + 18px);background:linear-gradient(180deg,rgba(2,6,23,0),#020617 30%);border-top:1px solid rgba(148,163,184,.12);pointer-events:auto}',
+      '.kdw-btn{flex:1;border:0;border-radius:18px;padding:15px;font-weight:950;font-size:15px;cursor:pointer;touch-action:manipulation;min-height:54px}',
       '.kdw-back{background:rgba(255,255,255,.08);color:#fff}',
       '.kdw-next{background:#22c55e;color:#03130a;box-shadow:0 0 28px rgba(34,197,94,.35)}',
       '.kdw-insight{margin:14px 0 0;padding:13px;border-radius:16px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);color:#bbf7d0;font-size:13px;line-height:1.45}',
@@ -270,9 +270,35 @@
       '.kdw-summary-card{display:grid;gap:10px}',
       '.kdw-summary-card div{display:flex;justify-content:space-between;gap:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:13px}',
       '.kdw-summary-card span{color:#94a3b8;font-size:13px}.kdw-summary-card strong{color:#fff;font-size:14px;text-align:right}',
-      '@media(max-width:430px){.kdw-card{padding:22px 18px}.kdw-grid{grid-template-columns:1fr}.kdw-card h2{font-size:25px}.kdw-footer{background:linear-gradient(180deg,rgba(2,6,23,0),#020617 30%);padding-top:14px;padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 16px)}}'
+      '@media(max-width:430px){.kdw-card{padding:22px 18px;max-height:calc((var(--kdw-vh,1vh) * 100) - var(--kdw-browser-bottom,0px) - 4px)}.kdw-grid{grid-template-columns:1fr}.kdw-card h2{font-size:25px}.kdw-footer{margin:18px -18px -22px;padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 24px)}}'
     ].join('');
     doc.head.appendChild(style);
+  }
+
+  function syncViewportSafeArea(screen) {
+    try {
+      var doc = root.document;
+      if (!doc || !doc.documentElement) return;
+      var vv = root.visualViewport;
+      var viewportHeight = vv && vv.height ? vv.height : root.innerHeight;
+      var vh = Math.max(320, viewportHeight || 0) * 0.01;
+      doc.documentElement.style.setProperty('--kdw-vh', vh + 'px');
+
+      var ua = root.navigator && root.navigator.userAgent || '';
+      var isiOS = /iPhone|iPad|iPod/i.test(ua);
+      var isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+      var standalone = !!(root.navigator && root.navigator.standalone) || (root.matchMedia && root.matchMedia('(display-mode: standalone)').matches);
+      var safariBrowser = isiOS && isSafari && !standalone;
+      var bottomOffset = 0;
+
+      if (safariBrowser) {
+        bottomOffset = Math.max(72, Math.round((root.innerHeight || viewportHeight) - viewportHeight - (vv && vv.offsetTop || 0)));
+        if (!Number.isFinite(bottomOffset)) bottomOffset = 72;
+      }
+
+      doc.documentElement.style.setProperty('--kdw-browser-bottom', bottomOffset + 'px');
+      if (screen && screen.classList) screen.classList.toggle('kdw-safari-browser', !!safariBrowser);
+    } catch (_) {}
   }
 
   function bindStepInputs(screen) {
@@ -387,6 +413,7 @@
     screen.querySelector('.kdw-next').textContent = state.step === steps.length - 1 ? 'Gerar plano com IA' : 'Continuar';
     bindStepInputs(screen);
     updateLiveSummary();
+    syncViewportSafeArea(screen);
   }
 
   function buildWizard(options) {
@@ -408,7 +435,7 @@
     screen.setAttribute('aria-modal', 'true');
     screen.innerHTML = [
       '<section class="kdw-card app-scroll">',
-        '<button type="button" class="kdw-close" aria-label="Fechar">\xd7</button>',
+        '<button type="button" class="kdw-close" aria-label="Fechar">×</button>',
         '<p class="kdw-kicker">KroniA Nutrition Engine V3</p>',
         '<h2 class="kdw-title"></h2>',
         '<p class="kdw-text"></p>',
@@ -421,6 +448,15 @@
 
     doc.body.appendChild(screen);
     doc.body.classList.add('diet-wizard-active', 'overlay-open');
+    syncViewportSafeArea(screen);
+
+    if (root.visualViewport) {
+      try {
+        root.visualViewport.addEventListener('resize', function() { syncViewportSafeArea(screen); });
+        root.visualViewport.addEventListener('scroll', function() { syncViewportSafeArea(screen); });
+      } catch (_) {}
+    }
+    try { root.addEventListener('resize', function() { syncViewportSafeArea(screen); }); } catch (_) {}
 
     screen.querySelector('.kdw-close').addEventListener('click', cleanupLegacyOverlay);
     screen.addEventListener('click', function(e) { if (e.target === screen) cleanupLegacyOverlay(); });
