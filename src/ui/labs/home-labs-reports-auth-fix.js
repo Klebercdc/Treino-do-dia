@@ -1,15 +1,15 @@
 /* Labs reports auth compatibility shim — KRONIA
  *
- * Corrige abertura do botão/card de Exames/Biomarcadores na Home.
- * Este shim NÃO cria outro modal. Ele usa o bridge principal
- * home-labs-cta-bridge.js e instala um listener de segurança para
- * qualquer elemento com texto/atributo relacionado a Exames, Labs ou Biomarcadores.
+ * Corrige abertura do botão/card de Exames/Biomarcadores sem abrir sozinho.
+ * Este shim NÃO cria outro modal. Ele só age quando o clique/toque vem
+ * de um CTA explícito de Exames/Labs/Biomarcadores.
  */
 (function () {
   'use strict';
 
-  var VERSION = '20260614-labs-open-click-guard';
+  var VERSION = '20260614-labs-open-cta-only';
   var installedClickGuard = false;
+  var lastOpenAt = 0;
 
   function log() {
     try {
@@ -53,6 +53,10 @@
   }
 
   async function openViaMainBridge(source) {
+    var now = Date.now();
+    if (now - lastOpenAt < 900) return null;
+    lastOpenAt = now;
+
     var mainBridge = hasMainBridge() ? window.openLabsUploadScreen : await waitForMainBridge(1200);
     if (mainBridge && mainBridge !== openViaMainBridge) {
       var legacyOpenLabsScreen = window.openLabsScreen;
@@ -64,7 +68,7 @@
         // Desabilitamos só durante a chamada para forçar o fallback real do bridge.
         if (hadLegacyOpenLabsScreen) window.openLabsScreen = null;
         mainBridge.__kroniaLabsMainBridge = true;
-        return mainBridge(source || 'labs-auth-shim-click-guard');
+        return mainBridge(source || 'labs-auth-shim-cta');
       } finally {
         if (hadLegacyOpenLabsScreen) window.openLabsScreen = legacyOpenLabsScreen;
       }
@@ -75,38 +79,61 @@
     return null;
   }
 
-  function textOf(el) {
+  function safeText(el) {
     try {
       return String(
-        (el && (el.innerText || el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || el.getAttribute('data-action') || el.id || el.className)) || ''
+        (el && (
+          el.getAttribute('data-action') ||
+          el.getAttribute('data-module') ||
+          el.getAttribute('aria-label') ||
+          el.getAttribute('title') ||
+          el.id ||
+          el.className ||
+          el.innerText ||
+          el.textContent
+        )) || ''
       ).toLowerCase();
     } catch (_) {
       return '';
     }
   }
 
-  function isLabsTarget(start) {
-    var el = start;
-    while (el && el !== document.body && el !== document.documentElement) {
-      var txt = textOf(el);
-      if (
-        txt.indexOf('exames') >= 0 ||
-        txt.indexOf('exame') >= 0 ||
-        txt.indexOf('biomarcador') >= 0 ||
-        txt.indexOf('biomarcadores') >= 0 ||
-        txt.indexOf('labs') >= 0 ||
-        txt.indexOf('lab') >= 0
-      ) {
-        return true;
-      }
-      el = el.parentElement;
-    }
-    return false;
+  function hasLabsKeyword(text) {
+    return /(^|\b)(exame|exames|biomarcador|biomarcadores|labs|lab)(\b|$)/i.test(String(text || ''));
+  }
+
+  function findExplicitLabsCta(start) {
+    if (!start || !start.closest) return null;
+
+    // Nunca intercepta cliques dentro do próprio modal, senão ele reabre ao usar botões internos.
+    if (start.closest('#labsCtaModal')) return null;
+
+    // Preferência: CTAs marcados diretamente no HTML/JS.
+    var explicit = start.closest(
+      '[data-labs-open], [data-open-labs], [data-module="labs"], [data-action="open_labs"], [data-action="open_labs_upload"], [data-action="labs"], [onclick*="openLabsUploadScreen"], [onclick*="openLabsScreen"]'
+    );
+    if (explicit) return explicit;
+
+    // Fallback controlado: só considera o elemento interativo mais próximo,
+    // não sobe até containers grandes da Home. Isso evita abrir sozinho quando
+    // qualquer área da tela contém texto oculto/filho com "Exames".
+    var interactive = start.closest('button, a, [role="button"]');
+    if (!interactive) return null;
+
+    var text = safeText(interactive);
+    if (!hasLabsKeyword(text)) return null;
+
+    // Evita capturar botões internos ou textos longos de seções inteiras.
+    var visibleText = String(interactive.innerText || interactive.textContent || '').trim();
+    if (visibleText && visibleText.length > 120) return null;
+
+    return interactive;
   }
 
   function handleLabsClick(ev) {
     var target = ev && ev.target;
-    if (!target || !isLabsTarget(target)) return;
+    var cta = findExplicitLabsCta(target);
+    if (!cta) return;
 
     try {
       if (ev.preventDefault) ev.preventDefault();
@@ -114,7 +141,7 @@
       if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
     } catch (_) {}
 
-    openViaMainBridge('home-exames-biomarcadores-click');
+    openViaMainBridge('home-exames-biomarcadores-cta');
   }
 
   function installClickGuard() {
