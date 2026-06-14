@@ -13114,7 +13114,10 @@ async function nutritionFlowGeneratePlan() {
   persistDietGenerationPrefs(input);
   persistCanonicalNutritionSnapshot({ source: "nutrition_plan_generated" });
   var savedPlan = null;
-  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (_) {}
+  try { savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: finalPlan }); } catch (saveError) {
+    console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
+    showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
+  }
   finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || finalPlan);
 }
 
@@ -15131,7 +15134,11 @@ async function gerarDieta() {
       }), { render: false });
       var savedPlan = await saveActiveDietPlan({ silent: true, contextSnapshot: intakeSnapshot, generatedPlan: renderModel });
       finishDietGenerationSuccess(savedPlan || window._kroniaDietPlan || renderModel);
-    } catch (_) {}
+    } catch (saveError) {
+      console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
+      showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
+      finishDietGenerationSuccess(window._kroniaDietPlan || renderModel);
+    }
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({
         type: "diet",
