@@ -22,6 +22,7 @@ const staticFiles = [
   'krona-setup.js',
   'transforms_dashboard_acwr.js',
   'plans.js',
+  'sw.js',
   'manifest.json',
   'Kronia.png',
   'splash.png',
