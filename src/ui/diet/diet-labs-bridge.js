@@ -11,7 +11,7 @@
   if (window.__KRONIA_DIET_LABS_BRIDGE__) return;
   window.__KRONIA_DIET_LABS_BRIDGE__ = true;
 
-  var VERSION = '20260614-diet-real-labs-v1';
+  var VERSION = '20260614-diet-real-labs-v2-manual-only';
   var SNAPSHOT_KEY = 'kronia_latest_lab_context';
   var REPORTS_URL = '/api/kronia/labs/reports?limit=1';
   var lastOpenAt = 0;
@@ -30,7 +30,6 @@
     if (target.closest('#labsCtaModal')) return false;
     if (target.closest('#kroniaDietPlanVisualScreen')) return true;
     if (target.closest('#dietDataScreen,#dietGeneratedScreen,#dietResultScreen,#dietChoiceScreen,#nutritionFlowScreen')) return true;
-    if (document.body && /minha\s+dieta|dieta/i.test(String(document.body.innerText || '').slice(0, 5000))) return true;
     return false;
   }
 
@@ -42,15 +41,18 @@
     );
     if (explicit) return explicit;
 
-    var interactive = target.closest('button, a, [role="button"], [onclick], .kdp-note, .kdp-meal, .kdp-hero, div');
+    // Segurança: não interceptar cards, refeições, notas ou DIVs genéricos da Dieta.
+    // O modal de biomarcadores só deve abrir por CTA acionável e intencional.
+    var interactive = target.closest('button, a, [role="button"], [onclick]');
     if (!interactive) return null;
 
     var text = textOf(interactive);
-    var isDietExamCard = /\bexames?\b/.test(text) && (/ajustes?\s+alimentares|orientar|dieta|nutricional|biomarcadores?/.test(text) || text.length < 180);
-    var isSendExam = /enviar\s+exame/.test(text);
-    var isRealFlowCopy = /fluxo\s+real\s+de\s+exames|alertas\s+nutricionais/.test(text);
+    var mentionsLabs = /\b(exame|exames|biomarcador|biomarcadores)\b/.test(text);
+    var hasManualIntent = /(enviar|mandar|adicionar|abrir|carregar|subir|importar|anexar)\s+(o\s+|os\s+|um\s+|uma\s+|meu\s+|meus\s+)?(exame|exames|biomarcador|biomarcadores)/.test(text) ||
+      /\b(exame|exames|biomarcador|biomarcadores)\b.{0,48}\b(enviar|mandar|adicionar|abrir|carregar|subir|importar|anexar)\b/.test(text) ||
+      /fluxo\s+real\s+de\s+exames/.test(text);
 
-    if (isDietExamCard || isSendExam || isRealFlowCopy) return interactive;
+    if (mentionsLabs && hasManualIntent) return interactive;
     return null;
   }
 
@@ -178,7 +180,6 @@
   }
 
   document.addEventListener('click', handleDietLabsClick, true);
-  document.addEventListener('touchend', handleDietLabsClick, true);
   window.addEventListener('kronia:labs:loaded', function (ev) {
     var reports = ev && ev.detail && Array.isArray(ev.detail.reports) ? ev.detail.reports : [];
     saveSnapshot(reports.length ? normalizeReport(reports[0]) : null);
