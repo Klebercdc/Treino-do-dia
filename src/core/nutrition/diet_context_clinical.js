@@ -34,11 +34,97 @@ function pickString() {
   return null;
 }
 
+function parseNumeric(value) {
+  if (value == null || value === '') return null;
+  var normalized = String(value).replace(',', '.').replace(/[^0-9.\-]/g, '');
+  var parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeBiomarker(item) {
+  item = safe(item);
+  var name = pickString(item.marker_name, item.biomarker_name, item.name, item.nome, item.marker, item.marker_key, 'Marcador');
+  var value = item.released_value;
+  if (value == null || value === '') value = item.reviewed_value_override;
+  if (value == null || value === '') value = item.value_numeric;
+  if (value == null || value === '') value = item.value;
+  if (value == null || value === '') value = item.value_text;
+  return {
+    name: name,
+    value: value,
+    numericValue: parseNumeric(value),
+    unit: pickString(item.unit, item.unidade) || '',
+    flag: pickString(item.released_flag, item.flag, item.lab_flag, item.context_flag) || '',
+    raw: item,
+  };
+}
+
+function normalizeBiomarkers(value) {
+  if (!Array.isArray(value)) return [];
+  var seen = Object.create(null);
+  return value.map(normalizeBiomarker).filter(function(item) {
+    var key = normalizeFreeText(item.name + '|' + item.value + '|' + item.unit);
+    if (!item.name || seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+function extractBiomarkersFromSource(source) {
+  source = safe(source);
+  var normalizedPayload = safe(source.normalizedPayload || source.normalized_payload);
+  var aiInsights = safe(source.aiInsights || source.ai_insights);
+  var candidates = [];
+  if (Array.isArray(source.biomarkers)) candidates = candidates.concat(source.biomarkers);
+  if (Array.isArray(normalizedPayload.biomarkers)) candidates = candidates.concat(normalizedPayload.biomarkers);
+  if (Array.isArray(aiInsights.marker_interpretations)) candidates = candidates.concat(aiInsights.marker_interpretations);
+  return normalizeBiomarkers(candidates);
+}
+
+function biomarkerValue(biomarkers, patterns) {
+  for (var i = 0; i < biomarkers.length; i += 1) {
+    var item = biomarkers[i];
+    var name = normalizeFreeText(item.name);
+    if (patterns.some(function(pattern) { return pattern.test(name); }) && item.numericValue != null) {
+      return item.numericValue;
+    }
+  }
+  return null;
+}
+
+function mergeParsedWithBiomarkers(parsed, biomarkers) {
+  var result = parsed && typeof parsed === 'object' ? Object.assign({}, parsed) : {};
+  var mappings = [
+    ['glucose', [/\bglicemia\b/, /\bglicose\b/, /glucose/]],
+    ['hba1c', [/hemoglobina\s+glicada/, /hba1c/, /hb\s*a1c/]],
+    ['potassium', [/\bpotassio\b/, /potassium/]],
+    ['creatinine', [/\bcreatinina\b/, /creatinine/]],
+    ['ldl', [/\bldl\b/]],
+    ['hdl', [/\bhdl\b/]],
+    ['triglycerides', [/triglicer/, /triglycer/]],
+    ['sodium', [/\bsodio\b/, /sodium/]],
+    ['urea', [/\bureia\b/, /\burea\b/]],
+    ['tgo', [/\btgo\b/, /\bast\b/]],
+    ['tgp', [/\btgp\b/, /\balt\b/]],
+  ];
+
+  mappings.forEach(function(pair) {
+    if (result[pair[0]] != null) return;
+    var value = biomarkerValue(biomarkers, pair[1]);
+    if (value != null) result[pair[0]] = value;
+  });
+
+  return Object.keys(result).length ? result : null;
+}
+
 // ─── Lab / Clinical core ────────────────────────────────────────────────────
 
 function resolveDietMode(labReport) {
-  if (!labReport || !labReport.isValid || !labReport.parsed) return 'standard';
-  return 'clinical';
+  if (!labReport || !labReport.isValid) return 'standard';
+  if (labReport.parsed || (Array.isArray(labReport.biomarkers) && labReport.biomarkers.length)) return 'clinical';
+  if (Array.isArray(labReport.clinicalFlags) && labReport.clinicalFlags.length) return 'clinical';
+  if (Array.isArray(labReport.criticalFlags) && labReport.criticalFlags.length) return 'clinical';
+  return 'standard';
 }
 
 function applyClinicalRules(labReport) {
@@ -64,13 +150,15 @@ function applyClinicalRules(labReport) {
 
 function buildLabContext(input) {
   var source = input && typeof input === 'object' ? input : null;
-  if (!source) return { mode: 'standard', parsed: null, clinicalFlags: [], criticalFlags: [], isValid: false };
+  if (!source) return { mode: 'standard', parsed: null, biomarkers: [], clinicalFlags: [], criticalFlags: [], isValid: false };
 
-  var parsed = source.parsed && typeof source.parsed === 'object' ? source.parsed : null;
-  var clinicalFlags = normalizeClinicalFlags(source.clinicalFlags || source.clinical_flags);
-  var criticalFlags = normalizeClinicalFlags(source.criticalFlags || source.critical_flags);
-  var isValid = source.isValid === true || source.is_valid === true;
-  var mode = resolveDietMode({ parsed: parsed, isValid: isValid });
+  var aiInsights = safe(source.aiInsights || source.ai_insights);
+  var biomarkers = extractBiomarkersFromSource(source);
+  var parsed = mergeParsedWithBiomarkers(source.parsed && typeof source.parsed === 'object' ? source.parsed : null, biomarkers);
+  var clinicalFlags = normalizeClinicalFlags(source.clinicalFlags || source.clinical_flags || aiInsights.clinical_flags);
+  var criticalFlags = normalizeClinicalFlags(source.criticalFlags || source.critical_flags || aiInsights.critical_flags);
+  var isValid = source.isValid === true || source.is_valid === true || biomarkers.length > 0 || clinicalFlags.length > 0 || criticalFlags.length > 0;
+  var mode = resolveDietMode({ parsed: parsed, biomarkers: biomarkers, isValid: isValid, clinicalFlags: clinicalFlags, criticalFlags: criticalFlags });
 
   if (mode === 'clinical' && !clinicalFlags.length && !criticalFlags.length) {
     var recalculated = applyClinicalRules({ parsed: parsed, isValid: isValid });
@@ -81,12 +169,17 @@ function buildLabContext(input) {
   return {
     id: source.id || null,
     parsed: parsed,
+    biomarkers: biomarkers,
+    scores: aiInsights.scores || source.scores || null,
+    healthProfile: aiInsights.health_profile || source.healthProfile || source.health_profile || null,
     confidence: Number(source.confidence || 0),
     isValid: isValid,
     mode: mode,
     clinicalFlags: clinicalFlags,
     criticalFlags: criticalFlags,
-    createdAt: source.createdAt || source.created_at || null
+    aiInsights: Object.keys(aiInsights).length ? aiInsights : null,
+    createdAt: source.createdAt || source.created_at || null,
+    processedAt: source.processedAt || source.processed_at || null,
   };
 }
 
