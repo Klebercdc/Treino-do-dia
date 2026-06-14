@@ -8909,13 +8909,17 @@ async function saveActiveDietPlan(options) {
               });
             });
           }
-        } catch (_) {}
+        } catch (catalogErr) {
+          console.warn('[food_catalog] match falhou, seguindo com llm_estimate:', catalogErr);
+        }
         if (rows.length) await _sb.from('meal_plan_items').insert(rows);
         plan.id = planInsert.data.id;
         savedRemote = true;
       }
     }
-  } catch (_) {}
+  } catch (saveErr) {
+    console.error('[saveActiveDietPlan] erro ao salvar no Supabase:', saveErr);
+  }
   setActiveDietPlan(Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' }));
   if (!opts.silent) showToast(savedRemote ? 'Dieta salva como versão ativa.' : 'Dieta salva localmente. Entre na conta para sincronizar.', savedRemote ? 'success' : 'info', 3200);
   return Object.assign({}, plan, { source: savedRemote ? 'supabase_meal_plans' : 'local_storage' });
