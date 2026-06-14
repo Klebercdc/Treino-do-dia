@@ -15137,7 +15137,7 @@ async function gerarDieta() {
     } catch (saveError) {
       console.warn('[diet_save] Falha ao salvar dieta gerada:', saveError);
       showToast('Dieta gerada, mas não consegui salvar agora. Tente novamente em instantes.', 'error', 5000);
-      finishDietGenerationSuccess(window._kroniaDietPlan || renderModel);
+      try { finishDietGenerationSuccess(window._kroniaDietPlan || renderModel); } catch (_) {}
     }
     writeAuditTracePatch({
       generation: buildGenerationEnvelope({
