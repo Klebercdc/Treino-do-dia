@@ -1,8 +1,6 @@
 var dietService = require('../../services/diet/dietService');
 var dietRouteContract = require('./_dietRouteContract');
 var { planGate } = require('../../core/plans/planGate');
-var trainingRecoveryHelper = require('./_trainingRecoveryContext');
-var { createAdminSupabaseClient } = require('../../lib/supabase/admin');
 
 function buildPayload(body) {
   var safeBody = body && typeof body === 'object' ? body : {};
@@ -256,17 +254,6 @@ function applyFoodCatalogMacrosToResult(result, payload) {
   return result;
 }
 
-async function tryLoadTrainingRecovery(userId) {
-  if (!userId) return null;
-  try {
-    var admin = createAdminSupabaseClient();
-    return await trainingRecoveryHelper.loadTrainingRecoveryContext(admin, userId);
-  } catch (error) {
-    console.warn('[diet-route-handler] training recovery unavailable', error && error.message);
-    return null;
-  }
-}
-
 async function processDietRouteRequest(input) {
   var request = input && typeof input === 'object' ? input : {};
   var body = request.body && typeof request.body === 'object' ? request.body : {};
@@ -306,8 +293,6 @@ async function processDietRouteRequest(input) {
   }
 
   var payload = buildPayload(body);
-  var trainingRecovery = await tryLoadTrainingRecovery(userId);
-  payload = mergeTrainingRecovery(payload, trainingRecovery);
   var result = await dietService.execute(action, payload);
   result = applyFoodCatalogMacrosToResult(result, payload);
   return {
